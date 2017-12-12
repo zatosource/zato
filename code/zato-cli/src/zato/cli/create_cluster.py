@@ -19,19 +19,19 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import CACHE, DATA_FORMAT, PUBSUB, SIMPLE_IO, WEB_SOCKET
+from zato.common import CACHE, DATA_FORMAT, MISC, PUBSUB, SIMPLE_IO, WEB_SOCKET
 from zato.common.odb.model import CacheBuiltin, ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, \
-     PubSubTopic, PubSubSubscription, RBACPermission, RBACRole, Service, WSSDefinition
+     PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
 from zato.common.pubsub import new_sub_key
 from zato.common.util import get_http_json_channel, get_http_soap_channel
 
 msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
 
 apispec_name_path = {
-    'zato.apispec.pub.brython-js': '/apispec/static/brython/_brython/brython.js',
-    'zato.apispec.pub.brython-json': '/apispec/static/brython/_brython/libs/json.js',
-    'zato.apispec.pub.main': '/apispec',
-    'zato.apispec.pub.frontend': '/apispec/static/brython/_zato/docs.py',
+    'zato.apispec.pub.brython-js': '/zato/apispec/static/brython/_brython/brython.js',
+    'zato.apispec.pub.brython-json': '/zato/apispec/static/brython/_brython/libs/json.js',
+    'zato.apispec.pub.main': '/zato/apispec',
+    'zato.apispec.pub.frontend': '/zato/apispec/static/brython/_zato/docs.py',
 }
 
 zato_services = {
@@ -507,11 +507,12 @@ class Create(ZatoCommand):
             uuid4().hex, msg_browser_defaults.TOKEN_TTL, cluster)
         session.add(live_browser_sec)
 
-        self.add_internal_services(
-            session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec)
-        self.add_ping_services(session, cluster)
         self.add_default_rbac_permissions(session, cluster)
-        self.add_default_rbac_roles(session, cluster)
+        root_rbac_role = self.add_default_rbac_roles(session, cluster)
+        apispec_rbac_role = self.add_apispec_rbac_auth(session, cluster, root_rbac_role)
+
+        self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec, apispec_rbac_role)
+        self.add_ping_services(session, cluster)
         self.add_default_cache(session, cluster)
         self.add_cache_endpoints(session, cluster)
         self.add_pubsub_sec_endpoints(session, cluster)
@@ -537,10 +538,10 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec):
+    def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec,
+        apispec_rbac_role):
         """ Adds these Zato internal services that can be accessed through SOAP requests.
         """
-
         #
         # HTTPSOAP + services
         #
@@ -571,7 +572,7 @@ class Create(ZatoCommand):
                 self.add_live_browser(session, cluster, service, live_browser_sec)
 
             elif 'apispec.pub' in name:
-                self.add_apispec_pub(session, cluster, service)
+                self.add_apispec_pub(session, cluster, service, apispec_rbac_role)
 
             elif 'check' in name:
                 self.add_check(session, cluster, service, pubapi_sec)
@@ -694,11 +695,26 @@ class Create(ZatoCommand):
     def add_default_rbac_roles(self, session, cluster):
         """ Adds default roles used by RBAC.
         """
-        item = RBACRole()
-        item.name = 'Root'
-        item.parent_id = None
-        item.cluster = cluster
-        session.add(item)
+        root = RBACRole(name='Root', parent=None, cluster=cluster)
+        session.add(root)
+        return root
+
+    def add_apispec_rbac_auth(self, session, cluster, root_rbac_role):
+        """ Create the apispec Readers role, associated default Basic Auth Account, and account<->role binding. Returns a reference to the role
+        to be used by add_apispec_pub() to grant access to each service individually."""
+        role = RBACRole(name='API Specification Readers', parent=root_rbac_role, cluster=cluster)
+        session.add(role)
+
+        name = 'apispec'
+        apispec_auth = HTTPBasicAuth(None, name, True, name, 'apispec', uuid4().hex, cluster)
+        session.add(apispec_auth)
+
+        client_role_def = MISC.SEPARATOR.join(('sec_def', 'basic_auth', name))
+        client_role_name = MISC.SEPARATOR.join((client_role_def, role.name))
+        client_role = RBACClientRole(name=client_role_name, client_def=client_role_def, role=role, cluster=cluster)
+        session.add(client_role)
+
+        return role
 
 # ################################################################################################################################
 
@@ -743,15 +759,19 @@ class Create(ZatoCommand):
             msg_browser_defaults.TOKEN_TTL, service=service, cluster=cluster, security=live_browser_sec)
         session.add(channel)
 
-# ################################################################################################################################
-
-    def add_apispec_pub(self, session, cluster, service, _name_path=apispec_name_path):
-        url_path = _name_path[service.name]
-        channel = HTTPSOAP(None, url_path, True, True, 'channel', 'plain_http', None, url_path, None, '', None, None,
-            merge_url_params_req=True, service=service, cluster=cluster)
+    def add_apispec_pub(self, session, cluster, service, apispec_rbac_role):
+        url_path = apispec_name_path[service.name]
+        channel = HTTPSOAP(name=url_path, is_active=True, is_internal=True, connection='channel', transport='plain_http',
+            url_path=url_path, soap_action='', has_rbac=True, sec_use_rbac=True, merge_url_params_req=True, service=service,
+            cluster=cluster)
         session.add(channel)
 
-# ################################################################################################################################
+        perm = session.query(RBACPermission).\
+            filter(RBACPermission.name=='Read').\
+            one()
+
+        role_perm = RBACRolePermission(role=apispec_rbac_role, perm=perm, service=service, cluster=cluster)
+        session.add(role_perm)
 
     def add_check(self, session, cluster, service, pubapi_sec):
 
@@ -869,7 +889,7 @@ class Create(ZatoCommand):
         endpoint.topic_patterns = 'pub=zato.demo.*\nsub=zato.demo.*'
         endpoint.security = sec
         endpoint.cluster = cluster
-        endpoint.endpoint_type = 'WSX'
+        endpoint.endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
 
         topic = PubSubTopic()
         topic.name = 'zato.demo.sample'

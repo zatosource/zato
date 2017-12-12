@@ -1730,3 +1730,18 @@ def is_func_overridden(func):
             return True
 
 # ################################################################################################################################
+
+def get_sql_engine_display_name(engine, fs_sql_config):
+    display_name = None
+    for key, value in fs_sql_config.items():
+        if key == engine:
+            display_name = value.get('display_name')
+            break
+
+    if not display_name:
+        raise ValueError('Could not find display name for engine `{}` in config `{}`'.format(
+            engine, fs_sql_config))
+    else:
+        return display_name
+
+# ################################################################################################################################

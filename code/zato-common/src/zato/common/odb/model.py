@@ -557,11 +557,12 @@ class HTTPSOAP(Base):
     cluster = relationship(Cluster, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, connection=None, transport=None, host=None,
-                 url_path=None, method=None, soap_action=None, soap_version=None, data_format=None, ping_method=None,
-                 pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None,
-                 timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None,
-                 cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None, content_type=None,
-                 cache_id=None, cache_type=None, cache_expiry=None, cache_name=None):
+            url_path=None, method=None, soap_action=None, soap_version=None, data_format=None, ping_method=None,
+            pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None,
+            timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None,
+            cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None, content_type=None,
+            cache_id=None, cache_type=None, cache_expiry=None, cache_name=None, **kwargs):
+        super(HTTPSOAP, self).__init__(**kwargs)
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -620,7 +621,7 @@ class SQLConnectionPool(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('sql_pools', order_by=name, cascade='all, delete, delete-orphan'))
 
-    engine_text = None # For auto-completion, not used by the DB
+    engine_display_name = None # For auto-completion, not used by DB
 
     def __init__(self, id=None, name=None, is_active=None, db_name=None,
                  username=None, engine=None, extra=None, host=None, port=None,
@@ -1774,6 +1775,7 @@ class RBACRole(Base):
     id = Column(Integer, Sequence('rbac_role_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     parent_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=True)
+    parent = relationship('RBACRole', backref=backref('children'), remote_side=[id])
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('rbac_roles', order_by=name, cascade='all, delete, delete-orphan'))

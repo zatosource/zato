@@ -78,7 +78,5 @@ class Generator(Service):
             if not impl_name.startswith('zato'):
                 details = bunchify(details)
                 info = ServiceInfo(details['name'], details['service_class'])
-                print(33, info.docstring.summary)
-                print(33, info.docstring.description)
 
 # ################################################################################################################################

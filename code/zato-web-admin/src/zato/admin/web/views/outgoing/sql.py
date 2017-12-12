@@ -18,7 +18,6 @@ from django.template.response import TemplateResponse
 from anyjson import dumps
 
 # Zato
-from zato.admin.settings import engine_friendly_name
 from zato.admin.web.views import change_password as _change_password, parse_response_data
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
@@ -44,12 +43,12 @@ def _get_edit_create_message(params, prefix=''):
         'extra': params.get(prefix + 'extra'),
     }
 
-def _edit_create_response(verb, id, name, engine, cluster_id):
+def _edit_create_response(verb, id, name, engine_display_name, cluster_id):
     """ A common function for producing return data for create and edit actions.
     """
     return_data = {'id': id,
-                   'message': 'Successfully {0} the outgoing SQL connection [{1}]'.format(verb, name.encode('utf-8')),
-                   'engine_text': engine_friendly_name[engine],
+                   'message': 'Successfully {} outgoing SQL connection `{}`'.format(verb, name.encode('utf-8')),
+                   'engine_display_name': engine_display_name,
                    'cluster_id': cluster_id,
                 }
 
@@ -60,8 +59,8 @@ def index(req):
     """ Lists all the SQL connections.
     """
     items = []
-    create_form = CreateForm()
-    edit_form = EditForm(prefix='edit')
+    create_form = CreateForm(req)
+    edit_form = EditForm(req, prefix='edit')
     change_password_form = ChangePasswordForm()
     meta = None
 
@@ -79,12 +78,12 @@ def index(req):
 
             _item = SQLConnectionPool()
 
-            for name in('id', 'name', 'is_active', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size'):
+            for name in('id', 'name', 'is_active', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size',
+                'engine_display_name'):
                 value = getattr(item, name)
                 setattr(_item, name, value)
 
             _item.extra = item.extra or ''
-            _item.engine_text = engine_friendly_name[_item.engine]
             items.append(_item)
 
     return_data = {'zato_clusters':req.zato.clusters,
@@ -107,10 +106,10 @@ def create(req):
     """
     try:
         request = _get_edit_create_message(req.POST)
-        engine = request['engine']
         response = req.zato.client.invoke('zato.outgoing.sql.create', request)
 
-        return _edit_create_response('created', response.data.id, req.POST['name'], engine, req.zato.cluster.id)
+        return _edit_create_response(
+            'created', response.data.id, req.POST['name'], response.data.display_name, req.zato.cluster.id)
 
     except Exception, e:
         msg = 'Could not create an outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
@@ -124,10 +123,10 @@ def edit(req):
     """
     try:
         request = _get_edit_create_message(req.POST, 'edit-')
-        engine = request['engine']
-        req.zato.client.invoke('zato.outgoing.sql.edit', request)
+        response = req.zato.client.invoke('zato.outgoing.sql.edit', request)
 
-        return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'], engine, req.zato.cluster.id)
+        return _edit_create_response(
+            'updated', req.POST['id'], req.POST['edit-name'], response.data.display_name, req.zato.cluster.id)
 
     except Exception, e:
         msg = 'Could not update the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))

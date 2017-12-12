@@ -21,7 +21,7 @@ from cryptography.fernet import Fernet
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts
+from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
 from zato.common import CONTENT_TYPE, SERVER_JOIN_STATUS
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
@@ -179,6 +179,12 @@ level=WARN
 [rbac]
 custom_auth_list_service=
 
+[[auth_type_hook]]
+/zato/apispec/static/brython/_brython/brython.js=zato.apispec.pub.get-default-auth-type
+/zato/apispec/static/brython/_brython/libs/json.js=zato.apispec.pub.get-default-auth-type
+/zato/apispec/static/brython/_zato/docs.py=zato.apispec.pub.get-default-auth-type
+/zato/apispec=zato.apispec.pub.get-default-auth-type
+
 [component_enabled]
 stats=True
 slow_response=True
@@ -233,6 +239,11 @@ pub_css_style="color:#eee; font-weight:bold; font-size:17px; padding-left:2px"
 
 [shmem]
 size=0.1 # In MB
+
+[apispec_services_allowed]
+# By default, public APIspec endpoints return nothing.
+order=false_true
+*=False
 
 [os_environ]
 sample_key=sample_value
@@ -348,9 +359,10 @@ directories = (
 )
 
 files = {
-    'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
-    'config/repo/service-sources.txt':service_sources_contents,
-    'config/repo/lua/internal/zato.rename_if_exists.lua':lua_zato_rename_if_exists
+    'config/repo/logging.conf': common_logging_conf_contents.format(log_path='./logs/server.log'),
+    'config/repo/service-sources.txt': service_sources_contents,
+    'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists,
+    'config/repo/sql.conf': sql_conf_contents
 }
 
 priv_key_location = './config/repo/config-priv.pem'

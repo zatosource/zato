@@ -19,9 +19,6 @@ import yaml
 # Bunch
 from zato.bunch import Bunch, bunchify, debunchify
 
-# Pip
-import pip
-
 # Texttable
 import texttable
 
@@ -71,8 +68,8 @@ IGNORE_PREFIXES = {
 }
 
 def populate_services_from_apispec(client, logger):
-    """Request a list of services from the APISpec service, and merge the results into SERVICES_BY_PREFIX, creating new ServiceInfo instances to represent
-    previously unknown services as appropriate."""
+    """ Request a list of services from the APISpec service, and merge the results into SERVICES_BY_PREFIX,
+    creating new ServiceInfo instances to represent previously unknown services as appropriate."""
     response = client.invoke('zato.apispec.get-api-spec', {
         'return_internal': True
     })
@@ -717,7 +714,6 @@ class ObjectImporter(object):
 
     def _import_object(self, def_type, item, is_edit):
         sinfo = SERVICE_BY_NAME[def_type]
-        attrs_dict = dict(item)
 
         if is_edit:
             service_name = sinfo.get_service_name('edit')

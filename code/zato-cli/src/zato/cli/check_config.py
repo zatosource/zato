@@ -25,12 +25,12 @@ from psutil import AccessDenied, Process, NoSuchProcess
 
 # Zato
 from zato.cli import ManageCommand
-from zato.common import INFO_FORMAT
+from zato.common import INFO_FORMAT, ping_queries
 from zato.common.component_info import get_info
 from zato.common.crypto import CryptoManager
 from zato.common.kvdb import KVDB
 from zato.common.haproxy import validate_haproxy_config
-from zato.common.odb import create_pool, ping_queries
+from zato.common.odb import create_pool, get_ping_query
 from zato.common.util import is_port_taken
 
 class CheckConfig(ManageCommand):
@@ -49,22 +49,21 @@ class CheckConfig(ManageCommand):
         address = '{}:{}'.format(conf['host'], conf['port'])
         self.ensure_port_free(prefix, conf['port'], address)
 
-    def ping_sql(self, cm, engine_params):
+    def ping_sql(self, cm, engine_params, ping_query):
 
-        query = ping_queries[engine_params['engine']]
-
-        session = create_pool(cm, engine_params)
-        session.execute(query)
+        session = create_pool(cm, engine_params, ping_query)
+        session.execute(ping_query)
         session.close()
 
         if self.show_output:
             self.logger.info('SQL ODB connection OK')
 
-    def check_sql_odb_server_scheduler(self, cm, conf):
+    def check_sql_odb_server_scheduler(self, cm, conf, fs_sql_config):
         engine_params = dict(conf['odb'].items())
         engine_params['extra'] = {}
         engine_params['pool_size'] = 1
-        self.ping_sql(cm, engine_params)
+
+        self.ping_sql(cm, engine_params, get_ping_query(fs_sql_config, engine_params))
 
     def check_sql_odb_web_admin(self, cm, conf):
         pairs = (
@@ -79,7 +78,7 @@ class CheckConfig(ManageCommand):
         for sqlalch_name, django_name in pairs:
             engine_params[sqlalch_name] = conf[django_name]
 
-        self.ping_sql(cm, engine_params)
+        self.ping_sql(cm, engine_params, ping_queries[engine_params['engine']])
 
     def on_server_check_kvdb(self, cm, conf, conf_key='kvdb'):
 
@@ -192,10 +191,15 @@ class CheckConfig(ManageCommand):
 
         return cm, conf
 
+    def get_sql_ini(self, conf_file, repo_dir=None):
+        repo_dir = repo_dir or join(self.config_dir, 'repo')
+        return ConfigObj(join(repo_dir, conf_file))
+
     def _on_server(self, args):
         cm, conf = self.get_crypto_manager_conf('server.conf')
+        fs_sql_config = self.get_sql_ini('sql.conf')
 
-        self.check_sql_odb_server_scheduler(cm, conf)
+        self.check_sql_odb_server_scheduler(cm, conf, fs_sql_config)
         self.on_server_check_kvdb(cm, conf)
 
         if getattr(args, 'ensure_no_pidfile', False):
@@ -243,8 +247,9 @@ class CheckConfig(ManageCommand):
 
     def _on_scheduler(self, *ignored_args, **ignored_kwargs):
         cm, conf = self.get_crypto_manager_conf('scheduler.conf')
+        fs_sql_config = self.get_sql_ini('sql.conf')
 
-        self.check_sql_odb_server_scheduler(cm, conf)
+        self.check_sql_odb_server_scheduler(cm, conf, fs_sql_config)
         self.on_server_check_kvdb(cm, conf, 'broker')
 
         self.ensure_no_pidfile('scheduler')

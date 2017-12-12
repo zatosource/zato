@@ -181,12 +181,9 @@ FALSE_TRUE = 'false_true'
 # If self.response.payload
 simple_types = (basestring, dict, list, tuple, bool, Number)
 
-# Queries to use in pinging the databases.
+# These are used by web-admin only because servers and scheduler use sql.conf
 ping_queries = {
-    'access': 'SELECT 1',
     'db2': 'SELECT current_date FROM sysibm.sysdummy1',
-    'firebird': 'SELECT current_timestamp FROM rdb$database',
-    'informix': 'SELECT 1 FROM systables WHERE tabid=1',
     'mssql': 'SELECT 1',
     'mysql+pymysql': 'SELECT 1+1',
     'oracle': 'SELECT 1 FROM dual',
