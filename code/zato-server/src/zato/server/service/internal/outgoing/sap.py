@@ -64,7 +64,7 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
 
         return self._handle(OutgoingSAP, _auth, OUTGOING.SAP_CHANGE_PASSWORD.value,
-            publish_instance_attrs=['host', 'sysnr', 'client', 'system_id', 'user', 'password', 'router', 'pool_size'])
+            publish_instance_attrs=['host', 'sysnr', 'client', 'sysid', 'user', 'password', 'router', 'pool_size'])
 
 class Ping(AdminService):
 

@@ -28,7 +28,7 @@
             '_is_active',
             'host',
             'sysnr',
-            'system_id',
+            'sysid',
             'user',
             'client',
             'router',
@@ -95,7 +95,7 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.host }}</td>
                         <td>{{ item.sysnr }}</td>
-                        <td>{{ item.system_id }}</td>
+                        <td>{{ item.sysid }}</td>
                         <td>{{ item.user }}</td>
                         <td>{{ item.client }}</td>
                         <td>{{ item.router|default:'' }}</td>
@@ -147,7 +147,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">System ID</td>
-                            <td>{{ create_form.system_id }}</td>
+                            <td>{{ create_form.sysid }}</td>
                         </tr>
 
                         <tr>
@@ -212,7 +212,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">System ID</td>
-                            <td>{{ edit_form.system_id }}</td>
+                            <td>{{ edit_form.sysid }}</td>
                         </tr>
 
                         <tr>

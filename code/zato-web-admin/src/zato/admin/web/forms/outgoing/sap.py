@@ -19,7 +19,7 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     sysnr = forms.CharField(initial=SAP.DEFAULT.INSTANCE, widget=forms.TextInput(attrs={'style':'width:10%'}))
-    system_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    sysid = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     user = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     client = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     router = forms.CharField(initial='', widget=forms.TextInput(attrs={'style':'width:100%'}))

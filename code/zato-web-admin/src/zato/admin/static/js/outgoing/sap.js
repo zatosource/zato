@@ -17,7 +17,7 @@ $(document).ready(function() {
    $.fn.zato.data_table.class_ = $.fn.zato.data_table.SAP;
    $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.sap.data_table.new_row;
    $.fn.zato.data_table.parse();
-   $.fn.zato.data_table.setup_forms(['name', 'host', 'sysnr', 'system_id', 'user', 'client', 'pool_size']);
+   $.fn.zato.data_table.setup_forms(['name', 'host', 'sysnr', 'sysid', 'user', 'client', 'pool_size']);
 })
 
 $.fn.zato.outgoing.sap.create = function() {
@@ -43,7 +43,7 @@ $.fn.zato.outgoing.sap.data_table.new_row = function(item, data, include_tr) {
    row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
    row += String.format('<td>{0}</td>', item.host);
    row += String.format('<td>{0}</td>', item.sysnr);
-   row += String.format('<td>{0}</td>', item.system_id);
+   row += String.format('<td>{0}</td>', item.sysid);
    row += String.format('<td>{0}</td>', item.user);
    row += String.format('<td>{0}</td>', item.client);
    row += String.format('<td>{0}</td>', item.router ? item.router : '');
