@@ -23,6 +23,7 @@ from zato.common import CACHE, DATA_FORMAT, MISC, PUBSUB, SIMPLE_IO, WEB_SOCKET
 from zato.common.odb.model import CacheBuiltin, ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, \
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
 from zato.common.pubsub import new_sub_key
+from zato.common.time_util import utcnow_as_ms
 from zato.common.util import get_http_json_channel, get_http_soap_channel
 
 msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
@@ -901,7 +902,7 @@ class Create(ZatoCommand):
         topic.cluster = cluster
 
         sub = PubSubSubscription()
-        sub.creation_time = datetime.utcnow()
+        sub.creation_time = utcnow_as_ms()
         sub.topic = topic
         sub.endpoint = endpoint
         sub.sub_key = new_sub_key()
