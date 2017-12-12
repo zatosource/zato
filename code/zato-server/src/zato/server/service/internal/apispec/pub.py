@@ -47,7 +47,6 @@ class Main(_Base):
         matcher = Matcher()
         matcher.read_config(self.server.fs_server_config.apispec_services_allowed)
 
-        ns_name = lambda s: s['namespace_name'] + ('.' if s['namespace_name'] else '') + s['name']
         response = json.loads(self.invoke('zato.apispec.get-api-spec', {'return_internal': True}))
         response['services'] = self.filter_services(matcher, response['services'])
 

@@ -40,7 +40,7 @@ except ImportError:
 from springpython.context import InitializingObject
 
 # Zato
-from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceInfo, TRACE1, zato_no_op_marker
+from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceInfo, TRACE1
 from zato.common.match import Matcher
 from zato.common.util import decompress, deployment_info, fs_safe_now, import_module_from_path, is_func_overridden, \
      is_python_file, visit_py_source
