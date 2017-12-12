@@ -415,6 +415,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Any user-defined SQL connections left?
         for pool_name in self.worker_config.out_sql:
             config = self.worker_config.out_sql[pool_name]['config']
+            config['fs_sql_config'] = self.server.fs_sql_config
             self.sql_pool_store[pool_name] = config
 
     def init_ftp(self):
@@ -1255,6 +1256,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         channel = kwargs.get('channel', CHANNEL.WORKER)
 
+        if 'serialize' in kwargs:
+            serialize = kwargs.get('serialize')
+        else:
+            serialize = True
+
         return self.on_message_invoke_service({
             'channel': channel,
             'payload': payload,
@@ -1264,7 +1270,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
             'zato_ctx': kwargs.get('zato_ctx'),
-        }, channel, None, needs_response=True, serialize=kwargs.get('serialize', True))
+        }, channel, None, needs_response=True, serialize=serialize)
 
 # ################################################################################################################################
 
@@ -1376,6 +1382,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         if msg.get('old_name') and msg.get('old_name') != msg['name']:
             del self.sql_pool_store[msg['old_name']]
 
+        msg['fs_sql_config'] = self.server.fs_sql_config
         self.sql_pool_store[msg['name']] = msg
 
     def on_broker_msg_OUTGOING_SQL_CHANGE_PASSWORD(self, msg, *args):

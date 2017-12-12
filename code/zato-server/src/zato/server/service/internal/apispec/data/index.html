@@ -1,8 +1,12 @@
-{% extends "zato/index.html" %}
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>API specification</title>
 
-{% block html_title %}Documentation{% endblock %}
-
-{% block "extra_css" %}
+    <style type="text/css">
+        {{ZATO_BASE_CSS}}
+    </style>
 
     <style type="text/css">
 
@@ -188,38 +192,33 @@
 
     </style>
 
-{% endblock %}
+    <script type="text/javascript" src="apispec/static/brython/_brython/brython.js"></script>
+    <script type="text/python" src="apispec/static/brython/_zato/docs.py"></script>
 
-{% block "extra_js" %}
-    <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/python" src="/static/brython/_zato/docs.py"></script>
-{% endblock %}
+</head>
+<body onload="brython()">
 
-{% block "content" %}
-<h2 class="zato">Documentation</h2>
-
-{% if not zato_clusters %}
-    {% include "zato/no-clusters.html" %}
-{% else %}
-
-{% include "zato/search-form.html" with page_prompt="Show documentation"%}
-
-    {% if cluster_id %}
-        <input type="hidden" id="cluster_id" value="{{ cluster_id }}" />
-    {% endif %}
-
-        <script id="docs-data" type="text/plain">
-            {{ response_inner|safe }}
-        </script>
-
-        <div id="markup">
-            <table id="data-table" style="border:none">
-                <tr>
-                    <td><div id="main-div"></div></td>
-                </tr>
-            </table>
+        <div id="hd">
+            <div id="console-header">&nbsp;<img src="data:image/png;charset=utf-8;base64, {{ZATO_LOGO}}" alt="Zato samurai helmet logo" style="vertical-align:bottom"/>
+            <span id="logo">Zato</span>
+            <span style="color:#eee; font-weight:bold; font-size:17px; padding-left:2px">{{ZATO_PUB_NAME}}</span>
+            </div>
         </div>
 
-{% endif %}
+    <script id="docs-data" type="text/plain">
+       {{ZATO_DATA}}
+    </script>
 
-{% endblock %}
+    <div id="markup">
+        <table id="data-table" style="border:none">
+            <tr>
+                <td><div id="main-div"></div></td>
+            </tr>
+        </table>
+    </div>
+
+    <form>
+      <input type="hidden" id="cluster_id" value="{{ZATO_CLUSTER_ID}}" />
+    </form>
+
+</body>

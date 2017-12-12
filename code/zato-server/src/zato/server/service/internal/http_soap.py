@@ -109,6 +109,7 @@ class Get(_BaseGet):
 # ################################################################################################################################
 
 class GetList(_BaseGet):
+
     """ Returns a list of HTTP/SOAP connections.
     """
     _filter_by = HTTPSOAP.name,

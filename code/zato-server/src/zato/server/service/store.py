@@ -50,6 +50,8 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+has_debug = logger.isEnabledFor(logging.DEBUG)
+has_trace1 = logger.isEnabledFor(TRACE1)
 
 # ################################################################################################################################
 
@@ -280,7 +282,8 @@ class ServiceStore(InitializingObject):
         deployed = []
 
         for item in items:
-            logger.debug('About to import services from:`%s`', item)
+            if has_debug:
+                logger.debug('About to import services from:`%s`', item)
 
             is_internal = item.startswith('zato')
 
@@ -367,7 +370,8 @@ class ServiceStore(InitializingObject):
                             logger.info('Skipped disallowed `%s`', service_name)
         except TypeError, e:
             # Ignore non-class objects passed in to issubclass
-            logger.log(TRACE1, 'Ignoring exception, name:`%s`, item:`%s`, e:`%s`', name, item, format_exc(e))
+            if has_trace1:
+                logger.log(TRACE1, 'Ignoring exception, name:`%s`, item:`%s`, e:`%s`', name, item, format_exc(e))
 
 # ################################################################################################################################
 
@@ -389,7 +393,8 @@ class ServiceStore(InitializingObject):
             si.hash_method = 'SHA-256'
 
         except IOError, e:
-            logger.log(TRACE1, 'Ignoring IOError, mod:`%s`, e:`%s`', mod, format_exc(e))
+            if has_trace1:
+                logger.log(TRACE1, 'Ignoring IOError, mod:`%s`, e:`%s`', mod, format_exc(e))
 
         return si
 
@@ -424,7 +429,8 @@ class ServiceStore(InitializingObject):
         self.impl_name_to_id[impl_name] = service_id
         self.name_to_impl_name[name] = impl_name
 
-        logger.debug('Imported service:`%s`', name)
+        if has_debug:
+            logger.debug('Imported service:`%s`', name)
 
         class_.after_add_to_store(logger)
 
