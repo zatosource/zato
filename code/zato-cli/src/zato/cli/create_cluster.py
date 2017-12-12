@@ -27,10 +27,10 @@ from zato.common.util import get_http_json_channel, get_http_soap_channel
 msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
 
 apispec_name_path = {
-    'zato.apispec.pub.brython-js': '/apispec/static/brython/_brython/brython.js',
-    'zato.apispec.pub.brython-json': '/apispec/static/brython/_brython/libs/json.js',
-    'zato.apispec.pub.main': '/apispec',
-    'zato.apispec.pub.frontend': '/apispec/static/brython/_zato/docs.py',
+    'zato.apispec.pub.brython-js': '/zato/apispec/static/brython/_brython/brython.js',
+    'zato.apispec.pub.brython-json': '/zato/apispec/static/brython/_brython/libs/json.js',
+    'zato.apispec.pub.main': '/zato/apispec',
+    'zato.apispec.pub.frontend': '/zato/apispec/static/brython/_zato/docs.py',
 }
 
 zato_services = {
