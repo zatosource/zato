@@ -196,6 +196,11 @@ class OUTGOING(Constants):
     ODOO_DELETE = ValueConstant('')
     ODOO_CHANGE_PASSWORD = ValueConstant('')
 
+    SAP_CREATE = ValueConstant('')
+    SAP_EDIT = ValueConstant('')
+    SAP_DELETE = ValueConstant('')
+    SAP_CHANGE_PASSWORD = ValueConstant('')
+
     STOMP_CREATE = ValueConstant('')
     STOMP_EDIT = ValueConstant('')
     STOMP_DELETE = ValueConstant('')

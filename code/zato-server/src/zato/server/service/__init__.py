@@ -250,6 +250,7 @@ class Service(object):
             self._worker_store.outgoing_web_sockets,
             self._worker_store.vault_conn_api,
             SMSAPI(self._worker_store.sms_twilio_api) if self.component_enabled_sms else None,
+            self._worker_config.out_sap,
         )
 
     @staticmethod
