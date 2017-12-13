@@ -26,9 +26,9 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query_ps_delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
-     get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
+     get_delivery_server_for_sub_key, get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
 from zato.common.time_util import utcnow_as_ms
-from zato.common.util import spawn_greenlet, is_func_overridden
+from zato.common.util import is_func_overridden, make_repr, spawn_greenlet
 
 # ################################################################################################################################
 
@@ -188,6 +188,9 @@ class SubKeyServer(object):
         # Attributes below are only for WebSockets
         self.channel_name = config.get('channel_name')
         self.pub_client_id = config.get('pub_client_id')
+
+    def __repr__(self):
+        return make_repr(self)
 
 # ################################################################################################################################
 
@@ -710,30 +713,38 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    #def set_sub_key_server(self, config, self_setting=False, source=None):
-    def set_sub_key_server(self, config):
-
-        msg = 'Setting info about delivery server for sub_key `%(sub_key)s` - `%(server_name)s:%(server_pid)s`'
+    def _set_sub_key_server(self, config):
+        """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
+        """
+        msg = 'Setting info about delivery server{}for sub_key `%(sub_key)s` - `%(server_name)s:%(server_pid)s`'.format(
+            ' ' if config['server_pid'] else ' (no PID) ')
         logger.info(msg, config)
         logger_zato.info(msg, config)
-
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
 # ################################################################################################################################
 
+    def set_sub_key_server(self, config):
+        with self.lock:
+            self._set_sub_key_server(config)
+
+# ################################################################################################################################
+
     def get_sub_key_server(self, sub_key):
-        return self.sub_key_servers[sub_key]
+        with self.lock:
+            return self.sub_key_servers[sub_key]
 
 # ################################################################################################################################
 
     def delete_sub_key_server(self, sub_key):
-        sub_key_server = self.sub_key_servers[sub_key]
-        msg = 'Deleting info about delivery server for sub_key `%s`, was `%s:%s`'
+        with self.lock:
+            sub_key_server = self.sub_key_servers[sub_key]
+            msg = 'Deleting info about delivery server for sub_key `%s`, was `%s:%s`'
 
-        logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
-        logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
+            logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
+            logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
 
-        del self.sub_key_servers[sub_key]
+            del self.sub_key_servers[sub_key]
 
 # ################################################################################################################################
 
@@ -741,12 +752,34 @@ class PubSub(object):
         """ Called after a WSX client disconnects - provides a list of sub_keys that it handled
         which we must remove from our config because without this client they are no longer usable (until the client reconnects).
         """
-        for sub_key in config.sub_key_list:
-            self.sub_key_servers.pop(sub_key, None)
-            for server_info in self.sub_key_servers.values():
-                if server_info.sub_key == sub_key:
-                    del self.sub_key_servers[sub_key]
-                    break
+        with self.lock:
+            for sub_key in config.sub_key_list:
+                self.sub_key_servers.pop(sub_key, None)
+                for server_info in self.sub_key_servers.values():
+                    if server_info.sub_key == sub_key:
+                        del self.sub_key_servers[sub_key]
+                        break
+
+# ################################################################################################################################
+
+    def add_missing_server_for_sub_key(self, sub_key):
+        """ Adds to self.sub_key_servers information from ODB about which server handles input sub_key.
+        Must be called with self.lock held.
+        """
+        with closing(self.server.odb.session()) as session:
+            data = get_delivery_server_for_sub_key(session, self.server.cluster_id, sub_key)
+            if not data:
+                msg = 'Could not find a delivery server in ODB for sub_key `%s`'
+                logger.info(msg, sub_key)
+                logger_zato.info(msg, sub_key)
+            else:
+                self._set_sub_key_server({
+                    'sub_key': sub_key,
+                    'cluster_id': data.cluster_id,
+                    'server_name': data.server_name,
+                    'server_pid': None, # Be explicit about the fact that we do not know the PID yet
+                    'endpoint_type': data.endpoint_type,
+                })
 
 # ################################################################################################################################
 
@@ -754,19 +787,39 @@ class PubSub(object):
         """ Returns a dictionary keyed by (server_name, server_pid, pub_client_id, channel_name) tuples
         and values being sub_keys that a WSX client pointed to by each key has subscribed to.
         """
-        found = {}
-        not_found = []
+        with self.lock:
+            found = {}
+            not_found = []
 
-        for sub_key in sub_keys:
-            info = self.sub_key_servers.get(sub_key)
-            if info:
-                _key = (info.server_name, info.server_pid, info.pub_client_id, info.channel_name, info.endpoint_type)
-                _info = found.setdefault(_key, [])
-                _info.append(sub_key)
-            else:
-                not_found.append(sub_key)
+            for sub_key in sub_keys:
 
-        return found, not_found
+                # If we do not have a server for this sub_key we first attempt to find
+                # if there is an already running server that handles it but we do not know it yet.
+                # It may happen if our server is down, another server (for this sub_key) boots up
+                # and notifies other servers about its existence and the fact that we handle this sub_key
+                # but we are still down so we never receive this message. In this case we attempt to look up
+                # the target server in ODB and then invoke it to get the PID of worker process that handles
+                # sub_key, populating self.sub_key_servers as we go.
+                if not sub_key in self.sub_key_servers:
+                    self.add_missing_server_for_sub_key(sub_key)
+
+                # At this point, if there is any information about this sub_key at all,
+                # no matter if its server is running or not, info will not be None.
+                info = self.sub_key_servers.get(sub_key)
+
+                # We report that a server is found only if we know the server itself and its concrete PID,
+                # which means that the server is currently running. Checking for server alone is not enough
+                # because we may have read this information from self.add_missing_server_for_sub_key
+                # and yet, self.get_server_pid_for_sub_key may have returned no information implying
+                # that the server, even if found in ODB in principle, is still currently not running.
+                if info and info.server_pid:
+                    _key = (info.server_name, info.server_pid, info.pub_client_id, info.channel_name, info.endpoint_type)
+                    _info = found.setdefault(_key, [])
+                    _info.append(sub_key)
+                else:
+                    not_found.append(sub_key)
+
+            return found, not_found
 
 # ################################################################################################################################
 
@@ -811,49 +864,50 @@ class PubSub(object):
         """ Removes subscriptions for all input sub_keys. Input topic_sub_keys is a dictionary keyed by topic_name,
         and each value is a list of sub_keys, possibly one-element long.
         """
-        for topic_name, sub_keys in topic_sub_keys.items():
+        with self.lock:
+            for topic_name, sub_keys in topic_sub_keys.items():
 
-            # We receive topic_names on input but in-RAM backlog requires topic IDs.
-            topic_id = self.topic_name_to_id[topic_name]
+                # We receive topic_names on input but in-RAM backlog requires topic IDs.
+                topic_id = self.topic_name_to_id[topic_name]
 
-            # Delete subscriptions, and any related messages, from RAM
-            self.in_ram_backlog.unsubscribe(topic_id, sub_keys)
+                # Delete subscriptions, and any related messages, from RAM
+                self.in_ram_backlog.unsubscribe(topic_id, sub_keys)
 
-            # Delete subscription metadata from local pubsub
-            subscriptions_by_topic = self.subscriptions_by_topic[topic_name]
+                # Delete subscription metadata from local pubsub
+                subscriptions_by_topic = self.subscriptions_by_topic[topic_name]
 
-            for sub in subscriptions_by_topic:
-                if sub.sub_key in sub_keys:
-                    subscriptions_by_topic.remove(sub)
+                for sub in subscriptions_by_topic:
+                    if sub.sub_key in sub_keys:
+                        subscriptions_by_topic.remove(sub)
 
-            # Find and stop all delivery tasks if we are the server that handles them
-            for sub_key in sub_keys:
-                sub_key_server = self.sub_key_servers.get(sub_key)
-                if sub_key_server:
+                # Find and stop all delivery tasks if we are the server that handles them
+                for sub_key in sub_keys:
+                    sub_key_server = self.sub_key_servers.get(sub_key)
+                    if sub_key_server:
 
-                    _cluster_id = sub_key_server.cluster_id
-                    _server_name = sub_key_server.server_name
-                    _server_pid = sub_key_server.server_pid
+                        _cluster_id = sub_key_server.cluster_id
+                        _server_name = sub_key_server.server_name
+                        _server_pid = sub_key_server.server_pid
 
-                    cluster_id = self.server.cluster_id
-                    server_name = self.server.name
-                    server_pid = self.server.pid
+                        cluster_id = self.server.cluster_id
+                        server_name = self.server.name
+                        server_pid = self.server.pid
 
-                    # If we are the server that handles this particular sub_key ..
-                    if _cluster_id == cluster_id and _server_name == server_name and _server_pid == server_pid:
+                        # If we are the server that handles this particular sub_key ..
+                        if _cluster_id == cluster_id and _server_name == server_name and _server_pid == server_pid:
 
-                        # .. then find the pubsub_tool that actually does it ..
-                        for pubsub_tool in self.pubsub_tools:
-                            if pubsub_tool.handles_sub_key(sub_key):
+                            # .. then find the pubsub_tool that actually does it ..
+                            for pubsub_tool in self.pubsub_tools:
+                                if pubsub_tool.handles_sub_key(sub_key):
 
-                                # .. stop the delivery task ..
-                                pubsub_tool.remove_sub_key(sub_key)
+                                    # .. stop the delivery task ..
+                                    pubsub_tool.remove_sub_key(sub_key)
 
-                                # .. and remove the mapping of sub_key -> pubsub_tool.
-                                del self.pubsub_tool_by_sub_key[sub_key]
+                                    # .. and remove the mapping of sub_key -> pubsub_tool.
+                                    del self.pubsub_tool_by_sub_key[sub_key]
 
-                                # No need to iterate further, there can be only one task for each sub_key
-                                break
+                                    # No need to iterate further, there can be only one task for each sub_key
+                                    break
 
 # ################################################################################################################################
 
