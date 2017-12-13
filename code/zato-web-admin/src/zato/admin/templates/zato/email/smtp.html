@@ -124,7 +124,7 @@
                 <form action="{% url "email-smtp-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:23%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
@@ -252,7 +252,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Confirm password</td>
-                            <td>{{ change_password_form.password2 }} 
+                            <td>{{ change_password_form.password2 }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
                             </td>

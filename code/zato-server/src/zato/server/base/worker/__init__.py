@@ -38,18 +38,18 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common import broker_message, CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, \
-     PUB_SUB, SEC_DEF_TYPE, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+from zato.common import broker_message, CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, MSG_PATTERN_TYPE, NOTIF, \
+     PUBSUB, SEC_DEF_TYPE, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, \
      store_tls, update_apikey_username, update_bind_port, visit_py_source
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
+from zato.server.connection.cache import CacheAPI
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -68,6 +68,7 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.web_socket.outgoing import OutgoingWebSocket
 from zato.server.connection.vault import VaultConnAPI
+from zato.server.pubsub import PubSub
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
@@ -131,7 +132,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.update_lock = RLock()
         self.kvdb = server.kvdb
         self.broker_client = None
-        self.pubsub = None
+        self.pubsub = PubSub(self.server.cluster_id, self.server)
         self.rbac = RBAC()
         self.worker_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
 
@@ -181,7 +182,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.zmq_out_api = ConnectorStore(connector_type.out.zmq, OutZMQSimple)
 
         # WebSocket
-        self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket)
+        self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket, self.server)
         self.outgoing_web_sockets = OutgoingWebSocket(self.server.cluster_id, self.server.servers, self.server.odb)
 
         # AMQP
@@ -190,6 +191,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Vault connections
         self.vault_conn_api = VaultConnAPI()
+
+        # Caches
+        self.cache_api = CacheAPI(self.server)
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
@@ -233,6 +237,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Vault connections
         self.init_vault_conn()
 
+        # Caches
+        self.init_caches()
+
         # API keys
         self.update_apikeys()
 
@@ -259,7 +266,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_http_soap()
 
         self.init_cloud()
-        self.init_pubsub()
         self.init_notifiers()
 
         # WebSocket
@@ -283,8 +289,17 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def after_broker_client_set(self):
+        self.pubsub.broker_client = self.broker_client
+
+        # Pub/sub requires broker client
+        self.init_pubsub()
+
+# ################################################################################################################################
+
     def set_broker_client(self, broker_client):
         self.broker_client = broker_client
+        self.after_broker_client_set()
 
 # ################################################################################################################################
 
@@ -381,8 +396,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def yield_outconn_http_config_dicts(self):
         for transport in('soap', 'plain_http'):
             config_dict = getattr(self.worker_config, 'out_' + transport)
-            for name in config_dict:
-                yield config_dict[name]
+            for name in config_dict.keys(): # Must use .keys() explicitly so that config_dict can be changed during iteration
+                yield config_dict, config_dict[name]
 
 # ################################################################################################################################
 
@@ -414,12 +429,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def init_http_soap(self):
         """ Initializes plain HTTP/SOAP connections.
         """
-        for config_dict in self.yield_outconn_http_config_dicts():
-            wrapper = self._http_soap_wrapper_from_config(config_dict.config)
-            config_dict.conn = wrapper
+        for config_dict, config_data in self.yield_outconn_http_config_dicts():
+            wrapper = self._http_soap_wrapper_from_config(config_data.config)
+            config_data.conn = wrapper
 
             # To make the API consistent with that of SQL connection pools
-            config_dict.ping = wrapper.ping
+            config_data.ping = wrapper.ping
+
+            # Store ID -> name mapping
+            config_dict.set_key_id_data(config_data.config)
 
     def init_cloud(self):
         """ Initializes all the cloud connections.
@@ -718,36 +736,29 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _topic_from_topic_data(self, data):
-        return Topic(data.name, data.is_active, True, data.max_depth)
+    def init_caches(self):
 
-    def _add_pubsub_topic(self, data):
-        self.pubsub.add_topic(self._topic_from_topic_data(data))
+        for name in 'builtin', 'memcached':
+            cache = getattr(self.worker_config, 'cache_{}'.format(name))
+            for value in cache.values():
+                self.cache_api.create(bunchify(value['config']))
+
+# ################################################################################################################################
 
     def init_pubsub(self):
-        """ Initializes publish/subscribe mechanisms.
+        """ Sets up all pub/sub endpoints, subscriptions and topics. Also, configures pubsub with getters for each endpoint type.
         """
-        self.pubsub.set_default_consumer(self.worker_config.pubsub.default_consumer)
-        self.pubsub.set_default_producer(self.worker_config.pubsub.default_producer)
+        for value in self.worker_config.pubsub_endpoint.values():
+            self.pubsub.create_endpoint(bunchify(value['config']))
 
-        for topic_name, topic_data in self.worker_config.pubsub.topics.items():
-            self._add_pubsub_topic(topic_data.config)
+        for value in self.worker_config.pubsub_subscription.values():
+            self.pubsub.create_subscription(bunchify(value['config']))
 
-        for list_value in self.worker_config.pubsub.producers.values():
-            for config in list_value:
-                self.pubsub.add_producer(Client(config.client_id, config.name, config.is_active), Topic(config.topic_name))
+        for value in self.worker_config.pubsub_topic.values():
+            self.pubsub.create_topic(bunchify(value['config']))
 
-        for list_value in self.worker_config.pubsub.consumers.values():
-            for config in list_value:
-
-                callback_type = PUB_SUB.CALLBACK_TYPE.OUTCONN_SOAP if bool(config.soap_version) else \
-                    PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTTP
-
-                self.pubsub.add_consumer(
-                    Consumer(
-                        config.client_id, config.name, config.is_active, config.sub_key, config.max_depth,
-                        config.delivery_mode, config.callback_id, config.callback_name, callback_type),
-                    Topic(config.topic_name))
+        self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.REST.id] = self.worker_config.out_plain_http.get_by_id
+        self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.SOAP.id] = self.worker_config.out_soap.get_by_id
 
 # ################################################################################################################################
 
@@ -1450,6 +1461,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         config_dict[msg['name']].conn = wrapper
         config_dict[msg['name']].ping = wrapper.ping # (just like in self.init_http)
 
+        # Store mapping of ID -> name
+        config_dict.set_key_id_data(msg)
+
     def on_broker_msg_OUTGOING_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an outgoing HTTP/SOAP connection (actually delegates the
         task to self._delete_config_close_wrapper_http_soap.
@@ -1736,47 +1750,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def on_broker_msg_PUB_SUB_TOPIC_CREATE(self, msg):
-        self._add_pubsub_topic(msg)
-
-    def on_broker_msg_PUB_SUB_TOPIC_EDIT(self, msg):
-        self.pubsub.update_topic(Topic(msg.name, msg.is_active, True, msg.max_depth))
-
-    def on_broker_msg_PUB_SUB_TOPIC_DELETE(self, msg):
-        self.pubsub.delete_topic(Topic(msg.name))
-
-# ################################################################################################################################
-
-    def _on_broker_msg_pub_sub_consumer_create_edit(self, msg):
-        self.pubsub.add_consumer(
-            Consumer(
-                msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_depth,
-                msg.delivery_mode, msg.callback_id, msg.callback_name, msg.callback_type),
-            Topic(msg.topic_name))
-
-    def on_broker_msg_PUB_SUB_CONSUMER_CREATE(self, msg):
-        self._on_broker_msg_pub_sub_consumer_create_edit(msg)
-
-    def on_broker_msg_PUB_SUB_CONSUMER_EDIT(self, msg):
-        self._on_broker_msg_pub_sub_consumer_create_edit(msg)
-
-    def on_broker_msg_PUB_SUB_CONSUMER_DELETE(self, msg):
-        self.pubsub.delete_consumer(
-            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_depth), Topic(msg.topic_name))
-
-# ################################################################################################################################
-
-    def on_broker_msg_PUB_SUB_PRODUCER_CREATE(self, msg):
-        self.pubsub.add_producer(Client(msg.client_id, msg.name, msg.is_active), Topic(msg.topic_name))
-
-    def on_broker_msg_PUB_SUB_PRODUCER_EDIT(self, msg):
-        self.pubsub.update_producer(Client(msg.client_id, msg.client_name, msg.is_active), Topic(msg.topic_name))
-
-    def on_broker_msg_PUB_SUB_PRODUCER_DELETE(self, msg):
-        self.pubsub.delete_producer(Client(msg.client_id, msg.client_name), Topic(msg.topic_name))
-
-# ################################################################################################################################
-
     def on_broker_msg_NOTIF_RUN_NOTIFIER(self, msg):
         self.on_message_invoke_service(loads(msg.request), CHANNEL.NOTIFIER_RUN, 'NOTIF_RUN_NOTIFIER')
 
@@ -2043,7 +2016,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def on_ipc_message(self, msg):
+    def on_ipc_message(self, msg, success=IPC.STATUS.SUCCESS, failure=IPC.STATUS.FAILURE):
 
         # If there is target_pid we cannot continue if we are not the recipient.
         if msg.target_pid and msg.target_pid != self.server.pid:
@@ -2051,9 +2024,16 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # We get here if there is no target_pid or if there is one and it matched that of ours.
 
-        response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=msg.data_format)
+        try:
+            response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=msg.data_format)
+            status = success
+        except Exception, e:
+            response = format_exc(e)
+            status = failure
+        finally:
+            data = '{};{}'.format(status, response)
 
         with open(msg.reply_to_fifo, 'wb') as fifo:
-            fifo.write(response)
+            fifo.write(data)
 
 # ################################################################################################################################

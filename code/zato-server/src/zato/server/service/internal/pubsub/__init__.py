@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2017, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,296 +9,272 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from httplib import FORBIDDEN, INTERNAL_SERVER_ERROR, OK
-from json import dumps, loads
-from logging import getLogger
+from contextlib import closing
 from traceback import format_exc
 
-# gevent
-from gevent import sleep, spawn
-
-# huTools
-from huTools.structured import dict2xml
-
 # Zato
-from zato.common import DATA_FORMAT, PUB_SUB, ZATO_ERROR, ZATO_NONE, ZATO_OK
-from zato.common.pubsub import ItemFull, PermissionDenied
-from zato.common.util import get_basic_auth_credentials
-from zato.server.connection.http_soap import BadRequest, Forbidden, TooManyRequests, Unauthorized
-from zato.server.service import AsIs, Bool, Int, Service
-from zato.server.service.internal import AdminService
-
-logger_overflown = getLogger('zato_pubsub_overflown')
+from zato.common import PUBSUB
+from zato.common.odb.model import PubSubSubscription, PubSubTopic
+from zato.server.service import AsIs, Bool, Int, List, ListOfDicts, Opaque
+from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
-class DeleteExpired(AdminService):
-    """ Invoked when a server is starting - periodically spawns a greenlet deleting expired messages.
-    """
-    def _delete_expired(self):
-        self.logger.debug('Deleted expired messages %s', self.pubsub.impl.delete_expired())
+endpoint_type_service = {
+    PUBSUB.ENDPOINT_TYPE.AMQP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.FILES.id:       'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.FTP.id:         'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.REST.id:        'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.REST.id:        'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.SERVICE.id:     'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id:  'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.SMTP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.SOAP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: 'zato.channel.web-socket.client.notify-pub-sub-message',
+}
+
+# ################################################################################################################################
+
+hook_type_model = {
+    PUBSUB.HOOK_TYPE.PUB: PubSubTopic,
+    PUBSUB.HOOK_TYPE.SUB: PubSubSubscription,
+}
+
+# ################################################################################################################################
+
+class CommonSubData:
+    common = ('is_internal', 'topic_name', 'active_status', 'endpoint_type', 'endpoint_id', 'delivery_method',
+        'delivery_data_format', 'delivery_batch_size', Bool('wrap_one_msg_in_list'), 'delivery_max_retry',
+        Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id', 'out_http_method',
+            'out_http_method', 'creation_time', 'last_interaction_time', Int('total_depth'), Int('current_depth'),
+            Int('staging_depth'), 'sub_key', 'has_gd', 'is_staging_enabled', 'sub_id', 'name', AsIs('ws_ext_client_id'))
+    amqp = ('amqp_exchange', 'amqp_routing_key')
+    files = ('files_directory_list',)
+    ftp = ('ftp_directory_list',)
+    pubapi = ('security_id',)
+    rest = ('out_rest_http_soap_id', 'rest_delivery_endpoint')
+    service = ('service_id',)
+    sms_twilio = ('sms_twilio_from', 'sms_twilio_to_list')
+    smtp = (Bool('smtp_is_html'), 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body')
+    soap = ('out_soap_http_soap_id', 'soap_delivery_endpoint')
+    websockets = ('ws_channel_id', 'ws_channel_name', AsIs('ws_pub_client_id'), 'sql_ws_client_id', AsIs('ext_client_id'),
+        Opaque('web_socket'))
+
+common_sub_data = CommonSubData.common + CommonSubData.amqp + CommonSubData.files + \
+    CommonSubData.ftp + CommonSubData.rest + CommonSubData.service + \
+    CommonSubData.sms_twilio + CommonSubData.smtp + CommonSubData.soap + CommonSubData.websockets + CommonSubData.pubapi
+
+# ################################################################################################################################
+
+class AfterPublish(AdminService):
+    class SimpleIO(AdminSIO):
+        input_required = ('cid', AsIs('topic_id'), 'topic_name')
+        input_optional = (Opaque('subscriptions'), Opaque('non_gd_msg_list'), 'has_gd_msg_list')
 
     def handle(self):
-        interval = float(self.server.fs_server_config.pubsub.delete_expired_interval)
+        # Notify all background tasks that new messages are available for their recipients.
+        # However, this needs to take into account the fact that there may be many notifications
+        # pointing to a single server so instead of sending notifications one by one,
+        # we first find all servers and then notify each server once giving it a list of subscriptions on input.
+        #
+        # We also need to remember that recipients may be currently offline, or in any other way inaccessible,
+        # in which case we keep non-GD messages in our server's RAM.
 
-        while True:
-            self.logger.debug('Deleting expired messages, interval %rs', interval)
-            spawn(self._delete_expired)
-            sleep(interval)
+        # Extract sub_keys from live Python subscription objects
+        sub_keys = [sub.config.sub_key for sub in self.request.input.subscriptions]
 
-# ################################################################################################################################
-
-class InvokeCallbacks(AdminService):
-    """ Invoked when a server is starting - periodically spawns a greenlet invoking consumer URL callbacks.
-    """
-    def _reject(self, msg_ids, sub_key, consumer, reason):
-        self.pubsub.reject(sub_key, msg_ids)
-        self.logger.error('Could not deliver messages `%s`, sub_key `%s` to `%s`, reason `%s`', msg_ids, sub_key, consumer, reason)
-
-    def _invoke_callbacks(self):
-        callback_consumers = list(self.pubsub.impl.get_callback_consumers())
-        self.logger.debug('Callback consumers found `%s`', callback_consumers)
-
-        for consumer in callback_consumers:
-            with self.lock(consumer.sub_key):
-                msg_ids = []
-
-                out = {
-                    'status': ZATO_OK,
-                    'results_count': 0,
-                    'results': []
-                }
-
-                messages = self.pubsub.get(consumer.sub_key, get_format=PUB_SUB.GET_FORMAT.JSON.id)
-
-                for msg in messages:
-                    msg_ids.append(msg['metadata']['msg_id'])
-                    out['results_count'] += 1
-                    out['results'].append(msg)
-
-                # messages is a generator so we still don't know if we had anything.
-                if msg_ids:
-                    outconn = self.outgoing.plain_http[consumer.callback_name]
-
-                    if outconn.config['data_format'] == DATA_FORMAT.XML:
-                        out = dict2xml(out)
-                        content_type = 'application/xml'
-                    else:
-                        out = dumps(out)
-                        content_type = 'application/json'
-
-                    try:
-                        response = outconn.conn.post(self.cid, data=out, headers={'content-type': content_type})
-                    except Exception, e:
-                        self._reject(msg_ids, consumer.sub_key, consumer, format_exc(e))
-                    else:
-                        if response.status_code == OK:
-                            self.pubsub.acknowledge(consumer.sub_key, msg_ids)
-                        else:
-                            self._reject(
-                                msg_ids, consumer.sub_key, consumer, '`{}` `{}`'.format(response.status_code, response.text))
-
-    def handle(self):
-        # TODO: self.logger's name should be 'zato_pubsub' so it got logged to the same location
-        # the rest of pub/sub does.
-
-        interval = float(self.server.fs_server_config.pubsub.invoke_callbacks_interval)
-
-        while True:
-            self.logger.debug('Invoking pub/sub callbacks, interval %rs', interval)
-            spawn(self._invoke_callbacks)
-            sleep(interval)
-
-# ################################################################################################################################
-
-class MoveToTargetQueues(AdminService):
-    """ Invoked when a server is starting - periodically spawns a greenlet moving published messages to recipient queues.
-    """
-    def _move_to_target_queues(self):
-
-        overflown = []
-
-        for item in self.pubsub.impl.move_to_target_queues():
-            for result, target_queue, msg_id in item:
-                if result == PUB_SUB.MOVE_RESULT.OVERFLOW:
-                    self.logger.warn('Message overflow, queue:`%s`, msg_id:`%s`', target_queue, msg_id)
-                    overflown.append((target_queue[target_queue.rfind(':')+1:], msg_id))
-
-        if overflown:
-            self.invoke_async(StoreOverflownMessages.get_name(), overflown, to_json_string=True)
-
-        self.logger.debug('Messages moved to target queues')
-
-    def handle(self):
-        interval = float(self.server.fs_server_config.pubsub.move_to_target_queues_interval)
-
-        while True:
-            self.logger.debug('Moving messages to target queues, interval %rs', interval)
-            spawn(self._move_to_target_queues)
-            sleep(interval)
-
-# ################################################################################################################################
-
-class StoreOverflownMessages(AdminService):
-    """ Stores on filesystem messages that were above a consumer's max backlog and marks them as rejected by the consumer.
-    """
-    def handle(self):
-
-        acks = {}
-
-        for sub_key, msg_id in loads(self.request.payload):
-            logger_overflown.warn('%s - %s - %s', msg_id, self.pubsub.get_consumer_by_sub_key(sub_key).name,
-                self.pubsub.get_message(msg_id))
-
-            msg_ids = acks.setdefault(sub_key, [])
-            msg_ids.append(msg_id)
-
-        for consumer_sub_key, msg_ids in acks.iteritems():
-            self.pubsub.acknowledge(sub_key, msg_id)
-
-# ################################################################################################################################
-
-class RESTHandler(Service):
-    """ Handles calls to pub/sub from REST clients.
-    """
-    class SimpleIO(object):
-        input_required = ('item_type', 'item')
-        input_optional = ('max', 'dir', 'format', 'mime_type', Int('priority'), Int('expiration'), AsIs('msg_id'),
-            Bool('ack'), Bool('reject'))
-        default = ZATO_NONE
-        use_channel_params_only = True
-
-# ################################################################################################################################
-
-    def _raise_unauthorized(self):
-        raise Unauthorized(self.cid, 'You are not authorized to access this resource', 'Zato pub/sub')
-
-    def validate_input(self):
-
-        username, password = get_basic_auth_credentials(self.wsgi_environ.get('HTTP_AUTHORIZATION'))
-        if not username:
-            self._raise_unauthorized()
-
-        for item in self.server.worker_store.request_dispatcher.url_data.basic_auth_config.values():
-            if item.config.username == username and item.config.password == password:
-                client = item
-                break
-        else:
-            self._raise_unauthorized()
-
-        if self.request.input.item_type not in PUB_SUB.URL_ITEM_TYPE:
-            raise BadRequest(self.cid, 'None of the supported resources `{}` found in URL path'.format(
-                ', '.join(PUB_SUB.URL_ITEM_TYPE)))
-
-        sub_key = self.wsgi_environ.get('HTTP_X_ZATO_PUBSUB_KEY', ZATO_NONE)
-        is_consumer = self.request.input.item_type == PUB_SUB.URL_ITEM_TYPE.MESSAGES.id
-
-        # Deletes don't access topics, they operate on messages.
-        if self.wsgi_environ['REQUEST_METHOD'] != 'DELETE':
-            if not self.pubsub.can_access_topic(client.config.id, self.request.input.item, is_consumer):
-                raise Forbidden(self.cid, 'You are not authorized to access this resource')
-
-        self.environ['sub_key'] = sub_key
-        self.environ['client_id'] = client.config.id
-        self.environ['format'] = self.request.input.format if self.request.input.format else PUB_SUB.GET_FORMAT.DEFAULT.id
-        self.environ['is_json'] = self.environ['format'] == PUB_SUB.GET_FORMAT.JSON.id
-
-# ################################################################################################################################
-
-    def _set_payload_data(self, out, status_code=OK):
-        if self.environ['is_json']:
-            content_type = 'application/json'
-            out = dumps(out)
-        else:
-            content_type = 'application/xml'
-            out = dict2xml(out)
-
-        self.response.headers['Content-Type'] = content_type
-        self.response.payload = out
-        self.response.status_code = status_code
-
-# ################################################################################################################################
-
-    def _handle_POST_topic(self):
-        """ Publishes a message on a topic.
-        """
-        pub_data = {
-            'payload': self.request.raw_request,
-            'topic': self.request.input.item,
-            'mime_type': self.request.input.mime_type or self.wsgi_environ['CONTENT_TYPE'],
-            'priority': int(self.request.input.priority or PUB_SUB.DEFAULT_PRIORITY),
-            'expiration': int(self.request.input.expiration or PUB_SUB.DEFAULT_EXPIRATION),
-            'msg_id': self.request.input.msg_id,
-            'client_id': self.environ['client_id'],
-        }
-
-        self._set_payload_data({
-            'status': ZATO_OK,
-            'msg_id':self.pubsub.publish(**pub_data).msg.msg_id
-        })
-
-# ################################################################################################################################
-
-    def _handle_POST_msg(self):
-        """ Returns messages from topics, either in JSON or XML.
-        """
-        out = {
-            'status': ZATO_OK,
-            'results_count': 0,
-            'results': []
-        }
-
-        max_batch_size = int(self.request.input.max) if self.request.input.max else PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE
-        is_fifo = True if (self.request.input.dir == PUB_SUB.GET_DIR.FIFO or not self.request.input.dir) else False
+        #
+        # There are two elements returned.
+        #
+        # current_servers - a list of servers that we know have currently subscribers
+        #                   for messsages on whose behalf we are being called
+        #
+        # not_found ------- a list of sub_keys for which we don't have any servers
+        #                   with delivery tasks right now
+        #
+        # All servers from current_servers will be invoked and notified about messages published (GD and non-GD).
+        # For all sub_keys from not_found, information about non-GD messages for each of them will be kept in RAM.
+        #
+        # Additionally, for all servers from current_servers that can not be invoked for any reasons,
+        # we will also store non-GD messages in our RAM store.
+        #
+        # Note that GD messages are not passed here directly at all - this is because at this point
+        # they have been already stored in SQL by publish service before this service runs.
+        #
 
         try:
-            for item in self.pubsub.get(self.environ['sub_key'], max_batch_size, is_fifo, self.environ['format']):
+            current_servers, not_found = self.pubsub.get_task_servers_by_sub_keys(sub_keys)
 
-                if self.environ['is_json']:
-                    out_item = item
-                else:
-                    out_item = {'metadata': item.to_dict()}
-                    out_item['payload'] = item.payload
+            # Local aliases
+            cid = self.request.input.cid
+            topic_id = self.request.input.topic_id
+            topic_name = self.request.input.topic_name
+            non_gd_msg_list = self.request.input.non_gd_msg_list
+            has_gd_msg_list = self.request.input.has_gd_msg_list
 
-                out['results'].append(out_item)
-                out['results_count'] += 1
+            # We already know we can store them in RAM
+            if not_found:
+                self._store_in_ram(cid, topic_id, topic_name, not_found, non_gd_msg_list, False)
 
-        except ItemFull, e:
-            raise TooManyRequests(self.cid, e.msg)
-        else:
-            self._set_payload_data(out)
+            # Attempt to notify pub/sub tasks about non-GD messages ..
+            notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list, has_gd_msg_list)
 
-# ################################################################################################################################
+            # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
+            if notif_error_sub_keys:
+                self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, True)
 
-    def handle_POST(self):
-        try:
-            getattr(self, '_handle_POST_{}'.format(self.request.input.item_type))()
         except Exception, e:
-            details, status_code = ('Permission denied', FORBIDDEN) if isinstance(e, PermissionDenied) else (e.message, INTERNAL_SERVER_ERROR)
-            self.logger.warn('Could not handle POST pub/sub (%s %s), e:`%s`', self.cid, details, format_exc(e))
-            self._set_payload_data({'status': ZATO_ERROR, 'details':details}, status_code)
+            self.logger.warn('Error in after_publish callback, e:`%s`', format_exc(e))
 
-    def handle_DELETE(self):
+# ################################################################################################################################
 
-        actions = ('ack', 'reject')
-        try:
-            self.request.input.require_any(*actions)
-        except ValueError:
-            raise BadRequest(self.cid, 'Missing state to set, should be one of `{}`'.format(', '.join(actions)))
+    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error):
+        """ Stores in RAM all input messages for all sub_keys.
+        """
+        self.pubsub.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error)
 
-        if self.request.input.ack and self.request.input.reject:
-            raise BadRequest(self.cid, 'Cannot both acknowledge and reject a message')
+# ################################################################################################################################
 
-        func = self.pubsub.acknowledge if self.request.input.ack else self.pubsub.reject
-        result = func(self.environ['sub_key'], self.request.input.item)
+    def _notify_pub_sub(self, current_servers, non_gd_msg_list, has_gd_msg_list, endpoint_type_service=endpoint_type_service):
+        """ Notifies all relevant remote servers about new messages available for delivery.
+        For GD messages     - a flag is sent to indicate that there is at least one message waiting in SQL DB.
+        For non-GD messages - their actual contents is sent.
+        """
+        notif_error_sub_keys = []
 
-        if self.request.input.item in result:
-            status = ZATO_OK
-            details = ''
-        else:
-            status = ZATO_ERROR
-            details = 'Message not found `{}`'.format(self.request.input.item)
+        for server_info, sub_key_list in current_servers.items():
+            server_name, server_pid, pub_client_id, channel_name, endpoint_type = server_info
+            service_name = endpoint_type_service[endpoint_type]
 
-        self._set_payload_data({'status': status, 'details':details})
+            try:
+                self.server.servers[server_name].invoke(service_name, {
+                    'pub_client_id': pub_client_id,
+                    'channel_name': channel_name,
+                    'request': {
+                        'endpoint_type': endpoint_type,
+                        'has_gd': has_gd_msg_list,
+                        'sub_key_list': sub_key_list,
+                        'non_gd_msg_list': non_gd_msg_list
+                    },
+                }, pid=server_pid)
+
+            except Exception, e:
+                self.logger.warn('Error in pub/sub notification %r', format_exc(e))
+                notif_error_sub_keys.extend(sub_key_list)
+
+        return notif_error_sub_keys
+
+# ################################################################################################################################
+
+class AfterWSXReconnect(AdminService):
+    """ Invoked by WSX clients after they reconnect with a list of their sub_keys on input. Collects all messages
+    waiting on other servers for that WebSocket and lets the caller know how many of them are available. At the same time,
+    the collection process trigger's that WebSocket's delivery task (via pubsub_tool) to start deliveries.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('sql_ws_client_id', 'channel_name', AsIs('pub_client_id'), Opaque('web_socket'))
+        input_optional = (List('sub_key_list'),)
+        output_optional = (ListOfDicts('queue_depth'),)
+
+    def handle(self):
+
+        # Local aliases
+        sub_key_list = self.request.input.sub_key_list
+        pubsub_tool = self.request.input.web_socket.pubsub_tool
+
+        # Response to produce - a list of dictionaries, each keyed by sub_key,
+        # values are a dictionary of gd, non_gd for Guaranteed Delivery and non-GD messages for that sub_key
+        response = []
+
+        with closing(self.odb.session()) as session:
+
+            # Everything is performed using that WebSocket's pub/sub lock to ensure that both
+            # in-RAM and SQL (non-GD and GD) messages are made available to the WebSocket as a single unit.
+            with pubsub_tool.lock:
+
+                # Response to produce
+                response = {}
+
+                get_in_ram_service = 'zato.pubsub.topic.get-in-ram-message-list'
+                non_gd_messages = self.servers.invoke_all(get_in_ram_service, {'sub_key_list':sub_key_list}, timeout=120)
+
+                # Parse non-GD messages on output from all servers, if any at all, into per-sub_key lists ..
+                if non_gd_messages:
+                    non_gd_messages = self._parse_non_gd_messages(sub_key_list, non_gd_messages)
+
+                    # If there are any non-GD messages, add them to this WebSocket's pubsub tool.
+                    if non_gd_messages:
+                        for sub_key, messages in non_gd_messages.items():
+                            pubsub_tool.add_sub_key_no_lock(sub_key)
+                            pubsub_tool.add_non_gd_messages_by_sub_key(sub_key, messages)
+
+                # For each sub_key from input ..
+                for sub_key in sub_key_list:
+
+                    # .. add relevant SQL objects ..
+                    self.pubsub.add_ws_client_pubsub_keys(
+                        session, self.request.input.sql_ws_client_id, sub_key,
+                        self.request.input.channel_name, self.request.input.pub_client_id)
+
+                    # .. update state of that WebSocket's pubsub tool that keeps track of message delivery
+                    pubsub_tool.add_sub_key_no_lock(sub_key)
+
+                    # .. add any GD messages waiting for this sub_key - note that we providing our
+                    # own session on input so as to control when the SQL commit happens,
+                    # which we want to have after all sub_keys have been processed.
+                    pubsub_tool.fetch_gd_messages_by_sub_key(sub_key, session)
+
+                    # Will hold depths of queues
+                    response[sub_key] = {
+                        'queue_depth_gd': None,
+                        'queue_depth_non_gd': None,
+                    }
+
+                    # .. set current depth for GD messages ..
+                    response[sub_key]['queue_depth_gd'] = self.invoke('zato.pubsub.queue.get-queue-depth-by-sub-key', {
+                        'sub_key': sub_key
+                    })['response']['queue_depth'][sub_key]
+
+                    # .. get depths for a given sub_key, but ignore the GD one
+                    # because it only indicates how many GD messages are in the delivery task,
+                    # not a total of GD messages which we have already obtained above.
+                    _, queue_depth_non_gd = pubsub_tool.get_queue_depth(sub_key)
+
+                    # .. set current depth for GD messages ..
+                    response[sub_key]['queue_depth_non_gd'] = queue_depth_non_gd
+
+                session.commit()
+
+            self.response.payload.queue_depth = response
+
+# ################################################################################################################################
+
+    def _parse_non_gd_messages(self, sub_key_list, server_response):
+        out = dict.fromkeys(sub_key_list, [])
+
+        for server_name, server_data_dict in server_response.items():
+            if server_data_dict['is_ok']:
+                server_data = server_data_dict['server_data']
+
+                for server_pid, pid_data_dict in server_data.items():
+                    if not pid_data_dict['is_ok']:
+                        self.logger.warn('Could not retrieve non-GD in-RAM messages from PID %s of %s (%s), details:`%s`',
+                            server_pid, server_name, server_data_dict['meta']['address'], pid_data_dict['error_info'])
+                    else:
+                        messages = pid_data_dict['pid_data']['response']['messages']
+                        for sub_key, sub_key_data in messages.items():
+                            for msg in sub_key_data.values():
+                                out[sub_key].append(msg)
+            else:
+                self.logger.warn('Could not retrieve non-GD in-RAM messages from %s (%s), details:`%s`',
+                    server_name, server_data_dict['meta']['address'], server_data_dict['error_info'])
+
+        # Do not return empty lists unnecessarily - note that it may happen that all sub_keys
+        # will be deleted in which cases only an empty dictionary remains.
+        for sub_key in sub_key_list:
+            if not out[sub_key]:
+                del out[sub_key]
+
+        return out
 
 # ################################################################################################################################

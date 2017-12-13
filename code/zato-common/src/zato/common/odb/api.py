@@ -38,7 +38,7 @@ from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, SEC_DEF_TYPE, SECRET_
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, JWT, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition, \
      VaultConnection
-from zato.common.odb import get_ping_query, query
+from zato.common.odb import get_ping_query, query, query_ps_subscription
 from zato.common.util import current_host, get_component_name, get_engine_url, get_http_json_channel, get_http_soap_channel, \
      parse_extra_into_dict, parse_tls_channel_security_definition
 
@@ -129,6 +129,9 @@ class SQLConnectionPool(object):
         self.checkins = 0
         self.checkouts = 0
 
+        self.checkins = 0
+        self.checkouts = 0
+
     def __str__(self):
         return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
 
@@ -136,11 +139,15 @@ class SQLConnectionPool(object):
 
     def _create_engine(self, engine_url, config, extra):
         if 'mxodbc' in engine_url:
-            config_data = {}
 
-            config_data['Server_Connection'] = {}
-            config_data['Logging'] = {}
-            config_data['Integration'] = {}
+            from mx.ODBCConnect.Client import ServerSession as mxServerSession
+            from mx.ODBCConnect.Error import OperationalError
+
+            config_data = {
+                'Server_Connection': {},
+                'Logging': {},
+                'Integration': {},
+            }
 
             config_data['Server_Connection']['host'] = config['host']
             config_data['Server_Connection']['port'] = config['port']
@@ -168,7 +175,7 @@ class SQLConnectionPool(object):
     def on_checkout(self, dbapi_conn, conn_record, conn_proxy):
         if self.has_debug:
             self.logger.debug('Checked out dbapi_conn:%s, conn_record:%s, conn_proxy:%s',
-                msg, dbapi_conn, conn_record, conn_proxy)
+                dbapi_conn, conn_record, conn_proxy)
 
         self.checkouts += 1
         self.logger.debug('co-cin-diff %d-%d-%d', self.checkouts, self.checkins, self.checkouts - self.checkins)
@@ -1123,6 +1130,34 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_cache_builtin(self, cluster_id, id):
+        """ Returns a built-in cache definition's details.
+        """
+        with closing(self.session()) as session:
+            return query.cache_builtin(session, cluster_id, id)
+
+    def get_cache_builtin_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of built-in cache definitions.
+        """
+        with closing(self.session()) as session:
+            return query.cache_builtin_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_cache_memcached(self, cluster_id, id):
+        """ Returns a Memcached-based definition's details.
+        """
+        with closing(self.session()) as session:
+            return query.cache_memcached(session, cluster_id, id)
+
+    def get_cache_memcached_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of Memcached-based cache definitions.
+        """
+        with closing(self.session()) as session:
+            return query.cache_memcached_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
     def get_namespace_list(self, cluster_id, needs_columns=False):
         """ Returns a list of XML namespaces.
         """
@@ -1182,30 +1217,16 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def get_pubsub_topic_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of pub/sub topics defined on a cluster.
+        """ Returns a list of pub/sub topics defined in a cluster.
         """
         return query.pubsub_topic_list(self._session, cluster_id, needs_columns)
 
-    def get_pubsub_default_client(self, cluster_id, name):
-        """ Returns an ID/name pair of a default internal consumer or producer, used for pub/sub.
-        """
-        result = query.pubsub_default_client(self._session, cluster_id, name)
+# ################################################################################################################################
 
-        if not result:
-            logger.warn('Could not find `%s` account', name)
-            return None, 'Warn: Missing `%s` account'.format(name)
-        else:
-            return result.id, result.name
-
-    def get_pubsub_producer_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of pub/sub producers defined on a cluster.
+    def get_pubsub_subscription_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of pub/sub subscriptions defined in a cluster.
         """
-        return query.pubsub_producer_list(self._session, cluster_id, None,needs_columns)
-
-    def get_pubsub_consumer_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of pub/sub consumers defined on a cluster.
-        """
-        return query.pubsub_consumer_list(self._session, cluster_id, None, needs_columns)
+        return query_ps_subscription.pubsub_subscription_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
@@ -1295,5 +1316,12 @@ class ODBManager(SessionWrapper):
         """ Returns a list of RBAC permissions for roles.
         """
         return query.rbac_role_permission_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_pubsub_endpoint_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of pub/sub endpoints.
+        """
+        return query.pubsub_endpoint_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################

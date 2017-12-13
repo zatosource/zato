@@ -34,6 +34,7 @@ setup(
       ext_modules = cythonize([
           Extension(name='zato.bunch', sources=['src/zato/cy/bunch.pyx']),
           Extension(name='zato.url_dispatcher', sources=['src/zato/cy/url_dispatcher.pyx']),
+          Extension(name='zato.cache', sources=['src/zato/cy/cache.pyx']),
         ]),
 
       zip_safe = False,
