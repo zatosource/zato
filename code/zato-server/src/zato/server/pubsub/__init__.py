@@ -762,6 +762,24 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_server_pid_for_sub_key(self, server_name, sub_key):
+        """ Invokes a named server on current cluster and asks it for PID of one its processes that handles sub_key.
+        Returns that PID or None if the information could not be obtained.
+        """
+        try:
+            response = self.server.servers[server_name].invoke('zato.pubsub.delivery.get-server-pid-for-sub-key', {
+                'sub_key': sub_key,
+            })
+        except Exception, e:
+            msg = 'Could not invoke server `%s` to get PID for sub_key `%s`, e:`%s`'
+            exc_formatted = format_exc(e)
+            logger.warn(msg, server_name, sub_key, exc_formatted)
+            logger_zato.warn(msg, server_name, sub_key, exc_formatted)
+        else:
+            return response['response']['server_pid']
+
+# ################################################################################################################################
+
     def add_missing_server_for_sub_key(self, sub_key):
         """ Adds to self.sub_key_servers information from ODB about which server handles input sub_key.
         Must be called with self.lock held.
@@ -773,13 +791,21 @@ class PubSub(object):
                 logger.info(msg, sub_key)
                 logger_zato.info(msg, sub_key)
             else:
-                self._set_sub_key_server({
+
+                # This is common config that we already know is valid but on top of it
+                # we will try to the server found and ask about PID that handles messages for sub_key.
+                config = {
                     'sub_key': sub_key,
                     'cluster_id': data.cluster_id,
                     'server_name': data.server_name,
-                    'server_pid': None, # Be explicit about the fact that we do not know the PID yet
                     'endpoint_type': data.endpoint_type,
-                })
+                }
+
+                # Guaranteed to either set PID or None
+                config['server_pid'] = self.get_server_pid_for_sub_key(data.server_name, sub_key)
+
+                # OK, set up the server with what we found above
+                self._set_sub_key_server(config)
 
 # ################################################################################################################################
 
