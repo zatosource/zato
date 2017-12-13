@@ -229,7 +229,7 @@ class URLData(CyURLData, OAuthDataStore):
 
         if not result:
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`, sec-wall code:`{}`, description:`{}`\n'.format(
                     path_info, cid, result.code, result.description)
                 logger.error(msg)
                 raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
@@ -304,7 +304,7 @@ class URLData(CyURLData, OAuthDataStore):
 
         if not result:
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`, sec-wall code:`{}`, description:`{}`\n'.format(
                     path_info, cid, result.code, result.description)
                 logger.error(msg)
                 raise Unauthorized(cid, msg, 'zato-wss')
@@ -1196,7 +1196,26 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def sort_channel_data(self):
-        self.channel_data = sorted(self.channel_data, key=itemgetter('name'))
+        """ Sorts channel items by name and then re-arranges the result so that user-facing services are closer to the begining
+        of the list which makes it faster to look them up - searches in the list are O(n).
+        """
+        channel_data = []
+        user_services = []
+        internal_services = []
+
+        for item in self.channel_data:
+            if item['is_internal']:
+                internal_services.append(item)
+            else:
+                user_services.append(item)
+
+        user_services.sort(key=itemgetter('name'))
+        internal_services.sort(key=itemgetter('name')) # Internal services will never conflict in names but let's do it anyway
+
+        channel_data.extend(user_services)
+        channel_data.extend(internal_services)
+
+        self.channel_data[:] = channel_data
 
 # ################################################################################################################################
 
@@ -1206,7 +1225,8 @@ class URLData(CyURLData, OAuthDataStore):
         channel_item = {}
         for name in('connection', 'content_type', 'data_format', 'host', 'id', 'has_rbac', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
-            'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac'):
+            'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac',
+            'cache_type', 'cache_id', 'cache_name', 'cache_expiry'):
 
             channel_item[name] = msg[name]
 

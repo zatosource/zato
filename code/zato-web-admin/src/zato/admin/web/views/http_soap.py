@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from cStringIO import StringIO
+from operator import itemgetter
 from pprint import pprint
 from traceback import format_exc
 
@@ -32,7 +33,7 @@ from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, 
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
      HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, \
      URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
-from zato.common import MISC, SEC_DEF_TYPE
+from zato.common import CACHE, MISC, SEC_DEF_TYPE
 from zato.common.odb.model import HTTPSOAP
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,11 @@ TRANSPORT = {
     'plain_http': 'Plain HTTP',
     'soap': 'SOAP',
     }
+
+CACHE_TYPE = {
+    CACHE.TYPE.BUILTIN: 'Built-in',
+    CACHE.TYPE.MEMCACHED: 'Memcached',
+}
 
 def _get_edit_create_message(params, prefix=''):
     """ A bunch of attributes that can be used by both 'edit' and 'create' actions
@@ -84,18 +90,34 @@ def _get_edit_create_message(params, prefix=''):
         'security_id': security_id,
         'has_rbac': bool(params.get(prefix + 'has_rbac')),
         'content_type': params.get(prefix + 'content_type'),
+        'cache_id': params.get(prefix + 'cache_id'),
+        'cache_expiry': params.get(prefix + 'cache_expiry'),
     }
 
-def _edit_create_response(id, verb, transport, connection, name):
+def _edit_create_response(req, id, verb, transport, connection, name):
 
-    return_data = {'id': id,
-                   'transport': transport,
-                   'message': 'Successfully {0} the {1} {2} [{3}], check server logs for details'.format(
-                       verb,
-                       TRANSPORT[transport],
-                       CONNECTION[connection],
-                       name),
-                }
+    return_data = {
+        'id': id,
+        'transport': transport,
+        'message': 'Successfully {} the {} {} `{}`, check server logs for details'.format(
+            verb, TRANSPORT[transport], CONNECTION[connection], name),
+    }
+
+    # If current item has a cache assigned, provide its human-friendly name to the caller
+    response = req.zato.client.invoke('zato.http-soap.get', {
+        'cluster_id': req.zato.cluster_id,
+        'id': id,
+    })
+
+    if response.data.cache_id:
+        cache_type = response.data.cache_type
+        cache_name = '{}/{}'.format(CACHE_TYPE[cache_type], response.data.cache_name)
+    else:
+        cache_type = None
+        cache_name = None
+
+    return_data['cache_type'] = cache_type
+    return_data['cache_name'] = cache_name
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
 
@@ -135,9 +157,19 @@ def index(req):
 
         _soap_versions = SOAP_CHANNEL_VERSIONS if connection == 'channel' else SOAP_VERSIONS
 
-        create_form = CreateForm(_security, get_tls_ca_cert_list(req.zato.client, req.zato.cluster), _soap_versions, req=req)
-        edit_form = EditForm(
-            _security, get_tls_ca_cert_list(req.zato.client, req.zato.cluster), _soap_versions, prefix='edit', req=req)
+        tls_ca_cert_list = get_tls_ca_cert_list(req.zato.client, req.zato.cluster)
+
+        cache_list = []
+
+        for cache_type in (CACHE.TYPE.BUILTIN, CACHE.TYPE.MEMCACHED):
+            service_name = 'zato.cache.{}.get-list'.format(cache_type)
+            response = req.zato.client.invoke(service_name, {'cluster_id': req.zato.cluster.id})
+
+            for item in sorted(response, key=itemgetter('name')):
+                cache_list.append({'id':item.id, 'name':'{}/{}'.format(CACHE_TYPE[cache_type], item.name)})
+
+        create_form = CreateForm(_security, tls_ca_cert_list, cache_list, _soap_versions, req=req)
+        edit_form = EditForm(_security, tls_ca_cert_list, cache_list, _soap_versions, prefix='edit', req=req)
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,
@@ -160,7 +192,7 @@ def index(req):
                 if item.sec_use_rbac:
                     security_name = DELEGATED_TO_RBAC
                 else:
-                    security_name = 'No security definition'
+                    security_name = '<span class="form_hint">---</span>'
 
             _security_id = item.security_id
             if _security_id:
@@ -171,13 +203,19 @@ def index(req):
                 else:
                     security_id = ZATO_NONE
 
+            if item.cache_id:
+                cache_name = '{}/{}'.format(CACHE_TYPE[item.cache_type], item.cache_name)
+            else:
+                cache_name = None
+
             item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection,
                     transport, item.host, item.url_path, item.method, item.soap_action,
                     item.soap_version, item.data_format, item.ping_method,
                     item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri,
                     item.serialization_type, item.timeout, item.sec_tls_ca_cert_id, service_id=item.service_id,
                     service_name=item.service_name, security_id=security_id, has_rbac=item.has_rbac,
-                    security_name=security_name, content_type=item.content_type)
+                    security_name=security_name, content_type=item.content_type,
+                    cache_id=item.cache_id, cache_name=cache_name, cache_type=item.cache_type, cache_expiry=item.cache_expiry)
             items.append(item)
 
     return_data = {'zato_clusters':req.zato.clusters,
@@ -207,7 +245,7 @@ def create(req):
     try:
         response = req.zato.client.invoke('zato.http-soap.create', _get_edit_create_message(req.POST))
         if response.has_data:
-            return _edit_create_response(response.data.id, 'created',
+            return _edit_create_response(req, response.data.id, 'created',
                 req.POST['transport'], req.POST['connection'], req.POST['name'])
         else:
             raise ZatoException(msg=response.details)
@@ -221,30 +259,30 @@ def edit(req):
     try:
         response = req.zato.client.invoke('zato.http-soap.edit', _get_edit_create_message(req.POST, 'edit-'))
         if response.has_data:
-            return _edit_create_response(response.data.id, 'updated',
+            return _edit_create_response(req, response.data.id, 'updated',
                 req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
         else:
             raise ZatoException(msg=response.details)
     except Exception, e:
-        msg = 'Could not perform the update, e:[{e}]'.format(e=format_exc(e))
+        msg = 'Could not perform the update, e:`{}`'.format(format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
 @method_allowed('POST')
 def delete(req, id, cluster_id):
-    id_only_service(req, 'zato.http-soap.delete', id, 'Could not delete the object, e:[{e}]')
+    id_only_service(req, 'zato.http-soap.delete', id, 'Could not delete the object, e:`{e}`')
     return HttpResponse()
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:[{e}]')
+    ret = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{e}`')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse(ret.data.info)
 
 @method_allowed('POST')
 def reload_wsdl(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.http-soap.reload-wsdl', id, 'Could not reload the WSDL, e:[{e}]')
+    ret = id_only_service(req, 'zato.http-soap.reload-wsdl', id, 'Could not reload the WSDL, e:`{e}`')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse('WSDL reloaded, check server logs for details')
@@ -341,8 +379,6 @@ def audit_log(req, **kwargs):
             item.req_time = from_utc_to_user(item.req_time_utc+'+00:00', req.zato.user_profile)
             item.resp_time = from_utc_to_user(item.resp_time_utc+'+00:00', req.zato.user_profile) if item.resp_time_utc else '(None)'
             out['items'].append(item)
-
-    #out.update(**req.zato.client.invoke('zato.http-soap.get-audit-batch-info', request).data)
 
     return TemplateResponse(req, 'zato/http_soap/audit/log.html', out)
 

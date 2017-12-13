@@ -64,6 +64,12 @@ def format_connections(conns, format):
 
     return out
 
+def get_worker_pids(component_path):
+    """ Returns PIDs of all workers of a given server, which must be already started.
+    """
+    master_proc_pid = int(open(os.path.join(component_path, MISC.PIDFILE)).read())
+    return sorted(elem.pid for elem in Process(master_proc_pid).children())
+
 def get_info(component_path, format):
     component_details = open(os.path.join(component_path, ZATO_INFO_FILE)).read()
 

@@ -178,6 +178,13 @@
                             </ul>
                         </li>
                         <li>
+                            <span class="like-a">Cache &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url "cache-builtin" %}?cluster={{ cluster_id|default:'' }}">Built-in</a></li>
+                                <li class='wide'><a href="{% url "cache-memcached" %}?cluster={{ cluster_id|default:'' }}">Memcached</a></li>
+                            </ul>
+                        </li>
+                        <li>
                             <span class="like-a">Search &rarr;</span>
                             <ul>
                                 <li class='wide'><a href="{% url "search-es" %}?cluster={{ cluster_id|default:'' }}">ElasticSearch</a></li>
@@ -243,7 +250,9 @@
 
                 <li><span class="like-a">Pub/sub &darr;</span>
                     <ul>
-                        <li><a href="{% url "pubsub-topics" %}?cluster={{ cluster_id|default:'' }}">Topics</a></li>
+                        <li><a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id|default:'' }}">Endpoints</a></li>
+                        <li><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:'' }}">Topics</a></li>
+                        <li><a href="{% url "pubsub-subscription" %}?cluster={{ cluster_id|default:'' }}">Subscriptions</a></li>
                     </ul>
                 </li>
 

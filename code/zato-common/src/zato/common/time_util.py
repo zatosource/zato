@@ -9,14 +9,45 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from datetime import datetime, timedelta
 import logging
 
 # Arrow
 import arrow
 
+# tzlocal
+from tzlocal import get_localzone
+
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+_epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
+local_tz = get_localzone()
+
+# ################################################################################################################################
+
+def datetime_to_ms(dt):
+    """ Converts a datetime object to a number of milliseconds since UNIX epoch.
+    """
+    return (dt - _epoch).total_seconds() * 1000
+
+# ################################################################################################################################
+
+def utcnow_as_ms(_datetime_to_ms=datetime_to_ms, _utcnow=datetime.utcnow):
+    """ Returns current UTC time in milliseconds since epoch.
+    """
+    return _datetime_to_ms(_utcnow())
+
+# ################################################################################################################################
+
+def datetime_from_ms(ms, isoformat=True):
+    """ Converts a number of milliseconds since UNIX epoch to a datetime object.
+    """
+    value = _epoch + timedelta(milliseconds=ms)
+    return value.isoformat() if isoformat else value
 
 # ################################################################################################################################
 
@@ -27,6 +58,8 @@ class TimeUtil(object):
     """
     def __init__(self, kvdb):
         self.kvdb = kvdb
+
+# ################################################################################################################################
 
     def get_format_from_kvdb(self, format):
         """ Returns format stored under a key pointed to by 'format' or raises
@@ -41,12 +74,9 @@ class TimeUtil(object):
 
         return format
 
-    def utc_now(self, format='YYYY-MM-DD HH:mm:ss', needs_format=True):
-        """ Returns now in UTC formatted as given in 'format'.
-        """
-        return self.now(format, 'UTC', needs_format)
+# ################################################################################################################################
 
-    def now(self, format='YYYY-MM-DD HH:mm:ss', tz='UTC', needs_format=True):
+    def now(self, format='YYYY-MM-DD HH:mm:ss', tz=local_tz.zone, needs_format=True):
         """ Returns now in a specified timezone.
         """
         now = arrow.now(tz=tz)
@@ -54,13 +84,16 @@ class TimeUtil(object):
             return now.format(format)
         return now
 
-    def iso_now(self, tz='UTC', needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
-        return self.now(_format, tz, needs_format)
+# ################################################################################################################################
 
-    def iso_utc_now(self, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
-        return self.utc_now(_format, needs_format)
+    def utcnow(self, format='YYYY-MM-DD HH:mm:ss', needs_format=True):
+        """ Returns now in UTC formatted as given in 'format'.
+        """
+        return self.now(format, 'UTC', needs_format)
 
-    def today(self, format='YYYY-MM-DD', tz='UTC', needs_format=True):
+# ################################################################################################################################
+
+    def today(self, format='YYYY-MM-DD', tz=local_tz.zone, needs_format=True):
         """ Returns current day in a given timezone.
         """
         now = arrow.now(tz=tz)
@@ -76,6 +109,18 @@ class TimeUtil(object):
             return today.format(format)
         else:
             return today
+
+# ################################################################################################################################
+
+    def isonow(self, tz=local_tz.zone, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
+        return self.now(_format, tz, needs_format)
+
+# ################################################################################################################################
+
+    def isoutcnow(self, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
+        return self.utc_now(_format, needs_format)
+
+# ################################################################################################################################
 
     def reformat(self, value, from_, to):
         """ Reformats value from one datetime format to another, for instance

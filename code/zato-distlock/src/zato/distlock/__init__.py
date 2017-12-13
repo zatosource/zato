@@ -21,7 +21,7 @@ from threading import current_thread
 # gevent
 from gevent import sleep, spawn
 
-# portalocket
+# portalocker
 from portalocker import lock, LockException, LOCK_NB, LOCK_EX, unlock
 
 # SQLAlchemy
@@ -252,14 +252,14 @@ user={}
         super(FCNTLLock, self).__init__(*args, **kwargs)
         self.tmp_file = None
 
-    def _acquire_impl(self, _flags=LOCK_EX | LOCK_NB):
+    def _acquire_impl(self, _flags=LOCK_EX | LOCK_NB, tmp_dir=gettempdir(), _utcnow=datetime.utcnow):
 
         current = current_thread()
 
-        self.tmp_file = open(os.path.join(gettempdir(), 'zato-lock-{}'.format(self.pub_id)), 'w+b')
+        self.tmp_file = open(os.path.join(tmp_dir, 'zato-lock-{}'.format(self.pub_id)), 'w+b')
         self.tmp_file.write(
             self.lock_template.format(
-                os.getpid(), current.name, current.ident, datetime.utcnow().isoformat(), self.os_user_name,
+                os.getpid(), current.name, current.ident, _utcnow().isoformat(), self.os_user_name,
             ))
         self.tmp_file.flush()
 

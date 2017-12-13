@@ -29,9 +29,11 @@ from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_P
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, JSONPointer, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsJSONPointer, \
      HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, TLSCACert, to_json, XPath
-from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap_list
+from zato.common.odb.query import cache_by_id, http_soap_audit_item, http_soap_audit_item_list, http_soap, http_soap_list
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
+# ################################################################################################################################
 
 class _HTTPSOAPService(object):
     """ A common class for various HTTP/SOAP-related services.
@@ -78,6 +80,8 @@ class _HTTPSOAPService(object):
 
         return info
 
+# ################################################################################################################################
+
 class _BaseGet(AdminService):
     """ Base class for services returning information about HTTP/SOAP objects.
     """
@@ -88,7 +92,24 @@ class _BaseGet(AdminService):
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
             'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type')
 
-class GetList(AdminService):
+# ################################################################################################################################
+
+class Get(_BaseGet):
+    """ Returns information about an individual HTTP/SOAP object by its ID.
+    """
+    class SimpleIO(_BaseGet.SimpleIO):
+        request_elem = 'zato_http_soap_get_request'
+        response_elem = 'zato_http_soap_get_response'
+        input_required = ('cluster_id', 'id')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload = http_soap(session, self.request.input.cluster_id, self.request.input.id)
+
+# ################################################################################################################################
+
+class GetList(_BaseGet):
+
     """ Returns a list of HTTP/SOAP connections.
     """
     _filter_by = HTTPSOAP.name,
@@ -110,12 +131,16 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+# ################################################################################################################################
+
 class _CreateEdit(AdminService, _HTTPSOAPService):
     def add_tls_ca_cert(self, input, sec_tls_ca_cert_id):
         with closing(self.odb.session()) as session:
             input.sec_tls_ca_cert_name = session.query(TLSCACert.name).\
                 filter(TLSCACert.id==sec_tls_ca_cert_id).\
                 one()[0]
+
+# ################################################################################################################################
 
 class Create(_CreateEdit):
     """ Creates a new HTTP/SOAP connection.
@@ -126,7 +151,8 @@ class Create(_CreateEdit):
         input_required = ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type')
+            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
+            'cache_id', Integer('cache_expiry'))
         output_required = ('id', 'name')
 
     def handle(self):
@@ -134,6 +160,7 @@ class Create(_CreateEdit):
         input.sec_use_rbac = input.security_id == ZATO_SEC_USE_RBAC
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
+        input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
 
         if not input.url_path.startswith('/'):
             msg = 'URL path:[{}] must start with a slash /'.format(input.url_path)
@@ -190,10 +217,12 @@ class Create(_CreateEdit):
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
-                item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+                item.timeout = input.timeout
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
+                item.cache_id = input.cache_id
+                item.cache_expiry = input.cache_expiry
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
@@ -205,6 +234,14 @@ class Create(_CreateEdit):
                     input.impl_name = service.impl_name
                     input.service_id = service.id
                     input.service_name = service.name
+
+                    cache = cache_by_id(session, input.cluster_id, item.cache_id) if item.cache_id else None
+                    if cache:
+                        input.cache_type = cache.cache_type
+                        input.cache_name = cache.name
+                    else:
+                        input.cache_type = None
+                        input.cache_name = None
 
                 if item.sec_tls_ca_cert_id and item.sec_tls_ca_cert_id != ZATO_NONE:
                     self.add_tls_ca_cert(input, item.sec_tls_ca_cert_id)
@@ -228,6 +265,8 @@ class Create(_CreateEdit):
 
                 raise
 
+# ################################################################################################################################
+
 class Edit(_CreateEdit):
     """ Updates an HTTP/SOAP connection.
     """
@@ -237,7 +276,8 @@ class Edit(_CreateEdit):
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type')
+            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
+            'cache_id', Integer('cache_expiry'))
         output_required = ('id', 'name')
 
     def handle(self):
@@ -310,6 +350,8 @@ class Edit(_CreateEdit):
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
+                item.cache_id = input.cache_id
+                item.cache_expiry = input.cache_expiry
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
@@ -324,6 +366,15 @@ class Edit(_CreateEdit):
                     input.merge_url_params_req = item.merge_url_params_req
                     input.url_params_pri = item.url_params_pri
                     input.params_pri = item.params_pri
+
+                    cache = cache_by_id(session, input.cluster_id, item.cache_id) if item.cache_id else None
+                    if cache:
+                        input.cache_type = cache.cache_type
+                        input.cache_name = cache.name
+                    else:
+                        input.cache_type = None
+                        input.cache_name = None
+
                 else:
                     input.ping_method = item.ping_method
                     input.pool_size = item.pool_size
@@ -352,6 +403,8 @@ class Edit(_CreateEdit):
                 session.rollback()
 
                 raise
+
+# ################################################################################################################################
 
 class Delete(AdminService, _HTTPSOAPService):
     """ Deletes an HTTP/SOAP connection.
@@ -391,6 +444,8 @@ class Delete(AdminService, _HTTPSOAPService):
 
                 raise
 
+# ################################################################################################################################
+
 class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
     """
@@ -405,6 +460,8 @@ class Ping(AdminService):
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             config_dict = getattr(self.outgoing, item.transport)
             self.response.payload.info = config_dict.get(item.name).ping(self.cid)
+
+# ################################################################################################################################
 
 class ReloadWSDL(AdminService, _HTTPSOAPService):
     """ Reloads WSDL by recreating the whole underlying queue of SOAP clients.
@@ -425,6 +482,8 @@ class ReloadWSDL(AdminService, _HTTPSOAPService):
 
         action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
         self.notify_worker_threads(fields, action)
+
+# ################################################################################################################################
 
 class GetURLSecurity(AdminService):
     """ Returns a JSON document describing the security configuration of all
@@ -460,6 +519,8 @@ class GetAuditConfig(AdminService):
             self.response.payload.audit_back_log = item.audit_back_log
             self.response.payload.audit_max_payload = item.audit_max_payload
             self.response.payload.audit_repl_patt_type = item.audit_repl_patt_type
+
+# ################################################################################################################################
 
 class SetAuditConfig(AdminService):
     """ Sets audit configuration for a given HTTP/SOAP connection. Everything except for replace patterns.
@@ -504,6 +565,8 @@ class GetAuditReplacePatterns(AdminService):
 
             self.response.payload.patterns_json_pointer = [elem.pattern.name for elem in item.replace_patterns_json_pointer]
             self.response.payload.patterns_xpath = [elem.pattern.name for elem in item.replace_patterns_xpath]
+
+# ################################################################################################################################
 
 class SetAuditReplacePatterns(AdminService):
     """ Set audit replace patterns for a given HTTP/SOAP connection.
@@ -630,6 +693,8 @@ class _BaseAuditService(AdminService):
 
         return Page(q, page=current_batch, items_per_page=batch_size)
 
+# ################################################################################################################################
+
 class GetAuditItemList(_BaseAuditService):
     """ Returns a list of audit items for a particular HTTP/SOAP object.
     """
@@ -649,6 +714,8 @@ class GetAuditItemList(_BaseAuditService):
             item.req_time_utc = item.req_time_utc.isoformat()
             if item.resp_time_utc:
                 item.resp_time_utc = item.resp_time_utc.isoformat()
+
+# ################################################################################################################################
 
 class GetAuditBatchInfo(_BaseAuditService):
     """ Returns pagination information for audit log for a specified object and from/to dates.
@@ -671,6 +738,8 @@ class GetAuditBatchInfo(_BaseAuditService):
                 'next_batch_number': page.next_page,
                 'previous_batch_number': page.previous_page,
             }
+
+# ################################################################################################################################
 
 class GetAuditItem(_BaseAuditService):
     """ Returns a particular audit item by its ID.

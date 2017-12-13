@@ -1,0 +1,105 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Messages for topic{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/topic.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            '_pub_time',
+            '_msg_id',
+
+            '_endpoint',
+            '_pattern',
+            'msg_prefix',
+
+            '_delete',
+            'id',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Messages for topic : <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}</a></h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show messages"%}
+
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:10px">&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th style="width:16%"><a href="#">Pub time</a></th>
+                        <th style="width:22%"><a href="#">Msg ID</a></th>
+
+                        <th><a href="#">Endpoint</a></th>
+                        <th><a href="#">Pattern</a></th>
+                        <th><a href="#">Msg prefix</a></th>
+
+                        <th style="width:5%">&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.msg_id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        <td>{{ item.pub_time }}</td>
+                        <td><a href="{% url "pubsub-message" cluster_id "topic" topic_id item.msg_id %}">{{ item.msg_id }}</a></td>
+
+                        <td>{{ item.endpoint_html|safe }}</td>
+                        <td>{{ item.pattern_matched }}</td>
+                        <td>{{ item.data_prefix_short }}</td>
+
+                        <td><a href="javascript:$.fn.zato.pubsub.topic.delete_message('{{ topic_id }}', '{{ item.msg_id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.msg_id }}'>{{ item.msg_id }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='9'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

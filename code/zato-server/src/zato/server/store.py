@@ -134,7 +134,8 @@ class BaseStore(object):
         except Exception, e:
             logger.warn('Error while deleting `%s`, e:`%s`', name, format_exc(e))
         finally:
-            del self.items[name]
+            if name in self.items:
+                del self.items[name]
 
     def delete(self, name):
         """ Deletes an existing connection.

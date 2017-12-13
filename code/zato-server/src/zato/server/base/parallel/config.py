@@ -17,7 +17,6 @@ from paste.util.converters import asbool
 # Zato
 from zato.bunch import Bunch
 from zato.common import MISC
-from zato.common.pubsub import PubSubAPI, RedisPubSub
 from zato.server.config import ConfigDict
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
@@ -40,9 +39,6 @@ class ConfigLoader(object):
         # Details of what is enabled in live message browser
         self.live_msg_browser = self.fs_server_config.live_msg_browser
         self.live_msg_browser.include_internal = asbool(self.live_msg_browser.include_internal)
-
-        # Pub/sub
-        self.pubsub = PubSubAPI(RedisPubSub(self.kvdb.conn))
 
         #
         # Cassandra - start
@@ -140,6 +136,13 @@ class ConfigLoader(object):
         # AMQP
         query = self.odb.get_out_amqp_list(server.cluster.id, True)
         self.config.out_amqp = ConfigDict.from_query('out_amqp', query)
+
+        # Caches
+        query = self.odb.get_cache_builtin_list(server.cluster.id, True)
+        self.config.cache_builtin = ConfigDict.from_query('cache_builtin', query)
+
+        query = self.odb.get_cache_memcached_list(server.cluster.id, True)
+        self.config.cache_memcached = ConfigDict.from_query('cache_memcached', query)
 
         # FTP
         query = self.odb.get_out_ftp_list(server.cluster.id, True)
@@ -323,25 +326,20 @@ class ConfigLoader(object):
         self.config.simple_io['int_parameter_suffixes'] = self.int_parameter_suffixes
         self.config.simple_io['bool_parameter_prefixes'] = self.bool_parameter_prefixes
 
-        # Pub/sub config
+        # Pub/sub
         self.config.pubsub = Bunch()
-        self.config.pubsub.default_consumer = Bunch()
-        self.config.pubsub.default_producer = Bunch()
 
+        # Pub/sub - endpoints
+        query = self.odb.get_pubsub_endpoint_list(server.cluster.id, True)
+        self.config.pubsub_endpoint = ConfigDict.from_query('pubsub_endpoint', query)
+
+        # Pub/sub - topics
         query = self.odb.get_pubsub_topic_list(server.cluster.id, True)
-        self.config.pubsub.topics = ConfigDict.from_query('pubsub_topics', query)
+        self.config.pubsub_topic = ConfigDict.from_query('pubsub_topic', query)
 
-        id, name = self.odb.get_pubsub_default_client(server.cluster.id, 'zato.pubsub.default-consumer')
-        self.config.pubsub.default_consumer.id, self.config.pubsub.default_consumer.name = id, name
-
-        id, name = self.odb.get_pubsub_default_client(server.cluster.id, 'zato.pubsub.default-producer')
-        self.config.pubsub.default_producer.id, self.config.pubsub.default_producer.name = id, name
-
-        query = self.odb.get_pubsub_producer_list(server.cluster.id, True)
-        self.config.pubsub.producers = ConfigDict.from_query('pubsub_producers', query, list_config=True)
-
-        query = self.odb.get_pubsub_consumer_list(server.cluster.id, True)
-        self.config.pubsub.consumers = ConfigDict.from_query('pubsub_consumers', query, list_config=True)
+        # Pub/sub - subscriptions
+        query = self.odb.get_pubsub_subscription_list(server.cluster.id, True)
+        self.config.pubsub_subscription = ConfigDict.from_query('pubsub_subscription', query)
 
         # E-mail - SMTP
         query = self.odb.get_email_smtp_list(server.cluster.id, True)
@@ -358,7 +356,6 @@ class ConfigLoader(object):
 
         # Assign config to worker
         self.worker_store.worker_config = self.config
-        self.worker_store.pubsub = self.pubsub
 
 # ################################################################################################################################
 

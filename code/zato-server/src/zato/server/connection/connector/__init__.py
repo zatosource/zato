@@ -73,11 +73,13 @@ class Connector(object):
     # Whether that connector's start method should be called in its own greenlet
     start_in_greenlet = False
 
-    def __init__(self, name, type, config, on_message_callback=None, auth_func=None, channels=None, outconns=None):
-        # type: (str, str, dict, Callable, Callable, dict, dict) -> None
+    def __init__(self, name, type, config, on_message_callback=None, auth_func=None, channels=None, outconns=None,
+            parallel_server=None):
+        # type: (str, str, dict, Callable, Callable, dict, dict, Callable) -> None
         self.name = name
         self.type = type
         self.config = config
+        self.config.parallel_server = parallel_server
         self.on_message_callback = on_message_callback # Invoked by channels for each message received
         self.auth_func = auth_func # Invoked by channels that need to authenticate users
 
@@ -280,9 +282,10 @@ class Connector(object):
 class ConnectorStore(object):
     """ Base container for all connectors.
     """
-    def __init__(self, type, connector_class):
+    def __init__(self, type, connector_class, parallel_server=None):
         self.type = type
         self.connector_class = connector_class
+        self.parallel_server = parallel_server
         self.connectors = {}
         self.lock = RLock()
 
@@ -290,7 +293,8 @@ class ConnectorStore(object):
 
     def _create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None, needs_start=False):
         # type: (str, dict, Callable, Callable, dict, dict, bool)
-        connector = self.connector_class(name, self.type, config, on_message_callback, auth_func, channels, outconns)
+        connector = self.connector_class(
+            name, self.type, config, on_message_callback, auth_func, channels, outconns, self.parallel_server)
         self.connectors[name] = connector
         if needs_start:
             connector.start()
@@ -403,5 +407,11 @@ class ConnectorStore(object):
     def invoke(self, name, *args, **kwargs):
         # type: (str, Any, Any)
         return self.connectors[name].invoke(*args, **kwargs)
+
+# ################################################################################################################################
+
+    def notify_pubsub_message(self, name, *args, **kwargs):
+        # type: (str, Any, Any)
+        return self.connectors[name].notify_pubsub_message(*args, **kwargs)
 
 # ################################################################################################################################

@@ -12,8 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_security_select, add_services, SearchForm as _ChooseClusterForm, DataFormatForm, \
-     INITIAL_CHOICES
+from zato.admin.web.forms import add_security_select, add_select, add_services, SearchForm as _ChooseClusterForm, \
+     DataFormatForm, INITIAL_CHOICES
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
      MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
 
@@ -49,9 +49,11 @@ class CreateForm(DataFormatForm):
     content_type = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
+    cache_id = forms.ChoiceField(widget=forms.Select())
+    cache_expiry = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=0)
     data_formats_allowed = SIMPLE_IO.HTTP_SOAP_FORMAT
 
-    def __init__(self, security_list=[], sec_tls_ca_cert_list={}, soap_versions=SOAP_VERSIONS,
+    def __init__(self, security_list=[], sec_tls_ca_cert_list={}, cache_list=[], soap_versions=SOAP_VERSIONS,
             prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
@@ -83,6 +85,7 @@ class CreateForm(DataFormatForm):
 
         add_security_select(self, security_list)
         add_services(self, req)
+        add_select(self, 'cache_id', cache_list)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

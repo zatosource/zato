@@ -10,27 +10,28 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from traceback import format_exc
 
 # dateutil
 from dateutil.parser import parse
 
 # Zato
+from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import ChannelWebSocket, Cluster, WebSocketClient
 from zato.common.odb.query import web_socket_client_by_pub_id, web_socket_clients_by_server_id
-from zato.server.service import AsIs
+from zato.server.service import AsIs, List
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
 class Create(AdminService):
-    """ Stores in ODB information about an established connection of an authenciated WebSocket client.
+    """ Stores in ODB information about an established connection of an authenticated WebSocket client.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_web_socket_client_create_request'
-        response_elem = 'zato_channel_web_socket_client_create_response'
         input_required = (AsIs('pub_client_id'), AsIs('ext_client_id'), 'is_internal', 'local_address', 'peer_address',
             'peer_fqdn', 'connection_time', 'last_seen', 'channel_name')
         input_optional = ('ext_client_name',)
+        output_optional = ('ws_client_id',)
 
     def handle(self):
         req = self.request.input
@@ -61,14 +62,7 @@ class Create(AdminService):
             session.add(client)
             session.commit()
 
-            # Create default subscriptions for the client
-            self.invoke('zato.channel.web-socket.subscription.create-default', {
-                'ext_client_id': req.ext_client_id,
-                'client_id': client.id,
-                'channel_id': channel.id,
-                'channel_name': channel.name,
-            })
-
+            self.response.payload.ws_client_id = client.id
 
 # ################################################################################################################################
 
@@ -76,8 +70,6 @@ class DeleteByPubId(AdminService):
     """ Deletes information about a previously established WebSocket connection. Called when a client disconnects.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_web_socket_client_delete_by_pub_id_request'
-        response_elem = 'zato_channel_web_socket_client_delete_by_pub_id_response'
         input_required = (AsIs('pub_client_id'),)
 
     def handle(self):
@@ -88,13 +80,24 @@ class DeleteByPubId(AdminService):
 
 # ################################################################################################################################
 
+class UnregisterWSSubKey(AdminService):
+    """ Notifies all workers about sub keys that will not longer be accessible because current WSX client disconnects.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = (List('sub_key_list'),)
+
+    def handle(self):
+        # Update in-RAM state of workers
+        self.broker_client.publish({
+            'action': BROKER_MSG_PUBSUB.WSX_CLIENT_SUB_KEY_SERVER_REMOVE.value,
+            'sub_key_list': self.request.input.sub_key_list,
+        })
+
+# ################################################################################################################################
+
 class DeleteByServer(AdminService):
     """ Deletes information about a previously established WebSocket connection. Called when a server shuts down.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_web_socket_client_delete_by_server_request'
-        response_elem = 'zato_channel_web_socket_client_delete_by_server_response'
-
     def handle(self):
 
         with closing(self.odb.session()) as session:
@@ -104,18 +107,20 @@ class DeleteByServer(AdminService):
 
 # ################################################################################################################################
 
-class DeliverRequest(AdminService):
-    """ Delivers request to a selected WebSocket client.
+class NotifyPubSubMessage(AdminService):
+    """ Notifies a WebSocket client of new messages available.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_web_socket_client_deliver_request_request'
-        response_elem = 'zato_channel_web_socket_client_deliver_request_response'
         input_required = (AsIs('pub_client_id'), 'channel_name', AsIs('request'))
         output_required = (AsIs('response'),)
 
     def handle(self):
         req = self.request.input
-        self.response.payload.response = self.server.worker_store.web_socket_api.invoke(
-            req.channel_name, self.cid, req.pub_client_id, req.request)
+        try:
+            self.response.payload.response = self.server.worker_store.web_socket_api.notify_pubsub_message(
+                req.channel_name, self.cid, req.pub_client_id, req.request)
+        except Exception, e:
+            self.logger.warn(format_exc(e))
+            raise
 
 # ################################################################################################################################

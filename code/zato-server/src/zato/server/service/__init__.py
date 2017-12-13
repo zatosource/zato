@@ -30,11 +30,11 @@ from gevent import Timeout, spawn
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, ZatoException
+from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, PUBSUB, ZatoException, zato_no_op_marker
 from zato.common.broker_message import SERVICE
 from zato.common.exception import Reportable
 from zato.common.nav import DictNav, ListNav
-from zato.common.util import get_response_value, new_cid, payload_from_request, service_name_from_impl, uncamelify
+from zato.common.util import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify
 from zato.server.connection import slow_response
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -80,11 +80,6 @@ Int = Integer
 
 # ################################################################################################################################
 
-# Hook methods whose func.im_func.func_defaults contains this argument will be assumed to have not been overridden by users
-# and ServiceStore will be allowed to override them with None so that they will not be called in Service.update_handle
-# which significantly improves performance (~30%).
-zato_no_op_marker = 'zato_no_op_marker'
-
 before_job_hooks = ('before_job', 'before_one_time_job', 'before_interval_based_job', 'before_cron_style_job')
 after_job_hooks = ('after_job', 'after_one_time_job', 'after_interval_based_job', 'after_cron_style_job')
 before_handle_hooks = ('before_handle',)
@@ -111,16 +106,20 @@ class ChannelInfo(object):
     """ Conveys information abouts the channel that a service is invoked through.
     Available in services as self.channel or self.chan.
     """
-    __slots__ = ('id', 'name', 'type', 'is_internal', 'match_target', 'impl', 'security', 'sec')
+    __slots__ = ('id', 'name', 'type', 'data_format', 'is_internal', 'match_target', 'impl', 'security', 'sec')
 
-    def __init__(self, id, name, type, is_internal, match_target, security, impl):
+    def __init__(self, id, name, type, data_format, is_internal, match_target, security, impl):
         self.id = id
         self.name = name
         self.type = type
+        self.data_format = data_format
         self.is_internal = is_internal
         self.match_target = match_target
         self.impl = impl
         self.security = self.sec = security
+
+    def __repr__(self):
+        return make_repr(self)
 
 # ################################################################################################################################
 
@@ -236,6 +235,7 @@ class Service(object):
         self.listnav = _ListNav
         self.has_validate_input = False
         self.has_validate_output = False
+        self.cache = None
 
         self.out = self.outgoing = _Outgoing(
             self.amqp,
@@ -339,6 +339,9 @@ class Service(object):
         if self.has_sio:
             self.request.init(True, self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
+
+        # Cache is always enabled
+        self.cache = self._worker_store.cache_api
 
     def set_response_data(self, service, _raw_types=(basestring, dict, list, tuple, EtreeElement, ObjectifiedElement), **kwargs):
         response = service.response.payload
@@ -466,7 +469,7 @@ class Service(object):
                 if service.after_handle:
                     _call_hook_no_service(service.after_handle)
 
-                # Call before job hooks if any are defined and we are called from the scheduler
+                # Call after job hooks if any are defined and we are called from the scheduler
                 if service._has_after_job_hooks and self.channel.type == _CHANNEL_SCHEDULER:
                     for elem in service._after_job_hooks:
                         if elem:
@@ -896,7 +899,7 @@ class Service(object):
 
         service.channel = service.chan = ChannelInfo(
             channel_item.get('id'), channel_item.get('name'), channel_type,
-            channel_item.get('is_internal'), channel_item.get('match_target'),
+            channel_item.get('data_format'), channel_item.get('is_internal'), channel_item.get('match_target'),
             ChannelSecurityInfo(sec_def_info.get('id'), sec_def_info.get('name'), sec_def_info.get('type'),
                 sec_def_info.get('username'), sec_def_info.get('impl')), channel_item)
 
@@ -904,3 +907,22 @@ class Service(object):
             service._init(channel_type==http_soap)
 
 # ################################################################################################################################
+
+class PubSubHook(Service):
+    """ Subclasses of this class may act as pub/sub hooks.
+    """
+    class SimpleIO:
+        input_required = (Opaque('ctx'),)
+        output_optional = (Bool('skip_msg'),)
+
+    def handle(self, _pub=PUBSUB.HOOK_TYPE.PUB):
+        func = self.before_publish if self.request.input.ctx.hook_type == _pub else self.before_delivery
+        func()
+
+    def before_publish(self, _zato_no_op_marker=zato_no_op_marker):
+        """ Invoked for each pub/sub message before it is published to a topic.
+        """
+
+    def before_delivery(self, _zato_no_op_marker=zato_no_op_marker):
+        """ Invoked for each pub/sub message before it is delivered to an endpoint.
+        """

@@ -25,6 +25,25 @@ def add_initial_select(form, field_name):
 
 # ################################################################################################################################
 
+def add_select(form, field_name, elems, needs_initial_select=True, skip=None):
+    skip = skip or []
+    if not isinstance(skip, (list, tuple)):
+        skip = [skip]
+
+    if needs_initial_select:
+        add_initial_select(form, field_name)
+    else:
+        form.fields[field_name].choices = []
+
+    for elem in elems:
+        id = getattr(elem, 'id', None) or elem['id']
+        if id in skip:
+            continue
+        name = getattr(elem, 'name', None) or elem['name']
+        form.fields[field_name].choices.append([id, name])
+
+# ################################################################################################################################
+
 def add_security_select(form, security_list, needs_no_security=True, field_name='security', needs_rbac=True):
     form.fields[field_name].choices = []
     form.fields[field_name].choices.append(INITIAL_CHOICES)
@@ -40,19 +59,66 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
 
 # ################################################################################################################################
 
-def add_services(form, req, by_id=False):
+def add_http_soap_select(form, field_name, req, connection, transport, needs_initial_select=True, skip=None):
+
+    skip = skip or []
+    if not isinstance(skip, (list, tuple)):
+        skip = [skip]
+
+    if needs_initial_select:
+        add_initial_select(form, field_name)
+    else:
+        form.fields[field_name].choices = []
+
+    field = form.fields[field_name]
+
     if req.zato.cluster_id:
 
-        field = form.fields.get('service_name') or form.fields.get('service_id') or form.fields['service']
+        response = req.zato.client.invoke('zato.http-soap.get-list', {
+            'cluster_id': req.zato.cluster_id,
+            'connection': connection,
+            'transport': transport,
+        })
+
+        for item in response.data:
+            field.choices.append([item.id, item.name])
+
+# ################################################################################################################################
+
+def add_services(form, req, by_id=False, initial_service=None, api_name='zato.service.get-list', has_name_filter=True):
+    if req.zato.cluster_id:
+
+        service_fields = ['service_name', 'service_id', 'service', 'hook_service_id', 'hook_service_name']
+
+        for name in service_fields:
+            field = form.fields.get(name)
+            if field:
+                field_name = name
+                break
+        else:
+            raise ValueError('Could not find any service field (tried: `{}` in `{}`)'.format(
+                service_fields, form.fields))
+
         field.choices = []
         field.choices.append(INITIAL_CHOICES)
 
-        for service in req.zato.client.invoke(
-            'zato.service.get-list', {'cluster_id': req.zato.cluster_id, 'name_filter':'*'}).data:
+        request = {'cluster_id': req.zato.cluster_id, 'name_filter':'*'}
+        if has_name_filter:
+            request['name_filter'] = '*'
+
+        for service in req.zato.client.invoke(api_name, request).data:
 
             # Older parts of web-admin use service names only but newer ones prefer service ID
             id_attr = service.id if by_id else service.name
             field.choices.append([id_attr, service.name])
+
+        if initial_service:
+            form.initial[field_name] = initial_service
+
+# ################################################################################################################################
+
+def add_pubsub_services(form, req, by_id=False, initial_service=None):
+    return add_services(form, req, by_id, initial_service, 'zato.pubsub.hook.get-hook-service-list', False)
 
 # ################################################################################################################################
 
