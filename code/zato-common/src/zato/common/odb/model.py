@@ -1965,7 +1965,7 @@ class WebSocketClientPubSubKeys(Base):
     id = Column(Integer, Sequence('web_socket_cli_ps_seq'), primary_key=True)
 
     # The same as in web_socket_sub.sub_key
-    sub_key = Column(Text, nullable=False)
+    sub_key = Column(String(200), nullable=False)
 
     client_id = Column(Integer, ForeignKey('web_socket_client.id', ondelete='CASCADE'), nullable=False)
     client = relationship(
@@ -1990,8 +1990,8 @@ class WebSocketSubscription(Base):
 
     id = Column(Integer, Sequence('web_socket_sub_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False)
-    sub_key = Column(Text, nullable=False)
-    ext_client_id = Column(Text(), nullable=False)
+    sub_key = Column(String(200), nullable=False)
+    ext_client_id = Column(String(200), nullable=False)
 
     channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
     channel = relationship(
