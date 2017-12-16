@@ -165,6 +165,9 @@ class Subscription(object):
         self.endpoint_id = config.endpoint_id
         self.topic_name = config.topic_name
 
+    def __repr__(self):
+        return make_repr(self)
+
 # ################################################################################################################################
 
 class HookCtx(object):

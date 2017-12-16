@@ -84,8 +84,11 @@ class DeliverMessage(AdminService):
         func(self, msg, subscription, endpoint_impl_getter)
 
     def _deliver_rest_soap(self, msg, subscription, impl_getter):
-        endpoint = impl_getter(subscription.config.out_http_soap_id)
-        endpoint.conn.http_request(subscription.config.out_http_method, self.cid, msg.data)
+        if not subscription.config.out_http_soap_id:
+            raise ValueError('Missing out_http_soap_id for subscription `{}`'.format(subscription))
+        else:
+            endpoint = impl_getter(subscription.config.out_http_soap_id)
+            endpoint.conn.http_request(subscription.config.out_http_method, self.cid, msg.data)
 
 # ################################################################################################################################
 
