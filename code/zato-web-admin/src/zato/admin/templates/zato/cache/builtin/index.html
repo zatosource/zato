@@ -115,7 +115,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='17'>No results</td>
+                        <td colspan='20'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -130,16 +130,16 @@
                 <form action="{% url "cache-builtin-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:30%">Name</td>
+                            <td style="vertical-align:middle; width:20%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td>{{ create_form.is_active }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Default</td>
-                            <td>{{ create_form.is_default }} </td>
+                            <td style="vertical-align:middle">Options</td>
+                            <td>
+                                <label>Active {{ create_form.is_active }}</label>
+                                |
+                                <label>Default {{ create_form.is_default }}</label>
+                                </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Max size
@@ -163,14 +163,13 @@
                             <td>{{ create_form.max_item_size }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Extend expiration on get
+                            <td style="vertical-align:middle">Extend expiration
                             </td>
-                            <td>{{ create_form.extend_expiry_on_get }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Extend expiration on set
+                            <td>
+                                <label>On get {{ create_form.extend_expiry_on_get }}</label>
+                                |
+                                <label>On set {{ create_form.extend_expiry_on_set }}</label>
                             </td>
-                            <td>{{ create_form.extend_expiry_on_set }} </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -194,16 +193,16 @@
                     <table class="form-data">
                         <tr>
                         <tr>
-                            <td style="vertical-align:middle; width:30%">Name</td>
+                            <td style="vertical-align:middle; width:20%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td>{{ edit_form.is_active }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Default</td>
-                            <td>{{ edit_form.is_default }} </td>
+                            <td style="vertical-align:middle">Options</td>
+                            <td>
+                                <label>Active {{ edit_form.is_active }}</label>
+                                |
+                                <label>Default {{ edit_form.is_default }}</label>
+                                </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Max size
@@ -227,14 +226,13 @@
                             <td>{{ edit_form.max_item_size }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Extend expiration on get
+                            <td style="vertical-align:middle">Extend expiration
                             </td>
-                            <td>{{ edit_form.extend_expiry_on_get }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Extend expiration on set
+                            <td>
+                                <label>On get {{ edit_form.extend_expiry_on_get }}</label>
+                                |
+                                <label>On set {{ edit_form.extend_expiry_on_set }}</label>
                             </td>
-                            <td>{{ edit_form.extend_expiry_on_set }} </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
