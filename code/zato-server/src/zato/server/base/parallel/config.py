@@ -256,10 +256,6 @@ class ConfigLoader(object):
         query = self.odb.get_rbac_role_permission_list(server.cluster.id, True)
         self.config.rbac_role_permission = ConfigDict.from_query('rbac_role_permission', query)
 
-        # Technical accounts
-        query = self.odb.get_tech_acc_list(server.cluster.id, True)
-        self.config.tech_acc = ConfigDict.from_query('tech_acc', query)
-
         # TLS CA certs
         query = self.odb.get_tls_ca_cert_list(server.cluster.id, True)
         self.config.tls_ca_cert = ConfigDict.from_query('tls_ca_cert', query)

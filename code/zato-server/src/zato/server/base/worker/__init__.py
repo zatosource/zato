@@ -252,7 +252,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self, self.worker_config.http_soap,
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.jwt, self.worker_config.ntlm, self.worker_config.oauth,
-            self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws,
+            self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws,
             self.worker_config.openstack_security, self.worker_config.xpath_sec, self.worker_config.tls_channel_sec,
             self.worker_config.tls_key_cert, self.worker_config.vault_conn_sec, self.kvdb, self.broker_client, self.server.odb,
             self.json_pointer_store, self.xpath_store, self.server.jwt_secret, self.vault_conn_api)
@@ -1065,33 +1065,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_change_password)
-
-# ################################################################################################################################
-
-    def tech_acc_get(self, name):
-        """ Returns the configuration of the technical account of the given name.
-        """
-        self.request_dispatcher.url_data.tech_acc_get(name)
-
-    def on_broker_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
-        """ Creates a new technical account.
-        """
-        dispatcher.notify(broker_message.SECURITY.TECH_ACC_CREATE.value, msg)
-
-    def on_broker_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
-        """ Updates an existing technical account.
-        """
-        dispatcher.notify(broker_message.SECURITY.TECH_ACC_EDIT.value, msg)
-
-    def on_broker_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
-        """ Deletes a technical account.
-        """
-        dispatcher.notify(broker_message.SECURITY.TECH_ACC_DELETE.value, msg)
-
-    def on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes the password of a technical account.
-        """
-        dispatcher.notify(broker_message.SECURITY.TECH_ACC_CHANGE_PASSWORD.value, msg)
 
 # ################################################################################################################################
 
