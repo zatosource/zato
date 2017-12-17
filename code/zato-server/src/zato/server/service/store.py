@@ -55,7 +55,7 @@ has_trace1 = logger.isEnabledFor(TRACE1)
 
 # ################################################################################################################################
 
-hook_methods = ('accept',) + before_handle_hooks + after_handle_hooks + before_job_hooks + after_job_hooks
+hook_methods = ('accept', 'get_request_hash') + before_handle_hooks + after_handle_hooks + before_job_hooks + after_job_hooks
 
 def set_up_class_attributes(class_, service_store=None, name=None):
     class_.add_http_method_handlers()
@@ -115,6 +115,7 @@ def set_up_class_attributes(class_, service_store=None, name=None):
     class_._before_job_hooks = []
     class_._after_job_hooks = []
 
+    # Override hook methods that have not been implemented by user
     for func_name in hook_methods:
         func = getattr(class_, func_name, None)
         if func:
