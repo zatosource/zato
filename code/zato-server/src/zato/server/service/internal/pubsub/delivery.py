@@ -11,8 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.common import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
+from zato.common.exception import BadRequest
 from zato.server.pubsub.task import PubSubTool
-from zato.server.service import Opaque
+from zato.server.service import Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -83,8 +84,11 @@ class DeliverMessage(AdminService):
         func(self, msg, subscription, endpoint_impl_getter)
 
     def _deliver_rest_soap(self, msg, subscription, impl_getter):
-        endpoint = impl_getter(subscription.config.out_http_soap_id)
-        endpoint.conn.http_request(subscription.config.out_http_method, self.cid, msg.data)
+        if not subscription.config.out_http_soap_id:
+            raise ValueError('Missing out_http_soap_id for subscription `{}`'.format(subscription))
+        else:
+            endpoint = impl_getter(subscription.config.out_http_soap_id)
+            endpoint.conn.http_request(subscription.config.out_http_method, self.cid, msg.data)
 
 # ################################################################################################################################
 
@@ -93,5 +97,22 @@ deliver_func = {
     PUBSUB.ENDPOINT_TYPE.REST.id: DeliverMessage._deliver_rest_soap,
     PUBSUB.ENDPOINT_TYPE.SOAP.id: DeliverMessage._deliver_rest_soap,
 }
+
+# ################################################################################################################################
+
+class GetServerPIDForSubKey(AdminService):
+    """ Returns PID of a server process for input sub_key.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('sub_key',)
+        output_optional = (Int('server_pid'),)
+
+    def handle(self):
+        try:
+            server = self.pubsub.get_sub_key_server(self.request.input.sub_key)
+        except KeyError, e:
+            raise BadRequest(self.cid, 'No such sub_key found `{}`'.format(self.request.input.sub_key))
+        else:
+            self.response.payload.server_pid = server.server_pid
 
 # ################################################################################################################################
