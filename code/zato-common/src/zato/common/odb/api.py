@@ -36,7 +36,7 @@ from bunch import Bunch
 from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, ZATO_NONE, \
      ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, JWT, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition, \
+     HTTPSOAP, HTTSOAPAudit, JWT, OAuth, Server, Service, TLSChannelSecurity, XPathSecurity, WSSDefinition, \
      VaultConnection
 from zato.common.odb import get_ping_query, query, query_ps_subscription
 from zato.common.util import current_host, get_component_name, get_engine_url, get_http_json_channel, get_http_soap_channel, \
@@ -423,7 +423,6 @@ class ODBManager(SessionWrapper):
                 SEC_DEF_TYPE.BASIC_AUTH: HTTPBasicAuth,
                 SEC_DEF_TYPE.JWT: JWT,
                 SEC_DEF_TYPE.OAUTH: OAuth,
-                SEC_DEF_TYPE.TECH_ACCOUNT: TechnicalAccount,
                 SEC_DEF_TYPE.TLS_CHANNEL_SEC: TLSChannelSecurity,
                 SEC_DEF_TYPE.WSS: WSSDefinition,
                 SEC_DEF_TYPE.VAULT: VaultConnection,
@@ -901,12 +900,6 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.openstack_security_list(session, cluster_id, needs_columns)
-
-    def get_tech_acc_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of technical accounts existing on the given cluster.
-        """
-        with closing(self.session()) as session:
-            return query.tech_acc_list(session, cluster_id, needs_columns)
 
     def get_tls_ca_cert_list(self, cluster_id, needs_columns=False):
         """ Returns a list of TLS CA certs on the given cluster.
