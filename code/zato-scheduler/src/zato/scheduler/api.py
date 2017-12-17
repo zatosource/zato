@@ -54,7 +54,7 @@ class Scheduler(BrokerMessageReceiver):
         self.sched = _Scheduler(self.config, self)
 
         # Broker connection
-        self.broker_conn = KVDB(config=self.config.main.broker)
+        self.broker_conn = KVDB(config=self.config.main.broker, decrypt_func=self.config.crypto_manager.decrypt)
         self.broker_conn.init()
 
         # Broker client

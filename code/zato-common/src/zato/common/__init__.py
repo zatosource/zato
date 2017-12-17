@@ -294,7 +294,6 @@ class SEC_DEF_TYPE:
     NTLM = 'ntlm'
     OAUTH = 'oauth'
     OPENSTACK = 'openstack'
-    TECH_ACCOUNT = 'tech_acc'
     TLS_CHANNEL_SEC = 'tls_channel_sec'
     TLS_KEY_CERT = 'tls_key_cert'
     WSS = 'wss'
@@ -309,7 +308,6 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.NTLM: 'NTLM',
     SEC_DEF_TYPE.OAUTH: 'OAuth 1.0',
     SEC_DEF_TYPE.OPENSTACK: 'OpenStack',
-    SEC_DEF_TYPE.TECH_ACCOUNT: 'Tech account',
     SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
     SEC_DEF_TYPE.WSS: 'WS-Security',

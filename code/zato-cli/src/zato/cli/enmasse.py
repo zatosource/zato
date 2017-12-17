@@ -115,7 +115,6 @@ SHORTNAME_BY_PREFIX = [
     ('zato.outgoing.', 'outconn'),
     ('zato.scheduler.job', 'scheduler'),
     ('zato.search.', 'search'),
-    ('zato.security.tech-account', 'tech_acc'),
     ('zato.security.tls.channel', 'tls_channel_sec'),
     ('zato.security.xpath', 'xpath_sec'),
     ('zato.security.', ''),

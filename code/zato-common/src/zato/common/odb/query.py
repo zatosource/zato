@@ -27,7 +27,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, Cac
      OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, \
      PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic, RBACClientRole, \
      RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, \
-     TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, \
+     TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, \
      WSSDefinition, VaultConnection, XPath, XPathSecurity
 from zato.common.search_util import SearchResults as _SearchResults
 
@@ -263,21 +263,6 @@ def openstack_security_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==OpenStackSecurity.cluster_id).\
         filter(SecurityBase.id==OpenStackSecurity.id).\
-        order_by('sec_base.name')
-
-@query_wrapper
-def tech_acc_list(session, cluster_id, needs_columns=False):
-    """ All the technical accounts.
-    """
-    return session.query(
-        TechnicalAccount.id, TechnicalAccount.name,
-        TechnicalAccount.is_active,
-        TechnicalAccount.password, TechnicalAccount.salt,
-        TechnicalAccount.sec_type, TechnicalAccount.password_type).\
-        order_by(TechnicalAccount.name).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==TechnicalAccount.cluster_id).\
-        filter(SecurityBase.id==TechnicalAccount.id).\
         order_by('sec_base.name')
 
 @query_wrapper

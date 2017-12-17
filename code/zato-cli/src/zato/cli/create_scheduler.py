@@ -18,7 +18,7 @@ except ImportError:
 import os
 from copy import deepcopy
 
-from zato.cli import common_logging_conf_contents, common_odb_opts, ZatoCommand
+from zato.cli import common_logging_conf_contents, common_odb_opts, sql_conf_contents, ZatoCommand
 from zato.common.markov_passwords import generate_password
 from zato.common.util import encrypt
 
@@ -128,6 +128,7 @@ class Create(ZatoCommand):
         repo_dir = os.path.join(self.target_dir, 'config', 'repo')
         conf_path = os.path.join(repo_dir, 'scheduler.conf')
         startup_jobs_conf_path = os.path.join(repo_dir, 'startup_jobs.conf')
+        sql_conf_path = os.path.join(repo_dir, 'sql.conf')
 
         os.mkdir(os.path.join(self.target_dir, 'logs'))
         os.mkdir(os.path.join(self.target_dir, 'config'))
@@ -154,6 +155,7 @@ class Create(ZatoCommand):
             common_logging_conf_contents.format(log_path='./logs/scheduler.log'))
         open(conf_path, 'w').write(config_template.format(**config))
         open(startup_jobs_conf_path, 'w').write(startup_jobs)
+        open(sql_conf_path, 'w').write(sql_conf_contents)
 
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.SCHEDULER.code)
