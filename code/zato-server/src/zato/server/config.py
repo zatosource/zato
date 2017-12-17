@@ -172,9 +172,9 @@ class ConfigStore(object):
     using the .copy method.
     """
     def __init__(self, out_ftp=ZATO_NONE, out_odoo=ZATO_NONE, out_plain_http=ZATO_NONE, out_soap=ZATO_NONE, out_sql=ZATO_NONE,
-            out_stomp=ZATO_NONE, repo_location=ZATO_NONE, basic_auth=ZATO_NONE, wss=ZATO_NONE, tech_acc=ZATO_NONE,
-            url_sec=ZATO_NONE, http_soap=ZATO_NONE, broker_config=ZATO_NONE, odb_data=ZATO_NONE, simple_io=ZATO_NONE,
-            msg_ns=ZATO_NONE, json_pointer=ZATO_NONE, xpath=ZATO_NONE):
+            out_stomp=ZATO_NONE, repo_location=ZATO_NONE, basic_auth=ZATO_NONE, wss=ZATO_NONE, url_sec=ZATO_NONE,
+            http_soap=ZATO_NONE, broker_config=ZATO_NONE, odb_data=ZATO_NONE, simple_io=ZATO_NONE, msg_ns=ZATO_NONE,
+            json_pointer=ZATO_NONE, xpath=ZATO_NONE):
 
         # Outgoing connections
         self.out_ftp = out_ftp
@@ -190,7 +190,6 @@ class ConfigStore(object):
         # Security definitions
         self.basic_auth = basic_auth
         self.wss = wss
-        self.tech_acc = tech_acc
 
         # URL security
         self.url_sec = url_sec

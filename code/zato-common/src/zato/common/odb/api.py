@@ -463,10 +463,7 @@ class ODBManager(SessionWrapper):
                     result[target].sec_def.password = sec_def.password
                     result[target].sec_def.sec_type = item.sec_type
 
-                    if item.sec_type == SEC_DEF_TYPE.TECH_ACCOUNT:
-                        result[target].sec_def.salt = sec_def.salt
-
-                    elif item.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
+                    if item.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
                         result[target].sec_def.username = sec_def.username
                         result[target].sec_def.password = sec_def.password
                         result[target].sec_def.realm = sec_def.realm
