@@ -284,7 +284,7 @@ class Scheduler(object):
         self.api = api
         self.on_job_executed_cb = config.on_job_executed_cb
         self.startup_jobs = config.startup_jobs
-        self.odb = config.main.odb
+        self.odb = config.odb
         self.jobs = set()
         self.job_greenlets = {}
         self.keep_running = True
