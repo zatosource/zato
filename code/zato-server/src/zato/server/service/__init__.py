@@ -817,6 +817,11 @@ class Service(object):
         """ Invoked right after handle. Any exception raised means further hooks will not be called.
         """
 
+    def get_request_hash(self, _zato_no_op_marker=zato_no_op_marker, *args, **kwargs):
+        """ Lets services compute an incoming request's hash to decide whether i is already kept in cache,
+        if one is configured for this request's channel.
+        """
+
 # ################################################################################################################################
 
     def _log_input_output(self, user_msg, level, suppress_keys, is_response):
