@@ -23,10 +23,13 @@ from django.http import QueryDict
 # Paste
 from paste.util.converters import asbool
 
+# regex
+from regex import compile as regex_compile
+
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
-from zato.common.util import payload_from_request
+from zato.common.util import pairwise, payload_from_request
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
@@ -407,7 +410,7 @@ class RequestHandler(object):
 # ################################################################################################################################
 
     def get_response_from_cache(self, service, raw_request, channel_item, channel_params, wsgi_environ, _loads=loads,
-        _CachedResponse=_CachedResponse, _HashCtx=_HashCtx, _sha256=sha256):
+        _CachedResponse=_CachedResponse, _HashCtx=_HashCtx, _sha256=sha256, split_re=regex_compile('........?').findall):
         """ Returns a cached response for incoming request or None if there is nothing cached for it.
         By default, an incoming request's hash is calculated by sha256 over a concatenation of:
           * WSGI REQUEST_METHOD   # E.g. GET or POST
@@ -423,9 +426,10 @@ class RequestHandler(object):
             query_string = str(sorted(channel_params.items()))
             data = '%s%s%s%s' % (wsgi_environ['REQUEST_METHOD'], wsgi_environ['PATH_INFO'], query_string, raw_request)
             hash_value = _sha256(data).hexdigest()
+            hash_value = '-'.join(split_re(hash_value))
 
         # No matter if hash value is default or from service, always prefix it with channel's type and ID
-        cache_key = 'http-channel:%s:%s' % (channel_item['id'], hash_value)
+        cache_key = 'http-channel-%s-%s' % (channel_item['id'], hash_value)
 
         # We have the key so now we can check if there is any matching response already stored in cache
         response = self.server.get_from_cache(channel_item['cache_type'], channel_item['cache_name'], cache_key)
