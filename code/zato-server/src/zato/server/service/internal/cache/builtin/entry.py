@@ -55,7 +55,7 @@ class GetList(_Base):
 
     def _get_data_from_sliceable(self, sliceable, query_ctx, _time_keys=time_keys):
 
-        max_chars = self.request.input.get('max_chars') or 60
+        max_chars = self.request.input.get('max_chars') or 30
         out = []
 
         now = self.time.utcnow(needs_format=False)
