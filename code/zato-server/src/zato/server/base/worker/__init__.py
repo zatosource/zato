@@ -1401,7 +1401,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def get_channel_plain_http(self, name):
         with self.update_lock:
             for item in self.request_dispatcher.url_data.channel_data:
-                if item.connection == 'channel' and item.name == name:
+                if item['connection'] == 'channel' and item['name'] == name:
                     return item
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
@@ -1412,6 +1412,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
+        # First, check if there was a cache for this channel. If so, make sure of all entries pointing
+        # to the channel are deleted too.
+        item = self.get_channel_plain_http(msg.name)
+        if item['cache_type']:
+            cache = self.server.get_cache(item['cache_type'], item['cache_name'])
+            cache.delete_by_prefix('http-channel-{}'.format(item['id']))
+
+        # Delete the channel object now
         self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
 
 # ################################################################################################################################

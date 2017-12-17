@@ -535,6 +535,13 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def get_cache(self, cache_type, cache_name):
+        """ Returns a cache object of given type and name.
+        """
+        return self.worker_store.cache_api.get_cache(cache_type, cache_name)
+
+# ################################################################################################################################
+
     def get_from_cache(self, cache_type, cache_name, key):
         """ Returns a value from input cache by key, or None if there is no such key.
         """
