@@ -27,6 +27,7 @@ from paste.util.converters import asbool
 from zato.common import APISPEC, DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, path, ZatoException, \
      ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.exception import BadRequest, Reportable
+from zato.common.pubsub import PubSubMessage
 
 logger = logging.getLogger(__name__)
 
@@ -77,16 +78,16 @@ class ForceType(object):
     def __repr__(self):
         return '<{} at {} name:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.name)
 
-    def from_json(self, value):
+    def from_json(self, value, *ignored):
         raise NotImplementedError('Subclasses should override it')
 
-    def to_json(self, value):
+    def to_json(self, value, *ignored):
         raise NotImplementedError('Subclasses should override it')
 
-    def from_xml(self, value):
+    def from_xml(self, value, *ignored):
         raise NotImplementedError('Subclasses should override it')
 
-    def to_xml(self, value):
+    def to_xml(self, value, *ignored):
         raise NotImplementedError('Subclasses should override it')
 
     def convert(self, value, param_name, data_type, from_sio_to_external):
@@ -118,6 +119,10 @@ class AsIs(ForceType):
     it would've been, for instance, because its name is 'user_id' and should've
     been converted over to an int.
     """
+    def from_json(self, value, *ignored):
+        return value
+
+    to_json = from_json
 
 # ################################################################################################################################
 
@@ -345,6 +350,11 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
             if isinstance(param, ForceType):
                 value = param.convert(value, param_name, data_format, from_sio_to_external)
             else:
+                # Empty string sent in lieu of integers are equivalent to None,
+                # as though they were never sent - this is need for internal metaclasses
+                if value == '' and _is_int(param_name, int_parameters, int_parameter_suffixes):
+                    value = None
+
                 if value and (value not in special_values) and has_simple_io_config:
                     if _is_int(param_name, int_parameters, int_parameter_suffixes):
                         value = int(value)
@@ -451,7 +461,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
     else:
         value = NOT_GIVEN
 
-    if value == NOT_GIVEN:
+    if (not isinstance(value, PubSubMessage)) and value == NOT_GIVEN:
         if default_value != NO_DEFAULT_VALUE:
             value = default_value
         else:
@@ -476,7 +486,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
             else:
                 value = unicode(value)
 
-        if not isinstance(param, AsIs):
+        if not isinstance(param, (AsIs, Opaque)):
             return param_name, convert_sio(cid, param, param_name, value, has_simple_io_config, data_format==DATA_FORMAT.XML,
                 bool_parameter_prefixes, int_parameters, int_parameter_suffixes, None, data_format, False)
 

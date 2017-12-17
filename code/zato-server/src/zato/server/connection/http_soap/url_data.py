@@ -72,6 +72,7 @@ class URLData(CyURLData, OAuthDataStore):
         self.odb = odb
         self.jwt_secret = jwt_secret
         self.vault_conn_api = vault_conn_api
+        self.rbac_auth_type_hooks = self.worker.server.fs_server_config.rbac.auth_type_hook
 
         self.sec_config_getter = Bunch()
         self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
@@ -586,6 +587,7 @@ class URLData(CyURLData, OAuthDataStore):
 
             if perm_id == http_method_permission_id and resource_id == channel_item['service_id']:
                 for client_def in worker_store.rbac.role_id_to_client_def[role_id]:
+
                     _, sec_type, sec_name = client_def.split(sep)
 
                     _sec = Bunch()
@@ -602,8 +604,20 @@ class URLData(CyURLData, OAuthDataStore):
                         break
 
         if not is_allowed:
-            logger.error('None of RBAC definitions allowed request in, cid:`%s`', cid)
-            raise Unauthorized(cid, 'You are not allowed to access this resource', 'zato')
+            logger.warn('None of RBAC definitions allowed request in, cid:`%s`', cid)
+
+            # We need to return 401 Unauthorized but we need to send a challenge, i.e. authentication type
+            # that this channel can be accessed through so we as the last resort, we invoke a hook
+            # service which decides what it should be. If there is no hook, we default to 'zato'.
+            if channel_item['url_path'] in self.rbac_auth_type_hooks:
+                service_name = self.rbac_auth_type_hooks[channel_item['url_path']]
+                response = self.worker.invoke(service_name, {'channel_item':channel_item}, serialize=False)
+                response = response.getvalue(serialize=False)
+                auth_type = response['response']['auth_type']
+            else:
+                auth_type = 'zato'
+
+            raise Unauthorized(cid, 'You are not allowed to access this resource', auth_type)
 
 # ################################################################################################################################
 

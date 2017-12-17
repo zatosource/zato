@@ -125,7 +125,7 @@ class RequestDispatcher(object):
         if soap_action[0] == '"' and soap_action[-1] == '"':
             soap_action = soap_action[1:-1]
 
-        return soap_action
+        return soap_action.decode('utf-8')
 
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
@@ -148,8 +148,6 @@ class RequestDispatcher(object):
         # we still haven't validated credentials, only matched the URL.
         # Credentials are checked in a call to self.url_data.check_security
         url_match, channel_item = self.url_data.match(path_info, soap_action, bool(soap_action))
-
-        logger.warn('333 %s', channel_item)
 
         if _has_debug and channel_item:
             logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))

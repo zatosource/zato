@@ -1,0 +1,106 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Topic publishers{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            '_name',
+            '_client',
+            '_is_internal',
+            'pattern_matched',
+            'last_pub_time',
+            'last_msg_id',
+            'last_correl_id',
+            'last_in_reply_to',
+            '_ext_cli',
+            '_conn',
+            'id',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Publishers for topic : <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}</a></h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:5%">&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Client</a></th>
+                        <th><a href="#">Pattern</a></th>
+                        <th><a href="#">Last pub time</a></th>
+                        <th><a href="#">Last Msg ID</a></th>
+                        <th><a href="#">Last Correl ID</a></th>
+                        <th><a href="#">Last in reply to</a></th>
+                        <th>EXTCLI</th>
+                        <th style="width:5%">CONN</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.topic_id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>
+                            {{ item.client_html|safe }}
+                        </td>
+                        <td>{{ item.pattern_matched }}</td>
+                        <td>{{ item.last_pub_time }}</td>
+                        <td>{{ item.last_msg_id|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.last_correl_id|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.last_in_reply_to|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.ext_client_id|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>
+                            {% if item.ws_channel_id %}
+                                <span class="form_hint">ACTIVE</span>
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='12'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

@@ -1,0 +1,137 @@
+
+{% extends "zato/index.html" %}
+
+{% block html_title %}Publish message{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+
+    <script type="text/javascript" src="/static/js/pubsub/message-publish.js"></script>
+    <script type="text/python" src="/static/brython/_zato/pubsub/message_publish.py"></script>
+
+{% endblock %}
+
+{% block "content" %}
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<h2 class="zato">Publish message
+
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div id="markup">
+    <form id="message-publish-form" action="" method="post">
+        <table id="data-table">
+            <tr>
+                <td class='inline_header' style="width:80px">
+                    Topic
+                </td>
+                <td style="width:140px">
+                    {{ form.topic_name }}
+                </td>
+
+                <td class='inline_header' style="width:90px">
+                    Publisher
+                </td>
+                <td style="width:170px">
+                    {{ form.publisher_id }}
+                </td>
+
+                <td class='inline_header' style="width:90px">Priority <span class="form_hint">(1-9, 1=min)</span></td>
+                <td>
+                    {{ form.priority }}
+                </td>
+            </tr>
+            <tr>
+                <td class='inline_header' style="width:90px">
+                    Guaranteed delivery
+                </td>
+                <td style="width:120px">
+                    {{ form.gd }}
+                </td>
+
+                <td class='inline_header' style="width:90px">
+                    Group ID
+                </td>
+                <td style="width:170px">
+                    {{ form.group_id }}
+                </td>
+
+                <td class='inline_header' style="width:90px">Pub ext. client ID</td>
+                <td style="width:140px">{{ form.ext_client_id }}</td>
+            </tr>
+            <tr>
+                <td class='inline_header' style="width:80px">Msg ID</td>
+                <td style="width:120px">{{ form.msg_id }}</td>
+
+                <td class='inline_header' style="width:90px">Position in group</td>
+                <td style="width:170px">{{ form.position_in_group }}</td>
+
+                <td class='inline_header' style="width:90px"></td>
+                <td style="width:140px">
+                </td>
+
+            </tr>
+            <tr>
+                <td class='inline_header' style="width:80px">Correl ID</td>
+                <td style="width:120px">
+                    {{ form.correl_id }}
+                </td>
+
+                <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in s)</span></td>
+                <td style="width:170px">{{ form.expiration }}</td>
+
+                <td class='inline_header' style="width:90px"></td>
+                <td style="width:140px"></td>
+
+            </tr>
+            <tr>
+                <td class='inline_header' style="width:80px">In reply to</td>
+                <td style="width:120px">
+                    {{ form.in_reply_to }}
+                </td>
+
+                <td class='inline_header' style="width:90px"></td>
+                <td style="width:170px"></td>
+
+                <td class='inline_header' style="width:90px">
+                    {% ifequal object_type "queue" %}
+                        Delivery history
+                    {% endifequal %}
+                </td>
+                <td style="width:140px">
+                    {% ifequal object_type "queue" %}
+                        <a href="#">Show</a>
+                    {% endifequal %}
+                </td>
+            </tr>
+            <tr>
+            <tr>
+                <td class='inline_header' colspan="6">
+                    Payload to send
+                </td>
+            </tr>
+            <tr>
+                <td colspan="6"><textarea style="height:200px" id="data-textarea" name="data">This is a sample message</textarea></td>
+            </tr>
+            <tr>
+                <td colspan="6" style="text-align:right">
+                    <input type="submit" name="update-message-button" value="Publish message to topic" />
+                    {% csrf_token %}
+                    <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
+                    {{ form.select_changer_source }}
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>
+
+{% endblock %}

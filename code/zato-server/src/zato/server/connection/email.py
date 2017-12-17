@@ -125,10 +125,10 @@ class SMTPConnection(_Connection):
             headers['From'] = msg.from_
 
         if msg.cc and 'CC' not in headers:
-            msg.headers['CC'] = ', '.join(msg.cc) if not isinstance(msg.cc, basestring) else msg.cc
+            headers['CC'] = ', '.join(msg.cc) if not isinstance(msg.cc, basestring) else msg.cc
 
         if msg.bcc and 'BCC' not in headers:
-            msg.headers['BCC'] = ', '.join(msg.bcc) if not isinstance(msg.bcc, basestring) else msg.bcc
+            headers['BCC'] = ', '.join(msg.bcc) if not isinstance(msg.bcc, basestring) else msg.bcc
 
         body, html_body = (None, msg.body) if msg.is_html else (msg.body, None)
         email = Email(msg.to, msg.subject, body, html_body, msg.charset, headers, msg.is_rfc2231)

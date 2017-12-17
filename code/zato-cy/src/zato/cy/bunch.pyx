@@ -20,6 +20,26 @@ class Bunch(dict):
 
 # ##################################################################################################################################
 
+cdef object _debunchify(object data):
+
+    if isinstance(data, dict):
+        return {
+            k: _debunchify(v)
+            for k, v in data.iteritems()
+        }
+
+    elif isinstance(data, list):
+        return [_debunchify(v) for v in data]
+
+    elif isinstance(data, tuple):
+        return tuple(_debunchify(v) for v in data)
+
+    else:
+        return data
+
+
+# ##################################################################################################################################
+
 cdef object _bunchify(object data, _Bunch):
 
     if isinstance(data, dict):
@@ -45,5 +65,10 @@ cdef object _bunchify(object data, _Bunch):
 
 def bunchify(data, _Bunch=Bunch):
     return _bunchify(data, _Bunch)
+
+# ##################################################################################################################################
+
+def debunchify(data, _Bunch=Bunch):
+    return _debunchify(data)
 
 # ##################################################################################################################################

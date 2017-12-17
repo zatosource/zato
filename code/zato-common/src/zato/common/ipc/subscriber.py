@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from traceback import format_exc
+
 # ZeroMQ
 import zmq.green as zmq
 
@@ -33,6 +36,9 @@ class Subscriber(IPCEndpoint):
         self.socket.setsockopt(zmq.SUBSCRIBE, b'')
 
         while self.keep_running:
-            self.on_message_callback(self.socket.recv_pyobj())
+            try:
+                self.on_message_callback(self.socket.recv_pyobj())
+            except Exception, e:
+                self.logger.warn('Error in IPC subscriber, e:`%s`', format_exc(e))
 
 # ################################################################################################################################

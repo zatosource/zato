@@ -32,7 +32,6 @@ from sqlalchemy.util import KeyedTuple
 # Zato
 from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, SIMPLE_IO, simple_types, TRACE1, ZatoException, \
      ZATO_OK
-from zato.common.exception import Reportable
 from zato.common.util import make_repr
 from zato.server.service.reqresp.fixed_width import FixedWidth
 from zato.server.service.reqresp.sio import AsIs, convert_param, ForceType, ServiceInput, SIOConverter
@@ -397,7 +396,7 @@ class SimpleIOPayload(SIOConverter):
                     leave_as_is = isinstance(name, AsIs)
                     elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
 
-                    if elem_value == '':
+                    if elem_value == u'':
                         if self.zato_skip_empty_keys:
                             if name not in self.zato_force_empty_keys:
                                 continue

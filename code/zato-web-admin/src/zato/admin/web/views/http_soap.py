@@ -125,6 +125,7 @@ def _edit_create_response(req, id, verb, transport, connection, name):
 def index(req):
     connection = req.GET.get('connection')
     transport = req.GET.get('transport')
+    query = req.GET.get('query', '')
     items = []
     _security = SecurityList()
 
@@ -181,6 +182,8 @@ def index(req):
         data, meta = parse_response_data(req.zato.client.invoke('zato.http-soap.get-list', input_dict))
 
         for item in data:
+            if query not in item.name:
+                continue
 
             _security_name = item.security_name
             if _security_name:
