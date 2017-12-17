@@ -134,6 +134,17 @@ class _CachedResponse(object):
 
 # ################################################################################################################################
 
+class _HashCtx(object):
+    """ Encapsulates information needed to compute a hash value of an incoming request.
+    """
+    def __init__(self, raw_request, channel_item, channel_params, wsgi_environ):
+        self.raw_request = raw_request
+        self.channel_item = channel_item
+        self.channel_params = channel_params
+        self.wsgi_environ = wsgi_environ
+
+# ################################################################################################################################
+
 class RequestDispatcher(object):
     """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
     """
@@ -396,7 +407,7 @@ class RequestHandler(object):
 # ################################################################################################################################
 
     def get_response_from_cache(self, service, raw_request, channel_item, channel_params, wsgi_environ, _loads=loads,
-        _CachedResponse=_CachedResponse):
+        _CachedResponse=_CachedResponse, _HashCtx=_HashCtx, _sha256=sha256):
         """ Returns a cached response for incoming request or None if there is nothing cached for it.
         By default, an incoming request's hash is calculated by sha256 over a concatenation of:
           * WSGI REQUEST_METHOD   # E.g. GET or POST
@@ -406,13 +417,15 @@ class RequestHandler(object):
         Note that query string is sorted which means that ?foo=123&bar=456 is equal to ?bar=456&foo=123,
         that is, the order of parameters in query string does not matter.
         """
-        if 0: # service.get_request_hash
-            pass
+        if service.get_request_hash:
+            hash_value = service.get_request_hash(_HashCtx(raw_request, channel_item, channel_params, wsgi_environ))
         else:
             query_string = str(sorted(channel_params.items()))
             data = '%s%s%s%s' % (wsgi_environ['REQUEST_METHOD'], wsgi_environ['PATH_INFO'], query_string, raw_request)
-            hash_value = sha256(data).hexdigest()
-            cache_key = 'http-channel:%s:%s' % (channel_item['id'], hash_value)
+            hash_value = _sha256(data).hexdigest()
+
+        # No matter if hash value is default or from service, always prefix it with channel's type and ID
+        cache_key = 'http-channel:%s:%s' % (channel_item['id'], hash_value)
 
         # We have the key so now we can check if there is any matching response already stored in cache
         response = self.server.get_from_cache(channel_item['cache_type'], channel_item['cache_name'], cache_key)
