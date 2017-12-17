@@ -24,7 +24,7 @@ from zato.common.odb.model import Cluster, JWT
 from zato.common.odb.query import jwt_list
 from zato.server.connection.http_soap import Unauthorized
 from zato.server.jwt import JWT as JWTBackend
-from zato.server.service import Integer
+from zato.server.service import Integer, Service
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 # ################################################################################################################################
@@ -199,12 +199,11 @@ class Delete(AdminService):
 
 # ################################################################################################################################
 
-class LogIn(AdminService):
+class LogIn(Service):
     """ Logs user into using JWT-backed credentials and returns a new token if credentials were correct.
     """
-    class SimpleIO(AdminSIO):
+    class SimpleIO:
         input_required = ('username', 'password')
-        response_elem = 'zato_security_jwt_log_in_response'
         output_optional = ('token',)
 
     def handle(self):
@@ -212,7 +211,7 @@ class LogIn(AdminService):
             self.request.input.username, self.request.input.password)
 
         if token:
-            self.response.payload.token = token
+            self.response.payload = {'token': token}
             self.response.headers['Authorization'] = token
 
         else:
@@ -245,7 +244,7 @@ class LogOut(AdminService):
 
 class CreateToken(AdminService):
     """ Creates token on behalf of a given user without requiring that user to provide a password. Useful when another application
-    obtains the token in lieu the user directly.
+    obtains the token in lieu of the user directly.
     """
     class SimpleIO(AdminSIO):
         input_required = ('username',)
