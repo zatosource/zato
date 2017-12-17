@@ -89,8 +89,8 @@ class AfterPublish(AdminService):
         # current_servers - a list of servers that we know have currently subscribers
         #                   for messsages on whose behalf we are being called
         #
-        # not_found ------- a list of sub_keys for which we don't have any servers
-        #                   with delivery tasks right now
+        # not_found ------- a list of sub_keys for which right now we don't have any servers
+        #                   with delivery tasks
         #
         # All servers from current_servers will be invoked and notified about messages published (GD and non-GD).
         # For all sub_keys from not_found, information about non-GD messages for each of them will be kept in RAM.

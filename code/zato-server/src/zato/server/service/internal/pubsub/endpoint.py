@@ -43,7 +43,8 @@ output_optional_extra = ['ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 's
 # ################################################################################################################################
 
 _sub_skip_update = ('id', 'sub_id', 'sub_key', 'cluster_id', 'creation_time', 'current_depth', 'endpoint_id', 'endpoint_type',
-    'last_interaction_time', 'staging_depth', 'sql_ws_client_id', 'topic_name', 'total_depth', 'web_socket')
+    'last_interaction_time', 'staging_depth', 'sql_ws_client_id', 'topic_name', 'total_depth', 'web_socket',
+    'out_rest_http_soap_id', 'out_soap_http_soap_id', 'out_http_soap_id')
 
 # ################################################################################################################################
 
@@ -274,6 +275,24 @@ class UpdateEndpointQueue(AdminService):
 
     def handle(self):
 
+        # REST and SOAP outconn IDs have different input names but they both map
+        # to the same SQL-level attribute. This means that at most one of them may be
+        # provided on input. It's an error to provide both.
+        out_rest_http_soap_id = self.request.input.get('out_rest_http_soap_id')
+        out_soap_http_soap_id = self.request.input.get('out_soap_http_soap_id')
+
+        if out_rest_http_soap_id and out_soap_http_soap_id:
+            raise BadRequest(self.cid, 'Cannot provide both out_rest_http_soap_id and out_soap_http_soap_id on input')
+
+        # We know we don't have both out_rest_http_soap_id and out_soap_http_soap_id on input
+        # but we still need to find out if we have any at all.
+        if out_rest_http_soap_id:
+            out_http_soap_id = out_rest_http_soap_id
+        elif out_soap_http_soap_id:
+            out_http_soap_id = out_soap_http_soap_id
+        else:
+            out_http_soap_id = None
+
         with closing(self.odb.session()) as session:
             item = session.query(PubSubSubscription).\
                 filter(PubSubSubscription.id==self.request.input.id).\
@@ -287,6 +306,9 @@ class UpdateEndpointQueue(AdminService):
             for key, value in sorted(self.request.input.items()):
                 if key not in _sub_skip_update:
                     setattr(item, key, value)
+
+            # This one we set manually based on logic at the top of the method
+            item.out_http_soap_id = out_http_soap_id
 
             session.add(item)
             session.commit()

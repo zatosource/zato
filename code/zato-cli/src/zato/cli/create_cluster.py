@@ -701,8 +701,8 @@ class Create(ZatoCommand):
         return root
 
     def add_apispec_rbac_auth(self, session, cluster, root_rbac_role):
-        """ Create the apispec Readers role, associated default Basic Auth Account, and account<->role binding. Returns a reference to the role
-        to be used by add_apispec_pub() to grant access to each service individually."""
+        """ Create the apispec Readers role, associated default Basic Auth Account, and account<->role binding.
+        Returns a reference to the role to be used by add_apispec_pub() to grant access to each service individually."""
         role = RBACRole(name='API Specification Readers', parent=root_rbac_role, cluster=cluster)
         session.add(role)
 

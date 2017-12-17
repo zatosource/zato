@@ -10,10 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # SQLAlchemy
 from sqlalchemy import update
+from sqlalchemy.orm.exc import NoResultFound
 
 # Zato
 from zato.common import PUBSUB
-from zato.common.odb.model import PubSubMessage, PubSubEndpointEnqueuedMessage, PubSubSubscription
+from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, PubSubSubscription, Server
 
 # ################################################################################################################################
 
@@ -75,5 +76,25 @@ def confirm_pubsub_msg_delivered(session, cluster_id, sub_key, pub_msg_id, now, 
         where(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
         where(PubSubSubscription.sub_key==sub_key)
     )
+
+# ################################################################################################################################
+
+def get_delivery_server_for_sub_key(session, cluster_id, sub_key):
+    """ Returns information about which server handles delivery tasks for input sub_key, the latter must exist in DB.
+    """
+    try:
+        return session.query(
+            Server.id.label('server_id'),
+            Server.name.label('server_name'),
+            Server.cluster_id,
+            PubSubEndpoint.endpoint_type,
+            ).\
+            filter(Server.id==PubSubSubscription.server_id).\
+            filter(PubSubSubscription.sub_key==sub_key).\
+            filter(PubSubSubscription.endpoint_id==PubSubEndpoint.id).\
+            filter(PubSubSubscription.cluster_id==cluster_id).\
+            one()
+    except NoResultFound:
+        pass # Implicitly returns None
 
 # ################################################################################################################################

@@ -1965,7 +1965,7 @@ class WebSocketClientPubSubKeys(Base):
     id = Column(Integer, Sequence('web_socket_cli_ps_seq'), primary_key=True)
 
     # The same as in web_socket_sub.sub_key
-    sub_key = Column(Text, nullable=False)
+    sub_key = Column(String(200), nullable=False)
 
     client_id = Column(Integer, ForeignKey('web_socket_client.id', ondelete='CASCADE'), nullable=False)
     client = relationship(
@@ -1990,8 +1990,8 @@ class WebSocketSubscription(Base):
 
     id = Column(Integer, Sequence('web_socket_sub_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False)
-    sub_key = Column(Text, nullable=False)
-    ext_client_id = Column(Text(), nullable=False)
+    sub_key = Column(String(200), nullable=False)
+    ext_client_id = Column(String(200), nullable=False)
 
     channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
     channel = relationship(
@@ -2010,7 +2010,6 @@ class PubSubEndpoint(Base):
         Index('pubsb_endp_clust_idx', 'cluster_id', unique=False),
         Index('pubsb_endp_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_endp_name_idx', 'cluster_id', 'name', unique=True),
-        UniqueConstraint('cluster_id', 'name'),
         UniqueConstraint('cluster_id', 'security_id'),
         UniqueConstraint('cluster_id', 'service_id'),
         UniqueConstraint('cluster_id', 'ws_channel_id'),
@@ -2136,7 +2135,12 @@ class PubSubMessage(Base):
     __tablename__ = 'pubsub_message'
     __table_args__ = (
         Index('pubsb_msg_id_idx', 'cluster_id', 'id', unique=True),
-        Index('pubsb_msg_pubmsg_id_idx', 'cluster_id', 'pub_msg_id', unique=True),
+
+        # This index is needed for FKs from other tables (on MySQL),
+        # otherwise we get error 1215 'Cannot add foreign key constraint'
+        Index('pubsb_msg_pubmsg_id_idx', 'pub_msg_id', unique=True),
+
+        Index('pubsb_msg_pubmsg_clu_id_idx', 'cluster_id', 'pub_msg_id', unique=True),
         Index('pubsb_msg_inreplyto_id_idx', 'cluster_id', 'in_reply_to', unique=False),
     {})
 
@@ -2359,7 +2363,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     endpoint = relationship(PubSubEndpoint,
         backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
     topic = relationship(PubSubTopic, backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
     subscription_id = Column(Integer, ForeignKey('pubsub_sub.id', ondelete='CASCADE'), nullable=True)
