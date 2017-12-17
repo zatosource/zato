@@ -464,6 +464,13 @@ class Cache(object):
 
 # ################################################################################################################################
 
+    def iterkeys(self):
+        """ Returns an iterator over all keys in the cache - like dict.iterkeys().
+        """
+        return self.impl.iterkeys()
+
+# ################################################################################################################################
+
     def values(self):
         """ Returns all values in the cache - like dict.values().
         """
@@ -471,10 +478,24 @@ class Cache(object):
 
 # ################################################################################################################################
 
+    def itervalues(self):
+        """ Returns an iterator over all values in the cache - like dict.itervalues().
+        """
+        return self.impl.itervalues()
+
+# ################################################################################################################################
+
     def items(self):
         """ Returns all items in the cache - like dict.items().
         """
         return self.impl.items()
+
+# ################################################################################################################################
+
+    def iteritems(self):
+        """ Returns an iterator over all items in the cache - like dict.iteritems().
+        """
+        return self.impl.iteritems()
 
 # ################################################################################################################################
 
