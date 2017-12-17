@@ -177,8 +177,8 @@
                             </td>
                             <td>
                                 {{ create_form.active_status }}
-                                | GD enabled {{ create_form.has_gd }}
-                                | STG enabled {{ create_form.is_staging_enabled }}
+                                | <label>GD enabled {{ create_form.has_gd }}</label>
+                                | <label>STG enabled {{ create_form.is_staging_enabled }}</label>
                             </td>
                         </tr>
 
@@ -198,8 +198,10 @@
                                 |
                                 Deliv. max retries
                                 {{ create_form.delivery_max_retry }}
+                                <label>
                                 Block on err.?
                                 {{ create_form.delivery_err_should_block }}
+                                </label>
                             </td>
                         </tr>
 
@@ -287,8 +289,9 @@
                             <td>
                                 {{ create_form.out_smtp_id }}
                                 |
-                                HTML?
-                                {{ create_form.smtp_is_html }}
+                                <label>
+                                HTML? {{ create_form.smtp_is_html }}
+                                </label>
                             </td>
                         </tr>
                         <tr id="dyn_form_row_id_smtp_subject" style="display:none">
