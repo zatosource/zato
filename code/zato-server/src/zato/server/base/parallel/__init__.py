@@ -535,6 +535,20 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def get_from_cache(self, cache_type, cache_name, key):
+        """ Returns a value from input cache by key, or None if there is no such key.
+        """
+        return self.worker_store.cache_api.get_cache(cache_type, cache_name).get(key)
+
+# ################################################################################################################################
+
+    def set_in_cache(self, cache_type, cache_name, key, value):
+        """ Sets a value in cache for input parameters.
+        """
+        return self.worker_store.cache_api.get_cache(cache_type, cache_name).set(key, value)
+
+# ################################################################################################################################
+
     def invoke_all_pids(self, service, request, timeout=5, *args, **kwargs):
         """ Invokes a given service in each of processes current server has.
         """

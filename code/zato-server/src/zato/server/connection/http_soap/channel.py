@@ -10,11 +10,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from hashlib import sha256
 from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
 from traceback import format_exc
 
 # anyjson
-from anyjson import dumps
+from anyjson import dumps, loads
 
 # Django
 from django.http import QueryDict
@@ -30,8 +31,12 @@ from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbid
      TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 _has_debug = logger.isEnabledFor(logging.DEBUG)
+
+# ################################################################################################################################
 
 _status_bad_request = b'{} {}'.format(BAD_REQUEST, HTTP_RESPONSES[BAD_REQUEST])
 _status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
@@ -41,18 +46,28 @@ _status_unauthorized = b'{} {}'.format(UNAUTHORIZED, HTTP_RESPONSES[UNAUTHORIZED
 _status_forbidden = b'{} {}'.format(FORBIDDEN, HTTP_RESPONSES[FORBIDDEN])
 _status_too_many_requests = b'{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO_MANY_REQUESTS])
 
+# ################################################################################################################################
+
 status_response = {}
 for code, response in HTTP_RESPONSES.items():
     status_response[code] = b'{} {}'.format(code, response)
 
+# ################################################################################################################################
+
 soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>""" # noqa
+
+# ################################################################################################################################
 
 zato_message_soap = b"""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
   <soap:Body>{data}</soap:Body>
 </soap:Envelope>"""
 
+# ################################################################################################################################
+
 zato_message_plain = b'{data}'
 zato_message_declaration = b"<?xml version='1.0' encoding='UTF-8'?>" + zato_message_plain
+
+# ################################################################################################################################
 
 # Returned if there has been any exception caught.
 soap_error = """<?xml version='1.0' encoding='UTF-8'?>
@@ -68,22 +83,34 @@ soap_error = """<?xml version='1.0' encoding='UTF-8'?>
   </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
 
+# ################################################################################################################################
+
 response_404 = b'CID:`{}` Unknown URL:`{}` or SOAP action:`{}`'
+
+# ################################################################################################################################
 
 def client_json_error(cid, faultstring):
     zato_env = {'zato_env':{'result':ZATO_ERROR, 'cid':cid, 'details':faultstring}}
     return dumps(zato_env)
 
+# ################################################################################################################################
+
 def client_soap_error(cid, faultstring):
     return soap_error.format(**{'faultcode':'Client', 'cid':cid, 'faultstring':faultstring})
 
+# ################################################################################################################################
+
 def server_soap_error(cid, faultstring):
     return soap_error.format(**{'faultcode':'Server', 'cid':cid, 'faultstring':faultstring})
+
+# ################################################################################################################################
 
 client_error_wrapper = {
     'json': client_json_error,
     'soap': client_soap_error,
 }
+
+# ################################################################################################################################
 
 def get_client_error_wrapper(transport, data_format):
     try:
@@ -92,7 +119,20 @@ def get_client_error_wrapper(transport, data_format):
         # Any KeyError must be caught by the caller
         return client_error_wrapper[data_format]
 
-# ##############################################################################
+# ################################################################################################################################
+
+class _CachedResponse(object):
+    """ A wrapper for responses served from caches.
+    """
+    __slots__ = ('payload', 'content_type', 'headers', 'status_code')
+
+    def __init__(self, payload, content_type, headers, status_code):
+        self.payload = payload
+        self.content_type = content_type
+        self.headers = headers
+        self.status_code = status_code
+
+# ################################################################################################################################
 
 class RequestDispatcher(object):
     """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
@@ -106,6 +146,8 @@ class RequestDispatcher(object):
         self.return_tracebacks = return_tracebacks
         self.default_error_message = default_error_message
 
+# ################################################################################################################################
+
     def wrap_error_message(self, cid, url_type, msg):
         """ Wraps an error message in a transport-specific envelope.
         """
@@ -115,6 +157,8 @@ class RequestDispatcher(object):
         # Let's return the message as-is if we didn't have any specific envelope
         # to use.
         return msg
+
+# ################################################################################################################################
 
     def _handle_quotes_soap_action(self, soap_action):
         """ Make sure quotes around SOAP actions are ignored so these two
@@ -126,6 +170,8 @@ class RequestDispatcher(object):
             soap_action = soap_action[1:-1]
 
         return soap_action.decode('utf-8')
+
+# ################################################################################################################################
 
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
@@ -206,8 +252,7 @@ class RequestDispatcher(object):
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
 
-                # OK, no security exception at that point means we can finally
-                # invoke the service.
+                # OK, no security exception at that point means we can finally invoke the service.
                 response = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
                     payload, worker_store, self.simple_io_config, post_data, path_info, soap_action)
 
@@ -280,7 +325,7 @@ class RequestDispatcher(object):
             logger.error(response)
             return response
 
-# ##############################################################################
+# ################################################################################################################################
 
 class RequestHandler(object):
     """ Handles individual HTTP requests to a given service.
@@ -288,6 +333,8 @@ class RequestHandler(object):
     def __init__(self, server=None):
         self.server = server # A ParallelServer instance
         self.use_soap_envelope = asbool(self.server.fs_server_config.misc.use_soap_envelope)
+
+# ################################################################################################################################
 
     def _set_response_data(self, service, **kwargs):
         """ A callback invoked by the services after it's done producing the response.
@@ -299,6 +346,8 @@ class RequestHandler(object):
         self.set_content_type(service.response, data_format, transport, kwargs.get('url_match'), kwargs.get('channel_item'))
 
         return service.response
+
+# ################################################################################################################################
 
     def create_channel_params(self, path_params, channel_item, wsgi_environ, raw_request, post_data=None, _has_debug=_has_debug):
         """ Collects parameters specific to this channel (HTTP) and updates wsgi_environ
@@ -344,6 +393,52 @@ class RequestHandler(object):
 
         return channel_params
 
+# ################################################################################################################################
+
+    def get_response_from_cache(self, service, raw_request, channel_item, channel_params, wsgi_environ, _loads=loads,
+        _CachedResponse=_CachedResponse):
+        """ Returns a cached response for incoming request or None if there is nothing cached for it.
+        By default, an incoming request's hash is calculated by sha256 over a concatenation of:
+          * WSGI REQUEST_METHOD   # E.g. GET or POST
+          * WSGI PATH_INFO        # E.g. /my/api
+          * sorted(zato.http.GET) # E.g. ?foo=123&bar=456 (query string aka channel_params)
+          * payload bytes         # E.g. '{"customer_id":"123"}' - a string object, before parsing
+        Note that query string is sorted which means that ?foo=123&bar=456 is equal to ?bar=456&foo=123,
+        that is, the order of parameters in query string does not matter.
+        """
+        if 0: # service.get_request_hash
+            pass
+        else:
+            query_string = str(sorted(channel_params.items()))
+            data = '%s%s%s%s' % (wsgi_environ['REQUEST_METHOD'], wsgi_environ['PATH_INFO'], query_string, raw_request)
+            hash_value = sha256(data).hexdigest()
+            cache_key = 'http-channel:%s:%s' % (channel_item['id'], hash_value)
+
+        # We have the key so now we can check if there is any matching response already stored in cache
+        response = self.server.get_from_cache(channel_item['cache_type'], channel_item['cache_name'], cache_key)
+
+        # If there is any response, we can now load into a format that our callers expect
+        if response:
+            response = _loads(response)
+            response = _CachedResponse(response['payload'], response['content_type'], response['headers'],
+                response['status_code'])
+
+        return cache_key, response
+
+# ################################################################################################################################
+
+    def set_response_in_cache(self, channel_item, key, response, _dumps=dumps):
+        """ Caches responses from this channel's invocation for as long as the cache is configured to keep it.
+        """
+        self.server.set_in_cache(channel_item['cache_type'], channel_item['cache_name'], key, _dumps({
+            'payload': response.payload,
+            'content_type': response.content_type,
+            'headers': response.headers,
+            'status_code': response.status_code,
+        }))
+
+# ################################################################################################################################
+
     def handle(self, cid, url_match, channel_item, wsgi_environ, raw_request, worker_store, simple_io_config, post_data,
             path_info, soap_action, channel_type=CHANNEL.HTTP_SOAP, _response_404=response_404):
         """ Create a new instance of a service and invoke it.
@@ -359,6 +454,13 @@ class RequestHandler(object):
         else:
             channel_params = None
 
+        # If caching is configured for this channel, we need to first check if there is no response already
+        if channel_item['cache_type']:
+            cache_key, response = self.get_response_from_cache(service, raw_request, channel_item, channel_params, wsgi_environ)
+            if response:
+                return response
+
+        # No cache for this channel or no cached response, invoke the service then.
         response = service.update_handle(self._set_response_data, service, raw_request,
             channel_type, channel_item.data_format, channel_item.transport, self.server, worker_store.broker_client,
             worker_store, cid, simple_io_config, wsgi_environ=wsgi_environ,
@@ -366,9 +468,14 @@ class RequestHandler(object):
             merge_channel_params=channel_item.merge_url_params_req,
             params_priority=channel_item.params_pri)
 
+        # Cache the response if needed (cache_key was already created on return from get_response_from_cache)
+        if channel_item['cache_type']:
+            self.set_response_in_cache(channel_item, cache_key, response)
+
+        # Having used the cache or not, we can return the response now
         return response
 
-    # ##########################################################################
+# ################################################################################################################################
 
     def _get_xml_admin_payload(self, service_instance, zato_message_template, payload):
 
@@ -386,6 +493,8 @@ class RequestHandler(object):
                          cid=service_instance.cid, result=ZATO_OK)
 
         return zato_message_template.format(data=data.encode('utf-8'))
+
+# ################################################################################################################################
 
     def set_payload(self, response, data_format, transport, service_instance):
         """ Sets the actual payload to represent the service's response out of
@@ -426,6 +535,8 @@ class RequestHandler(object):
                 if self.use_soap_envelope:
                     response.payload = soap_doc.format(body=response.payload)
 
+# ################################################################################################################################
+
     def set_content_type(self, response, data_format, transport, url_match, channel_item):
         """ Sets a response's content type if one hasn't been supplied by the user.
         """
@@ -451,4 +562,4 @@ class RequestHandler(object):
 
         response.content_type = content_type
 
-# ##########################################################################
+# ################################################################################################################################
