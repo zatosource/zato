@@ -289,6 +289,10 @@ class CreateEditMeta(AdminServiceMeta):
                     else:
                         instance = attrs.model()
 
+                    # Update the instance with data received on input, however,
+                    # note that this may overwrite some of existing attributes
+                    # if they are empty on input. If it's not desired,
+                    # set skip_input_params = ['...'] to ignore such input parameters.
                     instance.fromdict(input, exclude=['password'], allow_pk=True)
 
                     # Now that we have an instance which is known not to be a duplicate

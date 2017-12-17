@@ -14,6 +14,7 @@ from datetime import datetime
 from logging import INFO
 from re import IGNORECASE
 from tempfile import mkstemp
+from traceback import format_exc
 from uuid import uuid4
 
 # anyjson
@@ -39,6 +40,8 @@ from zato.bunch import Bunch
 from zato.common import DATA_FORMAT, KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
+from zato.common.posix_ipc_util import ServerStartupIPC
+from zato.common.pubsub import SkipDelivery
 from zato.common.time_util import TimeUtil
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, register_diag_handlers
@@ -87,6 +90,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.hot_deploy_config = None
         self.pickup = None
         self.fs_server_config = None
+        self.fs_sql_config = None
         self.pickup_config = None
         self.connector_server_grace_time = None
         self.id = None
@@ -122,6 +126,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.ipc_forwarder = IPCAPI(True)
         self.fifo_response_buffer_size = 0.1 # In megabytes
         self.live_msg_browser = None
+        self.is_first_worker = None
+        self.shmem_size = -1.0
+        self.server_startup_ipc = ServerStartupIPC()
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -130,6 +137,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.access_logger = logging.getLogger('zato_access_log')
         self.access_logger_log = self.access_logger._log
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)
+        self.has_pubsub_audit_log = logging.getLogger('zato_pubsub_audit').isEnabledFor('INFO')
 
         # The main config store
         self.config = ConfigStore()
@@ -141,7 +149,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def deploy_missing_services(self, locally_deployed):
         """ Deploys services that exist on other servers but not on ours.
         """
-
         # The locally_deployed list are all the services that we could import based on our current
         # understanding of the contents of the cluster. However, it's possible that we have
         # been shut down for a long time and during that time other servers deployed services
@@ -158,26 +165,47 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             missing = self.odb.get_missing_services(other_server, locally_deployed)
 
             if missing:
+
                 logger.info('Found extra services to deploy: %s', ', '.join(sorted(item.name for item in missing)))
 
+                # (file_name, source_path) -> a list of services it contains
+                modules = {}
+
+                # Coalesce all service modules - it is possible that each one has multiple services
+                # so we do want to deploy the same module over for each service found.
                 for service_id, name, source_path, source in missing:
                     file_name = os.path.basename(source_path)
-                    _, full_path = mkstemp(suffix='-'+ file_name)
+                    _, tmp_full_path = mkstemp(suffix='-'+ file_name)
 
-                    f = open(full_path, 'wb')
-                    f.write(source)
-                    f.close()
+                    # Module names are unique so they can serve as keys
+                    key = file_name
 
-                    # Create a deployment package in ODB out of which all the services will be picked up ..
+                    if key not in modules:
+                        modules[key] = {
+                            'tmp_full_path': tmp_full_path,
+                            'services': [name] # We can append initial name already in this 'if' branch
+                        }
+
+                        # Save the source code only once here
+                        f = open(tmp_full_path, 'wb')
+                        f.write(source)
+                        f.close()
+
+                    else:
+                        modules[key]['services'].append(name)
+
+                # Create a deployment package in ODB out of which all the services will be picked up ..
+                for file_name, values in modules.items():
                     msg = Bunch()
                     msg.action = HOT_DEPLOY.CREATE_SERVICE.value
                     msg.msg_type = MESSAGE_TYPE.TO_PARALLEL_ALL
-                    msg.package_id = hot_deploy(self, file_name, full_path, notify=False)
+                    msg.package_id = hot_deploy(self, file_name, values['tmp_full_path'], notify=False)
 
                     # .. and tell the worker to actually deploy all the services the package contains.
-                    gevent.spawn(self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE, msg)
+                    #gevent.spawn(self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE, msg)
+                    self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(msg)
 
-                    logger.info('Deployed an extra service found: %s (%s)', name, service_id)
+                    logger.info('Deployed extra services found: %s', sorted(values['services']))
 
 # ################################################################################################################################
 
@@ -198,21 +226,17 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             locally_deployed.extend(self.service_store.import_services_from_anywhere(
                 self.service_modules + self.service_sources, self.base_dir))
 
-            # Migrations
-            #self.odb.add_channels_2_0()
-
             return set(locally_deployed)
 
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, self.deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
-                                                 self.fs_server_config.main.token, self.deployment_key)
+            self.fs_server_config.main.token, self.deployment_key)
 
-        logger.debug('Will use the lock_name: [{}]'.format(lock_name))
+        logger.debug('Will use the lock_name: `%s`', lock_name)
 
         with self.zato_lock_manager(lock_name, ttl=self.deployment_lock_expires, block=self.deployment_lock_timeout):
             if redis_conn.get(already_deployed_flag):
-                # There has been already the first worker who's done everything
-                # there is to be done so we may just return.
+                # There has been already the first worker who's done everything there is to be done so we may just return.
                 is_first = False
                 logger.debug('Not attempting to grab the lock_name:`%s`', lock_name)
 
@@ -307,6 +331,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
     def set_odb_pool(self):
         # This is the call that creates an SQLAlchemy connection
+        self.config.odb_data['fs_sql_config'] = self.fs_sql_config
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         self.odb.token = self.config.odb_data.token
@@ -322,6 +347,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         # This cannot be done in __init__ because each sub-process obviously has its own PID
         self.pid = os.getpid()
 
+        # This also cannot be done in __init__ which doesn't have this variable yet
+        self.is_first_worker = int(os.environ['ZATO_SERVER_WORKER_IDX']) == 0
+
         # Used later on
         use_tls = asbool(self.fs_server_config.crypto.use_tls)
 
@@ -332,6 +360,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.deployment_key = zato_deployment_key
 
         register_diag_handlers()
+
+        # Create all POSIX IPC objects now that we have the deployment key
+        self.shmem_size = int(float(self.fs_server_config.shmem.size) * 10**6) # Convert to megabytes as integer
+        self.server_startup_ipc.create(self.deployment_key, self.shmem_size)
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         self.config.odb_data = self.get_config_odb_data(self)
@@ -401,8 +433,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
-        self._after_init_accepted(locally_deployed)
-
         broker_callbacks = {
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: self.worker_store.on_broker_msg,
@@ -410,6 +440,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks, self.get_lua_programs())
         self.worker_store.set_broker_client(self.broker_client)
+
+        self._after_init_accepted(locally_deployed)
 
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host,
             self.port, self.preferred_address, use_tls)
@@ -503,10 +535,44 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def invoke_all_pids(self, service, request, timeout=5, *args, **kwargs):
+        """ Invokes a given service in each of processes current server has.
+        """
+        # PID -> response from that process
+        out = {}
+
+        # Get all current PIDs
+        data = self.invoke('zato.info.get-worker-pids', serialize=False).getvalue(False)
+        pids = data['response']['pids']
+
+        # Underlying IPC needs strings on input instead of None
+        request = request or ''
+
+        for pid in pids:
+            response = {
+                'is_ok': False,
+                'pid_data': None,
+                'error_info': None
+            }
+
+            try:
+                by_pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
+                is_ok, pid_data = by_pid_response
+                response['is_ok'] = is_ok
+                response['pid_data' if is_ok else 'error_info'] = pid_data
+            except Exception, e:
+                response['error_info'] = format_exc(e)
+            finally:
+                out[pid] = response
+
+        return out
+
+# ################################################################################################################################
+
     def invoke_by_pid(self, service, request, target_pid, *args, **kwargs):
         """ Invokes a service in a worker process by the latter's PID.
         """
-        self.ipc_api.publish(request)
+        return self.ipc_api.invoke_by_pid(service, request, target_pid, self.fifo_response_buffer_size, *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -514,16 +580,18 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         """ Invokes a service either in our own worker or, if PID is given on input, in another process of this server.
         """
         target_pid = kwargs.pop('pid', None)
-
         if target_pid and target_pid != self.pid:
 
             # We need it only in the other branch, not here.
             kwargs.pop('data_format', None)
 
-            return self.ipc_api.invoke_by_pid(service, request, target_pid, self.fifo_response_buffer_size, *args, **kwargs)
+            return self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
         else:
             return self.worker_store.invoke(
-                service, request, data_format=kwargs.pop('data_format', DATA_FORMAT.DICT), *args, **kwargs)
+                service, request,
+                data_format=kwargs.pop('data_format', DATA_FORMAT.DICT),
+                serialize=kwargs.pop('serialize', True),
+                *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -531,6 +599,21 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         """ Invokes a service in background.
         """
         return self.worker_store.invoke(service, request, is_async=True, callback=callback, *args, **kwargs)
+
+# ################################################################################################################################
+
+    def deliver_pubsub_msg(self, msg):
+        """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
+        """
+        subscription = self.worker_store.pubsub.subscriptions_by_sub_key[msg.sub_key]
+        topic = self.worker_store.pubsub.topics[subscription.config.topic_id]
+
+        if topic.before_delivery_hook_service_invoker:
+            response = topic.before_delivery_hook_service_invoker(topic, msg)
+            if response['skip_msg']:
+                raise SkipDelivery(msg.pub_msg_id)
+
+        self.invoke('zato.pubsub.delivery.deliver-message', {'msg':msg, 'subscription':subscription})
 
 # ################################################################################################################################
 
@@ -556,7 +639,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def destroy(self):
         """ A Spring Python hook for closing down all the resources held.
         """
-
         # Tell the ODB we've gone through a clean shutdown but only if this is
         # the main process going down (Arbiter) not one of Gunicorn workers.
         # We know it's the main process because its ODB's session has never
@@ -564,6 +646,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         if not self.odb.session_initialized:
 
             self.config.odb_data = self.get_config_odb_data(self)
+            self.config.odb_data['fs_sql_config'] = self.fs_sql_config
             self.set_odb_pool()
 
             self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb_data, self.odb.pool, False)
@@ -573,6 +656,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         # Per-worker cleanup
         else:
+
+            # Close all POSIX IPC structures
+            self.server_startup_ipc.close()
+
+            self.invoke('zato.channel.web-socket.client.delete-by-server')
             self.invoke('zato.channel.web-socket.client.delete-by-server')
 
     # Convenience API

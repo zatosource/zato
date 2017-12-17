@@ -22,13 +22,13 @@ from zato.common import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE,
      URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
      CassandraQuery, ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
-     CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, \
-     HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
-     NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
-     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, \
-     RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, TechnicalAccount, \
-     TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, \
-     XPath, XPathSecurity
+     CronStyleJob, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \
+     MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
+     OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, \
+     PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic, RBACClientRole, \
+     RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, \
+     TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, \
+     WSSDefinition, VaultConnection, XPath, XPathSecurity
 from zato.common.search_util import SearchResults as _SearchResults
 
 # ################################################################################################################################
@@ -38,6 +38,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 _no_page_limit = 2 ** 24 # ~16.7 million results, tops
+
+# ################################################################################################################################
+
+def count(session, q):
+    _q = q.statement.with_only_columns([func.count()]).order_by(None)
+    return session.execute(_q).scalar()
 
 # ################################################################################################################################
 
@@ -96,7 +102,10 @@ def internal_channel_list(session, cluster_id):
     return session.query(
         HTTPSOAP.soap_action, Service.name).\
         filter(HTTPSOAP.cluster_id==Cluster.id).\
-        filter(HTTPSOAP.service_id==Service.id).filter(Service.is_internal==True).filter(Cluster.id==cluster_id).filter(Cluster.id==HTTPSOAP.cluster_id) # noqa
+        filter(HTTPSOAP.service_id==Service.id).\
+        filter(Service.is_internal==True).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==HTTPSOAP.cluster_id)
 
 # ################################################################################################################################
 
@@ -749,103 +758,6 @@ def service_list(session, cluster_id, return_internal=True, needs_columns=False)
 
 # ################################################################################################################################
 
-def _delivery_definition(session, cluster_id):
-    return session.query(DeliveryDefinitionBase).\
-        filter(Cluster.id==DeliveryDefinitionBase.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(DeliveryDefinitionBase.name)
-
-def delivery_definition_list(session, cluster_id, target_type=None):
-    """ Returns a list of delivery definitions for a given target type.
-    """
-    def_list = _delivery_definition(session, cluster_id)
-
-    if target_type:
-        def_list = def_list.\
-            filter(DeliveryDefinitionBase.target_type==target_type)
-
-    return def_list
-
-# ################################################################################################################################
-
-def delivery_count_by_state(session, def_id):
-    return session.query(Delivery.state, func.count(Delivery.state)).\
-        filter(Delivery.definition_id==def_id).\
-        group_by(Delivery.state)
-
-def delivery_list(session, cluster_id, def_name, state, start=None, stop=None, needs_payload=False):
-    columns = [
-        DeliveryDefinitionBase.name.label('def_name'),
-        DeliveryDefinitionBase.target_type,
-        Delivery.task_id,
-        Delivery.creation_time.label('creation_time_utc'),
-        Delivery.last_used.label('last_used_utc'),
-        Delivery.source_count,
-        Delivery.target_count,
-        Delivery.resubmit_count,
-        Delivery.state,
-        DeliveryDefinitionBase.retry_repeats,
-        DeliveryDefinitionBase.check_after,
-        DeliveryDefinitionBase.retry_seconds
-    ]
-
-    if needs_payload:
-        columns.extend([DeliveryPayload.payload, Delivery.args, Delivery.kwargs])
-
-    q = session.query(*columns).\
-        filter(DeliveryDefinitionBase.id==Delivery.definition_id).\
-        filter(DeliveryDefinitionBase.cluster_id==cluster_id).\
-        filter(DeliveryDefinitionBase.name==def_name).\
-        filter(Delivery.state.in_(state))
-
-    if needs_payload:
-        q = q.filter(DeliveryPayload.task_id==Delivery.task_id)
-
-    if start:
-        q = q.filter(Delivery.last_used >= start)
-
-    if stop:
-        q = q.filter(Delivery.last_used <= stop)
-
-    q = q.order_by(Delivery.last_used.desc())
-
-    return q
-
-def delivery(session, task_id, target_def_class):
-    return session.query(
-        target_def_class.name.label('def_name'),
-        target_def_class.target_type,
-        Delivery.task_id,
-        Delivery.creation_time.label('creation_time_utc'),
-        Delivery.last_used.label('last_used_utc'),
-        Delivery.source_count,
-        Delivery.target_count,
-        Delivery.resubmit_count,
-        Delivery.state,
-        target_def_class.retry_repeats,
-        target_def_class.check_after,
-        target_def_class.retry_seconds,
-        DeliveryPayload.payload,
-        Delivery.args,
-        Delivery.kwargs,
-        target_def_class.target,
-        ).\
-        filter(target_def_class.id==Delivery.definition_id).\
-        filter(Delivery.task_id==task_id).\
-        filter(DeliveryPayload.task_id==Delivery.task_id)
-
-@query_wrapper
-def delivery_history_list(session, task_id, needs_columns=True):
-    return session.query(
-        DeliveryHistory.entry_type,
-        DeliveryHistory.entry_time,
-        DeliveryHistory.entry_ctx,
-        DeliveryHistory.resubmit_count).\
-        filter(DeliveryHistory.task_id==task_id).\
-        order_by(DeliveryHistory.entry_time.desc())
-
-# ################################################################################################################################
-
 def _msg_list(class_, order_by, session, cluster_id, needs_columns=False):
     """ All the namespaces.
     """
@@ -977,8 +889,65 @@ def cloud_aws_s3_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
+def _pubsub_endpoint(session, cluster_id):
+    return session.query(
+        PubSubEndpoint.id,
+        PubSubEndpoint.name,
+        PubSubEndpoint.endpoint_type,
+        PubSubEndpoint.is_active,
+        PubSubEndpoint.is_internal,
+        PubSubEndpoint.role,
+        PubSubEndpoint.tags,
+        PubSubEndpoint.topic_patterns,
+        PubSubEndpoint.pub_tag_patterns,
+        PubSubEndpoint.message_tag_patterns,
+        PubSubEndpoint.security_id,
+        PubSubEndpoint.ws_channel_id,
+        SecurityBase.sec_type,
+        SecurityBase.name.label('sec_name'),
+        Service.id.label('service_id'),
+        Service.name.label('service_name'),
+        ChannelWebSocket.name.label('ws_channel_name'),
+        ).\
+        outerjoin(SecurityBase, SecurityBase.id==PubSubEndpoint.security_id).\
+        outerjoin(Service, PubSubEndpoint.id==PubSubEndpoint.service_id).\
+        outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==PubSubEndpoint.cluster_id).\
+        order_by(PubSubEndpoint.id)
+
+def pubsub_endpoint(session, cluster_id, id):
+    """ An individual pub/sub endpoint.
+    """
+    return _pubsub_endpoint(session, cluster_id).\
+        filter(PubSubEndpoint.id==id).\
+        one()
+
+@query_wrapper
+def pubsub_endpoint_list(session, cluster_id, needs_columns=False):
+    """ A list of pub/sub endpoints.
+    """
+    return _pubsub_endpoint(session, cluster_id)
+
+# ################################################################################################################################
+
 def _pubsub_topic(session, cluster_id):
-    return session.query(PubSubTopic.id, PubSubTopic.name, PubSubTopic.is_active, PubSubTopic.max_depth).\
+    return session.query(
+        PubSubTopic.id,
+        PubSubTopic.name,
+        PubSubTopic.is_active,
+        PubSubTopic.is_internal,
+        PubSubTopic.last_pub_time,
+        PubSubTopic.max_depth_gd,
+        PubSubTopic.max_depth_non_gd,
+        PubSubTopic.current_depth_gd,
+        PubSubTopic.has_gd,
+        PubSubTopic.is_api_sub_allowed,
+        PubSubTopic.gd_depth_check_freq,
+        PubSubTopic.hook_service_id,
+        Service.name.label('hook_service_name'),
+        ).\
+        outerjoin(Service, Service.id==PubSubTopic.hook_service_id).\
         filter(Cluster.id==PubSubTopic.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(PubSubTopic.name)
@@ -996,72 +965,183 @@ def pubsub_topic_list(session, cluster_id, needs_columns=False):
     """
     return _pubsub_topic(session, cluster_id)
 
-def pubsub_default_client(session, cluster_id, name):
-    """ Returns a client ID of a given name used internally for pub/sub.
-    """
-    return session.query(HTTPBasicAuth.id, HTTPBasicAuth.name).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==HTTPBasicAuth.cluster_id).\
-        filter(HTTPBasicAuth.name==name).\
+# ################################################################################################################################
+
+def pubsub_publishers_for_topic(session, cluster_id, topic_id):
+    return session.query(
+        PubSubEndpoint.service_id, PubSubEndpoint.security_id,
+        PubSubEndpoint.ws_channel_id, PubSubEndpoint.name,
+        PubSubEndpoint.is_active, PubSubEndpoint.is_internal,
+        PubSubEndpoint.last_seen, PubSubEndpoint.last_pub_time,
+        PubSubEndpointTopic.pattern_matched,
+        PubSubEndpointTopic.last_pub_time,
+        PubSubEndpointTopic.pub_msg_id.label('last_msg_id'),
+        PubSubEndpointTopic.pub_correl_id.label('last_correl_id'),
+        PubSubEndpointTopic.in_reply_to.label('last_in_reply_to'),
+        PubSubEndpointTopic.ext_client_id,
+        Service.name.label('service_name'),
+        SecurityBase.name.label('sec_name'),
+        ChannelWebSocket.name.label('ws_channel_name'),
+        ).\
+        outerjoin(Service, Service.id==PubSubEndpoint.service_id).\
+        outerjoin(SecurityBase, SecurityBase.id==PubSubEndpoint.security_id).\
+        outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
+        filter(PubSubEndpointTopic.topic_id==PubSubTopic.id).\
+        filter(PubSubEndpointTopic.topic_id==topic_id).\
+        filter(PubSubEndpointTopic.endpoint_id==PubSubEndpoint.id).\
+        filter(PubSubEndpointTopic.cluster_id==cluster_id)
+
+# ################################################################################################################################
+
+def _pubsub_topic_message(session, cluster_id):
+    return session.query(
+        PubSubMessage.pub_msg_id.label('msg_id'),
+        PubSubMessage.pub_correl_id.label('correl_id'),
+        PubSubMessage.in_reply_to,
+        PubSubMessage.pub_time, PubSubMessage.data_prefix_short,
+        PubSubMessage.pattern_matched, PubSubMessage.priority,
+        PubSubMessage.ext_pub_time, PubSubMessage.size,
+        PubSubMessage.data_format, PubSubMessage.mime_type,
+        PubSubMessage.data, PubSubMessage.expiration,
+        PubSubMessage.expiration_time, PubSubMessage.has_gd,
+        PubSubMessage.ext_client_id,
+        PubSubEndpoint.id.label('endpoint_id'),
+        PubSubEndpoint.name.label('endpoint_name'),
+        PubSubEndpoint.service_id,
+        PubSubEndpoint.security_id,
+        PubSubEndpoint.ws_channel_id,
+        PubSubTopic.id.label('topic_id'),
+        PubSubTopic.name.label('topic_name'),
+        ).\
+        filter(PubSubMessage.published_by_id==PubSubEndpoint.id).\
+        filter(PubSubMessage.cluster_id==cluster_id).\
+        filter(PubSubMessage.topic_id==PubSubTopic.id)
+
+# ################################################################################################################################
+
+def pubsub_message(session, cluster_id, pub_msg_id):
+    return _pubsub_topic_message(session, cluster_id).\
+        filter(PubSubMessage.pub_msg_id==pub_msg_id)
+
+# ################################################################################################################################
+
+def _pubsub_endpoint_queue(session, cluster_id):
+    return session.query(
+        PubSubSubscription.id.label('sub_id'),
+        PubSubSubscription.active_status,
+        PubSubSubscription.is_internal,
+        PubSubSubscription.creation_time,
+        PubSubSubscription.sub_key,
+        PubSubSubscription.has_gd,
+        PubSubSubscription.delivery_method,
+        PubSubSubscription.delivery_data_format,
+        PubSubSubscription.delivery_endpoint,
+        PubSubSubscription.last_interaction_time,
+        PubSubSubscription.last_interaction_type,
+        PubSubSubscription.last_interaction_details,
+        PubSubSubscription.is_staging_enabled,
+        PubSubTopic.id.label('topic_id'),
+        PubSubTopic.name.label('topic_name'),
+        PubSubTopic.name.label('name'), # Currently queue names are the same as their originating topics
+        PubSubEndpoint.name.label('endpoint_name'),
+        PubSubEndpoint.id.label('endpoint_id'),
+        WebSocketSubscription.ext_client_id.label('ws_ext_client_id'),
+        ).\
+        outerjoin(WebSocketSubscription, WebSocketSubscription.id==PubSubSubscription.ws_sub_id).\
+        filter(PubSubSubscription.topic_id==PubSubTopic.id).\
+        filter(PubSubSubscription.cluster_id==cluster_id).\
+        filter(PubSubSubscription.endpoint_id==PubSubEndpoint.id)
+
+# ################################################################################################################################
+
+@query_wrapper
+def pubsub_endpoint_queue_list(session, cluster_id, endpoint_id, needs_columns=False):
+    return _pubsub_endpoint_queue(session, cluster_id).\
+        filter(PubSubSubscription.endpoint_id==endpoint_id).\
+        order_by(PubSubSubscription.last_interaction_time.desc()).\
+        order_by(PubSubSubscription.creation_time.desc())
+
+# ################################################################################################################################
+
+def pubsub_endpoint_queue_list_by_sub_keys(session, cluster_id, sub_key_list):
+    return _pubsub_endpoint_queue(session, cluster_id).\
+        filter(PubSubSubscription.sub_key.in_(sub_key_list)).\
+        all()
+
+# ################################################################################################################################
+
+def pubsub_endpoint_queue(session, cluster_id, sub_id):
+    return _pubsub_endpoint_queue(session, cluster_id).\
+        filter(PubSubSubscription.id==sub_id).\
+        one()
+
+# ################################################################################################################################
+
+@query_wrapper
+def pubsub_messages_for_topic(session, cluster_id, topic_id, needs_columns=False):
+    return _pubsub_topic_message(session, cluster_id).\
+        filter(PubSubMessage.topic_id==topic_id).\
+        order_by(PubSubMessage.pub_time.desc())
+
+# ################################################################################################################################
+
+def _pubsub_queue_message(session, cluster_id):
+    return session.query(
+        PubSubMessage.pub_msg_id.label('msg_id'),
+        PubSubMessage.pub_correl_id.label('correl_id'),
+        PubSubMessage.in_reply_to,
+        PubSubMessage.data_prefix_short,
+        PubSubMessage.priority,
+        PubSubMessage.ext_pub_time,
+        PubSubMessage.size,
+        PubSubMessage.data_format,
+        PubSubMessage.mime_type,
+        PubSubMessage.data,
+        PubSubMessage.expiration,
+        PubSubMessage.expiration_time,
+        PubSubMessage.ext_client_id,
+        PubSubTopic.id.label('topic_id'),
+        PubSubTopic.name.label('topic_name'),
+        PubSubTopic.name.label('queue_name'), # Currently, queue name = name of its underlying topic
+        PubSubEndpointEnqueuedMessage.creation_time.label('recv_time'),
+        PubSubEndpointEnqueuedMessage.delivery_count,
+        PubSubEndpointEnqueuedMessage.last_delivery_time,
+        PubSubEndpointEnqueuedMessage.is_in_staging,
+        PubSubEndpointEnqueuedMessage.has_gd,
+        PubSubEndpointEnqueuedMessage.endpoint_id,
+        PubSubEndpoint.name.label('endpoint_name'),
+        PubSubSubscription.pattern_matched.label('sub_pattern_matched'),
+        ).\
+        filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
+        filter(PubSubEndpointEnqueuedMessage.topic_id==PubSubTopic.id).\
+        filter(PubSubEndpointEnqueuedMessage.endpoint_id==PubSubEndpoint.id).\
+        filter(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
+        filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id)
+
+# ################################################################################################################################
+
+def pubsub_queue_message(session, cluster_id, msg_id):
+    return _pubsub_queue_message(session, cluster_id).\
+        filter(PubSubMessage.pub_msg_id==msg_id)
+
+# ################################################################################################################################
+
+@query_wrapper
+def pubsub_messages_for_queue(session, cluster_id, sub_id, needs_columns=False):
+    return _pubsub_queue_message(session, cluster_id).\
+        filter(PubSubEndpointEnqueuedMessage.subscription_id==sub_id).\
+        order_by(PubSubEndpointEnqueuedMessage.creation_time.desc())
+
+# ################################################################################################################################
+
+def pubsub_hook_service(session, cluster_id, endpoint_id, model_class):
+    return session.query(
+        Service.id,
+        Service.name,
+        ).\
+        filter(Cluster.id==Service.cluster_id).\
+        filter(Service.id==model_class.hook_service_id).\
         first()
-
-# ################################################################################################################################
-
-def _pubsub_producer(session, cluster_id, needs_columns=False):
-    return session.query(
-        PubSubProducer.id,
-        PubSubProducer.is_active,
-        SecurityBase.id.label('client_id'),
-        SecurityBase.name,
-        SecurityBase.sec_type,
-        PubSubTopic.name.label('topic_name')).\
-        filter(Cluster.id==cluster_id).\
-        filter(PubSubProducer.topic_id==PubSubTopic.id).\
-        filter(PubSubProducer.cluster_id==Cluster.id).\
-        filter(PubSubProducer.sec_def_id==SecurityBase.id).\
-        order_by(SecurityBase.sec_type, SecurityBase.name)
-
-@query_wrapper
-def pubsub_producer_list(session, cluster_id, topic_name, needs_columns=False):
-    """ All pub/sub producers.
-    """
-    response = _pubsub_producer(session, cluster_id, query_wrapper)
-    if topic_name:
-        response = response.filter(PubSubTopic.name==topic_name)
-    return response
-
-# ################################################################################################################################
-
-def _pubsub_consumer(session, cluster_id, needs_columns=False):
-    return session.query(
-        PubSubConsumer.id,
-        PubSubConsumer.is_active,
-        PubSubConsumer.max_depth,
-        PubSubConsumer.sub_key,
-        PubSubConsumer.delivery_mode,
-        PubSubConsumer.callback_id,
-        PubSubConsumer.callback_type,
-        HTTPSOAP.name.label('callback_name'),
-        HTTPSOAP.soap_version,
-        SecurityBase.id.label('client_id'),
-        SecurityBase.name,
-        SecurityBase.sec_type,
-        PubSubTopic.name.label('topic_name')).\
-        outerjoin(HTTPSOAP, HTTPSOAP.id==PubSubConsumer.callback_id).\
-        filter(Cluster.id==cluster_id).\
-        filter(PubSubConsumer.topic_id==PubSubTopic.id).\
-        filter(PubSubConsumer.cluster_id==Cluster.id).\
-        filter(PubSubConsumer.sec_def_id==SecurityBase.id).\
-        order_by(SecurityBase.sec_type, SecurityBase.name)
-
-@query_wrapper
-def pubsub_consumer_list(session, cluster_id, topic_name, needs_columns=False):
-    """ All pub/sub consumers.
-    """
-    response = _pubsub_consumer(session, cluster_id, query_wrapper)
-    if topic_name:
-        response = response.filter(PubSubTopic.name==topic_name)
-    return response
 
 # ################################################################################################################################
 
@@ -1169,10 +1249,23 @@ def _server(session, cluster_id, cluster_name):
     return q
 
 @query_wrapper
-def server_list(session, cluster_id, cluster_name, needs_columns=False):
+def server_list(session, cluster_id, cluster_name, up_status=None, needs_columns=False):
     """ All the servers defined on a cluster.
     """
-    return _server(session, cluster_id, cluster_name)
+    q = _server(session, cluster_id, cluster_name)
+    if up_status:
+        q = q.filter(Server.up_status==up_status)
+    return q
+
+def server_by_name(session, cluster_id, cluster_name, server_name):
+    return _server(session, cluster_id, cluster_name).\
+        filter(Server.name==server_name).\
+        all()
+
+def server_by_id(session, cluster_id, server_id):
+    return _server(session, cluster_id, None).\
+        filter(Server.id==server_id).\
+        one()
 
 # ################################################################################################################################
 

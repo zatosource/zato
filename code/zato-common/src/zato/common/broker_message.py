@@ -398,7 +398,7 @@ class RBAC(Constants):
     ROLE_PERMISSION_DELETE = ValueConstant('')
 
 class VAULT(Constants):
-    code_start = 105600
+    code_start = 105400
 
     CONNECTION_CREATE = ValueConstant('')
     CONNECTION_EDIT = ValueConstant('')
@@ -407,6 +407,26 @@ class VAULT(Constants):
     POLICY_CREATE = ValueConstant('')
     POLICY_EDIT = ValueConstant('')
     POLICY_DELETE = ValueConstant('')
+
+class PUBSUB(Constants):
+    code_start = 105600
+
+    ENDPOINT_CREATE = ValueConstant('')
+    ENDPOINT_EDIT = ValueConstant('')
+    ENDPOINT_DELETE = ValueConstant('')
+
+    SUBSCRIPTION_CREATE = ValueConstant('')
+    SUBSCRIPTION_EDIT = ValueConstant('')
+    SUBSCRIPTION_DELETE = ValueConstant('')
+
+    TOPIC_CREATE = ValueConstant('')
+    TOPIC_EDIT = ValueConstant('')
+    TOPIC_DELETE = ValueConstant('')
+
+    SUB_KEY_SERVER_SET = ValueConstant('') # This is shared by WSX and other endpoint types
+    WSX_CLIENT_SUB_KEY_SERVER_REMOVE = ValueConstant('')
+
+    DELIVERY_SERVER_CHANGE = ValueConstant('')
 
 class SMS(Constants):
     code_start = 106000
@@ -454,6 +474,11 @@ class CACHE(Constants):
     MEMCACHED_CREATE = ValueConstant('')
     MEMCACHED_EDIT = ValueConstant('')
     MEMCACHED_DELETE = ValueConstant('')
+
+class SERVER_STATUS(Constants):
+    code_start = 106800
+
+    STATUS_CHANGED = ValueConstant('')
 
 code_to_name = {}
 

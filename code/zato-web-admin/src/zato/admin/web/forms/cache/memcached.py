@@ -11,10 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Django
 from django import forms
 
-# Zato
-from zato.common import CACHE
-from zato.admin.web.forms import add_select
-
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))

@@ -153,7 +153,7 @@ class ServiceInfo(object):
                         if isinstance(param, AsIs):
                             type_info = api_spec_info.DEFAULT
 
-                        elif is_bool(param, param_name, SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES):
+                        elif is_bool(param, param_name, SIMPLE_IO.BOOL_PARAMETERS.PREFIXES):
                             type_info = api_spec_info.BOOLEAN
 
                         elif is_int(param_name, SIMPLE_IO.INT_PARAMETERS.VALUES, SIMPLE_IO.INT_PARAMETERS.SUFFIXES):
@@ -164,7 +164,7 @@ class ServiceInfo(object):
                                 type_info = api_spec_info.map[param.__class__]
                             except KeyError:
                                 type_info = api_spec_info.DEFAULT
-    
+
                         _param_info.type, _param_info.subtype = type_info
                         _param_list.append(_param_info)
 
@@ -249,7 +249,7 @@ class Generator(object):
     def to_html(self, value):
         return markdown(value).lstrip('<p>').rstrip('</p>')
 
-    def get_info(self, ignore_prefix='zato'):
+    def get_info(self, ignore_prefix='TODO'):
         """ Returns a list of dicts containing metadata about services in the scope required to generate docs and API clients.
         """
         self.parse(ignore_prefix)
@@ -316,9 +316,8 @@ class Generator(object):
 # ################################################################################################################################
 
     def parse(self, ignore_prefix):
-
         for impl_name, details in self.service_store_services.iteritems():
-            if not impl_name.startswith(ignore_prefix):
+            if (not ignore_prefix) or impl_name.startswith(ignore_prefix):
                 details = bunchify(details)
                 info = ServiceInfo(details['name'], details['service_class'])
                 self.services[info.name] = info

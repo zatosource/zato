@@ -31,8 +31,6 @@ from pytz import UTC
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.cluster import DeleteClusterForm, EditClusterForm, EditServerForm
 from zato.admin.web.views import Delete as _Delete, get_lb_client, method_allowed, set_servers_state
-from zato.admin.settings import DATABASE_ENGINE, DATABASE_HOST, DATABASE_NAME, DATABASE_PORT, \
-     DATABASE_USER, sqlalchemy_django_engine
 from zato.common import SERVER_UP_STATUS
 from zato.common.odb.model import Cluster, Server
 
@@ -147,13 +145,6 @@ def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_
 
 @method_allowed('GET')
 def index(req):
-
-    initial = {}
-    initial['odb_type'] = sqlalchemy_django_engine[DATABASE_ENGINE.replace('django.db.backends.', '')]
-    initial['odb_host'] = DATABASE_HOST
-    initial['odb_port'] = DATABASE_PORT
-    initial['odb_user'] = DATABASE_USER
-    initial['odb_db_name'] = DATABASE_NAME
 
     delete_form = DeleteClusterForm(prefix='delete')
 

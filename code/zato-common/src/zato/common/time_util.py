@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from datetime import datetime, timedelta
 import logging
 
 # Arrow
@@ -23,7 +24,30 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+_epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
 local_tz = get_localzone()
+
+# ################################################################################################################################
+
+def datetime_to_ms(dt):
+    """ Converts a datetime object to a number of milliseconds since UNIX epoch.
+    """
+    return (dt - _epoch).total_seconds() * 1000
+
+# ################################################################################################################################
+
+def utcnow_as_ms(_datetime_to_ms=datetime_to_ms, _utcnow=datetime.utcnow):
+    """ Returns current UTC time in milliseconds since epoch.
+    """
+    return _datetime_to_ms(_utcnow())
+
+# ################################################################################################################################
+
+def datetime_from_ms(ms, isoformat=True):
+    """ Converts a number of milliseconds since UNIX epoch to a datetime object.
+    """
+    value = _epoch + timedelta(milliseconds=ms)
+    return value.isoformat() if isoformat else value
 
 # ################################################################################################################################
 
@@ -62,7 +86,7 @@ class TimeUtil(object):
 
 # ################################################################################################################################
 
-    def utc_now(self, format='YYYY-MM-DD HH:mm:ss', needs_format=True):
+    def utcnow(self, format='YYYY-MM-DD HH:mm:ss', needs_format=True):
         """ Returns now in UTC formatted as given in 'format'.
         """
         return self.now(format, 'UTC', needs_format)
@@ -88,12 +112,12 @@ class TimeUtil(object):
 
 # ################################################################################################################################
 
-    def iso_now(self, tz=local_tz.zone, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
+    def isonow(self, tz=local_tz.zone, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
         return self.now(_format, tz, needs_format)
 
 # ################################################################################################################################
 
-    def iso_utc_now(self, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
+    def isoutcnow(self, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
         return self.utc_now(_format, needs_format)
 
 # ################################################################################################################################

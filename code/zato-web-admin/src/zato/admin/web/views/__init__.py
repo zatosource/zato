@@ -28,15 +28,25 @@ from django.template.response import TemplateResponse
 from pytz import UTC
 
 # Zato
+from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
 from zato.common import SEC_DEF_TYPE_NAME, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
-
-logger = logging.getLogger(__name__)
-
-# Zato
-from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, \
-     LB_AGENT_CONNECT_TIMEOUT
 from zato.common.util import get_lb_client as _get_lb_client
+
+# ################################################################################################################################
+
+try:
+    from django.core.urlresolvers import reverse as django_url_reverse # Django < 1.10
+    from django.utils.text import slugify
+except ImportError:
+    from django.urls import reverse as django_url_reverse              # Django >= 1.10
+    from django.utils import slugify
+
+# For pyflakes
+django_url_reverse = django_url_reverse
+slugify = slugify
+
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
@@ -358,6 +368,7 @@ class Index(_BaseView):
             else:
                 logger.info('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)
 
+
             return_data['req'] = self.req
             return_data['items'] = self.items
             return_data['item'] = self.item
@@ -491,9 +502,10 @@ class BaseCallView(_BaseView):
 class Delete(BaseCallView):
     """ Our subclasses will delete objects such as connections and others.
     """
+    id_elem = 'id'
     def get_input_dict(self):
         return {
-            'id': self.req.zato.id,
+            self.id_elem: self.req.zato.id,
             'cluster_id': self.cluster_id
         }
 
@@ -507,8 +519,8 @@ class SecurityList(object):
         return iter(self.def_items)
 
     def append(self, def_item):
-        value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
-        label = '{0}/{1}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
+        value = b'{0}/{1}'.format(def_item.sec_type, def_item.id)
+        label = b'{0}/{1}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
         self.def_items.append((value, label))
 
     @staticmethod
@@ -538,10 +550,10 @@ def id_only_service(req, service, id, error_template):
 
 # ################################################################################################################################
 
-def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_template, content_type='application/javascript',
+def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_template='', content_type='application/javascript',
         extra=None):
     try:
-        result = req.zato.client.invoke(service, input_dict)
+        req.zato.client.invoke(service, input_dict)
     except Exception, e:
         return HttpResponseServerError(e.message, content_type=content_type)
     else:

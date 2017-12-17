@@ -31,6 +31,7 @@ from datetime import datetime, timedelta
 from glob import glob
 from hashlib import sha256
 from importlib import import_module
+from inspect import ismethod
 from itertools import ifilter, izip, izip_longest, tee
 from operator import itemgetter
 from os import getuid
@@ -75,9 +76,6 @@ from numpy.random import bytes as random_bytes, seed as numpy_seed
 # OpenSSL
 from OpenSSL import crypto
 
-# Paste
-from paste.util.converters import asbool
-
 # pip
 from pip.download import unpack_file_url
 
@@ -111,7 +109,8 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
 from zato.common import CHANNEL, CLI_ARG_SEP, curdir as common_curdir, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
-     SECRET_SHADOW, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN, ZMQ
+     SECRET_SHADOW, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, zato_no_op_marker, ZATO_NOT_GIVEN, \
+     ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
@@ -120,7 +119,6 @@ from zato.common.odb.query import _service as _service
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-
 logging.addLevelName(TRACE1, "TRACE1")
 
 _repr_template = Template('<$class_name at $mem_loc$attrs>')
@@ -132,6 +130,8 @@ cid_symbols = '0123456789abcdefghjkmnpqrstvwxyz'
 encode_cid_symbols = {idx: elem for (idx, elem) in enumerate(cid_symbols)}
 cid_base = len(cid_symbols)
 
+# ################################################################################################################################
+
 numpy_seed()
 
 # ################################################################################################################################
@@ -140,6 +140,35 @@ TLS_KEY_TYPE = {
     crypto.TYPE_DSA: 'DSA',
     crypto.TYPE_RSA: 'RSA'
 }
+
+# ################################################################################################################################
+
+# (c) 2005 Ian Bicking and contributors; written for Paste (http://pythonpaste.org)
+# Licensed under the MIT license: http://www.opensource.org/licenses/mit-license.php
+def asbool(obj):
+    if isinstance(obj, (str, unicode)):
+        obj = obj.strip().lower()
+        if obj in ['true', 'yes', 'on', 'y', 't', '1']:
+            return True
+        elif obj in ['false', 'no', 'off', 'n', 'f', '0']:
+            return False
+        else:
+            raise ValueError(
+                "String is not true/false: %r" % obj)
+    return bool(obj)
+
+def aslist(obj, sep=None, strip=True):
+    if isinstance(obj, (str, unicode)):
+        lst = obj.split(sep)
+        if strip:
+            lst = [v.strip() for v in lst]
+        return lst
+    elif isinstance(obj, (list, tuple)):
+        return obj
+    elif obj is None:
+        return []
+    else:
+        return [obj]
 
 # ################################################################################################################################
 
@@ -302,7 +331,7 @@ def make_repr(_object, ignore_double_underscore=True, to_avoid_list='repr_to_avo
         attr_obj = getattr(_object, attr)
         if not callable(attr_obj):
             buff.write(' ')
-            buff.write('%s:`%r`' % (attr, attr_obj))
+            buff.write('\n%s:`%r`' % (attr, attr_obj))
 
     out = _repr_template.safe_substitute(
         class_name=_object.__class__.__name__, mem_loc=hex(id(_object)), attrs=buff.getvalue())
@@ -1034,6 +1063,14 @@ def validate_xpath(expr):
 
 # ################################################################################################################################
 
+def get_free_port(start=30000):
+    port = start
+    while is_port_taken(port):
+        port += 1
+    return port
+
+# ################################################################################################################################
+
 # Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
 def is_port_taken(port):
     for conn in psutil.net_connections(kind='tcp'):
@@ -1648,5 +1685,63 @@ def parse_cmd_line_options(argv):
     options = argv.split(CLI_ARG_SEP)
     options = '\n'.join(options)
     return parse_extra_into_dict(options)
+
+# ################################################################################################################################
+
+def get_sa_model_columns(model):
+    """ Returns all columns (as string) of an input SQLAlchemy model.
+    """
+    return [elem.key for elem in model.__table__.columns]
+
+# ################################################################################################################################
+
+def is_class_pubsub_hook(class_):
+    """ Returns True if input class subclasses PubSubHook.
+    """
+    # Imported here to avoid circular dependencies
+    from zato.server.service import PubSubHook
+    return issubclass(class_, PubSubHook) and (not class_ is PubSubHook)
+
+# ################################################################################################################################
+
+def ensure_pubsub_hook_is_valid(self, input, instance, attrs):
+    """ An instance hook that validates if an optional pub/sub hook given on input actually subclasses PubSubHook.
+    """
+    if input.hook_service_id:
+        impl_name = self.server.service_store.id_to_impl_name[input.hook_service_id]
+        details = self.server.service_store.services[impl_name]
+        if not is_class_pubsub_hook(details['service_class']):
+            raise ValueError('Service `{}` is not a PubSubHook subclass'.format(details['name']))
+
+# ################################################################################################################################
+
+def is_func_overridden(func):
+    """ Returns True if input func was overridden by user in a subclass - used to decide
+    whether users implemented a given hook. If there is a special internal marker in input arguments,
+    it means that it is an internal function from parent class, not a user-defined one.
+    """
+    if func and ismethod(func):
+        func_defaults = func.im_func.func_defaults
+
+        # Only internally defined methods will fullfil these conditions that they have default arguments
+        # and one of them is our no-op marker, hence if we negate it and the result is True,
+        # it means it must have been a user-defined method.
+        if not (func_defaults and isinstance(func_defaults, tuple) and zato_no_op_marker in func_defaults):
+            return True
+
+# ################################################################################################################################
+
+def get_sql_engine_display_name(engine, fs_sql_config):
+    display_name = None
+    for key, value in fs_sql_config.items():
+        if key == engine:
+            display_name = value.get('display_name')
+            break
+
+    if not display_name:
+        raise ValueError('Could not find display name for engine `{}` in config `{}`'.format(
+            engine, fs_sql_config))
+    else:
+        return display_name
 
 # ################################################################################################################################

@@ -118,6 +118,13 @@ zato_cid_xpath = etree.XPath(zato_result_path, namespaces=common_namespaces)
 zato_details_path = '//zato:zato_env/zato:details'
 zato_details_xpath = etree.XPath(zato_details_path, namespaces=common_namespaces)
 
+megabyte = 10 ** 6
+
+# Hook methods whose func.im_func.func_defaults contains this argument will be assumed to have not been overridden by users
+# and ServiceStore will be allowed to override them with None so that they will not be called in Service.update_handle
+# which significantly improves performance (~30%).
+zato_no_op_marker = 'zato_no_op_marker'
+
 SECRET_SHADOW = '******'
 
 # TRACE1 logging level, even more details than DEBUG
@@ -174,12 +181,9 @@ FALSE_TRUE = 'false_true'
 # If self.response.payload
 simple_types = (basestring, dict, list, tuple, bool, Number)
 
-# Queries to use in pinging the databases.
+# These are used by web-admin only because servers and scheduler use sql.conf
 ping_queries = {
-    'access': 'SELECT 1',
     'db2': 'SELECT current_date FROM sysibm.sysdummy1',
-    'firebird': 'SELECT current_timestamp FROM rdb$database',
-    'informix': 'SELECT 1 FROM systables WHERE tabid=1',
     'mssql': 'SELECT 1',
     'mysql+pymysql': 'SELECT 1+1',
     'oracle': 'SELECT 1 FROM dual',
@@ -362,11 +366,12 @@ class DATA_FORMAT(Attrs):
     JSON = 'json'
     CSV = 'csv'
     POST = 'post'
+    SOAP = 'soap'
 
     class __metaclass__(type):
         def __iter__(self):
-            # Note that DICT isn't included because it's never exposed to external world as-is,
-            # it's only used so that services can invoke each other directly
+            # Note that DICT and other attributes aren't included because they're never exposed to external world as-is,
+            # they may at most only used so that services can invoke each other directly
             return iter((self.XML, self.JSON, self.CSV, self.POST))
 
 # TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
@@ -382,7 +387,7 @@ class SIMPLE_IO:
         SUFFIXES = ['_id', '_count', '_size', '_timeout']
 
     class BOOL_PARAMETERS:
-        SUFFIXES = ['is_', 'needs_', 'should_']
+        PREFIXES = ['is_', 'needs_', 'should_', 'by_', 'has_']
 
     COMMON_FORMAT = OrderedDict()
     COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
@@ -575,6 +580,10 @@ class CHANNEL(Attrs):
     WORKER = 'worker'
     ZMQ = 'zmq'
 
+class CONNECTION:
+    CHANNEL = 'channel'
+    OUTGOING = 'outgoing'
+
 class INVOCATION_TARGET(Attrs):
     CHANNEL_AMQP = 'channel-amqp'
     CHANNEL_WMQ = 'channel-wmq'
@@ -722,67 +731,121 @@ class HTTP_SOAP_SERIALIZATION_TYPE:
         def __iter__(self):
             return iter((self.STRING_VALUE, self.SUDS))
 
-class PUB_SUB:
-    PRIORITY_MIN = 1
-    PRIORITY_MAX = 9
+class PUBSUB:
 
-    DEFAULT_PRIORITY = 5
-    DEFAULT_MIME_TYPE = 'text/plain'
-    DEFAULT_EXPIRATION = 60.0 # In seconds
-    DEFAULT_GET_MAX_BATCH_SIZE = 100
-    DEFAULT_IS_FIFO = True
-    DEFAULT_MAX_DEPTH = 500
-    DEFAULT_MAX_BACKLOG = 1000
+    SKIPPED_PATTERN_MATCHING = '<skipped>'
+
+    class DATA_FORMAT:
+        CSV         = NameId('CSV', DATA_FORMAT.CSV)
+        DICT        = NameId('Dict', DATA_FORMAT.DICT)
+        FIXED_WIDTH = NameId('Fixed-width', DATA_FORMAT.FIXED_WIDTH)
+        JSON        = NameId('JSON', DATA_FORMAT.JSON)
+        POST        = NameId('POST', DATA_FORMAT.POST)
+        SOAP        = NameId('SOAP', DATA_FORMAT.SOAP)
+        XML         = NameId('XML', DATA_FORMAT.XML)
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.CSV, self.DICT, self.FIXED_WIDTH, self.JSON, self.POST, self.SOAP, self.XML))
+
+    class HOOK_TYPE:
+        PUB = 'pub'
+        SUB = 'sub'
+
+    class DELIVER_BY:
+        PRIORITY = 'priority'
+        EXT_PUB_TIME = 'ext_pub_time'
+        PUB_TIME = 'pub_time'
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.PRIORITY, self.EXT_PUB_TIME, self.PUB_TIME))
+
+    class DEFAULT:
+        DATA_FORMAT = 'text/plain'
+        TOPIC_MAX_DEPTH_GD = 10000
+        TOPIC_MAX_DEPTH_NON_GD = 1000
+        GD_DEPTH_CHECK_FREQ = 100
+        GET_BATCH_SIZE = 50
+        DELIVERY_BATCH_SIZE = 50
+        DELIVERY_MAX_RETRY = 123456789
+        DELIVERY_MAX_SIZE = 500000 # 500 kB
+        WAIT_TIME_SOCKET_ERROR = 10
+        WAIT_TIME_NON_SOCKET_ERROR = 30
 
     class QUEUE_TYPE:
-        MESSAGE = 'message'
-        IN_FLIGHT = 'in-flight'
+        STAGING = 'staging'
+        CURRENT = 'current'
 
-    class GET_DIR:
-        FIFO = 'fifo'
-        LIFO = 'lifo'
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.STAGING, self.CURRENT))
 
-    class MOVE_RESULT:
-        MOVED = 'moved'
-        OVERFLOW = 'overflow'
+    class GD_CHOICE:
+        DEFAULT_PER_TOPIC = NameId('----------', 'default-per-topic')
+        YES = NameId('Yes', 'true')
+        NO = NameId('No', 'false')
 
-    class CALLBACK_TYPE:
-        OUTCONN_PLAIN_HTTP = 'outconn-plain-http'
-        OUTCONN_SOAP = 'outconn-soap'
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.DEFAULT_PER_TOPIC, self.YES, self.NO))
 
-    class DELIVERY_MODE:
+    class QUEUE_ACTIVE_STATUS:
+        FULLY_ENABLED = NameId('Pub and sub', 'pub-sub')
+        PUB_ONLY = NameId('Pub only', 'pub-only')
+        SUB_ONLY = NameId('Sub only', 'sub-only')
+        DISABLED = NameId('Disabled', 'disabled')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.FULLY_ENABLED, self.PUB_ONLY, self.SUB_ONLY, self.DISABLED))
+
+    class DELIVERY_METHOD:
+        NOTIFY = NameId('Notify', 'notify')
         PULL = NameId('Pull', 'pull')
-        CALLBACK_URL = NameId('Callback URL', 'callback-url')
+        WEB_SOCKET = NameId('WebSocket', 'web-socket')
 
         class __metaclass__(type):
             def __iter__(self):
-                return iter((self.PULL, self.CALLBACK_URL))
+                # Note that WEB_SOCKET is not included because it's not shown in GUI for subscriptions
+                return iter((self.NOTIFY, self.PULL))
 
-    class MESSAGE_SOURCE:
-        TOPIC = NameId('Topic', 'topic')
-        CONSUMER_QUEUE = NameId('Consumer queue', 'consumer-queue')
+    class DELIVERY_STATUS:
+        INITIALIZED = 'initialized'
+        WAITING_FOR_CONFIRMATION = 'waiting-for-confirmation'
+        DELIVERED = 'delivered'
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.TOPIC, self.CONSUMER_QUEUE))
+    class PRIORITY:
+        DEFAULT = 5
+        MIN = 1
+        MAX = 9
 
-    class GET_FORMAT:
-        OBJECT = NameId('Object', 'object')
-        JSON = NameId('JSON', 'json')
-        XML = NameId('XML', 'xml')
-        DEFAULT = JSON
-
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.OBJECT, self.JSON, self.XML))
-
-    class URL_ITEM_TYPE:
-        TOPIC = NameId('Topic', 'topic')
-        MESSAGES = NameId('Messages', 'msg')
+    class ROLE:
+        PUBLISHER = NameId('Publisher', 'pub-only')
+        SUBSCRIBER = NameId('Subscriber', 'sub-only')
+        PUBLISHER_SUBSCRIBER = NameId('Publisher/subscriber', 'pub-sub')
 
         class __metaclass__(type):
             def __iter__(self):
-                return iter((self.TOPIC.id, self.MESSAGES.id))
+                return iter((self.PUBLISHER, self.SUBSCRIBER, self.PUBLISHER_SUBSCRIBER))
+
+    class ENDPOINT_TYPE:
+        AMQP = NameId('AMQP', 'amqp')
+        FILES = NameId('Files', 'files')
+        FTP = NameId('FTP', 'ftp')
+        IMAP = NameId('IMAP', 'imap')
+        REST = NameId('REST', 'rest')
+        SERVICE = NameId('Service', 'service')
+        SMS_TWILIO = NameId('SMS - Twilio', 'sms_twilio')
+        SMTP = NameId('SMTP', 'smtp')
+        SOAP = NameId('SOAP', 'soap')
+        SQL = NameId('SQL', 'sql')
+        WEB_SOCKETS = NameId('WebSockets', 'websockets')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.AMQP, self.FILES, self.FTP, self.IMAP, self.REST, self.SERVICE, self.SMS_TWILIO, self.SMTP,
+                    self.SOAP, self.SQL, self.WEB_SOCKETS))
 
 class EMAIL:
     class DEFAULT:
@@ -881,9 +944,16 @@ CONTENT_TYPE = Bunch(
     SOAP12 = 'application/soap+xml; charset=utf-8',
 )
 
-class IPC_ACTION:
-    INVOKE_SERVICE = 'invoke-service'
-    INVOKE_WORKER_STORE = 'invoke-worker-store'
+class IPC:
+
+    class ACTION:
+        INVOKE_SERVICE = 'invoke-service'
+        INVOKE_WORKER_STORE = 'invoke-worker-store'
+
+    class STATUS:
+        SUCCESS = 'zato.success'
+        FAILURE = 'zato.failure'
+        LENGTH = 12 # Length of either success or failure messages
 
 class WEB_SOCKET:
     class DEFAULT:
@@ -993,18 +1063,21 @@ class ConnectionException(ZatoException):
 class TimeoutException(ConnectionException):
     pass
 
-class HTTPException(ZatoException):
+class StatusAwareException(ZatoException):
     """ Raised when the underlying error condition can be easily expressed
     as one of the HTTP status codes.
     """
     def __init__(self, cid, msg, status):
-        super(HTTPException, self).__init__(cid, msg)
+        super(StatusAwareException, self).__init__(cid, msg)
         self.status = status
         self.reason = HTTP_RESPONSES[status]
 
     def __repr__(self):
         return '<{} at {} cid:`{}`, status:`{}`, msg:`{}`>'.format(
             self.__class__.__name__, hex(id(self)), self.cid, self.status, self.msg)
+
+class HTTPException(StatusAwareException):
+    pass
 
 class ParsingException(ZatoException):
     """ Raised when the error is to do with parsing of documents, such as an input
@@ -1171,3 +1244,5 @@ class IMAPMessage(object):
 
     def mark_seen(self):
         self.conn.mark_seen(self.uid)
+
+# ################################################################################################################################

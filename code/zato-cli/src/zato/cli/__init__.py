@@ -118,10 +118,15 @@ loggers:
         handlers: [pubsub]
         qualname: zato_pubsub
         propagate: false
-    zato_pubsub_overflown:
+    zato_pubsub_overflow:
         level: INFO
-        handlers: [pubsub_overflown]
-        qualname: zato_pubsub_overflown
+        handlers: [pubsub_overflow]
+        qualname: zato_pubsub_overflow
+        propagate: false
+    zato_pubsub_audit:
+        level: INFO
+        handlers: [pubsub_audit]
+        qualname: zato_pubsub_audit
         propagate: false
     zato_rbac:
         level: INFO
@@ -186,13 +191,20 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
-    pubsub_overflown:
+    pubsub_overflow:
         formatter: default
         class: logging.handlers.ConcurrentRotatingFileHandler
-        filename: './logs/pubsub-overflown.log'
+        filename: './logs/pubsub-overflow.log'
         mode: 'a'
-        maxBytes: 20000000
-        backupCount: 10
+        maxBytes: 200000000
+        backupCount: 50
+    pubsub_audit:
+        formatter: default
+        class: logging.handlers.ConcurrentRotatingFileHandler
+        filename: './logs/pubsub-audit.log'
+        mode: 'a'
+        maxBytes: 200000000
+        backupCount: 50
     rbac:
         formatter: default
         class: logging.handlers.ConcurrentRotatingFileHandler
@@ -226,6 +238,32 @@ formatters:
 
 version: 1
 """ # nopep8
+
+sql_conf_contents = """
+# ######### ######################## ######### #
+# ######### Engines defined by Zato  ######### #
+# ######### ######################## ######### #
+
+[mysql+pymysql]
+display_name=MySQL
+ping_query=SELECT 1+1
+
+[postgresql+pg8000]
+display_name=PostgreSQL
+ping_query=SELECT 1
+
+[oracle]
+display_name=Oracle
+ping_query=SELECT 1 FROM dual
+
+# ######### ################################# ######### #
+# ######### User-defined SQL engines go below ######### #
+# ######### ################################# ######### #
+
+#[label]
+#friendly_name=My DB
+#sqlalchemy_driver=sa-name
+""".lstrip() # nopep8
 
 # ######################################################################################################################
 
@@ -716,3 +754,4 @@ class ManageCommand(ZatoCommand):
 
         os.chdir(self.component_dir)
         return self._get_dispatch()[json_data['component']](args)
+

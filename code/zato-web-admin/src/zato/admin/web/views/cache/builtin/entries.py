@@ -10,15 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from urllib import quote_plus as urllib_quote
-
-# Django
-from django.http import HttpResponse
-from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.admin.web.views import BaseCallView, Delete as _Delete, Index as _Index
+from zato.admin.web.views import Delete as _Delete, Index as _Index
 
 # ################################################################################################################################
 

@@ -9,6 +9,8 @@ code/include/*
 code/lib/*
 code/lib64
 code/local/*
+code/mx/*
+code/OpenSSL/*
 code/parts/*
 code/pip-selfcheck.json
 code/release-info/revision.txt

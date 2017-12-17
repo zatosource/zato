@@ -1,0 +1,85 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# Zato
+from zato.server.service.internal import AdminService, AdminSIO
+
+# ################################################################################################################################
+
+class MigrateDeliveryServer(AdminService):
+    """ Synchronously notifies all servers that a migration is in progress for input sub_key, then stops a delivery task
+    on current server and starts it on another one.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('sub_key', 'new_delivery_server_name', 'endpoint_type')
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        # Local aliases
+        sub_key = self.request.input.sub_key
+        new_delivery_server_name = self.request.input.new_delivery_server_name
+        endpoint_type = self.request.input.endpoint_type
+
+        # Get a PubSubTool for this sub_key ..
+        pub_sub_tool = self.pubsub.pubsub_tool_by_sub_key[sub_key]
+
+        # .. and find a particular delivery for this very sub key.
+        task = pub_sub_tool.get_delivery_task(sub_key)
+
+        self.logger.info('About to migrate delivery task for sub_key `%s` (%s) to server `%s`',
+            sub_key, endpoint_type, new_delivery_server_name)
+
+        # First, let other servers know that this sub_key is no longer being handled,
+        # we do it synchronously to make sure that they do not send anything to us anymore.
+        is_ok, response = self.servers.invoke_all('zato.pubsub.migrate.notify-delivery-task-stopping', {
+            'sub_key': sub_key,
+            'endpoint_type': endpoint_type,
+            'new_delivery_server_name': new_delivery_server_name,
+        })
+
+        if not is_ok:
+            self.logger.warn('Could not notify other servers of a stopping delivery task, e:`%s`', response)
+            return
+
+        # Stop the task before proceeding to make sure this task will handle no new messages
+        task.stop()
+
+        # Clear any in-progress messages out of RAM. Note that any non-GD remaining messages
+        # will be lost but GD are in SQL anyway so they will be always available on the new server.
+        task.clear()
+
+        # We can remove this task from its pubsub_tool so as to release some memory
+        pub_sub_tool.remove_sub_key(sub_key)
+
+        # We can let the new server know it can start its task for sub_key
+        self.logger.info('Notifying server `%s` to start delivery task for `%s` (%s)', new_delivery_server_name,
+                sub_key, endpoint_type)
+
+        self.servers[new_delivery_server_name].invoke('zato.pubsub.delivery.create-delivery-task', {
+            'sub_key': sub_key,
+            'endpoint_type': endpoint_type,
+        })
+
+# ################################################################################################################################
+
+class NotifyDeliveryTaskStopping(AdminService):
+    """ Invoked when a delivery task is about to stop - deletes from pubsub information about input sub_key's delivery task.
+    Thanks to this, when a message is published and there is no new delivery task running, this message will be queued up
+    instead of being delivered to a task that is to stop. The new task will pick it up when it is starting up instead.
+    """
+    class SimpleIO:
+        input_required = ('sub_key', 'endpoint_type')
+
+    def handle(self):
+        self.pubsub.delete_sub_key_server(self.request.input.sub_key)
+
+# ################################################################################################################################

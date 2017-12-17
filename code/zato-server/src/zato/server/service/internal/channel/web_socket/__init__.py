@@ -51,12 +51,12 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
 def instance_hook(self, input, instance, attrs):
 
-    with closing(self.odb.session()) as session:
-
-        instance.service_id = session.query(ServiceModel).\
-            filter(ServiceModel.name==input.service_name).\
-            filter(ServiceModel.cluster_id==input.cluster_id).\
-            one().id
+    if attrs.is_create_edit:
+        with closing(self.odb.session()) as session:
+            instance.service_id = session.query(ServiceModel).\
+                filter(ServiceModel.name==input.service_name).\
+                filter(ServiceModel.cluster_id==input.cluster_id).\
+                one().id
 
 # ################################################################################################################################
 
@@ -104,7 +104,8 @@ class Start(Service):
     """
     class SimpleIO(object):
         input_required = tuple(Edit.SimpleIO.input_required) + ('id', 'config_cid')
-        input_optional = tuple(Edit.SimpleIO.input_optional) + (Int('bind_port'), 'service_name', 'sec_name', 'sec_type')
+        input_optional = tuple(Edit.SimpleIO.input_optional) + (
+            Int('bind_port'), 'service_name', 'sec_name', 'sec_type', 'vault_conn_default_auth_method')
         request_elem = 'zato_channel_web_socket_start_request'
         response_elem = 'zato_channel_web_socket_start_response'
 
