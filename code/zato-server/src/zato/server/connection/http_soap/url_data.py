@@ -47,7 +47,7 @@ class URLData(CyURLData, OAuthDataStore):
     """ Performs URL matching and security checks.
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
-                 oauth_config=None, tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, \
+                 oauth_config=None, wss_config=None, apikey_config=None, aws_config=None, \
                  openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
                  vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
                  jwt_secret=None, vault_conn_api=None):
@@ -58,7 +58,6 @@ class URLData(CyURLData, OAuthDataStore):
         self.jwt_config = jwt_config
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
-        self.tech_acc_config = tech_acc_config
         self.wss_config = wss_config
         self.apikey_config = apikey_config
         self.aws_config = aws_config
@@ -362,50 +361,6 @@ class URLData(CyURLData, OAuthDataStore):
             wsgi_environ['zato.oauth.request'] = oauth_request
 
         return True
-
-# ################################################################################################################################
-
-    def _handle_security_tech_acc(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None,
-        enforce_auth=True):
-        """ Performs the authentication using technical accounts.
-        """
-        zato_headers = ('HTTP_X_ZATO_USER', 'HTTP_X_ZATO_PASSWORD')
-
-        for header in zato_headers:
-            if not wsgi_environ.get(header, None):
-                if enforce_auth:
-                    error_msg = ("[{}] The header [{}] doesn't exist or is empty, URI:[{}, wsgi_environ:[{}]]").\
-                        format(cid, header, path_info, wsgi_environ)
-                    logger.error(error_msg)
-                    raise Unauthorized(cid, error_msg, 'zato-tech-acc')
-                else:
-                    return False
-
-        # Note that logs get a specific information what went wrong whereas the
-        # user gets a generic 'username or password' message
-        msg_template = '[{}] The {} is incorrect, URI:[{}], X_ZATO_USER:[{}]'
-
-        if wsgi_environ['HTTP_X_ZATO_USER'] != sec_def.name:
-            if enforce_auth:
-                error_msg = msg_template.format(cid, 'username', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
-                user_msg = msg_template.format(cid, 'username or password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
-                logger.error(error_msg)
-                raise Unauthorized(cid, user_msg, 'zato-tech-acc')
-            else:
-                return False
-
-        incoming_password = sha256(wsgi_environ['HTTP_X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
-
-        if incoming_password != sec_def.password:
-            if enforce_auth:
-                error_msg = msg_template.format(cid, 'password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
-                user_msg = msg_template.format(cid, 'username or password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
-                logger.error(error_msg)
-                raise Unauthorized(cid, user_msg, 'zato-tech-acc')
-            else:
-                return False
-
-        return wsgi_environ['HTTP_X_ZATO_USER']
 
 # ################################################################################################################################
 
@@ -997,50 +952,6 @@ class URLData(CyURLData, OAuthDataStore):
         with self.url_sec_lock:
             self.oauth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH)
-
-# ################################################################################################################################
-
-    def _update_tech_acc(self, name, config):
-        self.tech_acc_config[name] = Bunch()
-        self.tech_acc_config[name].config = config
-
-    def tech_acc_get(self, name):
-        """ Returns the configuration of the technical account of the given name.
-        """
-        with self.url_sec_lock:
-            return self.tech_acc_config.get(name)
-
-    def on_broker_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
-        """ Creates a new technical account.
-        """
-        with self.url_sec_lock:
-            self._update_tech_acc(msg.name, msg)
-
-    def on_broker_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
-        """ Updates an existing technical account.
-        """
-        with self.url_sec_lock:
-            del self.tech_acc_config[msg.old_name]
-            self._update_tech_acc(msg.name, msg)
-            self._update_url_sec(msg, SEC_DEF_TYPE.TECH_ACCOUNT)
-
-    def on_broker_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
-        """ Deletes a technical account.
-        """
-        with self.url_sec_lock:
-            self._delete_channel_data('tech_acc', msg.name)
-            del self.tech_acc_config[msg.name]
-            self._update_url_sec(msg, SEC_DEF_TYPE.TECH_ACCOUNT, True)
-
-    def on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes the password of a technical account.
-        """
-        with self.url_sec_lock:
-            # The message's 'password' attribute already takes the salt
-            # into account (pun intended ;-))
-            self.tech_acc_config[msg.name]['config']['password'] = msg.password
-            self.tech_acc_config[msg.name]['config']['salt'] = msg.salt
-            self._update_url_sec(msg, SEC_DEF_TYPE.TECH_ACCOUNT)
 
 # ################################################################################################################################
 
