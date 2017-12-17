@@ -53,7 +53,7 @@ from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
 from zato.admin.web.views.sms import twilio
 from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oauth, openstack as openstack_security, rbac, \
-     tech_account, wss, xpath as xpath_sec
+     wss, xpath as xpath_sec
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
 from zato.admin.web.views.security.vault import connection as vault_conn
 
@@ -444,26 +444,6 @@ urlpatterns += [
         login_required(rbac.role_permission.Create()), name=rbac.role_permission.Create.url_name),
     url(r'^zato/security/rbac/role-permission/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(rbac.role_permission.Delete()), name=rbac.role_permission.Delete.url_name),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. Technical accounts
-
-    url(r'^zato/security/tech-account/$',
-        login_required(tech_account.Index()), name=tech_account.Index.url_name),
-    url(r'^zato/security/tech-account/create/$',
-        login_required(tech_account.Create()), name=tech_account.Create.url_name),
-    url(r'^zato/security/tech-account/edit/$',
-        login_required(tech_account.Edit()), name=tech_account.Edit.url_name),
-    url(r'^zato/security/tech-account/change-password/$',
-        login_required(tech_account.change_password), name='security-tech-account-change-password'),
-    url(r'^zato/security/tech-account/get/by-id/(?P<tech_account_id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(tech_account.get_by_id), name='security-tech-account-get-by-id'),
-    url(r'^zato/security/tech-account/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(tech_account.delete), name='security-tech-account-delete'),
     ]
 
 # ################################################################################################################################
