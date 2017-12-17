@@ -275,29 +275,6 @@ class WSSDefinition(SecurityBase):
 
 # ################################################################################################################################
 
-class TechnicalAccount(SecurityBase):
-    """ Stores information about technical accounts, used for instance by Zato
-    itself for securing access to its API.
-    """
-    __tablename__ = 'sec_tech_acc'
-    __mapper_args__ = {'polymorphic_identity':'tech_acc'}
-
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-    salt = Column(String(32), nullable=False)
-
-    def __init__(self, id=None, name=None, is_active=None, password=None, salt=None, cluster=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.password = password
-        self.salt = salt
-        self.cluster = cluster
-
-    def to_json(self):
-        return to_json(self)
-
-# ################################################################################################################################
-
 class OAuth(SecurityBase):
     """ Stores OAuth credentials.
     """
