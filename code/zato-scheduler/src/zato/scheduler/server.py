@@ -82,10 +82,6 @@ class SchedulerServer(object):
         # API server
         self.api_server = WSGIServer((main.bind.host, int(main.bind.port)), self, keyfile=priv_key, certfile=cert)
 
-        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
-        self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb, self.odb.pool, False)
-        self.config.odb = self.odb
-
         # Scheduler
         self.scheduler = Scheduler(self.config)
 
