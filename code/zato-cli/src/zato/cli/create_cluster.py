@@ -378,14 +378,6 @@ zato_services = {
     'zato.security.rbac.role-permission.delete':'zato.server.service.internal.security.rbac.role_permission.Delete',
     'zato.security.rbac.role-permission.get-list':'zato.server.service.internal.security.rbac.role_permission.GetList',
 
-    # Security - Technical accounts
-    'zato.security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',
-    'zato.security.tech-account.create':'zato.server.service.internal.security.tech_account.Create',
-    'zato.security.tech-account.delete':'zato.server.service.internal.security.tech_account.Delete',
-    'zato.security.tech-account.edit':'zato.server.service.internal.security.tech_account.Edit',
-    'zato.security.tech-account.get-by-id':'zato.server.service.internal.security.tech_account.GetByID',
-    'zato.security.tech-account.get-list':'zato.server.service.internal.security.tech_account.GetList',
-
     # Security - TLS - CA certs
     'zato.security.tls.ca_cert.create':'zato.server.service.internal.security.tls.ca_cert.Create',
     'zato.security.tls.ca_cert.delete':'zato.server.service.internal.security.tls.ca_cert.Delete',
@@ -472,7 +464,7 @@ class Create(ZatoCommand):
     opts.append({'name':'broker_port', 'help':'Redis port'})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
 
-    opts += get_tech_account_opts('for web admin instances to use')
+    opts += get_tech_account_opts('for web-admin instances to use')
 
     def execute(self, args, show_output=True):
 
