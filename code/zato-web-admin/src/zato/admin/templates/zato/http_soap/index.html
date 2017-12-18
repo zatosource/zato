@@ -403,11 +403,13 @@
                             <td>{{ create_form.cache_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Cache expiry
-                            <br/>
-                            <span class="form_hint">(in minutes,<br/>0=unlimited)</span>
+                            <td style="vertical-align:middle">
+                                Cache expiry
                             </td>
-                            <td>{{ create_form.cache_expiry }}</td>
+                            <td>
+                                {{ create_form.cache_expiry }}
+                                <span class="form_hint">(in minutes, 0=unlimited)</span>
+                            </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">RBAC enabled</td>

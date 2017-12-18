@@ -26,7 +26,7 @@ $.fn.zato.cache.builtin.create = function() {
 }
 
 $.fn.zato.cache.builtin.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the cache definition', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update cache definition', id);
 }
 
 $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
@@ -77,7 +77,7 @@ $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.cache.builtin.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Cache definition `{0}` deleted',
-        'Are you sure you want to delete the cache definition `{0}`?',
+        'Are you sure you want to delete cache definition `{0}`?',
         true);
 }
 
