@@ -141,27 +141,27 @@
                                 <label>Default {{ create_form.is_default }}</label>
                                 </td>
                         </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Max size
-                            <br/>
-                            <span class="form_hint">0=No limits</span>
-                            <br/>
-                            <span class="form_hint">Default: {{ default_max_size }}</span>
+
+
+                            <td style="vertical-align:middle">Max size</td>
+                            <td>
+                                {{ create_form.max_size }}
+                                <span class="form_hint">
+                                    0=No limits, default: {{ default_max_size }}
+                                </span>
                             </td>
-                            <td>{{ create_form.max_size }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Max item size
-                            <br/>
-                            <span class="form_hint">0=No limits</span>
-                            <br/>
-                            <span class="form_hint">Default: {{ default_max_item_size }}
-                            <br/>
-                            (characters or bytes)
-                            </span>
+                            <td style="vertical-align:middle">Max item size</td>
+                            <td>
+                                {{ create_form.max_item_size }}
+                                <span class="form_hint">
+                                    0=No limits, default: {{ default_max_item_size }} (characters or bytes)
+                                </span>
                             </td>
-                            <td>{{ create_form.max_item_size }} </td>
                         </tr>
+
+
                         <tr>
                             <td style="vertical-align:middle">Extend expiration
                             </td>
@@ -204,27 +204,26 @@
                                 <label>Default {{ edit_form.is_default }}</label>
                                 </td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Max size
-                            <br/>
-                            <span class="form_hint">0=No limits</span>
-                            <br/>
-                            <span class="form_hint">Default: {{ default_max_size }}</span>
+                            <td style="vertical-align:middle">Max size</td>
+                            <td>
+                                {{ edit_form.max_size }}
+                                <span class="form_hint">
+                                    0=No limits, default: {{ default_max_size }}
+                                </span>
                             </td>
-                            <td>{{ edit_form.max_size }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Max item size
-                            <br/>
-                            <span class="form_hint">0=No limits</span>
-                            <br/>
-                            <span class="form_hint">Default: {{ default_max_item_size }}
-                            <br/>
-                            (characters or bytes)
-                            </span>
+                            <td style="vertical-align:middle">Max item size</td>
+                            <td>
+                                {{ edit_form.max_item_size }}
+                                <span class="form_hint">
+                                    0=No limits, default: {{ default_max_item_size }} (characters or bytes)
+                                </span>
                             </td>
-                            <td>{{ edit_form.max_item_size }} </td>
                         </tr>
+
                         <tr>
                             <td style="vertical-align:middle">Extend expiration
                             </td>
