@@ -33,6 +33,7 @@ class GetAPISpec(Service):
         if cluster_id and cluster_id != self.server.cluster_id:
             raise ValueError('Input cluster ID `%s` different than ours `%s`', cluster_id, self.server.cluster_id)
 
-        self.response.payload = dumps(Generator(self.server.service_store.services, self.request.input.query).get_info(ignore_prefix=ignore_prefix))
+        self.response.payload = dumps(Generator(self.server.service_store.services, self.request.input.query).get_info(
+            ignore_prefix=ignore_prefix))
 
 # ################################################################################################################################
