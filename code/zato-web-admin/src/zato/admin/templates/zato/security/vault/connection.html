@@ -93,12 +93,12 @@
 
                         <td>{{ item.name }}</td>
                         <td>{{ item.url }}</td>
-                        <td>{{ item.default_auth_method|default:"<span class='form_hint'>(None)</span>" }}</td>
+                        <td>{{ item.default_auth_method|default:"<span class='form_hint'>---</span>" }}</td>
                         <td>
                         {% if item.service_name %}
                             <a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a>
                         {% else %}
-                            <span class='form_hint'>(None)</span>
+                            <span class='form_hint'>---</span>
                         {% endif %}
                         </td>
 

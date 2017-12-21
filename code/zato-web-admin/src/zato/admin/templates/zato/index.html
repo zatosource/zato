@@ -127,8 +127,6 @@
                             </ul>
                         </li>
 
-                        <li><a href="{% url "security-tech-account" %}?cluster={{ cluster_id|default:'' }}">Technical accounts</a></li>
-
                         <li>
                             <span class="like-a">Vault &rarr;</span>
                             <ul>
@@ -176,6 +174,13 @@
                                 <!-- <li class='wide'><a href="{% url "out-stomp" %}?cluster={{ cluster_id|default:'' }}">STOMP</a></li> -->
                                 <li class='wide'><a href="{% url "out-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                                 <li class='wide'><a href="{% url "out-sap" %}?cluster={{ cluster_id|default:'' }}">SAP RFC</a></li>
+                            </ul>
+                        </li>
+                        <li>
+                            <span class="like-a">Cache &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url "cache-builtin" %}?cluster={{ cluster_id|default:'' }}">Built-in</a></li>
+                                <li class='wide'><a href="{% url "cache-memcached" %}?cluster={{ cluster_id|default:'' }}">Memcached</a></li>
                             </ul>
                         </li>
                         <li>
@@ -244,7 +249,9 @@
 
                 <li><span class="like-a">Pub/sub &darr;</span>
                     <ul>
-                        <li><a href="{% url "pubsub-topics" %}?cluster={{ cluster_id|default:'' }}">Topics</a></li>
+                        <li><a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id|default:'' }}">Endpoints</a></li>
+                        <li><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:'' }}">Topics</a></li>
+                        <li><a href="{% url "pubsub-subscription" %}?cluster={{ cluster_id|default:'' }}">Subscriptions</a></li>
                     </ul>
                 </li>
 

@@ -48,6 +48,10 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal',
             'zato.server.service.internal.apispec',
             'zato.server.service.internal.apispec.pub',
+            'zato.server.service.internal.cache.builtin',
+            'zato.server.service.internal.cache.builtin.entry',
+            'zato.server.service.internal.cache.builtin.pubapi',
+            'zato.server.service.internal.cache.memcached',
             'zato.server.service.internal.channel.amqp_',
             'zato.server.service.internal.channel.jms_wmq',
             'zato.server.service.internal.channel.stomp',
@@ -91,10 +95,17 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.pickup',
             'zato.server.service.internal.pattern.invoke_retry',
             'zato.server.service.internal.pubsub',
-            'zato.server.service.internal.pubsub.consumers',
+            'zato.server.service.internal.pubsub.cleanup',
+            'zato.server.service.internal.pubsub.delivery',
+            'zato.server.service.internal.pubsub.endpoint',
+            'zato.server.service.internal.pubsub.hook',
             'zato.server.service.internal.pubsub.message',
-            'zato.server.service.internal.pubsub.producers',
-            'zato.server.service.internal.pubsub.topics',
+            'zato.server.service.internal.pubsub.migrate',
+            'zato.server.service.internal.pubsub.pubapi',
+            'zato.server.service.internal.pubsub.publish',
+            'zato.server.service.internal.pubsub.subscription',
+            'zato.server.service.internal.pubsub.queue',
+            'zato.server.service.internal.pubsub.topic',
             'zato.server.service.internal.query.cassandra',
             'zato.server.service.internal.scheduler',
             'zato.server.service.internal.search.es',
@@ -111,7 +122,6 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.security.rbac.permission',
             'zato.server.service.internal.security.rbac.role',
             'zato.server.service.internal.security.rbac.role_permission',
-            'zato.server.service.internal.security.tech_account',
             'zato.server.service.internal.security.tls.ca_cert',
             'zato.server.service.internal.security.tls.channel',
             'zato.server.service.internal.security.tls.key_cert',
@@ -143,7 +153,7 @@ class ZatoContext(PythonConfig):
 
     @Object
     def bool_parameter_prefixes(self):
-        return SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES
+        return SIMPLE_IO.BOOL_PARAMETERS.PREFIXES
 
     # #######################################################
     # SQL

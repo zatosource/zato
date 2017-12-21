@@ -1,0 +1,198 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Cache definitions (built-in){% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/cache/memcached/index.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            '_is_default',
+            'servers',
+            '_is_debug',
+            '_edit',
+            '_delete',
+            'id',
+            'is_active',
+            'is_default',
+            'is_debug',
+            'extra',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Cache definitions - Memcached</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show definitions"%}
+
+
+    {% if cluster_id %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.cache.memcached.create()">Create a new definition</a>
+        </div>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Default</a></th>
+                        <th><a href="#">Servers</a></th>
+                        <th><a href="#">Debug mode</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.is_default|yesno:'Yes,No' }}</td>
+                        <td>{{ item.servers }}</td>
+                        <td>{{ item.is_debug|yesno:'Yes,No' }}</td>
+                        <td><a href="javascript:$.fn.zato.cache.memcached.edit('{{ item.id }}')">Edit</a></td>
+                        <td>{% if item.is_default %}<span class="form_hint">(Delete)</span>{% else %}<a href="javascript:$.fn.zato.cache.memcached.delete_('{{ item.id }}')">Delete</a>{% endif %}</td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.is_default }}</td>
+                        <td class='ignore'>{{ item.is_debug }}</td>
+                        <td class='ignore'>{{ item.extra }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='14'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "cache-memcached-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:20%">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ create_form.is_active }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Default</td>
+                            <td>{{ create_form.is_default }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Debug mode</td>
+                            <td>{{ create_form.is_debug }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Servers</td>
+                            <td>{{ create_form.servers }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra</td>
+                            <td>{{ create_form.extra }} </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" name="cache_type" value="memcached" />
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "cache-memcached-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:20%">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ edit_form.is_active }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Default</td>
+                            <td>{{ edit_form.is_default }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Debug mode</td>
+                            <td>{{ edit_form.is_debug }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Servers</td>
+                            <td>{{ edit_form.servers }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra</td>
+                            <td>{{ edit_form.extra }} </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cache_type" name="edit-cache_type" value="memcached" />
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

@@ -9,7 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from httplib import BAD_REQUEST, CONFLICT, FORBIDDEN, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
+from httplib import BAD_REQUEST, CONFLICT, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, SERVICE_UNAVAILABLE, \
+     UNAUTHORIZED
 
 # Zato
 from zato.common import TOO_MANY_REQUESTS, HTTPException
@@ -30,7 +31,7 @@ class Conflict(Reportable):
         super(Conflict, self).__init__(cid, msg, CONFLICT)
 
 class Forbidden(Reportable):
-    def __init__(self, cid, msg, *ignored_args, **ignored_kwargs):
+    def __init__(self, cid, msg='You are not allowed to access this resource', *ignored_args, **ignored_kwargs):
         super(Forbidden, self).__init__(cid, msg, FORBIDDEN)
 
 class MethodNotAllowed(Reportable):
@@ -49,3 +50,14 @@ class Unauthorized(Reportable):
 class TooManyRequests(Reportable):
     def __init__(self, cid, msg):
         super(TooManyRequests, self).__init__(cid, msg, TOO_MANY_REQUESTS)
+
+class InternalServerError(Reportable):
+    def __init__(self, cid, msg):
+        super(InternalServerError, self).__init__(cid, msg, INTERNAL_SERVER_ERROR)
+
+class ServiceUnavailable(Reportable):
+    def __init__(self, cid, msg):
+        super(ServiceUnavailable, self).__init__(cid, msg, SERVICE_UNAVAILABLE)
+
+class PubSubSubscriptionExists(BadRequest):
+    pass

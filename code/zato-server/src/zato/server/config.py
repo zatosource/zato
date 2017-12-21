@@ -91,6 +91,17 @@ class ConfigDict(object):
         with self.lock:
             return self._impl.items()
 
+    def get_by_id(self, key_id, default=None):
+        with self.lock:
+            key = self._impl.get('_zato_id_%s' % key_id)
+            return self._impl.get(key, default)
+
+    def set_key_id_data(self, config):
+        with self.lock:
+            key_id = config['id']
+            key = config['name']
+            self._impl['_zato_id_%s' % key_id] = key
+
     def copy(self):
         """ Returns a new instance of ConfigDict with items copied over from self.
         """
@@ -162,8 +173,9 @@ class ConfigStore(object):
     """
     def __init__(self, out_ftp=ZATO_NONE, out_odoo=ZATO_NONE, out_plain_http=ZATO_NONE, out_soap=ZATO_NONE, out_sql=ZATO_NONE,
             out_stomp=ZATO_NONE, out_sap=ZATO_NONE, repo_location=ZATO_NONE, basic_auth=ZATO_NONE, wss=ZATO_NONE,
-            tech_acc=ZATO_NONE, url_sec=ZATO_NONE, http_soap=ZATO_NONE, broker_config=ZATO_NONE, odb_data=ZATO_NONE,
-            simple_io=ZATO_NONE, msg_ns=ZATO_NONE, json_pointer=ZATO_NONE, xpath=ZATO_NONE, pubsub_topics=ZATO_NONE):
+            url_sec=ZATO_NONE, tech_acc=ZATO_NONE, url_sec=ZATO_NONE, http_soap=ZATO_NONE, broker_config=ZATO_NONE,
+            odb_data=ZATO_NONE, simple_io=ZATO_NONE, msg_ns=ZATO_NONE, json_pointer=ZATO_NONE, xpath=ZATO_NONE,
+            pubsub_topics=ZATO_NONE):
 
         # Outgoing connections
         self.out_ftp = out_ftp
@@ -180,7 +192,6 @@ class ConfigStore(object):
         # Security definitions
         self.basic_auth = basic_auth
         self.wss = wss
-        self.tech_acc = tech_acc
 
         # URL security
         self.url_sec = url_sec
@@ -205,9 +216,6 @@ class ConfigStore(object):
 
         # XPath
         self.xpath = xpath
-
-        # Pub/sub
-        self.pubsub_topics = pubsub_topics
 
     def outgoing_connections(self):
         """ Returns all the outgoing connections.

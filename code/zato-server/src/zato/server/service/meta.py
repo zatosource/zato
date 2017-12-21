@@ -25,7 +25,7 @@ from sqlalchemy import Boolean, Integer
 # Zato
 from zato.common import NO_DEFAULT_VALUE, ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
-from zato.server.service import Bool as BoolSIO, Int as IntSIO
+from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO, GetListAdminSIO
 
 logger = getLogger(__name__)
@@ -86,10 +86,17 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
 
             for k, v in sa_to_sio.items():
                 if isinstance(column.type, k):
-                    columns.append(v(column.name))
+                    if column.name in attrs.request_as_is:
+                        wrapper = AsIs
+                    else:
+                        wrapper = v
+                    columns.append(wrapper(column.name))
                     break
             else:
-                columns.append(column.name)
+                if column.name in attrs.request_as_is:
+                    columns.append(AsIs(column.name))
+                else:
+                    columns.append(column.name)
 
         # Override whatever objects it used to be
         elems = columns
@@ -120,6 +127,8 @@ def update_attrs(cls, name, attrs):
     attrs.create_edit_input_required_extra = getattr(mod, 'create_edit_input_required_extra', [])
     attrs.create_edit_rewrite = getattr(mod, 'create_edit_rewrite', [])
     attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
+    attrs.request_as_is = getattr(mod, 'request_as_is', [])
+    attrs._meta_session = None
 
     default_value = getattr(mod, 'default_value', singleton)
     default_value = NO_DEFAULT_VALUE if default_value is singleton else default_value
@@ -127,6 +136,7 @@ def update_attrs(cls, name, attrs):
 
     attrs.is_edit = False
     attrs.is_create_edit = False
+    attrs.is_delete = False
 
     if name == 'GetList':
         # get_sio sorts out what is required and what is optional.
@@ -138,10 +148,14 @@ def update_attrs(cls, name, attrs):
         attrs.broker_message_prefix = getattr(mod, 'broker_message_prefix')
 
         if name in('Create', 'Edit'):
+
             attrs.input_required = attrs.model
             attrs.input_optional = attrs.model
             attrs.is_edit = name == 'Edit'
             attrs.is_create_edit = True
+
+        elif name == 'Delete':
+            attrs.is_delete = True
 
     return attrs
 
@@ -248,6 +262,7 @@ class CreateEditMeta(AdminServiceMeta):
 
             with closing(self.odb.session()) as session:
                 try:
+                    attrs._meta_session = session
 
                     if attrs.check_existing_one:
 
@@ -274,6 +289,10 @@ class CreateEditMeta(AdminServiceMeta):
                     else:
                         instance = attrs.model()
 
+                    # Update the instance with data received on input, however,
+                    # note that this may overwrite some of existing attributes
+                    # if they are empty on input. If it's not desired,
+                    # set skip_input_params = ['...'] to ignore such input parameters.
                     instance.fromdict(input, exclude=['password'], allow_pk=True)
 
                     # Now that we have an instance which is known not to be a duplicate
@@ -328,11 +347,16 @@ class DeleteMeta(AdminServiceMeta):
     @staticmethod
     def handle(attrs):
         def handle_impl(self):
+            input = self.request.input
             with closing(self.odb.session()) as session:
+                attrs._meta_session = session
                 try:
                     instance = session.query(attrs.model).\
-                        filter(attrs.model.id==self.request.input.id).\
+                        filter(attrs.model.id==input.id).\
                         one()
+
+                    if attrs.instance_hook:
+                        attrs.instance_hook(self, input, instance, attrs)
 
                     session.delete(instance)
                     session.commit()
@@ -343,16 +367,16 @@ class DeleteMeta(AdminServiceMeta):
 
                     raise
                 else:
-                    self.request.input.action = getattr(attrs.broker_message, attrs.broker_message_prefix + 'DELETE').value
-                    self.request.input.name = getattr(instance, 'name', ZATO_NOT_GIVEN)
+                    input.action = getattr(attrs.broker_message, attrs.broker_message_prefix + 'DELETE').value
+                    input.name = getattr(instance, 'name', ZATO_NOT_GIVEN)
 
                     for name in attrs.extra_delete_attrs:
-                        self.request.input[name] = getattr(instance, name)
+                        input[name] = getattr(instance, name)
 
                     if attrs.broker_message_hook:
-                        attrs.broker_message_hook(self, self.request.input, instance, attrs, 'delete')
+                        attrs.broker_message_hook(self, input, instance, attrs, 'delete')
 
-                    self.broker_client.publish(self.request.input)
+                    self.broker_client.publish(input)
 
                     if attrs.delete_hook:
                         attrs.delete_hook(self, input, instance, attrs)

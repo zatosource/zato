@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import getLogger
-from traceback import format_exc
 
 # Zato
 from zato.server.base.worker.common import WorkerImpl

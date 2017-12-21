@@ -1,0 +1,91 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Endpoint topics{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            '_topic_name',
+            '_max_depth',
+            'last_pub_time',
+            'last_msg_id',
+            'last_correl_id',
+            'last_in_reply_to',
+            'ext_client_id',
+            '_topic_id',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Topics for endpoint : <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint_id }}">{{ endpoint_name }}</a></h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:5%">&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Topic name</a></th>
+                        <th><a href="#">Max depth GD / RAM</a></th>
+                        <th><a href="#">Last pub time</a></th>
+                        <th><a href="#">Last Msg ID</a></th>
+                        <th><a href="#">Last Correl ID</a></th>
+                        <th><a href="#">Last in reply to</a></th>
+                        <th><a href="#">EXTCLI</a></th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.topic_id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.name }}</a></td>
+                        <td>{{ item.max_depth_gd }} / {{ item.max_depth_non_gd }}</td>
+                        <td>{{ item.last_pub_time }}</td>
+                        <td><a href="{% url "pubsub-message" cluster_id "topic" item.topic_id item.last_msg_id %}">{{ item.last_msg_id }}</a></td>
+                        <td>{{ item.last_correl_id|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.last_in_reply_to|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.ext_client_id|default:'<span class="form_hint">---</span>' }}</td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='9'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

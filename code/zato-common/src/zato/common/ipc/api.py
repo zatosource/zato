@@ -14,6 +14,7 @@ import logging
 import os
 import stat
 import tempfile
+from cStringIO import StringIO
 from datetime import datetime, timedelta
 from traceback import format_exc
 from uuid import uuid4
@@ -25,6 +26,7 @@ from gevent import sleep
 from rapidjson import loads
 
 # Zato
+from zato.common import IPC
 from zato.common.ipc.forwarder import Forwarder
 from zato.common.ipc.publisher import Publisher
 from zato.common.ipc.subscriber import Subscriber
@@ -65,10 +67,25 @@ class IPCAPI(object):
     def _get_response(self, fifo, buffer_size, fifo_ignore_err=fifo_ignore_err, empty=('', None)):
 
         try:
-            response = os.read(fifo, buffer_size)
+            buff = StringIO()
+            data = object() # Just a sentinel because '' or None are expected from os.read
 
-            if response not in empty:
-                return loads(response)
+            while data not in empty:
+                data = os.read(fifo, 1)
+                buff.write(data)
+
+            response = buff.getvalue()
+
+            status = response[:IPC.STATUS.LENGTH]
+            response = response[IPC.STATUS.LENGTH+1:] # Add 1 to account for the separator
+            is_success = status == IPC.STATUS.SUCCESS
+
+            if is_success:
+                response = loads(response) if response else ''
+
+            buff.close()
+
+            return is_success, response
 
         except OSError, e:
             if e.errno not in fifo_ignore_err:
@@ -78,7 +95,6 @@ class IPCAPI(object):
         """ Invokes a service through IPC, synchronously or in background. If target_pid is an exact PID then this one worker
         process will be invoked if it exists at all.
         """
-
         # Create a FIFO pipe to receive replies to come through
         fifo_path = os.path.join(tempfile.tempdir, 'zato-ipc-fifo-{}'.format(uuid4().hex))
         os.mkfifo(fifo_path, fifo_create_mode)
@@ -90,7 +106,7 @@ class IPCAPI(object):
             if is_async:
                 return
 
-            response = None
+            response = None, None
 
             try:
 
@@ -109,6 +125,9 @@ class IPCAPI(object):
                         break
                     else:
                         now = datetime.utcnow()
+
+            except Exception, e:
+                logger.warn('Exception in IPC FIFO, e:`%s`', format_exc(e))
 
             finally:
                 os.close(fifo)

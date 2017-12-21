@@ -1,0 +1,125 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Messages for topic{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/topic.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            '_pub_time',
+            '_msg_id',
+            'prefix_short',
+
+            '_has_gd',
+            '_is_in_staging',
+            'delivery_count',
+            '_last_delivery',
+
+            '_endpoint',
+            '_pattern',
+            'msg_prefix',
+
+            '_delete',
+            'id',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Messages for queue :
+    <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id name_slug %}?highlight={{ sub_id }}">{{ name }}</a>
+    <span class="form_hint">{{ ws_ext_client_id|default:'' }}</span>
+</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show messages"%}
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:10px">&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th style="width:16%"><a href="#">Recv time</a></th>
+                        <th style="width:22%"><a href="#">Msg ID</a></th>
+                        <th style="width:22%"><a href="#">Recv msg prefix</a></th>
+
+                        <th><a href="#">GD</a></th>
+                        <th><a href="#">STG</a></th>
+                        <th><a href="#">DLV</a></th>
+                        <th><a href="#">Last DLV</a></th>
+
+                        <th style="width:5%">&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.msg_id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        <td>{{ item.recv_time }}</td>
+                        <td><a href="{% url "pubsub-message" cluster_id "queue" sub_id item.msg_id %}">{{ item.msg_id }}</a></td>
+                        <td>{{ item.data_prefix_short }}</td>
+
+                        <td>
+                            {% if item.has_gd %}
+                                <a href="#">Yes</a>
+                            {% else %}
+                                No
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="javascript:$.fn.zato.pubsub.queue_message.toggle_staging('{{ sub_id }}', '{{ item.msg_id }}')">{{ item.is_in_staging|yesno:"Yes,No" }}</a>
+                        </td>
+                        <td>{{ item.delivery_count }}</td>
+                        <td>{{ item.last_delivery_time|default:'<span class="form_hint">---</span>' }}</td>
+
+                        <td><a href="javascript:$.fn.zato.pubsub.queue_message.delete_('{{ sub_id }}', '{{ item.msg_id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.msg_id }}'>{{ item.msg_id }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='9'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

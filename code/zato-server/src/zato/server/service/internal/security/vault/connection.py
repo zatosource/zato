@@ -32,6 +32,8 @@ output_optional_extra = ['service_id', 'service_name']
 extra_delete_attrs = ['cluster_id', 'service_id']
 
 def instance_hook(self, input, instance, attrs):
+    instance.tls_key_cert_id = instance.tls_key_cert_id or None
+    instance.tls_ca_cert_id = instance.tls_ca_cert_id or None
     instance.username = uuid4().hex
 
 def broker_message_hook(self, input, instance, attrs, service_type):

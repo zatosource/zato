@@ -1,0 +1,351 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Pub/sub subscriptions{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/python" src="/static/brython/_zato/common.py"></script>
+    <script type="text/javascript" src="/static/js/pubsub/subscription.js"></script>
+
+    <script type="text/javascript">
+    window.zato_dyn_form_default = 'rest';
+    window.zato_dyn_form_elem_name = 'endpoint_type';
+    window.zato_dyn_form_skip_edit = true;
+    window.zato_dyn_form_skip_clear_field = ['id_out_http_method'];
+    window.zato_dyn_form_rows = {
+        'amqp': ['out_amqp_id', 'amqp_details'],
+        'files': ['files_directory_list'],
+        'ftp': ['ftp_directory_list'],
+        'rest': ['out_rest_http_soap_id', 'out_http_method'],
+        'service': ['service_id'],
+        'sms_twilio': ['sms_twilio_from', 'sms_twilio_to_list'],
+        'smtp': ['out_smtp_id', 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body'],
+        'soap': ['out_soap_http_soap_id', 'out_http_method'],
+    }
+
+    window.zato_select_data_target = 'endpoint_id';
+    window.zato_select_data_target_items = {
+        'endpoint_id': {
+            'amqp': [],
+            'files': [],
+            'ftp': [],
+            'rest': {{ select_data_target.rest|safe }},
+            'service': [],
+            'sms_twilio': [],
+            'smtp': [],
+            'soap': {{ select_data_target.soap|safe }},
+            'websockets': [],
+        }
+    }
+
+    </script>
+
+    <script type="text/javascript">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            'is_active',
+            'endpoint_name',
+            'endpoint_type',
+
+            'role',
+            'subscription_count',
+
+            '_last_seen',
+            '_last_deliv_time',
+
+            '_delete',
+            'id',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pub/sub subscriptions</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show subscriptions"%}
+
+    {% if cluster_id %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.pubsub.subscription.create()">Create new pub/sub subscriptions</a>
+        </div>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Active</a></th>
+                        <th style="width:10%"><a href="#">Endpoint</a></th>
+                        <th><a href="#">Type</a></th>
+
+                        <th><a href="#">Role</a></th>
+                        <th><a href="#"># of subscriptions</a></th>
+
+                        <th><a href="#">Last seen</a></th>
+                        <th><a href="#">Last deliv. time</a></th>
+
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        <td>{{ item.is_active|yesno:"Yes,No" }}</td>
+                        <td>{{ item.endpoint_name }}</td>
+                        <td>{{ item.endpoint_type }}</td>
+
+                        <td>{{ item.role }}</td>
+
+                        <td>
+                            <a id="pubsub_endpoint_queues_link_{{ item.id }}"
+                               href="{% url "pubsub-endpoint-queues" cluster_id item.id item.endpoint_name|slugify %}">{{ item.subscription_count}} </a>
+                        </td>
+
+                        <td>{{ item.last_seen|default:"<span class='form_hint'>---</span>" }}</td>
+                        <td>{{ item.last_deliv_time|default:"<span class='form_hint'>---</span>" }}</td>
+
+                        <td>
+                            {% if item.is_internal %}
+                                <span class="form_hint">Delete all subscriptions</span>
+                            {% else %}
+                                <a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete all subscriptions</a>
+                            {% endif %}
+                        </td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='11'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle; width:20%">Type</td>
+                            <td>
+                                {{ create_form.endpoint_type }}
+                                | Delivery server {{ create_form.server_id }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle; width:12%">Endpoint</td>
+                            <td>{{ create_form.endpoint_id }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle; width:12%">
+                                State
+                            </td>
+                            <td>
+                                {{ create_form.active_status }}
+                                | <label>GD enabled {{ create_form.has_gd }}</label>
+                                | <label>STG enabled {{ create_form.is_staging_enabled }}</label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle; width:12%">Delivery method<br/>and format</td>
+                            <td>
+                                {{ create_form.delivery_method }}
+                                {{ create_form.delivery_data_format }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle; width:12%">Deliv. batch size<br/>(list required?)</td>
+                            <td>
+                                {{ create_form.delivery_batch_size }}
+                                {{ create_form.wrap_one_msg_in_list }}
+                                |
+                                Deliv. max retries
+                                {{ create_form.delivery_max_retry }}
+                                <label>
+                                Block on err.?
+                                {{ create_form.delivery_err_should_block }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle; width:12%">
+                                Sleep on error
+                                <br/>
+                                socket / other
+                            </td>
+                            <td>
+                                {{ create_form.wait_sock_err }}
+                                {{ create_form.wait_non_sock_err }}
+                                <span class="form_hint">(both in seconds)</span>
+                            </td>
+                        </tr>
+
+                        {% comment %} --------- Topics --------- {% endcomment %}
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Topics
+                            </td>
+                            <td>{{ create_form.topic_list_text }} </td>
+                        </tr>
+
+                        {% comment %} --------- AMQP --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_out_amqp_id" style="display:none">
+                            <td style="vertical-align:middle; width:12%">AMQP outconn</td>
+                            <td>{{ create_form.out_amqp_id }}</td>
+                        </tr>
+                        <tr id="dyn_form_row_id_amqp_details" style="display:none">
+                            <td style="vertical-align:middle; width:12%">AMQP exchange<br/>and routing key</td>
+                            <td>
+                                {{ create_form.amqp_exchange }}
+                                {{ create_form.amqp_routing_key }}
+                            </td>
+                        </tr>
+
+                        {% comment %} --------- Files --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_files_directory_list" style="display:none">
+                            <td style="vertical-align:middle; width:12%">Local directories</td>
+                            <td>{{ create_form.files_directory_list }}</td>
+                        </tr>
+
+                        {% comment %} --------- FTP --------- {% endcomment %}
+                        <tr>
+                        <tr id="dyn_form_row_id_ftp_directory_list" style="display:none">
+                            <td style="vertical-align:middle; width:12%">FTP directories</td>
+                            <td>{{ create_form.ftp_directory_list }}</td>
+                        </tr>
+
+                        {% comment %} --------- REST/SOAP --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_out_http_method" style="display:none">
+                            <td style="vertical-align:middle; width:12%">HTTP method</td>
+                            <td>{{ create_form.out_http_method }}</td>
+                        </tr>
+
+                        {% comment %} --------- REST --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_out_rest_http_soap_id" style="display:none">
+                            <td style="vertical-align:middle; width:12%">REST outconn</td>
+                            <td>{{ create_form.out_rest_http_soap_id }}</td>
+                        </tr>
+                        <tr id="dyn_form_row_id_rest_delivery_endpoint" style="display:none">
+                            <td style="vertical-align:middle; width:12%">REST callback</td>
+                            <td>{{ create_form.rest_delivery_endpoint }}</td>
+                        </tr>
+                        {% comment %} --------- Service --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_service_id" style="display:none">
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_form.service_id }} </td>
+                        </tr>
+
+                        {% comment %} --------- SMS - Twilio --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_sms_twilio_from" style="display:none">
+                            <td style="vertical-align:middle">SMS from</td>
+                            <td>{{ create_form.sms_twilio_from }} </td>
+                        </tr>
+                        <tr id="dyn_form_row_id_sms_twilio_to_list" style="display:none">
+                            <td style="vertical-align:middle">SMS to</td>
+                            <td>{{ create_form.sms_twilio_to_list }} </td>
+                        </tr>
+
+                        {% comment %} --------- SMTP --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_out_smtp_id" style="display:none">
+                            <td style="vertical-align:middle">SMTP outconn</td>
+                            <td>
+                                {{ create_form.out_smtp_id }}
+                                |
+                                <label>
+                                HTML? {{ create_form.smtp_is_html }}
+                                </label>
+                            </td>
+                        </tr>
+                        <tr id="dyn_form_row_id_smtp_subject" style="display:none">
+                            <td style="vertical-align:middle">SMTP subject</td>
+                            <td>
+                                {{ create_form.smtp_subject }}
+                            </td>
+                        </tr>
+                        <tr id="dyn_form_row_id_smtp_from" style="display:none">
+                            <td style="vertical-align:middle">SMTP from</td>
+                            <td>
+                                {{ create_form.smtp_from }}
+                            </td>
+                        </tr>
+                        <tr id="dyn_form_row_id_smtp_to_list" style="display:none">
+                            <td style="vertical-align:middle">SMTP to</td>
+                            <td>
+                                {{ create_form.smtp_to_list }}
+                            </td>
+                        </tr>
+                        <tr id="dyn_form_row_id_smtp_body" style="display:none">
+                            <td style="vertical-align:middle">SMTP body</td>
+                            <td>
+                                {{ create_form.smtp_body }}
+                            </td>
+                        </tr>
+
+                        {% comment %} --------- SOAP --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_out_soap_http_soap_id" style="display:none">
+                            <td style="vertical-align:middle; width:12%">SOAP outconn</td>
+                            <td>{{ create_form.out_soap_http_soap_id }}</td>
+                        </tr>
+                        <tr id="dyn_form_row_id_soap_delivery_endpoint" style="display:none">
+                            <td style="vertical-align:middle; width:12%">SOAP callback</td>
+                            <td>{{ create_form.soap_delivery_endpoint }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+
+                    </table>
+                    <input type="hidden" name="is_active" value="on" />
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="out_job_id" name="out_job_id" />
+                </form>
+            </div>
+        </div>
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

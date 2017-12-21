@@ -1,0 +1,274 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Pub/sub endpoints{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/python" src="/static/brython/_zato/common.py"></script>
+    <script type="text/javascript" src="/static/js/pubsub/endpoint.js"></script>
+
+    <script type="text/javascript">
+    window.zato_dyn_form_default = 'websockets';
+    window.zato_dyn_form_elem_name = 'endpoint_type';
+    window.zato_dyn_form_rows = {
+        'amqp': [],
+        'files': [],
+        'ftp': [],
+        'imap': [],
+        'rest': ['security_id'],
+        'service': ['service_id'],
+        'sms_twilio': [],
+        'smtp': [],
+        'soap': ['security_id'],
+        'sql': [],
+        'websockets': ['ws_channel_id'],
+    }
+    window.zato_dyn_form_in_use = {{ in_use|safe }}
+    </script>
+
+    <script type="text/javascript">
+
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            'role',
+            '_topic_patterns_html',
+            '_client_html',
+            '_topics',
+            '_queues',
+            '_edit',
+            '_delete',
+            'id',
+            'endpoint_type',
+            'is_internal',
+            'is_active',
+            'topic_patterns',
+            'security_id',
+            'ws_channel_id',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pub/sub endpoints</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show endpoints"%}
+
+    {% if cluster_id %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.pubsub.endpoint.create()">Create a new pub/sub endpoint</a>
+        </div>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:5%">&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Role</a></th>
+                        <th style="width:25%"><a href="#">Topics allowed</a></th>
+                        <th style="width:10%"><a href="#">Client</a></th>
+                        <th>Pub</th>
+                        <th>Sub</th>
+                        <th style="width:5%">&nbsp;</th>
+                        <th style="width:5%">&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.role }}</td>
+                        <td>{{ item.topic_patterns_html|safe|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.client_html|safe|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>
+                            {% if 'pub' in item.role %}
+                                <a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}">Topics</a>
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if 'sub' in item.role %}
+                                <a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.name|slugify %}">Queues</a>
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+
+                        <td><a href="javascript:$.fn.zato.pubsub.endpoint.edit('{{ item.id }}')">Edit</a></td>
+                        <td>
+                            {% if item.is_internal %}
+                                <span class="form_hint">Delete</span>
+                            {% else %}
+                                <a href="javascript:$.fn.zato.pubsub.endpoint.delete_('{{ item.id }}')">Delete</a>
+                            {% endif %}
+                        </td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.endpoint_type }}</td>
+                        <td class='ignore'>{{ item.is_internal }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.topic_patterns|default:'' }}</td>
+                        <td class='ignore'>{{ item.security_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.ws_channel_id|default:'' }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='18'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "pubsub-endpoint-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle; width:15%">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle; width:15%">Type</td>
+                            <td>{{ create_form.endpoint_type }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Role</td>
+                            <td>{{ create_form.role }} </td>
+                        </tr>
+
+                        {% comment %} --------- REST/SOAP --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_security_id" style="display:none">
+                            <td style="vertical-align:middle">API client credentials</td>
+                            <td>{{ create_form.security_id }} </td>
+                        </tr>
+
+                        {% comment %} --------- Service --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_service_id" style="display:none">
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_form.service_id }} </td>
+                        </tr>
+
+                        {% comment %} --------- WebSockets --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_ws_channel_id" style="display:none">
+                            <td style="vertical-align:middle">WebSockets channel</td>
+                            <td>{{ create_form.ws_channel_id }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Topics allowed</td>
+                            <td>{{ create_form.topic_patterns }} </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" name="is_active" value="on" />
+                    <input type="hidden" name="is_internal" value="" />
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "pubsub-endpoint-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle; width:15%">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle; width:15%">Type</td>
+                            <td>{{ edit_form.endpoint_type }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Role</td>
+                            <td>{{ edit_form.role }} </td>
+                        </tr>
+
+                        {% comment %} --------- REST/SOAP --------- {% endcomment %}
+                        <tr id="edit-dyn_form_row_id_security_id" style="display:none">
+                            <td style="vertical-align:middle">API client credentials</td>
+                            <td>{{ edit_form.security_id }} </td>
+                        </tr>
+
+                        {% comment %} --------- Service --------- {% endcomment %}
+                        <tr id="edit-dyn_form_row_id_service_id" style="display:none">
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_form.service_id }} </td>
+                        </tr>
+
+                        {% comment %} --------- WebSockets --------- {% endcomment %}
+                        <tr id="edit-dyn_form_row_id_ws_channel_id" style="display:none">
+                            <td style="vertical-align:middle">WebSockets channel</td>
+                            <td>{{ edit_form.ws_channel_id }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Topics allowed</td>
+                            <td>{{ edit_form.topic_patterns }} </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" name="edit-is_active" value="on" />
+                    <input type="hidden" name="edit-is_internal" value="" />
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
