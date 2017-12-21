@@ -142,19 +142,13 @@ log_connection_info_sleep_time=5 # In seconds
 [startup_services_first_worker]
 zato.helpers.input-logger=Sample payload for a startup service (first worker)
 zato.notif.init-notifiers=
-zato.pubsub.move-to-target-queues=
-zato.pubsub.delete-expired=
-zato.pubsub.invoke-callbacks=
 zato.kvdb.log-connection-info=
+zato.pubsub.cleanup.delete-expired=10
+zato.pubsub.cleanup.delete-delivered=10
 zato.updates.check-updates=
 
 [startup_services_any_worker]
 zato.helpers.input-logger=Sample payload for a startup service (any worker)
-
-[pubsub]
-move_to_target_queues_interval=3 # In seconds
-delete_expired_interval=180 # In seconds
-invoke_callbacks_interval=2 # In seconds
 
 [profiler]
 enabled=False
@@ -184,6 +178,12 @@ level=WARN
 
 [rbac]
 custom_auth_list_service=
+
+[[auth_type_hook]]
+/zato/apispec/static/brython/_brython/brython.js=zato.apispec.pub.get-default-auth-type
+/zato/apispec/static/brython/_brython/libs/json.js=zato.apispec.pub.get-default-auth-type
+/zato/apispec/static/brython/_zato/docs.py=zato.apispec.pub.get-default-auth-type
+/zato/apispec=zato.apispec.pub.get-default-auth-type
 
 [component_enabled]
 stats=True
@@ -236,6 +236,14 @@ allow_loopback=False
 pub_enabled=False
 pub_name=API specification
 pub_css_style="color:#eee; font-weight:bold; font-size:17px; padding-left:2px"
+
+[shmem]
+size=0.1 # In MB
+
+[apispec_services_allowed]
+# By default, public APIspec endpoints return nothing.
+order=false_true
+*=False
 
 [os_environ]
 sample_key=sample_value
@@ -316,7 +324,7 @@ else
 end
 """
 
-default_odb_pool_size = 1
+default_odb_pool_size = 15
 
 directories = (
     'config',

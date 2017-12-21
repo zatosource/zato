@@ -44,9 +44,11 @@ def main():
     with open(os.path.join(repo_location, 'logging.conf')) as f:
         dictConfig(yaml.load(f))
 
-    # Read config in and make paths absolute
+    # Read config in and extend it with ODB-specific information
     config.main = get_config(repo_location, 'scheduler.conf')
+    config.main.odb.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
 
+    # Make all paths absolute
     if config.main.crypto.use_tls:
         config.main.crypto.ca_certs_location = absjoin(repo_location, config.main.crypto.ca_certs_location)
         config.main.crypto.priv_key_location = absjoin(repo_location, config.main.crypto.priv_key_location)

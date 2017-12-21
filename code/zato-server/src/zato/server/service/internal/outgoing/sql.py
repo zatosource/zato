@@ -250,7 +250,7 @@ class AutoPing(AdminService):
     """
     def handle(self):
         try:
-            self.server.sql_pool_store[ZATO_ODB_POOL_NAME].pool.ping()
+            self.server.sql_pool_store[ZATO_ODB_POOL_NAME].pool.ping(self.server.fs_sql_config)
         except Exception, e:
             self.logger.warn('Could not ping ODB, e:`%s`', format_exc(e))
 

@@ -49,6 +49,10 @@ if ({}.__proto__){
 $.namespace('zato');
 $.namespace('zato.account');
 $.namespace('zato.account.basic_settings');
+$.namespace('zato.cache');
+$.namespace('zato.cache.builtin');
+$.namespace('zato.cache.builtin.entries');
+$.namespace('zato.cache.memcached');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.jms_wmq');
@@ -102,10 +106,13 @@ $.namespace('zato.outgoing.sap');
 $.namespace('zato.outgoing.zmq');
 $.namespace('zato.pattern.delivery');
 $.namespace('zato.pattern.delivery.in_doubt');
-$.namespace('zato.pubsub.consumers');
+$.namespace('zato.pubsub.endpoint');
+$.namespace('zato.pubsub.endpoint_queue');
+$.namespace('zato.pubsub.subscription');
+$.namespace('zato.pubsub.topic');
 $.namespace('zato.pubsub.message');
-$.namespace('zato.pubsub.producers');
-$.namespace('zato.pubsub.topics');
+$.namespace('zato.pubsub.message.details');
+$.namespace('zato.pubsub.message.publish');
 $.namespace('zato.query');
 $.namespace('zato.query.cassandra');
 $.namespace('zato.scheduler');
@@ -122,7 +129,6 @@ $.namespace('zato.security.rbac.client_role');
 $.namespace('zato.security.rbac.permission');
 $.namespace('zato.security.rbac.role');
 $.namespace('zato.security.rbac.role_permission');
-$.namespace('zato.security.tech_account');
 $.namespace('zato.security.tls');
 $.namespace('zato.security.tls.ca_cert');
 $.namespace('zato.security.tls.channel');
@@ -263,11 +269,14 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
     var skip_boolean = ['in_lb']; // A list of boolean fields that should be treated as though they were regular text
 
     for(field_name in fields) {
+        //console.log('Field -> `'+ field_name +'`');
         if(field_name.indexOf(name_prefix) === 0 || field_name == 'id') {
             field_name = field_name.replace(name_prefix, '');
             for(item_attr in instance) {
+                //console.log('Item attr -> `'+ item_attr +'`');
                 if(item_attr == field_name) {
                     value = instance[item_attr];
+                    console.log('Field/value: `'+ item_attr + '` `'+ value +'`');
                     form_elem_name = id_prefix + field_name;
                     form_elem = $(form_elem_name);
                     if($.fn.zato.like_bool(value)) {
@@ -332,14 +341,14 @@ $.fn.zato.data_table.parse = function() {
         var instance = new $.fn.zato.data_table.class_()
         var tds = $(row).find('td');
 
-        console.log('columns = ' + columns);
+        // console.info('columns = ' + columns);
 
         $.each(tds, function(td_idx, td) {
 
             var attr_name = columns[td_idx];
             var attr_value = $(td).text().trim();
 
-            console.log('td_idx, attr_name = ' + td_idx + ' ' + attr_name);
+            //console.log('td_idx:`'+ td_idx +'`, attr_name:`'+ attr_name +'`, attr_value:`'+ attr_value + '`');
 
             // Don't bother with ignored attributes.
             if(attr_name[0] != '_') {
@@ -348,6 +357,7 @@ $.fn.zato.data_table.parse = function() {
         });
         console.log('Found instance in data_table ' + instance);
         $.fn.zato.data_table.data[instance.id] = instance;
+
     });
 
     if(_.size($.fn.zato.data_table.data) < 1) {
@@ -416,7 +426,7 @@ $.fn.zato.data_table._on_submit_complete = function(data, status) {
 
     if(success) {
         var response = $.parseJSON(data.responseText);
-        msg = response.message;
+        msg = response.message || response.msg;
     }
     else {
         msg = data.responseText;
@@ -428,8 +438,23 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
     $.fn.zato.post(form.attr('action'), callback, form.serialize());
 }
 
+$.fn.zato.data_table.remove_row = function(td_prefix, instance_id) {
+    $(td_prefix + instance_id).parent().remove();
+    $.fn.zato.data_table.data[instance_id] = null;
+
+    if($('#data-table tr').length == 1) {
+        var row = '<tr><td colspan="100">No results</td></tr>';
+        $('#data-table > tbody:last').prepend(row);
+        $('#data-table').data('is_empty', true);
+    }
+}
+
 $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_pattern,
-                        append_cluster, confirm_challenge, url_pattern, post_data) {
+    append_cluster, confirm_challenge, url_pattern, post_data, remove_tr,
+    on_success_callback) {
+
+    // 99% of callers will not provide remove_tr in which case we default to True
+    var _remove_tr = remove_tr == null ? true : remove_tr;
 
     var instance = $.fn.zato.data_table.data[id];
     var name = '';
@@ -440,20 +465,20 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
         name = instance.name;
     }
 
-    console.log('Instance: ' + instance);
+    console.log('Instance to delete: ' + instance);
 
     var _callback = function(data, status) {
         var success = status == 'success';
+
         if(success) {
-
-            $(td_prefix + instance.id).parent().remove();
-            $.fn.zato.data_table.data[instance.id] = null;
-
-            if($('#data-table tr').length == 1) {
-                var row = '<tr><td>No results</td></tr>';
-                $('#data-table > tbody:last').prepend(row);
-                $('#data-table').data('is_empty', true);
+            if(_remove_tr) {
+                $.fn.zato.data_table.remove_row(td_prefix, instance.id);
             }
+
+            if(on_success_callback) {
+                on_success_callback();
+            }
+
             msg = String.format(success_pattern, name);
         }
         else {
@@ -581,7 +606,7 @@ $.fn.zato.data_table._create_edit = function(action, title, id) {
 
 $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) {
 
-    var item = new $.fn.zato.data_table.class_();
+    var instance = new $.fn.zato.data_table.class_();
     var form = $(String.format('#{0}-form', action));
 
     var prefix;
@@ -596,34 +621,41 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     var id = '';
     var tag_name = '';
     var html_elem;
-    var _columns = $.fn.zato.data_table.get_columns();
 
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');
         html_elem = $('#id_' + prefix + name);
         tag_name = html_elem.prop('tagName');
 
+        console.log('Creating elem from: ' + name);
+
         if(tag_name && html_elem.prop('type') == 'checkbox') {
-            item[name] = html_elem.is(':checked');
+            instance[name] = html_elem.is(':checked');
         }
 
         else {
-            item[name] = elem.value;
+            instance[name] = elem.value;
         }
 
         if(tag_name && tag_name.toLowerCase() == 'select') {
-            item[name + '_select'] = $('#id_' + prefix + name + ' :selected').text();
+            instance[name + '_select'] = $('#id_' + prefix + name + ' :selected').text();
+        }
+
+        if($.fn.zato.data_table.add_row_hook) {
+            $.fn.zato.data_table.add_row_hook(instance, name, html_elem);
         }
 
     })
 
-    if(!item.id) {
-        item.id = data.id;
+    if(!instance.id) {
+        instance.id = data.id;
     }
 
-    $.fn.zato.data_table.data[item.id] = item;
+    console.log('Instance created: ' + instance);
 
-    return new_row_func(item, data, include_tr);
+    $.fn.zato.data_table.data[instance.id] = instance;
+
+    return new_row_func(instance, data, include_tr);
 }
 
 $.fn.zato.data_table.set_field_required = function(field_id) {
@@ -719,19 +751,25 @@ $.fn.zato.data_table.on_submit = function(action) {
     return $.fn.zato.data_table._on_submit(form, callback);
 }
 
-$.fn.zato.data_table.on_submit_complete = function(data, status,
-    action) {
+$.fn.zato.data_table.on_submit_complete = function(data, status, action) {
 
     if(status == 'success') {
         var json = $.parseJSON(data.responseText);
         var include_tr = true ? action == 'create' : false;
         var row = $.fn.zato.data_table.add_row(json, action, $.fn.zato.data_table.new_row_func, include_tr);
 
-        if($('#data-table').data('is_empty')) {
-            $('#data-table tr:last').remove();
+        // There are forms (like the one for subscriptions) where create action does create an object
+        // but it is not displayed in current data_table so we treat it as an update actually,
+        // and new_row_func_update_in_place is the flag to enable this behaviour.
+        var needs_create = action == 'create' && (!$.fn.zato.data_table.new_row_func_update_in_place);
+
+        if(!$.fn.zato.data_table.new_row_func_update_in_place) {
+            if($('#data-table').data('is_empty')) {
+                $('#data-table tr:last').remove();
+            }
         }
 
-        if(action == 'create') {
+        if(needs_create) {
             $('#data-table').data('is_empty', false);
             $('#data-table > tbody:last').prepend(row);
         }
@@ -859,3 +897,12 @@ $.fn.zato.get_url_param = function(name, url) {
     };
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
+
+$.fn.zato.empty_value = '<span class="form_hint">---</span>';
+
+// For Brython
+
+window.zato_select_data_target = null;
+window.zato_select_data_target_items = {};
+window.zato_dyn_form_skip_edit = null;
+window.zato_dyn_form_skip_clear_field = [];

@@ -47,7 +47,7 @@ class URLData(CyURLData, OAuthDataStore):
     """ Performs URL matching and security checks.
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
-                 oauth_config=None, tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, \
+                 oauth_config=None, wss_config=None, apikey_config=None, aws_config=None, \
                  openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
                  vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
                  jwt_secret=None, vault_conn_api=None):
@@ -58,7 +58,6 @@ class URLData(CyURLData, OAuthDataStore):
         self.jwt_config = jwt_config
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
-        self.tech_acc_config = tech_acc_config
         self.wss_config = wss_config
         self.apikey_config = apikey_config
         self.aws_config = aws_config
@@ -72,6 +71,7 @@ class URLData(CyURLData, OAuthDataStore):
         self.odb = odb
         self.jwt_secret = jwt_secret
         self.vault_conn_api = vault_conn_api
+        self.rbac_auth_type_hooks = self.worker.server.fs_server_config.rbac.auth_type_hook
 
         self.sec_config_getter = Bunch()
         self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
@@ -228,7 +228,7 @@ class URLData(CyURLData, OAuthDataStore):
 
         if not result:
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`, sec-wall code:`{}`, description:`{}`\n'.format(
                     path_info, cid, result.code, result.description)
                 logger.error(msg)
                 raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
@@ -303,7 +303,7 @@ class URLData(CyURLData, OAuthDataStore):
 
         if not result:
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`, sec-wall code:`{}`, description:`{}`\n'.format(
                     path_info, cid, result.code, result.description)
                 logger.error(msg)
                 raise Unauthorized(cid, msg, 'zato-wss')
@@ -361,50 +361,6 @@ class URLData(CyURLData, OAuthDataStore):
             wsgi_environ['zato.oauth.request'] = oauth_request
 
         return True
-
-# ################################################################################################################################
-
-    def _handle_security_tech_acc(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None,
-        enforce_auth=True):
-        """ Performs the authentication using technical accounts.
-        """
-        zato_headers = ('HTTP_X_ZATO_USER', 'HTTP_X_ZATO_PASSWORD')
-
-        for header in zato_headers:
-            if not wsgi_environ.get(header, None):
-                if enforce_auth:
-                    error_msg = ("[{}] The header [{}] doesn't exist or is empty, URI:[{}, wsgi_environ:[{}]]").\
-                        format(cid, header, path_info, wsgi_environ)
-                    logger.error(error_msg)
-                    raise Unauthorized(cid, error_msg, 'zato-tech-acc')
-                else:
-                    return False
-
-        # Note that logs get a specific information what went wrong whereas the
-        # user gets a generic 'username or password' message
-        msg_template = '[{}] The {} is incorrect, URI:[{}], X_ZATO_USER:[{}]'
-
-        if wsgi_environ['HTTP_X_ZATO_USER'] != sec_def.name:
-            if enforce_auth:
-                error_msg = msg_template.format(cid, 'username', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
-                user_msg = msg_template.format(cid, 'username or password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
-                logger.error(error_msg)
-                raise Unauthorized(cid, user_msg, 'zato-tech-acc')
-            else:
-                return False
-
-        incoming_password = sha256(wsgi_environ['HTTP_X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
-
-        if incoming_password != sec_def.password:
-            if enforce_auth:
-                error_msg = msg_template.format(cid, 'password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
-                user_msg = msg_template.format(cid, 'username or password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
-                logger.error(error_msg)
-                raise Unauthorized(cid, user_msg, 'zato-tech-acc')
-            else:
-                return False
-
-        return wsgi_environ['HTTP_X_ZATO_USER']
 
 # ################################################################################################################################
 
@@ -586,6 +542,7 @@ class URLData(CyURLData, OAuthDataStore):
 
             if perm_id == http_method_permission_id and resource_id == channel_item['service_id']:
                 for client_def in worker_store.rbac.role_id_to_client_def[role_id]:
+
                     _, sec_type, sec_name = client_def.split(sep)
 
                     _sec = Bunch()
@@ -602,8 +559,20 @@ class URLData(CyURLData, OAuthDataStore):
                         break
 
         if not is_allowed:
-            logger.error('None of RBAC definitions allowed request in, cid:`%s`', cid)
-            raise Unauthorized(cid, 'You are not allowed to access this resource', 'zato')
+            logger.warn('None of RBAC definitions allowed request in, cid:`%s`', cid)
+
+            # We need to return 401 Unauthorized but we need to send a challenge, i.e. authentication type
+            # that this channel can be accessed through so we as the last resort, we invoke a hook
+            # service which decides what it should be. If there is no hook, we default to 'zato'.
+            if channel_item['url_path'] in self.rbac_auth_type_hooks:
+                service_name = self.rbac_auth_type_hooks[channel_item['url_path']]
+                response = self.worker.invoke(service_name, {'channel_item':channel_item}, serialize=False)
+                response = response.getvalue(serialize=False)
+                auth_type = response['response']['auth_type']
+            else:
+                auth_type = 'zato'
+
+            raise Unauthorized(cid, 'You are not allowed to access this resource', auth_type)
 
 # ################################################################################################################################
 
@@ -986,50 +955,6 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
-    def _update_tech_acc(self, name, config):
-        self.tech_acc_config[name] = Bunch()
-        self.tech_acc_config[name].config = config
-
-    def tech_acc_get(self, name):
-        """ Returns the configuration of the technical account of the given name.
-        """
-        with self.url_sec_lock:
-            return self.tech_acc_config.get(name)
-
-    def on_broker_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
-        """ Creates a new technical account.
-        """
-        with self.url_sec_lock:
-            self._update_tech_acc(msg.name, msg)
-
-    def on_broker_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
-        """ Updates an existing technical account.
-        """
-        with self.url_sec_lock:
-            del self.tech_acc_config[msg.old_name]
-            self._update_tech_acc(msg.name, msg)
-            self._update_url_sec(msg, SEC_DEF_TYPE.TECH_ACCOUNT)
-
-    def on_broker_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
-        """ Deletes a technical account.
-        """
-        with self.url_sec_lock:
-            self._delete_channel_data('tech_acc', msg.name)
-            del self.tech_acc_config[msg.name]
-            self._update_url_sec(msg, SEC_DEF_TYPE.TECH_ACCOUNT, True)
-
-    def on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes the password of a technical account.
-        """
-        with self.url_sec_lock:
-            # The message's 'password' attribute already takes the salt
-            # into account (pun intended ;-))
-            self.tech_acc_config[msg.name]['config']['password'] = msg.password
-            self.tech_acc_config[msg.name]['config']['salt'] = msg.salt
-            self._update_url_sec(msg, SEC_DEF_TYPE.TECH_ACCOUNT)
-
-# ################################################################################################################################
-
     def _update_wss(self, name, config):
         if name in self.wss_config:
             self.wss_config[name].clear()
@@ -1182,7 +1107,26 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def sort_channel_data(self):
-        self.channel_data = sorted(self.channel_data, key=itemgetter('name'))
+        """ Sorts channel items by name and then re-arranges the result so that user-facing services are closer to the begining
+        of the list which makes it faster to look them up - searches in the list are O(n).
+        """
+        channel_data = []
+        user_services = []
+        internal_services = []
+
+        for item in self.channel_data:
+            if item['is_internal']:
+                internal_services.append(item)
+            else:
+                user_services.append(item)
+
+        user_services.sort(key=itemgetter('name'))
+        internal_services.sort(key=itemgetter('name')) # Internal services will never conflict in names but let's do it anyway
+
+        channel_data.extend(user_services)
+        channel_data.extend(internal_services)
+
+        self.channel_data[:] = channel_data
 
 # ################################################################################################################################
 
@@ -1192,7 +1136,8 @@ class URLData(CyURLData, OAuthDataStore):
         channel_item = {}
         for name in('connection', 'content_type', 'data_format', 'host', 'id', 'has_rbac', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
-            'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac'):
+            'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac',
+            'cache_type', 'cache_id', 'cache_name', 'cache_expiry'):
 
             channel_item[name] = msg[name]
 

@@ -135,7 +135,7 @@ cdef class CyURLData(object):
 
         # Return from cache if already seen
         try:
-            return self.url_path_cache[target]
+            return {}, self.url_path_cache[target]
         except KeyError:
             needs_user = not url_path.startswith('/zato')
 
@@ -157,9 +157,9 @@ cdef class CyURLData(object):
 
                     # Cache that URL if it's a static one, i.e. does not contain dynamically computed variables
                     if matcher.is_static:
-                        self.url_path_cache[target] = (match, item_bunch)
+                        self.url_path_cache[target] = item_bunch
 
-                    return match, item_bunch
+                    return {}, item_bunch
 
             return None, None
 
@@ -174,21 +174,20 @@ cdef class CyURLData(object):
 
         return item
 
-    def set_up(self):
+    def set_up_test_data(self):
 
         channel_data = []
+
         # We always add /zato/ping
         channel_data.append(self.get_item('/zato/ping', ''))
-        #return
 
         prefixes = ('channel', 'definition', 'http-soap', 'kvdb', 'outgoing', 'scheduler', 'security', 'server',
             'service', 'stats')
         soap_actions = ('soap', '')
         for prefix in prefixes:
-            for x in xrange(50):
-                for soap_action in soap_actions:
-                    url_path = '/zato/{}/{}'.format(prefix, str(uuid4()).replace('-', '/'))
-                    channel_data.append(self.get_item(url_path, soap_action))
+            for soap_action in soap_actions:
+                url_path = '/zato/{}/{}'.format(prefix, str(uuid4()).replace('-', '/'))
+                channel_data.append(self.get_item(url_path, soap_action))
 
         self.channel_data = tuple(sorted(channel_data, key=itemgetter('name')))
 
@@ -197,7 +196,7 @@ cdef class CyURLData(object):
 def run():
 
     url_data = CyURLData()
-    url_data.set_up()
+    url_data.set_up_test_data()
 
     #print(url_data.channel_data)
 

@@ -14,6 +14,7 @@ from datetime import datetime
 from logging import INFO
 from re import IGNORECASE
 from tempfile import mkstemp
+from traceback import format_exc
 from uuid import uuid4
 
 # anyjson
@@ -39,9 +40,11 @@ from zato.bunch import Bunch
 from zato.common import DATA_FORMAT, KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
+from zato.common.posix_ipc_util import ServerStartupIPC
+from zato.common.pubsub import SkipDelivery
 from zato.common.time_util import TimeUtil
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
-     invoke_startup_services as _invoke_startup_services, spawn_greenlet, StaticConfig, register_diag_handlers
+     invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, register_diag_handlers
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
@@ -92,6 +95,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.connector_server_grace_time = None
         self.id = None
         self.name = None
+        self.worker_id = None
+        self.worker_pid = None
         self.cluster = None
         self.cluster_id = None
         self.kvdb = None
@@ -121,6 +126,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.ipc_forwarder = IPCAPI(True)
         self.fifo_response_buffer_size = 0.1 # In megabytes
         self.live_msg_browser = None
+        self.is_first_worker = None
+        self.shmem_size = -1.0
+        self.server_startup_ipc = ServerStartupIPC()
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -129,6 +137,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.access_logger = logging.getLogger('zato_access_log')
         self.access_logger_log = self.access_logger._log
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)
+        self.has_pubsub_audit_log = logging.getLogger('zato_pubsub_audit').isEnabledFor('INFO')
 
         # The main config store
         self.config = ConfigStore()
@@ -217,21 +226,17 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             locally_deployed.extend(self.service_store.import_services_from_anywhere(
                 self.service_modules + self.service_sources, self.base_dir))
 
-            # Migrations
-            #self.odb.add_channels_2_0()
-
             return set(locally_deployed)
 
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, self.deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
-                                                 self.fs_server_config.main.token, self.deployment_key)
+            self.fs_server_config.main.token, self.deployment_key)
 
-        logger.debug('Will use the lock_name: [{}]'.format(lock_name))
+        logger.debug('Will use the lock_name: `%s`', lock_name)
 
         with self.zato_lock_manager(lock_name, ttl=self.deployment_lock_expires, block=self.deployment_lock_timeout):
             if redis_conn.get(already_deployed_flag):
-                # There has been already the first worker who's done everything
-                # there is to be done so we may just return.
+                # There has been already the first worker who's done everything there is to be done so we may just return.
                 is_first = False
                 logger.debug('Not attempting to grab the lock_name:`%s`', lock_name)
 
@@ -342,6 +347,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         # This cannot be done in __init__ because each sub-process obviously has its own PID
         self.pid = os.getpid()
 
+        # This also cannot be done in __init__ which doesn't have this variable yet
+        self.is_first_worker = int(os.environ['ZATO_SERVER_WORKER_IDX']) == 0
+
         # Used later on
         use_tls = asbool(self.fs_server_config.crypto.use_tls)
 
@@ -352,6 +360,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.deployment_key = zato_deployment_key
 
         register_diag_handlers()
+
+        # Create all POSIX IPC objects now that we have the deployment key
+        self.shmem_size = int(float(self.fs_server_config.shmem.size) * 10**6) # Convert to megabytes as integer
+        self.server_startup_ipc.create(self.deployment_key, self.shmem_size)
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         self.config.odb_data = self.get_config_odb_data(self)
@@ -378,6 +390,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.name = server.name
         self.cluster_id = server.cluster_id
         self.cluster = self.odb.cluster
+        self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, new_cid())
 
         # Looked up upfront here and assigned to services in their store
         self.enforce_service_invokes = asbool(self.fs_server_config.misc.enforce_service_invokes)
@@ -522,10 +535,65 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def get_cache(self, cache_type, cache_name):
+        """ Returns a cache object of given type and name.
+        """
+        return self.worker_store.cache_api.get_cache(cache_type, cache_name)
+
+# ################################################################################################################################
+
+    def get_from_cache(self, cache_type, cache_name, key):
+        """ Returns a value from input cache by key, or None if there is no such key.
+        """
+        return self.worker_store.cache_api.get_cache(cache_type, cache_name).get(key)
+
+# ################################################################################################################################
+
+    def set_in_cache(self, cache_type, cache_name, key, value):
+        """ Sets a value in cache for input parameters.
+        """
+        return self.worker_store.cache_api.get_cache(cache_type, cache_name).set(key, value)
+
+# ################################################################################################################################
+
+    def invoke_all_pids(self, service, request, timeout=5, *args, **kwargs):
+        """ Invokes a given service in each of processes current server has.
+        """
+        # PID -> response from that process
+        out = {}
+
+        # Get all current PIDs
+        data = self.invoke('zato.info.get-worker-pids', serialize=False).getvalue(False)
+        pids = data['response']['pids']
+
+        # Underlying IPC needs strings on input instead of None
+        request = request or ''
+
+        for pid in pids:
+            response = {
+                'is_ok': False,
+                'pid_data': None,
+                'error_info': None
+            }
+
+            try:
+                by_pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
+                is_ok, pid_data = by_pid_response
+                response['is_ok'] = is_ok
+                response['pid_data' if is_ok else 'error_info'] = pid_data
+            except Exception, e:
+                response['error_info'] = format_exc(e)
+            finally:
+                out[pid] = response
+
+        return out
+
+# ################################################################################################################################
+
     def invoke_by_pid(self, service, request, target_pid, *args, **kwargs):
         """ Invokes a service in a worker process by the latter's PID.
         """
-        self.ipc_api.publish(request)
+        return self.ipc_api.invoke_by_pid(service, request, target_pid, self.fifo_response_buffer_size, *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -533,16 +601,18 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         """ Invokes a service either in our own worker or, if PID is given on input, in another process of this server.
         """
         target_pid = kwargs.pop('pid', None)
-
         if target_pid and target_pid != self.pid:
 
             # We need it only in the other branch, not here.
             kwargs.pop('data_format', None)
 
-            return self.ipc_api.invoke_by_pid(service, request, target_pid, self.fifo_response_buffer_size, *args, **kwargs)
+            return self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
         else:
             return self.worker_store.invoke(
-                service, request, data_format=kwargs.pop('data_format', DATA_FORMAT.DICT), *args, **kwargs)
+                service, request,
+                data_format=kwargs.pop('data_format', DATA_FORMAT.DICT),
+                serialize=kwargs.pop('serialize', True),
+                *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -553,10 +623,26 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def deliver_pubsub_msg(self, msg):
+        """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
+        """
+        subscription = self.worker_store.pubsub.subscriptions_by_sub_key[msg.sub_key]
+        topic = self.worker_store.pubsub.topics[subscription.config.topic_id]
+
+        if topic.before_delivery_hook_service_invoker:
+            response = topic.before_delivery_hook_service_invoker(topic, msg)
+            if response['skip_msg']:
+                raise SkipDelivery(msg.pub_msg_id)
+
+        self.invoke('zato.pubsub.delivery.deliver-message', {'msg':msg, 'subscription':subscription})
+
+# ################################################################################################################################
+
     @staticmethod
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
         """
+        worker.app.zato_wsgi_app.worker_pid = worker.pid
         ParallelServer.start_server(worker.app.zato_wsgi_app, arbiter.zato_deployment_key)
 
 # ################################################################################################################################
@@ -574,7 +660,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def destroy(self):
         """ A Spring Python hook for closing down all the resources held.
         """
-
         # Tell the ODB we've gone through a clean shutdown but only if this is
         # the main process going down (Arbiter) not one of Gunicorn workers.
         # We know it's the main process because its ODB's session has never
@@ -592,6 +677,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         # Per-worker cleanup
         else:
+
+            # Close all POSIX IPC structures
+            self.server_startup_ipc.close()
+
+            self.invoke('zato.channel.web-socket.client.delete-by-server')
             self.invoke('zato.channel.web-socket.client.delete-by-server')
 
     # Convenience API

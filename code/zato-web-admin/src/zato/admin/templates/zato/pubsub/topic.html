@@ -1,0 +1,282 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Pub/sub topics{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/topic.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            'name',
+            '_has_gd',
+            '_max_depth',
+            '_current_depth',
+            '_last_pub_time',
+
+            '_publishers',
+            '_subscribers',
+
+            '_publish',
+            '_clear',
+            '_edit',
+            '_delete',
+
+            'id',
+            'is_internal',
+            'is_active',
+            'has_gd',
+            'is_api_sub_allowed',
+
+            'max_depth_gd',
+            'max_depth_non_gd',
+            'gd_depth_check_freq',
+
+            'hook_service_id',
+
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pub/sub topics</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show topics"%}
+
+    {% if cluster_id %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.pubsub.topic.create()">Create a new pub/sub topic</a>
+        </div>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:5%">&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">GD</a></th>
+                        <th><a href="#">Max depth GD / RAM</a></th>
+                        <th><a href="#">Current depth GD / RAM</a></th>
+                        <th><a href="#">Last pub. time</a></th>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.has_gd|yesno:"Yes,No" }}</td>
+                        <td>{{ item.max_depth_gd }} / {{ item.max_depth_non_gd }}</td>
+                        <td id="current_depth_{{ item.id }}">
+                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth_gd }}</a>
+                            /
+                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth_gd }}</a>
+                        </td>
+
+                        <td>{{ item.last_pub_time|default:"<span class='form_hint'>---</span>" }}</td>
+                        <td><a href="{% url "pubsub-topic-publishers" cluster_id item.id item.name|slugify %}">Publishers</a></td>
+                        <!-- <td><a href="{% url "pubsub-topic-subscribers" cluster_id item.id item.name|slugify %}">Subscribers</a></td> -->
+                        <td><span class="form_hint">Subscribers</span></td>
+                        <td><a href="{% url "pubsub-message-publish" cluster_id item.id %}">Publish</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.topic.clear('{{ item.id }}')">Clear</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.topic.edit('{{ item.id }}')">Edit</a></td>
+                        <td>
+                            {% if item.is_internal %}
+                                <span class="form_hint">Delete</span>
+                            {% else %}
+                                <a href="javascript:$.fn.zato.pubsub.topic.delete_('{{ item.id }}')">Delete</a>
+                            {% endif %}
+                        </td>
+
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_internal }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.has_gd }}</td>
+                        <td class='ignore'>{{ item.is_api_sub_allowed }}</td>
+
+                        <td class='ignore'>{{ item.max_depth_gd }}</td>
+                        <td class='ignore'>{{ item.max_depth_non_gd }}</td>
+                        <td class='ignore'>{{ item.gd_depth_check_freq }}</td>
+
+                        <td class='ignore'>{{ item.hook_service_id }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='21'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "pubsub-topic-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:15%">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Options</td>
+                            <td>
+
+                            <label>
+                            Active {{ create_form.is_active }}
+                            </label>
+
+                            |
+
+                            <label>
+                            GD enabled {{ create_form.has_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            API subscriptions allowed {{ create_form.is_api_sub_allowed }}
+                            </label>
+
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Max depth GD</td>
+                            <td>{{ create_form.max_depth_gd }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Max depth RAM</td>
+                            <td>{{ create_form.max_depth_non_gd }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">GD depth check freq.</td>
+                            <td>{{ create_form.gd_depth_check_freq }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Hook service</td>
+                            <td>{{ create_form.hook_service_id }} </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "pubsub-topic-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:15%">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Options</td>
+                            <td>
+
+                            <label>
+                            Active {{ edit_form.is_active }}
+                            </label>
+
+                            |
+
+                            <label>
+                            GD enabled {{ edit_form.has_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            API subscriptions allowed {{ edit_form.is_api_sub_allowed }}
+                            </label>
+
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Max depth GD</td>
+                            <td>{{ edit_form.max_depth_gd }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Max depth RAM</td>
+                            <td>{{ edit_form.max_depth_non_gd }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">GD depth check freq.</td>
+                            <td>{{ edit_form.gd_depth_check_freq }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Hook service</td>
+                            <td>{{ edit_form.hook_service_id }} </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

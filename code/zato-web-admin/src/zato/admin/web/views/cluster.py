@@ -31,7 +31,6 @@ from pytz import UTC
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.cluster import DeleteClusterForm, EditClusterForm, EditServerForm
 from zato.admin.web.views import Delete as _Delete, get_lb_client, method_allowed, set_servers_state
-from zato.admin.settings import DATABASE_ENGINE, DATABASE_HOST, DATABASE_NAME, DATABASE_PORT, DATABASE_USER
 from zato.common import SERVER_UP_STATUS
 from zato.common.odb.model import Cluster, Server
 

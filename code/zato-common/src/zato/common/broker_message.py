@@ -89,11 +89,6 @@ class SECURITY(Constants):
     JWT_DELETE = ValueConstant('')
     JWT_CHANGE_PASSWORD = ValueConstant('')
 
-    TECH_ACC_CREATE = ValueConstant('')
-    TECH_ACC_EDIT = ValueConstant('')
-    TECH_ACC_DELETE = ValueConstant('')
-    TECH_ACC_CHANGE_PASSWORD = ValueConstant('')
-
     WSS_CREATE = ValueConstant('')
     WSS_EDIT = ValueConstant('')
     WSS_DELETE = ValueConstant('')
@@ -403,7 +398,7 @@ class RBAC(Constants):
     ROLE_PERMISSION_DELETE = ValueConstant('')
 
 class VAULT(Constants):
-    code_start = 105600
+    code_start = 105400
 
     CONNECTION_CREATE = ValueConstant('')
     CONNECTION_EDIT = ValueConstant('')
@@ -413,6 +408,26 @@ class VAULT(Constants):
     POLICY_EDIT = ValueConstant('')
     POLICY_DELETE = ValueConstant('')
 
+class PUBSUB(Constants):
+    code_start = 105600
+
+    ENDPOINT_CREATE = ValueConstant('')
+    ENDPOINT_EDIT = ValueConstant('')
+    ENDPOINT_DELETE = ValueConstant('')
+
+    SUBSCRIPTION_CREATE = ValueConstant('')
+    SUBSCRIPTION_EDIT = ValueConstant('')
+    SUBSCRIPTION_DELETE = ValueConstant('')
+
+    TOPIC_CREATE = ValueConstant('')
+    TOPIC_EDIT = ValueConstant('')
+    TOPIC_DELETE = ValueConstant('')
+
+    SUB_KEY_SERVER_SET = ValueConstant('') # This is shared by WSX and other endpoint types
+    WSX_CLIENT_SUB_KEY_SERVER_REMOVE = ValueConstant('')
+
+    DELIVERY_SERVER_CHANGE = ValueConstant('')
+
 class SMS(Constants):
     code_start = 106000
 
@@ -420,6 +435,50 @@ class SMS(Constants):
     TWILIO_EDIT = ValueConstant('')
     TWILIO_DELETE = ValueConstant('')
 
+class CACHE(Constants):
+    code_start = 106400
+
+    BUILTIN_CREATE = ValueConstant('')
+    BUILTIN_EDIT = ValueConstant('')
+    BUILTIN_DELETE = ValueConstant('')
+
+    BUILTIN_STATE_CHANGED_CLEAR = ValueConstant('')
+
+    BUILTIN_STATE_CHANGED_DELETE = ValueConstant('')
+    BUILTIN_STATE_CHANGED_DELETE_BY_PREFIX = ValueConstant('')
+    BUILTIN_STATE_CHANGED_DELETE_BY_SUFFIX = ValueConstant('')
+    BUILTIN_STATE_CHANGED_DELETE_BY_REGEX = ValueConstant('')
+    BUILTIN_STATE_CHANGED_DELETE_CONTAINS = ValueConstant('')
+    BUILTIN_STATE_CHANGED_DELETE_NOT_CONTAINS = ValueConstant('')
+    BUILTIN_STATE_CHANGED_DELETE_CONTAINS_ALL = ValueConstant('')
+    BUILTIN_STATE_CHANGED_DELETE_CONTAINS_ANY = ValueConstant('')
+
+    BUILTIN_STATE_CHANGED_EXPIRE = ValueConstant('')
+    BUILTIN_STATE_CHANGED_EXPIRE_BY_PREFIX = ValueConstant('')
+    BUILTIN_STATE_CHANGED_EXPIRE_BY_SUFFIX = ValueConstant('')
+    BUILTIN_STATE_CHANGED_EXPIRE_BY_REGEX = ValueConstant('')
+    BUILTIN_STATE_CHANGED_EXPIRE_CONTAINS = ValueConstant('')
+    BUILTIN_STATE_CHANGED_EXPIRE_NOT_CONTAINS = ValueConstant('')
+    BUILTIN_STATE_CHANGED_EXPIRE_CONTAINS_ALL = ValueConstant('')
+    BUILTIN_STATE_CHANGED_EXPIRE_CONTAINS_ANY = ValueConstant('')
+
+    BUILTIN_STATE_CHANGED_SET = ValueConstant('')
+    BUILTIN_STATE_CHANGED_SET_BY_PREFIX = ValueConstant('')
+    BUILTIN_STATE_CHANGED_SET_BY_SUFFIX = ValueConstant('')
+    BUILTIN_STATE_CHANGED_SET_BY_REGEX = ValueConstant('')
+    BUILTIN_STATE_CHANGED_SET_CONTAINS = ValueConstant('')
+    BUILTIN_STATE_CHANGED_SET_NOT_CONTAINS = ValueConstant('')
+    BUILTIN_STATE_CHANGED_SET_CONTAINS_ALL = ValueConstant('')
+    BUILTIN_STATE_CHANGED_SET_CONTAINS_ANY = ValueConstant('')
+
+    MEMCACHED_CREATE = ValueConstant('')
+    MEMCACHED_EDIT = ValueConstant('')
+    MEMCACHED_DELETE = ValueConstant('')
+
+class SERVER_STATUS(Constants):
+    code_start = 106800
+
+    STATUS_CHANGED = ValueConstant('')
 
 code_to_name = {}
 

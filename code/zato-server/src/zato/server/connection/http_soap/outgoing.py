@@ -53,7 +53,7 @@ class BaseHTTPSOAPWrapper(object):
     """
     def __init__(self, config, requests_module=None):
         self.config = config
-        self.config['timeout'] = float(self.config['timeout'])
+        self.config['timeout'] = float(self.config['timeout']) if self.config['timeout'] else 0
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
         self.requests_module = requests_module or requests
@@ -208,9 +208,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         self.soap['1.2'] = {}
         self.soap['1.2']['content_type'] = 'application/soap+xml; charset=utf-8'
         self.soap['1.2']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s12="%s">
-  {header}
-  <s12:Body>{body}</s12:Body>
+<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s12="%s">{header}
+  <s12:Body>{data}</s12:Body>
 </s12:Envelope>""" % (soapenv12_namespace,)
 
         self.soap['1.2']['header_template'] = """<s12:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
