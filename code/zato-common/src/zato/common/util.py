@@ -23,6 +23,7 @@ import signal
 import string
 import threading
 import traceback
+import socket
 import sys
 from ast import literal_eval
 from contextlib import closing
@@ -38,7 +39,6 @@ from os import getuid
 from os.path import abspath, isabs, join
 from pprint import pprint as _pprint, PrettyPrinter
 from pwd import getpwuid
-from socket import gethostname, getfqdn
 from string import Template
 from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
@@ -197,7 +197,7 @@ def absolutize(path, base=''):
 # ################################################################################################################################
 
 def current_host():
-    return gethostname() + '/' + getfqdn()
+    return socket.gethostname() + '/' + socket.getfqdn()
 
 # ################################################################################################################################
 
@@ -1073,9 +1073,14 @@ def get_free_port(start=30000):
 
 # Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
 def is_port_taken(port):
-    for conn in psutil.net_connections(kind='tcp'):
-        if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(('', port))
+        sock.close()
+    except socket.error as e:
+        if e[0] == errno.EADDRINUSE:
             return True
+        raise
     return False
 
 # ################################################################################################################################
