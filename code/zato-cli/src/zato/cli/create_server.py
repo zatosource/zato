@@ -402,7 +402,7 @@ class Create(ZatoCommand):
 
         self.dirs_prepared = True
 
-    def execute(self, args, port=http_plain_server_port, show_output=True):
+    def execute(self, args, port=http_plain_server_port, show_output=True, return_server_id=False):
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
@@ -525,3 +525,8 @@ You can now start it with the 'zato start {}' command.""".format(self.target_dir
                 self.logger.debug(msg)
             else:
                 self.logger.info('OK')
+
+        # This is optional - need only by quickstart.py and needs to be requested explicitly,
+        # otherwise it would be construed as a non-0 return code from this process.
+        if return_server_id:
+            return server.id

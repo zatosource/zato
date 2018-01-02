@@ -504,7 +504,8 @@ class Create(ZatoCommand):
         root_rbac_role = self.add_default_rbac_roles(session, cluster)
         apispec_rbac_role = self.add_apispec_rbac_auth(session, cluster, root_rbac_role)
 
-        self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec, apispec_rbac_role)
+        self.add_internal_services(
+            session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec, apispec_rbac_role)
         self.add_ping_services(session, cluster)
         self.add_default_cache(session, cluster)
         self.add_cache_endpoints(session, cluster)
@@ -874,36 +875,6 @@ class Create(ZatoCommand):
         sec = HTTPBasicAuth(None, 'zato.pubsub', True, 'zato.pubsub', 'Zato pub/sub', uuid4().hex, cluster)
         session.add(sec)
 
-        endpoint = PubSubEndpoint()
-        endpoint.name = 'zato.pubsub'
-        endpoint.is_internal = True
-        endpoint.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
-        endpoint.topic_patterns = 'pub=zato.demo.*\nsub=zato.demo.*'
-        endpoint.security = sec
-        endpoint.cluster = cluster
-        endpoint.endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
-
-        topic = PubSubTopic()
-        topic.name = 'zato.demo.sample'
-        topic.is_active = True
-        topic.is_api_sub_allowed = True
-        topic.is_internal = True
-        topic.max_depth = 100
-        topic.has_gd = False
-        topic.cluster = cluster
-
-        sub = PubSubSubscription()
-        sub.creation_time = utcnow_as_ms()
-        sub.topic = topic
-        sub.endpoint = endpoint
-        sub.sub_key = new_sub_key()
-        sub.has_gd = False
-        sub.pattern_matched = 'sub=zato.demo.*'
-        sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
-        sub.cluster = cluster
-        sub.wrap_one_msg_in_list = False
-        sub.delivery_err_should_block = False
-
         impl_name1 = 'zato.server.service.internal.pubsub.pubapi.TopicService'
         impl_name2 = 'zato.server.service.internal.pubsub.pubapi.SubscribeService'
         impl_name3 = 'zato.server.service.internal.pubsub.pubapi.MessageService'
@@ -933,6 +904,37 @@ class Create(ZatoCommand):
         outconn_demo = HTTPSOAP(None, 'zato.pubsub.demo.sample.outconn', True, True, CONNECTION.OUTGOING,
             URL_TYPE.PLAIN_HTTP, 'http://localhost:11223', '/zato/pubsub/zato.demo.sample',
             None, '', None, None, security=sec, cluster=cluster)
+
+        endpoint = PubSubEndpoint()
+        endpoint.name = 'zato.pubsub'
+        endpoint.is_internal = True
+        endpoint.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
+        endpoint.topic_patterns = 'pub=zato.demo.*\nsub=zato.demo.*'
+        endpoint.security = sec
+        endpoint.cluster = cluster
+        endpoint.endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
+
+        topic = PubSubTopic()
+        topic.name = 'zato.demo.sample'
+        topic.is_active = True
+        topic.is_api_sub_allowed = True
+        topic.is_internal = True
+        topic.max_depth = 100
+        topic.has_gd = False
+        topic.cluster = cluster
+
+        sub = PubSubSubscription()
+        sub.creation_time = utcnow_as_ms()
+        sub.topic = topic
+        sub.endpoint = endpoint
+        sub.sub_key = new_sub_key()
+        sub.has_gd = False
+        sub.pattern_matched = 'sub=zato.demo.*'
+        sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
+        sub.cluster = cluster
+        sub.wrap_one_msg_in_list = False
+        sub.delivery_err_should_block = False
+        sub.out_http_soap = outconn_demo
 
         session.add(endpoint)
         session.add(topic)
