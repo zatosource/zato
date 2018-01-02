@@ -103,7 +103,7 @@ grace_time_multiplier=3
 context_class=zato.server.spring_context.ZatoContext
 
 [misc]
-return_internal_objects=False
+return_internal_objects=True
 internal_services_may_be_deleted=False
 initial_cluster_name={{initial_cluster_name}}
 initial_server_name={{initial_server_name}}
@@ -145,7 +145,6 @@ zato.notif.init-notifiers=
 zato.kvdb.log-connection-info=
 zato.pubsub.cleanup.delete-expired=10
 zato.pubsub.cleanup.delete-delivered=10
-zato.updates.check-updates=
 
 [startup_services_any_worker]
 zato.helpers.input-logger=Sample payload for a startup service (any worker)

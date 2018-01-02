@@ -47,6 +47,14 @@ class InputLogger(Service):
 
 # ################################################################################################################################
 
+class RawRequestLogger(Service):
+    """ Writes out self.request.raw_request to server logs.
+    """
+    def handle(self):
+        self.logger.info('self.request.raw_request: `%r`', self.request.raw_request)
+
+# ################################################################################################################################
+
 class SIOInputLogger(Service):
     """ Writes out all SIO input parameters to server logs.
     """
