@@ -96,7 +96,9 @@
                 '_ping',
             {% endifequal %}
             {% ifequal connection 'outgoing' %}
+              {% ifequal transport 'soap' %}
                 '_reload_wsdl',
+              {% endifequal %}
             {% endifequal %}
         ]
     }
@@ -180,7 +182,9 @@
                         {% endifequal %}
 
                         {% ifequal connection 'outgoing' %}
+                          {% ifequal transport 'soap' %}
                             <th>&nbsp;</th> {% comment %} _reload_wsdl {% endcomment %}
+                          {% endifequal %}
                         {% endifequal %}
                 </thead>
 
@@ -261,7 +265,9 @@
                         {% endifequal %}
 
                         {% ifequal connection 'outgoing' %}
+                          {% ifequal transport 'soap' %}
                             <td>{% ifequal item.serialization_type 'suds' %}<a href="javascript:$.fn.zato.http_soap.reload_wsdl('{{ item.id }}')">Reload WSDL</a>{% endifequal %}</td>
+                          {% endifequal %}
                         {% endifequal %}
                     </tr>
                 {% endfor %}
