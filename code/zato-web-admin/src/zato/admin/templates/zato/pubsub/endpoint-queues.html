@@ -24,7 +24,6 @@
             '_name',
             'active_status',
 
-            '_has_gd',
             '_is_staging_enabled',
 
             '_total_depth',
@@ -62,7 +61,6 @@
 
             {% comment %} -- 4 -- {% endcomment %}
             'ftp_directory_list',
-            'has_gd',
             'is_durable',
             'is_internal',
             'name',
@@ -132,7 +130,6 @@
                         <th><a href="#">Sub queue for topic</a></th>
                         <th><a href="#">Active status</a></th>
 
-                        <th><a href="#">GD</a></th>
                         <th><a href="#">STG</a></th>
 
                         <th><a href="#">Total</a></th>
@@ -169,7 +166,6 @@
                         <th class='ignore'>&nbsp;</th>
 
                         {% comment %} -- 4 -- {% endcomment %}
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -224,7 +220,6 @@
                         </td>
                         <td>{{ item.active_status }}</td>
 
-                        <td>{{ item.has_gd|yesno:'Yes,No' }}</td>
                         <td>{{ item.is_staging_enabled|yesno:'Yes,No' }}</td>
 
                         <td id="total_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "total" item.sub_id item.topic_name|slugify %}?cluster={{ cluster_id }}">{{ item.total_depth }}</a></td>
@@ -270,7 +265,6 @@
 
                         {% comment %} -- 4 -- {% endcomment %}
                         <td class='ignore'>{{ item.ftp_directory_list|default:'' }}</td>
-                        <td class='ignore'>{{ item.has_gd }}</td>
                         <td class='ignore'>{{ item.is_durable }}</td>
                         <td class='ignore'>{{ item.is_internal }}</td>
                         <td class='ignore'>{{ item.name|default:'' }}</td>
