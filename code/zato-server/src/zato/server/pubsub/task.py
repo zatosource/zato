@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from bisect import bisect_left
 from copy import deepcopy
 from logging import getLogger
 from random import randint
@@ -19,7 +20,7 @@ from gevent import sleep
 from gevent.lock import RLock
 
 # sortedcontainers
-from sortedcontainers import SortedList
+from sortedcontainers import SortedList as _SortedList
 
 # Zato
 from zato.common.pubsub import PubSubMessage, SkipDelivery
@@ -33,6 +34,29 @@ PubSub = PubSub
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+
+class SortedList(_SortedList):
+    """ A custom subclass that knows how to remove pubsub messages from SortedList instances.
+    """
+    def remove_pubsub_msg(self, msg):
+        """ Removes a pubsub message from a SortedList instance - we cannot use the regular .remove method
+        because it may triggger __cmp__ per
+        """
+        pos = bisect_left(self._maxes, msg)
+
+        if pos == len(self._maxes):
+            raise ValueError('{0!r} not in list'.format(val))
+
+        for _list_idx, _list_msg in enumerate(self._lists[pos]):
+            if msg.pub_msg_id == _list_msg.pub_msg_id:
+                idx = _list_idx
+                break
+        else:
+            raise ValueError('{0!r} not in list'.format(msg))
+
+        self._delete(pos, idx)
 
 # ################################################################################################################################
 
@@ -62,7 +86,7 @@ class DeliveryTask(object):
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
-        for msg in self.delivery_list:
+        for msg in self.delivery_list[:]:
             try:
                 self.deliver_pubsub_msg_cb(msg)
             except SkipDelivery:
@@ -86,7 +110,7 @@ class DeliveryTask(object):
                     logger.warn('Could not update delivery status for msg:`%s`, e:`%s`', msg, format_exc(e))
                 else:
                     with self.delivery_lock:
-                        self.delivery_list.remove(msg)
+                        self.delivery_list.remove_pubsub_msg(msg)
 
         # Indicates that we have successfully delivered all messages currently queued up
         return True
