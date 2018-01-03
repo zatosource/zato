@@ -42,7 +42,7 @@ class SortedList(_SortedList):
     """
     def remove_pubsub_msg(self, msg):
         """ Removes a pubsub message from a SortedList instance - we cannot use the regular .remove method
-        because it may triggger __cmp__ per
+        because it may triggger __cmp__ per https://github.com/grantjenks/sorted_containers/issues/81.
         """
         pos = bisect_left(self._maxes, msg)
 
