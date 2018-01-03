@@ -168,16 +168,9 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle; width:12%">Endpoint</td>
-                            <td>{{ create_form.endpoint_id }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">
-                                State
-                            </td>
                             <td>
-                                {{ create_form.active_status }}
-                                | <label>GD enabled {{ create_form.has_gd }}</label>
+                                {{ create_form.endpoint_id }}
+                                | State {{ create_form.active_status }}
                                 | <label>STG enabled {{ create_form.is_staging_enabled }}</label>
                             </td>
                         </tr>
