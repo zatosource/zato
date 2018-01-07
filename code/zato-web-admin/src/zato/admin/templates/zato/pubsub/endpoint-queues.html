@@ -124,7 +124,7 @@
                         <th>&nbsp;</th>
 
                         <th><a href="#">Sub queue for topic</a></th>
-                        <th><a href="#">Active status</a></th>
+                        <th><a href="#">State</a></th>
 
                         <th><a href="#">Total</a></th>
 
@@ -310,6 +310,7 @@
                             <td style="vertical-align:middle; width:20%">Delivery server</td>
                             <td>
                                 {{ edit_form.server_id }}
+                                | <label>State {{ edit_form.active_status }}</label>
                             </td>
                         </tr>
 
