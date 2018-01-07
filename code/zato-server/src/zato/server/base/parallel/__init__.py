@@ -624,7 +624,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 # ################################################################################################################################
 
     def deliver_pubsub_msg(self, msg):
-        """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
+        """ A callback method invoked by pub/sub delivery tasks for one or more message that is to be delivered.
         """
         subscription = self.worker_store.pubsub.subscriptions_by_sub_key[msg.sub_key]
         topic = self.worker_store.pubsub.topics[subscription.config.topic_id]
