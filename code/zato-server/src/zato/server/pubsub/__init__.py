@@ -429,9 +429,9 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_subscriptions_by_sub_key(self, sub_key):
+    def get_subscription_by_sub_key(self, sub_key):
         with self.lock:
-            return self.subscriptions_by_sub_key.get(sub_key, [])
+            return self.subscriptions_by_sub_key[sub_key]
 
 # ################################################################################################################################
 
