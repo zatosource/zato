@@ -568,7 +568,8 @@ class Create(ZatoCommand):
                 self.add_live_browser(session, cluster, service, live_browser_sec)
 
             elif name == 'zato.ide-deploy.create':
-                self.add_rbac_channel(session, cluster, service, ide_pub_rbac_role, '/zato/ide-deploy', permit_write=True)
+                self.add_rbac_channel(session, cluster, service, ide_pub_rbac_role, '/zato/ide-deploy', permit_write=True,
+                                      data_format=DATA_FORMAT.JSON)
 
             elif 'apispec.pub' in name:
                 self.add_rbac_channel(session, cluster, service, apispec_rbac_role, apispec_name_path[service.name])
@@ -769,7 +770,7 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_rbac_channel(self, session, cluster, service, rbac_role, url_path, permit_read=True, permit_write=False):
+    def add_rbac_channel(self, session, cluster, service, rbac_role, url_path, permit_read=True, permit_write=False, **kwargs):
         """ Create an RBAC-authenticated plain HTTP channel associated with a service.
 
         :param session: SQLAlchemy session instance
@@ -781,7 +782,7 @@ class Create(ZatoCommand):
         name = 'admin.' + service.name.replace('zato.', '')
         channel = HTTPSOAP(name=name, is_active=True, is_internal=True, connection='channel', transport='plain_http',
             url_path=url_path, soap_action='', has_rbac=True, sec_use_rbac=True, merge_url_params_req=True, service=service,
-            cluster=cluster)
+            cluster=cluster, **kwargs)
         session.add(channel)
 
         perms = []
