@@ -786,7 +786,7 @@ class Create(ZatoCommand):
         session.add(channel)
 
         perms = []
-        for permitted, perm_names in ((permit_read, ('Read')), (permit_write, ('Create', 'Update'))):
+        for permitted, perm_names in ((permit_read, ('Read',)), (permit_write, ('Create', 'Update'))):
             if permitted:
                 perms.extend(session.query(RBACPermission).\
                     filter(RBACPermission.name.in_(perm_names)))
