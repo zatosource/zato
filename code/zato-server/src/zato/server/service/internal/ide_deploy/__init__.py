@@ -35,34 +35,25 @@ class Create(Service):
 
     def handle(self):
         if not self.request.payload:
-            self.response.payload = {
-                'success': True,
-                'msg': 'Ping succeeded.'
-            }
+            self.response.payload.success = True
+            self.response.payload.msg = 'Ping succeeded.'
             return
 
         payload_name = self.request.payload.get('payload_name')
         payload = self.request.payload.get('payload')
         if not (payload and payload_name):
-            self.response.payload = {
-                'success': False,
-                'msg': 'Both "payload" and "payload_name" fields are required.'
-            }
+            self.response.payload.success = False
+            self.response.payload.msg = 'Both "payload" and "payload_name" fields are required.'
             return
 
-
         new_payload = dict(self.request.payload, cluster_id=self.server.cluster_id)
-        success = True
-        msg = 'Deployment started: please check server log for status.'
-
         try:
             upload_response = self.invoke('zato.service.upload-package', dumps(new_payload), data_format=DATA_FORMAT.JSON)
         except Exception as e:
             logging.exception('While invoked zato.service.upload-package')
-            success = False
-            msg = 'Deployment failed: {}'.format(e)
+            self.response.payload.success = False
+            self.response.payload.msg = 'Deployment failed: {}'.format(e)
+            return
 
-        self.response.payload = {
-            'success': success,
-            'msg': msg
-        }
+        self.response.payload.success = True
+        self.response.payload.msg = 'Deployment started: please check server log for status.'
