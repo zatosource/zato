@@ -145,6 +145,7 @@ zato.notif.init-notifiers=
 zato.kvdb.log-connection-info=
 zato.pubsub.cleanup.delete-expired=10
 zato.pubsub.cleanup.delete-delivered=10
+zato.pubsub.cleanup.delete-marked-deleted=120
 
 [startup_services_any_worker]
 zato.helpers.input-logger=Sample payload for a startup service (any worker)

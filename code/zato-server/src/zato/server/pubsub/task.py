@@ -23,6 +23,7 @@ from gevent.lock import RLock
 from sortedcontainers import SortedList as _SortedList
 
 # Zato
+from zato.common import PUBSUB
 from zato.common.pubsub import PubSubMessage, SkipDelivery
 from zato.common.time_util import datetime_from_ms
 from zato.common.util import spawn_greenlet
@@ -34,6 +35,10 @@ PubSub = PubSub
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+
+_hook_action = PUBSUB.HOOK_ACTION
 
 # ################################################################################################################################
 
@@ -72,13 +77,16 @@ class PubSubTask(object):
 class DeliveryTask(object):
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
-    def __init__(self, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg_cb, confirm_pubsub_msg_delivered_cb):
+    def __init__(self, pubsub, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg_cb, confirm_pubsub_msg_delivered_cb,
+            sub_config):
         self.keep_running = True
+        self.pubsub = pubsub
         self.sub_key = sub_key
         self.delivery_lock = delivery_lock
         self.delivery_list = delivery_list
         self.deliver_pubsub_msg_cb = deliver_pubsub_msg_cb
         self.confirm_pubsub_msg_delivered_cb = confirm_pubsub_msg_delivered_cb
+        self.sub_config = sub_config
 
         spawn_greenlet(self.run)
 
@@ -86,14 +94,57 @@ class DeliveryTask(object):
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
-        for msg in self.delivery_list[:]:
+        # Deliver up to that many messages in one batch
+        batch = self.delivery_list[:self.sub_config.delivery_batch_size]
+
+        # For each message from batch we invoke a hook, if there is any, which will decide
+        # whether the message should be delivered, skipped in this iteration or perhaps deleted altogether
+        # without even trying to deliver it. If there is no hook, none of messages will be skipped or deleted.
+
+        to_delete = []
+        to_deliver = []
+        to_skip = []
+
+        messages = {
+            _hook_action.DELETE: to_delete,
+            _hook_action.DELIVER: to_deliver,
+            _hook_action.SKIP: to_skip,
+        }
+
+        #print(111, self.sub_config)
+        #print()
+
+        # A pub/sub hook that is optional
+        hook = self.pubsub.get_before_delivery_hook(self.sub_key)
+
+        # Without a hook we will always try to deliver all messages that we have
+        if not hook:
+            to_deliver[:] = batch[:]
+        else:
+            # There is a hook so we can invoke it - it will update the 'messages' dict in place
+            self.pubsub.invoke_before_delivery_hook(hook, self.sub_config.topic_id, self.sub_key, batch, messages)
+
+            # Delete these messages, per response from hook (which must have existed)
+            if to_delete:
+
+                # Mark as deleted in SQL
+                self.pubsub.set_to_delete(self.sub_key, to_delete)
+
+                # Delete from our in-RAM delivery list
+                with self.delivery_lock:
+                    for msg in to_delete:
+                        self.delivery_list.remove_pubsub_msg(msg)
+
+        #print()
+        #print(333, messages)
+        #print()
+
+        '''
+
+        # Attempt to deliver all the messages now
+        for msg in messages[_hook_action.DELIVER]:
             try:
                 self.deliver_pubsub_msg_cb(msg)
-            except SkipDelivery:
-                # We are not to deliver this message at all
-                logger.info('Skipping delivery of pub_msg_id:`%s`', msg.pub_msg_id)
-                return
-
             except Exception, e:
                 # Do not attempt to deliver any other message, simply return and our
                 # parent will sleep for a small amount of time and then re-run us,
@@ -111,6 +162,7 @@ class DeliveryTask(object):
                 else:
                     with self.delivery_lock:
                         self.delivery_list.remove_pubsub_msg(msg)
+        '''
 
         # Indicates that we have successfully delivered all messages currently queued up
         return True
@@ -313,7 +365,8 @@ class PubSubTool(object):
 
         self.delivery_lists[sub_key] = delivery_list
         self.delivery_tasks[sub_key] = DeliveryTask(
-            sub_key, delivery_lock, delivery_list, self.parent.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered)
+            self.pubsub, sub_key, delivery_lock, delivery_list, self.pubsub.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered,
+            self.pubsub.get_subscription_by_sub_key(sub_key).config)
 
         self.sub_key_locks[sub_key] = delivery_lock
 

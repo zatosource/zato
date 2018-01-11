@@ -750,6 +750,15 @@ class PUBSUB:
         PUB = 'pub'
         SUB = 'sub'
 
+    class HOOK_ACTION:
+        SKIP = 'skip'
+        DELETE = 'delete'
+        DELIVER = 'deliver'
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.SKIP, self.DELETE, self.DELIVER))
+
     class DELIVER_BY:
         PRIORITY = 'priority'
         EXT_PUB_TIME = 'ext_pub_time'
@@ -809,9 +818,10 @@ class PUBSUB:
                 return iter((self.NOTIFY, self.PULL))
 
     class DELIVERY_STATUS:
-        INITIALIZED = 'initialized'
-        WAITING_FOR_CONFIRMATION = 'waiting-for-confirmation'
         DELIVERED = 'delivered'
+        INITIALIZED = 'initialized'
+        TO_DELETE = 'to-delete'
+        WAITING_FOR_CONFIRMATION = 'waiting-for-confirmation'
 
     class PRIORITY:
         DEFAULT = 5

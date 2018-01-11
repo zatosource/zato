@@ -623,21 +623,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
-    def deliver_pubsub_msg(self, msg):
-        """ A callback method invoked by pub/sub delivery tasks for one or more message that is to be delivered.
-        """
-        subscription = self.worker_store.pubsub.subscriptions_by_sub_key[msg.sub_key]
-        topic = self.worker_store.pubsub.topics[subscription.config.topic_id]
-
-        if topic.before_delivery_hook_service_invoker:
-            response = topic.before_delivery_hook_service_invoker(topic, msg)
-            if response['skip_msg']:
-                raise SkipDelivery(msg.pub_msg_id)
-
-        self.invoke('zato.pubsub.delivery.deliver-message', {'msg':msg, 'subscription':subscription})
-
-# ################################################################################################################################
-
     @staticmethod
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
