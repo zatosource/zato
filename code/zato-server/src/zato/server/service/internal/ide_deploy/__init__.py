@@ -50,7 +50,7 @@ class Create(Service):
         try:
             upload_response = self.invoke('zato.service.upload-package', dumps(new_payload), data_format=DATA_FORMAT.JSON)
         except Exception as e:
-            logging.exception('While invoked zato.service.upload-package')
+            logger.exception('While invoking zato.service.upload-package')
             self.response.payload.success = False
             self.response.payload.msg = 'Deployment failed: {}'.format(e)
             return
