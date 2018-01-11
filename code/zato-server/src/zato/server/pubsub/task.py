@@ -34,7 +34,7 @@ PubSub = PubSub
 
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger('zato_pubsub')
 
 # ################################################################################################################################
 
@@ -135,14 +135,11 @@ class DeliveryTask(object):
                     for msg in to_delete:
                         self.delivery_list.remove_pubsub_msg(msg)
 
-        #print()
-        #print(333, messages)
-        #print()
+        if to_skip:
+            logger.info('Skipping messages `%s`', to_skip)
 
-        '''
-
-        # Attempt to deliver all the messages now
-        for msg in messages[_hook_action.DELIVER]:
+        # Attempt to deliver all the remaining messages now
+        for msg in to_deliver:
             try:
                 self.deliver_pubsub_msg_cb(msg)
             except Exception, e:
@@ -162,7 +159,6 @@ class DeliveryTask(object):
                 else:
                     with self.delivery_lock:
                         self.delivery_list.remove_pubsub_msg(msg)
-        '''
 
         # Indicates that we have successfully delivered all messages currently queued up
         return True
