@@ -18,9 +18,10 @@ from zato.common.odb.query import count, _pubsub_queue_message
 
 # ################################################################################################################################
 
-_initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
-_waiting = PUBSUB.DELIVERY_STATUS.WAITING_FOR_CONFIRMATION
 _delivered = PUBSUB.DELIVERY_STATUS.DELIVERED
+_initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
+_to_delete = PUBSUB.DELIVERY_STATUS.TO_DELETE
+_waiting = PUBSUB.DELIVERY_STATUS.WAITING_FOR_CONFIRMATION
 
 # ################################################################################################################################
 
@@ -57,21 +58,32 @@ def get_messages(session, cluster_id, sub_key, batch_size, now, _initialized=_in
 
 # ################################################################################################################################
 
-def acknowledge_delivery(session, cluster_id, sub_key, msg_id_list, now, _delivered=_delivered):
-    """ Confirms delivery of all messages from msg_id_list.
-    """
+def _set_delivery_status(session, cluster_id, sub_key, msg_id_list, now, status):
     session.execute(
         update(PubSubEndpointEnqueuedMessage).\
         values({
-            'delivery_status': _delivered,
+            'delivery_status': status,
             'delivery_time': now,
             }).\
         where(PubSubSubscription.sub_key==sub_key).\
         where(PubSubEndpointEnqueuedMessage.cluster_id).\
         where(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
-        where(PubSubEndpointEnqueuedMessage.delivery_status==_waiting).\
         where(PubSubEndpointEnqueuedMessage.pub_msg_id.in_(msg_id_list))
     )
+
+# ################################################################################################################################
+
+def set_to_delete(session, cluster_id, sub_key, msg_id_list, now, status=_to_delete):
+    """ Marks all input messages as to be deleted.
+    """
+    _set_delivery_status(session, cluster_id, sub_key, msg_id_list, now, status)
+
+# ################################################################################################################################
+
+def acknowledge_delivery(session, cluster_id, sub_key, msg_id_list, now, status=_delivered):
+    """ Confirms delivery of all messages from msg_id_list.
+    """
+    _set_delivery_status(session, cluster_id, sub_key, msg_id_list, now, status)
 
 # ################################################################################################################################
 
