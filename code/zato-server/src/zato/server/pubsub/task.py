@@ -13,6 +13,7 @@ from bisect import bisect_left
 from copy import deepcopy
 from logging import getLogger
 from random import randint
+from socket import error as SocketError
 from traceback import format_exc
 
 # gevent
@@ -88,6 +89,19 @@ class DeliveryTask(object):
         self.confirm_pubsub_msg_delivered_cb = confirm_pubsub_msg_delivered_cb
         self.sub_config = sub_config
 
+        # If self.wrap_in_list is True, messages will be always wrapped in a list,
+        # even if there is only one message to send. Note that self.wrap_in_list will be False
+        # only if both batch_size is 1 and wrap_one_msg_in_list is True.
+        if self.sub_config.delivery_batch_size == 1:
+            if self.sub_config.wrap_one_msg_in_list:
+                self.self.wrap_in_list = True
+            else:
+                self.wrap_in_list = False
+
+        # With batch_size > 1, we always send a list, no matter what.
+        else:
+            self.wrap_in_list = True
+
         spawn_greenlet(self.run)
 
     def _run_delivery(self):
@@ -111,8 +125,11 @@ class DeliveryTask(object):
             _hook_action.SKIP: to_skip,
         }
 
-        #print(111, self.sub_config)
-        #print()
+        print(111, self.sub_config)
+        print()
+
+        # wrap_one_msg_in_list:
+        # delivery_batch_size:
 
         # A pub/sub hook that is optional
         hook = self.pubsub.get_before_delivery_hook(self.sub_key)
@@ -138,6 +155,30 @@ class DeliveryTask(object):
         if to_skip:
             logger.info('Skipping messages `%s`', to_skip)
 
+        # Try to deliver a batch of messages or a single message if batch size is 1
+        # and we should not wrap it in a list.
+        try:
+            self.deliver_pubsub_msg_cb(to_deliver if self.wrap_in_list else to_deliver[0])
+        except Exception, e:
+            # Do not attempt to deliver any other message, simply return and our
+            # parent will sleep for a small amount of time and then re-run us,
+            # thanks to which the next time we run we will again iterate over all the messages
+            # currently queued up, including the one that were not able to deliver.
+            logger.warn('Could not deliver pub/sub message, e:`%s`', format_exc(e))
+            return
+
+        else:
+            # On successful delivery, remove these messages from SQL and our own delivery_list
+            try:
+                self.confirm_pubsub_msg_delivered_cb(self.sub_key, to_deliver)
+            except Exception, e:
+                logger.warn('Could not update delivery status for messages:`%s`, e:`%s`', to_deliver, format_exc(e))
+            else:
+                with self.delivery_lock:
+                    for msg in to_deliver:
+                        self.delivery_list.remove_pubsub_msg(msg)
+
+        '''
         # Attempt to deliver all the remaining messages now
         for msg in to_deliver:
             try:
@@ -159,6 +200,7 @@ class DeliveryTask(object):
                 else:
                     with self.delivery_lock:
                         self.delivery_list.remove_pubsub_msg(msg)
+        '''
 
         # Indicates that we have successfully delivered all messages currently queued up
         return True

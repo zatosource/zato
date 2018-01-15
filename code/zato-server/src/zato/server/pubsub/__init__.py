@@ -988,7 +988,7 @@ class PubSub(object):
             response = hook(self.topics[topic_id], msg)
             hook_action = response['hook_action']
 
-            if hook_action not in actions:
+            if hook_action and hook_action not in actions:
                 raise ValueError('Invalid action returned `{}` for msg `{}`'.format(hook_action, msg))
             else:
                 messages[hook_action].append(msg)
