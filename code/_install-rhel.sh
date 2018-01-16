@@ -1,43 +1,35 @@
 #!/bin/bash
 
-#
-# Taken from https://gist.github.com/josephwecker/2884332
-#
-CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL -f")
-while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
-N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
+PYTHON_VER="2.7.13"
+PYTHON_URL="https://www.python.org/ftp/python/$PYTHON_VER/Python-$PYTHON_VER.tgz"
+PYTHON_PREFIX="/opt/zato/python/$PYTHON_VER"
+PATH="$PYTHON_PREFIX/bin:$PATH"
 
-function symlink_py {
-    ln -s `python -c 'import '${1}', os.path, sys; sys.stdout.write(os.path.dirname('${1}'.__file__))'` $CURDIR/zato_extra_paths
-}
+sudo yum -y install \
+    bzip2 bzip2-devel cyrus-sasl-devel gcc-c++ git haproxy libev libev-devel \
+    libevent-devel libffi libffi-devel libxml2-devel libxslt-devel \
+    libyaml-devel openldap-devel openssl openssl-devel patch postgresql-devel \
+    python-devel suitesparse swig uuid uuid-devel wget
 
-bash $CURDIR/clean.sh
+if ! [ "$(type -p python2.7)" ]
+then
+    # CentOS 6.x requires python2.7 build.
+    (
+        cd /tmp
+        wget "$PYTHON_URL"
+        tar zxf "Python-$PYTHON_VER.tgz"
+        cd "Python-$PYTHON_VER"
+        ./configure --quiet --prefix="$PYTHON_PREFIX"
+        # Travis CI always has at least 2 vCPUs.
+        make -j 2 >/dev/null
+        sudo make altinstall >/dev/null
+    )
+fi
 
-sudo yum -y install git bzr gcc-gfortran haproxy \
-    gcc-c++ atlas-devel atlas blas-devel  \
-    bzip2 bzip2-devel cyrus-sasl-devel libev libev-devel libffi libffi-devel \
-    libevent-devel libgfortran lapack-devel lapack \
-    libpqxx-devel libyaml-devel libxml2-devel libxslt-devel suitesparse \
-    openssl openssl-devel python-devel numpy python-pip \
-    scipy python-zdaemon swig uuid-devel uuid
+wget https://bootstrap.pypa.io/get-pip.py
+sudo $(type -p python2.7) get-pip.py
+sudo $(type -p python2.7) -m pip install -U setuptools virtualenv==15.1.0
 
-mkdir $CURDIR/zato_extra_paths
-
-symlink_py 'numpy'
-symlink_py 'scipy'
-
-export CYTHON=$CURDIR/bin/cython
-
-sudo pip install distribute==0.7.3
-sudo pip install virtualenv==15.1.0
-sudo pip install zato-apitest
-
-virtualenv $CURDIR
-$CURDIR/bin/pip install --upgrade pip
-
-$CURDIR/bin/python bootstrap.py
-$CURDIR/bin/pip install cython==0.22
-$CURDIR/bin/buildout
-
-echo
-echo OK
+python2.7 -m virtualenv .
+source ./bin/activate
+source ./_postinstall.sh
