@@ -36,6 +36,7 @@ PubSub = PubSub
 # ################################################################################################################################
 
 logger = getLogger('zato_pubsub')
+logger_zato = getLogger('zato')
 
 # ################################################################################################################################
 
@@ -108,63 +109,69 @@ class DeliveryTask(object):
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
-        # Deliver up to that many messages in one batch
-        batch = self.delivery_list[:self.sub_config.delivery_batch_size]
-
-        # For each message from batch we invoke a hook, if there is any, which will decide
-        # whether the message should be delivered, skipped in this iteration or perhaps deleted altogether
-        # without even trying to deliver it. If there is no hook, none of messages will be skipped or deleted.
-
-        to_delete = []
-        to_deliver = []
-        to_skip = []
-
-        messages = {
-            _hook_action.DELETE: to_delete,
-            _hook_action.DELIVER: to_deliver,
-            _hook_action.SKIP: to_skip,
-        }
-
-        print(111, self.sub_config)
-        print()
-
-        # wrap_one_msg_in_list:
-        # delivery_batch_size:
-
-        # A pub/sub hook that is optional
-        hook = self.pubsub.get_before_delivery_hook(self.sub_key)
-
-        # Without a hook we will always try to deliver all messages that we have
-        if not hook:
-            to_deliver[:] = batch[:]
-        else:
-            # There is a hook so we can invoke it - it will update the 'messages' dict in place
-            self.pubsub.invoke_before_delivery_hook(hook, self.sub_config.topic_id, self.sub_key, batch, messages)
-
-            # Delete these messages, per response from hook (which must have existed)
-            if to_delete:
-
-                # Mark as deleted in SQL
-                self.pubsub.set_to_delete(self.sub_key, to_delete)
-
-                # Delete from our in-RAM delivery list
-                with self.delivery_lock:
-                    for msg in to_delete:
-                        self.delivery_list.remove_pubsub_msg(msg)
-
-        if to_skip:
-            logger.info('Skipping messages `%s`', to_skip)
-
         # Try to deliver a batch of messages or a single message if batch size is 1
         # and we should not wrap it in a list.
         try:
-            self.deliver_pubsub_msg_cb(to_deliver if self.wrap_in_list else to_deliver[0])
+
+            # Deliver up to that many messages in one batch
+            batch = self.delivery_list[:self.sub_config.delivery_batch_size]
+
+            # For each message from batch we invoke a hook, if there is any, which will decide
+            # whether the message should be delivered, skipped in this iteration or perhaps deleted altogether
+            # without even trying to deliver it. If there is no hook, none of messages will be skipped or deleted.
+
+            to_delete = []
+            to_deliver = []
+            to_skip = []
+
+            messages = {
+                _hook_action.DELETE: to_delete,
+                _hook_action.DELIVER: to_deliver,
+                _hook_action.SKIP: to_skip,
+            }
+
+            print(111, self.sub_config)
+            print(222)
+            print()
+
+            # wrap_one_msg_in_list:
+            # delivery_batch_size:
+
+            # A pub/sub hook that is optional
+            hook = self.pubsub.get_before_delivery_hook(self.sub_key)
+
+            # Without a hook we will always try to deliver all messages that we have in a given batch
+            if not hook:
+                to_deliver[:] = batch[:]
+            else:
+                # There is a hook so we can invoke it - it will update the 'messages' dict in place
+                self.pubsub.invoke_before_delivery_hook(hook, self.sub_config.topic_id, self.sub_key, batch, messages)
+
+                # Delete these messages, per response from hook (which must have existed)
+                if to_delete:
+
+                    # Mark as deleted in SQL
+                    self.pubsub.set_to_delete(self.sub_key, to_delete)
+
+                    # Delete from our in-RAM delivery list
+                    with self.delivery_lock:
+                        for msg in to_delete:
+                            self.delivery_list.remove_pubsub_msg(msg)
+
+            if to_skip:
+                logger.info('Skipping messages `%s`', to_skip)
+
+            # This is the call that actually delivers messages
+            self.deliver_pubsub_msg_cb(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
+
         except Exception, e:
             # Do not attempt to deliver any other message, simply return and our
             # parent will sleep for a small amount of time and then re-run us,
             # thanks to which the next time we run we will again iterate over all the messages
-            # currently queued up, including the one that were not able to deliver.
-            logger.warn('Could not deliver pub/sub message, e:`%s`', format_exc(e))
+            # currently queued up, including the ones that we were not able to deliver in current iteration.
+            exc = format_exc(e)
+            logger.warn('Could not deliver pub/sub messages, e:`%s`', exc)
+            logger_zato.warn('Could not deliver pub/sub messages, e:`%s`', exc)
             return
 
         else:
