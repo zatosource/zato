@@ -545,7 +545,11 @@ class UploadPackage(AdminService):
             tf.write(self.request.input.payload.decode('base64'))
             tf.flush()
 
-            hot_deploy(self.server, self.request.input.payload_name, tf.name, False)
+            package_id = hot_deploy(self.server, self.request.input.payload_name, tf.name, False)
+
+        self.response.payload = {
+            'package_id': package_id
+        }
 
 # ################################################################################################################################
 
