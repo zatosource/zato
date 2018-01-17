@@ -63,7 +63,7 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now,
 
 # ################################################################################################################################
 
-def confirm_pubsub_msg_delivered(session, cluster_id, sub_key, pub_msg_id, now, _delivered=_delivered):
+def confirm_pubsub_msg_delivered(session, cluster_id, sub_key, delivered_pub_msg_id_list, now, _delivered=_delivered):
     """ Returns all SQL messages queued up for a given sub_key.
     """
     session.execute(
@@ -72,7 +72,7 @@ def confirm_pubsub_msg_delivered(session, cluster_id, sub_key, pub_msg_id, now, 
             'delivery_status': _delivered,
             'delivery_time': now
             }).\
-        where(PubSubEndpointEnqueuedMessage.pub_msg_id==pub_msg_id).\
+        where(PubSubEndpointEnqueuedMessage.pub_msg_id.in_(delivered_pub_msg_id_list)).\
         where(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
         where(PubSubSubscription.sub_key==sub_key)
     )

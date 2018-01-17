@@ -13,6 +13,10 @@ from zato.common.util import new_cid
 
 # ################################################################################################################################
 
+_skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pattern_matched', 'published_by_id')
+
+# ################################################################################################################################
+
 def new_msg_id(_new_cid=new_cid):
     return 'zpsm%s' % _new_cid()
 
@@ -31,10 +35,12 @@ def new_group_id(_new_cid=new_cid):
 class PubSubMessage(object):
     """ Base container class for pub/sub message wrappers.
     """
-    __slots__ = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id',
-        'position_in_group', 'pub_time', 'data', 'mime_type', 'priority', 'expiration', 'expiration_time', 'has_gd',
-        'delivery_status', 'pattern_matched', 'size', 'published_by_id', 'topic_id', 'cluster_id', 'ext_pub_time',
-        'data_prefix', 'data_prefix_short')
+    # We are not using __slots__ because they can't be inherited by subclasses
+    # and this class as well as subclasses will be rewritten in Cython anyway.
+    _attrs = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id', 'position_in_group',
+        'pub_time', 'ext_pub_time', 'data', 'data_prefix', 'data_prefix_short', 'mime_type', 'priority', 'expiration',
+        'expiration_time', 'has_gd', 'delivery_status', 'pattern_matched', 'size', 'published_by_id', 'topic_id',
+        'cluster_id')
 
     def __init__(self):
         self.topic = None
@@ -62,13 +68,22 @@ class PubSubMessage(object):
         self.topic_id = None
         self.cluster_id = None
 
-    def to_dict(self):
+    def to_dict(self, skip=None):
+        """ Returns a dict representation of self.
+        """
+        skip = skip or []
         out = {}
-        for key in PubSubMessage.__slots__:
-            if key != 'topic':
+        for key in PubSubMessage._attrs:
+            if key != 'topic' and key not in skip:
                 out[key] = getattr(self, key)
 
         return out
+
+    def to_external_dict(self, _skip=_skip_to_external):
+        """ Returns a dict representation of self ready to be delivered to external systems,
+        i.e. without internal attributes on output.
+        """
+        return self.to_dict(_skip)
 
 # ################################################################################################################################
 

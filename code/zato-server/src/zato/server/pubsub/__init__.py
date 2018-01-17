@@ -870,11 +870,11 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def confirm_pubsub_msg_delivered(self, sub_key, pub_msg_id):
+    def confirm_pubsub_msg_delivered(self, sub_key, delivered_pub_msg_id_list):
         """ Sets in SQL delivery status of a given message to True.
         """
         with closing(self.server.odb.session()) as session:
-            _confirm_pubsub_msg_delivered(session, self.server.cluster_id, sub_key, pub_msg_id, utcnow_as_ms())
+            _confirm_pubsub_msg_delivered(session, self.server.cluster_id, sub_key, delivered_pub_msg_id_list, utcnow_as_ms())
             session.commit()
 
 # ################################################################################################################################

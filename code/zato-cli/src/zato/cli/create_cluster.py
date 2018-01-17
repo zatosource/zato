@@ -908,12 +908,12 @@ class Create(ZatoCommand):
         impl_name1 = 'zato.server.service.internal.pubsub.pubapi.TopicService'
         impl_name2 = 'zato.server.service.internal.pubsub.pubapi.SubscribeService'
         impl_name3 = 'zato.server.service.internal.pubsub.pubapi.MessageService'
-        impl_demo = 'zato.server.service.internal.helpers.RawRequestLogger'
+        impl_demo = 'zato.server.service.internal.helpers.JSONRawRequestLogger'
 
         service_topic = Service(None, 'zato.pubsub.pubapi.topic-service', True, impl_name1, True, cluster)
         service_sub = Service(None, 'zato.pubsub.pubapi.subscribe-service', True, impl_name2, True, cluster)
         service_msg = Service(None, 'zato.pubsub.pubapi.message-service', True, impl_name3, True, cluster)
-        service_demo = Service(None, 'zato.pubsub.helpers.raw-request-logger', True, impl_demo, True, cluster)
+        service_demo = Service(None, 'zato.pubsub.helpers.json-raw-request-logger', True, impl_demo, True, cluster)
 
         chan_topic = HTTPSOAP(None, 'zato.pubsub.topic.topic_name', True, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, '/zato/pubsub/topic/{topic_name}',
@@ -929,11 +929,11 @@ class Create(ZatoCommand):
 
         chan_demo = HTTPSOAP(None, 'zato.pubsub.demo.sample.channel', True, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, '/zato/pubsub/zato.demo.sample',
-            None, '', None, None, security=sec, service=service_demo, cluster=cluster)
+            None, '', None, DATA_FORMAT.JSON, security=sec, service=service_demo, cluster=cluster)
 
         outconn_demo = HTTPSOAP(None, 'zato.pubsub.demo.sample.outconn', True, True, CONNECTION.OUTGOING,
             URL_TYPE.PLAIN_HTTP, 'http://localhost:11223', '/zato/pubsub/zato.demo.sample',
-            None, '', None, None, security=sec, cluster=cluster)
+            None, '', None, DATA_FORMAT.JSON, security=sec, cluster=cluster)
 
         endpoint = PubSubEndpoint()
         endpoint.name = 'zato.pubsub'
