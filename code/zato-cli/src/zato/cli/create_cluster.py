@@ -568,7 +568,7 @@ class Create(ZatoCommand):
                 self.add_live_browser(session, cluster, service, live_browser_sec)
 
             elif name == 'zato.ide-deploy.create':
-                self.add_rbac_channel(session, cluster, service, ide_pub_rbac_role, '/zato/ide-deploy', permit_write=True,
+                self.add_rbac_channel(session, cluster, service, ide_pub_rbac_role, '/ide-deploy', permit_write=True,
                                       data_format=DATA_FORMAT.JSON)
 
             elif 'apispec.pub' in name:
