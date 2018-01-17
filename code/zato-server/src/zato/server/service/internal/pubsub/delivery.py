@@ -90,15 +90,15 @@ class DeliverMessage(AdminService):
         else:
 
             # A list of messages is given on input so we need to serialize each of them individually
-            if isinstance(msg.data, list):
-                data = [elem.to_dict() for elem in msg.data]
+            if isinstance(msg, list):
+                data = [elem.to_external_dict() for elem in msg]
 
             # A single message was given on input
             else:
-                data = elem.to_dict()
+                data = msg.to_external_dict()
 
             endpoint = impl_getter(subscription.config.out_http_soap_id)
-            endpoint.conn.http_request(subscription.config.out_http_method, self.cid, data)
+            endpoint.conn.http_request(subscription.config.out_http_method, self.cid, data=data)
 
 # ################################################################################################################################
 

@@ -130,14 +130,8 @@ class DeliveryTask(object):
                 _hook_action.SKIP: to_skip,
             }
 
-            print(111, self.sub_config)
-            print(222)
-            print()
-
-            # wrap_one_msg_in_list:
-            # delivery_batch_size:
-
-            # A pub/sub hook that is optional
+            # An optional pub/sub hook - note that we are checking it here rather than once upfront
+            # because users may change it any time for a topic.
             hook = self.pubsub.get_before_delivery_hook(self.sub_key)
 
             # Without a hook we will always try to deliver all messages that we have in a given batch
@@ -177,40 +171,23 @@ class DeliveryTask(object):
         else:
             # On successful delivery, remove these messages from SQL and our own delivery_list
             try:
-                self.confirm_pubsub_msg_delivered_cb(self.sub_key, to_deliver)
+                # All message IDs that we have delivered
+                delivered_msg_id_list = [msg.pub_msg_id for msg in to_deliver]
+
+                with self.delivery_lock:
+                    self.confirm_pubsub_msg_delivered_cb(self.sub_key, delivered_msg_id_list)
             except Exception, e:
-                logger.warn('Could not update delivery status for messages:`%s`, e:`%s`', to_deliver, format_exc(e))
+                logger.warn('Could not update delivery status for message(s):`%s`, e:`%s`', to_deliver, format_exc(e))
             else:
                 with self.delivery_lock:
                     for msg in to_deliver:
                         self.delivery_list.remove_pubsub_msg(msg)
 
-        '''
-        # Attempt to deliver all the remaining messages now
-        for msg in to_deliver:
-            try:
-                self.deliver_pubsub_msg_cb(msg)
-            except Exception, e:
-                # Do not attempt to deliver any other message, simply return and our
-                # parent will sleep for a small amount of time and then re-run us,
-                # thanks to which the next time we run we will again iterate over all the messages
-                # currently queued up, including the one that were not able to deliver.
-                logger.warn('Could not deliver pub/sub message, e:`%s`', format_exc(e))
-                return
+                # Status of messages is updated in both SQL and RAM so we can now log success
+                logger.info('Successfully delivered message(s) %s', delivered_msg_id_list)
 
-            else:
-                # On successful delivery, remove this messages from SQL and our own delivery_list
-                try:
-                    self.confirm_pubsub_msg_delivered_cb(self.sub_key, msg.pub_msg_id)
-                except Exception, e:
-                    logger.warn('Could not update delivery status for msg:`%s`, e:`%s`', msg, format_exc(e))
-                else:
-                    with self.delivery_lock:
-                        self.delivery_list.remove_pubsub_msg(msg)
-        '''
-
-        # Indicates that we have successfully delivered all messages currently queued up
-        return True
+                # Indicates that we have successfully delivered all messages currently queued up
+                return True
 
     def run(self, no_msg_sleep_time=1):
         logger.info('Starting delivery task for sub_key:`%s`', self.sub_key)
@@ -274,10 +251,8 @@ class Message(PubSubMessage):
     """ Wrapper for messages adding __cmp__ which uses a custom comparison protocol,
     by priority, then ext_pub_time, then pub_time.
     """
-    __slots__ = ('sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id', 'position_in_group',
-        'pub_time', 'data', 'mime_type', 'priority', 'expiration', 'expiration_time', 'has_gd')
-
     def __init__(self):
+        super(Message, self).__init__()
         self.sub_key = None
         self.pub_msg_id = None
         self.pub_correl_id = None
@@ -310,6 +285,7 @@ class GDMessage(Message):
     """ A guaranteed delivery message initialized from SQL data.
     """
     def __init__(self, sub_key, msg):
+        super(GDMessage, self).__init__()
         self.sub_key = sub_key
         self.pub_msg_id = msg.pub_msg_id
         self.pub_correl_id = msg.pub_correl_id
@@ -332,6 +308,7 @@ class NonGDMessage(Message):
     """ A non-guaranteed delivery message initialized from a Python dict.
     """
     def __init__(self, sub_key, msg):
+        super(NonGDMessage, self).__init__()
         self.sub_key = sub_key
         self.pub_msg_id = msg['pub_msg_id']
         self.pub_correl_id = msg['pub_correl_id']
@@ -507,8 +484,8 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def confirm_pubsub_msg_delivered(self, sub_key, pub_msg_id):
-        self.pubsub.confirm_pubsub_msg_delivered(sub_key, pub_msg_id)
+    def confirm_pubsub_msg_delivered(self, sub_key, delivered_list):
+        self.pubsub.confirm_pubsub_msg_delivered(sub_key, delivered_list)
 
 # ################################################################################################################################
 
