@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging
+from traceback import format_exc
 
 # anyjson
 from anyjson import dumps
@@ -44,7 +44,7 @@ class Create(Service):
 
         new_payload = dict(self.request.payload, cluster_id=self.server.cluster_id)
         try:
-            upload_response = self.invoke('zato.service.upload-package', dumps(new_payload), data_format=DATA_FORMAT.JSON)
+            self.invoke('zato.service.upload-package', dumps(new_payload), data_format=DATA_FORMAT.JSON)
         except Exception as e:
             self.logger.warn('Could not invoke zato.service.upload-package, e:`%s`', format_exc(e))
             self.response.payload.success = False
