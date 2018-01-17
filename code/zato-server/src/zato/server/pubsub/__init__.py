@@ -980,13 +980,14 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def invoke_before_delivery_hook(self, hook, topic_id, sub_key, batch, messages, actions=list(PUBSUB.HOOK_ACTION)):
+    def invoke_before_delivery_hook(self, hook, topic_id, sub_key, batch, messages, actions=list(PUBSUB.HOOK_ACTION),
+        _deliver=PUBSUB.HOOK_ACTION.DELIVER):
         """ Invokes a hook service for each message from a batch of messages possibly to be delivered and arranges
         each one to a specific key in messages dict.
         """
         for msg in batch:
             response = hook(self.topics[topic_id], msg)
-            hook_action = response['hook_action']
+            hook_action = response['hook_action'] or _deliver
 
             if hook_action and hook_action not in actions:
                 raise ValueError('Invalid action returned `{}` for msg `{}`'.format(hook_action, msg))
@@ -995,12 +996,12 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def deliver_pubsub_msg(self, msg):
+    def deliver_pubsub_msg(self, sub_key, msg):
         """ A callback method invoked by pub/sub delivery tasks for one or more message that is to be delivered.
         """
         self.server.invoke('zato.pubsub.delivery.deliver-message', {
             'msg':msg,
-            'subscription':self.subscriptions_by_sub_key[msg.sub_key]
+            'subscription':self.subscriptions_by_sub_key[sub_key]
         })
 
 # ################################################################################################################################

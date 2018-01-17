@@ -69,7 +69,8 @@ class CreateDeliveryTask(AdminService):
 # ################################################################################################################################
 
 class DeliverMessage(AdminService):
-    """ Callback service invoked by delivery tasks for each message that needs to be delivered to a given endpoint.
+    """ Callback service invoked by delivery tasks for each message or a list of messages that need to be delivered
+    to a given endpoint.
     """
     class SimpleIO(AdminSIO):
         input_required = (Opaque('msg'), Opaque('subscription'))
@@ -87,8 +88,17 @@ class DeliverMessage(AdminService):
         if not subscription.config.out_http_soap_id:
             raise ValueError('Missing out_http_soap_id for subscription `{}`'.format(subscription))
         else:
+
+            # A list of messages is given on input so we need to serialize each of them individually
+            if isinstance(msg.data, list):
+                data = [elem.to_dict() for elem in msg.data]
+
+            # A single message was given on input
+            else:
+                data = elem.to_dict()
+
             endpoint = impl_getter(subscription.config.out_http_soap_id)
-            endpoint.conn.http_request(subscription.config.out_http_method, self.cid, msg.data)
+            endpoint.conn.http_request(subscription.config.out_http_method, self.cid, data)
 
 # ################################################################################################################################
 
