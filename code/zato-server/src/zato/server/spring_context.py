@@ -69,6 +69,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.email.smtp',
             'zato.server.service.internal.helpers',
             'zato.server.service.internal.hot_deploy',
+            'zato.server.service.internal.ide_deploy',
             'zato.server.service.internal.info',
             'zato.server.service.internal.http_soap',
             'zato.server.service.internal.kv_data',
