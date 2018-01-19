@@ -115,9 +115,6 @@ class DeliveryTask(object):
         # and we should not wrap it in a list.
         try:
 
-            print(self.sub_config)
-            print()
-
             # Deliver up to that many messages in one batch
             batch = self.delivery_list[:self.sub_config.delivery_batch_size]
 
@@ -159,6 +156,11 @@ class DeliveryTask(object):
 
             if to_skip:
                 logger.info('Skipping messages `%s`', to_skip)
+
+            from bunch import bunchify
+
+            print(bunchify(to_deliver[0].to_dict()))
+            print()
 
             # This is the call that actually delivers messages
             self.deliver_pubsub_msg_cb(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
@@ -284,6 +286,21 @@ class Message(PubSubMessage):
         self.expiration_time = None
         self.has_gd = None
 
+        self.pub_time_iso = None
+        self.ext_pub_time_iso = None
+        self.expiration_time_iso = None
+
+    def add_iso_times(self):
+        """ Sets additional attributes for datetime in ISO-8601.
+        """
+        self.pub_time_iso = datetime_from_ms(self.pub_time)
+
+        if self.ext_pub_time:
+            self.ext_pub_time_iso = datetime_from_ms(self.ext_pub_time)
+
+        if self.expiration_time:
+            self.expiration_time_iso = datetime_from_ms(self.expiration_time)
+
     def __cmp__(self, other, max_pri=9):
         return cmp(
             (max_pri - self.priority, self.ext_pub_time, self.pub_time),
@@ -317,6 +334,9 @@ class GDMessage(Message):
         self.expiration_time = msg.expiration_time
         self.has_gd = msg.has_gd
 
+        # Add times in ISO-8601 for external subscribers
+        self.add_iso_times()
+
 # ################################################################################################################################
 
 class NonGDMessage(Message):
@@ -339,6 +359,9 @@ class NonGDMessage(Message):
         self.expiration = msg['expiration']
         self.expiration_time = msg['expiration_time']
         self.has_gd = msg['has_gd']
+
+        # Add times in ISO-8601 for external subscribers
+        self.add_iso_times()
 
 # ################################################################################################################################
 
