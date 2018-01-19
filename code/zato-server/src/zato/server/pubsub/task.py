@@ -89,6 +89,8 @@ class DeliveryTask(object):
         self.deliver_pubsub_msg_cb = deliver_pubsub_msg_cb
         self.confirm_pubsub_msg_delivered_cb = confirm_pubsub_msg_delivered_cb
         self.sub_config = sub_config
+        self.wait_sock_err = self.sub_config.wait_sock_err
+        self.wait_non_sock_err = self.sub_config.wait_non_sock_err
 
         # If self.wrap_in_list is True, messages will be always wrapped in a list,
         # even if there is only one message to send. Note that self.wrap_in_list will be False
@@ -105,13 +107,16 @@ class DeliveryTask(object):
 
         spawn_greenlet(self.run)
 
-    def _run_delivery(self):
+    def _run_delivery(self, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
         # Try to deliver a batch of messages or a single message if batch size is 1
         # and we should not wrap it in a list.
         try:
+
+            print(self.sub_config)
+            print()
 
             # Deliver up to that many messages in one batch
             batch = self.delivery_list[:self.sub_config.delivery_batch_size]
@@ -166,7 +171,7 @@ class DeliveryTask(object):
             exc = format_exc(e)
             logger.warn('Could not deliver pub/sub messages, e:`%s`', exc)
             logger_zato.warn('Could not deliver pub/sub messages, e:`%s`', exc)
-            return
+            return _run_deliv_status.SOCKET_ERROR if isinstance(e, SocketError) else _run_deliv_status.OTHER_ERROR
 
         else:
             # On successful delivery, remove these messages from SQL and our own delivery_list
@@ -178,6 +183,7 @@ class DeliveryTask(object):
                     self.confirm_pubsub_msg_delivered_cb(self.sub_key, delivered_msg_id_list)
             except Exception, e:
                 logger.warn('Could not update delivery status for message(s):`%s`, e:`%s`', to_deliver, format_exc(e))
+                return _run_deliv_status.SOCKET_ERROR
             else:
                 with self.delivery_lock:
                     for msg in to_deliver:
@@ -187,9 +193,10 @@ class DeliveryTask(object):
                 logger.info('Successfully delivered message(s) %s', delivered_msg_id_list)
 
                 # Indicates that we have successfully delivered all messages currently queued up
-                return True
+                # and our delivery list is currently empty.
+                return _run_deliv_status.NO_MSG
 
-    def run(self, no_msg_sleep_time=1):
+    def run(self, no_msg_sleep_time=1, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         logger.info('Starting delivery task for sub_key:`%s`', self.sub_key)
         try:
             while self.keep_running:
@@ -200,10 +207,10 @@ class DeliveryTask(object):
                     # Get the list of all messaged IDs for which delivery was successful,
                     # indicating whether all currently lined up messages have been
                     # successfully delivered.
-                    success = self._run_delivery()
+                    result = self._run_delivery()
 
                     # On success, sleep for a moment because we have just run out of all messages.
-                    if success:
+                    if result == _run_deliv_status.NO_MSG:
                         sleep(no_msg_sleep_time)
 
                     # Otherwise, sleep for a longer time because our endpoint must have returned an error.
@@ -211,9 +218,17 @@ class DeliveryTask(object):
                     # we queued up. Note that we are the only delivery task for this sub_key  so when we sleep here
                     # for a moment, we do not block other deliveries.
                     else:
-                        sleep(randint(10, 20))
+                        sleep_time = self.wait_sock_err if result == _run_deliv_status.SOCKET_ERROR else self.wait_non_sock_err
+                        msg = 'Sleeping for {}s after `{}` in sub_key:`{}`'.format(sleep_time, result, self.sub_key)
+                        logger.warn(msg)
+                        logger_zato.warn(msg)
+                        sleep(sleep_time)
+
         except Exception, e:
-            logger.warn('Exception in delivery task for sub_key:`%s`, e:`%s`', self.sub_key, format_exc(e))
+            error_msg = 'Exception in delivery task for sub_key:`%s`, e:`%s`'
+            e_formatted = format_exc(e)
+            logger.warn(error_msg, self.sub_key, e_formatted)
+            logger_zato.warn(error_msg, self.sub_key, e_formatted)
 
     def stop(self):
         if self.keep_running:

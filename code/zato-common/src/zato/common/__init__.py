@@ -837,6 +837,11 @@ class PUBSUB:
             def __iter__(self):
                 return iter((self.PUBLISHER, self.SUBSCRIBER, self.PUBLISHER_SUBSCRIBER))
 
+    class RUN_DELIVERY_STATUS:
+        NO_MSG = 'no-messages'
+        SOCKET_ERROR = 'socket-error'
+        OTHER_ERROR = 'other-error'
+
     class ENDPOINT_TYPE:
         AMQP = NameId('AMQP', 'amqp')
         FILES = NameId('Files', 'files')
