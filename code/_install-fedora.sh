@@ -28,7 +28,7 @@ if (($? == 0)) ; then IS_RHEL6=1 ; fi
 
 if [ $IS_RHEL6 -eq 1 ]
 then
-  sed -i '/psycopg/psycopg2 = 2.5.3' $CURDIR/versions.cfg
+  sed -i '/psycopg2/psycopg2 = 2.5.3' $CURDIR/versions.cfg
 fi
 
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
