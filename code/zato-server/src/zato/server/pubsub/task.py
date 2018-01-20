@@ -166,13 +166,18 @@ class DeliveryTask(object):
             self.deliver_pubsub_msg_cb(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
 
         except Exception, e:
-            # Do not attempt to deliver any other message, simply return and our
-            # parent will sleep for a small amount of time and then re-run us,
+            # Do not attempt to deliver any other message, only increment delivery_count for each message
+            # from that batch and return. Our parent will sleep for a small amount of time and then re-run us,
             # thanks to which the next time we run we will again iterate over all the messages
             # currently queued up, including the ones that we were not able to deliver in current iteration.
+
             exc = format_exc(e)
             logger.warn('Could not deliver pub/sub messages, e:`%s`', exc)
             logger_zato.warn('Could not deliver pub/sub messages, e:`%s`', exc)
+
+            # ZZZ:
+            #increment delivery_count for each message from to_deliver here
+
             return _run_deliv_status.SOCKET_ERROR if isinstance(e, SocketError) else _run_deliv_status.OTHER_ERROR
 
         else:
