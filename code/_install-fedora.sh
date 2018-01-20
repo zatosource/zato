@@ -21,16 +21,6 @@ sudo yum -y install git bzr gcc-gfortran haproxy \
     openssl openssl-devel postgresql-devel python-devel numpy \
     scipy swig uuid-devel uuid
 
-# On RHEL 6 we need downgrade psycopg2 to make it compile
-# against the PostgreSQL version that RHEL 6 ships with by default (8.4)
-cat /etc/redhat-release | grep "release 6" > /dev/null 2>&1
-if (($? == 0)) ; then IS_RHEL6=1 ; fi
-
-if [ $IS_RHEL6 -eq 1 ]
-then
-  sed -i '/psycopg2/psycopg2 = 2.5.3' $CURDIR/versions.cfg
-fi
-
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
 sudo python get-pip.py
 
