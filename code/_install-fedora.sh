@@ -36,7 +36,7 @@ sudo pip install setuptools==35.0.1
 sudo pip install virtualenv==1.9.1
 sudo pip install zato-apitest
 
-virtualenv --no-pip --python=$CURDIR/bin/python2.7 .
+virtualenv --no-pip --python=python2.7 .
 
 $CURDIR/bin/python bootstrap.py
 $CURDIR/bin/buildout
