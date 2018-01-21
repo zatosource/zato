@@ -43,14 +43,16 @@ from zato.common.ipc.api import IPCAPI
 from zato.common.posix_ipc_util import ServerStartupIPC
 from zato.common.pubsub import SkipDelivery
 from zato.common.time_util import TimeUtil
-from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
-     invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, register_diag_handlers
+from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_free_port, get_user_config_name, hot_deploy, \
+     invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
+     register_diag_handlers
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
 from zato.server.connection.server import Servers
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
+from zato.server.base.parallel.wmq import WMQIPC
 from zato.server.pickup import PickupManager
 
 # ################################################################################################################################
@@ -62,7 +64,7 @@ megabyte = 10**6
 
 # ################################################################################################################################
 
-class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTPHandler):
+class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
     """ Main server process.
     """
     def __init__(self):
@@ -124,6 +126,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.sync_internal = None
         self.ipc_api = IPCAPI(False)
         self.ipc_forwarder = IPCAPI(True)
+        self.wmq_ipc_tcp_port = None
         self.fifo_response_buffer_size = 0.1 # In megabytes
         self.live_msg_browser = None
         self.is_first_worker = None
@@ -446,16 +449,20 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host,
             self.port, self.preferred_address, use_tls)
 
-        # Startup services
         if is_first:
+
+            # Startup services
             self.invoke_startup_services(is_first)
             spawn_greenlet(self.set_up_pickup)
 
-        # IPC
-        if is_first:
+            # IPC
             self.ipc_forwarder.name = self.name
             self.ipc_forwarder.pid = self.pid
             spawn_greenlet(self.ipc_forwarder.run)
+
+            # Set up WebSphere MQ connections if that component is enabled
+            if self.fs_server_config.component_enabled.websphere_mq:
+                self.start_websphere_mq_connector(int(self.fs_server_config.websphere_mq.ipc_tcp_start_port))
 
         # IPC
         self.ipc_api.name = self.name
@@ -467,6 +474,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def start_websphere_mq_connector(self, ipc_tcp_start_port):
+        """ Starts an HTTP server acting as a WebSphere MQ connector. Its port will be greater than ipc_tcp_start_port,
+        which is the starting point to find a free port from.
+        """
+        self.wmq_ipc_tcp_port = get_free_port(ipc_tcp_start_port)
+        logger.info('Found TCP port `%s` for WebSphere MQ connector to use by server `%s`', self.wmq_ipc_tcp_port, self.name)
+
+# ################################################################################################################################
 
     def invoke_startup_services(self, is_first):
         _invoke_startup_services(
