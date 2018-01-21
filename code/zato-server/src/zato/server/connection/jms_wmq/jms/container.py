@@ -27,6 +27,7 @@ from logging import basicConfig, DEBUG, getLogger, INFO
 from os import getpid
 from thread import start_new_thread
 from threading import RLock
+from wsgiref.simple_server import make_server
 
 # Bunch
 from bunch import Bunch
@@ -35,7 +36,6 @@ from bunch import Bunch
 from threadpool import ThreadPool, WorkRequest, NoResultsPending
 
 # Zato
-from zato.common.ipc.api import IPCAPI
 from zato.server.connection.jms_wmq.jms import WebSphereMQJMSException, NoMessageAvailableException
 from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
 from zato.server.connection.jms_wmq.jms.core import TextMessage
@@ -107,14 +107,9 @@ class ConnectionContainer(object):
     def __init__(self):
         self.lock = RLock()
         self.connections = {}
-        self.ipc_api = IPCAPI(False, 'wmq-server1', self.on_ipc_message_received, getpid(), False)
-        self.ipc_api.run()
-
-        self.ipc_api.publish('zzz')
 
     def on_mq_message_received(self, msg):
-        #logger.info('MQ message received %s', msg)
-        pass
+        logger.info('MQ message received %s', msg)
 
     def add_conn_def(self, config):
         with self.lock:
@@ -122,9 +117,6 @@ class ConnectionContainer(object):
             conn.connect()
 
             self.connections[config.name] = conn
-
-    def on_ipc_message_received(self, msg):
-        logger.warn('MQ IPC: `%s`', msg)
 
     def add_channel(self, config):
         with self.lock:
@@ -142,8 +134,27 @@ class ConnectionContainer(object):
 
             #print(conn.receive('DEV.QUEUE.1', 100))
 
+# ################################################################################################################################
+
+    def on_wsgi_request(self, environ, start_response):
+
+        data = environ['wsgi.input'].read(int(environ['CONTENT_LENGTH']))
+
+        print()
+        print(data, type(data))
+        print()
+
+        status = '200 OK'  # HTTP Status
+        headers = [('Content-type', 'text/plain')]  # HTTP Headers
+        start_response(status, headers)
+
+        return ['OK']
+
+# ################################################################################################################################
+
     def run(self):
-        print(123)
+        server = make_server('127.0.0.1', 34567, self.on_wsgi_request)
+        server.serve_forever()
 
 # ################################################################################################################################
 
