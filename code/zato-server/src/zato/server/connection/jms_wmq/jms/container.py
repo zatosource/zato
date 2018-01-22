@@ -23,28 +23,28 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import sys
+from json import loads
 from logging import basicConfig, DEBUG, getLogger, INFO
-from os import getpid
+from os import getpid, getppid
 from thread import start_new_thread
 from threading import RLock
 from wsgiref.simple_server import make_server
 
 # Bunch
-from bunch import Bunch
+from bunch import Bunch, bunchify
 
 # ThreadPool
 from threadpool import ThreadPool, WorkRequest, NoResultsPending
 
 # Zato
+from zato.common.zato_keyutils import KeyUtils
 from zato.server.connection.jms_wmq.jms import WebSphereMQJMSException, NoMessageAvailableException
 from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
 from zato.server.connection.jms_wmq.jms.core import TextMessage
 
 # ################################################################################################################################
 
-log_level = INFO
-log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
-basicConfig(level=INFO, format=log_format)
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -105,8 +105,39 @@ class WebSphereMQTask(object):
 
 class ConnectionContainer(object):
     def __init__(self):
+        self.host = None
+        self.port = None
+        self.username = None
+        self.password = None
+        self.basic_auth_expected = None
+        self.server_pid = None
+        self.server_name = None
+        self.cluster_name = None
+
+        self.parent_pid = getppid()
+        self.keyutils = KeyUtils('zato-wmq', self.parent_pid)
         self.lock = RLock()
         self.connections = {}
+        self.set_config()
+
+    def set_config(self):
+        """ Sets self attributes, as configured in keyring by our parent process.
+        """
+        config = self.keyutils.user_get()
+        config = loads(config)
+        config = bunchify(config)
+
+        self.host = config.host
+        self.port = config.port
+        self.username = config.username
+        self.password = config.password
+        self.server_pid = config.server_pid
+        self.server_name = config.server_name
+        self.cluster_name = config.cluster_name
+
+        log_level = INFO
+        log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+        basicConfig(level=INFO, format=log_format)
 
     def on_mq_message_received(self, msg):
         logger.info('MQ message received %s', msg)
@@ -153,34 +184,14 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def run(self):
-        server = make_server('127.0.0.1', 34567, self.on_wsgi_request)
+        server = make_server(self.host, self.port, self.on_wsgi_request)
         server.serve_forever()
 
 # ################################################################################################################################
 
 if __name__ == '__main__':
 
-    config = Bunch()
-    config.queue_manager = 'QM1'
-    config.channel = 'DEV.APP.SVRCONN'
-    config.host = 'localhost'
-    config.listener_port = 1414
-    config.username = 'app'
-    config.password = 'abcd1234'
-    config.cache_open_send_queues = True
-    config.cache_open_receive_queues = True
-    config.use_shared_connections = True
-    config.dynamic_queue_template = 'SYSTEM.DEFAULT.MODEL.QUEUE'
-    config.ssl = False
-    config.ssl_cipher_spec = None
-    config.ssl_key_repository = None
-    config.needs_mcd = True
-    config.needs_jms = False
-
     container = ConnectionContainer()
     container.run()
-
-    from time import sleep
-    sleep(3)
 
 # ################################################################################################################################

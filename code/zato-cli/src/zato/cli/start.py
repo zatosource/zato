@@ -25,7 +25,7 @@ from zato.cli.check_config import CheckConfig
 from zato.cli.stop import Stop
 from zato.common import CLI_ARG_SEP, MISC
 from zato.common.proc_util import start_python_process
-from zato.common.util import get_executable, get_haproxy_agent_pidfile
+from zato.common.util import get_haproxy_agent_pidfile
 
 stderr_sleep_fg = 0.9
 stderr_sleep_bg = 1.2
