@@ -40,9 +40,11 @@ from zato.bunch import Bunch
 from zato.common import DATA_FORMAT, KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
+from zato.common.zato_keyutils import KeyUtils
 from zato.common.posix_ipc_util import ServerStartupIPC
 from zato.common.pubsub import SkipDelivery
 from zato.common.time_util import TimeUtil
+from zato.common.proc_util import start_python_process
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_free_port, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
@@ -132,6 +134,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.is_first_worker = None
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
+        self.keyutils = KeyUtils()
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -479,7 +482,21 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         which is the starting point to find a free port from.
         """
         self.wmq_ipc_tcp_port = get_free_port(ipc_tcp_start_port)
-        logger.info('Found TCP port `%s` for WebSphere MQ connector to use by server `%s`', self.wmq_ipc_tcp_port, self.name)
+        logger.info('Starting WebSphere MQ connector for server `%s` on `%s`', self.wmq_ipc_tcp_port, self.name)
+
+        # User kernel's facilities to store configuration
+        self.keyutils.user_set(b'zato-wmq', dumps({
+            'host': '127.0.0.1',
+            'port': self.wmq_ipc_tcp_port,
+            'username': 'my-username',
+            'password': 'my-password',
+            'server_pid': self.pid,
+            'server_name': self.name,
+            'cluster_name': self.cluster.name,
+        }), self.pid)
+
+        # Start WebSphere MQ connector in a sub-process
+        start_python_process(False, 'zato.server.connection.jms_wmq.jms.container', 'WebSphere MQ connector', '')
 
 # ################################################################################################################################
 
