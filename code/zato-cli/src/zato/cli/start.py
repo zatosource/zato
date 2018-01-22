@@ -24,27 +24,11 @@ from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.cli.stop import Stop
 from zato.common import CLI_ARG_SEP, MISC
+from zato.common.proc_util import start_python_process
 from zato.common.util import get_executable, get_haproxy_agent_pidfile
 
 stderr_sleep_fg = 0.9
 stderr_sleep_bg = 1.2
-
-class _StdErr(object):
-    def __init__(self, path, timeout):
-        self.path = path
-        self.timeout = timeout
-
-    def wait_for_error(self):
-        now = time()
-
-        while time() - now < self.timeout:
-            sleep(0.02)
-            _stderr = open(self.path)
-            _err = _stderr.read()
-            if _err:
-                return _err
-            else:
-                _stderr.close()
 
 class Start(ManageCommand):
     """Starts a Zato component installed in the 'path'. The same command is used for starting servers, load-balancer and web admin instances. 'path' must point to a directory into which the given component has been installed. # nopep8
@@ -82,6 +66,12 @@ Examples:
     def start_component(self, py_path, name, program_dir, on_keyboard_interrupt=None):
         """ Starts a component in background or foreground, depending on the 'fg' flag.
         """
+        start_python_process(
+            self.args.fg, py_path, name, program_dir, on_keyboard_interrupt, self.SYS_ERROR.FAILED_TO_START, {
+                'sync_internal': self.args.sync_internal
+            })
+
+        '''
         tmp_path = mkstemp('-zato-start-{}.txt'.format(name.replace(' ','')))[1]
         stdout_redirect = '' if self.args.fg else '1> /dev/null'
         stderr_redirect = '2> {}'.format(tmp_path)
@@ -91,6 +81,10 @@ Examples:
             'fg': self.args.fg,
         }
         options = CLI_ARG_SEP.join('{}={}'.format(k, v) for k, v in options.items())
+
+        extra_options = {
+            'sync_internal': self.args.sync_internal
+        }
 
         program = '{} -m {} {} {} {} {}'.format(get_executable(), py_path, program_dir, options, stdout_redirect, stderr_redirect)
         try:
@@ -107,6 +101,8 @@ Examples:
             if on_keyboard_interrupt:
                 on_keyboard_interrupt()
             sys.exit(0)
+
+            '''
 
         if self.show_output:
             if not self.args.fg and self.verbose:
