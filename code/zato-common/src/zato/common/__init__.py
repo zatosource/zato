@@ -315,6 +315,11 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.XPATH_SEC: 'XPath',
 }
 
+class AUTH_RESULT:
+    class BASIC_AUTH:
+        INVALID_PREFIX = 'invalid-prefix'
+        NO_AUTH = 'no-auth'
+
 DEFAULT_STATS_SETTINGS = {
     'scheduler_per_minute_aggr_interval':60,
     'scheduler_raw_times_interval':90,
@@ -952,6 +957,10 @@ class IPC:
         SUCCESS = 'zato.success'
         FAILURE = 'zato.failure'
         LENGTH = 12 # Length of either success or failure messages
+
+    class CONNECTOR:
+        class WEBSPHERE_MQ:
+            USERNAME = 'zato.connector.wmq'
 
 class WEB_SOCKET:
     class DEFAULT:
