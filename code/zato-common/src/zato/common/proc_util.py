@@ -75,6 +75,8 @@ def start_python_process(run_in_fg, py_path, name, program_dir, on_keyboard_inte
 
     program = '{} -m {} {} {} {} {}'.format(get_executable(), py_path, program_dir, options, stdout_redirect, stderr_redirect)
 
+    print(program)
+
     try:
         _stderr = _StdErr(stderr_path, stderr_sleep_fg if run_in_fg else stderr_sleep_bg)
         sarge_run(program, async=False if run_in_fg else True)

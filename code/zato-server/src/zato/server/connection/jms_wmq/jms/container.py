@@ -26,11 +26,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import sys
 from json import loads
-from logging import basicConfig, DEBUG, getLogger, Formatter, INFO
+from logging import basicConfig, DEBUG, Formatter, getLogger, INFO, StreamHandler
 from logging.handlers import RotatingFileHandler
 from os import getpid, getppid, path
 from thread import start_new_thread
 from threading import RLock
+from traceback import format_exc
 from wsgiref.simple_server import make_server
 import httplib
 
@@ -60,7 +61,8 @@ default_logging_config = {
     },
     'handlers': {
         'websphere_mq': {
-            'formatter': 'default', 'backupCount': 10, 'mode': 'a', 'maxBytes': 20000000, 'filename': './logs/websphere-mq.log'}
+            'formatter': 'default', 'backupCount': 10, 'mode': 'a', 'maxBytes': 20000000, 'filename': './logs/websphere-mq.log'
+        },
     },
     'formatters': {
         'default': {
@@ -73,6 +75,7 @@ default_logging_config = {
 _http_200 = b'{} {}'.format(httplib.OK, httplib.responses[httplib.OK])
 _http_400 = b'{} {}'.format(httplib.BAD_REQUEST, httplib.responses[httplib.BAD_REQUEST])
 _http_403 = b'{} {}'.format(httplib.FORBIDDEN, httplib.responses[httplib.FORBIDDEN])
+_http_500 = b'{} {}'.format(httplib.INTERNAL_SERVER_ERROR, httplib.responses[httplib.INTERNAL_SERVER_ERROR])
 
 # ################################################################################################################################
 
@@ -151,19 +154,24 @@ class ConnectionContainer(object):
     def set_config(self):
         """ Sets self attributes, as configured in keyring by our parent process.
         """
+        '''
         config = self.keyutils.user_get()
         config = loads(config)
         config = bunchify(config)
+        '''
 
-        self.port = config.port
+        self.port = 34567#config.port
+        self.base_dir = '/home/dsuch/env/qs-ps2/server1'
+        '''
         self.username = config.username
         self.password = config.password
         self.server_pid = config.server_pid
         self.server_name = config.server_name
         self.cluster_name = config.cluster_name
         self.base_dir = config.base_dir
+        '''
 
-        with open(config.logging_conf_path) as f:
+        with open('/home/dsuch/env/qs-ps2/server1/config/repo/logging.conf') as f:#config.logging_conf_path) as f:
             logging_config = yaml.load(f)
 
         # WebSphere MQ logging configuration is new in Zato 3.0, so it's optional.
@@ -177,39 +185,25 @@ class ConnectionContainer(object):
     def set_up_logging(self, config):
 
         logger_conf = config['loggers']['zato_websphere_mq']
-        handler_conf = config['handlers']['websphere_mq']
-        del handler_conf['formatter']
-        del handler_conf['class']
+        wmq_handler_conf = config['handlers']['websphere_mq']
+        del wmq_handler_conf['formatter']
+        del wmq_handler_conf['class']
         formatter_conf = config['formatters']['default']['format']
 
         self.logger = getLogger(logger_conf['qualname'])
         self.logger.setLevel(getattr(logging, logger_conf['level']))
 
-        handler_conf['filename'] = path.abspath(path.join(self.base_dir, handler_conf['filename']))
-        handler = RotatingFileHandler(**handler_conf)
-
         formatter = Formatter(formatter_conf)
-        handler.setFormatter(formatter)
 
-        self.logger.addHandler(handler)
+        wmq_handler_conf['filename'] = path.abspath(path.join(self.base_dir, wmq_handler_conf['filename']))
+        wmq_handler = RotatingFileHandler(**wmq_handler_conf)
+        wmq_handler.setFormatter(formatter)
 
-        self.logger.warn('zzz')
+        stdout_handler = StreamHandler(sys.stdout)
+        stdout_handler.setFormatter(formatter)
 
-        '''
-            'loggers': {
-        'zato_websphere_mq': {
-            'qualname': 'zato_websphere_mq', 'level': 'INFO', 'propagate': False, 'handlers': ['websphere_mq']}
-    },
-    'handlers': {
-        'websphere_mq': {
-            'formatter': 'default', 'backupCount': 10, 'mode': 'a', 'maxBytes': 20000000, 'filename': './logs/websphere-mq.log'}
-    },
-    'formatters': {
-        'default': {
-            'format': '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'}
-    }
-}
-'''
+        self.logger.addHandler(wmq_handler)
+        self.logger.addHandler(stdout_handler)
 
 # ################################################################################################################################
 
@@ -263,6 +257,8 @@ class ConnectionContainer(object):
     def handle_http_request(self, msg):
         """ Dispatches incoming HTTP requests - either reconfigures the connector or puts messages to queues.
         """
+        self.logger.warn('MSG received %s', msg)
+        msg = bunchify(loads(msg))
         action = msg.action
 
         self.logger.info(msg)
@@ -273,6 +269,7 @@ class ConnectionContainer(object):
     def check_credentials(self, auth):
         """ Checks incoming username/password and returns True only if they were valid and as expected.
         """
+        return True
         username, password = parse_basic_auth(auth)
 
         if username != self.username:
@@ -289,27 +286,33 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def on_wsgi_request(self, environ, start_response):
-
-        content_length = environ['CONTENT_LENGTH']
-        if not content_length:
-            status = _http_400
-            response = 'Missing content'
-            content_type = 'text/plain'
-        else:
-            data = environ['wsgi.input'].read(int(content_length))
-            if self.check_credentials(environ.get('HTTP_AUTHORIZATION')):
-                status = _http_200
-                response = self.handle_http_request(data)
-                content_type = 'text/json'
-            else:
-                status = _http_403
-                response = 'You are not allowed to access this resource'
+        try:
+            content_length = environ['CONTENT_LENGTH']
+            if not content_length:
+                status = _http_400
+                response = 'Missing content'
                 content_type = 'text/plain'
+            else:
+                data = environ['wsgi.input'].read(int(content_length))
+                if self.check_credentials(environ.get('HTTP_AUTHORIZATION')):
+                    status = _http_200
+                    response = self.handle_http_request(data)
+                    content_type = 'text/json'
+                else:
+                    status = _http_403
+                    response = 'You are not allowed to access this resource'
+                    content_type = 'text/plain'
 
-        headers = [('Content-type', content_type)]
-        start_response(status, headers)
+        except Exception as e:
+            self.logger.warn(format_exc())
+            content_type = 'text/plain'
+            status = _http_500
+            response = 'Internal server error'
+        finally:
+            headers = [('Content-type', content_type)]
+            start_response(status, headers)
 
-        return [response]
+            return [response]
 
 # ################################################################################################################################
 

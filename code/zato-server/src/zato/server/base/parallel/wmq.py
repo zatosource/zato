@@ -65,14 +65,13 @@ class WMQIPC(object):
         }), self.pid)
 
         # Start WebSphere MQ connector in a sub-process
-        start_python_process(False, 'zato.server.connection.jms_wmq.jms.container', 'WebSphere MQ connector', '',
-            stderr_path=os.path.join(self.logs_dir, 'wmq.log'))
+        start_python_process(False, 'zato.server.connection.jms_wmq.jms.container', 'WebSphere MQ connector', '')
 
 # ################################################################################################################################
 
     def invoke_wmq_connector(self, msg, address_pattern='http://127.0.0.1:{}/'):
         if self.is_first_worker:
             address = address_pattern.format(self.wmq_ipc_tcp_port)
-            return post(address, data=str(msg), auth=self.get_wmq_credentials())
+            return post(address, data=dumps(msg), auth=self.get_wmq_credentials())
 
 # ################################################################################################################################
