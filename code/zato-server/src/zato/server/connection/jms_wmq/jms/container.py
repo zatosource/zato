@@ -23,13 +23,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import sys
 from json import loads
-from logging import basicConfig, DEBUG, getLogger, INFO
-from os import getpid, getppid
+from logging import basicConfig, DEBUG, getLogger, Formatter, INFO
+from logging.handlers import RotatingFileHandler
+from os import getpid, getppid, path
 from thread import start_new_thread
 from threading import RLock
 from wsgiref.simple_server import make_server
+import httplib
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -37,7 +40,12 @@ from bunch import Bunch, bunchify
 # ThreadPool
 from threadpool import ThreadPool, WorkRequest, NoResultsPending
 
+# YAML
+import yaml
+
 # Zato
+from zato.common.auth_util import parse_basic_auth
+from zato.common.broker_message import code_to_name, DEFINITION
 from zato.common.zato_keyutils import KeyUtils
 from zato.server.connection.jms_wmq.jms import WebSphereMQJMSException, NoMessageAvailableException
 from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
@@ -45,7 +53,26 @@ from zato.server.connection.jms_wmq.jms.core import TextMessage
 
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+default_logging_config = {
+    'loggers': {
+        'zato_websphere_mq': {
+            'qualname': 'zato_websphere_mq', 'level': 'INFO', 'propagate': False, 'handlers': ['websphere_mq']}
+    },
+    'handlers': {
+        'websphere_mq': {
+            'formatter': 'default', 'backupCount': 10, 'mode': 'a', 'maxBytes': 20000000, 'filename': './logs/websphere-mq.log'}
+    },
+    'formatters': {
+        'default': {
+            'format': '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'}
+    }
+}
+
+# ################################################################################################################################
+
+_http_200 = b'{} {}'.format(httplib.OK, httplib.responses[httplib.OK])
+_http_400 = b'{} {}'.format(httplib.BAD_REQUEST, httplib.responses[httplib.BAD_REQUEST])
+_http_403 = b'{} {}'.format(httplib.FORBIDDEN, httplib.responses[httplib.FORBIDDEN])
 
 # ################################################################################################################################
 
@@ -57,7 +84,7 @@ class WebSphereMQTask(object):
         self.on_message_callback = on_message_callback
         self.handlers_pool = ThreadPool(5)
         self.keep_running = True
-        self.has_debug = logger.isEnabledFor(DEBUG)
+        self.has_debug = self.logger.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -79,7 +106,7 @@ class WebSphereMQTask(object):
                 try:
                     message = self.conn.receive(queue_name, 1000)
                     if self.has_debug:
-                        logger.debug('Message received `%s`' % str(message).decode('utf-8'))
+                        self.logger.debug('Message received `%s`' % str(message).decode('utf-8'))
 
                     work_request = WorkRequest(self.on_message_callback, [message])
                     self.handlers_pool.putRequest(work_request)
@@ -91,10 +118,10 @@ class WebSphereMQTask(object):
 
                 except NoMessageAvailableException, e:
                     if self.has_debug:
-                        logger.debug('Consumer did not receive a message. `%s`' % self._get_destination_info())
+                        self.logger.debug('Consumer did not receive a message. `%s`' % self._get_destination_info())
 
                 except WebSphereMQJMSException, e:
-                    logger.error('%s in run, completion_code:`%s`, reason_code:`%s`' % (
+                    self.logger.error('%s in run, completion_code:`%s`, reason_code:`%s`' % (
                         e.__class__.__name__, e.completion_code, e.reason_code))
                     raise
 
@@ -105,7 +132,7 @@ class WebSphereMQTask(object):
 
 class ConnectionContainer(object):
     def __init__(self):
-        self.host = None
+        self.host = '127.0.0.1'
         self.port = None
         self.username = None
         self.password = None
@@ -113,6 +140,7 @@ class ConnectionContainer(object):
         self.server_pid = None
         self.server_name = None
         self.cluster_name = None
+        self.logger = None
 
         self.parent_pid = getppid()
         self.keyutils = KeyUtils('zato-wmq', self.parent_pid)
@@ -127,20 +155,68 @@ class ConnectionContainer(object):
         config = loads(config)
         config = bunchify(config)
 
-        self.host = config.host
         self.port = config.port
         self.username = config.username
         self.password = config.password
         self.server_pid = config.server_pid
         self.server_name = config.server_name
         self.cluster_name = config.cluster_name
+        self.base_dir = config.base_dir
 
-        log_level = INFO
-        log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
-        basicConfig(level=INFO, format=log_format)
+        with open(config.logging_conf_path) as f:
+            logging_config = yaml.load(f)
+
+        # WebSphere MQ logging configuration is new in Zato 3.0, so it's optional.
+        if not 'zato_websphere_mq' in logging_config['loggers']:
+            logging_config = default_logging_config
+
+        self.set_up_logging(logging_config)
+
+# ################################################################################################################################
+
+    def set_up_logging(self, config):
+
+        logger_conf = config['loggers']['zato_websphere_mq']
+        handler_conf = config['handlers']['websphere_mq']
+        del handler_conf['formatter']
+        del handler_conf['class']
+        formatter_conf = config['formatters']['default']['format']
+
+        self.logger = getLogger(logger_conf['qualname'])
+        self.logger.setLevel(getattr(logging, logger_conf['level']))
+
+        handler_conf['filename'] = path.abspath(path.join(self.base_dir, handler_conf['filename']))
+        handler = RotatingFileHandler(**handler_conf)
+
+        formatter = Formatter(formatter_conf)
+        handler.setFormatter(formatter)
+
+        self.logger.addHandler(handler)
+
+        self.logger.warn('zzz')
+
+        '''
+            'loggers': {
+        'zato_websphere_mq': {
+            'qualname': 'zato_websphere_mq', 'level': 'INFO', 'propagate': False, 'handlers': ['websphere_mq']}
+    },
+    'handlers': {
+        'websphere_mq': {
+            'formatter': 'default', 'backupCount': 10, 'mode': 'a', 'maxBytes': 20000000, 'filename': './logs/websphere-mq.log'}
+    },
+    'formatters': {
+        'default': {
+            'format': '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'}
+    }
+}
+'''
+
+# ################################################################################################################################
 
     def on_mq_message_received(self, msg):
-        logger.info('MQ message received %s', msg)
+        self.logger.info('MQ message received %s', msg)
+
+# ################################################################################################################################
 
     def add_conn_def(self, config):
         with self.lock:
@@ -148,6 +224,8 @@ class ConnectionContainer(object):
             conn.connect()
 
             self.connections[config.name] = conn
+
+# ################################################################################################################################
 
     def add_channel(self, config):
         with self.lock:
@@ -167,19 +245,71 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
+    def _on_DEFINITION_JMS_WMQ_CREATE(self, msg):
+        pass
+
+# ################################################################################################################################
+
+    def _on_DEFINITION_JMS_WMQ_EDIT(self, msg):
+        pass
+
+# ################################################################################################################################
+
+    def _on_DEFINITION_JMS_WMQ_DELETE(self, msg):
+        pass
+
+# ################################################################################################################################
+
+    def handle_http_request(self, msg):
+        """ Dispatches incoming HTTP requests - either reconfigures the connector or puts messages to queues.
+        """
+        action = msg.action
+
+        self.logger.info(msg)
+        return b'OK'
+
+# ################################################################################################################################
+
+    def check_credentials(self, auth):
+        """ Checks incoming username/password and returns True only if they were valid and as expected.
+        """
+        username, password = parse_basic_auth(auth)
+
+        if username != self.username:
+            self.logger.warn('Invalid username or password')
+            return
+
+        elif password != self.password:
+            self.logger.warn('Invalid username or password')
+            return
+        else:
+            # All good, we let the request in
+            return True
+
+# ################################################################################################################################
+
     def on_wsgi_request(self, environ, start_response):
 
-        data = environ['wsgi.input'].read(int(environ['CONTENT_LENGTH']))
+        content_length = environ['CONTENT_LENGTH']
+        if not content_length:
+            status = _http_400
+            response = 'Missing content'
+            content_type = 'text/plain'
+        else:
+            data = environ['wsgi.input'].read(int(content_length))
+            if self.check_credentials(environ.get('HTTP_AUTHORIZATION')):
+                status = _http_200
+                response = self.handle_http_request(data)
+                content_type = 'text/json'
+            else:
+                status = _http_403
+                response = 'You are not allowed to access this resource'
+                content_type = 'text/plain'
 
-        print()
-        print(data, type(data))
-        print()
-
-        status = '200 OK'  # HTTP Status
-        headers = [('Content-type', 'text/plain')]  # HTTP Headers
+        headers = [('Content-type', content_type)]
         start_response(status, headers)
 
-        return ['OK']
+        return [response]
 
 # ################################################################################################################################
 

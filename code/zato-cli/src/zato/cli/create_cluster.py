@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import CACHE, DATA_FORMAT, MISC, PUBSUB, SIMPLE_IO, WEB_SOCKET
+from zato.common import CACHE, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, WEB_SOCKET
 from zato.common.odb.model import CacheBuiltin, ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, \
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
 from zato.common.pubsub import new_sub_key
@@ -503,15 +503,22 @@ class Create(ZatoCommand):
 
         self.add_default_rbac_permissions(session, cluster)
         root_rbac_role = self.add_default_rbac_roles(session, cluster)
-        apispec_rbac_role = self.add_rbac_role_and_acct(session, cluster, root_rbac_role, 'API Specification Readers', 'apispec', 'apispec')
-        ide_pub_rbac_role = self.add_rbac_role_and_acct(session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
+        apispec_rbac_role = self.add_rbac_role_and_acct(
+            session, cluster, root_rbac_role, 'API Specification Readers', 'apispec', 'apispec')
+        ide_pub_rbac_role = self.add_rbac_role_and_acct(
+            session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
 
         self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec,
-                                   apispec_rbac_role, ide_pub_rbac_role)
+            apispec_rbac_role, ide_pub_rbac_role)
         self.add_ping_services(session, cluster)
         self.add_default_cache(session, cluster)
         self.add_cache_endpoints(session, cluster)
         self.add_pubsub_sec_endpoints(session, cluster)
+
+        # For WebSphere MQ connections / connectors
+        wmq_username = IPC.CONNECTOR.WEBSPHERE_MQ.USERNAME
+        wmq_sec = HTTPBasicAuth(None, wmq_username, True, wmq_username, 'Zato WebSphere MQ', uuid4().hex, cluster)
+        session.add(wmq_sec)
 
         try:
             session.commit()
@@ -901,8 +908,7 @@ class Create(ZatoCommand):
 
     def add_pubsub_sec_endpoints(self, session, cluster):
 
-        #sec = HTTPBasicAuth(None, 'zato.pubsub', True, 'zato.pubsub', 'Zato pub/sub', uuid4().hex, cluster)
-        sec = HTTPBasicAuth(None, 'zato.pubsub', True, 'zz', 'Zato pub/sub', 'zz', cluster)
+        sec = HTTPBasicAuth(None, 'zato.pubsub', True, 'zato.pubsub', 'Zato pub/sub', uuid4().hex, cluster)
         session.add(sec)
 
         endpoint = PubSubEndpoint()

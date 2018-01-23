@@ -58,12 +58,12 @@ class _StdErr(object):
 # ################################################################################################################################
 
 def start_python_process(run_in_fg, py_path, name, program_dir, on_keyboard_interrupt=None, failed_to_start_err=-100,
-    extra_options=None):
+    extra_options=None, stderr_path=None):
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
-    tmp_path = mkstemp('-zato-start-{}.txt'.format(name.replace(' ','')))[1]
+    stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(name.replace(' ','')))[1]
     stdout_redirect = '' if run_in_fg else '1> /dev/null'
-    stderr_redirect = '2> {}'.format(tmp_path)
+    stderr_redirect = '2> {}'.format(stderr_path)
 
     options = {
         'fg': run_in_fg,
@@ -75,11 +75,8 @@ def start_python_process(run_in_fg, py_path, name, program_dir, on_keyboard_inte
 
     program = '{} -m {} {} {} {} {}'.format(get_executable(), py_path, program_dir, options, stdout_redirect, stderr_redirect)
 
-    print(222, program)
-    print()
-
     try:
-        _stderr = _StdErr(tmp_path, stderr_sleep_fg if run_in_fg else stderr_sleep_bg)
+        _stderr = _StdErr(stderr_path, stderr_sleep_fg if run_in_fg else stderr_sleep_bg)
         sarge_run(program, async=False if run_in_fg else True)
 
         # Wait a moment for any potential errors
