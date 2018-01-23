@@ -23,9 +23,13 @@ class KeyUtils(object):
     """
     _user_keyring = _keyutils.KEY_SPEC_USER_KEYRING
 
+# ################################################################################################################################
+
     def __init__(self, default_key=None, default_pid=None):
         self.default_key = default_key
         self.default_pid = default_pid
+
+# ################################################################################################################################
 
     def _format_proc_key(self, key, pid):
         """ Prepends a process PID to key, if such a PID is given on input.
@@ -35,34 +39,41 @@ class KeyUtils(object):
         prefix = '{}-'.format(pid) if pid else ''
         return '{}{}'.format(prefix, key)
 
+# ################################################################################################################################
+
+    def _get_user_key_id(self, key=None, pid=None):
+        """ Returns ID under which a given key name is known.
+        """
+        key = key or self.default_key
+        pid = pid or self.default_pid
+
+        formatted = self._format_proc_key(key, pid)
+        key_id = _keyutils.request_key(formatted, self._user_keyring)
+
+        if not key_id:
+            raise ValueError('No such key `{}` in proc keyring'.format(formatted))
+
+        return key_id
+
+# ################################################################################################################################
+
     def user_set(self, key, value, pid=None):
         """ Sets key to value in current user's keyring.
         """
         return _keyutils.add_key(self._format_proc_key(key, pid), value, self._user_keyring)
 
+# ################################################################################################################################
+
     def user_get(self, key=None, pid=None):
         """ Returns value of key from current user's keyring.
         """
-        key = key or self.default_key
-        pid = pid or self.default_pid
-
-        key_id = _keyutils.request_key(self._format_proc_key(key, pid), self._user_keyring)
-
-        if not key_id:
-            raise ValueError('No such key `{}` in proc keyring'.format(key))
-        else:
-            return _keyutils.read_key(key_id)
+        return _keyutils.read_key(self._get_user_key_id(key))
 
 # ################################################################################################################################
 
-if __name__ == '__main__':
-
-    key = b'zzz'
-    value = b'qqq'
-
-    ku = KeyUtils()
-    ku.user_set(key, value)
-
-    print(ku.user_get(key))
+    def user_delete(self, key, pid=None):
+        """ Deletes key from current user's keyring.
+        """
+        return _keyutils.unlink(self._get_user_key_id(key, pid), self._user_keyring)
 
 # ################################################################################################################################
