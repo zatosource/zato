@@ -197,7 +197,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': DEFINITION.JMS_WMQ_DELETE.value, 'id': self.request.input.id}
-                self.broker_client.publish(msg, msg_type)
+                self.broker_client.publish(msg)
 
             except Exception, e:
                 session.rollback()
