@@ -108,7 +108,7 @@ pyflakes==0.8.1
 pygments==1.5
 PyJWT==1.4.2
 PyMySQL==0.7.11
-pyOpenSSL==0.15.1
+pyOpenSSL==17.5.0
 pyparsing==2.2.0
 pyprof2calltree==1.1.0
 PyPubSub==3.3.0
