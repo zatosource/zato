@@ -82,9 +82,10 @@ _http_500 = b'{} {}'.format(httplib.INTERNAL_SERVER_ERROR, httplib.responses[htt
 class WebSphereMQTask(object):
     """ A process to listen for messages and to send them to WebSphere MQ queue managers.
     """
-    def __init__(self, conn, on_message_callback):
+    def __init__(self, conn, on_message_callback, max_chars_printed):
         self.conn = conn
         self.on_message_callback = on_message_callback
+        self.max_chars_printed = max_chars_printed
         self.handlers_pool = ThreadPool(5)
         self.keep_running = True
         self.has_debug = self.logger.isEnabledFor(DEBUG)
@@ -212,15 +213,6 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
-    def add_conn_def(self, config):
-        with self.lock:
-            conn = WebSphereMQConnection(**config)
-            conn.connect()
-
-            self.connections[config.name] = conn
-
-# ################################################################################################################################
-
     def add_channel(self, config):
         with self.lock:
 
@@ -240,7 +232,18 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_DEFINITION_JMS_WMQ_CREATE(self, msg):
-        pass
+        """ Creates a new connection to WebSphere MQ.
+        """
+        conn_name = msg.pop('name')
+        cluster_id = msg.pop('cluster_id')
+        id = msg.pop('id')
+        max_chars_printed = msg.pop('max_chars_printed')
+
+        with self.lock:
+            conn = WebSphereMQConnection(**msg)
+            conn.connect()
+
+            self.connections[msg.name] = conn
 
 # ################################################################################################################################
 
@@ -259,9 +262,13 @@ class ConnectionContainer(object):
         """
         self.logger.warn('MSG received %s', msg)
         msg = bunchify(loads(msg))
-        action = msg.action
 
-        self.logger.info(msg)
+        # Delete what handlers don't need
+        del msg['msg_type']
+        action = msg.pop('action')
+
+        handler = getattr(self, '_on_{}'.format(code_to_name[action]))
+        handler(msg)
         return b'OK'
 
 # ################################################################################################################################

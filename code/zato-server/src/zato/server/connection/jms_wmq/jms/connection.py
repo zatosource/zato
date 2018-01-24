@@ -95,16 +95,16 @@ def unhexlify_wmq_id(wmq_id):
 
 class WebSphereMQConnection(object):
 
-    def __init__(self, queue_manager=None, channel=None, host=None, listener_port=None, username=None,
+    def __init__(self, queue_manager=None, channel=None, host=None, port=None, username=None,
         password=None, cache_open_send_queues=True, cache_open_receive_queues=True, use_shared_connections=True,
         dynamic_queue_template='SYSTEM.DEFAULT.MODEL.QUEUE', ssl=False, ssl_cipher_spec=None, ssl_key_repository=None,
         needs_mcd=True, needs_jms=False):
 
         # TCP-level settings
         self.queue_manager = queue_manager
-        self.channel = channel
-        self.host = host
-        self.listener_port = listener_port
+        self.channel = channel.encode('utf8')
+        self.host = host.encode('utf8')
+        self.port = port
 
         # Credentials
         self.username = username
@@ -181,7 +181,7 @@ class WebSphereMQConnection(object):
 
     def get_connection_info(self):
         return 'queue manager:`%s`, channel:`%s`, conn_name:`%s(%s)`' % (
-            self.queue_manager, self.channel, self.host, self.listener_port)
+            self.queue_manager, self.channel, self.host, self.port)
 
 # ################################################################################################################################
 
@@ -190,7 +190,7 @@ class WebSphereMQConnection(object):
             if self._is_connected:
                 return
 
-            conn_name = '%s(%s)' % (self.host, self.listener_port)
+            conn_name = '%s(%s)' % (self.host, self.port)
 
             logger.info('Connecting to queue manager:`%s`, channel:`%s`' ', connection info:`%s`' % (
                 self.queue_manager, self.channel, conn_name))
@@ -199,7 +199,7 @@ class WebSphereMQConnection(object):
             sco = self.mq.sco()
             cd = self.mq.cd()
             cd.ChannelName = self.channel
-            cd.ConnectionName = conn_name
+            cd.ConnectionName = conn_name.encode('utf8')
             cd.ChannelType = self.CMQC.MQCHT_CLNTCONN
             cd.TransportType = self.CMQC.MQXPT_TCP
 
@@ -218,7 +218,7 @@ class WebSphereMQConnection(object):
                 connect_options = self.CMQC.MQCNO_HANDLE_SHARE_NONE
 
             try:
-                self.mgr.connectWithOptions(self.queue_manager, cd=cd, opts=connect_options, sco=sco, user=self.username,
+                self.mgr.connect_with_options(self.queue_manager, cd=cd, opts=connect_options, sco=sco, user=self.username,
                     password=self.password)
             except self.mq.MQMIError, e:
                 exc = WebSphereMQJMSException(e, e.comp, e.reason)
