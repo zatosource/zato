@@ -32,11 +32,11 @@
 
             '_queue_manager',
             'channel',
+            '_username',
             '_ssl',
-            'ssl_cipher_spec',
-            'ssl_key_repository',
+            '_ssl_cipher_spec',
+            '_ssl_key_repository',
 
-            '_needs_mcd',
             'max_chars_printed',
             '_edit',
             '_delete',
@@ -50,6 +50,8 @@
 
             'username',
             'queue_manager',
+            'ssl_cipher_spec',
+            'ssl_key_repository',
         ]
     }
     </script>
@@ -83,22 +85,25 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Host</a></th>
                         <th><a href="#">Port</a></th>
+
                         <th><a href="#">QM</a></th>
                         <th><a href="#">Channel</a></th>
-
+                        <th><a href="#">Username</a></th>
                         <th><a href="#">SSL</a></th>
                         <th><a href="#">Cipher spec</a></th>
                         <th><a href="#">Key repo</a></th>
-                        <th><a href="#">MCD</a></th>
+
                         <th><a href="#">Chars printed</a></th>
-
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -117,11 +122,11 @@
 
                         <td>{{ item.queue_manager|default_if_none:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.channel }}</td>
+                        <td>{{ item.username|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.ssl|yesno:'Yes,No' }}</td>
                         <td>{{ item.ssl_cipher_spec|default_if_none:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.ssl_key_repository|default_if_none:'<span class="form_hint">---</span>' }}</td>
 
-                        <td>{{ item.needs_mcd|yesno:'Yes,No' }}</td>
                         <td>{{ item.max_chars_printed }}</td>
                         <td><a href="javascript:$.fn.zato.definition.jms_wmq.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.definition.jms_wmq.delete_('{{ item.id }}')">Delete</a></td>
@@ -135,6 +140,9 @@
 
                         <td class='ignore'>{{ item.username|default:'' }}</td>
                         <td class='ignore'>{{ item.queue_manager|default:'' }}</td>
+                        <td class='ignore'>{{ item.ssl_cipher_spec|default:'' }}</td>
+                        <td class='ignore'>{{ item.ssl_key_repository|default:'' }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
