@@ -231,24 +231,38 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
-    def _on_DEFINITION_JMS_WMQ_CREATE(self, msg):
-        """ Creates a new connection to WebSphere MQ.
+    def _create_definition(self, msg):
+        """ A low-level method to create connection definitions. Must be called with self.lock held.
         """
         conn_name = msg.pop('name')
         cluster_id = msg.pop('cluster_id')
         id = msg.pop('id')
         max_chars_printed = msg.pop('max_chars_printed')
 
-        with self.lock:
-            conn = WebSphereMQConnection(**msg)
-            conn.connect()
+        # We always create and add a connetion ..
+        conn = WebSphereMQConnection(**msg)
+        self.connections[id] = conn
 
-            self.connections[msg.name] = conn
+        # .. because even if it fails here, it will be eventually established during one of .send or .receive
+        conn.connect()
+
+# ################################################################################################################################
+
+    def _on_DEFINITION_JMS_WMQ_CREATE(self, msg):
+        """ Creates a new connection to WebSphere MQ.
+        """
+        with self.lock:
+            self._create_definition(msg)
 
 # ################################################################################################################################
 
     def _on_DEFINITION_JMS_WMQ_EDIT(self, msg):
-        pass
+        """ Updates an existing definition - close the current one, including channels and outconns,
+        and creates a new one in its place.
+        """
+        with self.lock:
+            self.connections[msg.id].close()
+            self._create_definition(msg)
 
 # ################################################################################################################################
 

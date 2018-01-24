@@ -101,7 +101,7 @@ class WebSphereMQConnection(object):
         needs_mcd=True, needs_jms=False):
 
         # TCP-level settings
-        self.queue_manager = queue_manager
+        self.queue_manager = queue_manager or ''
         self.channel = channel.encode('utf8')
         self.host = host.encode('utf8')
         self.port = port
@@ -146,7 +146,7 @@ class WebSphereMQConnection(object):
 
 # ################################################################################################################################
 
-    def destroy(self):
+    def close(self):
         with self.lock:
             if self._is_connected:
                 self._disconnecting = True
