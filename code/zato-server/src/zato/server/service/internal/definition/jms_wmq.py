@@ -17,7 +17,7 @@ from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefWMQ
 from zato.common.odb.query import def_jms_wmq, def_jms_wmq_list
 from zato.server.service import Boolean, Integer
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 # ################################################################################################################################
 
@@ -30,10 +30,10 @@ class GetList(AdminService):
         request_elem = 'zato_definition_jms_wmq_get_list_request'
         response_elem = 'zato_definition_jms_wmq_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'host', 'port', 'queue_manager', 'channel', Boolean('cache_open_send_queues'),
+        output_required = ('id', 'name', 'host', 'port', 'channel', Boolean('cache_open_send_queues'),
             Boolean('cache_open_receive_queues'), Boolean('use_shared_connections'), Boolean('ssl'), 'needs_mcd',
             Integer('max_chars_printed'))
-        output_optional = ('ssl_cipher_spec', 'ssl_key_repository')
+        output_optional = ('ssl_cipher_spec', 'ssl_key_repository', 'queue_manager', 'username')
 
     def get_data(self, session):
         return self._search(def_jms_wmq_list, session, self.request.input.cluster_id, False)
@@ -51,10 +51,10 @@ class GetByID(AdminService):
         request_elem = 'zato_definition_jms_wmq_get_by_id_request'
         response_elem = 'zato_definition_jms_wmq_get_by_id_response'
         input_required = ('id', 'cluster_id',)
-        output_required = ('id', 'name', 'host', 'port', 'queue_manager', 'channel', Boolean('cache_open_send_queues'),
+        output_required = ('id', 'name', 'host', 'port', 'channel', Boolean('cache_open_send_queues'),
             Boolean('cache_open_receive_queues'), Boolean('use_shared_connections'), Boolean('ssl'), 'needs_mcd',
             Integer('max_chars_printed'))
-        output_optional = ('ssl_cipher_spec', 'ssl_key_repository')
+        output_optional = ('ssl_cipher_spec', 'ssl_key_repository', 'queue_manager', 'username')
 
     def get_data(self, session):
         return def_jms_wmq(session, self.request.input.cluster_id, self.request.input.id)
@@ -71,10 +71,10 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_definition_jms_wmq_create_request'
         response_elem = 'zato_definition_jms_wmq_create_response'
-        input_required = ('cluster_id', 'name', 'host', 'port', 'queue_manager', 'channel', Boolean('cache_open_send_queues'),
+        input_required = ('cluster_id', 'name', 'host', 'port', 'channel', Boolean('cache_open_send_queues'),
             Boolean('cache_open_receive_queues'), Boolean('use_shared_connections'), Boolean('ssl'), 'needs_mcd',
             Integer('max_chars_printed'))
-        input_optional = ('ssl_cipher_spec', 'ssl_key_repository')
+        input_optional = ('ssl_cipher_spec', 'ssl_key_repository', 'queue_manager', 'username')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -122,9 +122,10 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_definition_jms_wmq_edit_request'
         response_elem = 'zato_definition_jms_wmq_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 'channel',
+        input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'channel',
             Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'), Boolean('use_shared_connections'),
             Boolean('ssl'), 'needs_mcd', Integer('max_chars_printed'))
+        input_optional = ('queue_manager', 'username')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -204,5 +205,22 @@ class Delete(AdminService):
                 self.logger.error('Could not delete WebSphere MQ definition, e:`%s`' % format_exc())
 
                 raise
+
+# ################################################################################################################################
+
+class ChangePassword(ChangePasswordBase):
+    """ Changes the password of a WebSphere MQ connection definition.
+    """
+    password_required = False
+
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        request_elem = 'zato_definition_jms_wmq_change_password_request'
+        response_elem = 'zato_definition_jms_wmq_change_password_response'
+
+    def handle(self):
+        def _auth(instance, password):
+            instance.password = password
+
+        return self._handle(CassandraConn, _auth, DEFINITION.CASSANDRA_CHANGE_PASSWORD.value)
 
 # ################################################################################################################################
