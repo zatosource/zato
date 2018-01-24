@@ -50,11 +50,11 @@ $.fn.zato.definition.jms_wmq.data_table.new_row = function(item, data, include_t
 
     row += String.format('<td>{0}</td>', item.queue_manager ? item.queue_manager : $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.channel);
+    row += String.format('<td>{0}</td>', item.username ? item.username : $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', ssl ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.ssl_cipher_spec ? item.ssl_cipher_spec : $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.ssl_key_repository ? item.ssl_key_repository : $.fn.zato.empty_value);
 
-    row += String.format('<td>{0}</td>', needs_mcd ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.max_chars_printed);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.definition.jms_wmq.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.definition.jms_wmq.delete_({0});'>Delete</a>", item.id));
@@ -68,6 +68,8 @@ $.fn.zato.definition.jms_wmq.data_table.new_row = function(item, data, include_t
 
     row += String.format("<td class='ignore'>{0}</td>", username);
     row += String.format("<td class='ignore'>{0}</td>", queue_manager);
+    row += String.format("<td class='ignore'>{0}</td>", ssl_cipher_spec);
+    row += String.format("<td class='ignore'>{0}</td>", ssl_key_repository);
 
     if(include_tr) {
         row += '</tr>';
