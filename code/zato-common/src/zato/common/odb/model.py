@@ -926,11 +926,9 @@ class ConnDefWMQ(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('wmq_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, name=None, host=None, port=None,
-                 queue_manager=None, channel=None, cache_open_send_queues=None,
-                 cache_open_receive_queues=None, use_shared_connections=None, ssl=None,
-                 ssl_cipher_spec=None, ssl_key_repository=None, needs_mcd=None,
-                 max_chars_printed=None, cluster_id=None):
+    def __init__(self, id=None, name=None, host=None, port=None, queue_manager=None, channel=None, cache_open_send_queues=None,
+        cache_open_receive_queues=None, use_shared_connections=None, ssl=None, ssl_cipher_spec=None, ssl_key_repository=None,
+        needs_mcd=None, max_chars_printed=None, cluster_id=None, username=None, password=None):
         self.id = id
         self.name = name
         self.host = host
@@ -946,6 +944,8 @@ class ConnDefWMQ(Base):
         self.needs_mcd = needs_mcd
         self.max_chars_printed = max_chars_printed
         self.cluster_id = cluster_id
+        self.username = username
+        self.password = password
 
 # ################################################################################################################################
 

@@ -29,7 +29,8 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'host', 'port', 'queue_manager', 'channel', 'cache_open_send_queues',
-            'cache_open_receive_queues', 'use_shared_connections', 'ssl', 'ssl_cipher_spec', 'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
+            'cache_open_receive_queues', 'use_shared_connections', 'ssl', 'ssl_cipher_spec', 'ssl_key_repository',
+            'needs_mcd', 'max_chars_printed', 'username')
         output_repeated = True
 
     def handle(self):
@@ -42,8 +43,9 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'host', 'port', 'queue_manager', 'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
-            'use_shared_connections', 'ssl', 'ssl_cipher_spec', 'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
+        input_required = ('name', 'host', 'port', 'queue_manager', 'channel', 'cache_open_send_queues',
+            'cache_open_receive_queues', 'use_shared_connections', 'ssl', 'ssl_cipher_spec', 'ssl_key_repository', 'needs_mcd',
+            'max_chars_printed', 'username')
         output_required = ('id',)
 
     def success_message(self, item):
