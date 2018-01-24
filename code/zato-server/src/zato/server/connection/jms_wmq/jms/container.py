@@ -77,6 +77,11 @@ _http_400 = b'{} {}'.format(httplib.BAD_REQUEST, httplib.responses[httplib.BAD_R
 _http_403 = b'{} {}'.format(httplib.FORBIDDEN, httplib.responses[httplib.FORBIDDEN])
 _http_500 = b'{} {}'.format(httplib.INTERNAL_SERVER_ERROR, httplib.responses[httplib.INTERNAL_SERVER_ERROR])
 
+_path_api = '/api'
+_path_ping = '/ping'
+
+_paths = (_path_api, _path_ping)
+
 # ################################################################################################################################
 
 class WebSphereMQTask(object):
@@ -271,19 +276,23 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
-    def handle_http_request(self, msg):
+    def handle_http_request(self, path, msg, ok=b'OK'):
         """ Dispatches incoming HTTP requests - either reconfigures the connector or puts messages to queues.
         """
-        self.logger.warn('MSG received %s', msg)
-        msg = bunchify(loads(msg))
+        self.logger.info('MSG received %s %s', path, msg)
 
-        # Delete what handlers don't need
-        del msg['msg_type']
-        action = msg.pop('action')
+        if path == _path_ping:
+            return ok
+        else:
+            msg = bunchify(loads(msg))
 
-        handler = getattr(self, '_on_{}'.format(code_to_name[action]))
-        handler(msg)
-        return b'OK'
+            # Delete what handlers don't need
+            del msg['msg_type']
+            action = msg.pop('action')
+
+            handler = getattr(self, '_on_{}'.format(code_to_name[action]))
+            handler(msg)
+            return ok
 
 # ################################################################################################################################
 
@@ -307,6 +316,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def on_wsgi_request(self, environ, start_response):
+
         try:
             content_length = environ['CONTENT_LENGTH']
             if not content_length:
@@ -317,7 +327,7 @@ class ConnectionContainer(object):
                 data = environ['wsgi.input'].read(int(content_length))
                 if self.check_credentials(environ.get('HTTP_AUTHORIZATION')):
                     status = _http_200
-                    response = self.handle_http_request(data)
+                    response = self.handle_http_request(environ['PATH_INFO'], data)
                     content_type = 'text/json'
                 else:
                     status = _http_403
