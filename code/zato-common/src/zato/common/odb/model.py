@@ -909,7 +909,7 @@ class ConnDefWMQ(Base):
 
     host = Column(String(200), nullable=False)
     port = Column(Integer, nullable=False)
-    queue_manager = Column(String(200), nullable=False)
+    queue_manager = Column(String(200), nullable=True)
     channel = Column(String(200), nullable=False)
     cache_open_send_queues = Column(Boolean(), nullable=False)
     cache_open_receive_queues = Column(Boolean(), nullable=False)
@@ -920,6 +920,8 @@ class ConnDefWMQ(Base):
     ssl_key_repository = Column(String(200))
     needs_mcd = Column(Boolean(), nullable=False)
     max_chars_printed = Column(Integer, nullable=False)
+    username = Column(String(100), nullable=True)
+    password = Column(String(100), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('wmq_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
