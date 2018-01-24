@@ -159,6 +159,7 @@ class Edit(AdminService):
                 def_.ssl_key_repository = input.get('ssl_key_repository')
                 def_.needs_mcd = input.needs_mcd
                 def_.max_chars_printed = input.max_chars_printed
+                def_.username = input.username
 
                 session.add(def_)
                 session.commit()

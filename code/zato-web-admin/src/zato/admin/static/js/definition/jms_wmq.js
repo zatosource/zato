@@ -64,7 +64,6 @@ $.fn.zato.definition.jms_wmq.data_table.new_row = function(item, data, include_t
     row += String.format("<td class='ignore'>{0}</td>", item.cache_open_receive_queues);
     row += String.format("<td class='ignore'>{0}</td>", item.use_shared_connections);
     row += String.format("<td class='ignore'>{0}</td>", ssl);
-    row += String.format("<td class='ignore'>{0}</td>", needs_mcd);
 
     row += String.format("<td class='ignore'>{0}</td>", username);
     row += String.format("<td class='ignore'>{0}</td>", queue_manager);

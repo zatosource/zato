@@ -359,7 +359,8 @@ def _def_jms_wmq(session, cluster_id):
         ConnDefWMQ.port, ConnDefWMQ.queue_manager, ConnDefWMQ.channel,
         ConnDefWMQ.cache_open_send_queues, ConnDefWMQ.cache_open_receive_queues,
         ConnDefWMQ.use_shared_connections, ConnDefWMQ.ssl, ConnDefWMQ.ssl_cipher_spec,
-        ConnDefWMQ.ssl_key_repository, ConnDefWMQ.needs_mcd, ConnDefWMQ.max_chars_printed).\
+        ConnDefWMQ.ssl_key_repository, ConnDefWMQ.needs_mcd, ConnDefWMQ.max_chars_printed,
+        ConnDefWMQ.username, ConnDefWMQ.password).\
         filter(Cluster.id==ConnDefWMQ.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(ConnDefWMQ.name)
