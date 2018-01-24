@@ -234,7 +234,7 @@ handlers:
     websphere_mq:
         formatter: default
         class: logging.handlers.RotatingFileHandler
-        filename: './logs/wmq.log'
+        filename: './logs/websphere-mq.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10

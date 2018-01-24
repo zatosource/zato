@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from traceback import format_exc
+from uuid import uuid4
 
 # Zato
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
@@ -93,11 +94,13 @@ class Create(AdminService):
                 raise Exception('WebSphere MQ definition `{}` already exists on this cluster'.format(input.name))
 
             try:
+                input.password = 'abcd1234'#uuid4().hex
+
                 def_ = ConnDefWMQ(None, input.name, input.host, input.port, input.queue_manager,
                     input.channel, input.cache_open_send_queues, input.cache_open_receive_queues,
                     input.use_shared_connections, input.ssl, input.ssl_cipher_spec,
                     input.ssl_key_repository, input.needs_mcd, input.max_chars_printed,
-                    input.cluster_id)
+                    input.cluster_id, input.username, input.password)
                 session.add(def_)
                 session.commit()
 
