@@ -149,7 +149,7 @@ class ConfigLoader(object):
         self.config.out_ftp = ConfigDict.from_query('out_ftp', query)
 
         # WebSphere MQ
-        query = self.odb.get_out_jms_wmq_list(server.cluster.id, True)
+        query = self.odb.get_out_wmq_list(server.cluster.id, True)
         self.config.out_wmq = ConfigDict.from_query('out_wmq', query)
 
         # Odoo
