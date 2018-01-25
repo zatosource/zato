@@ -15,7 +15,7 @@ from traceback import format_exc
 # Zato
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import ConnDefWMQ, OutgoingWMQ
-from zato.common.odb.query import out_jms_wmq_list
+from zato.common.odb.query import out_wmq_list
 from zato.server.connection.jms_wmq.outgoing import start_connector
 from zato.server.service import Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -33,7 +33,7 @@ class GetList(AdminService):
         output_optional = ('expiration',)
 
     def get_data(self, session):
-        return self._search(out_jms_wmq_list, session, self.request.input.cluster_id, False)
+        return self._search(out_wmq_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

@@ -15,7 +15,7 @@ from traceback import format_exc
 # Zato
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
-from zato.common.odb.query import channel_jms_wmq_list
+from zato.common.odb.query import channel_wmq_list
 from zato.server.connection.jms_wmq.channel import start_connector
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
@@ -32,7 +32,7 @@ class GetList(AdminService):
         output_optional = ('data_format',)
 
     def get_data(self, session):
-        return self._search(channel_jms_wmq_list, session, self.request.input.cluster_id, False)
+        return self._search(channel_wmq_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

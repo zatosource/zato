@@ -16,7 +16,7 @@ from uuid import uuid4
 # Zato
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefWMQ
-from zato.common.odb.query import def_jms_wmq, def_jms_wmq_list
+from zato.common.odb.query import definition_wmq, definition_wmq_list
 from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
@@ -37,7 +37,7 @@ class GetList(AdminService):
         output_optional = ('ssl_cipher_spec', 'ssl_key_repository', 'queue_manager', 'username')
 
     def get_data(self, session):
-        return self._search(def_jms_wmq_list, session, self.request.input.cluster_id, False)
+        return self._search(definition_wmq_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -58,7 +58,7 @@ class GetByID(AdminService):
         output_optional = ('ssl_cipher_spec', 'ssl_key_repository', 'queue_manager', 'username')
 
     def get_data(self, session):
-        return def_jms_wmq(session, self.request.input.cluster_id, self.request.input.id)
+        return definition_wmq(session, self.request.input.cluster_id, self.request.input.id)
 
     def handle(self):
         with closing(self.odb.session()) as session:

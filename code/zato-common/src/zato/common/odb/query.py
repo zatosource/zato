@@ -365,7 +365,7 @@ def _def_wmq(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(ConnDefWMQ.name)
 
-def def_wmq(session, cluster_id, id):
+def definition_wmq(session, cluster_id, id):
     """ A particular JMS WebSphere MQ definition
     """
     return _def_wmq(session, cluster_id).\
@@ -373,7 +373,7 @@ def def_wmq(session, cluster_id, id):
         one()
 
 @query_wrapper
-def def_wmq_list(session, cluster_id, needs_columns=False):
+def definition_wmq_list(session, cluster_id, needs_columns=False):
     """ JMS WebSphere MQ connection definitions.
     """
     return _def_wmq(session, cluster_id)
