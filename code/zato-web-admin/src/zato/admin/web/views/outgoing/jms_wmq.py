@@ -88,7 +88,7 @@ def index(req):
         'req': req,
         }
 
-    return TemplateResponse(req, 'zato/outgoing/jms_wmq.html', return_data)
+    return TemplateResponse(req, 'zato/outgoing/jms-wmq.html', return_data)
 
 @method_allowed('POST')
 def create(req):

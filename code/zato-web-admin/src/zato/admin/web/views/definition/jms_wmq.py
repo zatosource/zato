@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'definition-wmq'
-    template = 'zato/definition/jms_wmq.html'
+    template = 'zato/definition/jms-wmq.html'
     service_name = 'zato.definition.jms-wmq.get-list'
     output_class = ConnDefWMQ
     paginate = True
