@@ -30,7 +30,7 @@ from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
 from zato.admin.web.views.definition import amqp_ as def_amqp
 from zato.admin.web.views.definition import cassandra as def_cassandra
-from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
+from zato.admin.web.views.definition import jms_wmq as def_wmq
 from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
@@ -602,13 +602,15 @@ urlpatterns += [
     # .. JMS WebSphere MQ
 
     url(r'^zato/definition/jms-wmq/$',
-        login_required(def_jms_wmq.Index()), name=def_jms_wmq.Index.url_name),
+        login_required(def_wmq.Index()), name=def_wmq.Index.url_name),
     url(r'^zato/definition/jms-wmq/create/$',
-        login_required(def_jms_wmq.Create()), name=def_jms_wmq.Create.url_name),
+        login_required(def_wmq.Create()), name=def_wmq.Create.url_name),
     url(r'^zato/definition/jms-wmq/edit/$',
-        login_required(def_jms_wmq.Edit()), name=def_jms_wmq.Edit.url_name),
+        login_required(def_wmq.Edit()), name=def_wmq.Edit.url_name),
     url(r'^zato/definition/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(def_jms_wmq.Delete()), name=def_jms_wmq.Delete.url_name),
+        login_required(def_wmq.Delete()), name=def_wmq.Delete.url_name),
+    url(r'^zato/definition/jms-wmq/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(def_wmq.ping), name='definition-wmq-ping'),
     ]
 
 # ################################################################################################################################

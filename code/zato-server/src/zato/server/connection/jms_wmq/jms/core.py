@@ -28,7 +28,7 @@ from string import Template
 from cStringIO import StringIO
 
 # Zato
-from zato.server.connection.jms_wmq.jms import DEFAULT_DELIVERY_MODE, JMSException
+from zato.server.connection.jms_wmq.jms import DEFAULT_DELIVERY_MODE, BaseException
 
 # ################################################################################################################################
 
@@ -87,7 +87,7 @@ class JMSTemplate(object):
 
     def convert_and_send(self, object_, destination=None):
         if not self.message_converter:
-            raise JMSException("Couldn't send the message, no message converter set")
+            raise BaseException("Couldn't send the message, no message converter set")
 
         self.send(self.message_converter.to_message(object_), destination)
 
@@ -102,7 +102,7 @@ class JMSTemplate(object):
         elif self.default_destination:
             dest = self.default_destination
         else:
-            raise JMSException('No destination given and no default destination set')
+            raise BaseException('No destination given and no default destination set')
 
         message.jms_destination = dest
 
@@ -117,7 +117,7 @@ class JMSTemplate(object):
         elif self.default_destination:
             dest = self.default_destination
         else:
-            raise JMSException('No destination given and no default destination set')
+            raise BaseException('No destination given and no default destination set')
 
         return self.factory.receive(dest, timeout)
 
@@ -125,7 +125,7 @@ class JMSTemplate(object):
 
     def receive_and_convert(self, destination=None, timeout=1000):
         if not self.message_converter:
-            raise JMSException("Couldn't receive a message, no message converter set")
+            raise BaseException("Couldn't receive a message, no message converter set")
 
         return self.message_converter.from_message(self.receive(destination, timeout))
 

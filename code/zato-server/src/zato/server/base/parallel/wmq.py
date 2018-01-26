@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os
 from copy import deepcopy
 from datetime import datetime, timedelta
+from httplib import OK
 from json import dumps
 from logging import getLogger, Logger
 from traceback import format_exc
@@ -109,10 +110,20 @@ class WMQIPC(object):
 
 # ################################################################################################################################
 
+    def ping_wmq(self, id):
+        response = self.invoke_wmq_connector({
+            'action': DEFINITION.WMQ_PING.value,
+            'id': id
+        })
+
+        if not response.ok:
+            raise Exception(response.text)
+
+# ################################################################################################################################
+
     def invoke_wmq_connector(self, msg, address_pattern=address_pattern):
-        if self.is_first_worker:
-            address = address_pattern.format(self.wmq_ipc_tcp_port, 'api')
-            return post(address, data=dumps(msg), auth=self.get_wmq_credentials())
+        address = address_pattern.format(self.wmq_ipc_tcp_port, 'api')
+        return post(address, data=dumps(msg), auth=self.get_wmq_credentials())
 
 # ################################################################################################################################
 

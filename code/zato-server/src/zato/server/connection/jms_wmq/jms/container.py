@@ -48,7 +48,7 @@ import yaml
 from zato.common.auth_util import parse_basic_auth
 from zato.common.broker_message import code_to_name, DEFINITION
 from zato.common.zato_keyutils import KeyUtils
-from zato.server.connection.jms_wmq.jms import WebSphereMQJMSException, NoMessageAvailableException
+from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
 from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
 from zato.server.connection.jms_wmq.jms.core import TextMessage
 
@@ -76,11 +76,20 @@ _http_200 = b'{} {}'.format(httplib.OK, httplib.responses[httplib.OK])
 _http_400 = b'{} {}'.format(httplib.BAD_REQUEST, httplib.responses[httplib.BAD_REQUEST])
 _http_403 = b'{} {}'.format(httplib.FORBIDDEN, httplib.responses[httplib.FORBIDDEN])
 _http_500 = b'{} {}'.format(httplib.INTERNAL_SERVER_ERROR, httplib.responses[httplib.INTERNAL_SERVER_ERROR])
+_http_503 = b'{} {}'.format(httplib.SERVICE_UNAVAILABLE, httplib.responses[httplib.SERVICE_UNAVAILABLE])
 
 _path_api = '/api'
 _path_ping = '/ping'
 
 _paths = (_path_api, _path_ping)
+
+# ################################################################################################################################
+
+class Response(object):
+    def __init__(self, status=_http_200, data=b'', content_type='text/json'):
+        self.status = status
+        self.data = data
+        self.content_type = content_type
 
 # ################################################################################################################################
 
@@ -129,7 +138,7 @@ class WebSphereMQTask(object):
                     if self.has_debug:
                         self.logger.debug('Consumer did not receive a message. `%s`' % self._get_destination_info())
 
-                except WebSphereMQJMSException, e:
+                except WebSphereMQException, e:
                     self.logger.error('%s in run, completion_code:`%s`, reason_code:`%s`' % (
                         e.__class__.__name__, e.completion_code, e.reason_code))
                     raise
@@ -241,6 +250,7 @@ class ConnectionContainer(object):
         """
         conn_name = msg.pop('name')
         msg.pop('cluster_id', None)
+        msg.pop('old_name', None)
         id = msg.pop('id')
         max_chars_printed = msg.pop('max_chars_printed')
 
@@ -258,6 +268,7 @@ class ConnectionContainer(object):
         """
         with self.lock:
             self._create_definition(msg)
+            return Response()
 
 # ################################################################################################################################
 
@@ -266,13 +277,26 @@ class ConnectionContainer(object):
         and creates a new one in its place.
         """
         with self.lock:
+            # Edit messages don't carry passwords
+            msg.password = self.connections[msg.id].password
             self.connections[msg.id].close()
             self._create_definition(msg)
+            return Response()
 
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_DELETE(self, msg):
         pass
+
+# ################################################################################################################################
+
+    def _on_DEFINITION_WMQ_PING(self, msg):
+        try:
+            self.connections[msg.id].ping()
+        except WebSphereMQException, e:
+            return Response(_http_503, str(e.message), 'text/plain')
+        else:
+            return Response()
 
 # ################################################################################################################################
 
@@ -287,7 +311,7 @@ class ConnectionContainer(object):
         self.logger.info('MSG received %s %s', path, msg)
 
         if path == _path_ping:
-            return ok
+            return Response()
         else:
             msg = bunchify(loads(msg))
 
@@ -296,8 +320,7 @@ class ConnectionContainer(object):
             action = msg.pop('action')
 
             handler = getattr(self, '_on_{}'.format(code_to_name[action]))
-            handler(msg)
-            return ok
+            return handler(msg)
 
 # ################################################################################################################################
 
@@ -326,29 +349,30 @@ class ConnectionContainer(object):
             content_length = environ['CONTENT_LENGTH']
             if not content_length:
                 status = _http_400
-                response = 'Missing content'
+                data = 'Missing content'
                 content_type = 'text/plain'
             else:
                 data = environ['wsgi.input'].read(int(content_length))
                 if self.check_credentials(environ.get('HTTP_AUTHORIZATION')):
-                    status = _http_200
                     response = self.handle_http_request(environ['PATH_INFO'], data)
-                    content_type = 'text/json'
+                    status = response.status
+                    data = response.data
+                    content_type = response.content_type
                 else:
                     status = _http_403
-                    response = 'You are not allowed to access this resource'
+                    data = 'You are not allowed to access this resource'
                     content_type = 'text/plain'
 
         except Exception as e:
             self.logger.warn(format_exc())
             content_type = 'text/plain'
             status = _http_500
-            response = 'Internal server error'
+            data = 'Internal server error'
         finally:
             headers = [('Content-type', content_type)]
             start_response(status, headers)
 
-            return [response]
+            return [data]
 
 # ################################################################################################################################
 
