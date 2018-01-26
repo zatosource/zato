@@ -36,7 +36,7 @@ import xml.etree.ElementTree as etree
 
 # Zato
 from zato.server.connection.jms_wmq.jms.core import reserved_attributes, TextMessage
-from zato.server.connection.jms_wmq.jms import JMSException, WebSphereMQJMSException, NoMessageAvailableException, \
+from zato.server.connection.jms_wmq.jms import BaseException, WebSphereMQException, NoMessageAvailableException, \
      DELIVERY_MODE_NON_PERSISTENT, DELIVERY_MODE_PERSISTENT
 
 # ################################################################################################################################
@@ -185,6 +185,13 @@ class WebSphereMQConnection(object):
 
 # ################################################################################################################################
 
+    def ping(self):
+        """ Pings a remote queue manager by making sure that current connection exists.
+        """
+        self.connect()
+
+# ################################################################################################################################
+
     def connect(self):
         with self.lock:
             if self._is_connected:
@@ -207,7 +214,7 @@ class WebSphereMQConnection(object):
                 if not(self.ssl_cipher_spec and self.ssl_key_repository):
                     msg = 'SSL support requires setting both ssl_cipher_spec and ssl_key_repository'
                     logger.error(msg)
-                    raise JMSException(msg)
+                    raise BaseException(msg)
 
                 sco.KeyRepository = self.ssl_key_repository
                 cd.SSLCipherSpec = self.ssl_cipher_spec
@@ -221,7 +228,7 @@ class WebSphereMQConnection(object):
                 self.mgr.connect_with_options(self.queue_manager, cd=cd, opts=connect_options, sco=sco, user=self.username,
                     password=self.password)
             except self.mq.MQMIError, e:
-                exc = WebSphereMQJMSException(e, e.comp, e.reason)
+                exc = WebSphereMQException(e, e.comp, e.reason)
                 raise exc
             else:
                 self._is_connected = True
@@ -321,7 +328,7 @@ class WebSphereMQConnection(object):
             queue.put(body, md)
         except self.mq.MQMIError, e:
             logger.error('MQMIError in queue.put, comp:`%s`, reason:`%s`' % (e.comp, e.reason))
-            exc = WebSphereMQJMSException(e, e.comp, e.reason)
+            exc = WebSphereMQException(e, e.comp, e.reason)
             raise exc
 
         if not self.cache_open_send_queues:
@@ -389,7 +396,7 @@ class WebSphereMQConnection(object):
                 raise NoMessageAvailableException(text)
             else:
                 logger.debug('Exception caught in get, comp:`%s`, reason:`%s`' % (e.comp, e.reason))
-                exc = WebSphereMQJMSException(e, e.comp, e.reason)
+                exc = WebSphereMQException(e, e.comp, e.reason)
                 raise exc
 
 # ################################################################################################################################
@@ -508,7 +515,7 @@ class WebSphereMQConnection(object):
         else:
             text = "Don't know how to handle md.Persistence mode:`%s`" % (md.Persistence)
             logger.error(text)
-            exc = WebSphereMQJMSException(text)
+            exc = WebSphereMQException(text)
             raise exc
 
         if md.ReplyToQ.strip():
@@ -606,7 +613,7 @@ class WebSphereMQConnection(object):
                 pattern = 'jms_delivery_mode should be DELIVERY_MODE_NON_PERSISTENT or DELIVERY_MODE_PERSISTENT, not `%r`'
                 info = pattern % message.jms_delivery_mode
                 logger.error(info)
-                exc = JMSException(info)
+                exc = BaseException(info)
                 raise exc
 
             md.Persistence = persistence

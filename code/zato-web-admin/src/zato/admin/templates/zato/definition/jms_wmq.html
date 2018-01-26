@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}JMS WMQ conn. def.{% endblock %}
+{% block html_title %}WMQ conn. def.{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -40,6 +40,7 @@
             'max_chars_printed',
             '_edit',
             '_delete',
+            '_ping',
             'id',
 
             'cache_open_send_queues',
@@ -95,6 +96,7 @@
                         <th><a href="#">Chars printed</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
@@ -128,6 +130,7 @@
                         <td>{{ item.max_chars_printed }}</td>
                         <td><a href="javascript:$.fn.zato.definition.jms_wmq.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.definition.jms_wmq.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                         <td class='ignore'>{{ item.cache_open_send_queues }}</td>
@@ -156,7 +159,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "def-jms-wmq-create" %}" method="post" id="create-form">
+                <form action="{% url "definition-wmq-create" %}" method="post" id="create-form">
                     <table class="form-data">
 
                         <tr>
@@ -242,7 +245,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "def-jms-wmq-edit" %}" method="post" id="edit-form">
+                <form action="{% url "definition-wmq-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
 
                         <tr>

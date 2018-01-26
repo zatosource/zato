@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from datetime import datetime
 from traceback import format_exc
 from uuid import uuid4
 
@@ -226,5 +227,24 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
 
         return self._handle(CassandraConn, _auth, DEFINITION.CASSANDRA_CHANGE_PASSWORD.value)
+
+# ################################################################################################################################
+
+class Ping(AdminService):
+    """ Pings a remote queue manager a given connection definition ID points to.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_definition_jms_wmq_ping_request'
+        response_elem = 'zato_definition_jms_wmq_ping_response'
+        input_required = ('id',)
+        output_required = ('info',)
+
+    def handle(self):
+
+        start_time = datetime.utcnow()
+        self.server.ping_wmq(self.request.input.id)
+        response_time = datetime.utcnow() - start_time
+
+        self.response.payload.info = 'Ping OK, took:`{}` s'.format(response_time.total_seconds())
 
 # ################################################################################################################################
