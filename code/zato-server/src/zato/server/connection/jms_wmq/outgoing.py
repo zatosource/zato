@@ -44,7 +44,7 @@ class WMQFacade(object):
 
         # Common parameters
         params = {}
-        params['action'] = OUTGOING.JMS_WMQ_SEND.value
+        params['action'] = OUTGOING.WMQ_SEND.value
         params['name'] = out_name
         params['body'] = msg
         params['queue'] = queue
@@ -183,10 +183,10 @@ class OutgoingConnector(BaseJMSWMQConnector):
         if super(OutgoingConnector, self).filter(msg):
             return True
 
-        elif msg.action in(OUTGOING.JMS_WMQ_DELETE.value, OUTGOING.JMS_WMQ_EDIT.value):
+        elif msg.action in(OUTGOING.WMQ_DELETE.value, OUTGOING.WMQ_EDIT.value):
             return self.out.name == msg['old_name']
 
-        elif msg.action == OUTGOING.JMS_WMQ_SEND.value:
+        elif msg.action == OUTGOING.WMQ_SEND.value:
             return self.out.name == msg['name']
 
     def _stop_connection(self):

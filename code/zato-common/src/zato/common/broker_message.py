@@ -165,10 +165,10 @@ class OUTGOING(Constants):
     AMQP_DELETE = ValueConstant('')
     AMQP_PUBLISH = ValueConstant('')
 
-    JMS_WMQ_CREATE = ValueConstant('')
-    JMS_WMQ_EDIT = ValueConstant('')
-    JMS_WMQ_DELETE = ValueConstant('')
-    JMS_WMQ_SEND = ValueConstant('')
+    WMQ_CREATE = ValueConstant('')
+    WMQ_EDIT = ValueConstant('')
+    WMQ_DELETE = ValueConstant('')
+    WMQ_SEND = ValueConstant('')
 
     ZMQ_CREATE = ValueConstant('')
     ZMQ_EDIT = ValueConstant('')
