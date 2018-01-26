@@ -165,16 +165,22 @@ def send_message(req, cluster_id, conn_id, name_slug):
 def send_message_action(req, cluster_id, conn_id, name_slug):
 
     try:
-        request = {
-            'cluster_id': req.zato.cluster_id,
-            'id': req.POST['id'],
-            'delivery_mode': req.POST['delivery_mode'],
-            'priority': req.POST['priority'],
-            'expiration': req.POST['expiration'],
-            'data': req.POST['data'],
-        }
 
-        response = req.zato.client.invoke('zato.outgoing.jms-wmq.send-message', request)
+        from time import sleep
+        for x in range(10000):
+
+            request = {
+                'cluster_id': req.zato.cluster_id,
+                'id': req.POST['id'],
+                'queue_name': req.POST['queue_name'],
+                'data': req.POST.get('data', '') + '-' + str(x),
+                'delivery_mode': req.POST['delivery_mode'],
+                'priority': req.POST['priority'],
+                'expiration': req.POST['expiration'],
+            }
+
+            response = req.zato.client.invoke('zato.outgoing.jms-wmq.send-message', request)
+            sleep(0.001)
 
         if response.ok:
             return HttpResponse(dumps({'msg': 'OK, message sent successfully.'}), content_type='application/javascript')

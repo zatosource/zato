@@ -1106,7 +1106,8 @@ class OutgoingWMQ(Base):
         self.expiration = expiration
         self.def_id = def_id
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
-        self.def_name = def_name # Not used by the DB
+        self.def_name = def_name # Not used by DB
+        self.def_name_full_text = None # Not used by DB
 
 # ################################################################################################################################
 

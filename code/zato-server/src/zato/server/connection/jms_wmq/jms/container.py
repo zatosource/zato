@@ -166,6 +166,10 @@ class ConnectionContainer(object):
         self.connections = {}
         self.set_config()
 
+        # PyMQI is an optional dependency so let's import it here rather than on module level
+        import pymqi
+        self.pymqi = pymqi
+
     def set_config(self):
         """ Sets self attributes, as configured in keyring by our parent process.
         """
@@ -301,7 +305,28 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_SEND(self, msg):
-        raise Exception(msg)
+        """ Sends a message to a remote WebSphere MQ queue.
+        """
+        conn_id = 8
+
+        try:
+            self.connections[conn_id].send(TextMessage(
+                text = msg['data'],
+                jms_delivery_mode = msg['delivery_mode'],
+                jms_expiration = int(msg['expiration']) * 1000,
+                jms_priority = msg['priority']
+            ), msg['queue_name'].encode('utf8'))
+        except Exception as e:
+            self.logger.warn(format_exc())
+
+            if isinstance(e, self.pymqi.MQMIError):
+                message = e.errorAsString()
+            else:
+                message = e.message
+
+            return Response(_http_503, message)
+        else:
+            return Response()
 
 # ################################################################################################################################
 
@@ -344,6 +369,10 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def on_wsgi_request(self, environ, start_response):
+
+        # Default values to use in case of any internal errors
+        status = _http_503
+        content_type = 'text/plain'
 
         try:
             content_length = environ['CONTENT_LENGTH']
