@@ -22,15 +22,16 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
-_base_required = ('id', 'name', 'is_active', 'def_id', Integer('delivery_mode'), Integer('priority'))
+_base_required = ('id', Integer('delivery_mode'), Integer('priority'))
+_get_required = _base_required + ('name', 'is_active', 'def_id', 'def_name')
 _optional = ('expiration',)
 
 
 # ################################################################################################################################
 
 class _GetSIO(AdminSIO):
-    output_required = _base_required + ('def_name',)
-    output_optional = _optional
+    output_required = _get_required
+    output_optional = _optional + ('def_id', 'def_name_full_text')
 
 # ################################################################################################################################
 
@@ -41,10 +42,12 @@ class Get(AdminService):
         request_elem = 'zato_outgoing_jms_wmq_get_request'
         response_elem = 'zato_outgoing_jms_wmq_get_response'
         input_required = ('cluster_id', 'id')
+        output_optional = _GetSIO.output_optional
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload = out_wmq(session, self.request.input.cluster_id, self.request.input.id)
+            item = out_wmq(session, self.request.input.cluster_id, self.request.input.id)
+            self.response.payload = item
 
 # ################################################################################################################################
 
@@ -213,10 +216,10 @@ class SendMessage(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_send_message_request'
         response_elem = 'zato_outgoing_jms_wmq_message_response'
-        input_required = ('cluster_id',) + _base_required
+        input_required = ('cluster_id', 'queue_name', 'data') + _base_required
         input_optional = _optional
 
     def handle(self):
-        self.server.invoke_wmq(self.request.input.id, self.request.input)
+        self.server.send_wmq_message(self.request.input)
 
 # ################################################################################################################################

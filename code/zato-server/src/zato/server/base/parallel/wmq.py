@@ -25,7 +25,7 @@ from requests import get, post
 
 # Zato
 from zato.common import IPC
-from zato.common.broker_message import DEFINITION
+from zato.common.broker_message import DEFINITION, OUTGOING
 from zato.common.proc_util import start_python_process
 from zato.common.util import get_free_port
 
@@ -111,19 +111,25 @@ class WMQIPC(object):
 # ################################################################################################################################
 
     def ping_wmq(self, id):
-        response = self.invoke_wmq_connector({
+        return self.invoke_wmq_connector({
             'action': DEFINITION.WMQ_PING.value,
             'id': id
         })
 
-        if not response.ok:
-            raise Exception(response.text)
+# ################################################################################################################################
+
+    def send_wmq_message(self, msg):
+        msg['action'] = OUTGOING.WMQ_SEND.value
+        return self.invoke_wmq_connector(msg)
 
 # ################################################################################################################################
 
     def invoke_wmq_connector(self, msg, address_pattern=address_pattern):
         address = address_pattern.format(self.wmq_ipc_tcp_port, 'api')
-        return post(address, data=dumps(msg), auth=self.get_wmq_credentials())
+        response = post(address, data=dumps(msg), auth=self.get_wmq_credentials())
+
+        if not response.ok:
+            raise Exception(response.text)
 
 # ################################################################################################################################
 
