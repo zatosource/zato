@@ -25,7 +25,11 @@ from zato.admin.web.forms.outgoing.jms_wmq import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, get_definition_list, method_allowed, parse_response_data
 from zato.common.odb.model import OutgoingWMQ
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
 
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base dictionary which can be used by both 'edit' and 'create' actions.
@@ -41,6 +45,8 @@ def _get_edit_create_message(params, prefix=''):
         'expiration': params.get(prefix + 'expiration'),
     }
 
+# ################################################################################################################################
+
 def _edit_create_response(client, verb, id, name, delivery_mode_text, cluster_id, def_id):
     response = client.invoke('zato.definition.jms-wmq.get-by-id', {'id':def_id, 'cluster_id':cluster_id})
     return_data = {'id': id,
@@ -50,6 +56,8 @@ def _edit_create_response(client, verb, id, name, delivery_mode_text, cluster_id
                 }
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
+
+# ################################################################################################################################
 
 @method_allowed('GET')
 def index(req):
@@ -90,6 +98,8 @@ def index(req):
 
     return TemplateResponse(req, 'zato/outgoing/jms-wmq.html', return_data)
 
+# ################################################################################################################################
+
 @method_allowed('POST')
 def create(req):
     try:
@@ -103,6 +113,7 @@ def create(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
 
+# ################################################################################################################################
 
 @method_allowed('POST')
 def edit(req):
@@ -119,8 +130,59 @@ def edit(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
 
+# ################################################################################################################################
 
 class Delete(_Delete):
     url_name = 'out-jms-wmq-delete'
     error_message = 'Could not delete the outgoing JMS WebSphere MQ connection'
     service_name = 'zato.outgoing.jms-wmq.delete'
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+def send_message(req, cluster_id, conn_id, name_slug):
+
+    response = req.zato.client.invoke('zato.outgoing.jms-wmq.get', {
+        'cluster_id': cluster_id,
+        'id': conn_id,
+    })
+
+    if not response.ok:
+        raise Exception(response.details)
+
+    return_data = {
+        'cluster_id': cluster_id,
+        'name_slug': name_slug,
+        'item': response.data,
+        'conn_id': conn_id
+    }
+
+    return TemplateResponse(req, 'zato/outgoing/jms-wmq-send-message.html', return_data)
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def send_message_action(req, cluster_id, conn_id, name_slug):
+
+    try:
+        request = {
+            'cluster_id': req.zato.cluster_id,
+            'id': req.POST['id'],
+            'delivery_mode': req.POST['delivery_mode'],
+            'priority': req.POST['priority'],
+            'expiration': req.POST['expiration'],
+            'data': req.POST['data'],
+        }
+
+        response = req.zato.client.invoke('zato.outgoing.jms-wmq.send-message', request)
+
+        if response.ok:
+            return HttpResponse(dumps({'msg': 'OK, message sent successfully.'}), content_type='application/javascript')
+        else:
+            raise Exception(response.details)
+    except Exception:
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+
+# ################################################################################################################################
