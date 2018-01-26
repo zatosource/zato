@@ -19,11 +19,11 @@ class WebSphereMQ(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_DEFINITION_JMS_WMQ_CREATE(self, msg):
+    def on_broker_msg_DEFINITION_WMQ_CREATE(self, msg):
         self.server.invoke_wmq_connector(msg)
 
     # Everything is delegated to connectors
-    on_broker_msg_DEFINITION_JMS_WMQ_EDIT = on_broker_msg_DEFINITION_JMS_WMQ_CREATE
-    on_broker_msg_DEFINITION_JMS_WMQ_DELETE = on_broker_msg_DEFINITION_JMS_WMQ_CREATE
+    on_broker_msg_DEFINITION_WMQ_EDIT = on_broker_msg_DEFINITION_WMQ_CREATE
+    on_broker_msg_DEFINITION_WMQ_DELETE = on_broker_msg_DEFINITION_WMQ_CREATE
 
 # ################################################################################################################################

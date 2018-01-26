@@ -109,6 +109,9 @@ class ConfigLoader(object):
         query = self.odb.get_definition_amqp_list(server.cluster.id, True)
         self.config.definition_amqp = ConfigDict.from_query('definition_amqp', query)
 
+        query = self.odb.get_definition_wmq_list(server.cluster.id, True)
+        self.config.definition_wmq = ConfigDict.from_query('definition_wmq', query)
+
         #
         # Definitions - end
         #

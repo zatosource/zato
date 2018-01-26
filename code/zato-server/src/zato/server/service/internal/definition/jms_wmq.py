@@ -105,7 +105,7 @@ class Create(AdminService):
                 session.commit()
 
                 input.id = def_.id
-                input.action = DEFINITION.JMS_WMQ_CREATE.value
+                input.action = DEFINITION.WMQ_CREATE.value
                 self.broker_client.publish(input)
 
                 self.response.payload.id = def_.id
@@ -168,7 +168,7 @@ class Edit(AdminService):
                 session.commit()
 
                 input.id = def_.id
-                input.action = DEFINITION.JMS_WMQ_EDIT.value
+                input.action = DEFINITION.WMQ_EDIT.value
                 input.old_name = old_name
                 self.broker_client.publish(input)
 
@@ -201,7 +201,7 @@ class Delete(AdminService):
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': DEFINITION.JMS_WMQ_DELETE.value, 'id': self.request.input.id}
+                msg = {'action': DEFINITION.WMQ_DELETE.value, 'id': self.request.input.id}
                 self.broker_client.publish(msg)
 
             except Exception, e:

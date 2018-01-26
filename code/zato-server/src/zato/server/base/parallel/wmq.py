@@ -24,6 +24,7 @@ from requests import get, post
 
 # Zato
 from zato.common import IPC
+from zato.common.broker_message import DEFINITION
 from zato.common.proc_util import start_python_process
 from zato.common.util import get_free_port
 
@@ -115,7 +116,10 @@ class WMQIPC(object):
 
 # ################################################################################################################################
 
-    def create_initial_wmq_definitions(self, config):
-        logger.warn('zzz %s', config)
+    def create_initial_wmq_definitions(self, config_dict):
+        for value in config_dict.values():
+            config = value['config']
+            config['action'] = DEFINITION.WMQ_CREATE.value
+            self.invoke_wmq_connector(config)
 
 # ################################################################################################################################
