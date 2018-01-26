@@ -15,22 +15,48 @@ from traceback import format_exc
 # Zato
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import ConnDefWMQ, OutgoingWMQ
-from zato.common.odb.query import out_wmq_list
+from zato.common.odb.query import out_wmq, out_wmq_list
 from zato.server.connection.jms_wmq.outgoing import start_connector
 from zato.server.service import Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
+# ################################################################################################################################
+
+_base_required = ('id', 'name', 'is_active', 'def_id', Integer('delivery_mode'), Integer('priority'))
+_optional = ('expiration',)
+
+
+# ################################################################################################################################
+
+class _GetSIO(AdminSIO):
+    output_required = _base_required + ('def_name',)
+    output_optional = _optional
+
+# ################################################################################################################################
+
+class Get(AdminService):
+    """ Returns details of a single outgoing WebSphere MQ connection.
+    """
+    class SimpleIO(_GetSIO):
+        request_elem = 'zato_outgoing_jms_wmq_get_request'
+        response_elem = 'zato_outgoing_jms_wmq_get_response'
+        input_required = ('cluster_id', 'id')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload = out_wmq(session, self.request.input.cluster_id, self.request.input.id)
+
+# ################################################################################################################################
+
 class GetList(AdminService):
-    """ Returns a list of outgoing JMS WebSphere MQ connections.
+    """ Returns a list of outgoing WebSphere MQ connections.
     """
     _filter_by = OutgoingWMQ.name,
 
-    class SimpleIO(GetListAdminSIO):
+    class SimpleIO(_GetSIO, GetListAdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_get_list_request'
         response_elem = 'zato_outgoing_jms_wmq_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'def_id', Integer('delivery_mode'), Integer('priority'), 'def_name')
-        output_optional = ('expiration',)
 
     def get_data(self, session):
         return self._search(out_wmq_list, session, self.request.input.cluster_id, False)
@@ -39,8 +65,10 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+# ################################################################################################################################
+
 class Create(AdminService):
-    """ Creates a new outgoing JMS WebSphere MQ connection.
+    """ Creates a new outgoing WebSphere MQ connection.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_create_request'
@@ -63,7 +91,7 @@ class Create(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('An outgoing JMS WebSphere MQ connection [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing WebSphere MQ connection [{0}] already exists on this cluster'.format(input.name))
 
             try:
                 item = OutgoingWMQ()
@@ -84,14 +112,16 @@ class Create(AdminService):
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = 'Could not create an outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create an outgoing WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
 
                 raise
 
+# ################################################################################################################################
+
 class Edit(AdminService):
-    """ Updates an outgoing JMS WebSphere MQ connection.
+    """ Updates an outgoing WebSphere MQ connection.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_edit_request'
@@ -115,7 +145,7 @@ class Edit(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('An outgoing JMS WebSphere MQ connection [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing WebSphere MQ connection [{0}] already exists on this cluster'.format(input.name))
 
             try:
                 item = session.query(OutgoingWMQ).filter_by(id=input.id).one()
@@ -138,14 +168,16 @@ class Edit(AdminService):
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = 'Could not update the JMS WebSphere MQ definition, e:[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the WebSphere MQ definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
 
                 raise
 
+# ################################################################################################################################
+
 class Delete(AdminService):
-    """ Deletes an outgoing JMS WebSphere MQ connection.
+    """ Deletes an outgoing WebSphere MQ connection.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_delete_request'
@@ -168,7 +200,23 @@ class Delete(AdminService):
 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the outgoing WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
 
                 raise
+
+# ################################################################################################################################
+
+class SendMessage(AdminService):
+    """ Sends a message to a WebSphere MQ queue.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_jms_wmq_send_message_request'
+        response_elem = 'zato_outgoing_jms_wmq_message_response'
+        input_required = ('cluster_id',) + _base_required
+        input_optional = _optional
+
+    def handle(self):
+        self.server.invoke_wmq(self.request.input.id, self.request.input)
+
+# ################################################################################################################################

@@ -665,6 +665,12 @@ urlpatterns += [
         login_required(out_jms_wmq.edit), name='out-jms-wmq-edit'),
     url(r'^zato/outgoing/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_jms_wmq.Delete()), name=out_jms_wmq.Delete.url_name),
+
+    url(r'^zato/outgoing/jms-wmq/send/cluster/(?P<cluster_id>.*)/conn/(?P<conn_id>.*)/(?P<name_slug>.*)$',
+        login_required(out_jms_wmq.send_message), name='outgoing-wmq-send-message'),
+    url(r'^zato/outgoing/jms-wmq/send/action/cluster/(?P<cluster_id>.*)/conn/(?P<conn_id>.*)/(?P<name_slug>.*)$',
+        login_required(out_jms_wmq.send_message_action), name='outgoing-wmq-send-message-action'),
+
     ]
 
 # ################################################################################################################################

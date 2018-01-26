@@ -17,7 +17,7 @@
     <script type="text/javascript" src="/static/js/common.js"></script>
 
     {% comment %} HTTP Basic Auth {% endcomment %}
-    <script type="text/javascript" src="/static/js/outgoing/jms_wmq.js"></script>
+    <script type="text/javascript" src="/static/js/outgoing/jms-wmq.js"></script>
 
 
     <script>
@@ -31,6 +31,7 @@
             '_delivery_mode',
             'priority',
             '_expiration',
+            '_send_message',
             '_edit',
             '_delete',
             'id',
@@ -76,6 +77,7 @@
                         <th><a href="#">Expiration (ms)</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -95,6 +97,7 @@
                         <td>{{ item.priority|default_if_none:'' }}</td>
                         <td>{{ item.expiration|default:'<span class="form_hint">---</span>' }}</td>
 
+                        <td><a href="{% url "outgoing-wmq-send-message" cluster_id item.id item.name|slugify %}">Send a message</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.jms_wmq.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.jms_wmq.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
