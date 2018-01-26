@@ -240,7 +240,7 @@ class ConnectionContainer(object):
         """ A low-level method to create connection definitions. Must be called with self.lock held.
         """
         conn_name = msg.pop('name')
-        cluster_id = msg.pop('cluster_id')
+        msg.pop('cluster_id', None)
         id = msg.pop('id')
         max_chars_printed = msg.pop('max_chars_printed')
 
@@ -253,7 +253,7 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
-    def _on_DEFINITION_JMS_WMQ_CREATE(self, msg):
+    def _on_DEFINITION_WMQ_CREATE(self, msg):
         """ Creates a new connection to WebSphere MQ.
         """
         with self.lock:
@@ -261,7 +261,7 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
-    def _on_DEFINITION_JMS_WMQ_EDIT(self, msg):
+    def _on_DEFINITION_WMQ_EDIT(self, msg):
         """ Updates an existing definition - close the current one, including channels and outconns,
         and creates a new one in its place.
         """
@@ -271,7 +271,7 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
-    def _on_DEFINITION_JMS_WMQ_DELETE(self, msg):
+    def _on_DEFINITION_WMQ_DELETE(self, msg):
         pass
 
 # ################################################################################################################################
@@ -287,7 +287,7 @@ class ConnectionContainer(object):
             msg = bunchify(loads(msg))
 
             # Delete what handlers don't need
-            del msg['msg_type']
+            msg.pop('msg_type', None) # Optional if message was sent by a server that is starting up vs. API call
             action = msg.pop('action')
 
             handler = getattr(self, '_on_{}'.format(code_to_name[action]))

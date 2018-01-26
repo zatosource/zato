@@ -144,9 +144,9 @@ class DEFINITION(Constants):
     AMQP_DELETE = ValueConstant('')
     AMQP_CHANGE_PASSWORD = ValueConstant('')
 
-    JMS_WMQ_CREATE = ValueConstant('')
-    JMS_WMQ_EDIT = ValueConstant('')
-    JMS_WMQ_DELETE = ValueConstant('')
+    WMQ_CREATE = ValueConstant('')
+    WMQ_EDIT = ValueConstant('')
+    WMQ_DELETE = ValueConstant('')
 
     ZMQ_CREATE = ValueConstant('')
     ZMQ_EDIT = ValueConstant('')
