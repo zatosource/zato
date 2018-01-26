@@ -23,11 +23,11 @@ $(document).ready(function() {
 })
 
 $.fn.zato.outgoing.jms_wmq.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new outgoing JMS WebSphere MQ connection', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new outgoing WebSphere MQ connection', null);
 }
 
 $.fn.zato.outgoing.jms_wmq.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the outgoing JMS WebSphere MQ connection', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update outgoing WebSphere MQ connection', id);
 }
 
 $.fn.zato.outgoing.jms_wmq.data_table.new_row = function(item, data, include_tr) {
@@ -65,7 +65,7 @@ $.fn.zato.outgoing.jms_wmq.data_table.new_row = function(item, data, include_tr)
 
 $.fn.zato.outgoing.jms_wmq.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Outgoing JMS WebSphere MQ connection [{0}] deleted',
-        'Are you sure you want to delete the outgoing JMS WebSphere MQ connection [{0}]?',
+        'Outgoing WebSphere MQ connection `{0}` deleted',
+        'Are you sure you want to delete the outgoing WebSphere MQ connection `{0}`?',
         true);
 }

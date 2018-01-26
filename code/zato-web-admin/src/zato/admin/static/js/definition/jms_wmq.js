@@ -5,8 +5,8 @@ $.fn.zato.data_table.ConnDefWMQ = new Class({
     toString: function() {
         var s = '<ConnDefWMQ id:{0} name:{1} cache_open_send_queues:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                this.name ? this.name : '(none)',
-                                this.cache_open_send_queues ? this.cache_open_send_queues : '(none)');
+            this.name ? this.name : '(none)',
+            this.cache_open_send_queues ? this.cache_open_send_queues : '(none)');
     }
 });
 
@@ -79,7 +79,7 @@ $.fn.zato.definition.jms_wmq.data_table.new_row = function(item, data, include_t
 
 $.fn.zato.definition.jms_wmq.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'JMS WebSphere MQ definition [{0}] deleted',
-        'Are you sure you want to delete the JMS WebSphere MQ definition [{0}]?',
+        'WebSphere MQ definition `{0}` deleted',
+        'Are you sure you want to delete WebSphere MQ definition `{0}`?',
         true);
 }
