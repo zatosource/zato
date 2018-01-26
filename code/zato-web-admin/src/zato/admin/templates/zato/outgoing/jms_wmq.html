@@ -30,13 +30,14 @@
             '_def_name',
             '_delivery_mode',
             'priority',
-            'expiration',
+            '_expiration',
             '_edit',
             '_delete',
             'id',
             'is_active',
             'delivery_mode',
-            'def_id'
+            'def_id',
+            'expiration',
         ]
     }
     </script>
@@ -92,7 +93,7 @@
                         <td>{{ item.def_name }}</td>
                         <td>{{ item.delivery_mode_text|default_if_none:'' }}</td>
                         <td>{{ item.priority|default_if_none:'' }}</td>
-                        <td>{{ item.expiration|default_if_none:'' }}</td>
+                        <td>{{ item.expiration|default:'<span class="form_hint">---</span>' }}</td>
 
                         <td><a href="javascript:$.fn.zato.outgoing.jms_wmq.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.jms_wmq.delete_('{{ item.id }}')">Delete</a></td>
@@ -100,6 +101,7 @@
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.delivery_mode }}</td>
                         <td class='ignore'>{{ item.def_id }}</td>
+                        <td class='ignore'>{{ item.expiration|default_if_none:'' }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}

@@ -276,6 +276,11 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
+    def _on_OUTGOING_WMQ_SEND(self, msg):
+        raise Exception(msg)
+
+# ################################################################################################################################
+
     def handle_http_request(self, path, msg, ok=b'OK'):
         """ Dispatches incoming HTTP requests - either reconfigures the connector or puts messages to queues.
         """
