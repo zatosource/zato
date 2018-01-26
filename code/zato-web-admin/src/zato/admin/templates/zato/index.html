@@ -166,7 +166,7 @@
                             <ul>
                                 <li class='wide'><a href="{% url "out-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
                                 <li class='wide'><a href="{% url "out-ftp" %}?cluster={{ cluster_id|default:'' }}">FTP</a></li>
-                                <li class='wide'><a href="{% url "out-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
+                                <li class='wide'><a href="{% url "out-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">WebSphere MQ</a></li>
                                 <li class='wide'><a href="{% url "out-odoo" %}?cluster={{ cluster_id|default:'' }}">Odoo</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http">Plain HTTP</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
