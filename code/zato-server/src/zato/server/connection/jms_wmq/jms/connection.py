@@ -308,8 +308,6 @@ class WebSphereMQConnection(object):
         # Build the message descriptor (MQMD)
         md = self._build_md(message)
 
-        raise Exception(str(md))
-
         now = long(time() * 1000)
 
         # Create MQRFH2 header, if requested to

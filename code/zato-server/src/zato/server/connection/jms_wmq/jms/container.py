@@ -160,6 +160,10 @@ class ConnectionContainer(object):
         self.cluster_name = None
         self.logger = None
 
+        self.outconn_id_to_def_id = {} # Maps outgoing connection IDs to their underlying definition IDs
+        self.channel_id_to_def_id = {} # Ditto but for channels
+
+
         self.parent_pid = getppid()
         self.keyutils = KeyUtils('zato-wmq', self.parent_pid)
         self.lock = RLock()
@@ -173,24 +177,19 @@ class ConnectionContainer(object):
     def set_config(self):
         """ Sets self attributes, as configured in keyring by our parent process.
         """
-        '''
         config = self.keyutils.user_get()
         config = loads(config)
         config = bunchify(config)
-        '''
 
-        self.port = 34567#config.port
-        self.base_dir = '/home/dsuch/env/qs-ps2/server1'
-        '''
         self.username = config.username
         self.password = config.password
         self.server_pid = config.server_pid
         self.server_name = config.server_name
         self.cluster_name = config.cluster_name
         self.base_dir = config.base_dir
-        '''
+        self.port = config.port
 
-        with open('/home/dsuch/env/qs-ps2/server1/config/repo/logging.conf') as f:#config.logging_conf_path) as f:
+        with open(config.logging_conf_path) as f:
             logging_config = yaml.load(f)
 
         # WebSphere MQ logging configuration is new in Zato 3.0, so it's optional.
@@ -312,8 +311,7 @@ class ConnectionContainer(object):
     def _on_OUTGOING_WMQ_SEND(self, msg):
         """ Sends a message to a remote WebSphere MQ queue.
         """
-        conn_id = 8
-
+        conn_id = self.outconn_id_to_def_id[msg.id]
         try:
             self.connections[conn_id].send(TextMessage(
                 text = msg['data'],
