@@ -18,7 +18,7 @@
 <div id="markup">
     <table id="data-table">
         <tr>
-            <td class='inline_header'>Send a message using WebSphere MQ connection `{{ item.name }}` ({{ item.def_name_full_text }})</td>
+            <td class='inline_header'>Send a message using WebSphere MQ connection `{{ item.name }}`</td>
         </tr>
         <tr>
             <td>
@@ -32,8 +32,14 @@
                             <td style="width:5%">
                                 Queue:
                             </td>
-                            <td>
+                            <td style="width:20%">
                                 <input type="text" name="queue_name" value="" id="queue_name" style="width:220px"/>
+                            </td>
+                            <td style="width:6%">
+                                Reply to:
+                            </td>
+                            <td>
+                                <input type="text" name="reply_to" id="reply_to" style="width:250px"/>
                             </td>
                         </tr>
                         <tr>
@@ -43,6 +49,12 @@
                             <td>
                                 <input type="text" name="expiration" value="3600" id="expiration" style="width:60px"/>
                                 <span class="form_hint">(in seconds)</span>
+                            </td>
+                            <td>
+                                Correl ID:
+                            </td>
+                            <td>
+                                <input type="text" name="correl_id" id="correl_id" style="width:250px"/>
                             </td>
                         </tr>
                         <tr>
@@ -55,12 +67,18 @@
                                     <option value="2">Persistent</option>
                                 </select>
                             </td>
+                            <td>
+                                Msg ID:
+                            </td>
+                            <td>
+                                <input type="text" name="msg_id" id="msg_id" style="width:250px"/>
+                            </td>
                         </tr>
                         <tr>
                             <td>
                                 Priority:
                             </td>
-                            <td>
+                            <td colspan="3">
                                 <input type="text" name="priority" value="5" id="priority" style="width:30px"/>
                                 <span class="form_hint">(1-9, 1=min)</span>
                             </td>

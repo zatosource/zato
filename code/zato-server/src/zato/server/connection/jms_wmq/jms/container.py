@@ -319,7 +319,10 @@ class ConnectionContainer(object):
                 text = msg['data'],
                 jms_delivery_mode = msg['delivery_mode'],
                 jms_expiration = int(msg['expiration']) * 1000,
-                jms_priority = msg['priority']
+                jms_priority = msg['priority'],
+                jms_correlation_id = msg['correl_id'],
+                jms_message_id = msg['msg_id'],
+                jms_reply_to = msg['reply_to'],
             ), msg['queue_name'].encode('utf8'))
         except Exception as e:
             self.logger.warn(format_exc())
