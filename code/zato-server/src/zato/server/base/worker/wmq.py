@@ -19,11 +19,24 @@ class WebSphereMQ(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_DEFINITION_WMQ_CREATE(self, msg):
-        self.server.invoke_wmq_connector(msg)
+    def _on_broker_msg_invoke_wmq_connector(self, msg):
+        if self.server.is_first_worker:
+            self.server.invoke_wmq_connector(msg)
 
-    # Everything is delegated to connectors
-    on_broker_msg_DEFINITION_WMQ_EDIT = on_broker_msg_DEFINITION_WMQ_CREATE
-    on_broker_msg_DEFINITION_WMQ_DELETE = on_broker_msg_DEFINITION_WMQ_CREATE
+    # Everything is delegated to connectors ..
+    on_broker_msg_DEFINITION_WMQ_CREATE = _on_broker_msg_invoke_wmq_connector
+    on_broker_msg_DEFINITION_WMQ_EDIT = _on_broker_msg_invoke_wmq_connector
+    on_broker_msg_DEFINITION_WMQ_DELETE = _on_broker_msg_invoke_wmq_connector
+    on_broker_msg_DEFINITION_WMQ_CHANGE_PASSWORD = _on_broker_msg_invoke_wmq_connector
+
+    # .. including outconns ..
+    on_broker_msg_OUTGOING_WMQ_CREATE = _on_broker_msg_invoke_wmq_connector
+    on_broker_msg_OUTGOING_WMQ_EDIT = _on_broker_msg_invoke_wmq_connector
+    on_broker_msg_OUTGOING_WMQ_DELETE = _on_broker_msg_invoke_wmq_connector
+
+    # .. and channels.
+    on_broker_msg_CHANNEL_WMQ_CREATE = _on_broker_msg_invoke_wmq_connector
+    on_broker_msg_CHANNEL_WMQ_EDIT = _on_broker_msg_invoke_wmq_connector
+    on_broker_msg_CHANNEL_WMQ_DELETE = _on_broker_msg_invoke_wmq_connector
 
 # ################################################################################################################################

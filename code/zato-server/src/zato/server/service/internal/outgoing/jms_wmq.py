@@ -24,7 +24,7 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 _base_required = ('id', Integer('delivery_mode'), Integer('priority'))
 _get_required = _base_required + ('name', 'is_active', 'def_id', 'def_name')
-_optional = ('expiration',)
+_optional = (Integer('expiration'),)
 
 
 # ################################################################################################################################
@@ -105,11 +105,14 @@ class Create(AdminService):
                 item.priority = input.priority
                 item.expiration = input.expiration
 
+                # Commit to DB
                 session.add(item)
                 session.commit()
 
-                if item.is_active:
-                    start_connector(self.server.repo_location, item.id, item.def_id)
+                # Notify other servers
+                input.id = item.id
+                input.action = OUTGOING.WMQ_CREATE.value
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -160,12 +163,15 @@ class Edit(AdminService):
                 item.priority = input.priority
                 item.expiration = input.expiration
 
+                # Commit to DB
                 session.add(item)
                 session.commit()
 
                 input.action = OUTGOING.WMQ_EDIT.value
                 input.old_name = old_name
-                self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL)
+
+                # Notify other servers
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -194,12 +200,17 @@ class Delete(AdminService):
                     filter(OutgoingWMQ.id==self.request.input.id).\
                     one()
 
+                # Commit to DB
                 session.delete(item)
                 session.commit()
 
-                msg = {'action': OUTGOING.WMQ_DELETE.value, 'name': item.name,
-                       'old_name': item.name, 'id':item.id}
-                self.broker_client.publish(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL)
+                # Notify other servers
+                self.broker_client.publish({
+                    'action': OUTGOING.WMQ_DELETE.value,
+                    'name': item.name,
+                    'old_name': item.name,
+                    'id':item.id
+                })
 
             except Exception, e:
                 session.rollback()

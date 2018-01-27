@@ -15,8 +15,10 @@ import logging
 from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
+from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.definition.jms_wmq import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
+     Index as _Index, method_allowed
 from zato.common.odb.model import ConnDefWMQ
 
 logger = logging.getLogger(__name__)
@@ -38,6 +40,7 @@ class Index(_Index):
 
     def handle(self):
         return {
+            'change_password_form': ChangePasswordForm(),
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
         }
@@ -70,7 +73,11 @@ class Delete(_Delete):
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.definition.jms-wmq.ping', id, 'Could not ping the Odoo connection, e:[{e}]')
+    ret = id_only_service(req, 'zato.definition.jms-wmq.ping', id, 'Could not ping WebSphere MQ definition, e:`{e}`')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse(ret.data.info)
+
+@method_allowed('POST')
+def change_password(req):
+    return _change_password(req, 'zato.definition.jms-wmq.change-password')

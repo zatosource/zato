@@ -147,6 +147,7 @@ class DEFINITION(Constants):
     WMQ_CREATE = ValueConstant('')
     WMQ_EDIT = ValueConstant('')
     WMQ_DELETE = ValueConstant('')
+    WMQ_CHANGE_PASSWORD = ValueConstant('')
     WMQ_PING = ValueConstant('')
 
     ZMQ_CREATE = ValueConstant('')

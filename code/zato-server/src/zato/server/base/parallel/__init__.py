@@ -472,6 +472,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
                 is_ok = self.start_websphere_mq_connector(int(self.fs_server_config.websphere_mq.ipc_tcp_start_port))
                 if is_ok:
                     self.create_initial_wmq_definitions(self.worker_store.worker_config.definition_wmq)
+                    self.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
 
         # IPC
         self.ipc_api.name = self.name
