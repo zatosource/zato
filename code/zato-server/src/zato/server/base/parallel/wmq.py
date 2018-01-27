@@ -124,19 +124,28 @@ class WMQIPC(object):
 
 # ################################################################################################################################
 
-    def invoke_wmq_connector(self, msg, address_pattern=address_pattern):
+    def invoke_wmq_connector(self, msg, raise_on_error=True, address_pattern=address_pattern):
         address = address_pattern.format(self.wmq_ipc_tcp_port, 'api')
         response = post(address, data=dumps(msg), auth=self.get_wmq_credentials())
 
         if not response.ok:
-            raise Exception(response.text)
+            if raise_on_error:
+                raise Exception(response.text)
+            else:
+                logger.warn(response.text)
+
+# ################################################################################################################################
+
+    def get_connection_text(self, config):
+        return '{} {}:{} (queue manager:{})'.format(config['name'], config['host'], config['port'], config['queue_manager'])
 
 # ################################################################################################################################
 
     def create_initial_wmq_definitions(self, config_dict):
         for value in config_dict.values():
             config = value['config']
+            logger.info('Creating WebSphere MQ connection %s', self.get_connection_text(config))
             config['action'] = DEFINITION.WMQ_CREATE.value
-            self.invoke_wmq_connector(config)
+            self.invoke_wmq_connector(config, False)
 
 # ################################################################################################################################

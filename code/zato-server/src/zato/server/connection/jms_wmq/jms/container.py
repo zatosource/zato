@@ -271,8 +271,13 @@ class ConnectionContainer(object):
         """ Creates a new connection to WebSphere MQ.
         """
         with self.lock:
-            self._create_definition(msg)
-            return Response()
+            try:
+                self._create_definition(msg)
+            except Exception as e:
+                self.logger.warn(format_exc())
+                return Response(_http_503, str(e.message))
+            else:
+                return Response()
 
 # ################################################################################################################################
 
