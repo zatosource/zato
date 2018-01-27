@@ -17,7 +17,7 @@ from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import ConnDefWMQ, OutgoingWMQ
 from zato.common.odb.query import out_wmq, out_wmq_list
 from zato.server.connection.jms_wmq.outgoing import start_connector
-from zato.server.service import Integer
+from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -216,8 +216,8 @@ class SendMessage(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_send_message_request'
         response_elem = 'zato_outgoing_jms_wmq_message_response'
-        input_required = ('cluster_id', 'queue_name', 'data') + _base_required
-        input_optional = _optional
+        input_required = _base_required + ('cluster_id', 'queue_name', 'data')
+        input_optional = _optional + ('reply_to', AsIs('correl_id'), AsIs('msg_id'))
 
     def handle(self):
         self.server.send_wmq_message(self.request.input)

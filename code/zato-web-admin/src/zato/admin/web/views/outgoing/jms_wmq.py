@@ -31,6 +31,10 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+send_attrs = ('id', 'queue_name', 'data', 'delivery_mode', 'priority', 'expiration', 'reply_to', 'msg_id', 'correl_id')
+
+# ################################################################################################################################
+
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base dictionary which can be used by both 'edit' and 'create' actions.
     """
@@ -165,16 +169,12 @@ def send_message(req, cluster_id, conn_id, name_slug):
 def send_message_action(req, cluster_id, conn_id, name_slug):
 
     try:
-
         request = {
-            'cluster_id': req.zato.cluster_id,
-            'id': req.POST['id'],
-            'queue_name': req.POST['queue_name'] + 'a',
-            'data': req.POST.get('data', '') + '-' + str(x),
-            'delivery_mode': req.POST['delivery_mode'],
-            'priority': req.POST['priority'],
-            'expiration': req.POST['expiration'],
+            'cluster_id': req.zato.cluster_id
         }
+
+        for name in send_attrs:
+            request[name] = req.POST.get(name, '')
 
         response = req.zato.client.invoke('zato.outgoing.jms-wmq.send-message', request)
 

@@ -308,6 +308,8 @@ class WebSphereMQConnection(object):
         # Build the message descriptor (MQMD)
         md = self._build_md(message)
 
+        raise Exception(str(md))
+
         now = long(time() * 1000)
 
         # Create MQRFH2 header, if requested to
@@ -597,6 +599,10 @@ class WebSphereMQConnection(object):
         md.Encoding = _WMQ_DEFAULT_ENCODING
 
         # Map JMS headers to MQMD
+
+        if message.jms_message_id:
+            md.MsgId = message.jms_message_id
+
         if message.jms_correlation_id:
             if message.jms_correlation_id.startswith(_WMQ_ID_PREFIX):
                 md.CorrelId = unhexlify_wmq_id(message.jms_correlation_id)
