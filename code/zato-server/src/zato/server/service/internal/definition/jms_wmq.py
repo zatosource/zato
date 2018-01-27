@@ -95,7 +95,7 @@ class Create(AdminService):
                 raise Exception('WebSphere MQ definition `{}` already exists on this cluster'.format(input.name))
 
             try:
-                input.password = 'abcd1234'#uuid4().hex
+                input.password = uuid4().hex
 
                 def_ = ConnDefWMQ(None, input.name, input.host, input.port, input.queue_manager,
                     input.channel, input.cache_open_send_queues, input.cache_open_receive_queues,
@@ -226,7 +226,10 @@ class ChangePassword(ChangePasswordBase):
         def _auth(instance, password):
             instance.password = password
 
-        return self._handle(CassandraConn, _auth, DEFINITION.CASSANDRA_CHANGE_PASSWORD.value)
+        self.request.input.action = DEFINITION.WMQ_CHANGE_PASSWORD.value
+        self.broker_client.publish(self.request.input)
+
+        return self._handle(ConnDefWMQ, _auth, DEFINITION.WMQ_CHANGE_PASSWORD.value)
 
 # ################################################################################################################################
 

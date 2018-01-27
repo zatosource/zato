@@ -48,6 +48,8 @@ $.fn.zato.outgoing.jms_wmq.data_table.new_row = function(item, data, include_tr)
     row += String.format('<td>{0}</td>', data.delivery_mode_text);
     row += String.format('<td>{0}</td>', item.priority);
     row += String.format('<td>{0}</td>', expiration ? expiration : $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"/zato/outgoing/jms-wmq/send/cluster/{0}/conn/{1}\">Send a message</a>", item.cluster_id, item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.jms_wmq.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.jms_wmq.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);

@@ -599,7 +599,7 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. JMS WebSphere MQ
+    # .. WebSphere MQ
 
     url(r'^zato/definition/jms-wmq/$',
         login_required(def_wmq.Index()), name=def_wmq.Index.url_name),
@@ -609,6 +609,8 @@ urlpatterns += [
         login_required(def_wmq.Edit()), name=def_wmq.Edit.url_name),
     url(r'^zato/definition/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(def_wmq.Delete()), name=def_wmq.Delete.url_name),
+    url(r'^zato/definition/jms-wmq/change-password/$',
+        login_required(def_wmq.change_password), name='definition-wmq-change-password'),
     url(r'^zato/definition/jms-wmq/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(def_wmq.ping), name='definition-wmq-ping'),
     ]
@@ -655,7 +657,7 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. JMS WebSphere MQ
+    # .. WebSphere MQ
 
     url(r'^zato/outgoing/jms-wmq/$',
         login_required(out_jms_wmq.index), name='out-jms-wmq'),
@@ -665,7 +667,6 @@ urlpatterns += [
         login_required(out_jms_wmq.edit), name='out-jms-wmq-edit'),
     url(r'^zato/outgoing/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_jms_wmq.Delete()), name=out_jms_wmq.Delete.url_name),
-
     url(r'^zato/outgoing/jms-wmq/send/cluster/(?P<cluster_id>.*)/conn/(?P<conn_id>.*)/(?P<name_slug>.*)$',
         login_required(out_jms_wmq.send_message), name='outgoing-wmq-send-message'),
     url(r'^zato/outgoing/jms-wmq/send/action/cluster/(?P<cluster_id>.*)/conn/(?P<conn_id>.*)/(?P<name_slug>.*)$',
@@ -770,7 +771,7 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. JMS WebSphere MQ
+    # .. WebSphere MQ
     url(r'^zato/channel/jms-wmq/$',
         login_required(channel_jms_wmq.Index()), name=channel_jms_wmq.Index.url_name),
     url(r'^zato/channel/jms-wmq/create/$',

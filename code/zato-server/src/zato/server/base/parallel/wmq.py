@@ -83,7 +83,7 @@ class WMQIPC(object):
         until = timedelta(seconds=timeout)
         is_ok = False
         address = address_pattern.format(self.wmq_ipc_tcp_port, 'ping')
-        auth = (address, username)
+        auth = self.get_wmq_credentials()
 
         while not is_ok or now >= until:
             is_ok = self._ping_connector(address, auth)
@@ -136,16 +136,31 @@ class WMQIPC(object):
 
 # ################################################################################################################################
 
-    def get_connection_text(self, config):
-        return '{} {}:{} (queue manager:{})'.format(config['name'], config['host'], config['port'], config['queue_manager'])
+    def _create_initial_wmq_objects(self, config_dict, action, text_pattern, text_func):
+        for value in config_dict.values():
+            config = value['config']
+            logger.info(text_pattern, text_func(config))
+            config['action'] = action
+            self.invoke_wmq_connector(config, False)
 
 # ################################################################################################################################
 
     def create_initial_wmq_definitions(self, config_dict):
-        for value in config_dict.values():
-            config = value['config']
-            logger.info('Creating WebSphere MQ connection %s', self.get_connection_text(config))
-            config['action'] = DEFINITION.WMQ_CREATE.value
-            self.invoke_wmq_connector(config, False)
+        def text_func(config):
+            return '{} {}:{} (queue manager:{})'.format(config['name'], config['host'], config['port'], config['queue_manager'])
+
+        text_pattern = 'Creating WebSphere MQ definition %s'
+        action = DEFINITION.WMQ_CREATE.value
+        self._create_initial_wmq_objects(config_dict, action, text_pattern, text_func)
+
+# ################################################################################################################################
+
+    def create_initial_wmq_outconns(self, config_dict):
+        def text_func(config):
+            return config
+
+        text_pattern = 'Creating WebSphere MQ outconn %s'
+        action = OUTGOING.WMQ_CREATE.value
+        self._create_initial_wmq_objects(config_dict, action, text_pattern, text_func)
 
 # ################################################################################################################################

@@ -75,6 +75,7 @@ default_logging_config = {
 _http_200 = b'{} {}'.format(httplib.OK, httplib.responses[httplib.OK])
 _http_400 = b'{} {}'.format(httplib.BAD_REQUEST, httplib.responses[httplib.BAD_REQUEST])
 _http_403 = b'{} {}'.format(httplib.FORBIDDEN, httplib.responses[httplib.FORBIDDEN])
+_http_406 = b'{} {}'.format(httplib.NOT_ACCEPTABLE, httplib.responses[httplib.NOT_ACCEPTABLE])
 _http_500 = b'{} {}'.format(httplib.INTERNAL_SERVER_ERROR, httplib.responses[httplib.INTERNAL_SERVER_ERROR])
 _http_503 = b'{} {}'.format(httplib.SERVICE_UNAVAILABLE, httplib.responses[httplib.SERVICE_UNAVAILABLE])
 
@@ -150,6 +151,11 @@ class WebSphereMQTask(object):
 
 class ConnectionContainer(object):
     def __init__(self):
+
+        # PyMQI is an optional dependency so let's import it here rather than on module level
+        import pymqi
+        self.pymqi = pymqi
+
         self.host = '127.0.0.1'
         self.port = None
         self.username = None
@@ -158,21 +164,20 @@ class ConnectionContainer(object):
         self.server_pid = None
         self.server_name = None
         self.cluster_name = None
+
+        self.lock = RLock()
         self.logger = None
+        self.parent_pid = getppid()
+        self.keyutils = KeyUtils('zato-wmq', self.parent_pid)
+
+        self.connections = {}
+        self.outconns = {}
+        self.channels = {}
 
         self.outconn_id_to_def_id = {} # Maps outgoing connection IDs to their underlying definition IDs
         self.channel_id_to_def_id = {} # Ditto but for channels
 
-
-        self.parent_pid = getppid()
-        self.keyutils = KeyUtils('zato-wmq', self.parent_pid)
-        self.lock = RLock()
-        self.connections = {}
         self.set_config()
-
-        # PyMQI is an optional dependency so let's import it here rather than on module level
-        import pymqi
-        self.pymqi = pymqi
 
     def set_config(self):
         """ Sets self attributes, as configured in keyring by our parent process.
@@ -257,6 +262,8 @@ class ConnectionContainer(object):
         id = msg.pop('id')
         max_chars_printed = msg.pop('max_chars_printed')
 
+        self.logger.warn('DEF %s', msg)
+
         # We always create and add a connetion ..
         conn = WebSphereMQConnection(**msg)
         self.connections[id] = conn
@@ -294,11 +301,56 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_DELETE(self, msg):
-        pass
+        """ Deletes a WebSphere MQ definition along with its associated outconns and channels.
+        """
+        with self.lock:
+            def_id = msg.id
+
+            # Stop all connections ..
+            try:
+                self.connections[def_id].close()
+            except Exception as e:
+                self.logger.warn(format_exc())
+            finally:
+                try:
+                    del self.connections[def_id]
+                except Exception:
+                    self.logger.warn(format_exc())
+
+                # .. continue to delete outconns regardless of errors above ..
+                for outconn_id, outconn_def_id in self.outconn_id_to_def_id.items():
+                    if outconn_def_id == def_id:
+                        del self.outconn_id_to_def_id[outconn_id]
+                        del self.outconns[outconn_id]
+
+                # .. delete channels too.
+                for channel_id, channel_def_id in self.channel_id_to_def_id.items():
+                    if channel_def_id == def_id:
+                        del self.channel_id_to_def_id[channel_id]
+                        del self.channels[channel_id]
+
+            return Response()
+
+# ################################################################################################################################
+
+    def _on_DEFINITION_WMQ_CHANGE_PASSWORD(self, msg):
+        with self.lock:
+            try:
+                conn = self.connections[msg.id]
+                conn.close()
+                conn.password = msg.password1
+                conn.connect()
+            except Exception as e:
+                self.logger.warn(format_exc())
+                return Response(_http_503, str(e.message), 'text/plain')
+            else:
+                return Response()
 
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_PING(self, msg):
+        """ Pings a remote WebSphere MQ manager.
+        """
         try:
             self.connections[msg.id].ping()
         except WebSphereMQException, e:
@@ -308,31 +360,93 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
+    def _create_outconn(self, msg):
+        """ A low-level method to create an outgoing connection. Must be called with self.lock held.
+        """
+        # Just to be on the safe side, make sure that our connection exists
+        if not msg.def_id in self.connections:
+            return Response(_http_503, 'Could not find def_id among {}'.format(self.connections.keys()), 'text/plain')
+
+        # Map outconn to its definition
+        self.outconn_id_to_def_id[msg.id] = msg.def_id
+
+        # Create the outconn now
+        self.outconns[msg.id] = msg
+
+        # Everything OK
+        return Response()
+
+# ################################################################################################################################
+
+    def _delete_outconn(self, msg):
+        """ A low-level implementation of outconn deletion. Must be called with self.lock held.
+        """
+        del self.outconns[msg.id]
+        del self.outconn_id_to_def_id[msg.id]
+
+# ################################################################################################################################
+
+    def _on_OUTGOING_WMQ_DELETE(self, msg):
+        """ Deletes an existing WebSphere MQ outconn.
+        """
+        with self.lock:
+            self._delete_outconn(msg)
+            return Response()
+
+# ################################################################################################################################
+
+    def _on_OUTGOING_WMQ_CREATE(self, msg):
+        """ Creates a new WebSphere MQ outgoin connections using an already existing definition.
+        """
+        with self.lock:
+            return self._create_outconn(msg)
+
+# ################################################################################################################################
+
+    def _on_OUTGOING_WMQ_EDIT(self, msg):
+        """ Updates and existing outconn by deleting and creating it again with latest configuration.
+        """
+        with self.lock:
+            self._delete_outconn(msg)
+            return self._create_outconn(msg)
+
+# ################################################################################################################################
+
     def _on_OUTGOING_WMQ_SEND(self, msg):
         """ Sends a message to a remote WebSphere MQ queue.
         """
-        conn_id = self.outconn_id_to_def_id[msg.id]
-        try:
-            self.connections[conn_id].send(TextMessage(
-                text = msg['data'],
-                jms_delivery_mode = msg['delivery_mode'],
-                jms_expiration = int(msg['expiration']) * 1000,
-                jms_priority = msg['priority'],
-                jms_correlation_id = msg['correl_id'],
-                jms_message_id = msg['msg_id'],
-                jms_reply_to = msg['reply_to'],
-            ), msg['queue_name'].encode('utf8'))
-        except Exception as e:
-            self.logger.warn(format_exc())
+        outconn = self.outconns[msg.id]
 
-            if isinstance(e, self.pymqi.MQMIError):
-                message = e.errorAsString()
-            else:
-                message = e.message
-
-            return Response(_http_503, message)
+        if not outconn.is_active:
+            return Response(_http_406, 'Cannot send messages through an inactive connection', 'text/plain')
         else:
-            return Response()
+            conn_id = self.outconn_id_to_def_id[msg.id]
+            try:
+
+                delivery_mode = msg.delivery_mode or outconn.delivery_mode
+                priority = msg.priority or outconn.priority
+                expiration = msg.expiration or outconn.expiration
+
+                self.connections[conn_id].send(TextMessage(
+                    text = msg.data,
+                    jms_delivery_mode = delivery_mode,
+                    jms_priority = priority,
+                    jms_expiration = expiration,
+                    jms_correlation_id = msg.correl_id,
+                    jms_message_id = msg.msg_id,
+                    jms_reply_to = msg.reply_to,
+                ), msg.queue_name.encode('utf8'))
+            except Exception as e:
+                self.logger.warn(format_exc())
+
+                if isinstance(e, self.pymqi.MQMIError):
+                    message = e.errorAsString()
+                else:
+                    message = e.message
+
+                return Response(_http_503, message)
+            else:
+                return Response()
 
 # ################################################################################################################################
 
@@ -358,7 +472,6 @@ class ConnectionContainer(object):
     def check_credentials(self, auth):
         """ Checks incoming username/password and returns True only if they were valid and as expected.
         """
-        return True
         username, password = parse_basic_auth(auth)
 
         if username != self.username:
