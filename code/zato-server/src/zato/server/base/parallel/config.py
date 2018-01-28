@@ -128,6 +128,10 @@ class ConfigLoader(object):
         query = self.odb.get_channel_stomp_list(server.cluster.id, True)
         self.config.channel_stomp = ConfigDict.from_query('channel_stomp', query)
 
+        # WebSphere MQ
+        query = self.odb.get_channel_wmq_list(server.cluster.id, True)
+        self.config.channel_wmq = ConfigDict.from_query('channel_wmq', query)
+
         #
         # Channels - end
         #

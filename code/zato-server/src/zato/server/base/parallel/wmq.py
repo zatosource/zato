@@ -25,7 +25,7 @@ from requests import get, post
 
 # Zato
 from zato.common import IPC
-from zato.common.broker_message import DEFINITION, OUTGOING
+from zato.common.broker_message import CHANNEL, DEFINITION, OUTGOING
 from zato.common.proc_util import start_python_process
 from zato.common.util import get_free_port
 
@@ -68,9 +68,9 @@ class WMQIPC(object):
             'port': self.wmq_ipc_tcp_port,
             'username': username,
             'password': password,
-            'server_pid': self.pid,
+            'server_port': self.port,
             'server_name': self.name,
-            'cluster_name': self.cluster.name,
+            'server_path': '/zato/internal/callback/wmq',
             'base_dir': self.base_dir,
             'logging_conf_path': self.logging_conf_path
         }), self.pid)
@@ -157,10 +157,20 @@ class WMQIPC(object):
 
     def create_initial_wmq_outconns(self, config_dict):
         def text_func(config):
-            return config
+            return config['name']
 
         text_pattern = 'Creating WebSphere MQ outconn %s'
         action = OUTGOING.WMQ_CREATE.value
+        self._create_initial_wmq_objects(config_dict, action, text_pattern, text_func)
+
+# ################################################################################################################################
+
+    def create_initial_wmq_channels(self, config_dict):
+        def text_func(config):
+            return config['name']
+
+        text_pattern = 'Creating WebSphere MQ channel %s'
+        action = CHANNEL.WMQ_CREATE.value
         self._create_initial_wmq_objects(config_dict, action, text_pattern, text_func)
 
 # ################################################################################################################################

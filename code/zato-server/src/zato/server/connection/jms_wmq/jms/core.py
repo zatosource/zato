@@ -24,6 +24,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import locale
+from binascii import hexlify
 from string import Template
 from cStringIO import StringIO
 
@@ -148,9 +149,7 @@ class TextMessage(object):
 
         self.text = text
         self.jms_correlation_id = jms_correlation_id
-
         self.jms_delivery_mode = jms_delivery_mode or DEFAULT_DELIVERY_MODE
-
         self.jms_destination = jms_destination
         self.jms_expiration = jms_expiration
         self.jms_message_id = jms_message_id
@@ -159,21 +158,36 @@ class TextMessage(object):
         self.jms_reply_to = jms_reply_to
         self.jms_timestamp = jms_timestamp
         self.max_chars_printed = max_chars_printed
+        self.put_date = None
+        self.put_time = None
+
+# ################################################################################################################################
+
+    def _get_basic_data(self):
+        return {
+            'delivery_mode': self.jms_delivery_mode,
+            'expiration':self.jms_expiration,
+            'priority':self.jms_priority,
+            'message_id':hexlify(self.jms_message_id),
+            'put_date':self.put_date,
+            'put_time':self.put_time,
+            'correlation_id':hexlify(self.jms_correlation_id),
+            'destination':self.jms_destination,
+            'reply_to':self.jms_reply_to,
+            'redelivered':self.jms_redelivered,
+        }
+
+# ################################################################################################################################
+
+    def to_dict(self):
+        data = self._get_basic_data()
+        data['text'] = self.text
+        return data
 
 # ################################################################################################################################
 
     def __str__(self):
-        basic_data = {
-            'jms_delivery_mode': self.jms_delivery_mode,
-            'jms_expiration':self.jms_expiration,
-            'jms_priority':self.jms_priority,
-            'jms_message_id':self.jms_message_id,
-            'jms_timestamp':self.jms_timestamp,
-            'jms_correlation_id':self.jms_correlation_id,
-            'jms_destination':self.jms_destination,
-            'jms_reply_to':self.jms_reply_to,
-            'jms_redelivered':self.jms_redelivered,
-        }
+        basic_data = self._get_basic_data()
 
         buff = StringIO()
         buff.write(Template(text_message_template).safe_substitute(basic_data))

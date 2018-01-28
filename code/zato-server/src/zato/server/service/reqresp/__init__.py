@@ -76,13 +76,29 @@ class AMQPRequestData(object):
 
 # ################################################################################################################################
 
+class WebSphereMQRequestData(object):
+    """ Data regarding a WebSphere MQ request.
+    """
+    __slots__ = ('ctx', 'message_id', 'correlation_id', 'timestamp', 'put_date', 'put_time', 'reply_to')
+
+    def __init__(self, ctx):
+        self.ctx = ctx
+        self.message_id = ctx['message_id']
+        self.correlation_id = ctx['correlation_id']
+        self.timestamp = ctx['timestamp']
+        self.put_date = ctx['put_date']
+        self.put_time = ctx['put_time']
+        self.reply_to = ctx['reply_to']
+
+# ################################################################################################################################
+
 class Request(SIOConverter):
     """ Wraps a service request and adds some useful meta-data.
     """
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
                  'simple_io_config', 'bool_parameter_prefixes', 'int_parameters',
                  'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
-                 '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp')
+                 '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp', 'wmq')
 
     def __init__(self, logger, simple_io_config={}, data_format=None, transport=None,
             _dt_fixed_width=SIMPLE_IO.FORMAT.FIXED_WIDTH):
@@ -105,6 +121,7 @@ class Request(SIOConverter):
         self.merge_channel_params = True
         self.params_priority = PARAMS_PRIORITY.DEFAULT
         self.amqp = None
+        self.wmq = None
 
 # ################################################################################################################################
 
