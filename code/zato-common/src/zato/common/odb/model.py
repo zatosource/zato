@@ -919,6 +919,7 @@ class ConnDefWMQ(Base):
     ssl_cipher_spec = Column(String(200))
     ssl_key_repository = Column(String(200))
     needs_mcd = Column(Boolean(), nullable=False)
+    use_jms = Column(Boolean(), nullable=False)
     max_chars_printed = Column(Integer, nullable=False)
     username = Column(String(100), nullable=True)
     password = Column(String(100), nullable=True)
@@ -928,7 +929,7 @@ class ConnDefWMQ(Base):
 
     def __init__(self, id=None, name=None, host=None, port=None, queue_manager=None, channel=None, cache_open_send_queues=None,
         cache_open_receive_queues=None, use_shared_connections=None, ssl=None, ssl_cipher_spec=None, ssl_key_repository=None,
-        needs_mcd=None, max_chars_printed=None, cluster_id=None, username=None, password=None):
+        needs_mcd=None, max_chars_printed=None, cluster_id=None, username=None, password=None, use_jms=None):
         self.id = id
         self.name = name
         self.host = host
@@ -946,6 +947,7 @@ class ConnDefWMQ(Base):
         self.cluster_id = cluster_id
         self.username = username
         self.password = password
+        self.use_jms = use_jms
 
 # ################################################################################################################################
 

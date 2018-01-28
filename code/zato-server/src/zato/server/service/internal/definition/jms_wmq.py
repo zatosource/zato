@@ -34,7 +34,7 @@ class GetList(AdminService):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'host', 'port', 'channel', Boolean('cache_open_send_queues'),
             Boolean('cache_open_receive_queues'), Boolean('use_shared_connections'), Boolean('ssl'), 'needs_mcd',
-            Integer('max_chars_printed'))
+            Integer('max_chars_printed'), Boolean('use_jms'))
         output_optional = ('ssl_cipher_spec', 'ssl_key_repository', 'queue_manager', 'username')
 
     def get_data(self, session):
@@ -56,7 +56,7 @@ class GetByID(AdminService):
         output_required = ('id', 'name', 'host', 'port', 'channel', Boolean('cache_open_send_queues'),
             Boolean('cache_open_receive_queues'), Boolean('use_shared_connections'), Boolean('ssl'), 'needs_mcd',
             Integer('max_chars_printed'))
-        output_optional = ('ssl_cipher_spec', 'ssl_key_repository', 'queue_manager', 'username')
+        output_optional = ('ssl_cipher_spec', 'ssl_key_repository', 'queue_manager', 'username', Boolean('use_jms'))
 
     def get_data(self, session):
         return definition_wmq(session, self.request.input.cluster_id, self.request.input.id)
@@ -75,7 +75,7 @@ class Create(AdminService):
         response_elem = 'zato_definition_jms_wmq_create_response'
         input_required = ('cluster_id', 'name', 'host', 'port', 'channel', Boolean('cache_open_send_queues'),
             Boolean('cache_open_receive_queues'), Boolean('use_shared_connections'), Boolean('ssl'), 'needs_mcd',
-            Integer('max_chars_printed'))
+            Integer('max_chars_printed'), Boolean('use_jms'))
         input_optional = ('ssl_cipher_spec', 'ssl_key_repository', 'queue_manager', 'username')
         output_required = ('id', 'name')
 
@@ -96,12 +96,13 @@ class Create(AdminService):
 
             try:
                 input.password = uuid4().hex
+                input.use_jms = input.use_jms or False
 
                 def_ = ConnDefWMQ(None, input.name, input.host, input.port, input.queue_manager,
                     input.channel, input.cache_open_send_queues, input.cache_open_receive_queues,
                     input.use_shared_connections, input.ssl, input.ssl_cipher_spec,
                     input.ssl_key_repository, input.needs_mcd, input.max_chars_printed,
-                    input.cluster_id, input.username, input.password)
+                    input.cluster_id, input.username, input.password, input.use_jms or False)
                 session.add(def_)
                 session.commit()
 
@@ -128,7 +129,7 @@ class Edit(AdminService):
         response_elem = 'zato_definition_jms_wmq_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'channel',
             Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'), Boolean('use_shared_connections'),
-            Boolean('ssl'), 'needs_mcd', Integer('max_chars_printed'))
+            Boolean('ssl'), 'needs_mcd', Integer('max_chars_printed'), Boolean('use_jms'))
         input_optional = ('queue_manager', 'username')
         output_required = ('id', 'name')
 
@@ -164,6 +165,7 @@ class Edit(AdminService):
                 def_.needs_mcd = input.needs_mcd
                 def_.max_chars_printed = input.max_chars_printed
                 def_.username = input.username
+                def_.use_jms = input.use_jms or False
 
                 session.add(def_)
                 session.commit()

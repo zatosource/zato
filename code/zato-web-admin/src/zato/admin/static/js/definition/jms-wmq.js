@@ -39,6 +39,7 @@ $.fn.zato.definition.jms_wmq.data_table.new_row = function(item, data, include_t
     var ssl_cipher_spec = item.ssl_cipher_spec ? item.ssl_cipher_spec : '';
     var ssl_key_repository = item.ssl_key_repository ? item.ssl_key_repository : '';
     var needs_mcd = item.needs_mcd == true;
+    var use_jms = item.use_jms == true;
     var username = item.username ? item.username : '';
     var queue_manager = item.queue_manager ? item.queue_manager : '';
 
@@ -53,24 +54,25 @@ $.fn.zato.definition.jms_wmq.data_table.new_row = function(item, data, include_t
     row += String.format('<td>{0}</td>', item.username ? item.username : $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', ssl ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.ssl_cipher_spec ? item.ssl_cipher_spec : $.fn.zato.empty_value);
-    row += String.format('<td>{0}</td>', item.ssl_key_repository ? item.ssl_key_repository : $.fn.zato.empty_value);
 
+    row += String.format('<td>{0}</td>', item.ssl_key_repository ? item.ssl_key_repository : $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.max_chars_printed);
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.definition.jms_wmq.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.definition.jms_wmq.delete_({0});'>Delete</a>", item.id));
+
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
-
     row += String.format("<td class='ignore'>{0}</td>", item.cache_open_send_queues);
     row += String.format("<td class='ignore'>{0}</td>", item.cache_open_receive_queues);
     row += String.format("<td class='ignore'>{0}</td>", item.use_shared_connections);
-    row += String.format("<td class='ignore'>{0}</td>", ssl);
 
+    row += String.format("<td class='ignore'>{0}</td>", ssl);
     row += String.format("<td class='ignore'>{0}</td>", username);
     row += String.format("<td class='ignore'>{0}</td>", queue_manager);
     row += String.format("<td class='ignore'>{0}</td>", ssl_cipher_spec);
     row += String.format("<td class='ignore'>{0}</td>", ssl_key_repository);
+    row += String.format("<td class='ignore'>{0}</td>", use_jms);
 
     if(include_tr) {
         row += '</tr>';

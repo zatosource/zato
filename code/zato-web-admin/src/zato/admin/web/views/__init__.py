@@ -409,6 +409,8 @@ class CreateEdit(_BaseView):
         """ Handles the request, taking care of common things and delegating
         control to the subclass for fetching this view-specific data.
         """
+        print(req.POST.items())
+
         self.input_dict.clear()
         self.clear_user_message()
 
