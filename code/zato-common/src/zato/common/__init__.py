@@ -568,7 +568,6 @@ class CHANNEL(Attrs):
     INVOKE_ASYNC = 'invoke-async'
     INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'
     IPC = 'ipc'
-    JMS_WMQ = 'jms-wmq'
     NOTIFIER_RUN = 'notifier-run'
     NOTIFIER_TARGET = 'notifier-target'
     PARALLEL_EXEC_CALL = 'parallel-exec-call'
@@ -580,6 +579,7 @@ class CHANNEL(Attrs):
     STOMP = 'stomp'
     URL_DATA = 'url-data'
     WEB_SOCKET = 'web-socket'
+    WEBSPHERE_MQ = 'websphere-mq'
     WORKER = 'worker'
     ZMQ = 'zmq'
 

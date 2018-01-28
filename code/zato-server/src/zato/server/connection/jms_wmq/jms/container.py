@@ -25,12 +25,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import sys
-from json import loads
+from json import dumps, loads
 from logging import basicConfig, DEBUG, Formatter, getLogger, INFO, StreamHandler
 from logging.handlers import RotatingFileHandler
 from os import getpid, getppid, path
 from thread import start_new_thread
 from threading import RLock
+from time import sleep
 from traceback import format_exc
 from wsgiref.simple_server import make_server
 import httplib
@@ -38,8 +39,8 @@ import httplib
 # Bunch
 from bunch import Bunch, bunchify
 
-# ThreadPool
-from threadpool import ThreadPool, WorkRequest, NoResultsPending
+# Requests
+from requests import post
 
 # YAML
 import yaml
@@ -94,58 +95,83 @@ class Response(object):
 
 # ################################################################################################################################
 
+class _MessageCtx(object):
+    __slots__ = ('mq_msg', 'channel_id')
+
+    def __init__(self, mq_msg, channel_id):
+        self.mq_msg = mq_msg
+        self.channel_id = channel_id
+
+# ################################################################################################################################
+
 class WebSphereMQTask(object):
-    """ A process to listen for messages and to send them to WebSphere MQ queue managers.
+    """ A process to listen for messages from WebSphere MQ queue managers.
     """
-    def __init__(self, conn, on_message_callback, max_chars_printed):
+    def __init__(self, conn, channel_id, on_message_callback, logger):
         self.conn = conn
+        self.channel_id = channel_id
         self.on_message_callback = on_message_callback
-        self.max_chars_printed = max_chars_printed
-        self.handlers_pool = ThreadPool(5)
         self.keep_running = True
+        self.logger = logger
         self.has_debug = self.logger.isEnabledFor(DEBUG)
 
-# ################################################################################################################################
-
-    def _get_destination_info(self):
-        return 'destination:`%s`, %s' % (self.destination, self.conn.get_connection_info())
-
-# ################################################################################################################################
-
-    def send(self, payload, queue_name):
-        return self.conn.send(TextMessage(payload), queue_name)
+        # PyMQI is an optional dependency so let's import it here rather than on module level
+        import pymqi
+        self.pymqi = pymqi
 
 # ################################################################################################################################
 
-    def listen_for_messages(self, queue_name):
+    def _get_destination_info(self, queue_name):
+        return 'destination:`%s`, %s' % (queue_name, self.conn.get_connection_info())
+
+# ################################################################################################################################
+
+    def listen_for_messages(self, queue_name, sleep_on_error=3):
         """ Runs a background queue listener in its own  thread.
         """
+        def _invoke_callback(msg_ctx):
+            try:
+                self.on_message_callback(msg_ctx)
+            except Exception:
+                self.logger.warn('Could not invoke message callback %s', format_exc())
+
         def _impl():
             while self.keep_running:
                 try:
-                    message = self.conn.receive(queue_name, 1000)
+                    msg = self.conn.receive(queue_name, 100)
                     if self.has_debug:
-                        self.logger.debug('Message received `%s`' % str(message).decode('utf-8'))
+                        self.logger.debug('Message received `%s`' % str(msg).decode('utf-8'))
 
-                    work_request = WorkRequest(self.on_message_callback, [message])
-                    self.handlers_pool.putRequest(work_request)
+                    if msg:
+                        start_new_thread(_invoke_callback, (_MessageCtx(msg, self.channel_id),))
 
-                    try:
-                        self.handlers_pool.poll()
-                    except NoResultsPending, e:
-                        pass
-
-                except NoMessageAvailableException, e:
+                except NoMessageAvailableException as e:
                     if self.has_debug:
-                        self.logger.debug('Consumer did not receive a message. `%s`' % self._get_destination_info())
+                        self.logger.debug('Consumer for queue `%s` did not receive a message. `%s`' % (
+                            queue_name, self._get_destination_info(queue_name)))
 
-                except WebSphereMQException, e:
-                    self.logger.error('%s in run, completion_code:`%s`, reason_code:`%s`' % (
-                        e.__class__.__name__, e.completion_code, e.reason_code))
-                    raise
+                except self.pymqi.MQMIError as e:
+                    if e.reason == self.pymqi.CMQC.MQRC_UNKNOWN_OBJECT_NAME:
+                        self.logger.warn('No such queue `%s` found for %s', queue_name, self.conn.get_connection_info())
+                    else:
+                        self.logger.warn('%s in run, reason_code:`%s`, comp_code:`%s`' % (
+                            e.__class__.__name__, e.reason, e.comp))
+
+                    # In case of any low-level PyMQI error, sleep for some time
+                    # because there is nothing we can do at this time about it.
+                    self.logger.info('Sleeping for %ss', sleep_on_error)
+                    sleep(sleep_on_unknown)
+
+                except Exception as e:
+                    self.logger.error('Exception in the main loop %s', format_exc())
 
         # Start listener in a thread
         start_new_thread(_impl, ())
+
+# ################################################################################################################################
+
+    def close(self):
+        self.keep_running = False
 
 # ################################################################################################################################
 
@@ -160,10 +186,11 @@ class ConnectionContainer(object):
         self.port = None
         self.username = None
         self.password = None
+        self.server_auth = None
         self.basic_auth_expected = None
-        self.server_pid = None
-        self.server_name = None
-        self.cluster_name = None
+        self.server_port = None
+        self.server_path = None
+        self.server_address = 'http://127.0.0.1:{}{}'
 
         self.lock = RLock()
         self.logger = None
@@ -188,11 +215,13 @@ class ConnectionContainer(object):
 
         self.username = config.username
         self.password = config.password
-        self.server_pid = config.server_pid
-        self.server_name = config.server_name
-        self.cluster_name = config.cluster_name
+        self.server_auth = (self.username, self.password)
+
         self.base_dir = config.base_dir
         self.port = config.port
+        self.server_port = config.server_port
+        self.server_path = config.server_path
+        self.server_address = self.server_address.format(self.server_port, self.server_path)
 
         with open(config.logging_conf_path) as f:
             logging_config = yaml.load(f)
@@ -230,26 +259,11 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
-    def on_mq_message_received(self, msg):
-        self.logger.info('MQ message received %s', msg)
-
-# ################################################################################################################################
-
-    def add_channel(self, config):
-        with self.lock:
-
-            task = WebSphereMQTask(conn, self.on_mq_message_received)
-            task.listen_for_messages('DEV.QUEUE.1')
-
-            import time
-            time.sleep(1)
-
-            for x in range(40):
-                task.send('aaa', 'DEV.QUEUE.1')
-
-            time.sleep(2)
-
-            #print(conn.receive('DEV.QUEUE.1', 100))
+    def on_mq_message_received(self, msg_ctx, _post=post):
+        _post(self.server_address, data=dumps({
+            'msg': msg_ctx.mq_msg.to_dict(),
+            'channel_id': msg_ctx.channel_id
+        }), auth=self.server_auth)
 
 # ################################################################################################################################
 
@@ -261,7 +275,6 @@ class ConnectionContainer(object):
         msg.pop('old_name', None)
         id = msg.pop('id')
         msg['needs_jms'] = msg.pop('use_jms', False)
-        max_chars_printed = msg.pop('max_chars_printed')
 
         # We always create and add a connetion ..
         conn = WebSphereMQConnection(**msg)
@@ -443,10 +456,11 @@ class ConnectionContainer(object):
                     jms_delivery_mode = delivery_mode,
                     jms_priority = priority,
                     jms_expiration = expiration,
-                    jms_correlation_id = msg.correl_id,
-                    jms_message_id = msg.msg_id,
-                    jms_reply_to = msg.reply_to,
+                    jms_correlation_id = msg.correl_id.encode('utf8'),
+                    jms_message_id = msg.msg_id.encode('utf8'),
+                    jms_reply_to = msg.reply_to.encode('utf8'),
                 ), msg.queue_name.encode('utf8'))
+
             except Exception as e:
                 self.logger.warn(format_exc())
 
@@ -458,6 +472,17 @@ class ConnectionContainer(object):
                 return Response(_http_503, message)
             else:
                 return Response()
+
+# ################################################################################################################################
+
+    def _on_CHANNEL_WMQ_CREATE(self, msg):
+        """ Creates a new background task listening for messages from a given queue.
+        """
+        with self.lock:
+            conn = self.connections[msg.def_id]
+            task = WebSphereMQTask(conn, msg.id, self.on_mq_message_received, self.logger)
+            task.listen_for_messages(msg.queue.encode('utf8'))
+            return Response()
 
 # ################################################################################################################################
 

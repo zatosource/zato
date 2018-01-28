@@ -473,6 +473,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
                 if is_ok:
                     self.create_initial_wmq_definitions(self.worker_store.worker_config.definition_wmq)
                     self.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
+                    self.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
 
         # IPC
         self.ipc_api.name = self.name

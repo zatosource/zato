@@ -28,13 +28,13 @@ from cStringIO import StringIO
 from logging import DEBUG, getLogger
 from struct import pack, unpack
 from xml.sax.saxutils import escape
-from binascii import hexlify, unhexlify
 from time import time, mktime, strptime, altzone
 from threading import RLock
 from traceback import format_exc
 import xml.etree.ElementTree as etree
 
 # Zato
+from zato.common.wmq_util import unhexlify_wmq_id
 from zato.server.connection.jms_wmq.jms.core import reserved_attributes, TextMessage
 from zato.server.connection.jms_wmq.jms import BaseException, WebSphereMQException, NoMessageAvailableException, \
      DELIVERY_MODE_NON_PERSISTENT, DELIVERY_MODE_PERSISTENT
@@ -85,20 +85,12 @@ del(_msd, _msgbody)
 
 # ################################################################################################################################
 
-def unhexlify_wmq_id(wmq_id):
-    """ Converts the WebSphere MQ generated identifier back to bytes,
-    e.g. 'ID:414d5120535052494e47505954484f4ecc90674a041f0020' -> 'AMQ SPRINGPYTHON\xcc\x90gJ\x04\x1f\x00 '.
-    """
-    return unhexlify(wmq_id.replace(_WMQ_ID_PREFIX, '', 1))
-
-# ################################################################################################################################
-
 class WebSphereMQConnection(object):
 
     def __init__(self, queue_manager=None, channel=None, host=None, port=None, username=None,
         password=None, cache_open_send_queues=True, cache_open_receive_queues=True, use_shared_connections=True,
         dynamic_queue_template='SYSTEM.DEFAULT.MODEL.QUEUE', ssl=False, ssl_cipher_spec=None, ssl_key_repository=None,
-        needs_mcd=True, needs_jms=False):
+        needs_mcd=True, needs_jms=False, max_chars_printed=100):
 
         # TCP-level settings
         self.queue_manager = queue_manager or ''
@@ -124,6 +116,9 @@ class WebSphereMQConnection(object):
         # Whether we expect to both send and receive JMS messages or not
         self.needs_jms = needs_jms
 
+        # Use by channels for this connection
+        self.max_chars_printed = max_chars_printed
+
         from pymqi import CMQC
         import pymqi
 
@@ -143,6 +138,28 @@ class WebSphereMQConnection(object):
         self.lock = RLock()
 
         self.has_debug = logger.isEnabledFor(DEBUG)
+
+# ################################################################################################################################
+
+    def get_config(self):
+        return {
+            'queue_manager': self.queue_manager,
+            'channel': self.channel,
+            'host': self.host,
+            'port': self.port,
+            'username': self.username,
+            'password': self.password,
+            'cache_open_send_queues': self.cache_open_send_queues,
+            'cache_open_receive_queues': self.cache_open_receive_queues,
+            'use_shared_connections': self.use_shared_connections,
+            'dynamic_queue_template': self.dynamic_queue_template,
+            'ssl': self.ssl,
+            'ssl_cipher_spec': self.ssl_cipher_spec,
+            'ssl_key_repository': self.ssl_key_repository,
+            'needs_mcd': self.needs_mcd,
+            'needs_jms': self.needs_jms,
+            'max_chars_printed': self.max_chars_printed
+        }
 
 # ################################################################################################################################
 
@@ -180,8 +197,7 @@ class WebSphereMQConnection(object):
 # ################################################################################################################################
 
     def get_connection_info(self):
-        return 'queue manager:`%s`, channel:`%s`, conn_name:`%s(%s)`' % (
-            self.queue_manager, self.channel, self.host, self.port)
+        return 'queue manager:`%s`, channel:`%s`, conn_name:`%s(%s)`' % (self.queue_manager, self.channel, self.host, self.port)
 
 # ################################################################################################################################
 
@@ -335,9 +351,9 @@ class WebSphereMQConnection(object):
             queue.close()
 
         # Map the JMS headers overwritten by calling queue.put
-        message.jms_message_id = _WMQ_ID_PREFIX + hexlify(md.MsgId)
+        message.jms_message_id = md.MsgId
         message.jms_priority = md.Priority
-        message.jms_correlation_id = _WMQ_ID_PREFIX + hexlify(md.CorrelId)
+        message.jms_correlation_id = md.CorrelId
         message.JMSXUserID = md.UserIdentifier
         message.JMSXAppID = md.PutApplName
 
@@ -524,8 +540,9 @@ class WebSphereMQConnection(object):
             text_message.jms_reply_to = 'queue://' + md.ReplyToQMgr.strip() + '/' + md.ReplyToQ.strip()
 
         text_message.jms_priority = md.Priority
-        text_message.jms_message_id = _WMQ_ID_PREFIX + hexlify(md.MsgId)
-        text_message.jms_timestamp = self._get_jms_timestamp_from_md(md.PutDate.strip(), md.PutTime.strip())
+        text_message.jms_message_id = md.MsgId
+        text_message.put_date = md.PutDate.strip()
+        text_message.put_time = md.PutTime.strip()
         text_message.jms_redelivered = bool(int(md.BackoutCount))
 
         text_message.JMSXUserID = md.UserIdentifier.strip()

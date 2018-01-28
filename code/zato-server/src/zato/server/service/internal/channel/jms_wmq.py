@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,18 +9,27 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from binascii import unhexlify
 from contextlib import closing
+from json import loads
 from traceback import format_exc
 
+# Arrow
+from arrow import get as arrow_get
+
 # Zato
-from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
+from zato.common import CHANNEL, DATA_FORMAT
+from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
 from zato.common.odb.query import channel_wmq_list
-from zato.server.connection.jms_wmq.channel import start_connector
+from zato.common.time_util import datetime_from_ms
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
+# ################################################################################################################################
+
 class GetList(AdminService):
-    """ Returns a list of JMS WebSphere MQ channels.
+    """ Returns a list of WebSphere MQ channels.
     """
     _filter_by = ChannelWMQ.name,
 
@@ -37,6 +46,8 @@ class GetList(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
+
+# ################################################################################################################################
 
 class Create(AdminService):
     """ Creates a new WebSphere MQ channel.
@@ -61,7 +72,7 @@ class Create(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('A WebSphere MQ channel [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('A WebSphere MQ channel `{}` already exists on this cluster'.format(input.name))
 
             # Is the service's name correct?
             service = session.query(Service).\
@@ -70,7 +81,7 @@ class Create(AdminService):
                 filter(Service.name==input.service).first()
 
             if not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist on this cluster'.format(input.service)
                 self.logger.error(msg)
                 raise Exception(msg)
 
@@ -87,21 +98,24 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
 
-                if item.is_active:
-                    start_connector(self.server.repo_location, item.id, item.def_id)
+                input.id = item.id
+                input.service_name = service.name
+                input.action = BROKER_MSG_CHANNEL.WMQ_CREATE.value
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = 'Could not create a WebSphere MQ channel, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not create a WebSphere MQ channel, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
 
+# ################################################################################################################################
+
 class Edit(AdminService):
-    """ Updates a JMS WebSphere MQ channel.
+    """ Updates a WebSphere MQ channel.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_jms_wmq_edit_request'
@@ -124,7 +138,7 @@ class Edit(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('A JMS WebSphere MQ channel [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('A WebSphere MQ channel `{}` already exists on this cluster'.format(input.name))
 
             # Is the service's name correct?
             service = session.query(Service).\
@@ -133,7 +147,7 @@ class Edit(AdminService):
                 filter(Service.name==input.service).first()
 
             if not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist on this cluster'.format(input.service)
                 raise Exception(msg)
 
             try:
@@ -149,23 +163,28 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
 
-                input.action = CHANNEL.JMS_WMQ_EDIT.value
-                input.old_name = old_name
-                input.service = service.impl_name
-                self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL)
+                input.id = item.id
+                input.action = BROKER_MSG_CHANNEL.WMQ_CREATE.value
+                self.broker_client.publish(input)
+
+                input.id = item.id
+                input.service_name = service.name
+                input.action = BROKER_MSG_CHANNEL.WMQ_EDIT.value
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = 'Could not update the JMS WebSphere MQ definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not update WebSphere MQ definition, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
 
+# ################################################################################################################################
+
 class Delete(AdminService):
-    """ Deletes an JMS WebSphere MQ channel.
+    """ Deletes a WebSphere MQ channel.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_jms_wmq_delete_request'
@@ -182,12 +201,53 @@ class Delete(AdminService):
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': CHANNEL.JMS_WMQ_DELETE.value, 'name': def_.name, 'id':def_.id}
-                self.broker_client.publish(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL)
+                self.broker_client.publish({
+                    'action': BROKER_MSG_CHANNEL.WMQ_DELETE.value, 'id':def_.id
+                })
 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the JMS WebSphere MQ channel, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not delete WebSphere MQ channel, e:`%s`', format_exc())
 
                 raise
+
+# ################################################################################################################################
+
+class OnMessageReceived(AdminService):
+    """ A callback service invoked by WebSphere connectors for each taken off a queue.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_channel_jms_wmq_on_message_received_request'
+        response_elem = 'zato_channel_jms_wmq_on_message_received_response'
+
+    def handle(self, _channel=CHANNEL.WEBSPHERE_MQ, _data_format=DATA_FORMAT.DICT, ts_format='YYYYMMDDHHmmssSS'):
+        request = loads(self.request.raw_request)
+        msg = request['msg']
+        channel_id = request['channel_id']
+
+        # First, find the channel this message is destined to and its underlying service
+        for item in self.server.worker_store.worker_config.channel_wmq.itervalues():
+            if item['config']['id'] == channel_id:
+                service_name = item['config']['service_name']
+                break
+        else:
+            raise Exception('Could not find a channel matching input ID `%s` for message %s', channel_id, msg)
+
+        # Make MQ-level attributes easier to handle
+        correlation_id = unhexlify(msg['correlation_id']) if msg['correlation_id'] else None
+        expiration = datetime_from_ms(msg['expiration']) if msg['expiration'] else None
+
+        timestamp = '{}{}'.format(msg['put_date'], msg['put_time'])
+        timestamp = arrow_get(timestamp, ts_format).replace(tzinfo='UTC').datetime
+
+        self.invoke(service_name, msg['text'], _channel, wmq_ctx={
+            'message_id': unhexlify(msg['message_id']),
+            'correlation_id': correlation_id,
+            'timestamp': timestamp,
+            'put_time': msg['put_time'],
+            'put_date': msg['put_date'],
+            'expiration': expiration,
+            'reply_to': msg['reply_to'],
+        })
+
+# ################################################################################################################################
