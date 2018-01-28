@@ -253,7 +253,7 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
-    def _create_definition(self, msg):
+    def _create_definition(self, msg, needs_connect=True):
         """ A low-level method to create connection definitions. Must be called with self.lock held.
         """
         conn_name = msg.pop('name')
@@ -267,8 +267,11 @@ class ConnectionContainer(object):
         conn = WebSphereMQConnection(**msg)
         self.connections[id] = conn
 
-        # .. because even if it fails here, it will be eventually established during one of .send or .receive
-        conn.connect()
+        # .. because even if it fails here, it will be eventually established during one of .send or .receive,
+        # however, it is possible that our caller already knows that the connection will fail so we need
+        # to take it into account too.
+        if needs_connect:
+            conn.connect()
 
 # ################################################################################################################################
 
@@ -291,10 +294,19 @@ class ConnectionContainer(object):
         and creates a new one in its place.
         """
         with self.lock:
+            connection = self.connections[msg.id]
+
             # Edit messages don't carry passwords
-            msg.password = self.connections[msg.id].password
-            self.connections[msg.id].close()
-            self._create_definition(msg)
+            msg.password = connection.password
+
+            # It's possible that we are editing a connection that has no connected yet,
+            # e.g. if password was invalid, so this needs to be guarded by an if.
+            if connection.is_connected:
+                self.connections[msg.id].close()
+
+            # Overwrites the previous connection object
+            self._create_definition(msg, connection.is_connected)
+
             return Response()
 
 # ################################################################################################################################

@@ -137,7 +137,7 @@ class WebSphereMQConnection(object):
         self.cache_open_send_queues = cache_open_send_queues
         self.cache_open_receive_queues = cache_open_receive_queues
 
-        self._is_connected = False
+        self.is_connected = False
         self._disconnecting = False
 
         self.lock = RLock()
@@ -148,7 +148,7 @@ class WebSphereMQConnection(object):
 
     def close(self):
         with self.lock:
-            if self._is_connected:
+            if self.is_connected:
                 self._disconnecting = True
                 try:
                     logger.info('Deleting queues from caches')
@@ -172,7 +172,7 @@ class WebSphereMQConnection(object):
                     except Exception:
                         pass
 
-                self._is_connected = False
+                self.is_connected = False
 
             else:
                 logger.debug('Not connected, skipping cleaning up the resources')
@@ -194,7 +194,7 @@ class WebSphereMQConnection(object):
 
     def connect(self):
         with self.lock:
-            if self._is_connected:
+            if self.is_connected:
                 return
 
             conn_name = '%s(%s)' % (self.host, self.port)
@@ -231,7 +231,7 @@ class WebSphereMQConnection(object):
                 exc = WebSphereMQException(e, e.comp, e.reason)
                 raise exc
             else:
-                self._is_connected = True
+                self.is_connected = True
                 logger.info('Successfully connected to queue manager:`%s`, channel:`%s`, connection info:`%s`' % (
                     self.queue_manager, self.channel, conn_name))
 
@@ -291,14 +291,14 @@ class WebSphereMQConnection(object):
             if self.has_debug:
                 logger.debug('send -> not disconnecting')
 
-        if not self._is_connected:
+        if not self.is_connected:
             if self.has_debug:
-                logger.debug('send -> _is_connected1 %s' % self._is_connected)
+                logger.debug('send -> _is_connected1 %s' % self.is_connected)
 
             self.connect()
 
             if self.has_debug:
-                logger.debug('send -> _is_connected2 %s' % self._is_connected)
+                logger.debug('send -> _is_connected2 %s' % self.is_connected)
 
         destination = self._strip_prefixes_from_destination(destination)
 
@@ -366,14 +366,14 @@ class WebSphereMQConnection(object):
             if self.has_debug:
                 logger.debug('receive -> not disconnecting')
 
-        if not self._is_connected:
+        if not self.is_connected:
             if self.has_debug:
-                logger.debug('receive -> _is_connected1 %s' % self._is_connected)
+                logger.debug('receive -> _is_connected1 %s' % self.is_connected)
 
             self.connect()
 
             if self.has_debug:
-                logger.debug('receive -> _is_connected2 %s' % self._is_connected)
+                logger.debug('receive -> _is_connected2 %s' % self.is_connected)
 
         queue = self.get_queue_for_receiving(destination)
 
@@ -408,14 +408,14 @@ class WebSphereMQConnection(object):
         else:
             logger.debug('open_dynamic_queue -> not disconnecting')
 
-        if not self._is_connected:
+        if not self.is_connected:
             if self.has_debug:
-                logger.debug('open_dynamic_queue -> _is_connected1 %s' % self._is_connected)
+                logger.debug('open_dynamic_queue -> _is_connected1 %s' % self.is_connected)
 
             self.connect()
 
             if self.has_debug:
-                logger.debug('open_dynamic_queue -> _is_connected2 %s' % self._is_connected)
+                logger.debug('open_dynamic_queue -> _is_connected2 %s' % self.is_connected)
 
         dynamic_queue = self.mq.Queue(self.mgr, self.dynamic_queue_template, self.CMQC.MQOO_INPUT_SHARED)
 
@@ -439,14 +439,14 @@ class WebSphereMQConnection(object):
             if self.has_debug:
                 logger.debug('close_dynamic_queue -> not disconnecting')
 
-        if not self._is_connected:
+        if not self.is_connected:
             # If we're not connected then all dynamic queues had been already closed.
             if self.has_debug:
-                logger.debug('close_dynamic_queue -> _is_connected1 %s' % self._is_connected)
+                logger.debug('close_dynamic_queue -> _is_connected1 %s' % self.is_connected)
             return
         else:
             if self.has_debug:
-                logger.debug('close_dynamic_queue -> _is_connected2 %s' % self._is_connected)
+                logger.debug('close_dynamic_queue -> _is_connected2 %s' % self.is_connected)
 
             with self.lock:
                 dynamic_queue = self._open_dynamic_queues_cache[dynamic_queue_name]
