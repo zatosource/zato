@@ -260,9 +260,8 @@ class ConnectionContainer(object):
         msg.pop('cluster_id', None)
         msg.pop('old_name', None)
         id = msg.pop('id')
+        msg['needs_jms'] = msg.pop('use_jms', False)
         max_chars_printed = msg.pop('max_chars_printed')
-
-        self.logger.warn('DEF %s', msg)
 
         # We always create and add a connetion ..
         conn = WebSphereMQConnection(**msg)

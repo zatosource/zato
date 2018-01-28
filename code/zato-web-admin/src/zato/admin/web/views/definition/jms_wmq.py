@@ -35,7 +35,7 @@ class Index(_Index):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'host', 'port', 'queue_manager', 'channel', 'cache_open_send_queues',
             'cache_open_receive_queues', 'use_shared_connections', 'ssl', 'ssl_cipher_spec', 'ssl_key_repository',
-            'needs_mcd', 'max_chars_printed', 'username')
+            'needs_mcd', 'max_chars_printed', 'username', 'use_jms')
         output_repeated = True
 
     def handle(self):
@@ -51,11 +51,11 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'host', 'port', 'queue_manager', 'channel', 'cache_open_send_queues',
             'cache_open_receive_queues', 'use_shared_connections', 'ssl', 'ssl_cipher_spec', 'ssl_key_repository', 'needs_mcd',
-            'max_chars_printed', 'username')
+            'max_chars_printed', 'username', 'use_jms')
         output_required = ('id',)
 
     def success_message(self, item):
-        return 'Successfully {0} WebSphere MQ definition [{1}]'.format(self.verb, item.name)
+        return 'Successfully {} WebSphere MQ definition `{}`'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'definition-wmq-create'

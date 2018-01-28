@@ -18,6 +18,7 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:35%'}))
     host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:35%'}))
     port = forms.CharField(initial=PORT, widget=forms.TextInput(attrs={'style':'width:20%'}))
+    use_jms = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     queue_manager = forms.CharField(widget=forms.TextInput(attrs={'style':'width:35%'}))
     channel = forms.CharField(widget=forms.TextInput(attrs={'style':'width:35%'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:35%'}))
@@ -31,6 +32,7 @@ class CreateForm(forms.Form):
     max_chars_printed = forms.CharField(initial=MAX_CHARS, widget=forms.TextInput(attrs={'style':'width:20%'}))
 
 class EditForm(CreateForm):
+    use_jms = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     cache_open_send_queues = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     cache_open_receive_queues = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     use_shared_connections = forms.BooleanField(required=False, widget=forms.CheckboxInput())
