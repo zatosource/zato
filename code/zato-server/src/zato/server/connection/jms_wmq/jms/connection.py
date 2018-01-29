@@ -23,7 +23,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import sys
 from cStringIO import StringIO
 from logging import DEBUG, getLogger
 from struct import pack, unpack
@@ -496,7 +495,6 @@ class WebSphereMQConnection(object):
         mqrfh2.build_folders_and_payload_from_message(message)
 
         jms_folder = mqrfh2.folders.get('jms', None)
-        mcd_folder = mqrfh2.folders.get('mcd', None)
         usr_folder = mqrfh2.folders.get('usr', None)
 
         # Create a message instance ..

@@ -15,7 +15,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
+from zato.common.broker_message import DEFINITION
 from zato.common.odb.model import Cluster, ConnDefWMQ
 from zato.common.odb.query import definition_wmq, definition_wmq_list
 from zato.server.service import Boolean, Integer
@@ -113,8 +113,8 @@ class Create(AdminService):
                 self.response.payload.id = def_.id
                 self.response.payload.name = def_.name
 
-            except Exception, e:
-                self.logger.error('Could not create a WebSphere MQ definition, e:`%s`' % format_exc())
+            except Exception:
+                self.logger.error('Could not create a WebSphere MQ definition, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -178,8 +178,8 @@ class Edit(AdminService):
                 self.response.payload.id = def_.id
                 self.response.payload.name = def_.name
 
-            except Exception, e:
-                self.logger.error('Could not update WebSphere MQ definition, e:`%s`' % format_exc())
+            except Exception:
+                self.logger.error('Could not update WebSphere MQ definition, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -207,9 +207,9 @@ class Delete(AdminService):
                 msg = {'action': DEFINITION.WMQ_DELETE.value, 'id': self.request.input.id}
                 self.broker_client.publish(msg)
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                self.logger.error('Could not delete WebSphere MQ definition, e:`%s`' % format_exc())
+                self.logger.error('Could not delete WebSphere MQ definition, e:`%s`', format_exc())
 
                 raise
 

@@ -9,13 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os
 from binascii import unhexlify
-from copy import deepcopy
 from datetime import datetime, timedelta
-from httplib import OK
 from json import dumps, loads
-from logging import getLogger, Logger
+from logging import getLogger
 from traceback import format_exc
 
 # gevent
@@ -104,7 +101,7 @@ class WMQIPC(object):
     def _ping_connector(self, address, auth):
         try:
             response = get(address, data='{}', auth=auth)
-        except Exception as e:
+        except Exception:
             logger.warn(format_exc())
         else:
             return response.ok

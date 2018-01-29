@@ -10,20 +10,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os, sys
-from tempfile import mkstemp
-from time import time, sleep
 
 # Bunch
 from bunch import Bunch
-
-# Sarge
-from sarge import run
 
 # Zato
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.cli.stop import Stop
-from zato.common import CLI_ARG_SEP, MISC
+from zato.common import MISC
 from zato.common.proc_util import start_python_process
 from zato.common.util import get_haproxy_agent_pidfile
 

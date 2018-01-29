@@ -96,9 +96,9 @@ def create(req):
         response = req.zato.client.invoke('zato.channel.jms-wmq.create', _get_edit_create_message(req.POST))
         return _edit_create_response(
             req.zato.client, 'created', response.data.id, req.POST['name'], req.POST['cluster_id'], req.POST['def_id'])
-    except Exception, e:
-        msg = 'Could not create a WebSphere MQ channel, e:`{}`'.format(format_exc())
-        logger.error(msg)
+    except Exception:
+        msg = 'Could not create a WebSphere MQ channel, e:`%s`'
+        logger.error(msg, format_exc())
         return HttpResponseServerError(msg)
 
 
@@ -110,9 +110,9 @@ def edit(req):
         req.zato.client.invoke('zato.channel.jms-wmq.edit', _get_edit_create_message(req.POST, 'edit-'))
         return _edit_create_response(
             req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'], req.POST['cluster_id'], req.POST['edit-def_id'])
-    except Exception, e:
-        msg = 'Could not update WebSphere MQ channel, e:`{}`]'.format(format_exc())
-        logger.error(msg)
+    except Exception:
+        msg = 'Could not update WebSphere MQ channel, e:`%s`'
+        logger.error(msg, format_exc())
         return HttpResponseServerError(msg)
 
 # ################################################################################################################################

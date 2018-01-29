@@ -26,9 +26,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import sys
 from json import dumps, loads
-from logging import basicConfig, DEBUG, Formatter, getLogger, INFO, StreamHandler
+from logging import DEBUG, Formatter, getLogger, StreamHandler
 from logging.handlers import RotatingFileHandler
-from os import getpid, getppid, path
+from os import getppid, path
 from thread import start_new_thread
 from threading import RLock
 from time import sleep
@@ -37,7 +37,7 @@ from wsgiref.simple_server import make_server
 import httplib
 
 # Bunch
-from bunch import Bunch, bunchify
+from bunch import bunchify
 
 # Requests
 from requests import post
@@ -47,7 +47,7 @@ import yaml
 
 # Zato
 from zato.common.auth_util import parse_basic_auth
-from zato.common.broker_message import code_to_name, DEFINITION
+from zato.common.broker_message import code_to_name
 from zato.common.zato_keyutils import KeyUtils
 from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
 from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
@@ -166,7 +166,7 @@ class WebSphereMQChannel(object):
                     # In case of any low-level PyMQI error, sleep for some time
                     # because there is nothing we can do at this time about it.
                     self.logger.info('Sleeping for %ss', sleep_on_error)
-                    sleep(sleep_on_unknown)
+                    sleep(sleep_on_error)
 
                 except Exception as e:
                     self.logger.error('Exception in the main loop %s', format_exc())
@@ -279,7 +279,7 @@ class ConnectionContainer(object):
     def _create_definition(self, msg, needs_connect=True):
         """ A low-level method to create connection definitions. Must be called with self.lock held.
         """
-        conn_name = msg.pop('name')
+        msg.pop('name')
         msg.pop('cluster_id', None)
         msg.pop('old_name', None)
         id = msg.pop('id')
@@ -353,7 +353,7 @@ class ConnectionContainer(object):
             # Stop all connections ..
             try:
                 self.connections[def_id].close()
-            except Exception as e:
+            except Exception:
                 self.logger.warn(format_exc())
             finally:
                 try:
@@ -488,7 +488,7 @@ class ConnectionContainer(object):
                     jms_reply_to = msg.get('reply_to', '').encode('utf8'),
                 )
 
-                data = self.connections[def_id].send(text_msg, msg.queue_name.encode('utf8'))
+                self.connections[def_id].send(text_msg, msg.queue_name.encode('utf8'))
                 return Response(data=dumps(text_msg.to_dict(False)))
 
             except Exception as e:
@@ -607,7 +607,7 @@ class ConnectionContainer(object):
                     data = 'You are not allowed to access this resource'
                     content_type = 'text/plain'
 
-        except Exception as e:
+        except Exception:
             self.logger.warn(format_exc())
             content_type = 'text/plain'
             status = _http_500
