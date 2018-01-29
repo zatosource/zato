@@ -207,6 +207,7 @@ class ConnectionContainer(object):
 
         self.outconn_id_to_def_id = {} # Maps outgoing connection IDs to their underlying definition IDs
         self.channel_id_to_def_id = {} # Ditto but for channels
+        self.outconn_name_to_id = {}   # Maps outgoing connection names to their IDs
 
         self.set_config()
 
@@ -403,16 +404,21 @@ class ConnectionContainer(object):
         # Create the outconn now
         self.outconns[msg.id] = msg
 
+        # Maps outconn name to its ID
+        self.outconn_name_to_id[msg.name] = msg.id
+
         # Everything OK
         return Response()
 
 # ################################################################################################################################
 
-    def _delete_outconn(self, msg):
+    def _delete_outconn(self, msg, outconn_name=None):
         """ A low-level implementation of outconn deletion. Must be called with self.lock held.
         """
+        outconn_name = outconn_name if outconn_name else self.outconns[msg.id].name
         del self.outconns[msg.id]
         del self.outconn_id_to_def_id[msg.id]
+        del self.outconn_name_to_id[outconn_name]
 
 # ################################################################################################################################
 
@@ -437,7 +443,7 @@ class ConnectionContainer(object):
         """ Updates and existing outconn by deleting and creating it again with latest configuration.
         """
         with self.lock:
-            self._delete_outconn(msg)
+            self._delete_outconn(msg, msg.old_name)
             return self._create_outconn(msg)
 
 # ################################################################################################################################
@@ -445,27 +451,32 @@ class ConnectionContainer(object):
     def _on_OUTGOING_WMQ_SEND(self, msg):
         """ Sends a message to a remote WebSphere MQ queue.
         """
-        outconn = self.outconns[msg.id]
+        with self.lock:
+            outconn_id = msg.get('id', self.outconn_name_to_id[msg.outconn_name])
+            outconn = self.outconns[outconn_id]
 
         if not outconn.is_active:
             return Response(_http_406, 'Cannot send messages through an inactive connection', 'text/plain')
         else:
-            conn_id = self.outconn_id_to_def_id[msg.id]
+            def_id = self.outconn_id_to_def_id[outconn_id]
             try:
 
                 delivery_mode = msg.delivery_mode or outconn.delivery_mode
                 priority = msg.priority or outconn.priority
                 expiration = msg.expiration or outconn.expiration
 
-                self.connections[conn_id].send(TextMessage(
+                text_msg = TextMessage(
                     text = msg.data,
                     jms_delivery_mode = delivery_mode,
                     jms_priority = priority,
                     jms_expiration = expiration,
-                    jms_correlation_id = msg.correl_id.encode('utf8'),
+                    jms_correlation_id = msg.correlation_id.encode('utf8'),
                     jms_message_id = msg.msg_id.encode('utf8'),
                     jms_reply_to = msg.reply_to.encode('utf8'),
-                ), msg.queue_name.encode('utf8'))
+                )
+
+                data = self.connections[def_id].send(text_msg, msg.queue_name.encode('utf8'))
+                return Response(data=dumps(text_msg.to_dict(False)))
 
             except Exception as e:
                 self.logger.warn(format_exc())
@@ -476,8 +487,6 @@ class ConnectionContainer(object):
                     message = e.message
 
                 return Response(_http_503, message)
-            else:
-                return Response()
 
 # ################################################################################################################################
 

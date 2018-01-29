@@ -230,7 +230,7 @@ class OnMessageReceived(AdminService):
         timestamp = arrow_get(timestamp, ts_format).replace(tzinfo='UTC').datetime
 
         self.invoke(service_name, msg['text'], _channel, wmq_ctx={
-            'message_id': unhexlify(msg['message_id']),
+            'msg_id': unhexlify(msg['msg_id']),
             'correlation_id': correlation_id,
             'timestamp': timestamp,
             'put_time': msg['put_time'],

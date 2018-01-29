@@ -10,10 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
+from binascii import unhexlify
 from copy import deepcopy
 from datetime import datetime, timedelta
 from httplib import OK
-from json import dumps
+from json import dumps, loads
 from logging import getLogger, Logger
 from traceback import format_exc
 
@@ -24,7 +25,7 @@ from gevent import sleep
 from requests import get, post
 
 # Zato
-from zato.common import IPC
+from zato.common import IPC, WebSphereMQCallData
 from zato.common.broker_message import CHANNEL, DEFINITION, OUTGOING
 from zato.common.proc_util import start_python_process
 from zato.common.util import get_free_port
@@ -120,7 +121,13 @@ class WMQIPC(object):
 
     def send_wmq_message(self, msg):
         msg['action'] = OUTGOING.WMQ_SEND.value
-        return self.invoke_wmq_connector(msg)
+        response = self.invoke_wmq_connector(msg)
+
+        # If we are here, it means that there was no error because otherwise an exception
+        # would have been raised by invoke_wmq_connector.
+        response = loads(response.text)
+
+        return WebSphereMQCallData(unhexlify(response['msg_id']).strip(), unhexlify(response['correlation_id']).strip())
 
 # ################################################################################################################################
 
@@ -133,6 +140,8 @@ class WMQIPC(object):
                 raise Exception(response.text)
             else:
                 logger.warn(response.text)
+        else:
+            return response
 
 # ################################################################################################################################
 

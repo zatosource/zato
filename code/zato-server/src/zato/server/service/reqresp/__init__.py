@@ -77,13 +77,13 @@ class AMQPRequestData(object):
 # ################################################################################################################################
 
 class WebSphereMQRequestData(object):
-    """ Data regarding a WebSphere MQ request.
+    """ Metadata for WebSphere MQ requests.
     """
-    __slots__ = ('ctx', 'message_id', 'correlation_id', 'timestamp', 'put_date', 'put_time', 'reply_to')
+    __slots__ = ('ctx', 'msg_id', 'correlation_id', 'timestamp', 'put_date', 'put_time', 'reply_to')
 
     def __init__(self, ctx):
         self.ctx = ctx
-        self.message_id = ctx['message_id']
+        self.msg_id = ctx['msg_id']
         self.correlation_id = ctx['correlation_id']
         self.timestamp = ctx['timestamp']
         self.put_date = ctx['put_date']
@@ -463,14 +463,14 @@ class Outgoing(object):
     """ A container for various outgoing connections a service can access. This
     in fact is a thin wrapper around data fetched from the service's self.worker_store.
     """
-    __slots__ = ('amqp', 'ftp', 'jms_wmq', 'odoo', 'plain_http', 'soap', 'sql', 'stomp', 'zmq', 'websockets', 'vault',
+    __slots__ = ('amqp', 'ftp', 'wmq', 'jms_wmq', 'odoo', 'plain_http', 'soap', 'sql', 'stomp', 'zmq', 'websockets', 'vault',
         'sms')
 
     def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, stomp=None, zmq=None,
-            websockets=None, vault=None, sms=None):
+        websockets=None, vault=None, sms=None):
         self.amqp = amqp
         self.ftp = ftp
-        self.jms_wmq = jms_wmq
+        self.wmq = self.jms_wmq = jms_wmq # Backward compat with 2.0, self.wmq is not preferred
         self.odoo = odoo
         self.plain_http = plain_http
         self.soap = soap
