@@ -365,7 +365,7 @@ class WebSphereMQConnection(object):
             logger.warn('No md.PutDate and md.PutTime found, md:`%r`' % repr(md))
 
         # queue.put has succeeded, so overwrite expiration time as well
-        if message.jms_expiration != None:
+        if message.jms_expiration:
             message.jms_expiration += now
 
         if self.has_debug:

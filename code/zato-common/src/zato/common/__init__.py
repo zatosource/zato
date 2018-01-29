@@ -1253,3 +1253,14 @@ class IMAPMessage(object):
         self.conn.mark_seen(self.uid)
 
 # ################################################################################################################################
+
+class WebSphereMQCallData(object):
+    """ Metadata for information returned by WebSphere MQ in response to underlying MQPUT calls.
+    """
+    __slots__ = ('msg_id', 'correlation_id')
+
+    def __init__(self, msg_id, correlation_id):
+        self.msg_id = msg_id
+        self.correlation_id = correlation_id
+
+# ################################################################################################################################

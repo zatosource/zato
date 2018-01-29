@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -16,7 +16,6 @@ from traceback import format_exc
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import ConnDefWMQ, OutgoingWMQ
 from zato.common.odb.query import out_wmq, out_wmq_list
-from zato.server.connection.jms_wmq.outgoing import start_connector
 from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 

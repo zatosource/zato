@@ -168,7 +168,7 @@ class TextMessage(object):
             'delivery_mode': self.jms_delivery_mode,
             'expiration':self.jms_expiration,
             'priority':self.jms_priority,
-            'message_id':hexlify(self.jms_message_id),
+            'msg_id':hexlify(self.jms_message_id),
             'put_date':self.put_date,
             'put_time':self.put_time,
             'correlation_id':hexlify(self.jms_correlation_id),
@@ -179,9 +179,9 @@ class TextMessage(object):
 
 # ################################################################################################################################
 
-    def to_dict(self):
+    def to_dict(self, include_text=True):
         data = self._get_basic_data()
-        data['text'] = self.text
+        data['text'] = self.text if include_text else None
         return data
 
 # ################################################################################################################################
