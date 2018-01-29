@@ -41,7 +41,7 @@ from zato.server.connection.jms_wmq.jms import BaseException, WebSphereMQExcepti
 
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger('zato_websphere_mq')
 
 # ################################################################################################################################
 
@@ -328,11 +328,10 @@ class WebSphereMQConnection(object):
 
         # Create MQRFH2 header, if requested to
         if self.needs_jms:
-            mqrfh2jms = MQRFH2JMS(self.needs_mcd).build_header(message, destination, self.CMQC, now)
-
+            mqrfh2jms = MQRFH2JMS(self.needs_mcd, self.has_debug).build_header(message, destination, self.CMQC, now)
             buff.write(mqrfh2jms)
 
-        if message.text != None:
+        if message.text is not None:
             buff.write(message.text.encode('utf-8'))
 
         body = buff.getvalue()
@@ -659,12 +658,12 @@ class WebSphereMQConnection(object):
         # WebSphere MQ provider-specific JMS headers
 
         jmsxgroupseq = getattr(message, 'JMSXGroupSeq', None)
-        if jmsxgroupseq != None:
+        if jmsxgroupseq is not None:
             md.MsgSeqNumber = jmsxgroupseq
             md.MsgFlags |= self.CMQC.MQMF_MSG_IN_GROUP
 
         jmsxgroupid = getattr(message, 'JMSXGroupID', None)
-        if jmsxgroupid != None:
+        if jmsxgroupid is not None:
             if jmsxgroupid.startswith(_WMQ_ID_PREFIX):
                 md.GroupId = unhexlify_wmq_id(jmsxgroupid)
             else:
@@ -674,7 +673,7 @@ class WebSphereMQConnection(object):
         report_names = 'Exception', 'Expiration', 'COA', 'COD', 'PAN', 'NAN', 'Pass_Msg_ID', 'Pass_Correl_ID', 'Discard_Msg'
         for report_name in report_names:
             report = getattr(message, 'JMS_IBM_Report_' + report_name, None)
-            if report != None:
+            if report is not None:
                 md.Report |= report
 
         # Doesn't make much sense to map feedback options as we're stuffed into
@@ -683,11 +682,11 @@ class WebSphereMQConnection(object):
         # the future so let's leave it.
 
         jms_ibm_feedback = getattr(message, 'JMS_IBM_Feedback', None)
-        if jms_ibm_feedback != None:
+        if jms_ibm_feedback is not None:
             md.Feedback = jms_ibm_feedback
 
         jms_ibm_last_msg_in_group = getattr(message, 'JMS_IBM_Last_Msg_In_Group', None)
-        if jms_ibm_last_msg_in_group != None:
+        if jms_ibm_last_msg_in_group is not None:
             md.MsgFlags |= self.CMQC.MQMF_LAST_MSG_IN_GROUP
 
         return md
@@ -697,7 +696,7 @@ class WebSphereMQConnection(object):
 class DummyMQRFH2JMS(object):
     """ Dummy MQRFH2 container used when the message read from queues aren't actually JMS.
     """
-    def __init__(self, ignored):
+    def __init__(self, *ignored_args, **ignored_kwargs):
         self.folders = {'jms':None, 'mcd':None, 'usr':None}
         self.payload = None
 
@@ -725,11 +724,11 @@ class MQRFH2JMS(object):
     # Size of a folder header is always 4 bytes.
     FOLDER_SIZE_HEADER_LENGTH = 4
 
-    def __init__(self, needs_mcd=True):
+    def __init__(self, needs_mcd=True, has_debug=False):
 
-        # Whether to add the mcd folder. Needs to be False for everything to
-        # work properly with WMQ >= 7.0
+        # Whether to add the mcd folder. Needs to be False for everything to work properly with WMQ >= 7.0
         self.needs_mcd = needs_mcd
+        self.has_debug = has_debug
 
         self.folders = {}
         self.payload = None

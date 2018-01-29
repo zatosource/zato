@@ -115,7 +115,7 @@ class WebSphereMQChannel(object):
         self.queue_name = queue_name
         self.service_name = service_name
         self.on_message_callback = on_message_callback
-        self.keep_running = True
+        self.keep_running = False
         self.logger = logger
         self.has_debug = self.logger.isEnabledFor(DEBUG)
 
@@ -130,9 +130,11 @@ class WebSphereMQChannel(object):
 
 # ################################################################################################################################
 
-    def listen_for_messages(self, sleep_on_error=3):
+    def start(self, sleep_on_error=3):
         """ Runs a background queue listener in its own  thread.
         """
+        self.keep_running = True
+
         def _invoke_callback(msg_ctx):
             try:
                 self.on_message_callback(msg_ctx)
@@ -174,7 +176,7 @@ class WebSphereMQChannel(object):
 
 # ################################################################################################################################
 
-    def close(self):
+    def stop(self):
         self.keep_running = False
 
 # ################################################################################################################################
@@ -293,6 +295,8 @@ class ConnectionContainer(object):
         if needs_connect:
             conn.connect()
 
+        return conn
+
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_CREATE(self, msg):
@@ -314,18 +318,27 @@ class ConnectionContainer(object):
         and creates a new one in its place.
         """
         with self.lock:
-            connection = self.connections[msg.id]
+            def_id = msg.id
+            old_conn = self.connections[def_id]
 
             # Edit messages don't carry passwords
-            msg.password = connection.password
+            msg.password = old_conn.password
 
             # It's possible that we are editing a connection that has no connected yet,
             # e.g. if password was invalid, so this needs to be guarded by an if.
-            if connection.is_connected:
-                self.connections[msg.id].close()
+            if old_conn.is_connected:
+                self.connections[def_id].close()
 
             # Overwrites the previous connection object
-            self._create_definition(msg, connection.is_connected)
+            new_conn = self._create_definition(msg, old_conn.is_connected)
+
+            # Stop and start all channels using this definition.
+            for channel_id, _def_id in self.channel_id_to_def_id.items():
+                if def_id == _def_id:
+                    channel = self.channels[channel_id]
+                    channel.stop()
+                    channel.conn = new_conn
+                    channel.start()
 
             return Response()
 
@@ -452,7 +465,7 @@ class ConnectionContainer(object):
         """ Sends a message to a remote WebSphere MQ queue.
         """
         with self.lock:
-            outconn_id = msg.get('id', self.outconn_name_to_id[msg.outconn_name])
+            outconn_id = msg.get('id') or self.outconn_name_to_id[msg.outconn_name]
             outconn = self.outconns[outconn_id]
 
         if not outconn.is_active:
@@ -470,9 +483,9 @@ class ConnectionContainer(object):
                     jms_delivery_mode = delivery_mode,
                     jms_priority = priority,
                     jms_expiration = expiration,
-                    jms_correlation_id = msg.correlation_id.encode('utf8'),
-                    jms_message_id = msg.msg_id.encode('utf8'),
-                    jms_reply_to = msg.reply_to.encode('utf8'),
+                    jms_correlation_id = msg.get('correlation_id', '').encode('utf8'),
+                    jms_message_id = msg.get('msg_id', '').encode('utf8'),
+                    jms_reply_to = msg.get('reply_to', '').encode('utf8'),
                 )
 
                 data = self.connections[def_id].send(text_msg, msg.queue_name.encode('utf8'))
@@ -497,7 +510,7 @@ class ConnectionContainer(object):
             conn = self.connections[msg.def_id]
             channel = WebSphereMQChannel(
                 conn, msg.id, msg.queue.encode('utf8'), msg.service_name, self.on_mq_message_received, self.logger)
-            channel.listen_for_messages()
+            channel.start()
             self.channels[channel.id] = channel
             self.channel_id_to_def_id[channel.id] = msg.def_id
             return Response()
@@ -509,11 +522,11 @@ class ConnectionContainer(object):
         """
         with self.lock:
             channel = self.channels[msg.id]
-            channel.keep_running = False
+            channel.stop()
             channel.queue_name = msg.queue.encode('utf8')
             channel.service_name = msg.service_name
             channel.keep_running = True
-            channel.listen_for_messages()
+            channel.start()
 
             return Response()
 
