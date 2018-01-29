@@ -23,7 +23,6 @@ from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
 from zato.common.odb.query import channel_wmq_list
 from zato.common.time_util import datetime_from_ms
-from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -106,7 +105,7 @@ class Create(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
+            except Exception:
                 self.logger.error('Could not create a WebSphere MQ channel, e:`%s`', format_exc())
                 session.rollback()
 
@@ -152,7 +151,6 @@ class Edit(AdminService):
 
             try:
                 item = session.query(ChannelWMQ).filter_by(id=input.id).one()
-                old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
                 item.queue = input.queue
@@ -171,7 +169,7 @@ class Edit(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
+            except Exception:
                 self.logger.error('Could not update WebSphere MQ definition, e:`%s`', format_exc())
                 session.rollback()
 
@@ -201,7 +199,7 @@ class Delete(AdminService):
                     'action': BROKER_MSG_CHANNEL.WMQ_DELETE.value, 'id':def_.id
                 })
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
                 self.logger.error('Could not delete WebSphere MQ channel, e:`%s`', format_exc())
 
@@ -219,7 +217,6 @@ class OnMessageReceived(AdminService):
     def handle(self, _channel=CHANNEL.WEBSPHERE_MQ, _data_format=DATA_FORMAT.DICT, ts_format='YYYYMMDDHHmmssSS'):
         request = loads(self.request.raw_request)
         msg = request['msg']
-        channel_id = request['channel_id']
         service_name = request['service_name']
 
         # Make MQ-level attributes easier to handle

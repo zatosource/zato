@@ -44,7 +44,7 @@ from zato.common.zato_keyutils import KeyUtils
 from zato.common.posix_ipc_util import ServerStartupIPC
 from zato.common.pubsub import SkipDelivery
 from zato.common.time_util import TimeUtil
-from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_free_port, get_user_config_name, hot_deploy, \
+from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
 from zato.distlock import LockManager
