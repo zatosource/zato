@@ -16,7 +16,6 @@
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
-    {% comment %} HTTP Basic Auth {% endcomment %}
     <script type="text/javascript" src="/static/js/channel/jms-wmq.js"></script>
 
 
@@ -43,7 +42,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">JMS WebSphere MQ channels</h2>
+<h2 class="zato">WebSphere MQ channels</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -56,7 +55,7 @@
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.channel.jms_wmq.create()">Create a new JMS WebSphere MQ channel</a>
+            <a href="javascript:$.fn.zato.channel.jms_wmq.create()">Create a new WebSphere MQ channel</a>
         </div>
 
 

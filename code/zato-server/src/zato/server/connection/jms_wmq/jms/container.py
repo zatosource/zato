@@ -96,20 +96,24 @@ class Response(object):
 # ################################################################################################################################
 
 class _MessageCtx(object):
-    __slots__ = ('mq_msg', 'channel_id')
+    __slots__ = ('mq_msg', 'channel_id', 'queue_name', 'service_name')
 
-    def __init__(self, mq_msg, channel_id):
+    def __init__(self, mq_msg, channel_id, queue_name, service_name):
         self.mq_msg = mq_msg
         self.channel_id = channel_id
+        self.queue_name = queue_name
+        self.service_name = service_name
 
 # ################################################################################################################################
 
-class WebSphereMQTask(object):
+class WebSphereMQChannel(object):
     """ A process to listen for messages from WebSphere MQ queue managers.
     """
-    def __init__(self, conn, channel_id, on_message_callback, logger):
+    def __init__(self, conn, channel_id, queue_name, service_name, on_message_callback, logger):
         self.conn = conn
-        self.channel_id = channel_id
+        self.id = channel_id
+        self.queue_name = queue_name
+        self.service_name = service_name
         self.on_message_callback = on_message_callback
         self.keep_running = True
         self.logger = logger
@@ -121,12 +125,12 @@ class WebSphereMQTask(object):
 
 # ################################################################################################################################
 
-    def _get_destination_info(self, queue_name):
-        return 'destination:`%s`, %s' % (queue_name, self.conn.get_connection_info())
+    def _get_destination_info(self):
+        return 'destination:`%s`, %s' % (self.queue_name, self.conn.get_connection_info())
 
 # ################################################################################################################################
 
-    def listen_for_messages(self, queue_name, sleep_on_error=3):
+    def listen_for_messages(self, sleep_on_error=3):
         """ Runs a background queue listener in its own  thread.
         """
         def _invoke_callback(msg_ctx):
@@ -138,21 +142,21 @@ class WebSphereMQTask(object):
         def _impl():
             while self.keep_running:
                 try:
-                    msg = self.conn.receive(queue_name, 100)
+                    msg = self.conn.receive(self.queue_name, 100)
                     if self.has_debug:
                         self.logger.debug('Message received `%s`' % str(msg).decode('utf-8'))
 
                     if msg:
-                        start_new_thread(_invoke_callback, (_MessageCtx(msg, self.channel_id),))
+                        start_new_thread(_invoke_callback, (_MessageCtx(msg, self.id, self.queue_name, self.service_name),))
 
                 except NoMessageAvailableException as e:
                     if self.has_debug:
                         self.logger.debug('Consumer for queue `%s` did not receive a message. `%s`' % (
-                            queue_name, self._get_destination_info(queue_name)))
+                            self.queue_name, self._get_destination_info(self.queue_name)))
 
                 except self.pymqi.MQMIError as e:
                     if e.reason == self.pymqi.CMQC.MQRC_UNKNOWN_OBJECT_NAME:
-                        self.logger.warn('No such queue `%s` found for %s', queue_name, self.conn.get_connection_info())
+                        self.logger.warn('No such queue `%s` found for %s', self.queue_name, self.conn.get_connection_info())
                     else:
                         self.logger.warn('%s in run, reason_code:`%s`, comp_code:`%s`' % (
                             e.__class__.__name__, e.reason, e.comp))
@@ -262,7 +266,9 @@ class ConnectionContainer(object):
     def on_mq_message_received(self, msg_ctx, _post=post):
         _post(self.server_address, data=dumps({
             'msg': msg_ctx.mq_msg.to_dict(),
-            'channel_id': msg_ctx.channel_id
+            'channel_id': msg_ctx.channel_id,
+            'queue_name': msg_ctx.queue_name,
+            'service_name': msg_ctx.service_name,
         }), auth=self.server_auth)
 
 # ################################################################################################################################
@@ -476,12 +482,44 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_CHANNEL_WMQ_CREATE(self, msg):
-        """ Creates a new background task listening for messages from a given queue.
+        """ Creates a new background channel listening for messages from a given queue.
         """
         with self.lock:
             conn = self.connections[msg.def_id]
-            task = WebSphereMQTask(conn, msg.id, self.on_mq_message_received, self.logger)
-            task.listen_for_messages(msg.queue.encode('utf8'))
+            channel = WebSphereMQChannel(
+                conn, msg.id, msg.queue.encode('utf8'), msg.service_name, self.on_mq_message_received, self.logger)
+            channel.listen_for_messages()
+            self.channels[channel.id] = channel
+            self.channel_id_to_def_id[channel.id] = msg.def_id
+            return Response()
+
+# ################################################################################################################################
+
+    def _on_CHANNEL_WMQ_EDIT(self, msg):
+        """ Updates a WebSphere MQ channel by stopping it and starting again with a new configuration.
+        """
+        with self.lock:
+            channel = self.channels[msg.id]
+            channel.keep_running = False
+            channel.queue_name = msg.queue.encode('utf8')
+            channel.service_name = msg.service_name
+            channel.keep_running = True
+            channel.listen_for_messages()
+
+            return Response()
+
+# ################################################################################################################################
+
+    def _on_CHANNEL_WMQ_DELETE(self, msg):
+        """ Stops and deletes a background channel.
+        """
+        with self.lock:
+            channel = self.channels[msg.id]
+            channel.keep_running = False
+
+            del self.channels[channel.id]
+            del self.channel_id_to_def_id[channel.id]
+
             return Response()
 
 # ################################################################################################################################
