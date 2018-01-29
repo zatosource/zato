@@ -34,7 +34,7 @@ class WebSphereMQ(WorkerImpl):
     on_broker_msg_OUTGOING_WMQ_EDIT = _on_broker_msg_invoke_wmq_connector
     on_broker_msg_OUTGOING_WMQ_DELETE = _on_broker_msg_invoke_wmq_connector
 
-    # .. and channels.
+    # .. and channels ..
     on_broker_msg_CHANNEL_WMQ_CREATE = _on_broker_msg_invoke_wmq_connector
     on_broker_msg_CHANNEL_WMQ_EDIT = _on_broker_msg_invoke_wmq_connector
     on_broker_msg_CHANNEL_WMQ_DELETE = _on_broker_msg_invoke_wmq_connector

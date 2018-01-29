@@ -164,10 +164,6 @@ class Edit(AdminService):
                 session.commit()
 
                 input.id = item.id
-                input.action = BROKER_MSG_CHANNEL.WMQ_CREATE.value
-                self.broker_client.publish(input)
-
-                input.id = item.id
                 input.service_name = service.name
                 input.action = BROKER_MSG_CHANNEL.WMQ_EDIT.value
                 self.broker_client.publish(input)
@@ -224,14 +220,7 @@ class OnMessageReceived(AdminService):
         request = loads(self.request.raw_request)
         msg = request['msg']
         channel_id = request['channel_id']
-
-        # First, find the channel this message is destined to and its underlying service
-        for item in self.server.worker_store.worker_config.channel_wmq.itervalues():
-            if item['config']['id'] == channel_id:
-                service_name = item['config']['service_name']
-                break
-        else:
-            raise Exception('Could not find a channel matching input ID `%s` for message %s', channel_id, msg)
+        service_name = request['service_name']
 
         # Make MQ-level attributes easier to handle
         correlation_id = unhexlify(msg['correlation_id']) if msg['correlation_id'] else None
