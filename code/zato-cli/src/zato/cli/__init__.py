@@ -143,6 +143,11 @@ loggers:
         handlers: [stdout, web_socket]
         qualname: zato_web_socket
         propagate: false
+    zato_websphere_mq:
+        level: INFO
+        handlers: [stdout, websphere_mq]
+        qualname: zato_websphere_mq
+        propagate: false
 
 handlers:
     default:
@@ -223,6 +228,13 @@ handlers:
         formatter: default
         class: logging.handlers.ConcurrentRotatingFileHandler
         filename: './logs/web_socket.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    websphere_mq:
+        formatter: default
+        class: logging.handlers.RotatingFileHandler
+        filename: './logs/websphere-mq.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10

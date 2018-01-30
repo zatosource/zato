@@ -246,14 +246,6 @@ def decrypt(data, priv_key, b64=True):
 
 # ################################################################################################################################
 
-def get_executable():
-    """ Returns the wrapper buildout uses for executing Zato commands. This has
-    all the dependencies added to PYTHONPATH.
-    """
-    return os.path.join(os.path.dirname(sys.executable), 'py')
-
-# ################################################################################################################################
-
 def get_zato_command():
     """ Returns the full path to the 'zato' command' in a buildout environment.
     """

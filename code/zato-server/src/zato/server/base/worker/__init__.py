@@ -1339,9 +1339,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
         return self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
 
-    def on_broker_msg_CHANNEL_JMS_WMQ_MESSAGE_RECEIVED(self, msg, args=None):
-        return self.on_message_invoke_service(msg, CHANNEL.JMS_WMQ, 'CHANNEL_JMS_WMQ_MESSAGE_RECEIVED', args)
-
     def on_broker_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg, args=None):
         return self.on_message_invoke_service(msg, CHANNEL.ZMQ, 'CHANNEL_ZMQ_MESSAGE_RECEIVED', args)
 
