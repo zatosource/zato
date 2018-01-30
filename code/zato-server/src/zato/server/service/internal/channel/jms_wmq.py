@@ -23,6 +23,7 @@ from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL
 from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
 from zato.common.odb.query import channel_wmq_list
 from zato.common.time_util import datetime_from_ms
+from zato.common.util import payload_from_request
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -214,7 +215,7 @@ class OnMessageReceived(AdminService):
         request_elem = 'zato_channel_jms_wmq_on_message_received_request'
         response_elem = 'zato_channel_jms_wmq_on_message_received_response'
 
-    def handle(self, _channel=CHANNEL.WEBSPHERE_MQ, _data_format=DATA_FORMAT.DICT, ts_format='YYYYMMDDHHmmssSS'):
+    def handle(self, _channel=CHANNEL.WEBSPHERE_MQ, ts_format='YYYYMMDDHHmmssSS'):
         request = loads(self.request.raw_request)
         msg = request['msg']
         service_name = request['service_name']
@@ -226,7 +227,9 @@ class OnMessageReceived(AdminService):
         timestamp = '{}{}'.format(msg['put_date'], msg['put_time'])
         timestamp = arrow_get(timestamp, ts_format).replace(tzinfo='UTC').datetime
 
-        self.invoke(service_name, msg['text'], _channel, wmq_ctx={
+        data = payload_from_request(self.cid, msg['text'], request['data_format'], None)
+
+        self.invoke(service_name, data, _channel, wmq_ctx={
             'msg_id': unhexlify(msg['msg_id']),
             'correlation_id': correlation_id,
             'timestamp': timestamp,
