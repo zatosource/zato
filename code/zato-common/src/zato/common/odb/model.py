@@ -898,7 +898,7 @@ class ConnDefAMQP(Base):
 # ################################################################################################################################
 
 class ConnDefWMQ(Base):
-    """ A WebSphere MQ connection definition.
+    """ A IBM MQ connection definition.
     """
     __tablename__ = 'conn_def_wmq'
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
@@ -1081,7 +1081,7 @@ class OutgoingSTOMP(Base):
 # ################################################################################################################################
 
 class OutgoingWMQ(Base):
-    """ An outgoing WebSphere MQ connection.
+    """ An outgoing IBM MQ connection.
     """
     __tablename__ = 'out_wmq'
     __table_args__ = (UniqueConstraint('name', 'def_id'), {})
@@ -1204,7 +1204,7 @@ class ChannelSTOMP(Base):
 # ################################################################################################################################
 
 class ChannelWMQ(Base):
-    """ An incoming WebSphere MQ connection.
+    """ An incoming IBM MQ connection.
     """
     __tablename__ = 'channel_wmq'
     __table_args__ = (UniqueConstraint('name', 'def_id'), {})

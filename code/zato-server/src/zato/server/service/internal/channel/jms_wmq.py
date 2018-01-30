@@ -28,7 +28,7 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 # ################################################################################################################################
 
 class GetList(AdminService):
-    """ Returns a list of WebSphere MQ channels.
+    """ Returns a list of IBM MQ channels.
     """
     _filter_by = ChannelWMQ.name,
 
@@ -49,7 +49,7 @@ class GetList(AdminService):
 # ################################################################################################################################
 
 class Create(AdminService):
-    """ Creates a new WebSphere MQ channel.
+    """ Creates a new IBM MQ channel.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_jms_wmq_create_request'
@@ -71,7 +71,7 @@ class Create(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('A WebSphere MQ channel `{}` already exists on this cluster'.format(input.name))
+                raise Exception('A IBM MQ channel `{}` already exists on this cluster'.format(input.name))
 
             # Is the service's name correct?
             service = session.query(Service).\
@@ -106,7 +106,7 @@ class Create(AdminService):
                 self.response.payload.name = item.name
 
             except Exception:
-                self.logger.error('Could not create a WebSphere MQ channel, e:`%s`', format_exc())
+                self.logger.error('Could not create an IBM MQ MQ channel, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -114,7 +114,7 @@ class Create(AdminService):
 # ################################################################################################################################
 
 class Edit(AdminService):
-    """ Updates a WebSphere MQ channel.
+    """ Updates an IBM MQ MQ channel.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_jms_wmq_edit_request'
@@ -137,7 +137,7 @@ class Edit(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('A WebSphere MQ channel `{}` already exists on this cluster'.format(input.name))
+                raise Exception('A IBM MQ channel `{}` already exists on this cluster'.format(input.name))
 
             # Is the service's name correct?
             service = session.query(Service).\
@@ -170,7 +170,7 @@ class Edit(AdminService):
                 self.response.payload.name = item.name
 
             except Exception:
-                self.logger.error('Could not update WebSphere MQ definition, e:`%s`', format_exc())
+                self.logger.error('Could not update IBM MQ definition, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -178,7 +178,7 @@ class Edit(AdminService):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes a WebSphere MQ channel.
+    """ Deletes an IBM MQ MQ channel.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_jms_wmq_delete_request'
@@ -201,7 +201,7 @@ class Delete(AdminService):
 
             except Exception:
                 session.rollback()
-                self.logger.error('Could not delete WebSphere MQ channel, e:`%s`', format_exc())
+                self.logger.error('Could not delete IBM MQ channel, e:`%s`', format_exc())
 
                 raise
 

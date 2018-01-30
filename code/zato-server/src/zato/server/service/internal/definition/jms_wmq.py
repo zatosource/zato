@@ -24,7 +24,7 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 # ################################################################################################################################
 
 class GetList(AdminService):
-    """ Returns a list of WebSphere MQ definitions available.
+    """ Returns a list of IBM MQ definitions available.
     """
     _filter_by = ConnDefWMQ.name,
 
@@ -47,7 +47,7 @@ class GetList(AdminService):
 # ################################################################################################################################
 
 class GetByID(AdminService):
-    """ Returns a particular WebSphere MQ definition.
+    """ Returns a particular IBM MQ definition.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_definition_jms_wmq_get_by_id_request'
@@ -68,7 +68,7 @@ class GetByID(AdminService):
 # ################################################################################################################################
 
 class Create(AdminService):
-    """ Creates a new WebSphere MQ definition.
+    """ Creates a new IBM MQ definition.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_definition_jms_wmq_create_request'
@@ -92,7 +92,7 @@ class Create(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('WebSphere MQ definition `{}` already exists on this cluster'.format(input.name))
+                raise Exception('IBM MQ definition `{}` already exists on this cluster'.format(input.name))
 
             try:
                 input.password = uuid4().hex
@@ -114,7 +114,7 @@ class Create(AdminService):
                 self.response.payload.name = def_.name
 
             except Exception:
-                self.logger.error('Could not create a WebSphere MQ definition, e:`%s`', format_exc())
+                self.logger.error('Could not create an IBM MQ MQ definition, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -146,7 +146,7 @@ class Edit(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('WebSphere MQ definition `{}` already exists on this cluster'.format(input.name))
+                raise Exception('IBM MQ definition `{}` already exists on this cluster'.format(input.name))
 
             try:
                 def_ = session.query(ConnDefWMQ).filter_by(id=input.id).one()
@@ -179,7 +179,7 @@ class Edit(AdminService):
                 self.response.payload.name = def_.name
 
             except Exception:
-                self.logger.error('Could not update WebSphere MQ definition, e:`%s`', format_exc())
+                self.logger.error('Could not update IBM MQ definition, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -187,7 +187,7 @@ class Edit(AdminService):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes a WebSphere MQ definition.
+    """ Deletes an IBM MQ MQ definition.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_definition_jms_wmq_delete_request'
@@ -209,14 +209,14 @@ class Delete(AdminService):
 
             except Exception:
                 session.rollback()
-                self.logger.error('Could not delete WebSphere MQ definition, e:`%s`', format_exc())
+                self.logger.error('Could not delete IBM MQ definition, e:`%s`', format_exc())
 
                 raise
 
 # ################################################################################################################################
 
 class ChangePassword(ChangePasswordBase):
-    """ Changes the password of a WebSphere MQ connection definition.
+    """ Changes the password of an IBM MQ MQ connection definition.
     """
     password_required = False
 

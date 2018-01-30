@@ -1255,7 +1255,7 @@ class IMAPMessage(object):
 # ################################################################################################################################
 
 class WebSphereMQCallData(object):
-    """ Metadata for information returned by WebSphere MQ in response to underlying MQPUT calls.
+    """ Metadata for information returned by IBM MQ in response to underlying MQPUT calls.
     """
     __slots__ = ('msg_id', 'correlation_id')
 

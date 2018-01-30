@@ -77,7 +77,7 @@ class AMQPRequestData(object):
 # ################################################################################################################################
 
 class WebSphereMQRequestData(object):
-    """ Metadata for WebSphere MQ requests.
+    """ Metadata for IBM MQ requests.
     """
     __slots__ = ('ctx', 'msg_id', 'correlation_id', 'timestamp', 'put_date', 'put_time', 'reply_to')
 

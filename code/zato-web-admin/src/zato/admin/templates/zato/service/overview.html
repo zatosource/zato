@@ -24,7 +24,7 @@
 
     <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.sparkline.min.js"></script>
-    
+
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/service/overview.js"></script>
 
@@ -55,7 +55,7 @@
                 <div class="item-details-body">
                     <table style="width:100%">
                         <tr>
-                        
+
                             <td style="width:25%">
                                 <table>
                                     <tr>
@@ -132,7 +132,7 @@
                                             Plain HTTP: {% if not service.plain_http_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.plain_http_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
                                             SOAP: {% if not service.soap_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.soap_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
                                             AMQP: {% if not service.amqp_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.amqp_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
-                                            JMS WebSphere MQ: {% if not service.wmq_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.wmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                            IBM MQ: {% if not service.wmq_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.wmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
                                             ZeroMQ: {% if not service.zmq_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.zmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
                                             Scheduler: {% if not service.scheduler_jobs %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.scheduler_jobs %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
                                         </td>

@@ -38,13 +38,13 @@ address_pattern='http://127.0.0.1:{}/{}'
 # ################################################################################################################################
 
 class WMQIPC(object):
-    """ Implements communication with a WebSphere MQ connector for a given server.
+    """ Implements communication with an IBM MQ MQ connector for a given server.
     """
 
 # ################################################################################################################################
 
     def get_wmq_credentials(self, username=IPC.CONNECTOR.WEBSPHERE_MQ.USERNAME):
-        """ Returns a username/password pair that authentication with WebSphere MQ connectors is established with.
+        """ Returns a username/password pair that authentication with IBM MQ connectors is established with.
         """
         config = self.worker_store.basic_auth_get(username)['config']
         return config.username, config.password
@@ -52,11 +52,11 @@ class WMQIPC(object):
 # ################################################################################################################################
 
     def start_websphere_mq_connector(self, ipc_tcp_start_port, timeout=5):
-        """ Starts an HTTP server acting as a WebSphere MQ connector. Its port will be greater than ipc_tcp_start_port,
+        """ Starts an HTTP server acting as an IBM MQ MQ connector. Its port will be greater than ipc_tcp_start_port,
         which is the starting point to find a free port from.
         """
         self.wmq_ipc_tcp_port = get_free_port(ipc_tcp_start_port)
-        logger.info('Starting WebSphere MQ connector for server `%s` on `%s`', self.wmq_ipc_tcp_port, self.name)
+        logger.info('Starting IBM MQ connector for server `%s` on `%s`', self.wmq_ipc_tcp_port, self.name)
 
         # Credentials for both servers and connectors
         username, password = self.get_wmq_credentials()
@@ -73,8 +73,8 @@ class WMQIPC(object):
             'logging_conf_path': self.logging_conf_path
         }), self.pid)
 
-        # Start WebSphere MQ connector in a sub-process
-        start_python_process(False, 'zato.server.connection.jms_wmq.jms.container', 'WebSphere MQ connector', '')
+        # Start IBM MQ connector in a sub-process
+        start_python_process(False, 'zato.server.connection.jms_wmq.jms.container', 'IBM MQ connector', '')
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()
@@ -92,7 +92,7 @@ class WMQIPC(object):
                 now = datetime.utcnow()
 
         if not is_ok:
-            logger.warn('WebSphere MQ connector (%s) could not be started after %s', address, timeout)
+            logger.warn('IBM MQ connector (%s) could not be started after %s', address, timeout)
         else:
             return is_ok
 
@@ -155,7 +155,7 @@ class WMQIPC(object):
         def text_func(config):
             return '{} {}:{} (queue manager:{})'.format(config['name'], config['host'], config['port'], config['queue_manager'])
 
-        text_pattern = 'Creating WebSphere MQ definition %s'
+        text_pattern = 'Creating IBM MQ definition %s'
         action = DEFINITION.WMQ_CREATE.value
         self._create_initial_wmq_objects(config_dict, action, text_pattern, text_func)
 
@@ -165,7 +165,7 @@ class WMQIPC(object):
         def text_func(config):
             return config['name']
 
-        text_pattern = 'Creating WebSphere MQ outconn %s'
+        text_pattern = 'Creating IBM MQ outconn %s'
         action = OUTGOING.WMQ_CREATE.value
         self._create_initial_wmq_objects(config_dict, action, text_pattern, text_func)
 
@@ -175,7 +175,7 @@ class WMQIPC(object):
         def text_func(config):
             return config['name']
 
-        text_pattern = 'Creating WebSphere MQ channel %s'
+        text_pattern = 'Creating IBM MQ channel %s'
         action = CHANNEL.WMQ_CREATE.value
         self._create_initial_wmq_objects(config_dict, action, text_pattern, text_func)
 

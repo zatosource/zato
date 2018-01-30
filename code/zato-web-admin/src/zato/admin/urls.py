@@ -599,7 +599,7 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. WebSphere MQ
+    # .. IBM MQ
 
     url(r'^zato/definition/jms-wmq/$',
         login_required(def_wmq.Index()), name=def_wmq.Index.url_name),
@@ -657,7 +657,7 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. WebSphere MQ
+    # .. IBM MQ
 
     url(r'^zato/outgoing/jms-wmq/$',
         login_required(out_jms_wmq.index), name='out-jms-wmq'),
@@ -771,7 +771,7 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. WebSphere MQ
+    # .. IBM MQ
     url(r'^zato/channel/jms-wmq/$',
         login_required(channel_jms_wmq.Index()), name=channel_jms_wmq.Index.url_name),
     url(r'^zato/channel/jms-wmq/create/$',

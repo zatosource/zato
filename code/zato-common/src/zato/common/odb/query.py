@@ -366,7 +366,7 @@ def _def_wmq(session, cluster_id):
         order_by(ConnDefWMQ.name)
 
 def definition_wmq(session, cluster_id, id):
-    """ A particular JMS WebSphere MQ definition
+    """ A particular IBM MQ definition
     """
     return _def_wmq(session, cluster_id).\
         filter(ConnDefWMQ.id==id).\
@@ -374,7 +374,7 @@ def definition_wmq(session, cluster_id, id):
 
 @query_wrapper
 def definition_wmq_list(session, cluster_id, needs_columns=False):
-    """ JMS WebSphere MQ connection definitions.
+    """ IBM MQ connection definitions.
     """
     return _def_wmq(session, cluster_id)
 
@@ -419,14 +419,14 @@ def _out_wmq(session, cluster_id):
         order_by(OutgoingWMQ.name)
 
 def out_wmq(session, cluster_id, id):
-    """ An outgoing JMS WebSphere MQ connection (by ID).
+    """ An outgoing IBM MQ connection (by ID).
     """
     return _out_wmq(session, cluster_id).\
         filter(OutgoingWMQ.id==id).\
         one()
 
 def out_wmq_by_name(session, cluster_id, name):
-    """ An outgoing JMS WebSphere MQ connection (by name).
+    """ An outgoing IBM MQ connection (by name).
     """
     return _out_wmq(session, cluster_id).\
         filter(OutgoingWMQ.name==name).\
@@ -434,7 +434,7 @@ def out_wmq_by_name(session, cluster_id, name):
 
 @query_wrapper
 def out_wmq_list(session, cluster_id, needs_columns=False):
-    """ Outgoing JMS WebSphere MQ connections.
+    """ Outgoing IBM MQ connections.
     """
     return _out_wmq(session, cluster_id)
 
@@ -509,7 +509,7 @@ def _channel_wmq(session, cluster_id):
         order_by(ChannelWMQ.name)
 
 def channel_wmq(session, cluster_id, id):
-    """ A particular JMS WebSphere MQ channel.
+    """ A particular IBM MQ channel.
     """
     return _channel_wmq(session, cluster_id).\
         filter(ChannelWMQ.id==id).\
@@ -517,7 +517,7 @@ def channel_wmq(session, cluster_id, id):
 
 @query_wrapper
 def channel_wmq_list(session, cluster_id, needs_columns=False):
-    """ JMS WebSphere MQ channels.
+    """ IBM MQ channels.
     """
     return _channel_wmq(session, cluster_id)
 

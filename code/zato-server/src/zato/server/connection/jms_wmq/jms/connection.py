@@ -653,7 +653,7 @@ class WebSphereMQConnection(object):
             else:
                 md.Expiry = message.jms_expiration / 10
 
-        # WebSphere MQ provider-specific JMS headers
+        # IBM MQ provider-specific JMS headers
 
         jmsxgroupseq = getattr(message, 'JMSXGroupSeq', None)
         if jmsxgroupseq is not None:
@@ -704,7 +704,7 @@ class DummyMQRFH2JMS(object):
 # ################################################################################################################################
 
 class MQRFH2JMS(object):
-    """ A class for representing a subset of MQRFH2, suitable for passing WebSphere MQ JMS headers around.
+    """ A class for representing a subset of MQRFH2, suitable for passing IBM MQ JMS headers around.
     """
     # 4 bytes - MQRFH_STRUC_ID
     # 4 bytes - _WMQ_MQRFH_VERSION_2
@@ -732,8 +732,8 @@ class MQRFH2JMS(object):
         self.payload = None
 
     def _pad_folder(self, folder):
-        ''' Pads the folder to a multiple of 4, as required by WebSphere MQ.
-        '''
+        """ Pads the folder to a multiple of 4, as required by IBM MQ.
+        """
         folder_len = len(folder)
 
         if folder_len % MQRFH2JMS.FOLDER_LENGTH_MULTIPLE == 0:
