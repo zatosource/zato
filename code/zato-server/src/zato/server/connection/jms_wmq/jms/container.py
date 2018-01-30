@@ -185,8 +185,12 @@ class ConnectionContainer(object):
     def __init__(self):
 
         # PyMQI is an optional dependency so let's import it here rather than on module level
-        import pymqi
-        self.pymqi = pymqi
+        try:
+            import pymqi
+        except ImportError:
+            self.pymqi = None
+        else:
+            self.pymqi = pymqi
 
         self.host = '127.0.0.1'
         self.port = None
@@ -302,6 +306,9 @@ class ConnectionContainer(object):
     def _on_DEFINITION_WMQ_CREATE(self, msg):
         """ Creates a new connection to WebSphere MQ.
         """
+        if not self.pymqi:
+            return Response(_http_503, 'Could not find pymqi module, MQ connections will not start')
+
         with self.lock:
             try:
                 self._create_definition(msg)
