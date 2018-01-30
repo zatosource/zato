@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}WebSphere MQ connection definitions{% endblock %}
+{% block html_title %}IBM MQ connection definitions{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -58,7 +58,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">WebSphere MQ definitions</h2>
+<h2 class="zato">IBM MQ definitions</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -71,7 +71,7 @@
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.definition.jms_wmq.create()">Create a new WebSphere MQ definition</a>
+            <a href="javascript:$.fn.zato.definition.jms_wmq.create()">Create a new IBM MQ definition</a>
         </div>
 
 

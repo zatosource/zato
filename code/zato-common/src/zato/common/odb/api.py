@@ -975,37 +975,37 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def get_def_wmq(self, cluster_id, def_id):
-        """ Returns an JMS WebSphere MQ definition's details.
+        """ Returns an IBM MQ definition's details.
         """
         with closing(self.session()) as session:
             return query.definition_wmq(session, cluster_id, def_id)
 
     def get_definition_wmq_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of JMS WebSphere MQ definitions on the given cluster.
+        """ Returns a list of IBM MQ definitions on the given cluster.
         """
         with closing(self.session()) as session:
             return query.definition_wmq_list(session, cluster_id, needs_columns)
 
     def get_out_wmq(self, cluster_id, out_id):
-        """ Returns an outgoing JMS WebSphere MQ connection's details.
+        """ Returns an outgoing IBM MQ connection's details.
         """
         with closing(self.session()) as session:
             return query.out_wmq(session, cluster_id, out_id)
 
     def get_out_wmq_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of outgoing JMS WebSphere MQ connections.
+        """ Returns a list of outgoing IBM MQ connections.
         """
         with closing(self.session()) as session:
             return query.out_wmq_list(session, cluster_id, needs_columns)
 
     def get_channel_wmq(self, cluster_id, channel_id):
-        """ Returns a particular JMS WebSphere MQ channel.
+        """ Returns a particular IBM MQ channel.
         """
         with closing(self.session()) as session:
             return query.channel_wmq(session, cluster_id, channel_id)
 
     def get_channel_wmq_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of JMS WebSphere MQ channels.
+        """ Returns a list of IBM MQ channels.
         """
         with closing(self.session()) as session:
             return query.channel_wmq_list(session, cluster_id, needs_columns)

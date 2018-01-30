@@ -1,6 +1,6 @@
 @definition
 Feature: zato.definition.jms-wmq.get-list
-  Returns a list of JMS WebSphere MQ connection definition on a given cluster.
+  Returns a list of IBM MQ connection definition on a given cluster.
 
 
   @definition.jms-wmq.get-list
@@ -50,7 +50,7 @@ Feature: zato.definition.jms-wmq.get-list
 
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
-    
+
     And JSON Pointer "/zato_definition_jms_wmq_get_list_response" isn't an empty list
 
 

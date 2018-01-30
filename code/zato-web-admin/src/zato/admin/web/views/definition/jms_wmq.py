@@ -55,7 +55,7 @@ class _CreateEdit(CreateEdit):
         output_required = ('id',)
 
     def success_message(self, item):
-        return 'Successfully {} WebSphere MQ definition `{}`'.format(self.verb, item.name)
+        return 'Successfully {} IBM MQ definition `{}`'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'definition-wmq-create'
@@ -68,12 +68,12 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'definition-wmq-delete'
-    error_message = 'Could not delete WebSphere MQ definition'
+    error_message = 'Could not delete IBM MQ definition'
     service_name = 'zato.definition.jms-wmq.delete'
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.definition.jms-wmq.ping', id, 'Could not ping WebSphere MQ definition, e:`{e}`')
+    ret = id_only_service(req, 'zato.definition.jms-wmq.ping', id, 'Could not ping IBM MQ definition, e:`{e}`')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse(ret.data.info)

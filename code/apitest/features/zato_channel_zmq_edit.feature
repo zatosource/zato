@@ -1,6 +1,6 @@
 @channel.zmq
 Feature: zato.channel.zmq.edit
-  Updates an already existing JMS WebSphere MQ channel. The channel will be stopped. If ‘is_active’ flag is ‘true’,
+  Updates an already existing IBM MQ channel. The channel will be stopped. If ‘is_active’ flag is ‘true’,
   the underlying MQ listener will then be started.
 
 

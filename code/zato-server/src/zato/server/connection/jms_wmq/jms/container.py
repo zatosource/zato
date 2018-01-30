@@ -96,24 +96,26 @@ class Response(object):
 # ################################################################################################################################
 
 class _MessageCtx(object):
-    __slots__ = ('mq_msg', 'channel_id', 'queue_name', 'service_name')
+    __slots__ = ('mq_msg', 'channel_id', 'queue_name', 'service_name', 'data_format')
 
-    def __init__(self, mq_msg, channel_id, queue_name, service_name):
+    def __init__(self, mq_msg, channel_id, queue_name, service_name, data_format):
         self.mq_msg = mq_msg
         self.channel_id = channel_id
         self.queue_name = queue_name
         self.service_name = service_name
+        self.data_format = data_format
 
 # ################################################################################################################################
 
 class WebSphereMQChannel(object):
-    """ A process to listen for messages from WebSphere MQ queue managers.
+    """ A process to listen for messages from IBM MQ queue managers.
     """
-    def __init__(self, conn, channel_id, queue_name, service_name, on_message_callback, logger):
+    def __init__(self, conn, channel_id, queue_name, service_name, data_format, on_message_callback, logger):
         self.conn = conn
         self.id = channel_id
         self.queue_name = queue_name
         self.service_name = service_name
+        self.data_format = data_format
         self.on_message_callback = on_message_callback
         self.keep_running = False
         self.logger = logger
@@ -149,7 +151,8 @@ class WebSphereMQChannel(object):
                         self.logger.debug('Message received `%s`' % str(msg).decode('utf-8'))
 
                     if msg:
-                        start_new_thread(_invoke_callback, (_MessageCtx(msg, self.id, self.queue_name, self.service_name),))
+                        start_new_thread(_invoke_callback, (
+                            _MessageCtx(msg, self.id, self.queue_name, self.service_name, self.data_format),))
 
                 except NoMessageAvailableException as e:
                     if self.has_debug:
@@ -170,6 +173,7 @@ class WebSphereMQChannel(object):
 
                 except Exception as e:
                     self.logger.error('Exception in the main loop %s', format_exc())
+                    sleep(sleep_on_error)
 
         # Start listener in a thread
         start_new_thread(_impl, ())
@@ -185,8 +189,12 @@ class ConnectionContainer(object):
     def __init__(self):
 
         # PyMQI is an optional dependency so let's import it here rather than on module level
-        import pymqi
-        self.pymqi = pymqi
+        try:
+            import pymqi
+        except ImportError:
+            self.pymqi = None
+        else:
+            self.pymqi = pymqi
 
         self.host = '127.0.0.1'
         self.port = None
@@ -233,7 +241,7 @@ class ConnectionContainer(object):
         with open(config.logging_conf_path) as f:
             logging_config = yaml.load(f)
 
-        # WebSphere MQ logging configuration is new in Zato 3.0, so it's optional.
+        # IBM MQ logging configuration is new in Zato 3.0, so it's optional.
         if not 'zato_websphere_mq' in logging_config['loggers']:
             logging_config = default_logging_config
 
@@ -272,6 +280,7 @@ class ConnectionContainer(object):
             'channel_id': msg_ctx.channel_id,
             'queue_name': msg_ctx.queue_name,
             'service_name': msg_ctx.service_name,
+            'data_format': msg_ctx.data_format,
         }), auth=self.server_auth)
 
 # ################################################################################################################################
@@ -300,8 +309,11 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_CREATE(self, msg):
-        """ Creates a new connection to WebSphere MQ.
+        """ Creates a new connection to IBM MQ.
         """
+        if not self.pymqi:
+            return Response(_http_503, 'Could not find pymqi module, MQ connections will not start')
+
         with self.lock:
             try:
                 self._create_definition(msg)
@@ -345,7 +357,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_DELETE(self, msg):
-        """ Deletes a WebSphere MQ definition along with its associated outconns and channels.
+        """ Deletes an IBM MQ MQ definition along with its associated outconns and channels.
         """
         with self.lock:
             def_id = msg.id
@@ -393,7 +405,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_PING(self, msg):
-        """ Pings a remote WebSphere MQ manager.
+        """ Pings a remote IBM MQ manager.
         """
         try:
             self.connections[msg.id].ping()
@@ -436,7 +448,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_DELETE(self, msg):
-        """ Deletes an existing WebSphere MQ outconn.
+        """ Deletes an existing IBM MQ outconn.
         """
         with self.lock:
             self._delete_outconn(msg)
@@ -445,7 +457,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_CREATE(self, msg):
-        """ Creates a new WebSphere MQ outgoin connections using an already existing definition.
+        """ Creates a new IBM MQ outgoin connections using an already existing definition.
         """
         with self.lock:
             return self._create_outconn(msg)
@@ -462,7 +474,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_SEND(self, msg):
-        """ Sends a message to a remote WebSphere MQ queue.
+        """ Sends a message to a remote IBM MQ queue.
         """
         with self.lock:
             outconn_id = msg.get('id') or self.outconn_name_to_id[msg.outconn_name]
@@ -508,8 +520,8 @@ class ConnectionContainer(object):
         """
         with self.lock:
             conn = self.connections[msg.def_id]
-            channel = WebSphereMQChannel(
-                conn, msg.id, msg.queue.encode('utf8'), msg.service_name, self.on_mq_message_received, self.logger)
+            channel = WebSphereMQChannel(conn, msg.id, msg.queue.encode('utf8'), msg.service_name, msg.data_format,
+                self.on_mq_message_received, self.logger)
             channel.start()
             self.channels[channel.id] = channel
             self.channel_id_to_def_id[channel.id] = msg.def_id
@@ -518,13 +530,14 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_CHANNEL_WMQ_EDIT(self, msg):
-        """ Updates a WebSphere MQ channel by stopping it and starting again with a new configuration.
+        """ Updates an IBM MQ MQ channel by stopping it and starting again with a new configuration.
         """
         with self.lock:
             channel = self.channels[msg.id]
             channel.stop()
             channel.queue_name = msg.queue.encode('utf8')
             channel.service_name = msg.service_name
+            channel.data_format = msg.data_format
             channel.keep_running = True
             channel.start()
 
