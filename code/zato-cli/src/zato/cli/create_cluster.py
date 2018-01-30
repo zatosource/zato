@@ -50,7 +50,7 @@ zato_services = {
     'zato.channel.amqp.edit':'zato.server.service.internal.channel.amqp_.Edit',
     'zato.channel.amqp.get-list':'zato.server.service.internal.channel.amqp_.GetList',
 
-    # Channels - JMS WebSphere MQ
+    # Channels - IBM MQ
     'zato.channel.jms-wmq.create':'zato.server.service.internal.channel.jms_wmq.Create',
     'zato.channel.jms-wmq.delete':'zato.server.service.internal.channel.jms_wmq.Delete',
     'zato.channel.jms-wmq.edit':'zato.server.service.internal.channel.jms_wmq.Edit',
@@ -127,7 +127,7 @@ zato_services = {
     'zato.definition.cassandra.get-by-id':'zato.server.service.internal.definition.cassandra.GetByID',
     'zato.definition.cassandra.get-list':'zato.server.service.internal.definition.cassandra.GetList',
 
-    # Definitions - JMS WebSphere MQ
+    # Definitions - IBM MQ
     'zato.definition.jms-wmq.create':'zato.server.service.internal.definition.jms_wmq.Create',
     'zato.definition.jms-wmq.delete':'zato.server.service.internal.definition.jms_wmq.Delete',
     'zato.definition.jms-wmq.edit':'zato.server.service.internal.definition.jms_wmq.Edit',
@@ -239,7 +239,7 @@ zato_services = {
     'zato.outgoing.ftp.edit':'zato.server.service.internal.outgoing.ftp.Edit',
     'zato.outgoing.ftp.get-list':'zato.server.service.internal.outgoing.ftp.GetList',
 
-    # Outgoing connections - JMS WebSphere MQ
+    # Outgoing connections - IBM MQ
     'zato.outgoing.jms-wmq.create':'zato.server.service.internal.outgoing.jms_wmq.Create',
     'zato.outgoing.jms-wmq.delete':'zato.server.service.internal.outgoing.jms_wmq.Delete',
     'zato.outgoing.jms-wmq.edit':'zato.server.service.internal.outgoing.jms_wmq.Edit',
@@ -515,7 +515,7 @@ class Create(ZatoCommand):
         self.add_cache_endpoints(session, cluster)
         self.add_pubsub_sec_endpoints(session, cluster)
 
-        # For WebSphere MQ connections / connectors
+        # For IBM MQ connections / connectors
         self.add_internal_callback_wmq(session, cluster)
 
         try:
@@ -978,7 +978,7 @@ class Create(ZatoCommand):
         service = Service(None, 'zato.channel.jms-wmq.on-message-received', True, impl_name, True, cluster)
 
         wmq_username = IPC.CONNECTOR.WEBSPHERE_MQ.USERNAME
-        wmq_sec = HTTPBasicAuth(None, wmq_username, True, wmq_username, 'Zato WebSphere MQ', uuid4().hex, cluster)
+        wmq_sec = HTTPBasicAuth(None, wmq_username, True, wmq_username, 'Zato IBM MQ', uuid4().hex, cluster)
 
         channel = HTTPSOAP(None, 'zato.internal.callback.wmq', True, True, 'channel', 'plain_http', None,
             '/zato/internal/callback/wmq',

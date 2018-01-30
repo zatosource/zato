@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # ################################################################################################################################
 
 class WMQFacade(object):
-    """ A WebSphere MQ facade for services so they aren't aware that sending WMQ
+    """ A IBM MQ facade for services so they aren't aware that sending WMQ
     messages actually requires us to use the Zato broker underneath.
     """
 
@@ -26,7 +26,7 @@ class WMQFacade(object):
 
     def send(self, msg, outconn_name, queue_name, correlation_id='', msg_id='', reply_to='', expiration=None, priority=None,
         delivery_mode=None):
-        """ Puts a message on a WebSphere MQ queue.
+        """ Puts a message on an IBM MQ MQ queue.
         """
         return self.service.server.send_wmq_message({
             'data': msg,

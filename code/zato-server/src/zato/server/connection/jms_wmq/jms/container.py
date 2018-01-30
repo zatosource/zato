@@ -107,7 +107,7 @@ class _MessageCtx(object):
 # ################################################################################################################################
 
 class WebSphereMQChannel(object):
-    """ A process to listen for messages from WebSphere MQ queue managers.
+    """ A process to listen for messages from IBM MQ queue managers.
     """
     def __init__(self, conn, channel_id, queue_name, service_name, on_message_callback, logger):
         self.conn = conn
@@ -237,7 +237,7 @@ class ConnectionContainer(object):
         with open(config.logging_conf_path) as f:
             logging_config = yaml.load(f)
 
-        # WebSphere MQ logging configuration is new in Zato 3.0, so it's optional.
+        # IBM MQ logging configuration is new in Zato 3.0, so it's optional.
         if not 'zato_websphere_mq' in logging_config['loggers']:
             logging_config = default_logging_config
 
@@ -304,7 +304,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_CREATE(self, msg):
-        """ Creates a new connection to WebSphere MQ.
+        """ Creates a new connection to IBM MQ.
         """
         if not self.pymqi:
             return Response(_http_503, 'Could not find pymqi module, MQ connections will not start')
@@ -352,7 +352,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_DELETE(self, msg):
-        """ Deletes a WebSphere MQ definition along with its associated outconns and channels.
+        """ Deletes an IBM MQ MQ definition along with its associated outconns and channels.
         """
         with self.lock:
             def_id = msg.id
@@ -400,7 +400,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_PING(self, msg):
-        """ Pings a remote WebSphere MQ manager.
+        """ Pings a remote IBM MQ manager.
         """
         try:
             self.connections[msg.id].ping()
@@ -443,7 +443,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_DELETE(self, msg):
-        """ Deletes an existing WebSphere MQ outconn.
+        """ Deletes an existing IBM MQ outconn.
         """
         with self.lock:
             self._delete_outconn(msg)
@@ -452,7 +452,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_CREATE(self, msg):
-        """ Creates a new WebSphere MQ outgoin connections using an already existing definition.
+        """ Creates a new IBM MQ outgoin connections using an already existing definition.
         """
         with self.lock:
             return self._create_outconn(msg)
@@ -469,7 +469,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_SEND(self, msg):
-        """ Sends a message to a remote WebSphere MQ queue.
+        """ Sends a message to a remote IBM MQ queue.
         """
         with self.lock:
             outconn_id = msg.get('id') or self.outconn_name_to_id[msg.outconn_name]
@@ -525,7 +525,7 @@ class ConnectionContainer(object):
 # ################################################################################################################################
 
     def _on_CHANNEL_WMQ_EDIT(self, msg):
-        """ Updates a WebSphere MQ channel by stopping it and starting again with a new configuration.
+        """ Updates an IBM MQ MQ channel by stopping it and starting again with a new configuration.
         """
         with self.lock:
             channel = self.channels[msg.id]

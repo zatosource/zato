@@ -54,7 +54,7 @@ def _get_edit_create_message(params, prefix=''):
 def _edit_create_response(client, verb, id, name, delivery_mode_text, cluster_id, def_id):
     response = client.invoke('zato.definition.jms-wmq.get-by-id', {'id':def_id, 'cluster_id':cluster_id})
     return_data = {'id': id,
-                   'message': 'Successfully {0} the outgoing JMS WebSphere MQ connection [{1}]'.format(verb, name),
+                   'message': 'Successfully {} outgoing IBM MQ connection `{}`'.format(verb, name),
                    'delivery_mode_text': delivery_mode_text,
                    'def_name': response.data.name
                 }
@@ -113,7 +113,7 @@ def create(req):
         return _edit_create_response(req.zato.client, 'created', response.data.id,
             req.POST['name'], delivery_mode_text, req.POST['cluster_id'], req.POST['def_id'])
     except Exception, e:
-        msg = 'Could not create an outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
+        msg = 'Could not create outgoing IBM MQ connection, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -130,7 +130,7 @@ def edit(req):
             delivery_mode_text, req.POST['cluster_id'], req.POST['edit-def_id'])
 
     except Exception, e:
-        msg = 'Could not update the outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
+        msg = 'Could not update outgoing IBM MQ connection, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -138,7 +138,7 @@ def edit(req):
 
 class Delete(_Delete):
     url_name = 'out-jms-wmq-delete'
-    error_message = 'Could not delete the outgoing JMS WebSphere MQ connection'
+    error_message = 'Could not delete the outgoing IBM MQ connection'
     service_name = 'zato.outgoing.jms-wmq.delete'
 
 # ################################################################################################################################

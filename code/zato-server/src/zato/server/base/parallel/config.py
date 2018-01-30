@@ -128,7 +128,7 @@ class ConfigLoader(object):
         query = self.odb.get_channel_stomp_list(server.cluster.id, True)
         self.config.channel_stomp = ConfigDict.from_query('channel_stomp', query)
 
-        # WebSphere MQ
+        # IBM MQ
         query = self.odb.get_channel_wmq_list(server.cluster.id, True)
         self.config.channel_wmq = ConfigDict.from_query('channel_wmq', query)
 
@@ -155,7 +155,7 @@ class ConfigLoader(object):
         query = self.odb.get_out_ftp_list(server.cluster.id, True)
         self.config.out_ftp = ConfigDict.from_query('out_ftp', query)
 
-        # WebSphere MQ
+        # IBM MQ
         query = self.odb.get_out_wmq_list(server.cluster.id, True)
         self.config.out_wmq = ConfigDict.from_query('out_wmq', query)
 
