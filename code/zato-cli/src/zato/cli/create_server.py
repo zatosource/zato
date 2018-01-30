@@ -305,7 +305,23 @@ service_sources_contents = """# Visit https://zato.io/docs for more information.
 user_conf_contents = """[sample_section]
 string_key=sample_string
 list_key=sample,list
+"""
 
+sso_conf_contents = """[main]
+user_class=zato.common.user.User
+user_session_class=zato.common.user.UserSession
+
+[backend]
+default=sql
+
+[password_hash]
+method=pbkdf2_sha512
+rounds=
+rounds_target=200 # How long, in milliseconds, password verification for a single user should take
+salt_size=32 # In bytes = 256 bits
+
+[sql]
+name=zato
 """
 
 lua_zato_rename_if_exists = """
@@ -495,6 +511,11 @@ class Create(ZatoCommand):
             user_conf = open(user_conf_loc, 'w')
             user_conf.write(user_conf_contents)
             user_conf.close()
+
+            sso_conf_loc = os.path.join(self.target_dir, 'config/repo/sso.conf')
+            sso_conf = open(sso_conf_loc, 'w')
+            sso_conf.write(sso_conf_contents)
+            sso_conf.close()
 
             if show_output:
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))

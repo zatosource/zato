@@ -2408,3 +2408,38 @@ class SMSTwilio(Base):
     cluster = relationship(Cluster, backref=backref('sms_twilio_list', order_by=name, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
+
+class User(Base):
+    __tablename__ = 'zato_user'
+    __table_args__ = (
+        UniqueConstraint('cluster_id', 'app_name', 'username', name='zato_u_usrn_uq'),
+        Index('cluster_id', 'app_name', 'email', name='zato_u_email_idx', unique=False),
+        Index('cluster_id', 'app_name', 'display_name', name='zato_u_dspn_idx', unique=False),
+        Index('cluster_id', 'app_name', 'first_name', 'middle_name', 'last_name', name='zato_u_alln_idx', unique=False),
+        Index('cluster_id', 'last_name', name='zato_u_lastn_idx', unique=False),
+    {})
+
+    id = Column(Integer, Sequence('zato_user_id_seq'), primary_key=True)
+    is_active = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False, default=False)
+
+    # To which external application this user belongs
+    app_name = Column(String(192), nullable=False)
+
+    # Basic information, always required
+    username = Column(String(192), nullable=False)
+    password = Column(String(192), nullable=False)
+    password_is_set = Column(Boolean(), nullable=False)
+    password_change = Column(Boolean(), nullable=False)
+    password_expiry = Column(DateTime(), nullable=False)
+
+    # Won't be always needed
+    email = Column(String(192), nullable=True)
+
+    # Various cultures don't have a notion of first or last name and display_name is the one that can be used in that case.
+    display_name = Column(String(192), nullable=True)
+    first_name = Column(String(192), nullable=True)
+    middle_name = Column(String(192), nullable=True)
+    last_name = Column(String(192), nullable=True)
+
+# ################################################################################################################################
