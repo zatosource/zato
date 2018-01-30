@@ -1,48 +1,57 @@
 #!/bin/bash
 
-CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL -f")
-while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
-N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
+set -e
+shopt -s compat31
 
-git log -n 1 --pretty=format:"%H" > $CURDIR/release-info/revision.txt
-
-IS_DEB=0
-IS_RHEL=0
-
-RUN=0
 
 #
-# What OS are we on
+# Ensure current working directory is the parent directory of install.sh, i.e.
+# <git_repo>/code. Taken from https://gist.github.com/josephwecker/2884332
 #
 
-apt-get -h > /dev/null 2>&1
-if (($? == 0)) ; then IS_DEB=1 ; fi
+function switch_to_basedir()
+{
+    local dir="${BASH_SOURCE[0]}"
 
-yum --help > /dev/null 2>&1
-if (($? == 0)) ; then IS_RHEL=1 ; fi
+    if [[ "$(uname -s)" == 'Darwin' ]]
+    then
+        local f="-f"
+    fi
+
+    while ([ -L "${dir}" ])
+    do
+        dir="$(readlink $f "$dir")"
+    done
+
+    cd "$(dirname "${dir}")"
+
+    if ! [ -f "install.sh" ]
+    then
+        echo "$0: Could not locate <git_repo>/code directory." >&2
+        exit 1
+    fi
+}
+
+switch_to_basedir
+
 
 #
 # Run an OS-specific installer
 #
 
-if [ $IS_DEB -eq 1 ]
+if [ "$(type -p apt-get)" ]
 then
-  bash $CURDIR/_install-deb.sh
-  RUN=1
-fi
-
-if [ $IS_RHEL -eq 1 ]
+    source ./clean.sh
+    source ./_install-deb.sh
+elif [ "$(type -p yum)" ]
 then
-  bash $CURDIR/_install-rhel.sh
-  RUN=1
-fi
-
-#
-# Unknown system
-#
-
-if [ $RUN -ne 1 ]
+    source ./clean.sh
+    source ./_install-rhel.sh
+elif [ "$(type -p apk)" ]
 then
-   echo "Could not find apt-get nor yum. OS could not be determined, installer cannot run."
-   exit 1
+    source ./clean.sh
+    source ./_install-alpine.sh
+else
+    echo "install.sh: Unsupported OS: could not find apt-get, yum, or apk." >&2
+    exit 1
 fi
