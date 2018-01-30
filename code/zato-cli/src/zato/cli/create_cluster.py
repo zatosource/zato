@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import CACHE, DATA_FORMAT, MISC, PUBSUB, SIMPLE_IO, WEB_SOCKET
+from zato.common import CACHE, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, WEB_SOCKET
 from zato.common.odb.model import CacheBuiltin, ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, \
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
 from zato.common.pubsub import new_sub_key
@@ -503,15 +503,20 @@ class Create(ZatoCommand):
 
         self.add_default_rbac_permissions(session, cluster)
         root_rbac_role = self.add_default_rbac_roles(session, cluster)
-        apispec_rbac_role = self.add_rbac_role_and_acct(session, cluster, root_rbac_role, 'API Specification Readers', 'apispec', 'apispec')
-        ide_pub_rbac_role = self.add_rbac_role_and_acct(session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
+        apispec_rbac_role = self.add_rbac_role_and_acct(
+            session, cluster, root_rbac_role, 'API Specification Readers', 'apispec', 'apispec')
+        ide_pub_rbac_role = self.add_rbac_role_and_acct(
+            session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
 
         self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec,
-                                   apispec_rbac_role, ide_pub_rbac_role)
+            apispec_rbac_role, ide_pub_rbac_role)
         self.add_ping_services(session, cluster)
         self.add_default_cache(session, cluster)
         self.add_cache_endpoints(session, cluster)
         self.add_pubsub_sec_endpoints(session, cluster)
+
+        # For WebSphere MQ connections / connectors
+        self.add_internal_callback_wmq(session, cluster)
 
         try:
             session.commit()
@@ -535,7 +540,7 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec,
-                              apispec_rbac_role, ide_pub_rbac_role):
+        apispec_rbac_role, ide_pub_rbac_role):
         """ Adds these Zato internal services that can be accessed through SOAP requests.
         """
         #
@@ -901,8 +906,7 @@ class Create(ZatoCommand):
 
     def add_pubsub_sec_endpoints(self, session, cluster):
 
-        #sec = HTTPBasicAuth(None, 'zato.pubsub', True, 'zato.pubsub', 'Zato pub/sub', uuid4().hex, cluster)
-        sec = HTTPBasicAuth(None, 'zato.pubsub', True, 'zz', 'Zato pub/sub', 'zz', cluster)
+        sec = HTTPBasicAuth(None, 'zato.pubsub', True, 'zato.pubsub', 'Zato pub/sub', uuid4().hex, cluster)
         session.add(sec)
 
         endpoint = PubSubEndpoint()
@@ -935,21 +939,13 @@ class Create(ZatoCommand):
         sub.wrap_one_msg_in_list = False
         sub.delivery_err_should_block = False
 
-        impl_name1 = 'pubapi1.TopicService'     #'zato.server.service.internal.pubsub.pubapi.TopicService'
-        impl_name2 = 'pubapi1.SubscribeService' #'zato.server.service.internal.pubsub.pubapi.SubscribeService'
-        impl_name3 = 'pubapi1.MsgService'       #'zato.server.service.internal.pubsub.pubapi.MsgService'
+        impl_name1 = 'zato.server.service.internal.pubsub.pubapi.TopicService'
+        impl_name2 = 'zato.server.service.internal.pubsub.pubapi.SubscribeService'
+        impl_name3 = 'zato.server.service.internal.pubsub.pubapi.MsgService'
 
-        service_topic = Service(None, 'zato.pubsub.pubapi.topic-service', True,
-            impl_name1,
-            True, cluster)
-
-        service_sub = Service(None, 'zato.pubsub.pubapi.subscribe-service', True,
-            impl_name2,
-            True, cluster)
-
-        service_msg = Service(None, 'zato.pubsub.pubapi.msg-service', True,
-            impl_name3,
-            True, cluster)
+        service_topic = Service(None, 'zato.pubsub.pubapi.topic-service', True, impl_name1, True, cluster)
+        service_sub = Service(None, 'zato.pubsub.pubapi.subscribe-service', True, impl_name2, True, cluster)
+        service_msg = Service(None, 'zato.pubsub.pubapi.msg-service', True, impl_name3, True, cluster)
 
         chan_topic = HTTPSOAP(None, 'zato.pubsub.topic.topic_name', True, True, 'channel', 'plain_http', None,
             '/zato/pubsub/topic/{topic_name}',
@@ -974,5 +970,22 @@ class Create(ZatoCommand):
         session.add(chan_topic)
         session.add(chan_sub)
         session.add(chan_msg)
+
+# ################################################################################################################################
+
+    def add_internal_callback_wmq(self, session, cluster):
+        impl_name = 'zato.server.service.internal.channel.jms_wmq.OnMessageReceived'
+        service = Service(None, 'zato.channel.jms-wmq.on-message-received', True, impl_name, True, cluster)
+
+        wmq_username = IPC.CONNECTOR.WEBSPHERE_MQ.USERNAME
+        wmq_sec = HTTPBasicAuth(None, wmq_username, True, wmq_username, 'Zato WebSphere MQ', uuid4().hex, cluster)
+
+        channel = HTTPSOAP(None, 'zato.internal.callback.wmq', True, True, 'channel', 'plain_http', None,
+            '/zato/internal/callback/wmq',
+            None, '', None, None, security=wmq_sec, service=service, cluster=cluster)
+
+        session.add(wmq_sec)
+        session.add(service)
+        session.add(channel)
 
 # ################################################################################################################################
