@@ -96,24 +96,26 @@ class Response(object):
 # ################################################################################################################################
 
 class _MessageCtx(object):
-    __slots__ = ('mq_msg', 'channel_id', 'queue_name', 'service_name')
+    __slots__ = ('mq_msg', 'channel_id', 'queue_name', 'service_name', 'data_format')
 
-    def __init__(self, mq_msg, channel_id, queue_name, service_name):
+    def __init__(self, mq_msg, channel_id, queue_name, service_name, data_format):
         self.mq_msg = mq_msg
         self.channel_id = channel_id
         self.queue_name = queue_name
         self.service_name = service_name
+        self.data_format = data_format
 
 # ################################################################################################################################
 
 class WebSphereMQChannel(object):
     """ A process to listen for messages from IBM MQ queue managers.
     """
-    def __init__(self, conn, channel_id, queue_name, service_name, on_message_callback, logger):
+    def __init__(self, conn, channel_id, queue_name, service_name, data_format, on_message_callback, logger):
         self.conn = conn
         self.id = channel_id
         self.queue_name = queue_name
         self.service_name = service_name
+        self.data_format = data_format
         self.on_message_callback = on_message_callback
         self.keep_running = False
         self.logger = logger
@@ -149,7 +151,8 @@ class WebSphereMQChannel(object):
                         self.logger.debug('Message received `%s`' % str(msg).decode('utf-8'))
 
                     if msg:
-                        start_new_thread(_invoke_callback, (_MessageCtx(msg, self.id, self.queue_name, self.service_name),))
+                        start_new_thread(_invoke_callback, (
+                            _MessageCtx(msg, self.id, self.queue_name, self.service_name, self.data_format),))
 
                 except NoMessageAvailableException as e:
                     if self.has_debug:
@@ -170,6 +173,7 @@ class WebSphereMQChannel(object):
 
                 except Exception as e:
                     self.logger.error('Exception in the main loop %s', format_exc())
+                    sleep(sleep_on_error)
 
         # Start listener in a thread
         start_new_thread(_impl, ())
@@ -276,6 +280,7 @@ class ConnectionContainer(object):
             'channel_id': msg_ctx.channel_id,
             'queue_name': msg_ctx.queue_name,
             'service_name': msg_ctx.service_name,
+            'data_format': msg_ctx.data_format,
         }), auth=self.server_auth)
 
 # ################################################################################################################################
@@ -515,8 +520,8 @@ class ConnectionContainer(object):
         """
         with self.lock:
             conn = self.connections[msg.def_id]
-            channel = WebSphereMQChannel(
-                conn, msg.id, msg.queue.encode('utf8'), msg.service_name, self.on_mq_message_received, self.logger)
+            channel = WebSphereMQChannel(conn, msg.id, msg.queue.encode('utf8'), msg.service_name, msg.data_format,
+                self.on_mq_message_received, self.logger)
             channel.start()
             self.channels[channel.id] = channel
             self.channel_id_to_def_id[channel.id] = msg.def_id
@@ -532,6 +537,7 @@ class ConnectionContainer(object):
             channel.stop()
             channel.queue_name = msg.queue.encode('utf8')
             channel.service_name = msg.service_name
+            channel.data_format = msg.data_format
             channel.keep_running = True
             channel.start()
 
