@@ -21,11 +21,11 @@ $(document).ready(function() {
 })
 
 $.fn.zato.definition.jms_wmq.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new WebSphere MQ definition', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new IBM MQ definition', null);
 }
 
 $.fn.zato.definition.jms_wmq.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update WebSphere MQ definition', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update IBM MQ definition', id);
 }
 
 $.fn.zato.definition.jms_wmq.data_table.new_row = function(item, data, include_tr) {
@@ -83,7 +83,7 @@ $.fn.zato.definition.jms_wmq.data_table.new_row = function(item, data, include_t
 
 $.fn.zato.definition.jms_wmq.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'WebSphere MQ definition `{0}` deleted',
-        'Are you sure you want to delete WebSphere MQ definition `{0}`?',
+        'IBM MQ definition `{0}` deleted',
+        'Are you sure you want to delete IBM MQ definition `{0}`?',
         true);
 }

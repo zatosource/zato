@@ -1,6 +1,6 @@
 @definition
 Feature: zato.definition.jms-wmq.create
-  Creates a new JMS WebSphere MQ connection definition. A connection definition holds information on how to connect
+  Creates a new IBM MQ connection definition. A connection definition holds information on how to connect
   to a particular queue manager.
 
   @definition.jms-wmq.create

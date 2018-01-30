@@ -14,7 +14,7 @@ from binascii import unhexlify
 # ################################################################################################################################
 
 def unhexlify_wmq_id(wmq_id, _prefix='ID'):
-    """ Converts the WebSphere MQ generated identifier back to bytes,
+    """ Converts the IBM MQ generated identifier back to bytes,
     e.g. 'ID:414d5120535052494e47505954484f4ecc90674a041f0020' -> 'AMQ SPRINGPYTHON\xcc\x90gJ\x04\x1f\x00 '.
     """
     return unhexlify(wmq_id.replace(_prefix, '', 1))

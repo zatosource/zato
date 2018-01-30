@@ -166,7 +166,7 @@ class PatternsFacade(object):
 
 class Service(object):
     """ A base class for all services deployed on Zato servers, no matter
-    the transport and protocol, be it plain HTTP, SOAP, WebSphere MQ or any other,
+    the transport and protocol, be it plain HTTP, SOAP, IBM MQ or any other,
     regardless whether they're built-in or user-defined ones.
     """
     _filter_by = None

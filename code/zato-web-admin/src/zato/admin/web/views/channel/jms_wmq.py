@@ -49,7 +49,7 @@ def _edit_create_response(client, verb, id, name, cluster_id, def_id):
     response = client.invoke('zato.definition.jms-wmq.get-by-id', {'id':def_id, 'cluster_id': cluster_id})
     return_data = {
         'id': id,
-        'message': 'Successfully {} WebSphere MQ channel `{}`'.format(verb, name),
+        'message': 'Successfully {} IBM MQ channel `{}`'.format(verb, name),
         'def_name': response.data.name
     }
 
@@ -97,7 +97,7 @@ def create(req):
         return _edit_create_response(
             req.zato.client, 'created', response.data.id, req.POST['name'], req.POST['cluster_id'], req.POST['def_id'])
     except Exception:
-        msg = 'Could not create a WebSphere MQ channel, e:`%s`'
+        msg = 'Could not create an IBM MQ MQ channel, e:`%s`'
         logger.error(msg, format_exc())
         return HttpResponseServerError(msg)
 
@@ -111,7 +111,7 @@ def edit(req):
         return _edit_create_response(
             req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'], req.POST['cluster_id'], req.POST['edit-def_id'])
     except Exception:
-        msg = 'Could not update WebSphere MQ channel, e:`%s`'
+        msg = 'Could not update IBM MQ channel, e:`%s`'
         logger.error(msg, format_exc())
         return HttpResponseServerError(msg)
 
@@ -119,7 +119,7 @@ def edit(req):
 
 class Delete(_Delete):
     url_name = 'channel-jms-wmq-delete'
-    error_message = 'Could not delete WebSphere MQ channel'
+    error_message = 'Could not delete IBM MQ channel'
     service_name = 'zato.channel.jms-wmq.delete'
 
 # ################################################################################################################################

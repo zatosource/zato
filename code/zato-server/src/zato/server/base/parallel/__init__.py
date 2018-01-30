@@ -464,7 +464,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             self.ipc_forwarder.pid = self.pid
             spawn_greenlet(self.ipc_forwarder.run)
 
-            # Set up WebSphere MQ connections if that component is enabled
+            # Set up IBM MQ connections if that component is enabled
             if self.fs_server_config.component_enabled.websphere_mq:
 
                 # Will block for a few seconds at most, until is_ok is returned
@@ -677,7 +677,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     @staticmethod
     def worker_exit(arbiter, worker):
 
-        # Clean up WebSphere MQ configuration
+        # Clean up IBM MQ configuration
         if worker.app.zato_wsgi_app.pid:
             worker.app.zato_wsgi_app.keyutils.user_delete(b'zato-wmq', worker.app.zato_wsgi_app.pid)
 

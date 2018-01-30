@@ -20,10 +20,10 @@ from zato.common import BATCH_DEFAULTS, INVOCATION_TARGET
 # but here the names are shorter.
 _targets = {
     INVOCATION_TARGET.CHANNEL_AMQP: 'Channel - AMQP',
-    INVOCATION_TARGET.CHANNEL_WMQ: 'Channel - WebSphere MQ',
+    INVOCATION_TARGET.CHANNEL_WMQ: 'Channel - IBM MQ',
     INVOCATION_TARGET.CHANNEL_ZMQ: 'Channel - ZeroMQ',
     INVOCATION_TARGET.OUTCONN_AMQP: 'Outgoing conn. - AMQP',
-    INVOCATION_TARGET.OUTCONN_WMQ: 'Outgoing conn. - WebSphere MQ',
+    INVOCATION_TARGET.OUTCONN_WMQ: 'Outgoing conn. - IBM MQ',
     INVOCATION_TARGET.OUTCONN_ZMQ: 'Outgoing conn. - ZeroMQ',
     INVOCATION_TARGET.SERVICE: 'Service',
 }

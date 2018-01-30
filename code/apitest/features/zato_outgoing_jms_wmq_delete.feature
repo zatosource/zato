@@ -1,6 +1,6 @@
 @outgoing
 Feature: zato.outgoing.jms-wmq.delete
-  Deletes a JMS WebSphere MQ outgoing connection by its ID.
+  Deletes an IBM MQ MQ outgoing connection by its ID.
 
 
   @outgoing.jms-wmq.delete

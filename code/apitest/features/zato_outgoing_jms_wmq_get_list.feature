@@ -1,6 +1,6 @@
 @outgoing
 Feature: zato.outgoing.jms-wmq.get-list
-  Returns a list of outgoing JMS WebSphere MQ connections defined on a given cluster.
+  Returns a list of outgoing IBM MQ connections defined on a given cluster.
 
 
   @outgoing.jms-wmq.get-list

@@ -14,7 +14,7 @@ from zato.server.base.worker.common import WorkerImpl
 # ################################################################################################################################
 
 class WebSphereMQ(WorkerImpl):
-    """ WebSphere MQ-related functionality for worker objects.
+    """ IBM MQ-related functionality for worker objects.
     """
 
 # ################################################################################################################################

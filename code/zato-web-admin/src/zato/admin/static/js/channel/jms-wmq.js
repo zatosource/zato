@@ -24,11 +24,11 @@ $(document).ready(function() {
 })
 
 $.fn.zato.channel.jms_wmq.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new WebSphere MQ channel', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new IBM MQ channel', null);
 }
 
 $.fn.zato.channel.jms_wmq.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update WebSphere MQ channel', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update IBM MQ channel', id);
 }
 
 $.fn.zato.channel.jms_wmq.data_table.new_row = function(item, data, include_tr) {
@@ -63,7 +63,7 @@ $.fn.zato.channel.jms_wmq.data_table.new_row = function(item, data, include_tr) 
 
 $.fn.zato.channel.jms_wmq.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'WebSphere MQ channel `{0}` deleted',
-        'Are you sure you want to delete WebSphere MQ channel `{0}`?',
+        'IBM MQ channel `{0}` deleted',
+        'Are you sure you want to delete IBM MQ channel `{0}`?',
         true);
 }
