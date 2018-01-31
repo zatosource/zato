@@ -57,7 +57,7 @@ and is released under the `BSD license <http://www.opensource.org/licenses/bsd-l
 """
 
 # Taken from https://bitbucket.org/ecollins/passlib/raw/default/choose_rounds.py
-def get_hash_rounds_info(hash_algo='pbkdf2_sha512', target=2):
+def get_hash_rounds_info(hash_algo='pbkdf2_sha512', target=200):
     """ Returns the number of rounds required for a single password verification
     using hash_algo to take target milliseconds on current CPU.
     """
