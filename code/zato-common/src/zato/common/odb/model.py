@@ -2413,22 +2413,22 @@ class User(Base):
     __tablename__ = 'zato_user'
     __table_args__ = (
         UniqueConstraint('cluster_id', 'app_name', 'username', name='zato_u_usrn_uq'),
+        UniqueConstraint('cluster_id', 'pub_id', name='zato_u_pubid_uq'),
         Index('cluster_id', 'app_name', 'email', name='zato_u_email_idx', unique=False),
-        Index('cluster_id', 'app_name', 'display_name', name='zato_u_dspn_idx', unique=False),
-        Index('cluster_id', 'app_name', 'first_name', 'middle_name', 'last_name', name='zato_u_alln_idx', unique=False),
-        Index('cluster_id', 'last_name', name='zato_u_lastn_idx', unique=False),
+        Index('cluster_id', 'app_name', 'display_name_upper', name='zato_u_dspn_idx', unique=False),
+        Index('cluster_id', 'app_name', 'first_name_upper', 'middle_name_upper', 'last_name_upper',
+              name='zato_u_alln_idx', unique=False),
+        Index('cluster_id', 'last_name_upper', name='zato_u_lastn_idx', unique=False),
     {})
 
     id = Column(Integer, Sequence('zato_user_id_seq'), primary_key=True)
+    pub_id = Column(String(191), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False, default=False)
 
-    # To which external application this user belongs
-    app_name = Column(String(192), nullable=False)
-
     # Basic information, always required
-    username = Column(String(192), nullable=False)
-    password = Column(String(192), nullable=False)
+    username = Column(String(191), nullable=False)
+    password = Column(String(191), nullable=False)
     password_is_set = Column(Boolean(), nullable=False)
     password_change = Column(Boolean(), nullable=False)
     password_expiry = Column(DateTime(), nullable=False)
@@ -2437,9 +2437,15 @@ class User(Base):
     email = Column(String(192), nullable=True)
 
     # Various cultures don't have a notion of first or last name and display_name is the one that can be used in that case.
-    display_name = Column(String(192), nullable=True)
-    first_name = Column(String(192), nullable=True)
-    middle_name = Column(String(192), nullable=True)
-    last_name = Column(String(192), nullable=True)
+    display_name = Column(String(191), nullable=True)
+    first_name = Column(String(191), nullable=True)
+    middle_name = Column(String(191), nullable=True)
+    last_name = Column(String(191), nullable=True)
+
+    # Same as above but upper-cased for look-up / indexing purposes
+    display_name_upper = Column(String(191), nullable=True)
+    first_name_upper = Column(String(191), nullable=True)
+    middle_name_upper = Column(String(191), nullable=True)
+    last_name_upper = Column(String(191), nullable=True)
 
 # ################################################################################################################################
