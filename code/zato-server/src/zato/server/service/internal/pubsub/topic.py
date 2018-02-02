@@ -15,7 +15,7 @@ from contextlib import closing
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
-from zato.common.odb.query_ps_topic import get_topics_by_sub_keys
+from zato.common.odb.query.pubsub.topic import get_topics_by_sub_keys
 from zato.common.time_util import datetime_from_ms
 from zato.common.util import ensure_pubsub_hook_is_valid
 from zato.server.service import AsIs, Dict, List

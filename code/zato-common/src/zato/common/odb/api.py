@@ -38,7 +38,8 @@ from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, SEC_DEF_TYPE, SECRET_
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, JWT, OAuth, Server, Service, TLSChannelSecurity, XPathSecurity, WSSDefinition, \
      VaultConnection
-from zato.common.odb import get_ping_query, query, query_ps_subscription
+from zato.common.odb import get_ping_query, query
+from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.util import current_host, get_component_name, get_engine_url, get_http_json_channel, get_http_soap_channel, \
      parse_extra_into_dict, parse_tls_channel_security_definition
 
