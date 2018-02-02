@@ -21,7 +21,7 @@ from bunch import bunchify
 
 # Zato
 from zato.cli import common_logging_conf_contents, ManageCommand
-from zato.cli.create_server import auth_user_conf_contents, lua_zato_rename_if_exists, server_conf_template, user_conf_contents
+from zato.cli.create_server import lua_zato_rename_if_exists, server_conf_template, user_conf_contents
 from zato.common import version as zato_version, ZATO_INFO_FILE
 from zato.common.util import get_crypto_manager_from_server_config, get_odb_session_from_server_config, get_zato_command
 
