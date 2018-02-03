@@ -27,7 +27,7 @@ from psutil import AccessDenied, Process, NoSuchProcess
 from zato.cli import ManageCommand
 from zato.common import INFO_FORMAT, ping_queries
 from zato.common.component_info import get_info
-from zato.common.crypto import CryptoManager
+from zato.common.crypto import WebAdminCryptoManager
 from zato.common.kvdb import KVDB
 from zato.common.haproxy import validate_haproxy_config
 from zato.common.odb import create_pool, get_ping_query
@@ -178,14 +178,8 @@ class CheckConfig(ManageCommand):
         _, port = address.split(':')
         self.ensure_port_free('Server', int(port), address)
 
-    def get_crypto_manager(self, conf_file=None, repo_dir=None):
-        repo_dir = repo_dir or join(self.config_dir, 'repo')
-        conf = None
-
-        cm = CryptoManager(join(repo_dir, conf_file))
-        cm.check_consistency()
-
-        return cm, conf
+    def get_crypto_manager(self, repo_dir=None, class_=None):
+        return class_.from_repo_dir(repo_dir or join(self.config_dir, 'repo'))
 
     def get_sql_ini(self, conf_file, repo_dir=None):
         repo_dir = repo_dir or join(self.config_dir, 'repo')
@@ -235,7 +229,7 @@ class CheckConfig(ManageCommand):
         repo_dir = join(self.component_dir, 'config', 'repo')
 
         self.check_sql_odb_web_admin(
-            self.get_crypto_manager(priv_key_location=join(repo_dir, 'web-admin-priv-key.pem'), repo_dir=repo_dir)[0],
+            self.get_crypto_manager(repo_dir, WebAdminCryptoManager),
             self.get_json_conf('web-admin.conf', repo_dir))
 
         self.ensure_no_pidfile('web-admin')

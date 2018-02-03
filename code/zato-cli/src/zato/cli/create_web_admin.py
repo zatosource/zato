@@ -28,7 +28,7 @@ from django.core.management import call_command
 from zato.admin.zato_settings import update_globals
 
 from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, ZatoCommand
-from zato.common.crypto import CryptoManager, well_known_data
+from zato.common.crypto import WebAdminCryptoManager, well_known_data
 from zato.common.defaults import web_admin_host, web_admin_port
 
 config_template = """{{
@@ -42,6 +42,7 @@ config_template = """{{
   "well_known_data": "{well_known_data}",
 
   "DEBUG": 0,
+  "ALLOWED_HOSTS": ["*"],
 
   "DATABASE_NAME": "{DATABASE_NAME}",
   "DATABASE_USER": "{DATABASE_USER}",
@@ -102,13 +103,13 @@ class Create(ZatoCommand):
         os.mkdir(repo_dir)
 
         user_name = 'admin'
-        admin_password = admin_password if admin_password else CryptoManager.generate_password()
+        admin_password = admin_password if admin_password else WebAdminCryptoManager.generate_password()
 
         self.copy_web_admin_crypto(repo_dir, args)
         priv_key = open(os.path.join(repo_dir, 'web-admin-priv-key.pem')).read()
 
-        zato_secret_key = CryptoManager.generate_key()
-        cm = CryptoManager(secret_key=zato_secret_key)
+        zato_secret_key = WebAdminCryptoManager.generate_key()
+        cm = WebAdminCryptoManager.from_secret_key(zato_secret_key)
 
         django_secret_key = uuid4().hex
         django_site_id = getrandbits(20)
@@ -120,7 +121,7 @@ class Create(ZatoCommand):
             'db_type': args.odb_type,
             'log_config': 'logging.conf',
             'zato_secret_key':zato_secret_key,
-            'well_known_data': well_known_data,
+            'well_known_data': cm.encrypt(well_known_data),
             'DATABASE_NAME': args.odb_db_name or args.sqlite_path,
             'DATABASE_USER': args.odb_user or '',
             'DATABASE_PASSWORD': cm.encrypt(args.odb_password) if args.odb_password else '',

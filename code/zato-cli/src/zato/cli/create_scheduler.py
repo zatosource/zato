@@ -19,7 +19,7 @@ import os
 from copy import deepcopy
 
 from zato.cli import common_logging_conf_contents, common_odb_opts, sql_conf_contents, ZatoCommand
-from zato.common.crypto import CryptoManager
+from zato.common.crypto import SchedulerCryptoManager, well_known_data
 
 config_template = """[bind]
 host=0.0.0.0
@@ -51,6 +51,7 @@ db=0
 key1={secret_key1}
 
 [crypto]
+well_known_data={well_known_data}
 use_tls=True
 tls_protocol=TLSv1
 tls_ciphers=EECDH+AES:EDH+AES:-SHA1:EECDH+RC4:EDH+RC4:RC4-SHA:EECDH+AES256:EDH+AES256:AES256-SHA:!aNULL:!eNULL:!EXP:!LOW:!MD5
@@ -139,8 +140,8 @@ class Create(ZatoCommand):
 
         self.copy_scheduler_crypto(repo_dir, args)
 
-        secret_key = args.get('secret_key') or CryptoManager.generate_key()
-        cm = CryptoManager(secret_key=secret_key)
+        secret_key = args.get('secret_key') or SchedulerCryptoManager.generate_key()
+        cm = SchedulerCryptoManager.from_secret_key(secret_key)
 
         config = {
             'odb_db_name': args.odb_db_name or args.sqlite_path,
@@ -154,7 +155,8 @@ class Create(ZatoCommand):
             'broker_password': cm.encrypt(args.kvdb_password) if args.kvdb_password else '',
             'user1_password': cm.encrypt(cm.generate_password()),
             'cluster_id': args.cluster_id,
-            'secret_key1': secret_key
+            'secret_key1': secret_key,
+            'well_known_data': cm.encrypt(well_known_data)
         }
 
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write(
