@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import base64
 import os
 import logging
+from json import loads
 
 # Bunch
 from bunch import bunchify
@@ -35,13 +36,18 @@ well_known_data = b'3.141592...' # π number
 class CryptoManager(object):
     """ Used for encryption and decryption of secrets.
     """
-    def __init__(self, secrets_conf_path=None, secret_key=None):
-        if secrets_conf_path:
-            self.secrets_conf = bunchify(ConfigObj(secrets_conf_path, use_zato=False))
-            self.secret_key = Fernet(self.secrets_conf.secret_keys.key1)
+    def __init__(self):
+        self.secret_key = None
+        self.well_known_data = None
+
+# ################################################################################################################################
+
+    def set_config(self, secret_key, well_known_data):
+        self.secret_key = Fernet(secret_key.encode('utf8'))
+        self.well_known_data = well_known_data.encode('utf8') if well_known_data else None
+
+        if self.well_known_data:
             self.check_consistency()
-        else:
-            self.secret_key = Fernet(secret_key.encode('utf8'))
 
 # ################################################################################################################################
 
@@ -57,10 +63,22 @@ class CryptoManager(object):
 
 # ################################################################################################################################
 
+    @classmethod
+    def from_repo_dir(cls, repo_dir):
+        return cls(repo_dir=repo_dir)
+
+# ################################################################################################################################
+
+    @classmethod
+    def from_secret_key(cls, secret_key, well_known_data=None):
+        return cls(secret_key=secret_key, well_known_data=well_known_data)
+
+# ################################################################################################################################
+
     def check_consistency(self):
         """ Used as a consistency check to confirm that a given component's key can decrypt well-known data.
         """
-        decrypted = self.decrypt(self.secrets_conf.well_known.data)
+        decrypted = self.decrypt(self.well_known_data)
         if decrypted != well_known_data:
             raise ValueError('Expected for value `{}` to decrypt to `{}`'.format(encrypted, well_known_data))
 
@@ -73,5 +91,38 @@ class CryptoManager(object):
 
     def decrypt(self, encrypted):
         return self.secret_key.decrypt(encrypted.encode('utf8'))
+
+# ################################################################################################################################
+
+    def get_config_entry(self, entry):
+        raise NotImplementedError('May be implemented by subclasses')
+
+# ################################################################################################################################
+
+class WebAdminCryptoManager(CryptoManager):
+    """ CryptoManager for web-admin instances.
+    """
+    def __init__(self, repo_dir=None, secret_key=None, well_known_data=None):
+        if repo_dir:
+            conf_path = os.path.join(repo_dir, 'web-admin.conf')
+            conf = bunchify(loads(open(conf_path).read()))
+            secret_key = conf['zato_secret_key']
+            well_known_data = conf['well_known_data']
+
+        self.set_config(secret_key, well_known_data)
+
+# ################################################################################################################################
+
+class SchedulerCryptoManager(CryptoManager):
+    """ CryptoManager for schedulers.
+    """
+    def __init__(self, repo_dir=None, secret_key=None, well_known_data=None):
+        if repo_dir:
+            conf_path = os.path.join(repo_dir, 'web-admin.conf')
+            conf = bunchify(loads(open(conf_path).read()))
+            secret_key = conf['zato_secret_key']
+            well_known_data = conf['well_known_data']
+
+        self.set_config(secret_key, well_known_data)
 
 # ################################################################################################################################

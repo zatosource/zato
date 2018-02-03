@@ -13,7 +13,7 @@ import os
 
 # Zato
 from zato.common import SCHEDULER
-from zato.common.crypto import CryptoManager
+from zato.common.crypto import WebAdminCryptoManager
 
 SSL_KEY_FILE = './config/repo/web-admin-priv-key.pem'
 SSL_CERT_FILE = './config/repo/web-admin-cert.pem'
@@ -24,7 +24,7 @@ LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
 def update_globals(config, base_dir='.'):
     globals()['DATABASES'] = {'default': {}}
 
-    cm = CryptoManager(secret_key=config['zato_secret_key'])
+    cm = WebAdminCryptoManager.from_secret_key(config['zato_secret_key'], config['well_known_data'])
 
     for k, v in config.items():
         if k.startswith('DATABASE_'):
