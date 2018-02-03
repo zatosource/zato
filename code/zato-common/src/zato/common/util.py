@@ -218,34 +218,6 @@ def pprint(obj):
 
 # ################################################################################################################################
 
-def encrypt(data, priv_key, b64=True):
-    """ Encrypt data using a public key derived from the private key.
-    data - data to be encrypted
-    priv_key - private key to use (as a PEM string)
-    b64 - should the encrypted data be BASE64-encoded before being returned, defaults to True
-    """
-
-    cm = CryptoManager(priv_key=priv_key)
-    cm.load_keys()
-
-    return cm.encrypt(data, b64)
-
-# ################################################################################################################################
-
-def decrypt(data, priv_key, b64=True):
-    """ Decrypts data using the given private key.
-    data - data to be encrypted
-    priv_key - private key to use (as a PEM string)
-    b64 - should the data be BASE64-decoded before being decrypted, defaults to True
-    """
-
-    cm = CryptoManager(priv_key=priv_key)
-    cm.load_keys()
-
-    return cm.decrypt(data, b64)
-
-# ################################################################################################################################
-
 def get_zato_command():
     """ Returns the full path to the 'zato' command' in a buildout environment.
     """
@@ -393,7 +365,7 @@ def get_user_config_name(file_name):
 
 # ################################################################################################################################
 
-def get_config(repo_location, config_name, bunchified=True, needs_user_config=True):
+def get_config(repo_location, config_name, secret_key, secrets_conf, bunchified=True, needs_user_config=True):
     """ Returns the configuration object. Will load additional user-defined config files,
     if any are available at all.
     """

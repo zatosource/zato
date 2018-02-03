@@ -23,9 +23,9 @@ from sqlalchemy.exc import IntegrityError
 # Zato
 from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
 from zato.common import CONTENT_TYPE, SERVER_JOIN_STATUS
+from zato.common.crypto import well_known_data
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
-from zato.common.util import encrypt
 
 server_conf_template = """[main]
 gunicorn_bind=0.0.0.0:{{port}}
@@ -324,11 +324,12 @@ salt_size=32 # In bytes = 256 bits
 name=zato
 """
 
-secrets_conf_template = """
-[keys]
+secrets_conf_template = b"""
+[secret_keys]
 key1={keys_key1}
 
 [zato]
+well_known_data={zato_well_known_data} # π number
 server_conf.kvdb.password={zato_kvdb_password}
 server_conf.main.token={zato_main_token}
 server_conf.misc.jwt_secret={zato_misc_jwt_secret}
@@ -532,6 +533,7 @@ class Create(ZatoCommand):
             secrets_conf = open(secrets_conf_loc, 'w')
             secrets_conf.write(secrets_conf_template.format(
                 keys_key1=key1,
+                zato_well_known_data=fernet1.encrypt(well_known_data),
                 zato_kvdb_password=fernet1.encrypt(args.kvdb_password) if args.kvdb_password else '',
                 zato_main_token=fernet1.encrypt(self.token),
                 zato_misc_jwt_secret=fernet1.encrypt(getattr(args, 'jwt_secret', Fernet.generate_key())),

@@ -191,10 +191,8 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     if asbool(config.odb.use_async_driver) and config.odb.engine == 'postgresql':
         make_psycopg_green()
 
-    # New in 2.0 - Put HTTP_PROXY in os.environ.
-    http_proxy = config.misc.get('http_proxy', False)
-    if http_proxy:
-        os.environ['http_proxy'] = http_proxy
+    if config.misc.http_proxy:
+        os.environ['http_proxy'] = config.misc.http_proxy
 
     crypto_manager = get_crypto_manager(repo_location, app_context, config)
     server = app_context.get_object('server')
