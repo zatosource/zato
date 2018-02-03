@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,76 +9,69 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import base64
+import os
 import logging
-from base64 import b64decode, b64encode
 
-# PyCrypto
-from Crypto.PublicKey import RSA as pycrypto_rsa
+# Bunch
+from bunch import bunchify
 
-# rsa
-import rsa
+# configobj
+from configobj import ConfigObj
+
+# cryptography
+from cryptography.fernet import Fernet
+
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+
+well_known_data = b'3.141592...' # π number
+
+# ################################################################################################################################
+
 class CryptoManager(object):
-    """ Responsible for management of the server's crypto material.
+    """ Used for encryption and decryption of secrets.
     """
-    def __init__(self, priv_key_location=None, priv_key=None, pub_key_location=None, pub_key=None):
-
-        self.priv_key_location = priv_key_location
-        self.priv_key = priv_key
-
-        self.pub_key_location = pub_key_location
-        self.pub_key = pub_key
-
-    def _pkcs1_from_pkcs8(self, pkcs8):
-        """ Private keys saved by CLI are in PKCS#8 but the rsa module needs PKCS#1.
-        Note that PKCS#8 deals with private keys only (https://tools.ietf.org/html/rfc5208).
-        """
-        key = pycrypto_rsa.importKey(pkcs8)
-        return key.exportKey()
-
-    def load_keys(self):
-
-        if self.pub_key_location:
-            pkcs1 = open(self.pub_key_location).read()
-            self.pub_key = rsa.key.PublicKey.load_pkcs1_openssl_pem(pkcs1)
+    def __init__(self, secrets_conf_path=None, secret_key=None):
+        if secrets_conf_path:
+            self.secrets_conf = bunchify(ConfigObj(secrets_conf_path, use_zato=False))
+            self.secret_key = Fernet(self.secrets_conf.secret_keys.key1)
+            self.check_consistency()
         else:
-            if self.priv_key_location:
-                pkcs8 = open(self.priv_key_location).read()
-                pkcs1 = self._pkcs1_from_pkcs8(pkcs8)
-            elif self.priv_key:
-                pkcs1 = self._pkcs1_from_pkcs8(self._pkcs1_from_pkcs8(self.priv_key))
+            self.secret_key = Fernet(secret_key.encode('utf8'))
 
-            self.priv_key = rsa.key.PrivateKey.load_pkcs1(pkcs1)
-            self.pub_key = rsa.key.PublicKey(self.priv_key.n, self.priv_key.e)
+# ################################################################################################################################
 
-    def decrypt(self, data, hexlified=True):
-        """ Decrypts data using the private config key. Padding used defaults
-        to PKCS#1. hexlified defaults to True and indicates whether the data
-        should be hex-decoded before being decrypted.
+    @staticmethod
+    def generate_key():
+        return Fernet.generate_key()
+
+# ################################################################################################################################
+
+    @staticmethod
+    def generate_password(bits=128):
+        return base64.urlsafe_b64encode(os.urandom(int(bits / 8)))
+
+# ################################################################################################################################
+
+    def check_consistency(self):
+        """ Used as a consistency check to confirm that a given component's key can decrypt well-known data.
         """
-        if hexlified:
-            data = b64decode(data)
+        decrypted = self.decrypt(self.secrets_conf.well_known.data)
+        if decrypted != well_known_data:
+            raise ValueError('Expected for value `{}` to decrypt to `{}`'.format(encrypted, well_known_data))
 
-        return rsa.decrypt(data, self.priv_key)
+# ################################################################################################################################
 
-    def encrypt(self, data, b64=True):
-        """ Encrypts data using the public config key. Padding used defaults
-        to PKCS#1. b64 defaults to True and indicates whether the data
-        should be BASE64-encoded after being encrypted.
-        """
-        encrypted = rsa.encrypt(data, self.pub_key)
-        if b64:
-            return b64encode(encrypted)
+    def encrypt(self, data):
+        return self.secret_key.encrypt(data)
 
-        return encrypted
+# ################################################################################################################################
 
-    def reset(self):
-        """ Sets all the keys to None.
-        """
-        self.priv_key_location = None
-        self.pub_key_location = None
+    def decrypt(self, encrypted):
+        return self.secret_key.decrypt(encrypted.encode('utf8'))
 
-        self.priv_key = None
-        self.pub_key = None
+# ################################################################################################################################

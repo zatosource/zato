@@ -13,7 +13,7 @@ import os
 
 # Zato
 from zato.common import SCHEDULER
-from zato.common.util import decrypt
+from zato.common.crypto import CryptoManager
 
 SSL_KEY_FILE = './config/repo/web-admin-priv-key.pem'
 SSL_CERT_FILE = './config/repo/web-admin-cert.pem'
@@ -23,17 +23,19 @@ LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
 
 def update_globals(config, base_dir='.'):
     globals()['DATABASES'] = {'default': {}}
-    priv_key = open(os.path.abspath(os.path.join(base_dir, SSL_KEY_FILE))).read()
+
+    cm = CryptoManager(secret_key=config['zato_secret_key'])
+
     for k, v in config.items():
         if k.startswith('DATABASE_'):
             default = globals()['DATABASES']['default']
             k = k.replace('DATABASE_', '', 1)
             if k == 'PASSWORD' and config['db_type'] != 'sqlite':
-                v = decrypt(v, priv_key)
+                v = cm.decrypt(v)
             default[k] = str(v)
         else:
             if k == 'ADMIN_INVOKE_PASSWORD':
-                v = decrypt(v, priv_key)
+                v = cm.decrypt(v)
             elif k == 'log_config':
                 v = os.path.join(base_dir, v)
             globals()[k] = v

@@ -178,16 +178,12 @@ class CheckConfig(ManageCommand):
         _, port = address.split(':')
         self.ensure_port_free('Server', int(port), address)
 
-    def get_crypto_manager_conf(self, conf_file=None, priv_key_location=None, repo_dir=None):
+    def get_crypto_manager(self, conf_file=None, repo_dir=None):
         repo_dir = repo_dir or join(self.config_dir, 'repo')
         conf = None
 
-        if not priv_key_location:
-            conf = ConfigObj(join(repo_dir, conf_file))
-            priv_key_location = priv_key_location or abspath(join(repo_dir, conf['crypto']['priv_key_location']))
-
-        cm = CryptoManager(priv_key_location=priv_key_location)
-        cm.load_keys()
+        cm = CryptoManager(join(repo_dir, conf_file))
+        cm.check_consistency()
 
         return cm, conf
 
@@ -196,11 +192,11 @@ class CheckConfig(ManageCommand):
         return ConfigObj(join(repo_dir, conf_file))
 
     def _on_server(self, args):
-        cm, conf = self.get_crypto_manager_conf('server.conf')
+        cm = self.get_crypto_manager('secrets.conf')
         fs_sql_config = self.get_sql_ini('sql.conf')
 
-        self.check_sql_odb_server_scheduler(cm, conf, fs_sql_config)
-        self.on_server_check_kvdb(cm, conf)
+        self.check_sql_odb_server_scheduler(cm, fs_sql_config)
+        self.on_server_check_kvdb(cm)
 
         if getattr(args, 'ensure_no_pidfile', False):
             self.ensure_no_pidfile('server')
@@ -239,14 +235,14 @@ class CheckConfig(ManageCommand):
         repo_dir = join(self.component_dir, 'config', 'repo')
 
         self.check_sql_odb_web_admin(
-            self.get_crypto_manager_conf(priv_key_location=join(repo_dir, 'web-admin-priv-key.pem'), repo_dir=repo_dir)[0],
+            self.get_crypto_manager(priv_key_location=join(repo_dir, 'web-admin-priv-key.pem'), repo_dir=repo_dir)[0],
             self.get_json_conf('web-admin.conf', repo_dir))
 
         self.ensure_no_pidfile('web-admin')
         self.ensure_json_config_port_free('Web admin', 'web-admin.conf')
 
     def _on_scheduler(self, *ignored_args, **ignored_kwargs):
-        cm, conf = self.get_crypto_manager_conf('scheduler.conf')
+        cm, conf = self.get_crypto_manager('scheduler.conf')
         fs_sql_config = self.get_sql_ini('sql.conf')
 
         self.check_sql_odb_server_scheduler(cm, conf, fs_sql_config)
