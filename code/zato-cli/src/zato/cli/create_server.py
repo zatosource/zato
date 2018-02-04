@@ -41,7 +41,7 @@ gunicorn_graceful_timeout=1
 deployment_lock_expires=1073741824 # 2 ** 30 seconds ≅ 34 years
 deployment_lock_timeout=180
 
-token=zato+secret://zato.main.token
+token=zato+secret://zato.server_conf.main.token
 service_sources=./service-sources.txt
 
 [crypto]
@@ -60,7 +60,7 @@ engine={{odb_engine}}
 extra=
 host={{odb_host}}
 port={{odb_port}}
-password=zato+secret://zato.odb.password
+password=zato+secret://zato.server_conf.odb.password
 pool_size={{odb_pool_size}}
 username={{odb_user}}
 use_async_driver=True
@@ -116,7 +116,7 @@ zeromq_connect_sleep=0.1
 aws_host=
 use_soap_envelope=True
 fifo_response_buffer_size=0.2 # In MB
-jwt_secret=zato+secret://zato.misc.jwt_secret
+jwt_secret=zato+secret://zato.server_conf.misc.jwt_secret
 enforce_service_invokes=False
 return_tracebacks=True
 default_error_message="An error has occurred"
@@ -131,7 +131,7 @@ expire_after=168 # In hours, 168 = 7 days = 1 week
 host={{kvdb_host}}
 port={{kvdb_port}}
 unix_socket_path=
-password=zato+secret://zato.kvdb.password
+password=zato+secret://zato.server_conf.kvdb.password
 db=0
 socket_timeout=
 charset=
@@ -464,7 +464,6 @@ class Create(ZatoCommand):
 
             repo_dir = os.path.join(self.target_dir, 'config', 'repo')
             self.copy_server_crypto(repo_dir, args)
-            priv_key = open(os.path.join(repo_dir, 'zato-server-priv-key.pem')).read()
 
             if show_output:
                 self.logger.debug('Created a Bazaar repo in {}'.format(repo_dir))
@@ -549,7 +548,7 @@ class Create(ZatoCommand):
 
             session.commit()
 
-        except IntegrityError, e:
+        except IntegrityError:
             msg = 'Server name `{}` already exists'.format(args.server_name)
             if self.verbose:
                 msg += '. Caught an exception:`{}`'.format(format_exc())
@@ -558,7 +557,7 @@ class Create(ZatoCommand):
 
             return self.SYS_ERROR.SERVER_NAME_ALREADY_EXISTS
 
-        except Exception, e:
+        except Exception:
             self.logger.error('Could not create the server, e:`%s`', format_exc())
             session.rollback()
         else:
