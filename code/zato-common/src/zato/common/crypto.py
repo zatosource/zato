@@ -96,9 +96,7 @@ class CryptoManager(object):
 # ################################################################################################################################
 
     def decrypt(self, encrypted):
-        print(333, `encrypted`)
         decrypted = self.secret_key.decrypt(encrypted.encode('utf8'))
-        print(444, `decrypted`)
         return decrypted
 
 # ################################################################################################################################

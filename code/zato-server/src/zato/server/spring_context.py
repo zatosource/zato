@@ -25,13 +25,6 @@ from zato.server.service.store import ServiceStore
 class ZatoContext(PythonConfig):
 
     # #######################################################
-    # Crypto keys
-
-    @Object
-    def crypto_manager(self):
-        return CryptoManager()
-
-    # #######################################################
     # Services
 
     @Object

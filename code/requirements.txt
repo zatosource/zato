@@ -17,7 +17,7 @@ cffi==1.11.4
 click==1.1
 codegen==1.0
 ConcurrentLogHandler==0.9.1
-configobj==5.0.5
+configobj==5.0.6
 convertdate==2.0.3.1
 coverage==3.7.1
 crontab==0.20
