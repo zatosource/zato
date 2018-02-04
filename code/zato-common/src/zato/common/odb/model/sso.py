@@ -11,13 +11,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # ################################################################################################################################
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, LargeBinary, Sequence, \
-     SmallInteger, String, Text, UniqueConstraint
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy import Boolean, Column, DateTime, Index, Integer, Sequence, String, UniqueConstraint
 
 # ################################################################################################################################
 
-class User(Base):
+class User:#(Base):
     __tablename__ = 'zato_sso_user'
     __table_args__ = (
         UniqueConstraint('cluster_id', 'username', name='zato_u_usrn_uq'),
@@ -56,7 +54,7 @@ class User(Base):
     middle_name_upper = Column(String(191), nullable=True)
     last_name_upper = Column(String(191), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('user_list', order_by=username, cascade='all, delete, delete-orphan'))
+    #cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    #cluster = relationship(Cluster, backref=backref('user_list', order_by=username, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################

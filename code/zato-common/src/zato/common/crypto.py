@@ -86,7 +86,7 @@ class CryptoManager(object):
         """
         decrypted = self.decrypt(self.well_known_data)
         if decrypted != well_known_data:
-            raise ValueError('Expected for value `{}` to decrypt to `{}`'.format(encrypted, well_known_data))
+            raise ValueError('Expected for `{}` to equal to `{}`'.format(decrypted, well_known_data))
 
 # ################################################################################################################################
 

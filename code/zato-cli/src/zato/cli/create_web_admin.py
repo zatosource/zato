@@ -106,7 +106,6 @@ class Create(ZatoCommand):
         admin_password = admin_password if admin_password else WebAdminCryptoManager.generate_password()
 
         self.copy_web_admin_crypto(repo_dir, args)
-        priv_key = open(os.path.join(repo_dir, 'web-admin-priv-key.pem')).read()
 
         zato_secret_key = WebAdminCryptoManager.generate_key()
         cm = WebAdminCryptoManager.from_secret_key(zato_secret_key)
