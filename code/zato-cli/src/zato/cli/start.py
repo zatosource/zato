@@ -128,9 +128,9 @@ Examples:
 
     def _on_web_admin(self, *ignored):
         self.run_check_config()
-        self.start_component('zato.admin.main', 'web admin', '', self.delete_pidfile)
+        self.start_component('zato.admin.main', 'web-admin', '', self.delete_pidfile)
 
     def _on_scheduler(self, *ignored):
         self.run_check_config()
         self.check_pidfile()
-        self.start_component('zato.scheduler.main', 'web scheduler', '', self.delete_pidfile)
+        self.start_component('zato.scheduler.main', 'scheduler', '', self.delete_pidfile)

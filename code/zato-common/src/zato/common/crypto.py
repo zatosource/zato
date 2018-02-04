@@ -118,10 +118,10 @@ class SchedulerCryptoManager(CryptoManager):
     """
     def __init__(self, repo_dir=None, secret_key=None, well_known_data=None):
         if repo_dir:
-            conf_path = os.path.join(repo_dir, 'web-admin.conf')
-            conf = bunchify(loads(open(conf_path).read()))
-            secret_key = conf['zato_secret_key']
-            well_known_data = conf['well_known_data']
+            conf_path = os.path.join(repo_dir, 'scheduler.conf')
+            conf = bunchify(ConfigObj(conf_path, use_zato=False))
+            secret_key = conf.secret_keys.key1
+            well_known_data = conf.crypto.well_known_data
 
         self.set_config(secret_key, well_known_data)
 
