@@ -36,9 +36,15 @@ well_known_data = b'3.141592...' # π number
 class CryptoManager(object):
     """ Used for encryption and decryption of secrets.
     """
-    def __init__(self):
-        self.secret_key = None
-        self.well_known_data = None
+    def __init__(self, repo_dir=None, secret_key=None, well_known_data=None):
+        if repo_dir:
+            secret_key, well_known_data = self.get_config(repo_dir)
+        self.set_config(secret_key, well_known_data)
+
+# ################################################################################################################################
+
+    def get_config(self, repo_dir):
+        raise NotImplementedError('Must be implemented by subclasses')
 
 # ################################################################################################################################
 
@@ -90,7 +96,10 @@ class CryptoManager(object):
 # ################################################################################################################################
 
     def decrypt(self, encrypted):
-        return self.secret_key.decrypt(encrypted.encode('utf8'))
+        print(333, `encrypted`)
+        decrypted = self.secret_key.decrypt(encrypted.encode('utf8'))
+        print(444, `decrypted`)
+        return decrypted
 
 # ################################################################################################################################
 
@@ -102,27 +111,29 @@ class CryptoManager(object):
 class WebAdminCryptoManager(CryptoManager):
     """ CryptoManager for web-admin instances.
     """
-    def __init__(self, repo_dir=None, secret_key=None, well_known_data=None):
-        if repo_dir:
-            conf_path = os.path.join(repo_dir, 'web-admin.conf')
-            conf = bunchify(loads(open(conf_path).read()))
-            secret_key = conf['zato_secret_key']
-            well_known_data = conf['well_known_data']
-
-        self.set_config(secret_key, well_known_data)
+    def get_config(self, repo_dir):
+        conf_path = os.path.join(repo_dir, 'web-admin.conf')
+        conf = bunchify(loads(open(conf_path).read()))
+        return conf['zato_secret_key'], conf['well_known_data']
 
 # ################################################################################################################################
 
 class SchedulerCryptoManager(CryptoManager):
     """ CryptoManager for schedulers.
     """
-    def __init__(self, repo_dir=None, secret_key=None, well_known_data=None):
-        if repo_dir:
-            conf_path = os.path.join(repo_dir, 'scheduler.conf')
-            conf = bunchify(ConfigObj(conf_path, use_zato=False))
-            secret_key = conf.secret_keys.key1
-            well_known_data = conf.crypto.well_known_data
+    def get_config(self, repo_dir):
+        conf_path = os.path.join(repo_dir, 'scheduler.conf')
+        conf = bunchify(ConfigObj(conf_path, use_zato=False))
+        return conf.secret_keys.key1, conf.crypto.well_known_data
 
-        self.set_config(secret_key, well_known_data)
+# ################################################################################################################################
+
+class ServerCryptoManager(CryptoManager):
+    """ CryptoManager for servers.
+    """
+    def get_config(self, repo_dir):
+        conf_path = os.path.join(repo_dir, 'secrets.conf')
+        conf = bunchify(ConfigObj(conf_path, use_zato=False))
+        return conf.secret_keys.key1, conf.zato.well_known_data
 
 # ################################################################################################################################
