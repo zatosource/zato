@@ -365,7 +365,7 @@ def get_user_config_name(file_name):
 
 # ################################################################################################################################
 
-def get_config(repo_location, config_name, secret_key, secrets_conf, bunchified=True, needs_user_config=True):
+def get_config(repo_location, config_name, bunchified=True, needs_user_config=True):
     """ Returns the configuration object. Will load additional user-defined config files,
     if any are available at all.
     """

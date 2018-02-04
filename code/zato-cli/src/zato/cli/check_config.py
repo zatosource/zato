@@ -27,7 +27,7 @@ from psutil import AccessDenied, Process, NoSuchProcess
 from zato.cli import ManageCommand
 from zato.common import INFO_FORMAT, ping_queries
 from zato.common.component_info import get_info
-from zato.common.crypto import WebAdminCryptoManager
+from zato.common.crypto import SchedulerCryptoManager, WebAdminCryptoManager
 from zato.common.kvdb import KVDB
 from zato.common.haproxy import validate_haproxy_config
 from zato.common.odb import create_pool, get_ping_query
@@ -236,7 +236,8 @@ class CheckConfig(ManageCommand):
         self.ensure_json_config_port_free('Web admin', 'web-admin.conf')
 
     def _on_scheduler(self, *ignored_args, **ignored_kwargs):
-        cm, conf = self.get_crypto_manager('scheduler.conf')
+        cm = self.get_crypto_manager(class_=SchedulerCryptoManager)
+        conf = ConfigObj(join(self.component_dir, 'config', 'repo', 'scheduler.conf'), use_zato=False)
         fs_sql_config = self.get_sql_ini('sql.conf')
 
         self.check_sql_odb_server_scheduler(cm, conf, fs_sql_config)
