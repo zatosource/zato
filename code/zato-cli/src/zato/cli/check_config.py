@@ -27,27 +27,38 @@ from psutil import AccessDenied, Process, NoSuchProcess
 from zato.cli import ManageCommand
 from zato.common import INFO_FORMAT, ping_queries
 from zato.common.component_info import get_info
-from zato.common.crypto import SchedulerCryptoManager, WebAdminCryptoManager
+from zato.common.crypto import SchedulerCryptoManager, ServerCryptoManager, WebAdminCryptoManager
 from zato.common.kvdb import KVDB
 from zato.common.haproxy import validate_haproxy_config
 from zato.common.odb import create_pool, get_ping_query
 from zato.common.util import is_port_taken
 
+# ################################################################################################################################
+
 class CheckConfig(ManageCommand):
     """ Checks config of a Zato component.
     """
+
+# ################################################################################################################################
+
     def get_json_conf(self, conf_name, repo_dir=None):
         repo_dir = repo_dir or join(self.config_dir, 'repo')
         return loads(open(join(repo_dir, conf_name)).read())
+
+# ################################################################################################################################
 
     def ensure_port_free(self, prefix, port, address):
         if is_port_taken(port):
             raise Exception('{} check failed. Address `{}` already taken.'.format(prefix, address))
 
+# ################################################################################################################################
+
     def ensure_json_config_port_free(self, prefix, conf_name=None, conf=None):
         conf = self.get_json_conf(conf_name) if conf_name else conf
         address = '{}:{}'.format(conf['host'], conf['port'])
         self.ensure_port_free(prefix, conf['port'], address)
+
+# ################################################################################################################################
 
     def ping_sql(self, cm, engine_params, ping_query):
 
@@ -58,12 +69,16 @@ class CheckConfig(ManageCommand):
         if self.show_output:
             self.logger.info('SQL ODB connection OK')
 
+# ################################################################################################################################
+
     def check_sql_odb_server_scheduler(self, cm, conf, fs_sql_config):
         engine_params = dict(conf['odb'].items())
         engine_params['extra'] = {}
         engine_params['pool_size'] = 1
 
         self.ping_sql(cm, engine_params, get_ping_query(fs_sql_config, engine_params))
+
+# ################################################################################################################################
 
     def check_sql_odb_web_admin(self, cm, conf):
         pairs = (
@@ -79,6 +94,8 @@ class CheckConfig(ManageCommand):
             engine_params[sqlalch_name] = conf[django_name]
 
         self.ping_sql(cm, engine_params, ping_queries[engine_params['engine']])
+
+# ################################################################################################################################
 
     def on_server_check_kvdb(self, cm, conf, conf_key='kvdb'):
 
@@ -101,6 +118,8 @@ class CheckConfig(ManageCommand):
 
         if self.show_output:
             self.logger.info('Redis connection OK')
+
+# ################################################################################################################################
 
     def ensure_no_pidfile(self, log_file_marker):
         pidfile = abspath(join(self.component_dir, 'pidfile'))
@@ -173,30 +192,44 @@ class CheckConfig(ManageCommand):
         if self.show_output:
             self.logger.info('No such pidfile `%s`, OK', pidfile)
 
+# ################################################################################################################################
+
     def on_server_check_port_available(self, server_conf):
         address = server_conf['main']['gunicorn_bind']
         _, port = address.split(':')
         self.ensure_port_free('Server', int(port), address)
 
+# ################################################################################################################################
+
     def get_crypto_manager(self, repo_dir=None, class_=None):
         return class_.from_repo_dir(repo_dir or join(self.config_dir, 'repo'))
+
+# ################################################################################################################################
 
     def get_sql_ini(self, conf_file, repo_dir=None):
         repo_dir = repo_dir or join(self.config_dir, 'repo')
         return ConfigObj(join(repo_dir, conf_file))
 
-    def _on_server(self, args):
-        cm = self.get_crypto_manager('secrets.conf')
-        fs_sql_config = self.get_sql_ini('sql.conf')
+# ################################################################################################################################
 
-        self.check_sql_odb_server_scheduler(cm, fs_sql_config)
-        self.on_server_check_kvdb(cm)
+    def _on_server(self, args):
+        cm = self.get_crypto_manager(class_=ServerCryptoManager)
+        fs_sql_config = self.get_sql_ini('sql.conf')
+        repo_dir = join(self.component_dir, 'config', 'repo')
+        server_conf_path = join(repo_dir, 'server.conf')
+        secrets_conf_path = ConfigObj(join(repo_dir, 'secrets.conf'), use_zato=False)
+        server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
+
+        self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config)
+        self.on_server_check_kvdb(cm, server_conf)
 
         if getattr(args, 'ensure_no_pidfile', False):
             self.ensure_no_pidfile('server')
 
         if getattr(args, 'check_server_port_available', False):
-            self.on_server_check_port_available(conf)
+            self.on_server_check_port_available(server_conf)
+
+# ################################################################################################################################
 
     def _on_lb(self, *ignored_args, **ignored_kwargs):
         self.ensure_no_pidfile('lb-agent')
@@ -225,6 +258,8 @@ class CheckConfig(ManageCommand):
 
         validate_haproxy_config(lb_conf_string, lba_conf['haproxy_command'])
 
+# ################################################################################################################################
+
     def _on_web_admin(self, *ignored_args, **ignored_kwargs):
         repo_dir = join(self.component_dir, 'config', 'repo')
 
@@ -235,6 +270,8 @@ class CheckConfig(ManageCommand):
         self.ensure_no_pidfile('web-admin')
         self.ensure_json_config_port_free('Web admin', 'web-admin.conf')
 
+# ################################################################################################################################
+
     def _on_scheduler(self, *ignored_args, **ignored_kwargs):
         cm = self.get_crypto_manager(class_=SchedulerCryptoManager)
         conf = ConfigObj(join(self.component_dir, 'config', 'repo', 'scheduler.conf'), use_zato=False)
@@ -244,3 +281,5 @@ class CheckConfig(ManageCommand):
         self.on_server_check_kvdb(cm, conf, 'broker')
 
         self.ensure_no_pidfile('scheduler')
+
+# ################################################################################################################################
