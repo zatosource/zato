@@ -21,6 +21,9 @@ from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log
 
+# ConfigObj
+from configobj import ConfigObj
+
 # gunicorn
 import gunicorn
 from gunicorn.app.base import Application
@@ -42,10 +45,11 @@ import yaml
 
 # Zato
 from zato.common import TRACE1
+from zato.common.crypto import ServerCryptoManager
 from zato.common.repo import RepoManager
 from zato.common.ipaddress_ import get_preferred_ip
-from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_crypto_manager, \
-     get_kvdb_config_for_log, parse_cmd_line_options, register_diag_handlers, store_pidfile
+from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_kvdb_config_for_log, \
+     parse_cmd_line_options, register_diag_handlers, store_pidfile
 
 # ################################################################################################################################
 
@@ -148,7 +152,10 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     logger = logging.getLogger(__name__)
     kvdb_logger = logging.getLogger('zato_kvdb')
 
-    config = get_config(repo_location, 'server.conf')
+    crypto_manager = ServerCryptoManager(repo_location)
+    secrets_conf = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
+
+    config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_conf)
     pickup_config = get_config(repo_location, 'pickup.conf')
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
@@ -194,9 +201,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     if config.misc.http_proxy:
         os.environ['http_proxy'] = config.misc.http_proxy
 
-    crypto_manager = get_crypto_manager(repo_location, app_context, config)
     server = app_context.get_object('server')
-
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, config.main, config.crypto)
 
     server.crypto_manager = crypto_manager

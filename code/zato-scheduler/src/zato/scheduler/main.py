@@ -29,6 +29,8 @@ import yaml
 from zato.common.util import absjoin, get_config, store_pidfile
 from zato.scheduler.server import Config, SchedulerServer
 
+# ################################################################################################################################
+
 def main():
 
     # Always attempt to store the PID file first
@@ -69,5 +71,9 @@ def main():
     except Exception, e:
         logger.warn(format_exc(e))
 
+# ################################################################################################################################
+
 if __name__ == '__main__':
     main()
+
+# ################################################################################################################################
