@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}JMS WMQ outconns{% endblock %}
+{% block html_title %}IBM MQ channels{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -16,8 +16,7 @@
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
-    {% comment %} HTTP Basic Auth {% endcomment %}
-    <script type="text/javascript" src="/static/js/outgoing/jms_wmq.js"></script>
+    <script type="text/javascript" src="/static/js/channel/jms-wmq.js"></script>
 
 
     <script>
@@ -27,16 +26,15 @@
             '_selection',
             'name',
             '_is_active',
-            '_def_name',
-            '_delivery_mode',
-            'priority',
-            'expiration',
+            'def_name',
+            'queue',
+            'service',
             '_edit',
             '_delete',
             'id',
             'is_active',
-            'delivery_mode',
-            'def_id'
+            'def_id',
+            'data_format',
         ]
     }
     </script>
@@ -44,7 +42,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Outgoing JMS WebSphere MQ connections</h2>
+<h2 class="zato">IBM MQ channels</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -52,12 +50,12 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/search-form.html" with page_prompt="Show outgoing connections"%}
+{% include "zato/search-form.html" with page_prompt="Show channels"%}
 
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.outgoing.jms_wmq.create()">Create a new outgoing JMS WebSphere MQ connection</a>
+            <a href="javascript:$.fn.zato.channel.jms_wmq.create()">Create a new IBM MQ channel</a>
         </div>
 
 
@@ -70,12 +68,10 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Definition</a></th>
-                        <th><a href="#">Delivery mode</a></th>
-                        <th><a href="#">Priority</a></th>
-                        <th><a href="#">Expiration (ms)</a></th>
+                        <th><a href="#">Queue</a></th>
+                        <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -90,21 +86,19 @@
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.def_name }}</td>
-                        <td>{{ item.delivery_mode_text|default_if_none:'' }}</td>
-                        <td>{{ item.priority|default_if_none:'' }}</td>
-                        <td>{{ item.expiration|default_if_none:'' }}</td>
-
-                        <td><a href="javascript:$.fn.zato.outgoing.jms_wmq.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.outgoing.jms_wmq.delete_('{{ item.id }}')">Delete</a></td>
+                        <td>{{ item.queue }}</td>
+                        <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.jms_wmq.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.jms_wmq.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.delivery_mode }}</td>
                         <td class='ignore'>{{ item.def_id }}</td>
+                        <td class='ignore'>{{ item.data_format }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='14'>No results</td>
+                        <td colspan='12'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -116,7 +110,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "out-jms-wmq-create" %}" method="post" id="create-form">
+                <form action="{% url "channel-jms-wmq-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
@@ -134,18 +128,19 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Delivery mode</td>
-                            <td>{{ create_form.delivery_mode }}</td>
+                            <td style="vertical-align:middle">Queue</td>
+                            <td>{{ create_form.queue }}</td>
+                        </tr>
+
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_form.service }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Priority <span class='form_hint'>(0-9)</span></td>
-                            <td>{{ create_form.priority }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Expiration <span class='form_hint'>(ms)</span></td>
-                            <td>{{ create_form.expiration }}</td>
+                            <td style="vertical-align:middle">Data format</td>
+                            <td>{{ create_form.data_format }}</td>
                         </tr>
 
                         <tr>
@@ -162,7 +157,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "out-jms-wmq-edit" %}" method="post" id="edit-form">
+                <form action="{% url "channel-jms-wmq-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
@@ -180,20 +175,19 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Delivery mode</td>
-                            <td>{{ edit_form.delivery_mode }}</td>
+                            <td style="vertical-align:middle">Queue</td>
+                            <td>{{ edit_form.queue }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Priority <span class='form_hint'>(0-9)</span></td>
-                            <td>{{ edit_form.priority }}</td>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_form.service }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Expiration <span class='form_hint'>(ms)</span></td>
-                            <td>{{ edit_form.expiration }}</td>
+                            <td style="vertical-align:middle">Data format</td>
+                            <td>{{ edit_form.data_format }}</td>
                         </tr>
-
 
                         <tr>
                             <td colspan="2" style="text-align:right">

@@ -246,14 +246,6 @@ def decrypt(data, priv_key, b64=True):
 
 # ################################################################################################################################
 
-def get_executable():
-    """ Returns the wrapper buildout uses for executing Zato commands. This has
-    all the dependencies added to PYTHONPATH.
-    """
-    return os.path.join(os.path.dirname(sys.executable), 'py')
-
-# ################################################################################################################################
-
 def get_zato_command():
     """ Returns the full path to the 'zato' command' in a buildout environment.
     """
@@ -531,7 +523,7 @@ def payload_from_request(cid, request, data_format, transport):
                     soap = objectify.fromstring(request)
                 body = soap_body_xpath(soap)
                 if not body:
-                    raise ZatoException(cid, 'Client did not send the [{}] element'.format(soap_body_path))
+                    raise ZatoException(cid, 'Client did not send `{}` element'.format(soap_body_path))
                 payload = get_body_payload(body)
             else:
                 if isinstance(request, objectify.ObjectifiedElement):
@@ -542,7 +534,11 @@ def payload_from_request(cid, request, data_format, transport):
             if not request:
                 return ''
             if isinstance(request, basestring) and data_format == DATA_FORMAT.JSON:
-                payload = loads(request)
+                try:
+                    payload = loads(request)
+                except ValueError:
+                    logger.warn('Could not parse request as JSON:`{}`, e:`{}`'.format(request, format_exc()))
+                    raise
             else:
                 payload = request
         else:

@@ -1,6 +1,6 @@
 @outgoing
 Feature: zato.outgoing.jms-wmq.delete
-  Updates an already existing JMS WebSphere MQ outgoing connection. The connection will be stopped. If ‘is_active’
+  Updates an already existing IBM MQ outgoing connection. The connection will be stopped. If ‘is_active’
   flag is ‘true’, the underlying MQ connector will then be started.
 
 

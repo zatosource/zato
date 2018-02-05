@@ -353,29 +353,30 @@ def definition_amqp_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def _def_jms_wmq(session, cluster_id):
+def _def_wmq(session, cluster_id):
     return session.query(
         ConnDefWMQ.id, ConnDefWMQ.name, ConnDefWMQ.host,
         ConnDefWMQ.port, ConnDefWMQ.queue_manager, ConnDefWMQ.channel,
         ConnDefWMQ.cache_open_send_queues, ConnDefWMQ.cache_open_receive_queues,
         ConnDefWMQ.use_shared_connections, ConnDefWMQ.ssl, ConnDefWMQ.ssl_cipher_spec,
-        ConnDefWMQ.ssl_key_repository, ConnDefWMQ.needs_mcd, ConnDefWMQ.max_chars_printed).\
+        ConnDefWMQ.ssl_key_repository, ConnDefWMQ.needs_mcd, ConnDefWMQ.max_chars_printed,
+        ConnDefWMQ.username, ConnDefWMQ.password, ConnDefWMQ.use_jms).\
         filter(Cluster.id==ConnDefWMQ.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(ConnDefWMQ.name)
 
-def def_jms_wmq(session, cluster_id, id):
-    """ A particular JMS WebSphere MQ definition
+def definition_wmq(session, cluster_id, id):
+    """ A particular IBM MQ definition
     """
-    return _def_jms_wmq(session, cluster_id).\
+    return _def_wmq(session, cluster_id).\
         filter(ConnDefWMQ.id==id).\
         one()
 
 @query_wrapper
-def def_jms_wmq_list(session, cluster_id, needs_columns=False):
-    """ JMS WebSphere MQ connection definitions.
+def definition_wmq_list(session, cluster_id, needs_columns=False):
+    """ IBM MQ connection definitions.
     """
-    return _def_jms_wmq(session, cluster_id)
+    return _def_wmq(session, cluster_id)
 
 # ################################################################################################################################
 
@@ -406,7 +407,7 @@ def out_amqp_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def _out_jms_wmq(session, cluster_id):
+def _out_wmq(session, cluster_id):
     return session.query(
         OutgoingWMQ.id, OutgoingWMQ.name, OutgoingWMQ.is_active,
         OutgoingWMQ.delivery_mode, OutgoingWMQ.priority, OutgoingWMQ.expiration,
@@ -417,25 +418,25 @@ def _out_jms_wmq(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(OutgoingWMQ.name)
 
-def out_jms_wmq(session, cluster_id, id):
-    """ An outgoing JMS WebSphere MQ connection (by ID).
+def out_wmq(session, cluster_id, id):
+    """ An outgoing IBM MQ connection (by ID).
     """
-    return _out_jms_wmq(session, cluster_id).\
+    return _out_wmq(session, cluster_id).\
         filter(OutgoingWMQ.id==id).\
         one()
 
-def out_jms_wmq_by_name(session, cluster_id, name):
-    """ An outgoing JMS WebSphere MQ connection (by name).
+def out_wmq_by_name(session, cluster_id, name):
+    """ An outgoing IBM MQ connection (by name).
     """
-    return _out_jms_wmq(session, cluster_id).\
+    return _out_wmq(session, cluster_id).\
         filter(OutgoingWMQ.name==name).\
         first()
 
 @query_wrapper
-def out_jms_wmq_list(session, cluster_id, needs_columns=False):
-    """ Outgoing JMS WebSphere MQ connections.
+def out_wmq_list(session, cluster_id, needs_columns=False):
+    """ Outgoing IBM MQ connections.
     """
-    return _out_jms_wmq(session, cluster_id)
+    return _out_wmq(session, cluster_id)
 
 # ################################################################################################################################
 
@@ -495,7 +496,7 @@ def channel_stomp_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def _channel_jms_wmq(session, cluster_id):
+def _channel_wmq(session, cluster_id):
     return session.query(
         ChannelWMQ.id, ChannelWMQ.name, ChannelWMQ.is_active,
         ChannelWMQ.queue, ConnDefWMQ.name.label('def_name'), ChannelWMQ.def_id,
@@ -507,18 +508,18 @@ def _channel_jms_wmq(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(ChannelWMQ.name)
 
-def channel_jms_wmq(session, cluster_id, id):
-    """ A particular JMS WebSphere MQ channel.
+def channel_wmq(session, cluster_id, id):
+    """ A particular IBM MQ channel.
     """
-    return _channel_jms_wmq(session, cluster_id).\
+    return _channel_wmq(session, cluster_id).\
         filter(ChannelWMQ.id==id).\
         one()
 
 @query_wrapper
-def channel_jms_wmq_list(session, cluster_id, needs_columns=False):
-    """ JMS WebSphere MQ channels.
+def channel_wmq_list(session, cluster_id, needs_columns=False):
+    """ IBM MQ channels.
     """
-    return _channel_jms_wmq(session, cluster_id)
+    return _channel_wmq(session, cluster_id)
 
 # ################################################################################################################################
 

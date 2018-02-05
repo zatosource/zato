@@ -5,11 +5,11 @@ $.fn.zato.data_table.ChannelWMQ = new Class({
     toString: function() {
         var s = '<ChannelWMQ id:{0} name:{1} is_active:{2} def_id:{3} queue:{4} service:{5}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                this.name ? this.name : '(none)',
-                                this.is_active ? this.is_active : '(none)',
-                                this.def_id ? this.def_id : '(none)',
-                                this.queue ? this.queue: '(none)',
-                                this.service ? this.service: '(none)');
+            this.name ? this.name : '(none)',
+            this.is_active ? this.is_active : '(none)',
+            this.def_id ? this.def_id : '(none)',
+            this.queue ? this.queue: '(none)',
+            this.service ? this.service: '(none)');
     }
 });
 
@@ -24,11 +24,11 @@ $(document).ready(function() {
 })
 
 $.fn.zato.channel.jms_wmq.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new JMS WebSphere MQ channel', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new IBM MQ channel', null);
 }
 
 $.fn.zato.channel.jms_wmq.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the JMS WebSphere MQ channel', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update IBM MQ channel', id);
 }
 
 $.fn.zato.channel.jms_wmq.data_table.new_row = function(item, data, include_tr) {
@@ -63,7 +63,7 @@ $.fn.zato.channel.jms_wmq.data_table.new_row = function(item, data, include_tr) 
 
 $.fn.zato.channel.jms_wmq.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'JMS WebSphere MQ channel [{0}] deleted',
-        'Are you sure you want to delete the JMS WebSphere MQ channel [{0}]?',
+        'IBM MQ channel `{0}` deleted',
+        'Are you sure you want to delete IBM MQ channel `{0}`?',
         true);
 }

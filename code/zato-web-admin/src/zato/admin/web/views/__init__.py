@@ -409,6 +409,8 @@ class CreateEdit(_BaseView):
         """ Handles the request, taking care of common things and delegating
         control to the subclass for fetching this view-specific data.
         """
+        print(req.POST.items())
+
         self.input_dict.clear()
         self.clear_user_message()
 
@@ -544,7 +546,7 @@ def id_only_service(req, service, id, error_template):
         else:
             return result
     except Exception, e:
-        msg = error_template.format(e=format_exc(e))
+        msg = error_template.format(e=format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
