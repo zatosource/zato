@@ -71,10 +71,14 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def check_sql_odb_server_scheduler(self, cm, conf, fs_sql_config):
+    def check_sql_odb_server_scheduler(self, cm, conf, fs_sql_config, needs_decrypt_password=True):
         engine_params = dict(conf['odb'].items())
         engine_params['extra'] = {}
         engine_params['pool_size'] = 1
+
+        # This will be needed by scheduler but not server
+        if needs_decrypt_password:
+            engine_params['password'] = cm.decrypt(engine_params['password'])
 
         self.ping_sql(cm, engine_params, get_ping_query(fs_sql_config, engine_params))
 
@@ -92,6 +96,7 @@ class CheckConfig(ManageCommand):
         engine_params = {'extra':{}, 'pool_size':1}
         for sqlalch_name, django_name in pairs:
             engine_params[sqlalch_name] = conf[django_name]
+        engine_params['password'] = cm.decrypt(engine_params['password'])
 
         self.ping_sql(cm, engine_params, ping_queries[engine_params['engine']])
 
@@ -220,7 +225,7 @@ class CheckConfig(ManageCommand):
         secrets_conf_path = ConfigObj(join(repo_dir, 'secrets.conf'), use_zato=False)
         server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
 
-        self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config)
+        self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config, False)
         self.on_server_check_kvdb(cm, server_conf)
 
         if getattr(args, 'ensure_no_pidfile', False):
