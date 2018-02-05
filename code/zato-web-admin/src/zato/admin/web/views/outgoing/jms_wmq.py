@@ -25,7 +25,15 @@ from zato.admin.web.forms.outgoing.jms_wmq import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, get_definition_list, method_allowed, parse_response_data
 from zato.common.odb.model import OutgoingWMQ
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+send_attrs = ('id', 'queue_name', 'data', 'delivery_mode', 'priority', 'expiration', 'reply_to', 'msg_id', 'correl_id')
+
+# ################################################################################################################################
 
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base dictionary which can be used by both 'edit' and 'create' actions.
@@ -41,15 +49,19 @@ def _get_edit_create_message(params, prefix=''):
         'expiration': params.get(prefix + 'expiration'),
     }
 
+# ################################################################################################################################
+
 def _edit_create_response(client, verb, id, name, delivery_mode_text, cluster_id, def_id):
     response = client.invoke('zato.definition.jms-wmq.get-by-id', {'id':def_id, 'cluster_id':cluster_id})
     return_data = {'id': id,
-                   'message': 'Successfully {0} the outgoing JMS WebSphere MQ connection [{1}]'.format(verb, name),
+                   'message': 'Successfully {} outgoing IBM MQ connection `{}`'.format(verb, name),
                    'delivery_mode_text': delivery_mode_text,
                    'def_name': response.data.name
                 }
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
+
+# ################################################################################################################################
 
 @method_allowed('GET')
 def index(req):
@@ -88,7 +100,9 @@ def index(req):
         'req': req,
         }
 
-    return TemplateResponse(req, 'zato/outgoing/jms_wmq.html', return_data)
+    return TemplateResponse(req, 'zato/outgoing/jms-wmq.html', return_data)
+
+# ################################################################################################################################
 
 @method_allowed('POST')
 def create(req):
@@ -99,10 +113,11 @@ def create(req):
         return _edit_create_response(req.zato.client, 'created', response.data.id,
             req.POST['name'], delivery_mode_text, req.POST['cluster_id'], req.POST['def_id'])
     except Exception, e:
-        msg = 'Could not create an outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
+        msg = 'Could not create outgoing IBM MQ connection, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
+# ################################################################################################################################
 
 @method_allowed('POST')
 def edit(req):
@@ -115,12 +130,61 @@ def edit(req):
             delivery_mode_text, req.POST['cluster_id'], req.POST['edit-def_id'])
 
     except Exception, e:
-        msg = 'Could not update the outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
+        msg = 'Could not update outgoing IBM MQ connection, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
+# ################################################################################################################################
 
 class Delete(_Delete):
     url_name = 'out-jms-wmq-delete'
-    error_message = 'Could not delete the outgoing JMS WebSphere MQ connection'
+    error_message = 'Could not delete the outgoing IBM MQ connection'
     service_name = 'zato.outgoing.jms-wmq.delete'
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+def send_message(req, cluster_id, conn_id, name_slug):
+
+    response = req.zato.client.invoke('zato.outgoing.jms-wmq.get', {
+        'cluster_id': cluster_id,
+        'id': conn_id,
+    })
+
+    if not response.ok:
+        raise Exception(response.details)
+
+    return_data = {
+        'cluster_id': cluster_id,
+        'name_slug': name_slug,
+        'item': response.data,
+        'conn_id': conn_id
+    }
+
+    return TemplateResponse(req, 'zato/outgoing/jms-wmq-send-message.html', return_data)
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def send_message_action(req, cluster_id, conn_id, name_slug):
+
+    try:
+        request = {
+            'cluster_id': req.zato.cluster_id
+        }
+
+        for name in send_attrs:
+            request[name] = req.POST.get(name, '')
+
+        response = req.zato.client.invoke('zato.outgoing.jms-wmq.send-message', request)
+
+        if response.ok:
+            return HttpResponse(dumps({'msg': 'OK, message sent successfully.'}), content_type='application/javascript')
+        else:
+            raise Exception(response.details)
+    except Exception:
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+
+# ################################################################################################################################

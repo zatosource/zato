@@ -45,7 +45,7 @@ from zato.server.message import MessageFacade
 from zato.server.pattern.fanout import FanOut
 from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.pattern.parallel import ParallelExec
-from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request, Response
+from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request, Response, WebSphereMQRequestData
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, Float, ForceType, Integer, List, ListOfDicts, Nested, \
@@ -166,7 +166,7 @@ class PatternsFacade(object):
 
 class Service(object):
     """ A base class for all services deployed on Zato servers, no matter
-    the transport and protocol, be it plain HTTP, SOAP, WebSphere MQ or any other,
+    the transport and protocol, be it plain HTTP, SOAP, IBM MQ or any other,
     regardless whether they're built-in or user-defined ones.
     """
     _filter_by = None
@@ -240,7 +240,7 @@ class Service(object):
         self.out = self.outgoing = _Outgoing(
             self.amqp,
             self._out_ftp,
-            _WMQFacade(self.broker_client) if self.component_enabled_websphere_mq else None,
+            _WMQFacade(self) if self.component_enabled_websphere_mq else None,
             self._worker_config.out_odoo,
             self._out_plain_http,
             self._worker_config.out_soap,
@@ -426,7 +426,8 @@ class Service(object):
             worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ,
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
-            in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'))
+            in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
+            wmq_ctx=kwargs.get('wmq_ctx'))
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -521,7 +522,7 @@ class Service(object):
         return response
 
     def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=DATA_FORMAT.DICT,
-                            transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
+        transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
         if self.component_enabled_target_matcher:
@@ -551,7 +552,7 @@ class Service(object):
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
-                       self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), self.request.simple_io_config)
+            self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), self.request.simple_io_config)
 
         kwargs.update({'serialize':serialize, 'as_bunch':as_bunch})
 
@@ -864,11 +865,10 @@ class Service(object):
 # ################################################################################################################################
 
     @staticmethod
-    def update(service, channel_type, server, broker_client, _ignored, cid, payload,
-               raw_request, transport=None, simple_io_config=None, data_format=None,
-               wsgi_environ={}, job_type=None, channel_params=None,
-               merge_channel_params=True, params_priority=None, in_reply_to=None, environ=None, init=True,
-               http_soap=CHANNEL.HTTP_SOAP, _CHANNEL_AMQP=CHANNEL.AMQP):
+    def update(service, channel_type, server, broker_client, _ignored, cid, payload, raw_request, transport=None,
+        simple_io_config=None, data_format=None, wsgi_environ={}, job_type=None, channel_params=None, merge_channel_params=True,
+        params_priority=None, in_reply_to=None, environ=None, init=True, wmq_ctx=None, _HTTP_SOAP=CHANNEL.HTTP_SOAP,
+        _AMQP=CHANNEL.AMQP, _WMQ=CHANNEL.WEBSPHERE_MQ):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
@@ -899,8 +899,10 @@ class Service(object):
         channel_item = wsgi_environ.get('zato.channel_item', {})
         sec_def_info = wsgi_environ.get('zato.sec_def', {})
 
-        if channel_type == _CHANNEL_AMQP:
+        if channel_type == _AMQP:
             service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
+        elif channel_type == _WMQ:
+            service.request.wmq = WebSphereMQRequestData(wmq_ctx)
 
         service.channel = service.chan = ChannelInfo(
             channel_item.get('id'), channel_item.get('name'), channel_type,
@@ -909,7 +911,7 @@ class Service(object):
                 sec_def_info.get('username'), sec_def_info.get('impl')), channel_item)
 
         if init:
-            service._init(channel_type==http_soap)
+            service._init(channel_type==_HTTP_SOAP)
 
 # ################################################################################################################################
 
@@ -931,3 +933,5 @@ class PubSubHook(Service):
     def before_delivery(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked for each pub/sub message before it is delivered to an endpoint.
         """
+
+# ################################################################################################################################

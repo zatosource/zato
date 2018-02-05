@@ -315,6 +315,11 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.XPATH_SEC: 'XPath',
 }
 
+class AUTH_RESULT:
+    class BASIC_AUTH:
+        INVALID_PREFIX = 'invalid-prefix'
+        NO_AUTH = 'no-auth'
+
 DEFAULT_STATS_SETTINGS = {
     'scheduler_per_minute_aggr_interval':60,
     'scheduler_raw_times_interval':90,
@@ -563,7 +568,6 @@ class CHANNEL(Attrs):
     INVOKE_ASYNC = 'invoke-async'
     INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'
     IPC = 'ipc'
-    JMS_WMQ = 'jms-wmq'
     NOTIFIER_RUN = 'notifier-run'
     NOTIFIER_TARGET = 'notifier-target'
     PARALLEL_EXEC_CALL = 'parallel-exec-call'
@@ -575,6 +579,7 @@ class CHANNEL(Attrs):
     STOMP = 'stomp'
     URL_DATA = 'url-data'
     WEB_SOCKET = 'web-socket'
+    WEBSPHERE_MQ = 'websphere-mq'
     WORKER = 'worker'
     ZMQ = 'zmq'
 
@@ -953,6 +958,10 @@ class IPC:
         FAILURE = 'zato.failure'
         LENGTH = 12 # Length of either success or failure messages
 
+    class CONNECTOR:
+        class WEBSPHERE_MQ:
+            USERNAME = 'zato.connector.wmq'
+
 class WEB_SOCKET:
     class DEFAULT:
         NEW_TOKEN_TIMEOUT = 5
@@ -1242,5 +1251,16 @@ class IMAPMessage(object):
 
     def mark_seen(self):
         self.conn.mark_seen(self.uid)
+
+# ################################################################################################################################
+
+class WebSphereMQCallData(object):
+    """ Metadata for information returned by IBM MQ in response to underlying MQPUT calls.
+    """
+    __slots__ = ('msg_id', 'correlation_id')
+
+    def __init__(self, msg_id, correlation_id):
+        self.msg_id = msg_id
+        self.correlation_id = correlation_id
 
 # ################################################################################################################################

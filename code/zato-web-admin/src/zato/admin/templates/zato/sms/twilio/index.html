@@ -86,8 +86,8 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.default_from|default:'<span class="form_hint">(None)</span>' }}</td>
-                        <td>{{ item.default_to|default:'<span class="form_hint">(None)</span>' }}</td>
+                        <td>{{ item.default_from|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.default_to|default:'<span class="form_hint">---</span>' }}</td>
                         <td><a href="{% url "sms-twilio-send-message" cluster_id item.id item.name|slugify %}">Send a message</a></td>
                         <td><a href="javascript:$.fn.zato.sms.twilio.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.sms.twilio.delete_('{{ item.id }}')">Delete</a></td>

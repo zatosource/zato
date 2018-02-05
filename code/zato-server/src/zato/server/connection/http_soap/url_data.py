@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from datetime import datetime
-from hashlib import sha256
 from json import dumps, loads
 from operator import itemgetter
 from threading import RLock
