@@ -48,7 +48,7 @@ class CryptoManager(object):
         # We always get it on input rather than reading it directly because our caller
         # may want to provide it to subprocesses in which case reading it in this process
         # would consume it and the other process would not be able to access it.
-        self.stdin = stdin
+        self.stdin = (stdin or '').strip()
 
         # In case we have a repository directory on input, look up the secret keys and well known data here ..
         if repo_dir:
@@ -78,14 +78,9 @@ class CryptoManager(object):
 
         # Read from stdin
         elif secret_key.startswith(zato_stdin_prefix):
-            value = sys.stdin.read()
-            print(111, `value`)
-            value = (value or '').strip()
-            print(222, `value`)
+            value = self.stdin
             if not value:
                 raise SecretKeyError('No value provided through stdin')
-            else:
-                sys.stdin.write('zzz')
 
         # Use the value as it is
         else:
