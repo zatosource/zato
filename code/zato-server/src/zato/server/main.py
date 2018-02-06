@@ -45,6 +45,7 @@ import yaml
 
 # Zato
 from zato.common import TRACE1
+from zato.common.cli_util import read_stdin_data
 from zato.common.crypto import ServerCryptoManager
 from zato.common.repo import RepoManager
 from zato.common.ipaddress_ import get_preferred_ip
@@ -152,7 +153,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     logger = logging.getLogger(__name__)
     kvdb_logger = logging.getLogger('zato_kvdb')
 
-    crypto_manager = ServerCryptoManager(repo_location)
+    crypto_manager = ServerCryptoManager(repo_location, stdin_data=read_stdin_data())
     secrets_conf = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
 
     config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_conf)

@@ -218,7 +218,7 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def _on_server(self, args):
-        cm = self.get_crypto_manager(class_=ServerCryptoManager)
+        cm = self.get_crypto_manager(stdin_data=args.stdin_data, class_=ServerCryptoManager)
         fs_sql_config = self.get_sql_ini('sql.conf')
         repo_dir = join(self.component_dir, 'config', 'repo')
         server_conf_path = join(repo_dir, 'server.conf')
@@ -236,7 +236,7 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def _on_lb(self, *ignored_args, **ignored_kwargs):
+    def _on_lb(self, args, *ignored_args, **ignored_kwargs):
         self.ensure_no_pidfile('lb-agent')
         repo_dir = join(self.config_dir, 'repo')
 
@@ -265,11 +265,11 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def _on_web_admin(self, *ignored_args, **ignored_kwargs):
+    def _on_web_admin(self, args, *ignored_args, **ignored_kwargs):
         repo_dir = join(self.component_dir, 'config', 'repo')
 
         self.check_sql_odb_web_admin(
-            self.get_crypto_manager(repo_dir, WebAdminCryptoManager),
+            self.get_crypto_manager(repo_dir, stdin_data=args.stdin_data, class_=WebAdminCryptoManager),
             self.get_json_conf('web-admin.conf', repo_dir))
 
         self.ensure_no_pidfile('web-admin')
