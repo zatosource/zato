@@ -51,7 +51,11 @@ elif [ "$(type -p apk)" ]
 then
     source ./clean.sh
     source ./_install-alpine.sh
+elif [ "$(uname -s)" = "Darwin" ]
+then
+    source ./clean.sh
+    source ./_install-osx.sh
 else
-    echo "install.sh: Unsupported OS: could not find apt-get, yum, or apk." >&2
+    echo "install.sh: Unsupported OS: could not detect OS X, apt-get, yum, or apk." >&2
     exit 1
 fi
