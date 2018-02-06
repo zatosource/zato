@@ -70,5 +70,4 @@ patch -p0 -d eggs < patches/redis/redis/connection.py.diff
 patch -p0 -d eggs < patches/requests/models.py.diff
 patch -p0 -d eggs < patches/requests/packages/urllib3/connectionpool.py.diff
 patch -p0 -d eggs < patches/requests/sessions.py.diff
-patch -p0 -d eggs < patches/springpython/jms/factory.py.diff
 patch -p0 -d eggs < patches/ws4py/server/geventserver.py.diff
