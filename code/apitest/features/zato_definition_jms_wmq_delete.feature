@@ -1,6 +1,6 @@
 @definition
 Feature: zato.definition.jms-wmq.create
-  Deletes a JMS WebSphere MQ connection definition. Any channels using the definition will be stopped and deleted.
+  Deletes an IBM MQ MQ connection definition. Any channels using the definition will be stopped and deleted.
 
   @definition.jms-wmq.delete
   Scenario: Create jms-wmq definition

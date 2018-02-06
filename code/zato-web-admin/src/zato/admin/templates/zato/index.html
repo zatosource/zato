@@ -146,14 +146,14 @@
                             <ul>
                                 <li class='wide'><a href="{% url "def-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
                                 <li class='wide'><a href="{% url "def-cassandra" %}?cluster={{ cluster_id|default:'' }}">Cassandra</a></li>
-                                <li class='wide'><a href="{% url "def-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
+                                <li class='wide'><a href="{% url "definition-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
                             </ul>
                         </li>
                         <li>
                             <span class="like-a">Channels &rarr;</span>
                             <ul>
                                 <li class='wide'><a href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
-                                <li class='wide'><a href="{% url "channel-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
+                                <li class='wide'><a href="{% url "channel-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=plain_http">Plain HTTP</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
                                 <!-- <li class='wide'><a href="{% url "channel-stomp" %}?cluster={{ cluster_id|default:'' }}">STOMP</a></li> -->
@@ -166,7 +166,7 @@
                             <ul>
                                 <li class='wide'><a href="{% url "out-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
                                 <li class='wide'><a href="{% url "out-ftp" %}?cluster={{ cluster_id|default:'' }}">FTP</a></li>
-                                <li class='wide'><a href="{% url "out-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
+                                <li class='wide'><a href="{% url "out-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
                                 <li class='wide'><a href="{% url "out-odoo" %}?cluster={{ cluster_id|default:'' }}">Odoo</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http">Plain HTTP</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>

@@ -23,6 +23,7 @@ import signal
 import string
 import threading
 import traceback
+import socket
 import sys
 from ast import literal_eval
 from contextlib import closing
@@ -38,7 +39,6 @@ from os import getuid
 from os.path import abspath, isabs, join
 from pprint import pprint as _pprint, PrettyPrinter
 from pwd import getpwuid
-from socket import gethostname, getfqdn
 from string import Template
 from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
@@ -197,7 +197,7 @@ def absolutize(path, base=''):
 # ################################################################################################################################
 
 def current_host():
-    return gethostname() + '/' + getfqdn()
+    return socket.gethostname() + '/' + socket.getfqdn()
 
 # ################################################################################################################################
 
@@ -243,14 +243,6 @@ def decrypt(data, priv_key, b64=True):
     cm.load_keys()
 
     return cm.decrypt(data, b64)
-
-# ################################################################################################################################
-
-def get_executable():
-    """ Returns the wrapper buildout uses for executing Zato commands. This has
-    all the dependencies added to PYTHONPATH.
-    """
-    return os.path.join(os.path.dirname(sys.executable), 'py')
 
 # ################################################################################################################################
 
@@ -531,7 +523,7 @@ def payload_from_request(cid, request, data_format, transport):
                     soap = objectify.fromstring(request)
                 body = soap_body_xpath(soap)
                 if not body:
-                    raise ZatoException(cid, 'Client did not send the [{}] element'.format(soap_body_path))
+                    raise ZatoException(cid, 'Client did not send `{}` element'.format(soap_body_path))
                 payload = get_body_payload(body)
             else:
                 if isinstance(request, objectify.ObjectifiedElement):
@@ -542,7 +534,11 @@ def payload_from_request(cid, request, data_format, transport):
             if not request:
                 return ''
             if isinstance(request, basestring) and data_format == DATA_FORMAT.JSON:
-                payload = loads(request)
+                try:
+                    payload = loads(request)
+                except ValueError:
+                    logger.warn('Could not parse request as JSON:`{}`, e:`{}`'.format(request, format_exc()))
+                    raise
             else:
                 payload = request
         else:
@@ -1073,9 +1069,14 @@ def get_free_port(start=30000):
 
 # Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
 def is_port_taken(port):
-    for conn in psutil.net_connections(kind='tcp'):
-        if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(('', port))
+        sock.close()
+    except socket.error as e:
+        if e[0] == errno.EADDRINUSE:
             return True
+        raise
     return False
 
 # ################################################################################################################################

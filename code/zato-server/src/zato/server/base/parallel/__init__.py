@@ -40,17 +40,20 @@ from zato.bunch import Bunch
 from zato.common import DATA_FORMAT, KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
+from zato.common.zato_keyutils import KeyUtils
 from zato.common.posix_ipc_util import ServerStartupIPC
 from zato.common.pubsub import SkipDelivery
 from zato.common.time_util import TimeUtil
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
-     invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, register_diag_handlers
+     invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
+     register_diag_handlers
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
 from zato.server.connection.server import Servers
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
+from zato.server.base.parallel.wmq import WMQIPC
 from zato.server.pickup import PickupManager
 
 # ################################################################################################################################
@@ -62,7 +65,7 @@ megabyte = 10**6
 
 # ################################################################################################################################
 
-class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTPHandler):
+class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
     """ Main server process.
     """
     def __init__(self):
@@ -92,6 +95,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.fs_server_config = None
         self.fs_sql_config = None
         self.pickup_config = None
+        self.logging_config = None
+        self.logging_conf_path = None
         self.connector_server_grace_time = None
         self.id = None
         self.name = None
@@ -124,11 +129,13 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.sync_internal = None
         self.ipc_api = IPCAPI(False)
         self.ipc_forwarder = IPCAPI(True)
+        self.wmq_ipc_tcp_port = None
         self.fifo_response_buffer_size = 0.1 # In megabytes
         self.live_msg_browser = None
         self.is_first_worker = None
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
+        self.keyutils = KeyUtils()
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -446,16 +453,27 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host,
             self.port, self.preferred_address, use_tls)
 
-        # Startup services
         if is_first:
+
+            # Startup services
             self.invoke_startup_services(is_first)
             spawn_greenlet(self.set_up_pickup)
 
-        # IPC
-        if is_first:
+            # IPC
             self.ipc_forwarder.name = self.name
             self.ipc_forwarder.pid = self.pid
             spawn_greenlet(self.ipc_forwarder.run)
+
+            # Set up IBM MQ connections if that component is enabled
+            if self.fs_server_config.component_enabled.websphere_mq:
+
+                # Will block for a few seconds at most, until is_ok is returned
+                # which indicates that a connector started or not.
+                is_ok = self.start_websphere_mq_connector(int(self.fs_server_config.websphere_mq.ipc_tcp_start_port))
+                if is_ok:
+                    self.create_initial_wmq_definitions(self.worker_store.worker_config.definition_wmq)
+                    self.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
+                    self.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
 
         # IPC
         self.ipc_api.name = self.name
@@ -466,7 +484,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
 
 # ################################################################################################################################
-
 
     def invoke_startup_services(self, is_first):
         _invoke_startup_services(
@@ -657,6 +674,15 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    @staticmethod
+    def worker_exit(arbiter, worker):
+
+        # Clean up IBM MQ configuration
+        if worker.app.zato_wsgi_app.pid:
+            worker.app.zato_wsgi_app.keyutils.user_delete(b'zato-wmq', worker.app.zato_wsgi_app.pid)
+
+# ################################################################################################################################
+
     def destroy(self):
         """ A Spring Python hook for closing down all the resources held.
         """
@@ -665,6 +691,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         # We know it's the main process because its ODB's session has never
         # been initialized.
         if not self.odb.session_initialized:
+
 
             self.config.odb_data = self.get_config_odb_data(self)
             self.config.odb_data['fs_sql_config'] = self.fs_sql_config

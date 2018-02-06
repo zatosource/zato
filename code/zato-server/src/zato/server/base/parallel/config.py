@@ -109,6 +109,9 @@ class ConfigLoader(object):
         query = self.odb.get_definition_amqp_list(server.cluster.id, True)
         self.config.definition_amqp = ConfigDict.from_query('definition_amqp', query)
 
+        query = self.odb.get_definition_wmq_list(server.cluster.id, True)
+        self.config.definition_wmq = ConfigDict.from_query('definition_wmq', query)
+
         #
         # Definitions - end
         #
@@ -124,6 +127,10 @@ class ConfigLoader(object):
         # STOMP
         query = self.odb.get_channel_stomp_list(server.cluster.id, True)
         self.config.channel_stomp = ConfigDict.from_query('channel_stomp', query)
+
+        # IBM MQ
+        query = self.odb.get_channel_wmq_list(server.cluster.id, True)
+        self.config.channel_wmq = ConfigDict.from_query('channel_wmq', query)
 
         #
         # Channels - end
@@ -148,9 +155,9 @@ class ConfigLoader(object):
         query = self.odb.get_out_ftp_list(server.cluster.id, True)
         self.config.out_ftp = ConfigDict.from_query('out_ftp', query)
 
-        # JMS WMQ
-        query = self.odb.get_out_jms_wmq_list(server.cluster.id, True)
-        self.config.out_jms_wmq = ConfigDict.from_query('out_jms_wmq', query)
+        # IBM MQ
+        query = self.odb.get_out_wmq_list(server.cluster.id, True)
+        self.config.out_wmq = ConfigDict.from_query('out_wmq', query)
 
         # Odoo
         query = self.odb.get_out_odoo_list(server.cluster.id, True)

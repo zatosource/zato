@@ -124,11 +124,14 @@ class ConfigDict(object):
 
         return out
 
-    def copy_keys(self):
+    def copy_keys(self, skip_ids=True):
         """ Returns a deepcopy of the underlying Bunch's keys
         """
         with self.lock:
-            return deepcopy(self._impl.keys())
+            keys = self._impl.keys()
+            if skip_ids:
+                keys = [elem for elem in keys if not elem.startswith('_zato_id')]
+            return deepcopy(keys)
 
     @staticmethod
     def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False):
