@@ -16,9 +16,9 @@ fi
 
 sudo apt-get install -y \
     build-essential git haproxy libbz2-dev libev-dev libev4 libevent-dev \
-    libffi-dev libldap2-dev libmemcached-dev libpq-dev libsasl2-dev \
-    libssl-dev libxml2-dev libxslt1-dev libyaml-dev openssl python2.7 \
-    python2.7-dev swig uuid-dev uuid-runtime wget zlib1g-dev
+    libffi-dev libkeyutils-dev libldap2-dev libmemcached-dev libpq-dev \
+    libsasl2-dev libssl-dev libxml2-dev libxslt1-dev libyaml-dev openssl \
+    python2.7 python2.7-dev swig uuid-dev uuid-runtime wget zlib1g-dev
 
 # On Debian and Ubuntu the binary goes to /usr/sbin/haproxy so we need to
 # symlink it to a directory that can be easily found on PATH so that starting
@@ -28,8 +28,8 @@ then
     sudo ln -sf /usr/sbin/haproxy /usr/bin/haproxy
 fi
 
-wget https://bootstrap.pypa.io/get-pip.py
-sudo python2.7 get-pip.py
+wget -P /tmp https://bootstrap.pypa.io/get-pip.py
+sudo python2.7 /tmp/get-pip.py
 sudo python2.7 -m pip install -U setuptools virtualenv==15.1.0
 
 python2.7 -m virtualenv .
