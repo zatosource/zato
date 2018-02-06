@@ -13,7 +13,10 @@ import os
 
 # Zato
 from zato.common import SCHEDULER
+from zato.common.cli_util import read_stdin_data
 from zato.common.crypto import WebAdminCryptoManager
+
+# ################################################################################################################################
 
 SSL_KEY_FILE = './config/repo/web-admin-priv-key.pem'
 SSL_CERT_FILE = './config/repo/web-admin-cert.pem'
@@ -21,10 +24,13 @@ SSL_CA_CERTS = './config/repo/web-admin-ca-certs.pem'
 
 LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
 
+# ################################################################################################################################
+
 def update_globals(config, base_dir='.'):
     globals()['DATABASES'] = {'default': {}}
 
-    cm = WebAdminCryptoManager.from_secret_key(config['zato_secret_key'], config['well_known_data'])
+    cm = WebAdminCryptoManager.from_secret_key(
+        config['zato_secret_key'], config['well_known_data'], stdin_data=read_stdin_data())
 
     for k, v in config.items():
         if k.startswith('DATABASE_'):
@@ -40,7 +46,7 @@ def update_globals(config, base_dir='.'):
                 v = os.path.join(base_dir, v)
             globals()[k] = v
 
-# ##############################################################################
+# ################################################################################################################################
 
 django_sqlalchemy_engine = {
     'postgresql': 'postgresql_psycopg2',
@@ -50,6 +56,8 @@ django_sqlalchemy_engine = {
     'dummy':'dummy'
 }
 
+# ################################################################################################################################
+
 # Maps job types as they are used by servers into UI friendly names.
 job_type_friendly_names = {
     SCHEDULER.JOB_TYPE.ONE_TIME: 'one-time',
@@ -57,8 +65,12 @@ job_type_friendly_names = {
     SCHEDULER.JOB_TYPE.CRON_STYLE: 'cron-style',
 }
 
+# ################################################################################################################################
+
 # Maps AMQP delivery modes to UI-friendly names
 delivery_friendly_name = {
     1:'Non-persistent',
     2:'Persistent',
 }
+
+# ################################################################################################################################

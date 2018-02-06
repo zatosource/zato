@@ -86,6 +86,9 @@ class CryptoManager(object):
         else:
             value = secret_key
 
+        # Fernet keys always require encoding
+        value = value.encode('utf8')
+
         # Create a transient key just to confirm that what we found was syntactically correct
         try:
             Fernet(value)
@@ -143,10 +146,10 @@ class CryptoManager(object):
 # ################################################################################################################################
 
     @classmethod
-    def from_secret_key(cls, secret_key, well_known_data=None):
+    def from_secret_key(cls, secret_key, well_known_data=None, stdin_data=None):
         """ Creates a new CryptoManager instance from an already existing secret key.
         """
-        return cls(secret_key=secret_key, well_known_data=well_known_data)
+        return cls(secret_key=secret_key, well_known_data=well_known_data, stdin_data=stdin_data)
 
 # ################################################################################################################################
 
