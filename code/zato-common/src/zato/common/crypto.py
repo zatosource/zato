@@ -43,12 +43,12 @@ class SecretKeyError(Exception):
 class CryptoManager(object):
     """ Used for encryption and decryption of secrets.
     """
-    def __init__(self, repo_dir=None, secret_key=None, stdin=None, well_known_data=None):
+    def __init__(self, repo_dir=None, secret_key=None, stdin_data=None, well_known_data=None):
 
         # We always get it on input rather than reading it directly because our caller
         # may want to provide it to subprocesses in which case reading it in this process
         # would consume it and the other process would not be able to access it.
-        self.stdin = (stdin or '').strip()
+        self.stdin_data = stdin_data
 
         # In case we have a repository directory on input, look up the secret keys and well known data here ..
         if repo_dir:
@@ -78,9 +78,9 @@ class CryptoManager(object):
 
         # Read from stdin
         elif secret_key.startswith(zato_stdin_prefix):
-            value = self.stdin
+            value = self.stdin_data
             if not value:
-                raise SecretKeyError('No value provided through stdin')
+                raise SecretKeyError('No value provided on stdin')
 
         # Use the value as it is
         else:
@@ -135,10 +135,10 @@ class CryptoManager(object):
 # ################################################################################################################################
 
     @classmethod
-    def from_repo_dir(cls, repo_dir):
+    def from_repo_dir(cls, repo_dir, stdin_data):
         """ Creates a new CryptoManager instance from a path to configuration file(s).
         """
-        return cls(repo_dir=repo_dir)
+        return cls(repo_dir=repo_dir, stdin_data=stdin_data)
 
 # ################################################################################################################################
 

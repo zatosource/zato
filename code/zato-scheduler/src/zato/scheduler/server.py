@@ -22,6 +22,7 @@ from gevent.pywsgi import WSGIServer
 from zato.common import ZATO_ODB_POOL_NAME
 from zato.common.crypto import SchedulerCryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
+from zato.common.cli_util import read_stdin_data
 from zato.scheduler.api import Scheduler
 
 # ################################################################################################################################
@@ -61,7 +62,7 @@ class SchedulerServer(object):
         self.sql_pool_store = PoolStore()
 
         # Set up the crypto manager that will be used by both ODB and, possibly, KVDB
-        self.config.crypto_manager = SchedulerCryptoManager(self.repo_location)
+        self.config.crypto_manager = SchedulerCryptoManager(self.repo_location, stdin_data=read_stdin_data())
 
         # ODB connection
         self.odb = ODBManager()

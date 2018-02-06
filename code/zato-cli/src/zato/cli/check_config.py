@@ -206,8 +206,8 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def get_crypto_manager(self, repo_dir=None, class_=None):
-        return class_.from_repo_dir(repo_dir or join(self.config_dir, 'repo'))
+    def get_crypto_manager(self, repo_dir=None, stdin_data=None, class_=None):
+        return class_.from_repo_dir(repo_dir or join(self.config_dir, 'repo'), stdin_data)
 
 # ################################################################################################################################
 
@@ -277,8 +277,8 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def _on_scheduler(self, *ignored_args, **ignored_kwargs):
-        cm = self.get_crypto_manager(class_=SchedulerCryptoManager)
+    def _on_scheduler(self, args, *ignored_args, **ignored_kwargs):
+        cm = self.get_crypto_manager(stdin_data=args.stdin_data, class_=SchedulerCryptoManager)
         conf = ConfigObj(join(self.component_dir, 'config', 'repo', 'scheduler.conf'), use_zato=False)
         fs_sql_config = self.get_sql_ini('sql.conf')
 
