@@ -110,7 +110,7 @@ class GetServerPIDForSubKey(AdminService):
     def handle(self):
         try:
             server = self.pubsub.get_sub_key_server(self.request.input.sub_key)
-        except KeyError, e:
+        except KeyError:
             raise BadRequest(self.cid, 'No such sub_key found `{}`'.format(self.request.input.sub_key))
         else:
             self.response.payload.server_pid = server.server_pid

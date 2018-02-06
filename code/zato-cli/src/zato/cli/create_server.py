@@ -121,6 +121,9 @@ enforce_service_invokes=False
 return_tracebacks=True
 default_error_message="An error has occurred"
 
+[websphere_mq]
+ipc_tcp_start_port=34567
+
 [stats]
 expire_after=168 # In hours, 168 = 7 days = 1 week
 

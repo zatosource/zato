@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}JMS WMQ channels{% endblock %}
+{% block html_title %}IBM MQ outconns{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -17,7 +17,7 @@
     <script type="text/javascript" src="/static/js/common.js"></script>
 
     {% comment %} HTTP Basic Auth {% endcomment %}
-    <script type="text/javascript" src="/static/js/channel/jms_wmq.js"></script>
+    <script type="text/javascript" src="/static/js/outgoing/jms-wmq.js"></script>
 
 
     <script>
@@ -27,15 +27,18 @@
             '_selection',
             'name',
             '_is_active',
-            'def_name',
-            'queue',
-            'service',
+            '_def_name',
+            '_delivery_mode',
+            'priority',
+            '_expiration',
+            '_send_message',
             '_edit',
             '_delete',
             'id',
             'is_active',
+            'delivery_mode',
             'def_id',
-            'data_format',
+            'expiration',
         ]
     }
     </script>
@@ -43,7 +46,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">JMS WebSphere MQ channels</h2>
+<h2 class="zato">Outgoing IBM MQ connections</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -51,14 +54,14 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/search-form.html" with page_prompt="Show channels"%}
+{% include "zato/search-form.html" with page_prompt="Show outgoing connections"%}
 
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.channel.jms_wmq.create()">Create a new JMS WebSphere MQ channel</a>
+            <a href="javascript:$.fn.zato.outgoing.jms_wmq.create()">Create a new outgoing IBM MQ connection</a>
         </div>
-        
+
 
         <div id="markup">
             <table id="data-table">
@@ -69,10 +72,13 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Definition</a></th>
-                        <th><a href="#">Queue</a></th>
-                        <th><a href="#">Service</a></th>
+                        <th><a href="#">Delivery mode</a></th>
+                        <th><a href="#">Priority</a></th>
+                        <th><a href="#">Expiration (ms)</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -87,19 +93,23 @@
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.def_name }}</td>
-                        <td>{{ item.queue }}</td>
-                        <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
-                        <td><a href="javascript:$.fn.zato.channel.jms_wmq.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.channel.jms_wmq.delete_('{{ item.id }}')">Delete</a></td>
+                        <td>{{ item.delivery_mode_text|default_if_none:'' }}</td>
+                        <td>{{ item.priority|default_if_none:'' }}</td>
+                        <td>{{ item.expiration|default:'<span class="form_hint">---</span>' }}</td>
+
+                        <td><a href="{% url "outgoing-wmq-send-message" cluster_id item.id item.name|slugify %}">Send a message</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.jms_wmq.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.jms_wmq.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.delivery_mode }}</td>
                         <td class='ignore'>{{ item.def_id }}</td>
-                        <td class='ignore'>{{ item.data_format }}</td>
+                        <td class='ignore'>{{ item.expiration|default_if_none:'' }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='12'>No results</td>
+                        <td colspan='14'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -111,83 +121,36 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "channel-jms-wmq-create" %}" method="post" id="create-form">
+                <form action="{% url "out-jms-wmq-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
-                    
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ create_form.is_active }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Definition</td>
                             <td>{{ create_form.def_id }}</td>
                         </tr>
-                        
+
                         <tr>
-                            <td style="vertical-align:middle">Queue</td>
-                            <td>{{ create_form.queue }}</td>
+                            <td style="vertical-align:middle">Delivery mode</td>
+                            <td>{{ create_form.delivery_mode }}</td>
                         </tr>
-                        
-                        
+
                         <tr>
-                            <td style="vertical-align:middle">Service</td>
-                            <td>{{ create_form.service }}</td>
+                            <td style="vertical-align:middle">Priority <span class='form_hint'>(0-9)</span></td>
+                            <td>{{ create_form.priority }}</td>
                         </tr>
-                        
+
                         <tr>
-                            <td style="vertical-align:middle">Data format</td>
-                            <td>{{ create_form.data_format }}</td>
-                        </tr>
-                        
-                        <tr>
-                            <td colspan="2" style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                            </td>
-                        </tr>                        
-                    </table>
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                </form>
-            </div>
-        </div>
-        
-        <div id="edit-div" class='data-popup ignore'>
-            <div class="bd">
-                <form action="{% url "channel-jms-wmq-edit" %}" method="post" id="edit-form">
-                    <table class="form-data">
-                        <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
-                            <td>{{ edit_form.name }}</td>
-                        </tr>
-                    
-                        <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td>{{ edit_form.is_active }}</td>
-                        </tr>
-                        
-                        <tr>
-                            <td style="vertical-align:middle">Definition</td>
-                            <td>{{ edit_form.def_id }}</td>
-                        </tr>
-                        
-                        <tr>
-                            <td style="vertical-align:middle">Queue</td>
-                            <td>{{ edit_form.queue }}</td>
-                        </tr>
-                        
-                        <tr>
-                            <td style="vertical-align:middle">Service</td>
-                            <td>{{ edit_form.service }}</td>
-                        </tr>
-                        
-                        <tr>
-                            <td style="vertical-align:middle">Data format</td>
-                            <td>{{ edit_form.data_format }}</td>
+                            <td style="vertical-align:middle">Expiration <span class='form_hint'>(ms)</span></td>
+                            <td>{{ create_form.expiration }}</td>
                         </tr>
 
                         <tr>
@@ -195,7 +158,54 @@
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
-                        </tr>                        
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "out-jms-wmq-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ edit_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Definition</td>
+                            <td>{{ edit_form.def_id }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Delivery mode</td>
+                            <td>{{ edit_form.delivery_mode }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Priority <span class='form_hint'>(0-9)</span></td>
+                            <td>{{ edit_form.priority }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Expiration <span class='form_hint'>(ms)</span></td>
+                            <td>{{ edit_form.expiration }}</td>
+                        </tr>
+
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />

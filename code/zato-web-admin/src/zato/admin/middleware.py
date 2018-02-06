@@ -12,11 +12,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from httplib import OK
 from json import loads
 
-# Django
-from django.core.urlresolvers import resolve
-
 # Bunch
 from bunch import Bunch
+
+# Django
+from django.core.urlresolvers import resolve
 
 # Zato
 from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, SASession, settings_db

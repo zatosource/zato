@@ -61,6 +61,7 @@ class ZatoGunicornApplication(Application):
     def init(self, *ignored_args, **ignored_kwargs):
         self.cfg.set('post_fork', self.zato_wsgi_app.post_fork) # Initializes a worker
         self.cfg.set('on_starting', self.zato_wsgi_app.on_starting) # Generates the deployment key
+        self.cfg.set('worker_exit', self.zato_wsgi_app.worker_exit) # Cleans up after the worker
 
         for k, v in self.config_main.items():
             if k.startswith('gunicorn') and v:
@@ -134,9 +135,11 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
     # Configure the logging first, before configuring the actual server.
     logging.addLevelName('TRACE1', TRACE1)
+    logging_conf_path = os.path.join(repo_location, 'logging.conf')
 
-    with open(os.path.join(repo_location, 'logging.conf')) as f:
-        dictConfig(yaml.load(f))
+    with open(logging_conf_path) as f:
+        logging_config = yaml.load(f)
+        dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
     kvdb_logger = logging.getLogger('zato_kvdb')
@@ -174,8 +177,8 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     if user_locale:
         locale.setlocale(locale.LC_ALL, user_locale)
         value = 12345
-        logger.info('Locale is `%s`, amount of %s -> `%s`', user_locale, value,
-                    locale.currency(value, grouping=True).decode('utf-8'))
+        logger.info('Locale is `%s`, amount of %s -> `%s`', user_locale, value, locale.currency(
+            value, grouping=True).decode('utf-8'))
 
     # Spring Python
     app_context = get_app_context(config)
@@ -201,10 +204,13 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.repo_location = repo_location
     server.user_conf_location = os.path.join(server.repo_location, 'user-conf')
     server.base_dir = base_dir
+    server.logs_dir = os.path.join(server.base_dir, 'logs')
     server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
     server.fs_server_config = config
     server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
     server.pickup_config = pickup_config
+    server.logging_config = logging_config
+    server.logging_conf_path = logging_conf_path
     server.user_config.update(config.user_config_items)
     server.app_context = app_context
     server.preferred_address = preferred_address

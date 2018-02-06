@@ -803,17 +803,17 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ A common method for updating auth-related configuration.
         """
         with self.update_lock:
-            # Channels
             handler = getattr(self.request_dispatcher.url_data, 'on_broker_msg_' + action_name)
             handler(msg)
 
             for transport in('soap', 'plain_http'):
                 config_dict = getattr(self.worker_config, 'out_' + transport)
 
-                # Wrappers and static configuration for outgoing connections
-                for name in config_dict.copy_keys():
-                    config = config_dict[name].config
-                    wrapper = config_dict[name].conn
+                for conn_name in config_dict.copy_keys():
+
+                    config = config_dict[conn_name]['config']
+                    wrapper = config_dict[conn_name]['conn']
+
                     if config['sec_type'] == sec_type:
                         if keys:
                             visit_wrapper(wrapper, msg, keys)
@@ -1353,9 +1353,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
         return self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
-
-    def on_broker_msg_CHANNEL_JMS_WMQ_MESSAGE_RECEIVED(self, msg, args=None):
-        return self.on_message_invoke_service(msg, CHANNEL.JMS_WMQ, 'CHANNEL_JMS_WMQ_MESSAGE_RECEIVED', args)
 
     def on_broker_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg, args=None):
         return self.on_message_invoke_service(msg, CHANNEL.ZMQ, 'CHANNEL_ZMQ_MESSAGE_RECEIVED', args)
