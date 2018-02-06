@@ -463,7 +463,7 @@ class Outgoing(object):
     """ A container for various outgoing connections a service can access. This
     in fact is a thin wrapper around data fetched from the service's self.worker_store.
     """
-    __slots__ = ('amqp', 'ftp', 'jms_wmq', 'odoo', 'plain_http', 'soap', 'sql', 'stomp', 'zmq', 'websockets', 'vault',
+    __slots__ = ('amqp', 'ftp', 'jms_wmq', 'wmq', 'odoo', 'plain_http', 'soap', 'sql', 'stomp', 'zmq', 'websockets', 'vault',
         'sms', 'sap')
 
     def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, stomp=None, zmq=None,
