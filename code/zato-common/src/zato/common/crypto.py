@@ -22,7 +22,7 @@ from bunch import bunchify
 from configobj import ConfigObj
 
 # cryptography
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 
 # ################################################################################################################################
 
@@ -80,7 +80,10 @@ class CryptoManager(object):
         elif secret_key.startswith(zato_stdin_prefix):
             value = self.stdin_data
             if not value:
-                raise SecretKeyError('No value provided on stdin')
+                raise SecretKeyError('No data provided on stdin')
+
+        elif not secret_key:
+            raise SecretKeyError('Secret key is missing')
 
         # Use the value as it is
         else:
@@ -115,9 +118,13 @@ class CryptoManager(object):
     def check_consistency(self):
         """ Used as a consistency check to confirm that a given component's key can decrypt well-known data.
         """
-        decrypted = self.decrypt(self.well_known_data)
-        if decrypted != well_known_data:
-            raise SecretKeyError('Expected for `{}` to equal to `{}`'.format(decrypted, well_known_data))
+        try:
+            decrypted = self.decrypt(self.well_known_data)
+        except InvalidToken:
+            raise SecretKeyError('Invalid key, could not decrypt well-known data')
+        else:
+            if decrypted != well_known_data:
+                raise SecretKeyError('Expected for `{}` to equal to `{}`'.format(decrypted, well_known_data))
 
 # ################################################################################################################################
 

@@ -585,9 +585,13 @@ class ZatoCommand(object):
             else:
                 sys.exit(0)
 
-        except Exception:
+        except Exception as e:
             self.reset_logger(self.args)
-            self.logger.error(get_full_stack())
+            if self.verbose:
+                msg = get_full_stack()
+            else:
+                msg = '{}: {} (re-run with --verbose to log full traceback)'.format(e.__class__.__name__, e.message)
+            self.logger.error(msg)
             sys.exit(self.SYS_ERROR.EXCEPTION_CAUGHT)
 
 # ################################################################################################################################
