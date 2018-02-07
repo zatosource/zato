@@ -38,7 +38,8 @@ Examples:
 
     opts = [
         {'name':'--fg', 'help':'If given, the component will run in foreground', 'action':'store_true'},
-        {'name':'--sync-internal', 'help':"Whether to synchronize component's internal state with ODB", 'action':'store_true'}
+        {'name':'--sync-internal', 'help':"Whether to synchronize component's internal state with ODB", 'action':'store_true'},
+        {'name':'--secret-key', 'help':"Component's secret key", 'action':'store'}
     ]
 
 # ################################################################################################################################
@@ -51,6 +52,7 @@ Examples:
             'ensure_no_pidfile': True,
             'check_server_port_available': True,
             'stdin_data': self.stdin_data,
+            'secret_key': self.args.secret_key,
         }))
 
 # ################################################################################################################################
@@ -75,13 +77,14 @@ Examples:
 
 # ################################################################################################################################
 
-    def start_component(self, py_path, name, program_dir, on_keyboard_interrupt=None, stdin_data=None):
+    def start_component(self, py_path, name, program_dir, on_keyboard_interrupt=None):
         """ Starts a component in background or foreground, depending on the 'fg' flag.
         """
         start_python_process(
             self.args.fg, py_path, name, program_dir, on_keyboard_interrupt, self.SYS_ERROR.FAILED_TO_START, {
-                'sync_internal': self.args.sync_internal
-            }, stdin_data=stdin_data)
+                'sync_internal': self.args.sync_internal,
+                'secret_key': self.args.secret_key
+            }, stdin_data=self.stdin_data)
 
         if self.show_output:
             if not self.args.fg and self.verbose:
@@ -93,7 +96,7 @@ Examples:
 
     def _on_server(self, show_output=True, *ignored):
         self.run_check_config()
-        self.start_component('zato.server.main', 'server', self.component_dir, self.delete_pidfile, stdin_data=self.stdin_data)
+        self.start_component('zato.server.main', 'server', self.component_dir, self.delete_pidfile)
 
 # ################################################################################################################################
 
@@ -108,8 +111,7 @@ Examples:
             found_agent_pidfile = self.check_pidfile(get_haproxy_agent_pidfile(self.component_dir))
             if not found_agent_pidfile:
                 self.start_component(
-                    'zato.agent.load_balancer.main', 'load-balancer', os.path.join(self.config_dir, 'repo'),
-                    stop_haproxy, stdin_data=self.stdin_data)
+                    'zato.agent.load_balancer.main', 'load-balancer', os.path.join(self.config_dir, 'repo'), stop_haproxy)
                 return
 
         # Will be returned if either of pidfiles was found
@@ -119,13 +121,13 @@ Examples:
 
     def _on_web_admin(self, *ignored):
         self.run_check_config()
-        self.start_component('zato.admin.main', 'web-admin', '', self.delete_pidfile, stdin_data=self.stdin_data)
+        self.start_component('zato.admin.main', 'web-admin', '', self.delete_pidfile)
 
 # ################################################################################################################################
 
     def _on_scheduler(self, *ignored):
         self.run_check_config()
         self.check_pidfile()
-        self.start_component('zato.scheduler.main', 'scheduler', '', self.delete_pidfile, stdin_data=self.stdin_data)
+        self.start_component('zato.scheduler.main', 'scheduler', '', self.delete_pidfile)
 
 # ################################################################################################################################

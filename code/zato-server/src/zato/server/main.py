@@ -153,7 +153,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     logger = logging.getLogger(__name__)
     kvdb_logger = logging.getLogger('zato_kvdb')
 
-    crypto_manager = ServerCryptoManager(repo_location, stdin_data=read_stdin_data())
+    crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
     secrets_conf = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
 
     config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_conf)
