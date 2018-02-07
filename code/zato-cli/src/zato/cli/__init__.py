@@ -565,6 +565,10 @@ class ZatoCommand(object):
                 name = opt_dict['name']
                 if 'password' in name or 'secret' in name:
 
+                    # Don't require a component's secret key
+                    if name == '--secret-key':
+                        continue
+
                     # Don't required password on SQLite
                     if 'odb' in name and args.odb_type == 'sqlite':
                         continue
@@ -590,7 +594,7 @@ class ZatoCommand(object):
             if self.verbose:
                 msg = get_full_stack()
             else:
-                msg = '{}: {} (re-run with --verbose to log full traceback)'.format(e.__class__.__name__, e.message)
+                msg = '{}: {} (re-run with --verbose for full traceback)'.format(e.__class__.__name__, e.message)
             self.logger.error(msg)
             sys.exit(self.SYS_ERROR.EXCEPTION_CAUGHT)
 

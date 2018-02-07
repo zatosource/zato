@@ -206,8 +206,8 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def get_crypto_manager(self, repo_dir=None, stdin_data=None, class_=None):
-        return class_.from_repo_dir(repo_dir or join(self.config_dir, 'repo'), stdin_data)
+    def get_crypto_manager(self, secret_key=None, repo_dir=None, stdin_data=None, class_=None):
+        return class_.from_repo_dir(secret_key, join(self.config_dir, 'repo'), stdin_data)
 
 # ################################################################################################################################
 
@@ -218,7 +218,7 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def _on_server(self, args):
-        cm = self.get_crypto_manager(stdin_data=args.stdin_data, class_=ServerCryptoManager)
+        cm = self.get_crypto_manager(args.secret_key, args.stdin_data, class_=ServerCryptoManager)
         fs_sql_config = self.get_sql_ini('sql.conf')
         repo_dir = join(self.component_dir, 'config', 'repo')
         server_conf_path = join(repo_dir, 'server.conf')
@@ -269,7 +269,7 @@ class CheckConfig(ManageCommand):
         repo_dir = join(self.component_dir, 'config', 'repo')
 
         self.check_sql_odb_web_admin(
-            self.get_crypto_manager(repo_dir, stdin_data=args.stdin_data, class_=WebAdminCryptoManager),
+            self.get_crypto_manager(args.secret_key, args.stdin_data, WebAdminCryptoManager),
             self.get_json_conf('web-admin.conf', repo_dir))
 
         self.ensure_no_pidfile('web-admin')
@@ -278,7 +278,7 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def _on_scheduler(self, args, *ignored_args, **ignored_kwargs):
-        cm = self.get_crypto_manager(stdin_data=args.stdin_data, class_=SchedulerCryptoManager)
+        cm = self.get_crypto_manager(args.secret_key, args.stdin_data, SchedulerCryptoManager)
         conf = ConfigObj(join(self.component_dir, 'config', 'repo', 'scheduler.conf'), use_zato=False)
         fs_sql_config = self.get_sql_ini('sql.conf')
 

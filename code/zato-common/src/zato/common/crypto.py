@@ -51,8 +51,9 @@ class CryptoManager(object):
         self.stdin_data = stdin_data
 
         # In case we have a repository directory on input, look up the secret keys and well known data here ..
-        if repo_dir:
-            secret_key, well_known_data = self.get_config(repo_dir)
+        if not secret_key:
+            if repo_dir:
+                secret_key, well_known_data = self.get_config(repo_dir)
 
         # .. no matter if given on input or through repo_dir, we can set up crypto keys now.
         self.set_config(secret_key, well_known_data)
@@ -145,10 +146,10 @@ class CryptoManager(object):
 # ################################################################################################################################
 
     @classmethod
-    def from_repo_dir(cls, repo_dir, stdin_data):
+    def from_repo_dir(cls, secret_key, repo_dir, stdin_data):
         """ Creates a new CryptoManager instance from a path to configuration file(s).
         """
-        return cls(repo_dir=repo_dir, stdin_data=stdin_data)
+        return cls(secret_key=secret_key, repo_dir=repo_dir, stdin_data=stdin_data)
 
 # ################################################################################################################################
 
