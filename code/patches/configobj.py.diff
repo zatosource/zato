@@ -1,6 +1,14 @@
---- configobj.py.orig	2018-02-04 20:37:48.907710211 +0100
-+++ configobj.py	2018-02-04 20:39:01.711711388 +0100
-@@ -1175,7 +1175,8 @@
+--- configobj.py.orig	2018-02-08 19:13:29.275264183 +0100
++++ configobj.py	2018-02-08 19:13:44.059264422 +0100
+@@ -17,6 +17,7 @@
+ import re
+ import sys
+ 
++from ast import literal_eval
+ from codecs import BOM_UTF8, BOM_UTF16, BOM_UTF16_BE, BOM_UTF16_LE
+ 
+ import six
+@@ -1175,7 +1176,8 @@
                   interpolation=True, raise_errors=False, list_values=True,
                   create_empty=False, file_error=False, stringify=True,
                   indent_type=None, default_encoding=None, unrepr=False,
@@ -10,7 +18,7 @@
          """
          Parse a config file or create a config file object.
  
-@@ -1186,6 +1187,11 @@
+@@ -1186,6 +1188,11 @@
                      write_empty_values=False, _inspec=False)``
          """
          self._inspec = _inspec
@@ -22,7 +30,7 @@
          # init the superclass
          Section.__init__(self, self, 0, self)
  
-@@ -1633,6 +1639,52 @@
+@@ -1633,6 +1640,52 @@
                  # is a keyword value
                  # value will include any inline comment
                  (indent, key, value) = mat.groups()
@@ -75,7 +83,7 @@
                  if indent and (self.indent_type is None):
                      self.indent_type = indent
                  # check for a multiline value
-@@ -1690,6 +1742,16 @@
+@@ -1690,6 +1743,16 @@
                  # add the key.
                  # we set unrepr because if we have got this far we will never
                  # be creating a new section
