@@ -385,10 +385,6 @@ class SIMPLE_IO:
         XML = DATA_FORMAT.XML
         FIXED_WIDTH = DATA_FORMAT.FIXED_WIDTH
 
-    class INT_PARAMETERS:
-        VALUES = ['id']
-        SUFFIXES = ['_id', '_count', '_size', '_timeout']
-
     class BOOL_PARAMETERS:
         PREFIXES = ['is_', 'needs_', 'should_', 'by_', 'has_']
 

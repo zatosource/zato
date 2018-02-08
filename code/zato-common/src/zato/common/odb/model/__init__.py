@@ -1485,7 +1485,7 @@ class OpenStackSwift(Base):
     auth_url = Column(String(200), nullable=False)
     auth_version = Column(String(200), nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.AUTH_VERSION)
     user = Column(String(200), nullable=True)
-    key = Column(String(200), nullable=True)
+    secret_key = Column(String(200), nullable=True)
     retries = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.RETRIES)
     is_snet = Column(Boolean(), nullable=False)
     starting_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_STARTING)
