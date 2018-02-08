@@ -19,9 +19,9 @@ from zato.common import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, PubSubSubscriptionExists
 from zato.common.odb.model import PubSubSubscription
-from zato.common.odb.query_ps_subscribe import add_subscription, add_wsx_subscription, has_subscription, \
+from zato.common.odb.query.pubsub.subscribe import add_subscription, add_wsx_subscription, has_subscription, \
      move_messages_to_sub_queue
-from zato.common.odb.query_ps_subscription import pubsub_subscription_list_by_endpoint_id_no_search
+from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search
 from zato.common.pubsub import new_sub_key
 from zato.common.time_util import utcnow_as_ms
 from zato.common.util import get_sa_model_columns

@@ -16,20 +16,12 @@ from springpython.config import Object, PythonConfig
 
 # Zato
 from zato.common import SIMPLE_IO, ZATO_CRYPTO_WELL_KNOWN_DATA
-from zato.common.crypto import CryptoManager
 from zato.common.kvdb import KVDB
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.server.base.parallel import ParallelServer
 from zato.server.service.store import ServiceStore
 
 class ZatoContext(PythonConfig):
-
-    # #######################################################
-    # Crypto keys
-
-    @Object
-    def crypto_manager(self):
-        return CryptoManager()
 
     # #######################################################
     # Services

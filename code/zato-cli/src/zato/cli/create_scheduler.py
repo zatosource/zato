@@ -19,8 +19,7 @@ import os
 from copy import deepcopy
 
 from zato.cli import common_logging_conf_contents, common_odb_opts, sql_conf_contents, ZatoCommand
-from zato.common.markov_passwords import generate_password
-from zato.common.util import encrypt
+from zato.common.crypto import SchedulerCryptoManager, well_known_data
 
 config_template = """[bind]
 host=0.0.0.0
@@ -48,7 +47,11 @@ port={broker_port}
 password={broker_password}
 db=0
 
+[secret_keys]
+key1={secret_key1}
+
 [crypto]
+well_known_data={well_known_data}
 use_tls=True
 tls_protocol=TLSv1
 tls_ciphers=EECDH+AES:EDH+AES:-SHA1:EECDH+RC4:EDH+RC4:RC4-SHA:EECDH+AES256:EDH+AES256:AES256-SHA:!aNULL:!eNULL:!EXP:!LOW:!MD5
@@ -117,12 +120,13 @@ class Create(ZatoCommand):
     opts.append({'name':'cert_path', 'help':"Path to the admin's certificate in PEM"})
     opts.append({'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
     opts.append({'name':'cluster_id', 'help':"ID of the cluster this scheduler will belong to"})
+    opts.append({'name':'secret_key', 'help':"Scheduler's secret crypto key"})
 
     def __init__(self, args):
         self.target_dir = os.path.abspath(args.path)
         super(Create, self).__init__(args)
 
-    def execute(self, args, show_output=True, password=None, needs_created_flag=False):
+    def execute(self, args, show_output=True, needs_created_flag=False):
         os.chdir(self.target_dir)
 
         repo_dir = os.path.join(self.target_dir, 'config', 'repo')
@@ -135,20 +139,24 @@ class Create(ZatoCommand):
         os.mkdir(repo_dir)
 
         self.copy_scheduler_crypto(repo_dir, args)
-        priv_key = open(os.path.join(repo_dir, 'zato-scheduler-priv-key.pem')).read()
+
+        secret_key = args.get('secret_key') or SchedulerCryptoManager.generate_key()
+        cm = SchedulerCryptoManager.from_secret_key(secret_key)
 
         config = {
             'odb_db_name': args.odb_db_name or args.sqlite_path,
             'odb_engine': args.odb_type,
             'odb_host': args.odb_host or '',
             'odb_port': args.odb_port or '',
-            'odb_password': encrypt(args.odb_password, priv_key) if args.odb_password else '',
+            'odb_password': cm.encrypt(args.odb_password) if args.odb_password else '',
             'odb_username': args.odb_user or '',
             'broker_host': args.kvdb_host,
             'broker_port': args.kvdb_port,
-            'broker_password': encrypt(args.kvdb_password, priv_key) if args.kvdb_password else '',
-            'user1_password': generate_password(),
+            'broker_password': cm.encrypt(args.kvdb_password) if args.kvdb_password else '',
+            'user1_password': cm.encrypt(cm.generate_password()),
             'cluster_id': args.cluster_id,
+            'secret_key1': secret_key,
+            'well_known_data': cm.encrypt(well_known_data)
         }
 
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write(

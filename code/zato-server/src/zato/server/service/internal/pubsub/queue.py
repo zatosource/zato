@@ -13,7 +13,7 @@ from contextlib import closing
 
 # Zato
 from zato.common import PUBSUB
-from zato.common.odb.query_ps_queue import acknowledge_delivery, get_messages, get_queue_depth_by_sub_key
+from zato.common.odb.query.pubsub.queue import acknowledge_delivery, get_messages, get_queue_depth_by_sub_key
 from zato.common.time_util import datetime_from_ms, utcnow_as_ms
 from zato.server.service import AsIs, Dict, List
 from zato.server.service.internal import AdminService, AdminSIO
