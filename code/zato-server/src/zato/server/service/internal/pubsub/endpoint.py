@@ -21,8 +21,8 @@ from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage,
      PubSubSubscription, PubSubTopic
 from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, pubsub_endpoint_queue, \
      pubsub_endpoint_queue_list_by_sub_keys, pubsub_messages_for_queue, server_by_id
-from zato.common.odb.query_ps_endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
-from zato.common.odb.query_ps_subscription import pubsub_subscription_list_by_endpoint_id
+from zato.common.odb.query.pubsub.endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
+from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id
 from zato.common.time_util import datetime_from_ms
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO

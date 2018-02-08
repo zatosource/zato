@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json, shutil
+import json
+import shutil
+import sys
 from cStringIO import StringIO
 from getpass import getpass, getuser
 from socket import gethostname
@@ -26,9 +28,10 @@ import sqlalchemy
 from zato import common
 from zato.cli import util as cli_util
 from zato.common import odb, util, ZATO_INFO_FILE
+from zato.common.cli_util import read_stdin_data
 from zato.common.util import get_engine_url, get_full_stack, get_session
 
-################################################################################
+# ################################################################################################################################
 
 _opts_odb_type = 'Operational database type, must be one of {}'.format(odb.SUPPORTED_DB_TYPES) # noqa
 _opts_odb_host = 'Operational database host'
@@ -41,6 +44,8 @@ _opts_broker_port = 'Broker port'
 _opts_kvdb_host = 'Key/value DB host'
 _opts_kvdb_port = 'Key/value DB port'
 
+# ################################################################################################################################
+
 ca_defaults = {
     'organization': 'My Company',
     'organizational_unit': 'My Unit', # When it's an optional argument
@@ -50,8 +55,12 @@ ca_defaults = {
     'country': 'US'
 }
 
+# ################################################################################################################################
+
 default_ca_name = 'Sample CA'
 default_common_name = 'localhost'
+
+# ################################################################################################################################
 
 common_odb_opts = [
     {'name':'odb_type', 'help':_opts_odb_type, 'choices':odb.SUPPORTED_DB_TYPES}, # noqa
@@ -77,11 +86,15 @@ kvdb_opts = [
     {'name':'--kvdb_password', 'help':'Key/value database password'},
 ]
 
+# ################################################################################################################################
+
 def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
     return [
         {'name':'tech_account_name', 'help':'Technical account name {}'.format(help_suffix)},
         {'name':'--tech_account_password', 'help':'Technical account password'},
     ]
+
+# ################################################################################################################################
 
 common_logging_conf_contents = """
 loggers:
@@ -277,7 +290,7 @@ ping_query=SELECT 1 FROM dual
 #sqlalchemy_driver=sa-name
 """.lstrip() # nopep8
 
-# ######################################################################################################################
+# ################################################################################################################################
 
 def run_command(args):
     command_class = {}
@@ -314,7 +327,7 @@ def run_command(args):
 
     command_class[args.command](args).run(args)
 
-################################################################################
+# ################################################################################################################################
 
 class ZatoCommand(object):
     """ A base class for all Zato CLI commands. Handles common things like parsing
@@ -329,6 +342,8 @@ class ZatoCommand(object):
     target_dir = None
     show_output = True
     opts = []
+
+# ################################################################################################################################
 
     class SYS_ERROR(object):
         """ All non-zero sys.exit return codes the commands may use.
@@ -353,7 +368,10 @@ class ZatoCommand(object):
         FAILED_TO_START = 18
         FOUND_PIDFILE = 19
 
+# ################################################################################################################################
+
     class COMPONENTS(object):
+
         class _ComponentName(object):
             def __init__(self, code, name):
                 self.code = code
@@ -365,17 +383,25 @@ class ZatoCommand(object):
         SERVER = _ComponentName('SERVER', 'Server')
         WEB_ADMIN = _ComponentName('WEB_ADMIN', 'Web admin')
 
+# ################################################################################################################################
+
     def __init__(self, args):
         self.args = args
         self.original_dir = os.getcwd()
         self.show_output = False if 'ZATO_CLI_DONT_SHOW_OUTPUT' in os.environ else True
         self.verbose = args.verbose
         self.reset_logger(args)
+        self.engine = None
 
         if args.store_config:
             self.store_config(args)
 
-        self.engine = None
+        # Get input from sys.stdin, if any was provided at all. It needs to be read once here,
+        # because subprocesses will not be able to do it once we read it all in in the parent
+        # one, so we read it here and give other processes explicitly on input, if they need it.
+        self.stdin_data = read_stdin_data()
+
+# ################################################################################################################################
 
     def reset_logger(self, args, reload_=False):
         if reload_:
@@ -396,6 +422,8 @@ class ZatoCommand(object):
             verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s') # noqa
             verbose_handler.setFormatter(verbose_formatter)
             self.logger.addHandler(verbose_handler)
+
+# ################################################################################################################################
 
     def _get_secret(self, template, needs_confirm, allow_empty, secret_name='password'):
         """ Runs an infinite loop until a user enters the secret. User needs
@@ -423,14 +451,20 @@ class ZatoCommand(object):
                 else:
                     return secret1.strip('\n')
 
+# ################################################################################################################################
+
     def _get_now(self, time_=None):
         if not time_:
             time_ = time.gmtime() # noqa
 
         return time.strftime('%Y-%m-%d_%H-%M-%S', time_) # noqa
 
+# ################################################################################################################################
+
     def _get_user_host(self):
         return getuser() + '@' + gethostname()
+
+# ################################################################################################################################
 
     def store_initial_info(self, target_dir, component):
         info = {'version': common.version, # noqa
@@ -439,6 +473,8 @@ class ZatoCommand(object):
                 'component': component
                 }
         open(os.path.join(target_dir, ZATO_INFO_FILE), 'wb').write(json.dumps(info))
+
+# ################################################################################################################################
 
     def store_config(self, args):
         """ Stores the config options in a config file for a later use.
@@ -459,12 +495,18 @@ class ZatoCommand(object):
         self.logger.debug('Options saved in file {file_name}'.format(
             file_name=os.path.abspath(file_name)))
 
+# ################################################################################################################################
+
     def _get_engine(self, args):
         connect_args = {'application_name':util.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
         return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
 
+# ################################################################################################################################
+
     def _get_session(self, engine):
         return get_session(engine)
+
+# ################################################################################################################################
 
     def _check_passwords(self, args, check_password):
         """ Get the password from a user for each argument that needs a password.
@@ -483,9 +525,13 @@ class ZatoCommand(object):
 
         return args
 
+# ################################################################################################################################
+
     def _get_arg(self, args, name, default):
         value = getattr(args, name, None)
         return value if value else default
+
+# ################################################################################################################################
 
     def run(self, args, offer_save_opts=True, work_args=None):
         """ Parses the command line or the args passed in and figures out
@@ -519,6 +565,10 @@ class ZatoCommand(object):
                 name = opt_dict['name']
                 if 'password' in name or 'secret' in name:
 
+                    # Don't require a component's secret key
+                    if name == '--secret-key':
+                        continue
+
                     # Don't required password on SQLite
                     if 'odb' in name and args.odb_type == 'sqlite':
                         continue
@@ -539,13 +589,21 @@ class ZatoCommand(object):
             else:
                 sys.exit(0)
 
-        except Exception:
+        except Exception as e:
             self.reset_logger(self.args)
-            self.logger.error(get_full_stack())
+            if self.verbose:
+                msg = get_full_stack()
+            else:
+                msg = '{}: {} (re-run with --verbose for full traceback)'.format(e.__class__.__name__, e.message)
+            self.logger.error(msg)
             sys.exit(self.SYS_ERROR.EXCEPTION_CAUGHT)
+
+# ################################################################################################################################
 
     def is_password_required(self):
         return True
+
+# ################################################################################################################################
 
     def before_execute(self, args):
         """ A hooks that lets commands customize their input before they are actually executed.
@@ -554,36 +612,55 @@ class ZatoCommand(object):
         if getattr(args, 'odb_type', None) == 'mysql':
             args.odb_type = 'mysql+pymysql'
 
+# ################################################################################################################################
+
     def _copy_crypto(self, repo_dir, args, middle_part):
         for name in('pub-key', 'priv-key', 'cert', 'ca-certs'):
             arg_name = '{}_path'.format(name.replace('-', '_'))
             full_path = os.path.join(repo_dir, 'zato-{}-{}.pem'.format(middle_part, name))
             shutil.copyfile(os.path.abspath(getattr(args, arg_name)), full_path)
 
+# ################################################################################################################################
+
     def copy_lb_crypto(self, repo_dir, args):
         self._copy_crypto(repo_dir, args, 'lba')
+
+# ################################################################################################################################
 
     def copy_server_crypto(self, repo_dir, args):
         self._copy_crypto(repo_dir, args, 'server')
 
+# ################################################################################################################################
+
     def copy_scheduler_crypto(self, repo_dir, args):
         self._copy_crypto(repo_dir, args, 'scheduler')
 
+# ################################################################################################################################
+
     def copy_web_admin_crypto(self, repo_dir, args):
-        for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'), ('ca_certs_path', 'ca-certs')):
+        for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'),
+            ('ca_certs_path', 'ca-certs')):
             file_name = os.path.join(repo_dir, 'web-admin-{}.pem'.format(name))
             shutil.copyfile(os.path.abspath(getattr(args, attr)), file_name)
+
+# ################################################################################################################################
 
     def get_crypto_manager_from_server_config(self, config, repo_dir):
         return cli_util.get_crypto_manager_from_server_config(config, repo_dir)
 
+# ################################################################################################################################
+
     def get_odb_session_from_server_config(self, config, cm):
         return cli_util.get_odb_session_from_server_config(config, cm)
+
+# ################################################################################################################################
 
     def get_server_client_auth(self, config, repo_dir):
         """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
         """
         return cli_util.get_server_client_auth(config, repo_dir)
+
+# ################################################################################################################################
 
 class FromConfig(ZatoCommand):
     """ Executes commands from a command config file.
@@ -604,18 +681,26 @@ class FromConfig(ZatoCommand):
 
         run_command(args)
 
+# ################################################################################################################################
+
 class CACreateCommand(ZatoCommand):
     """ A base class for all commands that create new crypto material.
     """
     file_needed = '.zato-ca-dir'
 
+# ################################################################################################################################
+
     def __init__(self, args):
         super(CACreateCommand, self).__init__(args)
         self.target_dir = os.path.abspath(args.path)
 
+# ################################################################################################################################
+
     def _on_file_missing(self):
         msg = "{} doesn't seem to be a CA directory, the '{}' file is missing."
         return msg.format(self.target_dir, self.file_needed)
+
+# ################################################################################################################################
 
     def _execute(self, args, extension, show_output=True):
         now = self._get_now()
@@ -728,8 +813,12 @@ class CACreateCommand(ZatoCommand):
         # what the format_args were.
         return format_args
 
+# ################################################################################################################################
+
 class ManageCommand(ZatoCommand):
     add_config_file = False
+
+# ################################################################################################################################
 
     def _get_dispatch(self):
         return {
@@ -741,10 +830,16 @@ class ManageCommand(ZatoCommand):
 
     command_files = set([ZATO_INFO_FILE])
 
+# ################################################################################################################################
+
     def _on_lb(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Should be implemented by subclasses')
 
+# ################################################################################################################################
+
     _on_web_admin = _on_server = _on_scheduler = _on_lb
+
+# ################################################################################################################################
 
     def execute(self, args):
 
@@ -756,7 +851,7 @@ class ManageCommand(ZatoCommand):
         found = self.command_files & listing
 
         if not found:
-            msg = """Directory {} doesn't seem to belong to a Zato component. Expected one of the following files to exist {}""".format(
+            msg = """Directory {} doesn't seem to belong to a Zato component. Expected one of the following to exist {}""".format(
                 self.component_dir, sorted(self.command_files))
             self.logger.info(msg)
             sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT) # noqa
@@ -767,3 +862,5 @@ class ManageCommand(ZatoCommand):
         os.chdir(self.component_dir)
         return self._get_dispatch()[json_data['component']](args)
 
+
+# ################################################################################################################################
