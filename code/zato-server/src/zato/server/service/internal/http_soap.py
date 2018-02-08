@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -67,12 +67,12 @@ class _HTTPSOAPService(object):
 
                 if transport == URL_TYPE.PLAIN_HTTP and \
                    sec_def.sec_type not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT):
-                    raise Exception('Only HTTP Basic Auth and TLS keys/certs are supported, not [{}]'.format(sec_def.sec_type))
+                    raise Exception('Only HTTP Basic Auth and TLS keys/certs are supported, not `{}`'.format(sec_def.sec_type))
 
                 elif transport == URL_TYPE.SOAP and sec_def.sec_type \
                      not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.WSS):
 
-                    raise Exception('Security type must be HTTP Basic Auth, NTLM or WS-Security, not [{}]'.format(
+                    raise Exception('Security type must be HTTP Basic Auth, NTLM or WS-Security, not `{}`'.format(
                         sec_def.sec_type))
 
             info['security_name'] = sec_def.name
@@ -162,11 +162,6 @@ class Create(_CreateEdit):
         input.soap_action = input.soap_action if input.soap_action else ''
         input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
 
-        if not input.url_path.startswith('/'):
-            msg = 'URL path:[{}] must start with a slash /'.format(input.url_path)
-            self.logger.error(msg)
-            raise Exception(msg)
-
         with closing(self.odb.session()) as session:
             existing_one = session.query(HTTPSOAP.id).\
                 filter(HTTPSOAP.cluster_id==input.cluster_id).\
@@ -176,7 +171,7 @@ class Create(_CreateEdit):
                 first()
 
             if existing_one:
-                raise Exception('An object of that name [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An object of that name `{}` already exists on this cluster'.format(input.name))
 
             # Is the service's name correct?
             service = session.query(Service).\
@@ -185,7 +180,7 @@ class Create(_CreateEdit):
                 filter(Service.name==input.service).first()
 
             if input.connection == 'channel' and not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist on this cluster'.format(input.service)
                 self.logger.error(msg)
                 raise Exception(msg)
 
@@ -259,7 +254,7 @@ class Create(_CreateEdit):
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = 'Could not create the object, e:[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create the object, e:`{}'.format(format_exc())
                 self.logger.error(msg)
                 session.rollback()
 
@@ -286,11 +281,6 @@ class Edit(_CreateEdit):
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
 
-        if not input.url_path.startswith('/'):
-            msg = 'URL path:[{}] must start with a slash /'.format(input.url_path)
-            self.logger.error(msg)
-            raise Exception(msg)
-
         with closing(self.odb.session()) as session:
 
             existing_one = session.query(HTTPSOAP.id).\
@@ -302,7 +292,7 @@ class Edit(_CreateEdit):
                 first()
 
             if existing_one:
-                raise Exception('An object of that name [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An object of that name `{}` already exists on this cluster'.format(input.name))
 
             # Is the service's name correct?
             service = session.query(Service).\
@@ -311,7 +301,7 @@ class Edit(_CreateEdit):
                 filter(Service.name==input.service).first()
 
             if input.connection == 'channel' and not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist on this cluster'.format(input.service)
                 self.logger.error(msg)
                 raise Exception(msg)
 
@@ -581,7 +571,7 @@ class SetAuditReplacePatterns(AdminService):
         conn.replace_patterns_json_pointer[:] = []
         conn.replace_patterns_xpath[:] = []
 
-    def handle(self):
+    def handle(self, JSON_POINTER=MSG_PATTERN_TYPE.JSON_POINTER):
         conn_id = self.request.input.id
         patt_type = self.request.input.audit_repl_patt_type
 
@@ -596,8 +586,8 @@ class SetAuditReplacePatterns(AdminService):
                 session.commit()
 
             else:
-                pattern_class = JSONPointer if patt_type == MSG_PATTERN_TYPE.JSON_POINTER.id else XPath
-                conn_pattern_list_class = HTTSOAPAuditReplacePatternsJSONPointer if patt_type == MSG_PATTERN_TYPE.JSON_POINTER.id else \
+                pattern_class = JSONPointer if patt_type == JSON_POINTER.id else XPath
+                conn_pattern_list_class = HTTSOAPAuditReplacePatternsJSONPointer if patt_type == JSON_POINTER.id else \
                     HTTSOAPAuditReplacePatternsXPath
 
                 all_patterns = session.query(pattern_class).\
@@ -725,7 +715,8 @@ class GetAuditBatchInfo(_BaseAuditService):
         response_elem = 'zato_http_soap_get_batch_info_response'
         input_required = ('conn_id',)
         input_optional = ('start', 'stop', Integer('current_batch'), Integer('batch_size'), 'query')
-        output_required = ('total_results', 'num_batches', 'has_previous', 'has_next', 'next_batch_number', 'previous_batch_number')
+        output_required = ('total_results', 'num_batches', 'has_previous', 'has_next', 'next_batch_number',
+            'previous_batch_number')
 
     def handle(self):
         with closing(self.odb.session()) as session:
