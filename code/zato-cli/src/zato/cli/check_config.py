@@ -206,7 +206,7 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def get_crypto_manager(self, secret_key=None, repo_dir=None, stdin_data=None, class_=None):
+    def get_crypto_manager(self, secret_key=None, stdin_data=None, class_=None):
         return class_.from_repo_dir(secret_key, join(self.config_dir, 'repo'), stdin_data)
 
 # ################################################################################################################################
