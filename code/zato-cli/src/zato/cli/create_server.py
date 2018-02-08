@@ -336,6 +336,18 @@ server_conf.misc.jwt_secret={zato_misc_jwt_secret}
 server_conf.odb.password={zato_odb_password}
 """
 
+simple_io_conf_contents = """
+[int]
+exact=id
+suffix=_id, _count, _size, _timeout
+
+[bool]
+prefix=is_, needs_, should_, by_, has_
+
+[secret]
+exact=password, secret_key, auth_token
+""".lstrip()
+
 lua_zato_rename_if_exists = """
 -- Checks whether a from_key exists and if it does renames it to to_key.
 -- Returns an error code otherwise.
@@ -539,6 +551,11 @@ class Create(ZatoCommand):
                 zato_odb_password=fernet1.encrypt(args.odb_password) if args.odb_password else '',
             ))
             secrets_conf.close()
+
+            simple_io_conf_loc = os.path.join(self.target_dir, 'config/repo/simple-io.conf')
+            simple_io_conf = open(simple_io_conf_loc, 'w')
+            simple_io_conf.write(simple_io_conf_contents)
+            simple_io_conf.close()
 
             if show_output:
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
