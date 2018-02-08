@@ -83,7 +83,7 @@ Examples:
         start_python_process(
             self.args.fg, py_path, name, program_dir, on_keyboard_interrupt, self.SYS_ERROR.FAILED_TO_START, {
                 'sync_internal': self.args.sync_internal,
-                'secret_key': self.args.secret_key
+                'secret_key': self.args.secret_key or ''
             }, stdin_data=self.stdin_data)
 
         if self.show_output:

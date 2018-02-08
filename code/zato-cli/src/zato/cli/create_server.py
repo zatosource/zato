@@ -525,7 +525,7 @@ class Create(ZatoCommand):
             sso_conf.close()
 
             # There will be multiple keys in future releases to allow for key rotation
-            key1 = Fernet.generate_key()
+            key1 = args.secret_key or Fernet.generate_key()
             fernet1 = Fernet(key1)
 
             secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')

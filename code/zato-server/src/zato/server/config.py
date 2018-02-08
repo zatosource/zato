@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,8 +21,13 @@ from zato.bunch import Bunch
 
 # Zato
 from zato.common import ZATO_NONE
+from zato.common.config_util import resolve_value
+
+# ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
 
 class ConfigDict(object):
     """ Stores configuration of a particular item of interest, such as an
@@ -38,9 +43,13 @@ class ConfigDict(object):
         self._impl = _bunch
         self.lock = RLock()
 
+# ################################################################################################################################
+
     def get(self, key, default=None):
         with self.lock:
             return self._impl.get(key, default)
+
+# ################################################################################################################################
 
     def set(self, key, value):
         with self.lock:
@@ -48,21 +57,31 @@ class ConfigDict(object):
 
     __setitem__ = set
 
+# ################################################################################################################################
+
     def __getitem__(self, key):
         with self.lock:
             return self._impl.__getitem__(key)
+
+# ################################################################################################################################
 
     def __delitem__(self, key):
         with self.lock:
             del self._impl[key]
 
+# ################################################################################################################################
+
     def pop(self, key, default):
         with self.lock:
             return self._impl.pop(key, default)
 
+# ################################################################################################################################
+
     def __iter__(self):
         with self.lock:
             return iter(self._impl)
+
+# ################################################################################################################################
 
     def __repr__(self):
         with self.lock:
@@ -71,36 +90,52 @@ class ConfigDict(object):
 
     __str__ = __repr__
 
+# ################################################################################################################################
+
     def __nonzero__(self):
         with self.lock:
             return bool(self._impl)
+
+# ################################################################################################################################
 
     def keys(self):
         with self.lock:
             return self._impl.keys()
 
+# ################################################################################################################################
+
     def values(self):
         with self.lock:
             return self._impl.values()
+
+# ################################################################################################################################
 
     def itervalues(self):
         with self.lock:
             return self._impl.itervalues()
 
+# ################################################################################################################################
+
     def items(self):
         with self.lock:
             return self._impl.items()
+
+# ################################################################################################################################
 
     def get_by_id(self, key_id, default=None):
         with self.lock:
             key = self._impl.get('_zato_id_%s' % key_id)
             return self._impl.get(key, default)
 
+# ################################################################################################################################
+
     def set_key_id_data(self, config):
         with self.lock:
             key_id = config['id']
             key = config['name']
             self._impl['_zato_id_%s' % key_id] = key
+
+# ################################################################################################################################
 
     def copy(self):
         """ Returns a new instance of ConfigDict with items copied over from self.
@@ -111,6 +146,8 @@ class ConfigDict(object):
             config_dict._impl.update(deepcopy(self._impl))
 
             return config_dict
+
+# ################################################################################################################################
 
     def get_config_list(self, predicate=lambda value: value):
         """ Returns a list of deepcopied config Bunch objects.
@@ -124,6 +161,8 @@ class ConfigDict(object):
 
         return out
 
+# ################################################################################################################################
+
     def copy_keys(self, skip_ids=True):
         """ Returns a deepcopy of the underlying Bunch's keys
         """
@@ -132,6 +171,8 @@ class ConfigDict(object):
             if skip_ids:
                 keys = [elem for elem in keys if not elem.startswith('_zato_id')]
             return deepcopy(keys)
+
+# ################################################################################################################################
 
     @staticmethod
     def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False):
@@ -165,9 +206,13 @@ class ConfigDict(object):
                 else:
                     config_dict._impl[item_name].config = item_class()
                     for attr_name in attrs.keys():
-                        config_dict._impl[item_name]['config'][attr_name] = getattr(item, attr_name)
+                        value = getattr(item, attr_name)
+                        value = resolve_value(value)
+                        config_dict._impl[item_name]['config'][attr_name] = value
 
         return config_dict
+
+# ################################################################################################################################
 
 class ConfigStore(object):
     """ The central place for storing a Zato server's thread configuration.
@@ -218,10 +263,14 @@ class ConfigStore(object):
         # XPath
         self.xpath = xpath
 
+# ################################################################################################################################
+
     def outgoing_connections(self):
         """ Returns all the outgoing connections.
         """
         return self.out_ftp, self.out_odoo, self.out_plain_http, self.out_soap
+
+# ################################################################################################################################
 
     def copy(self):
         """ Creates a copy of this ConfigStore. All configuration data is copied
@@ -265,3 +314,5 @@ class ConfigStore(object):
         config_store.odb_data = deepcopy(self.odb_data)
 
         return config_store
+
+# ################################################################################################################################
