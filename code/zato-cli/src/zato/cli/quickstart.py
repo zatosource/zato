@@ -337,6 +337,7 @@ class Create(ZatoCommand):
 
         # Must be shared by all servers
         jwt_secret = Fernet.generate_key()
+        secret_key = Fernet.generate_key()
 
         for name in server_names:
             server_path = os.path.join(args_path, server_names[name])
@@ -350,6 +351,7 @@ class Create(ZatoCommand):
             create_server_args.priv_key_path = server_crypto_loc[name].priv_path
             create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path
             create_server_args.jwt_secret = jwt_secret
+            create_server_args.secret_key = secret_key
 
             create_server.Create(create_server_args).execute(create_server_args, next_port.next(), False)
 
