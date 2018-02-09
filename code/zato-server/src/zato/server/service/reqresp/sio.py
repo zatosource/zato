@@ -430,9 +430,8 @@ convert_impl = {
 
 # ################################################################################################################################
 
-def convert_param(cid, payload, param, data_format, is_required, default_value, path_prefix, use_text,
-                  channel_params, has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes,
-                  params_priority):
+def convert_param(cid, payload, param, data_format, is_required, default_value, path_prefix, use_text, channel_params,
+    has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes, params_priority):
     """ Converts request parameters from any data format supported into Python objects.
     """
     param_name = param.name if isinstance(param, ForceType) else param

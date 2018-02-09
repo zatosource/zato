@@ -21,7 +21,7 @@ from zato.bunch import Bunch
 
 # Zato
 from zato.common import ZATO_NONE
-from zato.common.config_util import resolve_value
+from zato.common.util.config import resolve_value
 
 # ################################################################################################################################
 

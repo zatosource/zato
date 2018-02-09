@@ -46,7 +46,7 @@ from requests import post
 import yaml
 
 # Zato
-from zato.common.auth_util import parse_basic_auth
+from zato.common.util.auth import parse_basic_auth
 from zato.common.broker_message import code_to_name
 from zato.common.zato_keyutils import KeyUtils
 from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
