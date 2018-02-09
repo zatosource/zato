@@ -19,8 +19,8 @@ from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.cli.stop import Stop
 from zato.common import MISC
-from zato.common.proc_util import start_python_process
 from zato.common.util import get_haproxy_agent_pidfile
+from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
 

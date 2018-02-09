@@ -22,7 +22,7 @@ from gevent.pywsgi import WSGIServer
 from zato.common import ZATO_ODB_POOL_NAME
 from zato.common.crypto import SchedulerCryptoManager
 from zato.common.odb.api import ODBManager, PoolStore
-from zato.common.cli_util import read_stdin_data
+from zato.common.util.cli import read_stdin_data
 from zato.scheduler.api import Scheduler
 
 # ################################################################################################################################

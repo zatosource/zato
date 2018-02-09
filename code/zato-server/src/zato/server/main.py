@@ -45,12 +45,12 @@ import yaml
 
 # Zato
 from zato.common import TRACE1
-from zato.common.cli_util import read_stdin_data
 from zato.common.crypto import ServerCryptoManager
-from zato.common.repo import RepoManager
 from zato.common.ipaddress_ import get_preferred_ip
+from zato.common.repo import RepoManager
 from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_kvdb_config_for_log, \
      parse_cmd_line_options, register_diag_handlers, store_pidfile
+from zato.common.util.cli import read_stdin_data
 
 # ################################################################################################################################
 

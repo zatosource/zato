@@ -13,8 +13,8 @@ import os
 
 # Zato
 from zato.common import SCHEDULER
-from zato.common.cli_util import read_stdin_data
 from zato.common.crypto import WebAdminCryptoManager
+from zato.common.util.cli import read_stdin_data
 
 # ################################################################################################################################
 
