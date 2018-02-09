@@ -305,6 +305,10 @@ class ForceTypeWrapper(object):
 
 class ServiceTestCase(TestCase):
 
+    def __init__(self, *args, **kwargs):
+        self.maxDiff = None
+        super(ServiceTestCase, self).__init__(*args, **kwargs)
+
     def invoke(self, class_, request_data, expected, mock_data={}, channel=CHANNEL.HTTP_SOAP, job_type=None,
         data_format=DATA_FORMAT.JSON, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None):
         """ Sets up a service's invocation environment, then invokes and returns
