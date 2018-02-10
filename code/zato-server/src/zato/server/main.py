@@ -154,38 +154,38 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     kvdb_logger = logging.getLogger('zato_kvdb')
 
     crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
-    secrets_conf = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
-
-    config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_conf)
+    secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
+    server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
+    sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
-    preferred_address = config.preferred_address.get('address')
+    preferred_address = server_config.preferred_address.get('address')
 
     if not preferred_address:
-        preferred_address = get_preferred_ip(config.main.gunicorn_bind, config.preferred_address)
+        preferred_address = get_preferred_ip(server_config.main.gunicorn_bind, server_config.preferred_address)
 
-    if not preferred_address and not config.server_to_server.boot_if_preferred_not_found:
+    if not preferred_address and not server_config.server_to_server.boot_if_preferred_not_found:
         msg = 'Unable to start the server. Could not obtain a preferred address, please configure [bind_options] in server.conf'
         logger.warn(msg)
         raise Exception(msg)
 
     # New in 2.0 - Start monitoring as soon as possible
-    if config.get('newrelic', {}).get('config'):
+    if server_config.get('newrelic', {}).get('config'):
         import newrelic.agent
         newrelic.agent.initialize(
-            config.newrelic.config, config.newrelic.environment or None, config.newrelic.ignore_errors or None,
-            config.newrelic.log_file or None, config.newrelic.log_level or None)
+            server_config.newrelic.config, server_config.newrelic.environment or None, server_config.newrelic.ignore_errors or None,
+            server_config.newrelic.log_file or None, server_config.newrelic.log_level or None)
 
     # New in 2.0 - override gunicorn-set Server HTTP header
-    gunicorn.SERVER_SOFTWARE = config.misc.get('http_server_header', 'Zato')
+    gunicorn.SERVER_SOFTWARE = server_config.misc.get('http_server_header', 'Zato')
 
     # Store KVDB config in logs, possibly replacing its password if told to
-    kvdb_config = get_kvdb_config_for_log(config.kvdb)
+    kvdb_config = get_kvdb_config_for_log(server_config.kvdb)
     kvdb_logger.info('Master process config `%s`', kvdb_config)
 
     # New in 2.0 hence optional
-    user_locale = config.misc.get('locale', None)
+    user_locale = server_config.misc.get('locale', None)
     if user_locale:
         locale.setlocale(locale.LC_ALL, user_locale)
         value = 12345
@@ -193,20 +193,26 @@ def run(base_dir, start_gunicorn_app=True, options=None):
             value, grouping=True).decode('utf-8'))
 
     # Spring Python
-    app_context = get_app_context(config)
+    app_context = get_app_context(server_config)
 
     # Makes queries against Postgres asynchronous
-    if asbool(config.odb.use_async_driver) and config.odb.engine == 'postgresql':
+    if asbool(server_config.odb.use_async_driver) and server_config.odb.engine == 'postgresql':
         make_psycopg_green()
 
-    if config.misc.http_proxy:
-        os.environ['http_proxy'] = config.misc.http_proxy
+    if server_config.misc.http_proxy:
+        os.environ['http_proxy'] = server_config.misc.http_proxy
 
     server = app_context.get_object('server')
-    zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, config.main, config.crypto)
+    zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
+
+    #_sio_config = {
+    #    'int_parameters': sio_config.int.exact,
+    #    'int_parameter_suffixes': sio_config.int.suffix,
+    #    'bool_parameter_prefixes': sio_config.bool.prefix,
+    #}
 
     server.crypto_manager = crypto_manager
-    server.odb_data = config.odb
+    server.odb_data = server_config.odb
     server.host = zato_gunicorn_app.zato_host
     server.port = zato_gunicorn_app.zato_port
     server.repo_location = repo_location
@@ -214,12 +220,13 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.base_dir = base_dir
     server.logs_dir = os.path.join(server.base_dir, 'logs')
     server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
-    server.fs_server_config = config
+    server.fs_server_config = server_config
     server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
     server.pickup_config = pickup_config
     server.logging_config = logging_config
     server.logging_conf_path = logging_conf_path
-    server.user_config.update(config.user_config_items)
+    server.sio_config = sio_config
+    server.user_config.update(server_config.user_config_items)
     server.app_context = app_context
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
@@ -228,20 +235,20 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     # Remove all locks possibly left over by previous server instances
     kvdb = app_context.get_object('kvdb')
     kvdb.component = 'master-proc'
-    clear_locks(kvdb, config.main.token, config.kvdb, crypto_manager.decrypt)
+    clear_locks(kvdb, server_config.main.token, server_config.kvdb, crypto_manager.decrypt)
 
     # New in 2.0.8
-    server.return_tracebacks = asbool(config.misc.get('return_tracebacks', True))
-    server.default_error_message = config.misc.get('default_error_message', 'An error has occurred')
+    server.return_tracebacks = asbool(server_config.misc.get('return_tracebacks', True))
+    server.default_error_message = server_config.misc.get('default_error_message', 'An error has occurred')
 
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
 
     # New in 2.0 so it's optional.
-    profiler_enabled = config.get('profiler', {}).get('enabled', False)
+    profiler_enabled = server_config.get('profiler', {}).get('enabled', False)
 
     # New in 2.0 so it's optional.
-    sentry_config = config.get('sentry')
+    sentry_config = server_config.get('sentry')
 
     dsn = sentry_config.pop('dsn', None)
     if dsn:
@@ -264,18 +271,18 @@ def run(base_dir, start_gunicorn_app=True, options=None):
                 logger.addHandler(handler)
 
     if asbool(profiler_enabled):
-        profiler_dir = os.path.abspath(os.path.join(base_dir, config.profiler.profiler_dir))
+        profiler_dir = os.path.abspath(os.path.join(base_dir, server_config.profiler.profiler_dir))
         server.on_wsgi_request = ProfileMiddleware(
             server.on_wsgi_request,
-            log_filename = os.path.join(profiler_dir, config.profiler.log_filename),
-            cachegrind_filename = os.path.join(profiler_dir, config.profiler.cachegrind_filename),
-            discard_first_request = config.profiler.discard_first_request,
-            flush_at_shutdown = config.profiler.flush_at_shutdown,
-            path = config.profiler.url_path,
-            unwind = config.profiler.unwind)
+            log_filename = os.path.join(profiler_dir, server_config.profiler.log_filename),
+            cachegrind_filename = os.path.join(profiler_dir, server_config.profiler.cachegrind_filename),
+            discard_first_request = server_config.profiler.discard_first_request,
+            flush_at_shutdown = server_config.profiler.flush_at_shutdown,
+            path = server_config.profiler.url_path,
+            unwind = server_config.profiler.unwind)
 
     # New in 2.0 - set environmet variables for servers to inherit
-    os_environ = config.get('os_environ', {})
+    os_environ = server_config.get('os_environ', {})
     for key, value in os_environ.items():
         os.environ[key] = value
 

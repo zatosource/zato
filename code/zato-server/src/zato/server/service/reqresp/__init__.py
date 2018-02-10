@@ -96,21 +96,21 @@ class Request(SIOConverter):
     """ Wraps a service request and adds some useful meta-data.
     """
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
-                 'simple_io_config', 'bool_parameter_prefixes', 'int_parameters',
-                 'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
-                 '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp', 'wmq')
+        'simple_io_config', 'bool_parameter_prefixes', 'int_parameters',
+        'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
+        '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp', 'wmq')
 
-    def __init__(self, logger, simple_io_config={}, data_format=None, transport=None):
+    def __init__(self, logger, simple_io_config=None, data_format=None, transport=None):
         self.logger = logger
         self.payload = ''
         self.raw_request = ''
         self.input = {} # Will be overwritten in self.init if necessary
         self.cid = None
-        self.simple_io_config = simple_io_config
+        self.simple_io_config = simple_io_config or {}
         self.has_simple_io_config = False
-        self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
-        self.int_parameters = simple_io_config.get('int_parameters', [])
-        self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
+        self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
+        self.int_parameters = self.simple_io_config.get('int_parameters', [])
+        self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
         self.is_xml = None
         self.data_format = data_format
         self.transport = transport
@@ -127,7 +127,7 @@ class Request(SIOConverter):
     def init(self, is_sio, cid, sio, data_format, transport, wsgi_environ):
         """ Initializes the object with an invocation-specific data.
         """
-        self.input = FixedWidth() if data_format == _dt_fixed_width else ServiceInput()
+        self.input = ServiceInput()
 
         if is_sio:
             self.init_flat_sio(cid, sio, data_format, transport, wsgi_environ, getattr(sio, 'input_required', []))
@@ -273,16 +273,11 @@ class SimpleIOPayload(SIOConverter):
         self.response_elem = response_elem
         self.namespace = namespace
 
-        if self.zato_is_fixed_width:
-            self.zato_all_attrs = []
-            for name in required_list:
-                self.zato_all_attrs.append(name)
-        else:
-            self.zato_all_attrs = set()
-            for name in chain(required_list, optional_list):
-                if isinstance(name, ForceType):
-                    name = name.name
-                self.zato_all_attrs.add(name)
+        self.zato_all_attrs = set()
+        for name in chain(required_list, optional_list):
+            if isinstance(name, ForceType):
+                name = name.name
+            self.zato_all_attrs.add(name)
 
         self.set_expected_attrs(required_list, optional_list)
 
@@ -307,11 +302,10 @@ class SimpleIOPayload(SIOConverter):
         """ Dynamically assigns all the expected attributes to self. Setting a value
         of an attribute will actually add data to self.zato_output.
         """
-        if not self.zato_is_fixed_width:
-            for name in chain(required_list, optional_list):
-                if isinstance(name, ForceType):
-                    name = name.name
-                setattr(self, name, '')
+        for name in chain(required_list, optional_list):
+            if isinstance(name, ForceType):
+                name = name.name
+            setattr(self, name, '')
 
     def set_payload_attrs(self, attrs):
         """ Called when the user wants to set the payload to a bunch of attributes.
@@ -375,26 +369,22 @@ class SimpleIOPayload(SIOConverter):
     def getvalue(self, serialize=True):
         """ Gets the actual payload's value converted to a string representing either XML, JSON or fixed-width.
         """
-        if self.zato_is_fixed_width:
-            return FixedWidth(self.zato_all_attrs).serialize(self.zato_output if self.zato_output_repeated else self)
-
-        else:
-            if self.zato_is_xml:
-                if self.zato_output_repeated:
-                    value = Element('item_list')
-                else:
-                    value = Element('item')
-            else:
-                if self.zato_output_repeated:
-                    value = []
-                else:
-                    value = {}
-
+        if self.zato_is_xml:
             if self.zato_output_repeated:
-                output = self.zato_output
+                value = Element('item_list')
             else:
-                output = set(dir(self)) & self.zato_all_attrs
-                output = [dict((name, getattr(self, name)) for name in output)]
+                value = Element('item')
+        else:
+            if self.zato_output_repeated:
+                value = []
+            else:
+                value = {}
+
+        if self.zato_output_repeated:
+            output = self.zato_output
+        else:
+            output = set(dir(self)) & self.zato_all_attrs
+            output = [dict((name, getattr(self, name)) for name in output)]
 
         if output:
 

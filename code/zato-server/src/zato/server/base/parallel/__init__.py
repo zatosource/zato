@@ -78,9 +78,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.repo_location = None
         self.user_conf_location = None
         self.sql_pool_store = None
-        self.int_parameters = None
-        self.int_parameter_suffixes = None
-        self.bool_parameter_prefixes = None
         self.soap11_content_type = None
         self.soap12_content_type = None
         self.plain_xml_content_type = None
@@ -97,7 +94,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.pickup_config = None
         self.logging_config = None
         self.logging_conf_path = None
-        self.simple_io_config = None
+        self.sio_config = None
         self.connector_server_grace_time = None
         self.id = None
         self.name = None
