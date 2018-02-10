@@ -15,7 +15,7 @@ then
 fi
 
 sudo apt-get install -y \
-    build-essential git haproxy libbz2-dev libev-dev libev4 libevent-dev \
+    build-essential curl git haproxy libbz2-dev libev-dev libev4 libevent-dev \
     libffi-dev libkeyutils-dev libldap2-dev libmemcached-dev libpq-dev \
     libsasl2-dev libssl-dev libxml2-dev libxslt1-dev libyaml-dev openssl \
     python2.7 python2.7-dev swig uuid-dev uuid-runtime wget zlib1g-dev
