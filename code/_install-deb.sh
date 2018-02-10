@@ -28,8 +28,7 @@ then
     sudo ln -sf /usr/sbin/haproxy /usr/bin/haproxy
 fi
 
-wget -P /tmp https://bootstrap.pypa.io/get-pip.py
-sudo python2.7 /tmp/get-pip.py
+curl https://bootstrap.pypa.io/get-pip.py | sudo python2.7
 sudo python2.7 -m pip install -U setuptools virtualenv==15.1.0
 
 python2.7 -m virtualenv .
