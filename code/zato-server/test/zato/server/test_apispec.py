@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -28,7 +28,17 @@ from zato.server.apispec._ns2 import Namespace11, Namespace22, Namespace33
 from zato.server.apispec._ns3 import NoNamespace
 from zato.server.apispec._simple_io import BoolInt, ForceTypeService, RequestResponse, String, String2, String3
 
+# ################################################################################################################################
+
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+
+simple_io_config = bunchify({
+    'int': {'exact':['id'], 'suffix':['_id', '_count', '_size', '_timeout']},
+    'bool': {'prefix':['is_', 'needs_', 'should_', 'by_', 'has_']},
+    'secret': {'exact':['password', 'secret_key']},
+})
 
 # ################################################################################################################################
 
@@ -59,7 +69,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_name(self):
-        gen = Generator(get_service_store_services(Name, Name2, Name3))
+        gen = Generator(get_service_store_services(Name, Name2, Name3), simple_io_config)
         info = gen.get_info(rand_string())
 
         name1 = get_services_from_info('name', '_test.name', info)
@@ -73,7 +83,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_docstring(self):
-        gen = Generator(get_service_store_services(Docstring, Docstring2, Docstring3))
+        gen = Generator(get_service_store_services(Docstring, Docstring2, Docstring3), simple_io_config)
         info = gen.get_info(rand_string())
 
         docstring1 = get_services_from_info('name', '_test.docstring', info)
@@ -98,7 +108,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_invokes_string(self):
-        gen = Generator(get_service_store_services(InvokesString, InvokesString2, InvokesString3))
+        gen = Generator(get_service_store_services(InvokesString, InvokesString2, InvokesString3), simple_io_config)
         info = gen.get_info(rand_string())
 
         invokes_string1 = get_services_from_info('name', '_test.invokes-string', info)
@@ -120,7 +130,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_invokes_list(self):
-        gen = Generator(get_service_store_services(InvokesList, InvokesList2, InvokesList3))
+        gen = Generator(get_service_store_services(InvokesList, InvokesList2, InvokesList3), simple_io_config)
         info = gen.get_info(rand_string())
 
         invokes_list1 = get_services_from_info('name', '_test.invokes-list', info)
@@ -142,7 +152,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_sio_string1_open_api_v2(self):
-        gen = Generator(get_service_store_services(String))
+        gen = Generator(get_service_store_services(String), simple_io_config)
         info = gen.get_info(rand_string())
         req = get_services_from_info('name', '_test.string', info)
 
@@ -172,7 +182,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_sio_string1_zato(self):
-        gen = Generator(get_service_store_services(String))
+        gen = Generator(get_service_store_services(String), simple_io_config)
         info = gen.get_info(rand_string())
         req = get_services_from_info('name', '_test.string', info)
 
@@ -202,7 +212,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_sio_string2_open_api_v2(self):
-        gen = Generator(get_service_store_services(String2))
+        gen = Generator(get_service_store_services(String2), simple_io_config)
         info = gen.get_info(rand_string())
         req = get_services_from_info('name', '_test.string2', info)
 
@@ -238,7 +248,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_sio_string2_zato(self):
-        gen = Generator(get_service_store_services(String2))
+        gen = Generator(get_service_store_services(String2), simple_io_config)
         info = gen.get_info(rand_string())
         req = get_services_from_info('name', '_test.string2', info)
 
@@ -274,7 +284,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_sio_string3_open_api_v2(self):
-        gen = Generator(get_service_store_services(String3))
+        gen = Generator(get_service_store_services(String3), simple_io_config)
         info = gen.get_info(rand_string())
         req = get_services_from_info('name', '_test.string3', info)
 
@@ -310,7 +320,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_sio_string3_zato(self):
-        gen = Generator(get_service_store_services(String3))
+        gen = Generator(get_service_store_services(String3), simple_io_config)
         info = gen.get_info(rand_string())
         req = get_services_from_info('name', '_test.string3', info)
 
@@ -346,7 +356,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_sio_bool_int_open_api_v2(self):
-        gen = Generator(get_service_store_services(BoolInt))
+        gen = Generator(get_service_store_services(BoolInt), simple_io_config)
         info = gen.get_info(rand_string())
         req = get_services_from_info('name', '_test.bool-int', info)
 
@@ -400,7 +410,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_sio_bool_zato(self):
-        gen = Generator(get_service_store_services(BoolInt))
+        gen = Generator(get_service_store_services(BoolInt), simple_io_config)
         info = gen.get_info(rand_string())
         req = get_services_from_info('name', '_test.bool-int', info)
 
@@ -454,7 +464,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_force_type_open_api_v2(self):
-        gen = Generator(get_service_store_services(ForceTypeService))
+        gen = Generator(get_service_store_services(ForceTypeService), simple_io_config)
         info = gen.get_info(rand_string())
         req = get_services_from_info('name', '_test.force-type', info)
 
@@ -540,7 +550,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_force_type_zato(self):
-        gen = Generator(get_service_store_services(ForceTypeService))
+        gen = Generator(get_service_store_services(ForceTypeService), simple_io_config)
         info = gen.get_info(rand_string())
         req = get_services_from_info('name', '_test.force-type', info)
 
@@ -626,7 +636,7 @@ class APISpecTestCase(TestCase):
 # ################################################################################################################################
 
     def test_request_response_open_api_v2(self):
-        gen = Generator(get_service_store_services(RequestResponse))
+        gen = Generator(get_service_store_services(RequestResponse), simple_io_config)
         info = gen.get_info(rand_string())
         req = get_services_from_info('name', '_test.request-response', info)
         sio = req.simple_io[APISPEC.OPEN_API_V2]
@@ -639,7 +649,7 @@ class APISpecTestCase(TestCase):
 
     def test_namespace(self):
         gen = Generator(get_service_store_services(
-            Namespace1, Namespace2, Namespace3, Namespace11, Namespace22, Namespace33, NoNamespace))
+            Namespace1, Namespace2, Namespace3, Namespace11, Namespace22, Namespace33, NoNamespace), simple_io_config)
         info = gen.get_info(rand_string())
 
         sns1 = get_services_from_info('name', '_test.namespace1', info)

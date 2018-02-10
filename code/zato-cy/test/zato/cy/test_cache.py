@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -29,17 +29,17 @@ class CacheTestCace(TestCase):
         key3, expected3 = 'key3', 'value3'
 
         c = Cache()
-        c.set(key1, expected1)
-        c.set(key2, expected2)
-        c.set(key3, expected3)
+        c.set(key1, expected1, 1.0, None)
+        c.set(key2, expected2, 1.0, None)
+        c.set(key3, expected3, 1.0, None)
 
-        returned1 = c.get(key1)
+        returned1 = c.get(key1, None, False)
         self.assertEquals(returned1, expected1)
 
-        returned2 = c.get(key2)
+        returned2 = c.get(key2, None, False)
         self.assertEquals(returned2, expected2)
 
-        returned3 = c.get(key3)
+        returned3 = c.get(key3, None, False)
         self.assertEquals(returned3, expected3)
 
 # ################################################################################################################################
@@ -51,10 +51,10 @@ class CacheTestCace(TestCase):
         key2_expiry = 1000
 
         c = Cache()
-        c.set(key1, expected1)
-        c.set(key2, expected2, key2_expiry)
+        c.set(key1, expected1, 0.0, None)
+        c.set(key2, expected2, key2_expiry, None)
 
-        returned1 = c.get(key1, True)
+        returned1 = c.get(key1, None, True)
         sleep(0.01)
 
         self.assertEquals(returned1.value, expected1)
@@ -66,7 +66,7 @@ class CacheTestCace(TestCase):
         self.assertLess(returned1.last_read, c.get_timestamp())
         self.assertLess(returned1.last_write, c.get_timestamp())
 
-        returned2 = c.get(key2, True)
+        returned2 = c.get(key2, None, True)
         sleep(0.01)
 
         self.assertEquals(returned2.value, expected2)
@@ -87,14 +87,14 @@ class CacheTestCace(TestCase):
         key3, expected3 = 'key3', 'value3'
 
         c = Cache()
-        c.set(key1, expected1)
-        c.set(key2, expected2)
-        c.set(key3, expected3)
+        c.set(key1, expected1, 1.0, None)
+        c.set(key2, expected2, 1.0, None)
+        c.set(key3, expected3, 1.0, None)
 
         # Add one second to be sure that at least that much time elapsed between when keys were stored and current time.
         now = c.get_timestamp() + 1
 
-        returned1 = c.get(key1, True)
+        returned1 = c.get(key1, None, True)
         self.assertEquals(returned1.value, expected1)
         self.assertEquals(returned1.position, 2)
         self.assertLess(returned1.last_read, now)
@@ -103,7 +103,7 @@ class CacheTestCace(TestCase):
         self.assertLess(returned1.prev_write, now)
 
 
-        returned2 = c.get(key2, True)
+        returned2 = c.get(key2, None, True)
         self.assertEquals(returned2.value, expected2)
         self.assertEquals(returned2.position, 2)
         self.assertLess(returned2.last_read, now)
@@ -111,7 +111,7 @@ class CacheTestCace(TestCase):
         self.assertLess(returned2.prev_read, now)
         self.assertLess(returned2.prev_write, now)
 
-        returned3 = c.get(key3, True)
+        returned3 = c.get(key3, None, True)
         self.assertEquals(returned3.value, expected3)
         self.assertEquals(returned3.position, 2)
         self.assertLess(returned3.last_read, now)
@@ -129,9 +129,9 @@ class CacheTestCace(TestCase):
         key3, expected3 = 'key3', 'value3'
 
         c = Cache(max_size)
-        c.set(key1, expected1)
-        c.set(key2, expected2)
-        c.set(key3, expected3)
+        c.set(key1, expected1, 1.0, None)
+        c.set(key2, expected2, 1.0, None)
+        c.set(key3, expected3, 1.0, None)
 
         # The value of max_size is 2 but we added 3 keys and there were no .get in between .set calls,
         # so we now expect that the first key will have been evicted and only key2 and key3 still exist.
@@ -152,11 +152,11 @@ class CacheTestCace(TestCase):
         expected1_new = 'value1_new'
 
         c = Cache()
-        c.set(key1, expected1)
-        c.set(key1, expected1_new)
+        c.set(key1, expected1, 1.0, None)
+        c.set(key1, expected1_new, 1.0, None)
 
-        returned1_a = c.get(key1)
-        returned1_b = c.get(key1, True)
+        returned1_a = c.get(key1, None, False)
+        returned1_b = c.get(key1, None, True)
 
         self.assertEquals(len(c), 1)
         self.assertEquals(returned1_a, expected1_new)
@@ -176,12 +176,12 @@ class CacheTestCace(TestCase):
         sleep_time = expiry - expiry * 0.01
 
         c = Cache(extend_expiry_on_get=True)
-        c.set(key1, expected1, expiry)
+        c.set(key1, expected1, expiry, None)
 
         sleep(sleep_time)
 
-        returned1_a = c.get(key1)
-        returned1_b = c.get(key1, True)
+        returned1_a = c.get(key1, None, False)
+        returned1_b = c.get(key1, None, True)
 
         self.assertEquals(returned1_a, expected1)
         self.assertEquals(len(c), 1)
@@ -189,8 +189,8 @@ class CacheTestCace(TestCase):
 
         sleep(sleep_time)
 
-        returned1_a = c.get(key1)
-        returned1_b = c.get(key1, True)
+        returned1_a = c.get(key1, None, False)
+        returned1_b = c.get(key1, None, True)
 
         self.assertEquals(returned1_a, expected1)
         self.assertEquals(len(c), 1)
@@ -209,12 +209,12 @@ class CacheTestCace(TestCase):
         sleep_time = expiry - expiry * 0.01
 
         c = Cache(extend_expiry_on_get=False)
-        c.set(key1, expected1, expiry)
+        c.set(key1, expected1, expiry, None)
 
         sleep(sleep_time)
 
-        returned1_a = c.get(key1)
-        returned1_b = c.get(key1, True)
+        returned1_a = c.get(key1, None, False)
+        returned1_b = c.get(key1, None, True)
 
         self.assertEquals(returned1_a, expected1)
         self.assertEquals(len(c), 1)
@@ -222,8 +222,11 @@ class CacheTestCace(TestCase):
 
         sleep(sleep_time)
 
-        self.assertRaises(KeyExpiredError, c.get, key1)
-        self.assertRaises(KeyError, c.get, key1, True)
+        self.assertRaises(KeyExpiredError, c.get, key1, None, False)
+
+        no_such_key_marker = object()
+        value = c.get(key1, no_such_key_marker, True)
+        self.assertIs(value, no_such_key_marker)
 
 # ################################################################################################################################
 
@@ -233,12 +236,12 @@ class CacheTestCace(TestCase):
         expected1_new = 'value1_new'
 
         c = Cache(extend_expiry_on_set=True)
-        c.set(key1, expected1, 0.1)
+        c.set(key1, expected1, 3.0, None)
         sleep(0.11)
-        c.set(key1, expected1_new)
+        c.set(key1, expected1_new, 0.0, None)
 
-        returned1_a = c.get(key1)
-        returned1_b = c.get(key1, True)
+        returned1_a = c.get(key1, None, False)
+        returned1_b = c.get(key1, None, True)
 
         self.assertEquals(len(c), 1)
         self.assertEquals(returned1_a, expected1_new)
@@ -252,10 +255,10 @@ class CacheTestCace(TestCase):
         expected1_new = 'value1_new'
 
         c = Cache(extend_expiry_on_set=False)
-        c.set(key1, expected1, 0.1)
+        c.set(key1, expected1, 0.1, None)
         sleep(0.11)
 
-        self.assertRaises(KeyExpiredError, c.set, key1, expected1_new)
+        self.assertRaises(KeyExpiredError, c.set, key1, expected1_new, 0.0, None)
         self.assertEquals(len(c), 0)
         self.assertListEqual(c._expired_on_op, [key1])
 
@@ -273,9 +276,9 @@ class CacheTestCace(TestCase):
         key3, expected3 = 'key3', 'value3'
 
         c = Cache(max_size)
-        c.set(key1, expected1)
-        c.set(key2, expected2)
-        c.set(key3, expected3)
+        c.set(key1, expected1, 5.0, None)
+        c.set(key2, expected2, 5.0, None)
+        c.set(key3, expected3, 5.0, None)
 
 
         self.assertEquals(len(c.hits_per_position), 2)
@@ -285,33 +288,31 @@ class CacheTestCace(TestCase):
 
         # Right now index0 is key3, so when we look up this key 3 times, we always find it at index0
 
-        c.get('key3')
-        c.get('key3')
-        c.get('key3')
+        c.get('key3', None, False)
+        c.get('key3', None, False)
+        c.get('key3', None, False)
         self.assertEquals(c.hits_per_position[0], 3)
 
 
         # Now get key2 which will be found at index1 and getting it will move it to index0
 
-        c.get('key2')
+        c.get('key2', None, False)
         self.assertEquals(c.hits_per_position[1], 1)
 
 
         # Now key2 is at index0 so getting this key will increase index0's counter
 
-        c.get('key2')
-        c.get('key2')
-        c.get('key2')
+        c.get('key2', None, False)
+        c.get('key2', None, False)
+        c.get('key2', None, False)
         self.assertEquals(c.hits_per_position[0], 6)
-
 
         # Make sure index1's counter is still the same as it was
         self.assertEquals(c.hits_per_position[1], 1)
 
-
         # Looking up unknown keys should not increase any counters
         try:
-            c.get(uuid4().hex)
+            c.get(uuid4().hex, None, False)
         except KeyError:
             pass
 
@@ -328,9 +329,9 @@ class CacheTestCace(TestCase):
         key3, expected3 = 'key3', 'value3'
 
         c = Cache()
-        c.set(key1, expected1)
-        c.set(key2, expected2)
-        c.set(key3, expected3)
+        c.set(key1, expected1, 0.0, None)
+        c.set(key2, expected2, 0.0, None)
+        c.set(key3, expected3, 0.0, None)
 
         c.delete(key1)
 
@@ -348,9 +349,9 @@ class CacheTestCace(TestCase):
         key3, expected3 = 'key3', 'value3'
 
         c = Cache()
-        c.set(key1, expected1, 0.1)
-        c.set(key2, expected2)
-        c.set(key3, expected3, 0.03)
+        c.set(key1, expected1, 0.1, None)
+        c.set(key2, expected2, 0.0, None)
+        c.set(key3, expected3, 0.03, None)
 
         sleep(0.12)
 
@@ -371,14 +372,14 @@ class CacheTestCace(TestCase):
         key3, expected3 = 'key3', 'value3'
 
         c = Cache()
-        c.set(key1, expected1, 0.03)
-        c.set(key2, expected2)
-        c.set(key3, expected3, 0.05)
+        c.set(key1, expected1, 0.03, None)
+        c.set(key2, expected2, 0.0, None)
+        c.set(key3, expected3, 0.05, None)
 
         sleep(0.12)
 
-        self.assertRaises(KeyExpiredError, c.get, key1)
-        self.assertRaises(KeyExpiredError, c.get, key3)
+        self.assertRaises(KeyExpiredError, c.get, key1, None, False)
+        self.assertRaises(KeyExpiredError, c.get, key3, None, False)
 
         self.assertEquals(len(c), 1)
         self.assertNotIn(key1, c)
@@ -403,9 +404,9 @@ class CacheTestCace(TestCase):
         c = Cache(max_item_size=6)
 
         # No exception should be raised by the calls below as all values are not greater than max_item_size
-        c.set(key1, expected1)
-        c.set(key2, expected2)
-        c.set(key3, expected3)
+        c.set(key1, expected1, 0.0, None)
+        c.set(key2, expected2, 0.0, None)
+        c.set(key3, expected3, 0.0, None)
 
 # ################################################################################################################################
 
@@ -418,12 +419,12 @@ class CacheTestCace(TestCase):
         c = Cache(max_item_size=6)
 
         # The first two must succeed
-        c.set(key1, expected1)
-        c.set(key2, expected2)
+        c.set(key1, expected1, 0.0, None)
+        c.set(key2, expected2, 0.0, None)
 
         # This fails because expected3 is > than max_item_size
         try:
-            c.set(key3, expected3)
+            c.set(key3, expected3, 0.0, None)
         except ValueError, e:
             self.assertEquals(e.message, 'Value too long 7 > 6')
         else:
@@ -442,21 +443,21 @@ class CacheTestCace(TestCase):
 
         # No exception should be raised by the calls below as all values are numbers
 
-        c.set(key1, expected1)
-        c.set(key2, expected2)
-        c.set(key3, expected3)
-        c.set(key4, expected4)
+        c.set(key1, expected1, 0.0, None)
+        c.set(key2, expected2, 0.0, None)
+        c.set(key3, expected3, 0.0, None)
+        c.set(key4, expected4, 0.0, None)
 
-        returned1 = c.get(key1)
+        returned1 = c.get(key1, None, False)
         self.assertEquals(returned1, expected1)
 
-        returned2 = c.get(key2)
+        returned2 = c.get(key2, None, False)
         self.assertEquals(returned2, expected2)
 
-        returned3 = c.get(key3)
+        returned3 = c.get(key3, None, False)
         self.assertEquals(returned3, expected3)
 
-        returned4 = c.get(key4)
+        returned4 = c.get(key4, None, False)
         self.assertEquals(returned4, expected4)
 
 
@@ -474,12 +475,9 @@ class CacheTestCace(TestCase):
         c = Cache(max_item_size=1)
 
         # No exception should be raised by the calls below value is a non-string Python object
-        c.set(key1, expected1)
+        c.set(key1, expected1, 0.0, None)
 
-        returned1 = c.get(key1)
+        returned1 = c.get(key1, None, False)
         self.assertIs(returned1, expected1)
 
 # ################################################################################################################################
-
-if __name__ == '__main__':
-    unittest_main()

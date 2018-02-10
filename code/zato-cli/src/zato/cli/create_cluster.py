@@ -803,11 +803,7 @@ class Create(ZatoCommand):
 
     def add_check(self, session, cluster, service, pubapi_sec):
 
-        if 'fixed-width' in service.name:
-            data_formats = [DATA_FORMAT.FIXED_WIDTH]
-        else:
-            data_formats = [DATA_FORMAT.JSON, DATA_FORMAT.XML]
-
+        data_formats = [DATA_FORMAT.JSON, DATA_FORMAT.XML]
         for data_format in data_formats:
 
             name = 'zato.checks.{}.{}'.format(data_format, service.name)
