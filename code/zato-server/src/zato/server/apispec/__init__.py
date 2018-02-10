@@ -76,9 +76,10 @@ class SimpleIO(object):
 class ServiceInfo(object):
     """ Contains information about a service basing on which documentation is generated.
     """
-    def __init__(self, name, service_class):
+    def __init__(self, name, service_class, simple_io_config):
         self.name = name
         self.service_class = service_class
+        self.simple_io_config = simple_io_config
         self.config = Config()
         self.simple_io = {}
         self.docstring = Docstring()
@@ -153,10 +154,10 @@ class ServiceInfo(object):
                         if isinstance(param, AsIs):
                             type_info = api_spec_info.DEFAULT
 
-                        elif is_bool(param, param_name, SIMPLE_IO.BOOL_PARAMETERS.PREFIXES):
+                        elif is_bool(param, param_name, self.simple_io_config.bool.prefix):
                             type_info = api_spec_info.BOOLEAN
 
-                        elif is_int(param_name, SIMPLE_IO.INT_PARAMETERS.VALUES, SIMPLE_IO.INT_PARAMETERS.SUFFIXES):
+                        elif is_int(param_name, self.simple_io_config.int.exact, self.simple_io_config.int.suffix):
                             type_info = api_spec_info.INTEGER
 
                         else:
@@ -235,8 +236,9 @@ class ServiceInfo(object):
 # ################################################################################################################################
 
 class Generator(object):
-    def __init__(self, service_store_services, query=None):
+    def __init__(self, service_store_services, simple_io_config, query=None):
         self.service_store_services = service_store_services
+        self.simple_io_config = simple_io_config
         self.query = query
         self.services = {}
 
@@ -317,9 +319,11 @@ class Generator(object):
 
     def parse(self, ignore_prefix):
         for impl_name, details in self.service_store_services.iteritems():
-            if (not ignore_prefix) or impl_name.startswith(ignore_prefix):
+            if ignore_prefix and impl_name.startswith(ignore_prefix):
+                continue
+            else:
                 details = bunchify(details)
-                info = ServiceInfo(details['name'], details['service_class'])
+                info = ServiceInfo(details['name'], details['service_class'], self.simple_io_config)
                 self.services[info.name] = info
 
         for name, info in self.services.iteritems():
