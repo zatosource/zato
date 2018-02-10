@@ -175,7 +175,7 @@ class ConfigDict(object):
 # ################################################################################################################################
 
     @staticmethod
-    def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False):
+    def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False, decrypt_func=None):
         """ Return a new ConfigDict with items taken from an SQL query.
         """
         config_dict = ConfigDict(name)
@@ -207,7 +207,7 @@ class ConfigDict(object):
                     config_dict._impl[item_name].config = item_class()
                     for attr_name in attrs.keys():
                         value = getattr(item, attr_name)
-                        value = resolve_value(attr_name, value)
+                        value = resolve_value(attr_name, value, decrypt_func)
                         config_dict._impl[item_name]['config'][attr_name] = value
 
         return config_dict

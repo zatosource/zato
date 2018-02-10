@@ -37,7 +37,7 @@ from springpython.context import DisposableObject
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common import DATA_FORMAT, KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common import DATA_FORMAT, KVDB, SECRETS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
 from zato.common.zato_keyutils import KeyUtils
@@ -653,17 +653,17 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
-    def encrypt(self, data):
+    def encrypt(self, data, _prefix=SECRETS.PREFIX):
         """ Returns data encrypted using server's CryptoManager.
         """
-        return self.crypto_manager.encrypt(data)
+        return '{}{}'.format(_prefix, self.crypto_manager.encrypt(data.encode('utf8')))
 
 # ################################################################################################################################
 
-    def decrypt(self, encrypted):
+    def decrypt(self, encrypted, _prefix=SECRETS.PREFIX):
         """ Returns data decrypted using server's CryptoManager.
         """
-        return self.crypto_manager.decrypt(encrypted)
+        return self.crypto_manager.decrypt(encrypted.replace(_prefix, '', 1))
 
 # ################################################################################################################################
 
