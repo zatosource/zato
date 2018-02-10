@@ -188,7 +188,7 @@ class SecurityBase(Base):
     # It's nullable because some children classes do not use usernames
     username = Column(String(200), nullable=True)
 
-    password = Column(String(64), nullable=True)
+    password = Column(String(1000), nullable=True)
     password_type = Column(String(45), nullable=True)
     is_active = Column(Boolean(), nullable=False)
     sec_type = Column(String(45), nullable=False)

@@ -33,7 +33,6 @@ from sqlalchemy.util import KeyedTuple
 from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, SIMPLE_IO, simple_types, TRACE1, ZatoException, \
      ZATO_OK
 from zato.common.util import make_repr
-from zato.server.service.reqresp.fixed_width import FixedWidth
 from zato.server.service.reqresp.sio import AsIs, convert_param, ForceType, ServiceInput, SIOConverter
 
 logger = logging.getLogger(__name__)
@@ -121,13 +120,15 @@ class Request(SIOConverter):
         self.params_priority = PARAMS_PRIORITY.DEFAULT
         self.amqp = None
         self.wmq = None
+        self.encrypt_func = None
 
 # ################################################################################################################################
 
-    def init(self, is_sio, cid, sio, data_format, transport, wsgi_environ):
+    def init(self, is_sio, cid, sio, data_format, transport, wsgi_environ, encrypt_func):
         """ Initializes the object with an invocation-specific data.
         """
         self.input = ServiceInput()
+        self.encrypt_func = encrypt_func
 
         if is_sio:
             self.init_flat_sio(cid, sio, data_format, transport, wsgi_environ, getattr(sio, 'input_required', []))
@@ -207,7 +208,8 @@ class Request(SIOConverter):
                 param_name, value = convert_param(
                     self.cid, '' if use_channel_params_only else self.payload, param, self.data_format, is_required,
                     default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
-                    self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes, self.params_priority)
+                    self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes,
+                    self.encrypt_func, self.params_priority)
                 params[param_name] = value
 
             except Exception, e:
@@ -353,7 +355,7 @@ class SimpleIOPayload(SIOConverter):
             return elem_value
         else:
             return self.convert(self.zato_cid, name, lookup_name, elem_value, True, self.zato_is_xml,
-                self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes, None,
+                self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes, None, None,
                 self.zato_data_format, True)
 
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):

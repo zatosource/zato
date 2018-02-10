@@ -653,6 +653,20 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def encrypt(self, data):
+        """ Returns data encrypted using server's CryptoManager.
+        """
+        return self.crypto_manager.encrypt(data)
+
+# ################################################################################################################################
+
+    def decrypt(self, encrypted):
+        """ Returns data decrypted using server's CryptoManager.
+        """
+        return self.crypto_manager.decrypt(encrypted)
+
+# ################################################################################################################################
+
     @staticmethod
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.

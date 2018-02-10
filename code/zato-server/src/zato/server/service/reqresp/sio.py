@@ -160,7 +160,7 @@ class Dict(ForceType):
             for key in self.args:
                 v = value.get(key, self.default)
                 if v == NO_DEFAULT_VALUE:
-                    raise ValidationException(self.name, value, key, 'Dict [{}] [{}]  has no key [{}]')
+                    raise ValidationException(self.name, value, key, 'Dict `{}` `{}`  has no key `{}`')
                 else:
                     out[key] = v
 
@@ -334,14 +334,20 @@ def is_bool(param, param_name, bool_parameter_prefixes, _Boolean=Boolean):
 # ################################################################################################################################
 
 def is_int(param_name, int_params, int_param_suffixes):
-        if any(param_name==elem for elem in int_params) or any(param_name.endswith(suffix) for suffix in int_param_suffixes):
-            return True
+    if any(param_name==elem for elem in int_params) or any(param_name.endswith(suffix) for suffix in int_param_suffixes):
+        return True
+
+# ################################################################################################################################
+
+def is_secret(param_name, _secret_params=('password', 'password1', 'password2', 'secret_key', 'auth_token')):
+    # Zato 3.1+ will have SIO rewritten to handle user-specified parameters but today this list is fixed.
+    return param_name in _secret_params
 
 # ################################################################################################################################
 
 def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, bool_parameter_prefixes, int_parameters,
-    int_parameter_suffixes, date_time_format=None, data_format=ZATO_NONE, from_sio_to_external=False,
-    special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC), _is_bool=is_bool, _is_int=is_int):
+    int_parameter_suffixes, encrypt_func, date_time_format=None, data_format=ZATO_NONE, from_sio_to_external=False,
+    special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC), _is_bool=is_bool, _is_int=is_int, _is_secret=is_secret):
     try:
         if _is_bool(param, param_name, bool_parameter_prefixes):
             value = asbool(value or None) # value can be an empty string and asbool chokes on that
@@ -358,6 +364,8 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
                 if value and (value not in special_values) and has_simple_io_config:
                     if _is_int(param_name, int_parameters, int_parameter_suffixes):
                         value = int(value)
+                    elif _is_secret(param_name):
+                        value = encrypt_func(value.encode('utf8'))
 
         return value
 
@@ -412,14 +420,6 @@ def convert_from_xml(payload, param_name, cid, is_required, is_complex, default_
 
 # ################################################################################################################################
 
-def convert_from_fixed_width(payload, param_name, cid, *ignored):
-    print(111, payload)
-    print(222, param_name)
-    print(333, cid)
-    print(444, ignored)
-
-# ################################################################################################################################
-
 convert_impl = {
     DATA_FORMAT.JSON: convert_from_json,
     DATA_FORMAT.XML: convert_from_xml,
@@ -431,7 +431,7 @@ convert_impl = {
 # ################################################################################################################################
 
 def convert_param(cid, payload, param, data_format, is_required, default_value, path_prefix, use_text, channel_params,
-    has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes, params_priority):
+    has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes, encrypt_func, params_priority):
     """ Converts request parameters from any data format supported into Python objects.
     """
     param_name = param.name if isinstance(param, ForceType) else param
@@ -446,7 +446,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
     # Convert it to a native Python data type
     if channel_value != ZATO_NONE:
         channel_value = convert_sio(cid, param, param_name, channel_value, has_simple_io_config, False, bool_parameter_prefixes,
-                    int_parameters, int_parameter_suffixes, None, data_format, False)
+            int_parameters, int_parameter_suffixes, encrypt_func, None, data_format, False)
 
     # Return the value immediately if we already know channel_params are of higer priority
     if params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG and channel_value != ZATO_NONE:
@@ -456,7 +456,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
 
     if payload is not None:
         value = convert_impl[data_format](payload, param_name, cid, is_required, isinstance(param, COMPLEX_VALUE),
-                                          default_value, path_prefix, use_text)
+            default_value, path_prefix, use_text)
     else:
         value = NOT_GIVEN
 
@@ -487,7 +487,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
 
         if not isinstance(param, (AsIs, Opaque)):
             return param_name, convert_sio(cid, param, param_name, value, has_simple_io_config, data_format==DATA_FORMAT.XML,
-                bool_parameter_prefixes, int_parameters, int_parameter_suffixes, None, data_format, False)
+                bool_parameter_prefixes, int_parameters, int_parameter_suffixes, encrypt_func, None, data_format, False)
 
     return param_name, value
 
