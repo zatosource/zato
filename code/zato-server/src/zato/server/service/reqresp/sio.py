@@ -24,8 +24,8 @@ from lxml.objectify import Element
 from paste.util.converters import asbool
 
 # Zato
-from zato.common import APISPEC, DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, path, ZatoException, \
-     ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common import APISPEC, DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, path, SECRETS, \
+     ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.exception import BadRequest, Reportable
 from zato.common.pubsub import PubSubMessage
 
@@ -339,9 +339,9 @@ def is_int(param_name, int_params, int_param_suffixes):
 
 # ################################################################################################################################
 
-def is_secret(param_name, _secret_params=('password', 'password1', 'password2', 'secret_key', 'auth_token')):
+def is_secret(param_name, _secrets_params=SECRETS.PARAMS):
     # Zato 3.1+ will have SIO rewritten to handle user-specified parameters but today this list is fixed.
-    return param_name in _secret_params
+    return param_name in _secrets_params
 
 # ################################################################################################################################
 

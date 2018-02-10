@@ -207,7 +207,7 @@ class ConfigDict(object):
                     config_dict._impl[item_name].config = item_class()
                     for attr_name in attrs.keys():
                         value = getattr(item, attr_name)
-                        value = resolve_value(value)
+                        value = resolve_value(attr_name, value)
                         config_dict._impl[item_name]['config'][attr_name] = value
 
         return config_dict
