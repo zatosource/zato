@@ -37,6 +37,7 @@ from itertools import ifilter, izip, izip_longest, tee
 from operator import itemgetter
 from os import getuid
 from os.path import abspath, isabs, join
+from platform import system as platform_system
 from pprint import pprint as _pprint, PrettyPrinter
 from pwd import getpwuid
 from string import Template
@@ -1017,16 +1018,21 @@ def get_free_port(start=30000):
 # ################################################################################################################################
 
 # Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
-def is_port_taken(port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.bind(('', port))
-        sock.close()
-    except socket.error as e:
-        if e[0] == errno.EADDRINUSE:
-            return True
-        raise
-    return False
+def is_port_taken(port, is_linux=platform_system().lower()=='linux'):
+    # Short for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
+    if is_linux:
+        for conn in psutil.net_connections(kind='tcp'):
+            if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
+                return True
+    else:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.bind(('', port))
+            sock.close()
+        except socket.error as e:
+            if e[0] == errno.EADDRINUSE:
+                return True
+            raise
 
 # ################################################################################################################################
 

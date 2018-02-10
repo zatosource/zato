@@ -22,7 +22,7 @@ from docformatter import format_docstring
 from markdown import markdown
 
 # Zato
-from zato.common import APISPEC, SIMPLE_IO
+from zato.common import APISPEC
 from zato.server.service.reqresp.sio import AsIs, SIO_TYPE_MAP, is_bool, is_int
 
 # ################################################################################################################################

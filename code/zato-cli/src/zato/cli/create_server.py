@@ -345,7 +345,7 @@ suffix=_id, _count, _size, _timeout
 prefix=is_, needs_, should_, by_, has_
 
 [secret]
-exact=password, secret_key, auth_token
+exact=password, password1, password2, secret_key, auth_token
 """.lstrip()
 
 lua_zato_rename_if_exists = """
