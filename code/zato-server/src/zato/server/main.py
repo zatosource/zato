@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -20,6 +20,9 @@ cloghandler = cloghandler # For pyflakes
 from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log
+
+# ConfigObj
+from configobj import ConfigObj
 
 # gunicorn
 import gunicorn
@@ -42,10 +45,14 @@ import yaml
 
 # Zato
 from zato.common import TRACE1
+from zato.common.cli_util import read_stdin_data
+from zato.common.crypto import ServerCryptoManager
 from zato.common.repo import RepoManager
 from zato.common.ipaddress_ import get_preferred_ip
-from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_crypto_manager, \
-     get_kvdb_config_for_log, parse_cmd_line_options, register_diag_handlers, store_pidfile
+from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_kvdb_config_for_log, \
+     parse_cmd_line_options, register_diag_handlers, store_pidfile
+
+# ################################################################################################################################
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
@@ -58,6 +65,8 @@ class ZatoGunicornApplication(Application):
         self.zato_config = {}
         super(ZatoGunicornApplication, self).__init__(*args, **kwargs)
 
+# ################################################################################################################################
+
     def init(self, *ignored_args, **ignored_kwargs):
         self.cfg.set('post_fork', self.zato_wsgi_app.post_fork) # Initializes a worker
         self.cfg.set('on_starting', self.zato_wsgi_app.on_starting) # Generates the deployment key
@@ -68,7 +77,7 @@ class ZatoGunicornApplication(Application):
                 k = k.replace('gunicorn_', '')
                 if k == 'bind':
                     if not ':' in v:
-                        raise ValueError('No port found in main.gunicorn_bind [{v}]; a proper value is, for instance, [{v}:17010]'.format(v=v))
+                        raise ValueError('No port found in main.gunicorn_bind `{}`, such as `{}:17010`'.format(v))
                     else:
                         host, port = v.split(':')
                         self.zato_host = host
@@ -83,9 +92,7 @@ class ZatoGunicornApplication(Application):
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
 
-        # TLS is new in 2.0 and we need to assume it's not enabled. In Zato 2.1 or later
-        # this will be changed to assume that we are always over TLS by default.
-        if asbool(self.crypto_config.get('use_tls', False)):
+        if asbool(self.crypto_config.use_tls):
             self.cfg.set('ssl_version', getattr(ssl, 'PROTOCOL_{}'.format(self.crypto_config.tls_protocol)))
             self.cfg.set('ciphers', self.crypto_config.tls_ciphers)
             self.cfg.set('cert_reqs', getattr(ssl, 'CERT_{}'.format(self.crypto_config.tls_client_certs.upper())))
@@ -98,6 +105,8 @@ class ZatoGunicornApplication(Application):
 
     def load(self):
         return self.zato_wsgi_app.on_wsgi_request
+
+# ################################################################################################################################
 
 def run(base_dir, start_gunicorn_app=True, options=None):
     options = options or {}
@@ -144,7 +153,10 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     logger = logging.getLogger(__name__)
     kvdb_logger = logging.getLogger('zato_kvdb')
 
-    config = get_config(repo_location, 'server.conf')
+    crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
+    secrets_conf = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
+
+    config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_conf)
     pickup_config = get_config(repo_location, 'pickup.conf')
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
@@ -187,14 +199,10 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     if asbool(config.odb.use_async_driver) and config.odb.engine == 'postgresql':
         make_psycopg_green()
 
-    # New in 2.0 - Put HTTP_PROXY in os.environ.
-    http_proxy = config.misc.get('http_proxy', False)
-    if http_proxy:
-        os.environ['http_proxy'] = http_proxy
+    if config.misc.http_proxy:
+        os.environ['http_proxy'] = config.misc.http_proxy
 
-    crypto_manager = get_crypto_manager(repo_location, app_context, config)
     server = app_context.get_object('server')
-
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, config.main, config.crypto)
 
     server.crypto_manager = crypto_manager
@@ -277,9 +285,13 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     else:
         return zato_gunicorn_app.zato_wsgi_app
 
+# ################################################################################################################################
+
 if __name__ == '__main__':
     base_dir = sys.argv[1]
     if not os.path.isabs(base_dir):
         base_dir = os.path.abspath(os.path.join(os.getcwd(), base_dir))
 
     run(base_dir, options=parse_cmd_line_options(sys.argv[2]))
+
+# ################################################################################################################################

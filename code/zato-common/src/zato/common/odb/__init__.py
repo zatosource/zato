@@ -56,7 +56,7 @@ def create_pool(crypto_manager, engine_params, ping_query):
 
     engine_params = copy.deepcopy(engine_params)
     if engine_params['engine'] != 'sqlite':
-        engine_params['password'] = str(crypto_manager.decrypt(engine_params['password']))
+        engine_params['password'] = str(engine_params['password'])
         engine_params['extra']['pool_size'] = engine_params.pop('pool_size')
 
     engine = create_engine(get_engine_url(engine_params), **engine_params['extra'])

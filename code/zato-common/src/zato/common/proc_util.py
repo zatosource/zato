@@ -58,7 +58,7 @@ class _StdErr(object):
 # ################################################################################################################################
 
 def start_python_process(run_in_fg, py_path, name, program_dir, on_keyboard_interrupt=None, failed_to_start_err=-100,
-    extra_options=None, stderr_path=None):
+    extra_options=None, stderr_path=None, stdin_data=None):
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
     stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(name.replace(' ','')))[1]
@@ -77,7 +77,7 @@ def start_python_process(run_in_fg, py_path, name, program_dir, on_keyboard_inte
 
     try:
         _stderr = _StdErr(stderr_path, stderr_sleep_fg if run_in_fg else stderr_sleep_bg)
-        sarge_run(program, async=False if run_in_fg else True)
+        sarge_run(program, async=False if run_in_fg else True, input=stdin_data)
 
         # Wait a moment for any potential errors
         _err = _stderr.wait_for_error()
