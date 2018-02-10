@@ -324,10 +324,12 @@ class ConfigLoader(object):
         self.config.json_pointer = ConfigDict.from_query('json_pointer', query)
 
         # SimpleIO
+        # In preparation for a SIO rewrite, we loaded SIO config from a file
+        # but actual code paths require the pre-3.0 format so let's prepare it here.
         self.config.simple_io = ConfigDict('simple_io', Bunch())
-        self.config.simple_io['int_parameters'] = self.int_parameters
-        self.config.simple_io['int_parameter_suffixes'] = self.int_parameter_suffixes
-        self.config.simple_io['bool_parameter_prefixes'] = self.bool_parameter_prefixes
+        self.config.simple_io['int_parameters'] = self.sio_config.int.exact
+        self.config.simple_io['int_parameter_suffixes'] = self.sio_config.int.suffix
+        self.config.simple_io['bool_parameter_prefixes'] = self.sio_config.bool.prefix
 
         # Pub/sub
         self.config.pubsub = Bunch()
