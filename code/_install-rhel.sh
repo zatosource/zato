@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PYTHON_VER="2.7.13"
-PYTHON_URL="https://www.python.org/ftp/python/$PYTHON_VER/Python-$PYTHON_VER.tgz"
+PYTHON_URL="https://travis-ci-integration.s3.amazonaws.com/python27/python27.tar.bz2"
 PYTHON_PREFIX="/opt/zato/python/$PYTHON_VER"
 PATH="$PYTHON_PREFIX/bin:$PATH"
 
@@ -15,20 +15,10 @@ sudo yum -y install \
 if ! [ "$(type -p python2.7)" ]
 then
     # CentOS 6.x requires python2.7 build.
-    (
-        cd /tmp
-        wget "$PYTHON_URL"
-        tar zxf "Python-$PYTHON_VER.tgz"
-        cd "Python-$PYTHON_VER"
-        ./configure --quiet --prefix="$PYTHON_PREFIX"
-        # Travis CI always has at least 2 vCPUs.
-        make -j 2 >/dev/null
-        sudo make altinstall >/dev/null
-    )
+    curl "$PYTHON_URL" | sudo tar -C / -jx
 fi
 
-wget -P /tmp https://bootstrap.pypa.io/get-pip.py
-sudo $(type -p python2.7) /tmp/get-pip.py
+curl https://bootstrap.pypa.io/get-pip.py | sudo $(type -p python2.7)
 sudo $(type -p python2.7) -m pip install -U setuptools virtualenv==15.1.0
 
 python2.7 -m virtualenv .
