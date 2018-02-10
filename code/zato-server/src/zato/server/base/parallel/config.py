@@ -45,10 +45,10 @@ class ConfigLoader(object):
         #
 
         query = self.odb.get_cassandra_conn_list(server.cluster.id, True)
-        self.config.cassandra_conn = ConfigDict.from_query('cassandra_conn', query)
+        self.config.cassandra_conn = ConfigDict.from_query('cassandra_conn', query, decrypt_func=self.decrypt)
 
         query = self.odb.get_cassandra_query_list(server.cluster.id, True)
-        self.config.cassandra_query = ConfigDict.from_query('cassandra_query', query)
+        self.config.cassandra_query = ConfigDict.from_query('cassandra_query', query, decrypt_func=self.decrypt)
 
         #
         # Cassandra - end
@@ -59,10 +59,10 @@ class ConfigLoader(object):
         #
 
         query = self.odb.get_search_es_list(server.cluster.id, True)
-        self.config.search_es = ConfigDict.from_query('search_es', query)
+        self.config.search_es = ConfigDict.from_query('search_es', query, decrypt_func=self.decrypt)
 
         query = self.odb.get_search_solr_list(server.cluster.id, True)
-        self.config.search_solr = ConfigDict.from_query('search_solr', query)
+        self.config.search_solr = ConfigDict.from_query('search_solr', query, decrypt_func=self.decrypt)
 
         #
         # Search - end
@@ -73,7 +73,7 @@ class ConfigLoader(object):
         #
 
         query = self.odb.get_sms_twilio_list(server.cluster.id, True)
-        self.config.sms_twilio = ConfigDict.from_query('sms_twilio', query)
+        self.config.sms_twilio = ConfigDict.from_query('sms_twilio', query, decrypt_func=self.decrypt)
 
         #
         # SMS - end
@@ -86,10 +86,10 @@ class ConfigLoader(object):
         # OpenStack - Swift
 
         query = self.odb.get_cloud_openstack_swift_list(server.cluster.id, True)
-        self.config.cloud_openstack_swift = ConfigDict.from_query('cloud_openstack_swift', query)
+        self.config.cloud_openstack_swift = ConfigDict.from_query('cloud_openstack_swift', query, decrypt_func=self.decrypt)
 
         query = self.odb.get_cloud_aws_s3_list(server.cluster.id, True)
-        self.config.cloud_aws_s3 = ConfigDict.from_query('cloud_aws_s3', query)
+        self.config.cloud_aws_s3 = ConfigDict.from_query('cloud_aws_s3', query, decrypt_func=self.decrypt)
 
         #
         # Cloud - end
@@ -99,7 +99,7 @@ class ConfigLoader(object):
 
         # Services
         query = self.odb.get_service_list(server.cluster.id, True)
-        self.config.service = ConfigDict.from_query('service_list', query)
+        self.config.service = ConfigDict.from_query('service_list', query, decrypt_func=self.decrypt)
 
         #
         # Definitions - start
@@ -107,10 +107,10 @@ class ConfigLoader(object):
 
         # AMQP
         query = self.odb.get_definition_amqp_list(server.cluster.id, True)
-        self.config.definition_amqp = ConfigDict.from_query('definition_amqp', query)
+        self.config.definition_amqp = ConfigDict.from_query('definition_amqp', query, decrypt_func=self.decrypt)
 
         query = self.odb.get_definition_wmq_list(server.cluster.id, True)
-        self.config.definition_wmq = ConfigDict.from_query('definition_wmq', query)
+        self.config.definition_wmq = ConfigDict.from_query('definition_wmq', query, decrypt_func=self.decrypt)
 
         #
         # Definitions - end
@@ -122,15 +122,15 @@ class ConfigLoader(object):
 
         # AMQP
         query = self.odb.get_channel_amqp_list(server.cluster.id, True)
-        self.config.channel_amqp = ConfigDict.from_query('channel_amqp', query)
+        self.config.channel_amqp = ConfigDict.from_query('channel_amqp', query, decrypt_func=self.decrypt)
 
         # STOMP
         query = self.odb.get_channel_stomp_list(server.cluster.id, True)
-        self.config.channel_stomp = ConfigDict.from_query('channel_stomp', query)
+        self.config.channel_stomp = ConfigDict.from_query('channel_stomp', query, decrypt_func=self.decrypt)
 
         # IBM MQ
         query = self.odb.get_channel_wmq_list(server.cluster.id, True)
-        self.config.channel_wmq = ConfigDict.from_query('channel_wmq', query)
+        self.config.channel_wmq = ConfigDict.from_query('channel_wmq', query, decrypt_func=self.decrypt)
 
         #
         # Channels - end
@@ -142,54 +142,54 @@ class ConfigLoader(object):
 
         # AMQP
         query = self.odb.get_out_amqp_list(server.cluster.id, True)
-        self.config.out_amqp = ConfigDict.from_query('out_amqp', query)
+        self.config.out_amqp = ConfigDict.from_query('out_amqp', query, decrypt_func=self.decrypt)
 
         # Caches
         query = self.odb.get_cache_builtin_list(server.cluster.id, True)
-        self.config.cache_builtin = ConfigDict.from_query('cache_builtin', query)
+        self.config.cache_builtin = ConfigDict.from_query('cache_builtin', query, decrypt_func=self.decrypt)
 
         query = self.odb.get_cache_memcached_list(server.cluster.id, True)
-        self.config.cache_memcached = ConfigDict.from_query('cache_memcached', query)
+        self.config.cache_memcached = ConfigDict.from_query('cache_memcached', query, decrypt_func=self.decrypt)
 
         # FTP
         query = self.odb.get_out_ftp_list(server.cluster.id, True)
-        self.config.out_ftp = ConfigDict.from_query('out_ftp', query)
+        self.config.out_ftp = ConfigDict.from_query('out_ftp', query, decrypt_func=self.decrypt)
 
         # IBM MQ
         query = self.odb.get_out_wmq_list(server.cluster.id, True)
-        self.config.out_wmq = ConfigDict.from_query('out_wmq', query)
+        self.config.out_wmq = ConfigDict.from_query('out_wmq', query, decrypt_func=self.decrypt)
 
         # Odoo
         query = self.odb.get_out_odoo_list(server.cluster.id, True)
-        self.config.out_odoo = ConfigDict.from_query('out_odoo', query)
+        self.config.out_odoo = ConfigDict.from_query('out_odoo', query, decrypt_func=self.decrypt)
 
         # Plain HTTP
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'plain_http', True)
-        self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query)
+        self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query, decrypt_func=self.decrypt)
 
         # SOAP
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)
-        self.config.out_soap = ConfigDict.from_query('out_soap', query)
+        self.config.out_soap = ConfigDict.from_query('out_soap', query, decrypt_func=self.decrypt)
 
         # SQL
         query = self.odb.get_out_sql_list(server.cluster.id, True)
-        self.config.out_sql = ConfigDict.from_query('out_sql', query)
+        self.config.out_sql = ConfigDict.from_query('out_sql', query, decrypt_func=self.decrypt)
 
         # STOMP
         query = self.odb.get_out_stomp_list(server.cluster.id, True)
-        self.config.out_stomp = ConfigDict.from_query('out_stomp', query)
+        self.config.out_stomp = ConfigDict.from_query('out_stomp', query, decrypt_func=self.decrypt)
 
         # ZMQ channels
         query = self.odb.get_channel_zmq_list(server.cluster.id, True)
-        self.config.channel_zmq = ConfigDict.from_query('channel_zmq', query)
+        self.config.channel_zmq = ConfigDict.from_query('channel_zmq', query, decrypt_func=self.decrypt)
 
         # ZMQ outgoing
         query = self.odb.get_out_zmq_list(server.cluster.id, True)
-        self.config.out_zmq = ConfigDict.from_query('out_zmq', query)
+        self.config.out_zmq = ConfigDict.from_query('out_zmq', query, decrypt_func=self.decrypt)
 
         # WebSocket channels
         query = self.odb.get_channel_web_socket_list(server.cluster.id, True)
-        self.config.channel_web_socket = ConfigDict.from_query('channel_web_socket', query)
+        self.config.channel_web_socket = ConfigDict.from_query('channel_web_socket', query, decrypt_func=self.decrypt)
 
         #
         # Outgoing connections - end
@@ -203,11 +203,11 @@ class ConfigLoader(object):
 
         # OpenStack Swift
         query = self.odb.get_notif_cloud_openstack_swift_list(server.cluster.id, True)
-        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift', query)
+        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift', query, decrypt_func=self.decrypt)
 
         # SQL
         query = self.odb.get_notif_sql_list(server.cluster.id, True)
-        self.config.notif_sql = ConfigDict.from_query('notif_sql', query)
+        self.config.notif_sql = ConfigDict.from_query('notif_sql', query, decrypt_func=self.decrypt)
 
         #
         # Notifications - end
@@ -221,71 +221,71 @@ class ConfigLoader(object):
 
         # API keys
         query = self.odb.get_apikey_security_list(server.cluster.id, True)
-        self.config.apikey = ConfigDict.from_query('apikey', query)
+        self.config.apikey = ConfigDict.from_query('apikey', query, decrypt_func=self.decrypt)
 
         # AWS
         query = self.odb.get_aws_security_list(server.cluster.id, True)
-        self.config.aws = ConfigDict.from_query('aws', query)
+        self.config.aws = ConfigDict.from_query('aws', query, decrypt_func=self.decrypt)
 
         # HTTP Basic Auth
         query = self.odb.get_basic_auth_list(server.cluster.id, None, True)
-        self.config.basic_auth = ConfigDict.from_query('basic_auth', query)
+        self.config.basic_auth = ConfigDict.from_query('basic_auth', query, decrypt_func=self.decrypt)
 
         # HTTP Basic Auth
         query = self.odb.get_jwt_list(server.cluster.id, None, True)
-        self.config.jwt = ConfigDict.from_query('jwt', query)
+        self.config.jwt = ConfigDict.from_query('jwt', query, decrypt_func=self.decrypt)
 
         # NTLM
         query = self.odb.get_ntlm_list(server.cluster.id, True)
-        self.config.ntlm = ConfigDict.from_query('ntlm', query)
+        self.config.ntlm = ConfigDict.from_query('ntlm', query, decrypt_func=self.decrypt)
 
         # OAuth
         query = self.odb.get_oauth_list(server.cluster.id, True)
-        self.config.oauth = ConfigDict.from_query('oauth', query)
+        self.config.oauth = ConfigDict.from_query('oauth', query, decrypt_func=self.decrypt)
 
         # OpenStack
         query = self.odb.get_openstack_security_list(server.cluster.id, True)
-        self.config.openstack_security = ConfigDict.from_query('openstack_security', query)
+        self.config.openstack_security = ConfigDict.from_query('openstack_security', query, decrypt_func=self.decrypt)
 
         # RBAC - permissions
         query = self.odb.get_rbac_permission_list(server.cluster.id, True)
-        self.config.rbac_permission = ConfigDict.from_query('rbac_permission', query)
+        self.config.rbac_permission = ConfigDict.from_query('rbac_permission', query, decrypt_func=self.decrypt)
 
         # RBAC - roles
         query = self.odb.get_rbac_role_list(server.cluster.id, True)
-        self.config.rbac_role = ConfigDict.from_query('rbac_role', query)
+        self.config.rbac_role = ConfigDict.from_query('rbac_role', query, decrypt_func=self.decrypt)
 
         # RBAC - client roles
         query = self.odb.get_rbac_client_role_list(server.cluster.id, True)
-        self.config.rbac_client_role = ConfigDict.from_query('rbac_client_role', query)
+        self.config.rbac_client_role = ConfigDict.from_query('rbac_client_role', query, decrypt_func=self.decrypt)
 
         # RBAC - role permission
         query = self.odb.get_rbac_role_permission_list(server.cluster.id, True)
-        self.config.rbac_role_permission = ConfigDict.from_query('rbac_role_permission', query)
+        self.config.rbac_role_permission = ConfigDict.from_query('rbac_role_permission', query, decrypt_func=self.decrypt)
 
         # TLS CA certs
         query = self.odb.get_tls_ca_cert_list(server.cluster.id, True)
-        self.config.tls_ca_cert = ConfigDict.from_query('tls_ca_cert', query)
+        self.config.tls_ca_cert = ConfigDict.from_query('tls_ca_cert', query, decrypt_func=self.decrypt)
 
         # TLS channel security
         query = self.odb.get_tls_channel_sec_list(server.cluster.id, True)
-        self.config.tls_channel_sec = ConfigDict.from_query('tls_channel_sec', query)
+        self.config.tls_channel_sec = ConfigDict.from_query('tls_channel_sec', query, decrypt_func=self.decrypt)
 
         # TLS key/cert pairs
         query = self.odb.get_tls_key_cert_list(server.cluster.id, True)
-        self.config.tls_key_cert = ConfigDict.from_query('tls_key_cert', query)
+        self.config.tls_key_cert = ConfigDict.from_query('tls_key_cert', query, decrypt_func=self.decrypt)
 
         # WS-Security
         query = self.odb.get_wss_list(server.cluster.id, True)
-        self.config.wss = ConfigDict.from_query('wss', query)
+        self.config.wss = ConfigDict.from_query('wss', query, decrypt_func=self.decrypt)
 
         # Vault connections
         query = self.odb.get_vault_connection_list(server.cluster.id, True)
-        self.config.vault_conn_sec = ConfigDict.from_query('vault_conn_sec', query)
+        self.config.vault_conn_sec = ConfigDict.from_query('vault_conn_sec', query, decrypt_func=self.decrypt)
 
         # XPath
         query = self.odb.get_xpath_sec_list(server.cluster.id, True)
-        self.config.xpath_sec = ConfigDict.from_query('xpath_sec', query)
+        self.config.xpath_sec = ConfigDict.from_query('xpath_sec', query, decrypt_func=self.decrypt)
 
         #
         # Security - end
@@ -313,15 +313,15 @@ class ConfigLoader(object):
 
         # Namespaces
         query = self.odb.get_namespace_list(server.cluster.id, True)
-        self.config.msg_ns = ConfigDict.from_query('msg_ns', query)
+        self.config.msg_ns = ConfigDict.from_query('msg_ns', query, decrypt_func=self.decrypt)
 
         # XPath
         query = self.odb.get_xpath_list(server.cluster.id, True)
-        self.config.xpath = ConfigDict.from_query('msg_xpath', query)
+        self.config.xpath = ConfigDict.from_query('msg_xpath', query, decrypt_func=self.decrypt)
 
         # JSON Pointer
         query = self.odb.get_json_pointer_list(server.cluster.id, True)
-        self.config.json_pointer = ConfigDict.from_query('json_pointer', query)
+        self.config.json_pointer = ConfigDict.from_query('json_pointer', query, decrypt_func=self.decrypt)
 
         # SimpleIO
         # In preparation for a SIO rewrite, we loaded SIO config from a file
@@ -336,23 +336,23 @@ class ConfigLoader(object):
 
         # Pub/sub - endpoints
         query = self.odb.get_pubsub_endpoint_list(server.cluster.id, True)
-        self.config.pubsub_endpoint = ConfigDict.from_query('pubsub_endpoint', query)
+        self.config.pubsub_endpoint = ConfigDict.from_query('pubsub_endpoint', query, decrypt_func=self.decrypt)
 
         # Pub/sub - topics
         query = self.odb.get_pubsub_topic_list(server.cluster.id, True)
-        self.config.pubsub_topic = ConfigDict.from_query('pubsub_topic', query)
+        self.config.pubsub_topic = ConfigDict.from_query('pubsub_topic', query, decrypt_func=self.decrypt)
 
         # Pub/sub - subscriptions
         query = self.odb.get_pubsub_subscription_list(server.cluster.id, True)
-        self.config.pubsub_subscription = ConfigDict.from_query('pubsub_subscription', query)
+        self.config.pubsub_subscription = ConfigDict.from_query('pubsub_subscription', query, decrypt_func=self.decrypt)
 
         # E-mail - SMTP
         query = self.odb.get_email_smtp_list(server.cluster.id, True)
-        self.config.email_smtp = ConfigDict.from_query('email_smtp', query)
+        self.config.email_smtp = ConfigDict.from_query('email_smtp', query, decrypt_func=self.decrypt)
 
         # E-mail - IMAP
         query = self.odb.get_email_imap_list(server.cluster.id, True)
-        self.config.email_imap = ConfigDict.from_query('email_imap', query)
+        self.config.email_imap = ConfigDict.from_query('email_imap', query, decrypt_func=self.decrypt)
 
         # Message paths
         self.config.msg_ns_store = NamespaceStore()
