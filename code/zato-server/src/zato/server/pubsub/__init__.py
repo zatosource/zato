@@ -25,7 +25,7 @@ from zato.common import DATA_FORMAT, PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import WebSocketClientPubSubKeys
-from zato.common.odb.query_ps_delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
+from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_delivery_server_for_sub_key, get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
 from zato.common.time_util import utcnow_as_ms
 from zato.common.util import is_func_overridden, make_repr, spawn_greenlet
