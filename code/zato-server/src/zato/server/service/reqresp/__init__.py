@@ -140,15 +140,6 @@ class Request(SIOConverter):
 
 # ################################################################################################################################
 
-    def init_list_sio(self, cid, sio, data_format, transport, wsgi_environ, required_list):
-        """ Initializes list-like SIO requests, e.g. fixed-width ones.
-        """
-        self.input.definition = required_list
-        self.input.raw_data = self.payload
-        self.input.set_up()
-
-# ################################################################################################################################
-
     def init_flat_sio(self, cid, sio, data_format, transport, wsgi_environ, required_list):
         """ Initializes flat SIO requests, i.e. not list ones.
         """
@@ -252,7 +243,7 @@ class Request(SIOConverter):
 # ################################################################################################################################
 
 class SimpleIOPayload(SIOConverter):
-    """ Produces the actual response - XML, JSON or fixed-width - out of the user-provided SimpleIO abstract data.
+    """ Produces the actual response - XML, JSON - out of the user-provided SimpleIO abstract data.
     All of the attributes are prefixed with zato_ so that they don't conflict with non-Zato data..
     """
     def __init__(self, zato_cid, data_format, required_list, optional_list, simple_io_config, response_elem, namespace,
@@ -369,7 +360,7 @@ class SimpleIOPayload(SIOConverter):
             'Expected' if is_required else 'Optional', name, msg_item)
 
     def getvalue(self, serialize=True):
-        """ Gets the actual payload's value converted to a string representing either XML, JSON or fixed-width.
+        """ Gets the actual payload's value converted to a string representing either XML or JSON.
         """
         if self.zato_is_xml:
             if self.zato_output_repeated:

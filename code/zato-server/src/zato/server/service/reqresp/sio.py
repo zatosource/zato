@@ -424,7 +424,6 @@ convert_impl = {
     DATA_FORMAT.JSON: convert_from_json,
     DATA_FORMAT.XML: convert_from_xml,
     DATA_FORMAT.DICT: convert_from_dict,
-    #DATA_FORMAT.FIXED_WIDTH: convert_from_fixed_width,
     None: convert_from_dict,
 }
 
