@@ -51,9 +51,6 @@ from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Reques
 from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, Float, ForceType, Integer, List, ListOfDicts, Nested, \
      Opaque, Unicode, UTC
 
-# Again, not used here but imported for convenience
-from zato.server.service.reqresp import fixed_width
-
 # So pyflakes doesn't complain about names being imported but not used
 AsIs = AsIs
 CSV = CSV
@@ -68,7 +65,6 @@ Nested = Nested
 Opaque = Opaque
 Unicode = Unicode
 UTC = UTC
-fixed_width = fixed_width
 
 logger = logging.getLogger(__name__)
 
