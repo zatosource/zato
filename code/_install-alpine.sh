@@ -9,7 +9,7 @@ fi
 # Alpine does not use glibc, so pip disables binary wheels, therefore we also
 # need SciPy dependencies.
 sudo apk add \
-    build-base bzip2 bzip2-dev cyrus-sasl-dev gfortran git haproxy \
+    build-base bzip2 bzip2-dev cyrus-sasl-dev curl gfortran git haproxy \
     keyutils-dev lapack-dev libev-dev libevent-dev libffi-dev libressl \
     libressl-dev libuuid libxml2-dev libxslt-dev linux-headers openldap-dev \
     patch postgresql-dev python2 python2-dev suitesparse swig wget yaml-dev

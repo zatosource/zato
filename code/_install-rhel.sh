@@ -6,7 +6,7 @@ PYTHON_PREFIX="/opt/zato/python/$PYTHON_VER"
 PATH="$PYTHON_PREFIX/bin:$PATH"
 
 sudo yum -y install \
-    bzip2 bzip2-devel cyrus-sasl-devel gcc-c++ git haproxy \
+    bzip2 bzip2-devel curl cyrus-sasl-devel gcc-c++ git haproxy \
     keyutils-libs-devel libev libev-devel libevent-devel libffi libffi-devel \
     libxml2-devel libxslt-devel libyaml-devel openldap-devel openssl \
     openssl-devel patch postgresql-devel python-devel suitesparse swig uuid \

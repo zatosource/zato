@@ -7,7 +7,7 @@ then
 fi
 
 brew install \
-    bzip2 bzr git gsasl haproxy libev libevent libffi libxml2 libxslt \
+    bzip2 curl bzr git gsasl haproxy libev libevent libffi libxml2 libxslt \
     libyaml openldap openssl ossp-uuid postgresql python2 swig \
     || true
 
