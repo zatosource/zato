@@ -27,7 +27,7 @@
             '_edit',
             '_delete',
             'id',
-            'value'
+            'auth_data'
         ]
     }
 
@@ -78,7 +78,7 @@
                         <td><a href="javascript:$.fn.zato.security.tls.key_cert.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.security.tls.key_cert.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-                        <td class='ignore'>{{ item.value }}</td>
+                        <td class='ignore'>{{ item.auth_data }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -103,7 +103,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Value<br/><span class="form_hint">(in PEM)</span></td>
-                            <td>{{ create_form.value }}</td>
+                            <td>{{ create_form.auth_data }}</td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -128,7 +128,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Value<br/><span class="form_hint">(in PEM)</span></td>
-                            <td>{{ edit_form.value }}</td>
+                            <td>{{ edit_form.auth_data }}</td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">

@@ -1,6 +1,6 @@
 @channel.jms-wmq
 Feature: zato.channel.jms-wmq.get-list
-  Returns a list of JMS WebSphere MQ channels defined on a given cluster.
+  Returns a list of IBM MQ channels defined on a given cluster.
 
 
   @channel.jms-wmq.get-list

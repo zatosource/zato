@@ -17,7 +17,7 @@ from bunch import bunchify
 # Zato
 from zato.common import CACHE
 from zato.common.exception import BadRequest
-from zato.common.search_util import SearchResults
+from zato.common.util.search import SearchResults
 from zato.server.service import AsIs, Bool, Float, Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
