@@ -8,15 +8,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+import logging
+import os
 import shutil
 import sys
+import tempfile
+import time
 from cStringIO import StringIO
+from datetime import datetime
 from getpass import getpass, getuser
 from socket import gethostname
-
-# stdlib
-import logging, os, sys, tempfile, time
-from datetime import datetime
 
 # Importing
 from peak.util.imports import importString
@@ -28,8 +29,8 @@ import sqlalchemy
 from zato import common
 from zato.cli import util as cli_util
 from zato.common import odb, util, ZATO_INFO_FILE
-from zato.common.cli_util import read_stdin_data
 from zato.common.util import get_engine_url, get_full_stack, get_session
+from zato.common.util.cli import read_stdin_data
 
 # ################################################################################################################################
 

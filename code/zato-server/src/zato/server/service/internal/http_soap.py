@@ -253,7 +253,7 @@ class Create(_CreateEdit):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
+            except Exception:
                 msg = 'Could not create the object, e:`{}'.format(format_exc())
                 self.logger.error(msg)
                 session.rollback()

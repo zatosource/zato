@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from platform import processor
+import math
 
 # passlib
 from passlib.registry import get_crypt_handler
