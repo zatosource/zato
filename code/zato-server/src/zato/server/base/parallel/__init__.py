@@ -334,12 +334,13 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
-    def set_odb_pool(self):
+    def set_up_odb(self):
         # This is the call that creates an SQLAlchemy connection
         self.config.odb_data['fs_sql_config'] = self.fs_sql_config
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         self.odb.token = self.config.odb_data.token
+        self.odb.decrypt_func = self.decrypt
 
 # ################################################################################################################################
 
@@ -372,7 +373,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         self.config.odb_data = self.get_config_odb_data(self)
-        self.set_odb_pool()
+        self.set_up_odb()
 
         # Now try grabbing the basic server's data from the ODB. No point
         # in doing anything else if we can't get past this point.
@@ -707,7 +708,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
             self.config.odb_data = self.get_config_odb_data(self)
             self.config.odb_data['fs_sql_config'] = self.fs_sql_config
-            self.set_odb_pool()
+            self.set_up_odb()
 
             self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb_data, self.odb.pool, False)
 

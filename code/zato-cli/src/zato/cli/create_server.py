@@ -339,13 +339,13 @@ server_conf.odb.password={zato_odb_password}
 simple_io_conf_contents = """
 [int]
 exact=id
-suffix=_id, _count, _size, _timeout
+suffix=_count, _id, _size, _timeout
 
 [bool]
-prefix=is_, needs_, should_, by_, has_
+prefix=by_, has_, is_, needs_, should_
 
 [secret]
-exact=password, password1, password2, secret_key, auth_token
+exact=auth_data, auth_token, password, password1, password2, secret_key, token
 """.lstrip()
 
 lua_zato_rename_if_exists = """

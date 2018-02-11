@@ -414,7 +414,7 @@ class TLSKeyCertSecurity(SecurityBase):
 
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
     info = Column(LargeBinary(200000), nullable=False)
-    value = Column(LargeBinary(200000), nullable=False)
+    auth_data = Column(LargeBinary(200000), nullable=False)
 
 # ################################################################################################################################
 

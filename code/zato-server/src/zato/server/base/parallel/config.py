@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from contextlib import closing
 import os
 
 # Paste
@@ -16,7 +17,7 @@ from paste.util.converters import asbool
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import MISC
+from zato.common import MISC, SECRETS
 from zato.server.config import ConfigDict
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
@@ -231,7 +232,7 @@ class ConfigLoader(object):
         query = self.odb.get_basic_auth_list(server.cluster.id, None, True)
         self.config.basic_auth = ConfigDict.from_query('basic_auth', query, decrypt_func=self.decrypt)
 
-        # HTTP Basic Auth
+        # JWT
         query = self.odb.get_jwt_list(server.cluster.id, None, True)
         self.config.jwt = ConfigDict.from_query('jwt', query, decrypt_func=self.decrypt)
 
@@ -286,6 +287,9 @@ class ConfigLoader(object):
         # XPath
         query = self.odb.get_xpath_sec_list(server.cluster.id, True)
         self.config.xpath_sec = ConfigDict.from_query('xpath_sec', query, decrypt_func=self.decrypt)
+
+        # New in 3.0 - encrypt all old secrets
+        self._migrate_30_encrypt_secrets()
 
         #
         # Security - end
@@ -361,6 +365,45 @@ class ConfigLoader(object):
 
         # Assign config to worker
         self.worker_store.worker_config = self.config
+
+# ################################################################################################################################
+
+    def _migrate_30_encrypt_secrets(self):
+        """ New in 3.0 - sall passwords are always encrypted so we need to look up any that are not,
+        for instance, because it is a cluster newly migrated from 2.0 to 3.0, and encrypt them now in ODB.
+        """
+        sec_config_dict_types = ('apikey', 'aws', 'basic_auth', 'jwt', 'ntlm', 'oauth', 'openstack_security',
+            'tls_key_cert', 'wss', 'vault_conn_sec', 'xpath_sec')
+
+        # Global lock to make sure only one server attempts to do it at a time
+        with self.zato_lock_manager('migrate_30_encrypt_secrets'):
+
+            # An SQL session shared by all updates
+            with closing(self.odb.session()) as session:
+
+                # Iterate over all security definitions
+                for sec_config_dict_type in sec_config_dict_types:
+                    config_dicts = getattr(self.config, sec_config_dict_type)
+                    for config in config_dicts.values():
+                        config = config['config']
+
+                        # Continue to encryption only if needed and not already encrypted
+                        if config.get('_encryption_needed'):
+                            if not config['_encrypted_in_odb']:
+                                odb_func = getattr(self.odb, '_migrate_30_encrypt_sec_{}'.format(sec_config_dict_type))
+
+                                # Encrypt all params that are applicable
+                                for secret_param in SECRETS.PARAMS:
+                                    if secret_param in config:
+                                        encrypted = self.encrypt(config[secret_param])
+                                        odb_func(session, config['id'], secret_param, encrypted)
+
+                        # Clean up config afterwards
+                        config.pop('_encryption_needed', None)
+                        config.pop('_encrypted_in_odb', None)
+
+                # Commit to SQL now that all updates are made
+                session.commit()
 
 # ################################################################################################################################
 

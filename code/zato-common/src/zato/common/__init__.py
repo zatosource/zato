@@ -1001,10 +1001,12 @@ NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
 ZATO_INFO_FILE = b'.zato-info'
 
 class SECRETS:
-    # These parameters will be automatically encrypted in SimpleIO input
-    PARAMS = ('password', 'password1', 'password2', 'secret_key', 'auth_token')
 
-    PREFIX = 'zato.secf.' # Zato secret (Fernet)
+    # These parameters will be automatically encrypted in SimpleIO input
+    PARAMS = ('auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'token')
+
+    # Zato secret (Fernet)
+    PREFIX = 'zato.secf.'
 
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):

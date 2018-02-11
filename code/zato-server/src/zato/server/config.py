@@ -20,7 +20,7 @@ from paste.util.multidict import MultiDict
 from zato.bunch import Bunch
 
 # Zato
-from zato.common import ZATO_NONE
+from zato.common import SECRETS, ZATO_NONE
 from zato.common.util.config import resolve_value
 
 # ################################################################################################################################
@@ -206,9 +206,18 @@ class ConfigDict(object):
                 else:
                     config_dict._impl[item_name].config = item_class()
                     for attr_name in attrs.keys():
-                        value = getattr(item, attr_name)
+                        config = config_dict._impl[item_name]['config']
+                        original = value = getattr(item, attr_name)
                         value = resolve_value(attr_name, value, decrypt_func)
-                        config_dict._impl[item_name]['config'][attr_name] = value
+                        config[attr_name] = value
+
+                        # Temporarily, add a flag to indicate whether the password in ODB was encrypted or not.
+                        if attr_name in SECRETS.PARAMS:
+                            config['_encryption_needed'] = True
+                            if original.startswith(SECRETS.PREFIX):
+                                config['_encrypted_in_odb'] = True
+                            else:
+                                config['_encrypted_in_odb'] = False
 
         return config_dict
 

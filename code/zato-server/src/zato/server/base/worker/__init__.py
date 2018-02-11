@@ -1942,7 +1942,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_OUTGOING_ZMQ_CREATE(self, msg):
-        print(333, msg)
         self.zmq_out_api.create(msg.name, msg)
 
     def on_broker_msg_OUTGOING_ZMQ_EDIT(self, msg):

@@ -23,7 +23,7 @@ label = 'a TLS key/cert pair'
 broker_message = SECURITY
 broker_message_prefix = 'TLS_KEY_CERT_'
 list_func = tls_key_cert_list
-create_edit_input_required_extra = ['value']
+create_edit_input_required_extra = ['auth_data']
 skip_input_params = ['info', 'sec_type']
 output_optional_extra = ['info']
 
@@ -31,10 +31,10 @@ def instance_hook(service, input, instance, attrs):
 
     instance.username = service.cid # Required by model
     instance.sec_type = SEC_DEF_TYPE.TLS_KEY_CERT
-    instance.info = get_tls_from_payload(input.value, True)
+    instance.info = get_tls_from_payload(input.auth_data, True)
 
     with service.lock():
-        full_path = store_tls(service.server.tls_dir, service.request.input.value, True)
+        full_path = store_tls(service.server.tls_dir, service.request.input.auth_data, True)
         service.logger.info('Key/cert pair saved under `%s`', full_path)
 
 def response_hook(service, input, instance, attrs, service_type):
@@ -43,7 +43,7 @@ def response_hook(service, input, instance, attrs, service_type):
 
 def broker_message_hook(service, input, instance, attrs, service_type):
     if service_type == 'delete':
-        input.value = instance.value
+        input.auth_data = instance.auth_data
 
 def delete_hook(service, input, instance, attrs):
     delete_tls_material_from_fs(service.server, instance.info, get_tls_ca_cert_full_path)
