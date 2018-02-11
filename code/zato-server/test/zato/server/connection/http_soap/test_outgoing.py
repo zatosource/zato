@@ -453,7 +453,7 @@ class HTTPSOAPWrapperTestCase(TestCase, Base):
 class TLSPingTestCase(TestCase, Base):
 
     def tearDown(self):
-        sleep(1) # So the server's thread can shut down cleanly
+        sleep(0.2) # So the server's thread can shut down cleanly
 
     def test_ping_unknown_ca_verify_false(self):
         server = TLSServer()
@@ -483,7 +483,7 @@ class TLSPingTestCase(TestCase, Base):
             server = TLSServer()
             server.start()
 
-            sleep(1)
+            sleep(0.2)
 
             port = server.get_port()
 
@@ -499,7 +499,10 @@ class TLSPingTestCase(TestCase, Base):
                 wrapper.ping(rand_string())
             except Exception, e:
                 details = e.message[0][1][0][0]
-                self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
+                try:
+                    self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
+                except AssertionError:
+                    self.assertEquals(details, ('SSL routines', 'tls_process_server_certificate', 'certificate verify failed'))
             else:
                 self.fail('Excepted a TLS error here because the CA is invalid')
 
@@ -529,7 +532,10 @@ class TLSPingTestCase(TestCase, Base):
                 wrapper.ping(rand_string())
             except Exception, e:
                 details = e.message[0][1][0][0]
-                self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
+                try:
+                    self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
+                except AssertionError:
+                    self.assertEquals(details, ('SSL routines', 'ssl3_read_bytes', 'sslv3 alert handshake failure'))
             else:
                 self.fail('Excepted a TLS error here because no TLS cert has been provided by client')
 
@@ -616,7 +622,10 @@ class TLSHTTPTestCase(TestCase, Base):
                 wrapper.get('123')
             except Exception, e:
                 details = e.message[0][1][0][0]
-                self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
+                try:
+                    self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
+                except AssertionError:
+                    self.assertEquals(details, ('SSL routines', 'tls_process_server_certificate', 'certificate verify failed'))
             else:
                 self.fail('Excepted a TLS error here because the CA is invalid')
 
@@ -647,7 +656,10 @@ class TLSHTTPTestCase(TestCase, Base):
                 wrapper.get('123')
             except Exception, e:
                 details = e.message[0][1][0][0]
-                self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
+                try:
+                    self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
+                except AssertionError:
+                    self.assertEquals(details, ('SSL routines', 'ssl3_read_bytes', 'sslv3 alert handshake failure'))
             else:
                 self.fail('Excepted a TLS error here because no TLS cert has been provided by client')
 

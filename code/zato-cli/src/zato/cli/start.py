@@ -19,11 +19,15 @@ from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.cli.stop import Stop
 from zato.common import MISC
-from zato.common.proc_util import start_python_process
 from zato.common.util import get_haproxy_agent_pidfile
+from zato.common.util.proc import start_python_process
+
+# ################################################################################################################################
 
 stderr_sleep_fg = 0.9
 stderr_sleep_bg = 1.2
+
+# ################################################################################################################################
 
 class Start(ManageCommand):
     """Starts a Zato component installed in the 'path'. The same command is used for starting servers, load-balancer and web admin instances. 'path' must point to a directory into which the given component has been installed. # nopep8
@@ -34,16 +38,29 @@ Examples:
 
     opts = [
         {'name':'--fg', 'help':'If given, the component will run in foreground', 'action':'store_true'},
-        {'name':'--sync-internal', 'help':"Whether to synchronize component's internal state with ODB", 'action':'store_true'}
+        {'name':'--sync-internal', 'help':"Whether to synchronize component's internal state with ODB", 'action':'store_true'},
+        {'name':'--secret-key', 'help':"Component's secret key", 'action':'store'}
     ]
+
+# ################################################################################################################################
 
     def run_check_config(self):
         cc = CheckConfig(self.args)
         cc.show_output = False
-        cc.execute(Bunch(path='.', ensure_no_pidfile=True, check_server_port_available=True))
+        cc.execute(Bunch({
+            'path': '.',
+            'ensure_no_pidfile': True,
+            'check_server_port_available': True,
+            'stdin_data': self.stdin_data,
+            'secret_key': self.args.secret_key,
+        }))
+
+# ################################################################################################################################
 
     def delete_pidfile(self):
         os.remove(os.path.join(self.component_dir, MISC.PIDFILE))
+
+# ################################################################################################################################
 
     def check_pidfile(self, pidfile=None):
         pidfile = pidfile or os.path.join(self.config_dir, MISC.PIDFILE)
@@ -58,46 +75,16 @@ Examples:
         # Returning None would have sufficed but let's be explicit.
         return 0
 
+# ################################################################################################################################
+
     def start_component(self, py_path, name, program_dir, on_keyboard_interrupt=None):
         """ Starts a component in background or foreground, depending on the 'fg' flag.
         """
         start_python_process(
             self.args.fg, py_path, name, program_dir, on_keyboard_interrupt, self.SYS_ERROR.FAILED_TO_START, {
-                'sync_internal': self.args.sync_internal
-            })
-
-        '''
-        tmp_path = mkstemp('-zato-start-{}.txt'.format(name.replace(' ','')))[1]
-        stdout_redirect = '' if self.args.fg else '1> /dev/null'
-        stderr_redirect = '2> {}'.format(tmp_path)
-
-        options = {
-            'sync_internal': self.args.sync_internal,
-            'fg': self.args.fg,
-        }
-        options = CLI_ARG_SEP.join('{}={}'.format(k, v) for k, v in options.items())
-
-        extra_options = {
-            'sync_internal': self.args.sync_internal
-        }
-
-        program = '{} -m {} {} {} {} {}'.format(get_executable(), py_path, program_dir, options, stdout_redirect, stderr_redirect)
-        try:
-            _stderr = _StdErr(tmp_path, stderr_sleep_fg if self.args.fg else stderr_sleep_bg)
-            run(program, async=False if self.args.fg else True)
-
-            # Wait a moment for any potential errors
-            _err = _stderr.wait_for_error()
-            if _err:
-                self.logger.warn(_err)
-                sys.exit(self.SYS_ERROR.FAILED_TO_START)
-
-        except KeyboardInterrupt:
-            if on_keyboard_interrupt:
-                on_keyboard_interrupt()
-            sys.exit(0)
-
-            '''
+                'sync_internal': self.args.sync_internal,
+                'secret_key': self.args.secret_key or ''
+            }, stdin_data=self.stdin_data)
 
         if self.show_output:
             if not self.args.fg and self.verbose:
@@ -105,9 +92,13 @@ Examples:
             else:
                 self.logger.info('OK')
 
+# ################################################################################################################################
+
     def _on_server(self, show_output=True, *ignored):
         self.run_check_config()
         self.start_component('zato.server.main', 'server', self.component_dir, self.delete_pidfile)
+
+# ################################################################################################################################
 
     def _on_lb(self, *ignored):
         self.run_check_config()
@@ -126,11 +117,17 @@ Examples:
         # Will be returned if either of pidfiles was found
         sys.exit(self.SYS_ERROR.FOUND_PIDFILE)
 
+# ################################################################################################################################
+
     def _on_web_admin(self, *ignored):
         self.run_check_config()
-        self.start_component('zato.admin.main', 'web admin', '', self.delete_pidfile)
+        self.start_component('zato.admin.main', 'web-admin', '', self.delete_pidfile)
+
+# ################################################################################################################################
 
     def _on_scheduler(self, *ignored):
         self.run_check_config()
         self.check_pidfile()
-        self.start_component('zato.scheduler.main', 'web scheduler', '', self.delete_pidfile)
+        self.start_component('zato.scheduler.main', 'scheduler', '', self.delete_pidfile)
+
+# ################################################################################################################################

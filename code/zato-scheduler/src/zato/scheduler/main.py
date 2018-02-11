@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -28,6 +28,8 @@ import yaml
 # Zato
 from zato.common.util import absjoin, get_config, store_pidfile
 from zato.scheduler.server import Config, SchedulerServer
+
+# ################################################################################################################################
 
 def main():
 
@@ -69,5 +71,9 @@ def main():
     except Exception, e:
         logger.warn(format_exc(e))
 
+# ################################################################################################################################
+
 if __name__ == '__main__':
     main()
+
+# ################################################################################################################################

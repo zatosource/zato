@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,9 +23,9 @@ from sqlalchemy.exc import IntegrityError
 # Zato
 from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
 from zato.common import CONTENT_TYPE, SERVER_JOIN_STATUS
+from zato.common.crypto import well_known_data
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
-from zato.common.util import encrypt
 
 server_conf_template = """[main]
 gunicorn_bind=0.0.0.0:{{port}}
@@ -41,7 +41,7 @@ gunicorn_graceful_timeout=1
 deployment_lock_expires=1073741824 # 2 ** 30 seconds ≅ 34 years
 deployment_lock_timeout=180
 
-token={{token}}
+token=zato+secret://zato.server_conf.main.token
 service_sources=./service-sources.txt
 
 [crypto]
@@ -60,7 +60,7 @@ engine={{odb_engine}}
 extra=
 host={{odb_host}}
 port={{odb_port}}
-password={{odb_password}}
+password=zato+secret://zato.server_conf.odb.password
 pool_size={{odb_pool_size}}
 username={{odb_user}}
 use_async_driver=True
@@ -116,7 +116,7 @@ zeromq_connect_sleep=0.1
 aws_host=
 use_soap_envelope=True
 fifo_response_buffer_size=0.2 # In MB
-jwt_secret={{jwt_secret}}
+jwt_secret=zato+secret://zato.server_conf.misc.jwt_secret
 enforce_service_invokes=False
 return_tracebacks=True
 default_error_message="An error has occurred"
@@ -131,7 +131,7 @@ expire_after=168 # In hours, 168 = 7 days = 1 week
 host={{kvdb_host}}
 port={{kvdb_port}}
 unix_socket_path=
-password={{kvdb_password}}
+password=zato+secret://zato.server_conf.kvdb.password
 db=0
 socket_timeout=
 charset=
@@ -324,6 +324,30 @@ salt_size=32 # In bytes = 256 bits
 name=zato
 """
 
+secrets_conf_template = b"""
+[secret_keys]
+key1={keys_key1}
+
+[zato]
+well_known_data={zato_well_known_data} # π number
+server_conf.kvdb.password={zato_kvdb_password}
+server_conf.main.token={zato_main_token}
+server_conf.misc.jwt_secret={zato_misc_jwt_secret}
+server_conf.odb.password={zato_odb_password}
+"""
+
+simple_io_conf_contents = """
+[int]
+exact=id
+suffix=_count, _id, _size, _timeout
+
+[bool]
+prefix=by_, has_, is_, needs_, should_
+
+[secret]
+exact=auth_data, auth_token, password, password1, password2, secret_key, token
+""".lstrip()
+
 lua_zato_rename_if_exists = """
 -- Checks whether a from_key exists and if it does renames it to to_key.
 -- Returns an error code otherwise.
@@ -402,7 +426,8 @@ class Create(ZatoCommand):
     opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':"Server's name"})
-    opts.append({'name':'jwt_secret', 'help':"Server's JWT secret (must be the same for all servers in a cluster)"})
+    opts.append({'name':'secret_key', 'help':"Server's secret key (in Fernet format, must be the same for all servers)"})
+    opts.append({'name':'jwt_secret', 'help':"Server's JWT secret (in Fernet format, must be the same for all servers)"})
 
     def __init__(self, args):
         super(Create, self).__init__(args)
@@ -417,7 +442,7 @@ class Create(ZatoCommand):
         for d in sorted(directories):
             d = os.path.join(self.target_dir, d)
             if show_output:
-                self.logger.debug('Creating {d}'.format(d=d))
+                self.logger.debug('Creating %s', d)
             os.mkdir(d)
 
         self.dirs_prepared = True
@@ -432,8 +457,7 @@ class Create(ZatoCommand):
             first()
 
         if not cluster:
-            msg = "Cluster [{}] doesn't exist in the ODB".format(args.cluster_name)
-            self.logger.error(msg)
+            self.logger.error("Cluster `{}` doesn't exist in ODB", args.cluster_name)
             return self.SYS_ERROR.NO_SUCH_CLUSTER
 
         server = Server()
@@ -452,7 +476,6 @@ class Create(ZatoCommand):
 
             repo_dir = os.path.join(self.target_dir, 'config', 'repo')
             self.copy_server_crypto(repo_dir, args)
-            priv_key = open(os.path.join(repo_dir, 'zato-server-priv-key.pem')).read()
 
             if show_output:
                 self.logger.debug('Created a Bazaar repo in {}'.format(repo_dir))
@@ -489,16 +512,12 @@ class Create(ZatoCommand):
                     odb_engine=odb_engine,
                     odb_host=args.odb_host or '',
                     odb_port=args.odb_port or '',
-                    odb_password=encrypt(args.odb_password, priv_key) if args.odb_password else '',
                     odb_pool_size=default_odb_pool_size,
                     odb_user=args.odb_user or '',
-                    token=self.token,
                     kvdb_host=args.kvdb_host,
                     kvdb_port=args.kvdb_port,
-                    kvdb_password=encrypt(args.kvdb_password, priv_key) if args.kvdb_password else '',
                     initial_cluster_name=args.cluster_name,
                     initial_server_name=args.server_name,
-                    jwt_secret=getattr(args, 'jwt_secret', Fernet.generate_key()),
                 ))
             server_conf.close()
 
@@ -517,6 +536,27 @@ class Create(ZatoCommand):
             sso_conf.write(sso_conf_contents)
             sso_conf.close()
 
+            # There will be multiple keys in future releases to allow for key rotation
+            key1 = args.secret_key or Fernet.generate_key()
+            fernet1 = Fernet(key1)
+
+            secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')
+            secrets_conf = open(secrets_conf_loc, 'w')
+            secrets_conf.write(secrets_conf_template.format(
+                keys_key1=key1,
+                zato_well_known_data=fernet1.encrypt(well_known_data),
+                zato_kvdb_password=fernet1.encrypt(args.kvdb_password) if args.kvdb_password else '',
+                zato_main_token=fernet1.encrypt(self.token),
+                zato_misc_jwt_secret=fernet1.encrypt(getattr(args, 'jwt_secret', Fernet.generate_key())),
+                zato_odb_password=fernet1.encrypt(args.odb_password) if args.odb_password else '',
+            ))
+            secrets_conf.close()
+
+            simple_io_conf_loc = os.path.join(self.target_dir, 'config/repo/simple-io.conf')
+            simple_io_conf = open(simple_io_conf_loc, 'w')
+            simple_io_conf.write(simple_io_conf_contents)
+            simple_io_conf.close()
+
             if show_output:
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
 
@@ -525,19 +565,17 @@ class Create(ZatoCommand):
 
             session.commit()
 
-        except IntegrityError, e:
-            msg = 'Server name [{}] already exists'.format(args.server_name)
+        except IntegrityError:
+            msg = 'Server name `{}` already exists'.format(args.server_name)
             if self.verbose:
-                msg += '. Caught an exception:[{}]'.format(format_exc(e))
-                self.logger.error(msg)
+                msg += '. Caught an exception:`{}`'.format(format_exc())
             self.logger.error(msg)
             session.rollback()
 
             return self.SYS_ERROR.SERVER_NAME_ALREADY_EXISTS
 
-        except Exception, e:
-            msg = 'Could not create the server, e:[{}]'.format(format_exc(e))
-            self.logger.error(msg)
+        except Exception:
+            self.logger.error('Could not create the server, e:`%s`', format_exc())
             session.rollback()
         else:
             if show_output:

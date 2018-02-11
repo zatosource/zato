@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,9 +15,10 @@ except ImportError:
     pass
 
 # stdlib
-import os, json, uuid
+import os, json
 from copy import deepcopy
 from random import getrandbits
+from uuid import uuid4
 
 # Django
 from django.core.management import call_command
@@ -27,9 +28,8 @@ from django.core.management import call_command
 from zato.admin.zato_settings import update_globals
 
 from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, ZatoCommand
+from zato.common.crypto import WebAdminCryptoManager, well_known_data
 from zato.common.defaults import web_admin_host, web_admin_port
-from zato.common.markov_passwords import generate_password
-from zato.common.util import encrypt
 
 config_template = """{{
   "host": "{host}",
@@ -38,8 +38,11 @@ config_template = """{{
   "log_config": "./config/repo/{log_config}",
   "lb_use_tls": false,
   "lb_tls_verify": true,
+  "zato_secret_key": "{zato_secret_key}",
+  "well_known_data": "{well_known_data}",
 
-  "DEBUG": 1,
+  "DEBUG": 0,
+  "ALLOWED_HOSTS": ["*"],
 
   "DATABASE_NAME": "{DATABASE_NAME}",
   "DATABASE_USER": "{DATABASE_USER}",
@@ -88,7 +91,7 @@ class Create(ZatoCommand):
         self.target_dir = os.path.abspath(args.path)
         super(Create, self).__init__(args)
 
-    def execute(self, args, show_output=True, password=None, needs_admin_created_flag=False):
+    def execute(self, args, show_output=True, admin_password=None, needs_admin_created_flag=False):
         os.chdir(self.target_dir)
 
         repo_dir = os.path.join(self.target_dir, 'config', 'repo')
@@ -100,28 +103,37 @@ class Create(ZatoCommand):
         os.mkdir(repo_dir)
 
         user_name = 'admin'
-        password = password if password else generate_password()
+        admin_password = admin_password if admin_password else WebAdminCryptoManager.generate_password()
 
         self.copy_web_admin_crypto(repo_dir, args)
-        priv_key = open(os.path.join(repo_dir, 'web-admin-priv-key.pem')).read()
+
+        zato_secret_key = WebAdminCryptoManager.generate_key()
+        cm = WebAdminCryptoManager.from_secret_key(zato_secret_key)
+
+        django_secret_key = uuid4().hex
+        django_site_id = getrandbits(20)
+        admin_invoke_password = getattr(args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password')
 
         config = {
             'host': web_admin_host,
             'port': web_admin_port,
             'db_type': args.odb_type,
             'log_config': 'logging.conf',
+            'zato_secret_key':zato_secret_key,
+            'well_known_data': cm.encrypt(well_known_data),
             'DATABASE_NAME': args.odb_db_name or args.sqlite_path,
             'DATABASE_USER': args.odb_user or '',
-            'DATABASE_PASSWORD': encrypt(args.odb_password, priv_key) if args.odb_password else '',
+            'DATABASE_PASSWORD': cm.encrypt(args.odb_password) if args.odb_password else '',
             'DATABASE_HOST': args.odb_host or '',
             'DATABASE_PORT': args.odb_port or '',
-            'SITE_ID': getrandbits(20),
-            'SECRET_KEY': encrypt(uuid.uuid4().hex, priv_key),
+            'SITE_ID': django_site_id,
+            'SECRET_KEY': cm.encrypt(django_secret_key),
             'ADMIN_INVOKE_NAME':'admin.invoke',
-            'ADMIN_INVOKE_PASSWORD':encrypt(getattr(args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password'), priv_key),
+            'ADMIN_INVOKE_PASSWORD':cm.encrypt(admin_invoke_password),
         }
 
-        open(os.path.join(repo_dir, 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/web-admin.log'))
+        open(os.path.join(repo_dir, 'logging.conf'), 'w').write(
+            common_logging_conf_contents.format(log_path='./logs/web-admin.log'))
         open(web_admin_conf_path, 'w').write(config_template.format(**config))
         open(initial_data_json_path, 'w').write(initial_data_json.format(**config))
 
@@ -153,7 +165,7 @@ class Create(ZatoCommand):
             admin_created = True
 
             user = User.objects.get(username=user_name)
-            user.set_password(password)
+            user.set_password(admin_password)
             user.save()
 
         except IntegrityError:

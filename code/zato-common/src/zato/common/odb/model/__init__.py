@@ -188,7 +188,7 @@ class SecurityBase(Base):
     # It's nullable because some children classes do not use usernames
     username = Column(String(200), nullable=True)
 
-    password = Column(String(64), nullable=True)
+    password = Column(String(1000), nullable=True)
     password_type = Column(String(45), nullable=True)
     is_active = Column(Boolean(), nullable=False)
     sec_type = Column(String(45), nullable=False)
@@ -414,7 +414,7 @@ class TLSKeyCertSecurity(SecurityBase):
 
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
     info = Column(LargeBinary(200000), nullable=False)
-    value = Column(LargeBinary(200000), nullable=False)
+    auth_data = Column(LargeBinary(200000), nullable=False)
 
 # ################################################################################################################################
 
@@ -1485,7 +1485,7 @@ class OpenStackSwift(Base):
     auth_url = Column(String(200), nullable=False)
     auth_version = Column(String(200), nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.AUTH_VERSION)
     user = Column(String(200), nullable=True)
-    key = Column(String(200), nullable=True)
+    secret_key = Column(String(200), nullable=True)
     retries = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.RETRIES)
     is_snet = Column(Boolean(), nullable=False)
     starting_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_STARTING)
