@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -36,9 +36,10 @@ from bunch import Bunch
 from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, ZATO_NONE, \
      ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, JWT, OAuth, Server, Service, TLSChannelSecurity, XPathSecurity, WSSDefinition, \
+     HTTPSOAP, HTTSOAPAudit, JWT, OAuth, SecurityBase, Server, Service, TLSChannelSecurity, TLSKeyCertSecurity, XPathSecurity, WSSDefinition, \
      VaultConnection
-from zato.common.odb import get_ping_query, query, query_ps_subscription
+from zato.common.odb import get_ping_query, query
+from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.util import current_host, get_component_name, get_engine_url, get_http_json_channel, get_http_soap_channel, \
      parse_extra_into_dict, parse_tls_channel_security_definition
 
@@ -315,7 +316,7 @@ class ODBManager(SessionWrapper):
     """ Manages connections to a given component's Operational Database.
     """
     def __init__(self, well_known_data=None, token=None, crypto_manager=None, server_id=None, server_name=None, cluster_id=None,
-            pool=None):
+            pool=None, decrypt_func=None):
         super(ODBManager, self).__init__()
         self.well_known_data = well_known_data
         self.token = token
@@ -324,6 +325,7 @@ class ODBManager(SessionWrapper):
         self.server_name = server_name
         self.cluster_id = cluster_id
         self.pool = pool
+        self.decrypt_func = decrypt_func
 
     def on_deployment_finished(self):
         """ Commits all the implicit BEGIN blocks opened by SELECTs.
@@ -460,25 +462,21 @@ class ODBManager(SessionWrapper):
                     # Common things first
                     result[target].sec_def.id = sec_def.id
                     result[target].sec_def.name = sec_def.name
-                    result[target].sec_def.password = sec_def.password
+                    result[target].sec_def.password = self.decrypt_func(sec_def.password)
                     result[target].sec_def.sec_type = item.sec_type
 
                     if item.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
                         result[target].sec_def.username = sec_def.username
-                        result[target].sec_def.password = sec_def.password
                         result[target].sec_def.realm = sec_def.realm
 
                     elif item.sec_type == SEC_DEF_TYPE.JWT:
                         result[target].sec_def.username = sec_def.username
-                        result[target].sec_def.password = sec_def.password
 
                     elif item.sec_type == SEC_DEF_TYPE.APIKEY:
                         result[target].sec_def.username = 'HTTP_{}'.format(sec_def.username.upper().replace('-', '_'))
-                        result[target].sec_def.password = sec_def.password
 
                     elif item.sec_type == SEC_DEF_TYPE.WSS:
                         result[target].sec_def.username = sec_def.username
-                        result[target].sec_def.password = sec_def.password
                         result[target].sec_def.password_type = sec_def.password_type
                         result[target].sec_def.reject_empty_nonce_creat = sec_def.reject_empty_nonce_creat
                         result[target].sec_def.reject_stale_tokens = sec_def.reject_stale_tokens
@@ -490,7 +488,6 @@ class ODBManager(SessionWrapper):
 
                     elif item.sec_type == SEC_DEF_TYPE.XPATH_SEC:
                         result[target].sec_def.username = sec_def.username
-                        result[target].sec_def.password = sec_def.password
                         result[target].sec_def.username_expr = sec_def.username_expr
                         result[target].sec_def.password_expr = sec_def.password_expr
 
@@ -974,41 +971,41 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_def_jms_wmq(self, cluster_id, def_id):
-        """ Returns an JMS WebSphere MQ definition's details.
+    def get_def_wmq(self, cluster_id, def_id):
+        """ Returns an IBM MQ definition's details.
         """
         with closing(self.session()) as session:
-            return query.def_jms_wmq(session, cluster_id, def_id)
+            return query.definition_wmq(session, cluster_id, def_id)
 
-    def get_def_jms_wmq_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of JMS WebSphere MQ definitions on the given cluster.
+    def get_definition_wmq_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of IBM MQ definitions on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.def_jms_wmq_list(session, cluster_id, needs_columns)
+            return query.definition_wmq_list(session, cluster_id, needs_columns)
 
-    def get_out_jms_wmq(self, cluster_id, out_id):
-        """ Returns an outgoing JMS WebSphere MQ connection's details.
+    def get_out_wmq(self, cluster_id, out_id):
+        """ Returns an outgoing IBM MQ connection's details.
         """
         with closing(self.session()) as session:
-            return query.out_jms_wmq(session, cluster_id, out_id)
+            return query.out_wmq(session, cluster_id, out_id)
 
-    def get_out_jms_wmq_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of outgoing JMS WebSphere MQ connections.
+    def get_out_wmq_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of outgoing IBM MQ connections.
         """
         with closing(self.session()) as session:
-            return query.out_jms_wmq_list(session, cluster_id, needs_columns)
+            return query.out_wmq_list(session, cluster_id, needs_columns)
 
-    def get_channel_jms_wmq(self, cluster_id, channel_id):
-        """ Returns a particular JMS WebSphere MQ channel.
+    def get_channel_wmq(self, cluster_id, channel_id):
+        """ Returns a particular IBM MQ channel.
         """
         with closing(self.session()) as session:
-            return query.channel_jms_wmq(session, cluster_id, channel_id)
+            return query.channel_wmq(session, cluster_id, channel_id)
 
-    def get_channel_jms_wmq_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of JMS WebSphere MQ channels.
+    def get_channel_wmq_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of IBM MQ channels.
         """
         with closing(self.session()) as session:
-            return query.channel_jms_wmq_list(session, cluster_id, needs_columns)
+            return query.channel_wmq_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
@@ -1313,5 +1310,33 @@ class ODBManager(SessionWrapper):
         """ Returns a list of pub/sub endpoints.
         """
         return query.pubsub_endpoint_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def _migrate_30_encrypt_sec_base(self, session, id, attr_name, encrypted_value):
+        """ Sets an encrypted value of a named attribute in a security definition.
+        """
+        item = session.query(SecurityBase).\
+            filter(SecurityBase.id==id).\
+            one()
+
+        setattr(item, attr_name, encrypted_value)
+        session.add(item)
+
+    _migrate_30_encrypt_sec_apikey             = _migrate_30_encrypt_sec_base
+    _migrate_30_encrypt_sec_aws                = _migrate_30_encrypt_sec_base
+    _migrate_30_encrypt_sec_basic_auth         = _migrate_30_encrypt_sec_base
+    _migrate_30_encrypt_sec_jwt                = _migrate_30_encrypt_sec_base
+    _migrate_30_encrypt_sec_ntlm               = _migrate_30_encrypt_sec_base
+    _migrate_30_encrypt_sec_oauth              = _migrate_30_encrypt_sec_base
+    _migrate_30_encrypt_sec_openstack_security = _migrate_30_encrypt_sec_base
+    _migrate_30_encrypt_sec_vault_conn_sec     = _migrate_30_encrypt_sec_base
+    _migrate_30_encrypt_sec_wss                = _migrate_30_encrypt_sec_base
+    _migrate_30_encrypt_sec_xpath_sec          = _migrate_30_encrypt_sec_base
+
+# ################################################################################################################################
+
+    def _migrate_30_encrypt_tls_key_cert(self, session, id, encrypted_value):
+        pass
 
 # ################################################################################################################################

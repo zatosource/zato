@@ -19,12 +19,12 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import CACHE, CONNECTION, DATA_FORMAT, MISC, PUBSUB, SIMPLE_IO, URL_TYPE, WEB_SOCKET
+from zato.common import CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE, WEB_SOCKET
 from zato.common.odb.model import CacheBuiltin, ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, \
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
 from zato.common.pubsub import new_sub_key
-from zato.common.time_util import utcnow_as_ms
 from zato.common.util import get_http_json_channel, get_http_soap_channel
+from zato.common.util.time_ import utcnow_as_ms
 
 msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
 
@@ -50,7 +50,7 @@ zato_services = {
     'zato.channel.amqp.edit':'zato.server.service.internal.channel.amqp_.Edit',
     'zato.channel.amqp.get-list':'zato.server.service.internal.channel.amqp_.GetList',
 
-    # Channels - JMS WebSphere MQ
+    # Channels - IBM MQ
     'zato.channel.jms-wmq.create':'zato.server.service.internal.channel.jms_wmq.Create',
     'zato.channel.jms-wmq.delete':'zato.server.service.internal.channel.jms_wmq.Delete',
     'zato.channel.jms-wmq.edit':'zato.server.service.internal.channel.jms_wmq.Edit',
@@ -94,8 +94,6 @@ zato_services = {
     'zato.checks.sio.no-force-type-service': 'zato.server.service.internal.checks.sio.NoForceTypeService',
     'zato.checks.sio.utc-service': 'zato.server.service.internal.checks.sio.UTCService',
     'zato.checks.sio.unicode-service': 'zato.server.service.internal.checks.sio.UnicodeService',
-    'zato.checks.sio.fixed-width-string': 'zato.server.service.internal.checks.sio.FixedWidthString',
-    'zato.checks.sio.fixed-width-string-multi-line': 'zato.server.service.internal.checks.sio.FixedWidthStringMultiLine',
 
     # Cloud - AWS - S3
     'zato.cloud.aws.s3.create':'zato.server.service.internal.cloud.aws.s3.Create',
@@ -127,7 +125,7 @@ zato_services = {
     'zato.definition.cassandra.get-by-id':'zato.server.service.internal.definition.cassandra.GetByID',
     'zato.definition.cassandra.get-list':'zato.server.service.internal.definition.cassandra.GetList',
 
-    # Definitions - JMS WebSphere MQ
+    # Definitions - IBM MQ
     'zato.definition.jms-wmq.create':'zato.server.service.internal.definition.jms_wmq.Create',
     'zato.definition.jms-wmq.delete':'zato.server.service.internal.definition.jms_wmq.Delete',
     'zato.definition.jms-wmq.edit':'zato.server.service.internal.definition.jms_wmq.Edit',
@@ -239,7 +237,7 @@ zato_services = {
     'zato.outgoing.ftp.edit':'zato.server.service.internal.outgoing.ftp.Edit',
     'zato.outgoing.ftp.get-list':'zato.server.service.internal.outgoing.ftp.GetList',
 
-    # Outgoing connections - JMS WebSphere MQ
+    # Outgoing connections - IBM MQ
     'zato.outgoing.jms-wmq.create':'zato.server.service.internal.outgoing.jms_wmq.Create',
     'zato.outgoing.jms-wmq.delete':'zato.server.service.internal.outgoing.jms_wmq.Delete',
     'zato.outgoing.jms-wmq.edit':'zato.server.service.internal.outgoing.jms_wmq.Edit',
@@ -503,8 +501,10 @@ class Create(ZatoCommand):
 
         self.add_default_rbac_permissions(session, cluster)
         root_rbac_role = self.add_default_rbac_roles(session, cluster)
-        apispec_rbac_role = self.add_rbac_role_and_acct(session, cluster, root_rbac_role, 'API Specification Readers', 'apispec', 'apispec')
-        ide_pub_rbac_role = self.add_rbac_role_and_acct(session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
+        apispec_rbac_role = self.add_rbac_role_and_acct(
+            session, cluster, root_rbac_role, 'API Specification Readers', 'apispec', 'apispec')
+        ide_pub_rbac_role = self.add_rbac_role_and_acct(
+            session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
 
         self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec,
             apispec_rbac_role, ide_pub_rbac_role)
@@ -513,6 +513,9 @@ class Create(ZatoCommand):
         self.add_default_cache(session, cluster)
         self.add_cache_endpoints(session, cluster)
         self.add_pubsub_sec_endpoints(session, cluster)
+
+        # For IBM MQ connections / connectors
+        self.add_internal_callback_wmq(session, cluster)
 
         try:
             session.commit()
@@ -536,7 +539,7 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec,
-                              apispec_rbac_role, ide_pub_rbac_role):
+        apispec_rbac_role, ide_pub_rbac_role):
         """ Adds these Zato internal services that can be accessed through SOAP requests.
         """
         #
@@ -799,11 +802,7 @@ class Create(ZatoCommand):
 
     def add_check(self, session, cluster, service, pubapi_sec):
 
-        if 'fixed-width' in service.name:
-            data_formats = [DATA_FORMAT.FIXED_WIDTH]
-        else:
-            data_formats = [DATA_FORMAT.JSON, DATA_FORMAT.XML]
-
+        data_formats = [DATA_FORMAT.JSON, DATA_FORMAT.XML]
         for data_format in data_formats:
 
             name = 'zato.checks.{}.{}'.format(data_format, service.name)
@@ -966,6 +965,10 @@ class Create(ZatoCommand):
         sub.delivery_err_should_block = False
         sub.out_http_soap = outconn_demo
 
+        impl_name1 = 'zato.server.service.internal.pubsub.pubapi.TopicService'
+        impl_name2 = 'zato.server.service.internal.pubsub.pubapi.SubscribeService'
+        impl_name3 = 'zato.server.service.internal.pubsub.pubapi.MsgService'
+
         session.add(endpoint)
         session.add(topic)
         session.add(sub)
@@ -980,5 +983,22 @@ class Create(ZatoCommand):
 
         session.add(chan_demo)
         session.add(outconn_demo)
+
+# ################################################################################################################################
+
+    def add_internal_callback_wmq(self, session, cluster):
+        impl_name = 'zato.server.service.internal.channel.jms_wmq.OnMessageReceived'
+        service = Service(None, 'zato.channel.jms-wmq.on-message-received', True, impl_name, True, cluster)
+
+        wmq_username = IPC.CONNECTOR.WEBSPHERE_MQ.USERNAME
+        wmq_sec = HTTPBasicAuth(None, wmq_username, True, wmq_username, 'Zato IBM MQ', uuid4().hex, cluster)
+
+        channel = HTTPSOAP(None, 'zato.internal.callback.wmq', True, True, 'channel', 'plain_http', None,
+            '/zato/internal/callback/wmq',
+            None, '', None, None, security=wmq_sec, service=service, cluster=cluster)
+
+        session.add(wmq_sec)
+        session.add(service)
+        session.add(channel)
 
 # ################################################################################################################################

@@ -22,11 +22,11 @@ from gevent import spawn
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
-from zato.common.odb.query_ps_publish import get_topic_depth, incr_topic_depth, insert_queue_messages, insert_topic_messages, \
+from zato.common.odb.query.pubsub.publish import get_topic_depth, incr_topic_depth, insert_queue_messages, insert_topic_messages, \
      update_publish_metadata
 from zato.common.pubsub import PubSubMessage
 from zato.common.pubsub import new_msg_id
-from zato.common.time_util import datetime_to_ms, utcnow_as_ms
+from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService

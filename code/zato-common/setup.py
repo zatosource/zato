@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -29,7 +29,7 @@ setup(
       name = 'zato-common',
       version = version,
 
-      author = 'Zato Developers',
+      author = 'Zato Source s.r.o.',
       author_email = 'info@zato.io',
       url = 'https://zato.io',
       license = 'GNU Lesser General Public License v3 (LGPLv3)',

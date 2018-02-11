@@ -1,6 +1,6 @@
 @definition
 Feature: zato.definition.jms-wmq.edit
-  Updates a JMS WebSphere MQ connection definition. Any channels using this definition will be restarted with new values.
+  Updates an IBM MQ MQ connection definition. Any channels using this definition will be restarted with new values.
 
   @definition.jms-wmq.edit
   Scenario: Create jms-wmq definition

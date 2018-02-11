@@ -1,0 +1,102 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}IBM MQ outconns - Send a message{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/outgoing/jms-wmq-send-message.js"></script>
+
+{% endblock %}
+
+{% block "content" %}
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div id="markup">
+    <table id="data-table">
+        <tr>
+            <td class='inline_header'>Send a message using IBM MQ connection `{{ item.name }}`</td>
+        </tr>
+        <tr>
+            <td>
+                <form id="send_message_form" action="{% url "outgoing-wmq-send-message-action" cluster_id conn_id name_slug %}" method="post">
+                {% csrf_token %}
+                    <textarea style="width:100%; height:350px" id="data" name="data">Hello from Zato!</textarea>
+                    <br/><br/>
+
+                    <table style="width:100%">
+                        <tr>
+                            <td style="width:5%">
+                                Queue:
+                            </td>
+                            <td style="width:20%">
+                                <input type="text" name="queue_name" value="" id="queue_name" style="width:220px"/>
+                            </td>
+                            <td style="width:6%">
+                                Reply to:
+                            </td>
+                            <td>
+                                <input type="text" name="reply_to" id="reply_to" style="width:250px"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Expiration:
+                            </td>
+                            <td>
+                                <input type="text" name="expiration" value="3600000" id="expiration" style="width:70px"/>
+                                <span class="form_hint">(in ms, default=1 hour)</span>
+                            </td>
+                            <td>
+                                Correl ID:
+                            </td>
+                            <td>
+                                <input type="text" name="correl_id" id="correl_id" style="width:250px"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Delivery:
+                            </td>
+                            <td>
+                                <select name="delivery_mode" id="delivery_mode">
+                                    <option value="1">Non-persistent</option>
+                                    <option value="2">Persistent</option>
+                                </select>
+                            </td>
+                            <td>
+                                Msg ID:
+                            </td>
+                            <td>
+                                <input type="text" name="msg_id" id="msg_id" style="width:250px"/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Priority:
+                            </td>
+                            <td colspan="3">
+                                <input type="text" name="priority" value="5" id="priority" style="width:30px"/>
+                                <span class="form_hint">(1-9, 1=min)</span>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="id" name="id" value="{{ conn_id }}" />
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+
+                    <div style="text-align:right">
+                        <input type="submit" value="Submit" />
+                    </div>
+
+                </form>
+            </td>
+        </tr>
+    </table>
+</div>
+
+
+{% endblock %}

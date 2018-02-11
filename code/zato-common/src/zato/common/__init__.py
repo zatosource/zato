@@ -315,6 +315,11 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.XPATH_SEC: 'XPath',
 }
 
+class AUTH_RESULT:
+    class BASIC_AUTH:
+        INVALID_PREFIX = 'invalid-prefix'
+        NO_AUTH = 'no-auth'
+
 DEFAULT_STATS_SETTINGS = {
     'scheduler_per_minute_aggr_interval':60,
     'scheduler_raw_times_interval':90,
@@ -359,7 +364,6 @@ class Attrs(type):
 
 class DATA_FORMAT(Attrs):
     DICT = 'dict'
-    FIXED_WIDTH = 'fixed-width'
     XML = 'xml'
     JSON = 'json'
     CSV = 'csv'
@@ -378,14 +382,6 @@ class SIMPLE_IO:
     class FORMAT(Attrs):
         JSON = DATA_FORMAT.JSON
         XML = DATA_FORMAT.XML
-        FIXED_WIDTH = DATA_FORMAT.FIXED_WIDTH
-
-    class INT_PARAMETERS:
-        VALUES = ['id']
-        SUFFIXES = ['_id', '_count', '_size', '_timeout']
-
-    class BOOL_PARAMETERS:
-        PREFIXES = ['is_', 'needs_', 'should_', 'by_', 'has_']
 
     COMMON_FORMAT = OrderedDict()
     COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
@@ -394,7 +390,6 @@ class SIMPLE_IO:
     HTTP_SOAP_FORMAT = OrderedDict()
     HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
     HTTP_SOAP_FORMAT[DATA_FORMAT.XML] = 'XML'
-    HTTP_SOAP_FORMAT[DATA_FORMAT.FIXED_WIDTH] = 'Fixed-width'
 
 class DEPLOYMENT_STATUS(Attrs):
     DEPLOYED = 'deployed'
@@ -563,7 +558,6 @@ class CHANNEL(Attrs):
     INVOKE_ASYNC = 'invoke-async'
     INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'
     IPC = 'ipc'
-    JMS_WMQ = 'jms-wmq'
     NOTIFIER_RUN = 'notifier-run'
     NOTIFIER_TARGET = 'notifier-target'
     PARALLEL_EXEC_CALL = 'parallel-exec-call'
@@ -575,6 +569,7 @@ class CHANNEL(Attrs):
     STOMP = 'stomp'
     URL_DATA = 'url-data'
     WEB_SOCKET = 'web-socket'
+    WEBSPHERE_MQ = 'websphere-mq'
     WORKER = 'worker'
     ZMQ = 'zmq'
 
@@ -736,7 +731,6 @@ class PUBSUB:
     class DATA_FORMAT:
         CSV         = NameId('CSV', DATA_FORMAT.CSV)
         DICT        = NameId('Dict', DATA_FORMAT.DICT)
-        FIXED_WIDTH = NameId('Fixed-width', DATA_FORMAT.FIXED_WIDTH)
         JSON        = NameId('JSON', DATA_FORMAT.JSON)
         POST        = NameId('POST', DATA_FORMAT.POST)
         SOAP        = NameId('SOAP', DATA_FORMAT.SOAP)
@@ -744,7 +738,7 @@ class PUBSUB:
 
         class __metaclass__(type):
             def __iter__(self):
-                return iter((self.CSV, self.DICT, self.FIXED_WIDTH, self.JSON, self.POST, self.SOAP, self.XML))
+                return iter((self.CSV, self.DICT, self.JSON, self.POST, self.SOAP, self.XML))
 
     class HOOK_TYPE:
         PUB = 'pub'
@@ -968,6 +962,10 @@ class IPC:
         FAILURE = 'zato.failure'
         LENGTH = 12 # Length of either success or failure messages
 
+    class CONNECTOR:
+        class WEBSPHERE_MQ:
+            USERNAME = 'zato.connector.wmq'
+
 class WEB_SOCKET:
     class DEFAULT:
         NEW_TOKEN_TIMEOUT = 5
@@ -1016,6 +1014,14 @@ class AMQP:
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
 
 ZATO_INFO_FILE = b'.zato-info'
+
+class SECRETS:
+
+    # These parameters will be automatically encrypted in SimpleIO input
+    PARAMS = ('auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'token')
+
+    # Zato secret (Fernet)
+    PREFIX = 'zato.secf.'
 
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):
@@ -1257,5 +1263,16 @@ class IMAPMessage(object):
 
     def mark_seen(self):
         self.conn.mark_seen(self.uid)
+
+# ################################################################################################################################
+
+class WebSphereMQCallData(object):
+    """ Metadata for information returned by IBM MQ in response to underlying MQPUT calls.
+    """
+    __slots__ = ('msg_id', 'correlation_id')
+
+    def __init__(self, msg_id, correlation_id):
+        self.msg_id = msg_id
+        self.correlation_id = correlation_id
 
 # ################################################################################################################################

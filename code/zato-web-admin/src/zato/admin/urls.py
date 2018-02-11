@@ -30,7 +30,7 @@ from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
 from zato.admin.web.views.definition import amqp_ as def_amqp
 from zato.admin.web.views.definition import cassandra as def_cassandra
-from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
+from zato.admin.web.views.definition import jms_wmq as def_wmq
 from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
@@ -599,16 +599,20 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. JMS WebSphere MQ
+    # .. IBM MQ
 
     url(r'^zato/definition/jms-wmq/$',
-        login_required(def_jms_wmq.Index()), name=def_jms_wmq.Index.url_name),
+        login_required(def_wmq.Index()), name=def_wmq.Index.url_name),
     url(r'^zato/definition/jms-wmq/create/$',
-        login_required(def_jms_wmq.Create()), name=def_jms_wmq.Create.url_name),
+        login_required(def_wmq.Create()), name=def_wmq.Create.url_name),
     url(r'^zato/definition/jms-wmq/edit/$',
-        login_required(def_jms_wmq.Edit()), name=def_jms_wmq.Edit.url_name),
+        login_required(def_wmq.Edit()), name=def_wmq.Edit.url_name),
     url(r'^zato/definition/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(def_jms_wmq.Delete()), name=def_jms_wmq.Delete.url_name),
+        login_required(def_wmq.Delete()), name=def_wmq.Delete.url_name),
+    url(r'^zato/definition/jms-wmq/change-password/$',
+        login_required(def_wmq.change_password), name='definition-wmq-change-password'),
+    url(r'^zato/definition/jms-wmq/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(def_wmq.ping), name='definition-wmq-ping'),
     ]
 
 # ################################################################################################################################
@@ -653,7 +657,7 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. JMS WebSphere MQ
+    # .. IBM MQ
 
     url(r'^zato/outgoing/jms-wmq/$',
         login_required(out_jms_wmq.index), name='out-jms-wmq'),
@@ -663,6 +667,11 @@ urlpatterns += [
         login_required(out_jms_wmq.edit), name='out-jms-wmq-edit'),
     url(r'^zato/outgoing/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_jms_wmq.Delete()), name=out_jms_wmq.Delete.url_name),
+    url(r'^zato/outgoing/jms-wmq/send/cluster/(?P<cluster_id>.*)/conn/(?P<conn_id>.*)/(?P<name_slug>.*)$',
+        login_required(out_jms_wmq.send_message), name='outgoing-wmq-send-message'),
+    url(r'^zato/outgoing/jms-wmq/send/action/cluster/(?P<cluster_id>.*)/conn/(?P<conn_id>.*)/(?P<name_slug>.*)$',
+        login_required(out_jms_wmq.send_message_action), name='outgoing-wmq-send-message-action'),
+
     ]
 
 # ################################################################################################################################
@@ -762,7 +771,7 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. JMS WebSphere MQ
+    # .. IBM MQ
     url(r'^zato/channel/jms-wmq/$',
         login_required(channel_jms_wmq.Index()), name=channel_jms_wmq.Index.url_name),
     url(r'^zato/channel/jms-wmq/create/$',
@@ -1282,7 +1291,6 @@ urlpatterns += [
 
 # ################################################################################################################################
 
-if settings.DEBUG:
-    urlpatterns += [
-        url(r'^static/(?P<path>.*)$', django_static_serve, {'document_root': settings.MEDIA_ROOT}),
-    ]
+urlpatterns += [
+    url(r'^static/(?P<path>.*)$', django_static_serve, {'document_root': settings.MEDIA_ROOT}),
+]

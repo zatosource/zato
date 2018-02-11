@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,34 +13,64 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import ConnDefWMQ, OutgoingWMQ
-from zato.common.odb.query import out_jms_wmq_list
-from zato.server.connection.jms_wmq.outgoing import start_connector
-from zato.server.service import Integer
+from zato.common.odb.query import out_wmq, out_wmq_list
+from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
+# ################################################################################################################################
+
+_base_required = ('id', Integer('delivery_mode'), Integer('priority'))
+_get_required = _base_required + ('name', 'is_active', 'def_id', 'def_name')
+_optional = (Integer('expiration'),)
+
+
+# ################################################################################################################################
+
+class _GetSIO(AdminSIO):
+    output_required = _get_required
+    output_optional = _optional + ('def_id', 'def_name_full_text')
+
+# ################################################################################################################################
+
+class Get(AdminService):
+    """ Returns details of a single outgoing IBM MQ connection.
+    """
+    class SimpleIO(_GetSIO):
+        request_elem = 'zato_outgoing_jms_wmq_get_request'
+        response_elem = 'zato_outgoing_jms_wmq_get_response'
+        input_required = ('cluster_id', 'id')
+        output_optional = _GetSIO.output_optional
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = out_wmq(session, self.request.input.cluster_id, self.request.input.id)
+            self.response.payload = item
+
+# ################################################################################################################################
+
 class GetList(AdminService):
-    """ Returns a list of outgoing JMS WebSphere MQ connections.
+    """ Returns a list of outgoing IBM MQ connections.
     """
     _filter_by = OutgoingWMQ.name,
 
-    class SimpleIO(GetListAdminSIO):
+    class SimpleIO(_GetSIO, GetListAdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_get_list_request'
         response_elem = 'zato_outgoing_jms_wmq_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'def_id', Integer('delivery_mode'), Integer('priority'), 'def_name')
-        output_optional = ('expiration',)
 
     def get_data(self, session):
-        return self._search(out_jms_wmq_list, session, self.request.input.cluster_id, False)
+        return self._search(out_wmq_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+# ################################################################################################################################
+
 class Create(AdminService):
-    """ Creates a new outgoing JMS WebSphere MQ connection.
+    """ Creates a new outgoing IBM MQ connection.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_create_request'
@@ -63,7 +93,7 @@ class Create(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('An outgoing JMS WebSphere MQ connection [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing IBM MQ connection `{}` already exists on this cluster'.format(input.name))
 
             try:
                 item = OutgoingWMQ()
@@ -74,24 +104,28 @@ class Create(AdminService):
                 item.priority = input.priority
                 item.expiration = input.expiration
 
+                # Commit to DB
                 session.add(item)
                 session.commit()
 
-                if item.is_active:
-                    start_connector(self.server.repo_location, item.id, item.def_id)
+                # Notify other servers
+                input.id = item.id
+                input.action = OUTGOING.WMQ_CREATE.value
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                msg = 'Could not create an outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('Could not create an outgoing IBM MQ connection, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
 
+# ################################################################################################################################
+
 class Edit(AdminService):
-    """ Updates an outgoing JMS WebSphere MQ connection.
+    """ Updates an outgoing IBM MQ connection.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_edit_request'
@@ -115,7 +149,7 @@ class Edit(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('An outgoing JMS WebSphere MQ connection [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing IBM MQ connection `{`}` already exists on this cluster'.format(input.name))
 
             try:
                 item = session.query(OutgoingWMQ).filter_by(id=input.id).one()
@@ -127,25 +161,29 @@ class Edit(AdminService):
                 item.priority = input.priority
                 item.expiration = input.expiration
 
+                # Commit to DB
                 session.add(item)
                 session.commit()
 
-                input.action = OUTGOING.JMS_WMQ_EDIT.value
+                input.action = OUTGOING.WMQ_EDIT.value
                 input.old_name = old_name
-                self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL)
+
+                # Notify other servers
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                msg = 'Could not update the JMS WebSphere MQ definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('Could not update IBM MQ definition, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
 
+# ################################################################################################################################
+
 class Delete(AdminService):
-    """ Deletes an outgoing JMS WebSphere MQ connection.
+    """ Deletes an outgoing IBM MQ connection.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_delete_request'
@@ -159,16 +197,36 @@ class Delete(AdminService):
                     filter(OutgoingWMQ.id==self.request.input.id).\
                     one()
 
+                # Commit to DB
                 session.delete(item)
                 session.commit()
 
-                msg = {'action': OUTGOING.JMS_WMQ_DELETE.value, 'name': item.name,
-                       'old_name': item.name, 'id':item.id}
-                self.broker_client.publish(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL)
+                # Notify other servers
+                self.broker_client.publish({
+                    'action': OUTGOING.WMQ_DELETE.value,
+                    'name': item.name,
+                    'old_name': item.name,
+                    'id':item.id
+                })
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                msg = 'Could not delete the outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not delete outgoing IBM MQ connection, e:`{}`', format_exc())
 
                 raise
+
+# ################################################################################################################################
+
+class SendMessage(AdminService):
+    """ Sends a message to an IBM MQ MQ queue.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_jms_wmq_send_message_request'
+        response_elem = 'zato_outgoing_jms_wmq_message_response'
+        input_required = _base_required + ('cluster_id', 'queue_name', 'data')
+        input_optional = _optional + ('reply_to', AsIs('correl_id'), AsIs('msg_id'))
+
+    def handle(self):
+        self.server.send_wmq_message(self.request.input)
+
+# ################################################################################################################################

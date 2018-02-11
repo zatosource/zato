@@ -26,8 +26,8 @@ from sortedcontainers import SortedList as _SortedList
 # Zato
 from zato.common import PUBSUB
 from zato.common.pubsub import PubSubMessage, SkipDelivery
-from zato.common.time_util import datetime_from_ms
 from zato.common.util import spawn_greenlet
+from zato.common.util.time_ import datetime_from_ms
 from zato.server.pubsub import PubSub
 
 # For pyflakes
