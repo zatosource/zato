@@ -158,6 +158,15 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
     sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
+    sso_config = get_config(repo_location, 'sso.conf', needs_user_config=False)
+
+    # Construct a set of common passwords to reject out of a multi-line list
+    reject = set()
+    for line in sso_config.password_complexity.reject.strip().splitlines():
+        line = str(line.strip())
+        reject.add(line)
+
+    sso_config.password_complexity.reject = reject
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
     preferred_address = server_config.preferred_address.get('address')
@@ -226,6 +235,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.logging_config = logging_config
     server.logging_conf_path = logging_conf_path
     server.sio_config = sio_config
+    server.sso_config = sso_config
     server.user_config.update(server_config.user_config_items)
     server.app_context = app_context
     server.preferred_address = preferred_address
