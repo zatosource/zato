@@ -27,26 +27,29 @@ create_edit_input_required_extra = ['auth_data']
 skip_input_params = ['info', 'sec_type']
 output_optional_extra = ['info']
 
-def instance_hook(service, input, instance, attrs):
+def instance_hook(self, input, instance, attrs):
 
-    instance.username = service.cid # Required by model
+    decrypted = self.server.decrypt(input.auth_data).encode('utf8')
+
+    instance.username = self.cid # Required by model
     instance.sec_type = SEC_DEF_TYPE.TLS_KEY_CERT
-    instance.info = get_tls_from_payload(input.auth_data, True)
+    instance.info = get_tls_from_payload(decrypted, True).encode('utf8')
+    instance.auth_data = input.auth_data.encode('utf8')
 
-    with service.lock():
-        full_path = store_tls(service.server.tls_dir, service.request.input.auth_data, True)
-        service.logger.info('Key/cert pair saved under `%s`', full_path)
+    with self.lock():
+        full_path = store_tls(self.server.tls_dir, decrypted, True)
+        self.logger.info('Key/cert pair saved under `%s`', full_path)
 
-def response_hook(service, input, instance, attrs, service_type):
+def response_hook(self, input, instance, attrs, service_type):
     if service_type == 'create_edit':
-        service.response.payload.info = instance.info
+        self.response.payload.info = instance.info
 
-def broker_message_hook(service, input, instance, attrs, service_type):
+def broker_message_hook(self, input, instance, attrs, service_type):
     if service_type == 'delete':
         input.auth_data = instance.auth_data
 
-def delete_hook(service, input, instance, attrs):
-    delete_tls_material_from_fs(service.server, instance.info, get_tls_ca_cert_full_path)
+def delete_hook(self, input, instance, attrs):
+    delete_tls_material_from_fs(self.server, instance.info, get_tls_ca_cert_full_path)
 
 class GetList(AdminService):
     _filter_by = TLSKeyCertSecurity.name,
