@@ -365,7 +365,9 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
                     if _is_int(param_name, int_parameters, int_parameter_suffixes):
                         value = int(value)
                     elif _is_secret(param_name):
-                        value = encrypt_func(value)
+                        # It will be None in SIO responses
+                        if encrypt_func:
+                            value = encrypt_func(value)
 
         return value
 
