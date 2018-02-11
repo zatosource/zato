@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import base64
 import logging
 import os
-import sys
 from json import loads
 
 # Bunch

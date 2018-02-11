@@ -12,9 +12,12 @@ import os
 # Bunch
 from bunch import Bunch
 
+# Zato
+from zato.common import SECRETS
+
 # ################################################################################################################################
 
-def resolve_value(value, _default=object()):
+def resolve_value(key, value, decrypt_func=None, _default=object(), _secrets=SECRETS):
     """ Resolves final value of a given variable by looking it up in environment if applicable.
     """
     # Skip non-resolvable items
@@ -37,6 +40,10 @@ def resolve_value(value, _default=object()):
             if value is _default:
                 value = 'ENV_KEY_MISSING_{}'.format(env_key)
 
+    # It may be an encrypted value
+    elif key in _secrets.PARAMS and value.startswith(_secrets.PREFIX):
+        value = decrypt_func(value)
+
     # Pre-processed, we can assign this pair to output
     return value
 
@@ -48,6 +55,6 @@ def resolve_env_variables(data):
     """
     out = Bunch()
     for key, value in data.items():
-        out[key] = resolve_value(value)
+        out[key] = resolve_value(None, value)
 
     return out

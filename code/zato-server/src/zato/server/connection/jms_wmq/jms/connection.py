@@ -33,7 +33,7 @@ from traceback import format_exc
 import xml.etree.ElementTree as etree
 
 # Zato
-from zato.common.wmq_util import unhexlify_wmq_id
+from zato.common.util.wmq import unhexlify_wmq_id
 from zato.server.connection.jms_wmq.jms.core import reserved_attributes, TextMessage
 from zato.server.connection.jms_wmq.jms import BaseException, WebSphereMQException, NoMessageAvailableException, \
      DELIVERY_MODE_NON_PERSISTENT, DELIVERY_MODE_PERSISTENT

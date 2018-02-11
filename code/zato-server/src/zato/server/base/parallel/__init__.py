@@ -37,16 +37,16 @@ from springpython.context import DisposableObject
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common import DATA_FORMAT, KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common import DATA_FORMAT, KVDB, SECRETS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
 from zato.common.zato_keyutils import KeyUtils
-from zato.common.posix_ipc_util import ServerStartupIPC
 from zato.common.pubsub import SkipDelivery
-from zato.common.time_util import TimeUtil
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
+from zato.common.util.posix_ipc_ import ServerStartupIPC
+from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
@@ -78,9 +78,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.repo_location = None
         self.user_conf_location = None
         self.sql_pool_store = None
-        self.int_parameters = None
-        self.int_parameter_suffixes = None
-        self.bool_parameter_prefixes = None
         self.soap11_content_type = None
         self.soap12_content_type = None
         self.plain_xml_content_type = None
@@ -97,6 +94,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.pickup_config = None
         self.logging_config = None
         self.logging_conf_path = None
+        self.sio_config = None
         self.connector_server_grace_time = None
         self.id = None
         self.name = None
@@ -336,12 +334,13 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
-    def set_odb_pool(self):
+    def set_up_odb(self):
         # This is the call that creates an SQLAlchemy connection
         self.config.odb_data['fs_sql_config'] = self.fs_sql_config
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         self.odb.token = self.config.odb_data.token
+        self.odb.decrypt_func = self.decrypt
 
 # ################################################################################################################################
 
@@ -374,7 +373,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         self.config.odb_data = self.get_config_odb_data(self)
-        self.set_odb_pool()
+        self.set_up_odb()
 
         # Now try grabbing the basic server's data from the ODB. No point
         # in doing anything else if we can't get past this point.
@@ -655,6 +654,20 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def encrypt(self, data, _prefix=SECRETS.PREFIX):
+        """ Returns data encrypted using server's CryptoManager.
+        """
+        return '{}{}'.format(_prefix, self.crypto_manager.encrypt(data.encode('utf8')))
+
+# ################################################################################################################################
+
+    def decrypt(self, encrypted, _prefix=SECRETS.PREFIX):
+        """ Returns data decrypted using server's CryptoManager.
+        """
+        return self.crypto_manager.decrypt(encrypted.replace(_prefix, '', 1))
+
+# ################################################################################################################################
+
     @staticmethod
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
@@ -695,7 +708,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
             self.config.odb_data = self.get_config_odb_data(self)
             self.config.odb_data['fs_sql_config'] = self.fs_sql_config
-            self.set_odb_pool()
+            self.set_up_odb()
 
             self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb_data, self.odb.pool, False)
 

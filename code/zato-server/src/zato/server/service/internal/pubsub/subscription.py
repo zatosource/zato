@@ -23,7 +23,7 @@ from zato.common.odb.query.pubsub.subscribe import add_subscription, add_wsx_sub
      move_messages_to_sub_queue
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search
 from zato.common.pubsub import new_sub_key
-from zato.common.time_util import utcnow_as_ms
+from zato.common.util.time_ import utcnow_as_ms
 from zato.common.util import get_sa_model_columns
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic

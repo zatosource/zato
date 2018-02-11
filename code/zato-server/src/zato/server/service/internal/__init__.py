@@ -223,15 +223,18 @@ class ChangePasswordBase(AdminService):
             password1 = self.request.input.get('password1', '')
             password2 = self.request.input.get('password2', '')
 
+            password1_decrypted = self.server.decrypt(password1)
+            password2_decrypted = self.server.decrypt(password2)
+
             try:
                 if self.password_required:
-                    if not password1:
+                    if not password1_decrypted:
                         raise Exception('Password must not be empty')
 
-                    if not password2:
+                    if not password2_decrypted:
                         raise Exception('Password must be repeated')
 
-                if password1 != password2:
+                if password1_decrypted != password2_decrypted:
                     raise Exception('Passwords need to be the same')
 
                 auth = session.query(class_).\
@@ -248,7 +251,7 @@ class ChangePasswordBase(AdminService):
 
                     self.request.input.action = action
                     self.request.input.name = name
-                    self.request.input.password = auth.password
+                    self.request.input.password = password1_decrypted
                     self.request.input.salt = kwargs.get('salt')
 
                     for attr in kwargs.get('publish_instance_attrs', []):
@@ -256,9 +259,8 @@ class ChangePasswordBase(AdminService):
 
                     self.broker_client.publish(self.request.input, msg_type=msg_type)
 
-            except Exception, e:
-                msg = 'Could not update the password, e:[{}]'.format(format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('Could not update password, e:`%s`', format_exc())
                 session.rollback()
 
                 raise

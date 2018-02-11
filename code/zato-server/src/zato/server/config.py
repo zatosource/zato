@@ -20,8 +20,8 @@ from paste.util.multidict import MultiDict
 from zato.bunch import Bunch
 
 # Zato
-from zato.common import ZATO_NONE
-from zato.common.config_util import resolve_value
+from zato.common import SECRETS, ZATO_NONE
+from zato.common.util.config import resolve_value
 
 # ################################################################################################################################
 
@@ -175,7 +175,7 @@ class ConfigDict(object):
 # ################################################################################################################################
 
     @staticmethod
-    def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False):
+    def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False, decrypt_func=None):
         """ Return a new ConfigDict with items taken from an SQL query.
         """
         config_dict = ConfigDict(name)
@@ -206,9 +206,18 @@ class ConfigDict(object):
                 else:
                     config_dict._impl[item_name].config = item_class()
                     for attr_name in attrs.keys():
-                        value = getattr(item, attr_name)
-                        value = resolve_value(value)
-                        config_dict._impl[item_name]['config'][attr_name] = value
+                        config = config_dict._impl[item_name]['config']
+                        original = value = getattr(item, attr_name)
+                        value = resolve_value(attr_name, value, decrypt_func)
+                        config[attr_name] = value
+
+                        # Temporarily, add a flag to indicate whether the password in ODB was encrypted or not.
+                        if attr_name in SECRETS.PARAMS:
+                            config['_encryption_needed'] = True
+                            if original.startswith(SECRETS.PREFIX):
+                                config['_encrypted_in_odb'] = True
+                            else:
+                                config['_encrypted_in_odb'] = False
 
         return config_dict
 

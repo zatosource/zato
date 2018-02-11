@@ -15,7 +15,7 @@ from zato.bunch import Bunch
 from springpython.config import Object, PythonConfig
 
 # Zato
-from zato.common import SIMPLE_IO, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.kvdb import KVDB
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.server.base.parallel import ParallelServer
@@ -135,18 +135,6 @@ class ZatoContext(PythonConfig):
     def service_modules(self):
         return []
 
-    @Object
-    def int_parameters(self):
-        return SIMPLE_IO.INT_PARAMETERS.VALUES
-
-    @Object
-    def int_parameter_suffixes(self):
-        return SIMPLE_IO.INT_PARAMETERS.SUFFIXES
-
-    @Object
-    def bool_parameter_prefixes(self):
-        return SIMPLE_IO.BOOL_PARAMETERS.PREFIXES
-
     # #######################################################
     # SQL
 
@@ -176,9 +164,6 @@ class ZatoContext(PythonConfig):
         server.service_store = self.service_store()
         server.service_store.server = server
         server.sql_pool_store = self.sql_pool_store()
-        server.int_parameters = self.int_parameters()
-        server.int_parameter_suffixes = self.int_parameter_suffixes()
-        server.bool_parameter_prefixes = self.bool_parameter_prefixes()
         server.internal_service_modules = self.internal_service_modules()
         server.service_modules = self.service_modules()
         server.kvdb = self.kvdb()
