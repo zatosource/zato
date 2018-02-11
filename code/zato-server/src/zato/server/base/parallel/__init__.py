@@ -95,6 +95,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.logging_config = None
         self.logging_conf_path = None
         self.sio_config = None
+        self.sso_config = None
         self.connector_server_grace_time = None
         self.id = None
         self.name = None

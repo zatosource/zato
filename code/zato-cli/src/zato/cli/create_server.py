@@ -307,7 +307,7 @@ string_key=sample_string
 list_key=sample,list
 """
 
-sso_conf_contents = """[main]
+sso_conf_contents = '''[main]
 user_class=zato.common.user.User
 user_session_class=zato.common.user.UserSession
 
@@ -322,7 +322,35 @@ salt_size=32 # In bytes = 256 bits
 
 [sql]
 name=zato
+
+[password_validation]
+service=zato.sso.password.validate
+reject = """
+  111111
+  123123
+  123321
+  123456
+  1234567
+  12345678
+  123456789
+  1234567890
+  123qwe
+  1q2w3e
+  1q2w3e4r
+  1q2w3e4r5t
+  555555
+  654321
+  666666
+  7777777
+  987654321
+  google
+  mynoob
+  password
+  qwerty
+  qwertyuiop
+  zxcvbnm
 """
+'''
 
 secrets_conf_template = b"""
 [secret_keys]
