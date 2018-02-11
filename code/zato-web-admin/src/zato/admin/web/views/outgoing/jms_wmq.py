@@ -112,7 +112,7 @@ def create(req):
 
         return _edit_create_response(req.zato.client, 'created', response.data.id,
             req.POST['name'], delivery_mode_text, req.POST['cluster_id'], req.POST['def_id'])
-    except Exception, e:
+    except Exception:
         msg = 'Could not create outgoing IBM MQ connection, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
@@ -129,7 +129,7 @@ def edit(req):
         return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'],
             delivery_mode_text, req.POST['cluster_id'], req.POST['edit-def_id'])
 
-    except Exception, e:
+    except Exception:
         msg = 'Could not update outgoing IBM MQ connection, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)

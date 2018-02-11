@@ -20,7 +20,7 @@ from zato.common import DATA_FORMAT
 from zato.common.exception import NotFound
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage
 from zato.common.odb.query import pubsub_message, pubsub_queue_message
-from zato.common.time_util import datetime_from_ms
+from zato.common.util.time_ import datetime_from_ms
 from zato.server.pubsub import get_expiration, get_priority
 from zato.server.service import AsIs, Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO

@@ -29,7 +29,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, Cac
      RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, \
      TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, \
      WSSDefinition, VaultConnection, XPath, XPathSecurity
-from zato.common.search_util import SearchResults as _SearchResults
+from zato.common.util.search import SearchResults as _SearchResults
 
 # ################################################################################################################################
 
@@ -294,7 +294,7 @@ def tls_key_cert_list(session, cluster_id, needs_columns=False):
     return session.query(
         TLSKeyCertSecurity.id, TLSKeyCertSecurity.name,
         TLSKeyCertSecurity.is_active, TLSKeyCertSecurity.info,
-        TLSKeyCertSecurity.value, TLSKeyCertSecurity.sec_type).\
+        TLSKeyCertSecurity.auth_data, TLSKeyCertSecurity.sec_type).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==TLSKeyCertSecurity.cluster_id).\
         filter(SecurityBase.id==TLSKeyCertSecurity.id).\

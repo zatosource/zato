@@ -116,7 +116,7 @@ class Create(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
+            except Exception:
                 self.logger.error('Could not create an outgoing IBM MQ connection, e:`%s`', format_exc())
                 session.rollback()
 
@@ -174,7 +174,7 @@ class Edit(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
+            except Exception:
                 self.logger.error('Could not update IBM MQ definition, e:`%s`', format_exc())
                 session.rollback()
 
@@ -209,7 +209,7 @@ class Delete(AdminService):
                     'id':item.id
                 })
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
                 self.logger.error('Could not delete outgoing IBM MQ connection, e:`{}`', format_exc())
 

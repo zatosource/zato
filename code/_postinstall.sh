@@ -52,6 +52,7 @@ echo "$(pwd)/zato_extra_paths" >> eggs/easy-install.pth
 # Apply patches.
 patch -p0 -d eggs < patches/anyjson/__init__.py.diff
 patch -p0 -d eggs < patches/butler/__init__.py.diff
+patch -p0 -d eggs < patches/configobj.py.diff
 patch -p0 -d eggs < patches/gunicorn/arbiter.py.diff
 patch -p0 -d eggs < patches/gunicorn/config.py.diff
 patch -p0 -d eggs < patches/gunicorn/glogging.py.diff
@@ -70,5 +71,4 @@ patch -p0 -d eggs < patches/redis/redis/connection.py.diff
 patch -p0 -d eggs < patches/requests/models.py.diff
 patch -p0 -d eggs < patches/requests/packages/urllib3/connectionpool.py.diff
 patch -p0 -d eggs < patches/requests/sessions.py.diff
-patch -p0 -d eggs < patches/springpython/jms/factory.py.diff
 patch -p0 -d eggs < patches/ws4py/server/geventserver.py.diff

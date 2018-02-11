@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,6 +23,7 @@ import signal
 import string
 import threading
 import traceback
+import socket
 import sys
 from ast import literal_eval
 from contextlib import closing
@@ -36,9 +37,9 @@ from itertools import ifilter, izip, izip_longest, tee
 from operator import itemgetter
 from os import getuid
 from os.path import abspath, isabs, join
+from platform import system as platform_system
 from pprint import pprint as _pprint, PrettyPrinter
 from pwd import getpwuid
-from socket import gethostname, getfqdn
 from string import Template
 from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
@@ -197,7 +198,7 @@ def absolutize(path, base=''):
 # ################################################################################################################################
 
 def current_host():
-    return gethostname() + '/' + getfqdn()
+    return socket.gethostname() + '/' + socket.getfqdn()
 
 # ################################################################################################################################
 
@@ -215,34 +216,6 @@ def pprint(obj):
     buf.close()
 
     return value
-
-# ################################################################################################################################
-
-def encrypt(data, priv_key, b64=True):
-    """ Encrypt data using a public key derived from the private key.
-    data - data to be encrypted
-    priv_key - private key to use (as a PEM string)
-    b64 - should the encrypted data be BASE64-encoded before being returned, defaults to True
-    """
-
-    cm = CryptoManager(priv_key=priv_key)
-    cm.load_keys()
-
-    return cm.encrypt(data, b64)
-
-# ################################################################################################################################
-
-def decrypt(data, priv_key, b64=True):
-    """ Decrypts data using the given private key.
-    data - data to be encrypted
-    priv_key - private key to use (as a PEM string)
-    b64 - should the data be BASE64-decoded before being decrypted, defaults to True
-    """
-
-    cm = CryptoManager(priv_key=priv_key)
-    cm.load_keys()
-
-    return cm.decrypt(data, b64)
 
 # ################################################################################################################################
 
@@ -393,11 +366,12 @@ def get_user_config_name(file_name):
 
 # ################################################################################################################################
 
-def get_config(repo_location, config_name, bunchified=True, needs_user_config=True):
+def get_config(repo_location, config_name, bunchified=True, needs_user_config=True, crypto_manager=None, secrets_conf=None):
     """ Returns the configuration object. Will load additional user-defined config files,
     if any are available at all.
     """
-    conf = ConfigObj(os.path.join(repo_location, config_name))
+    conf = ConfigObj(
+        os.path.join(repo_location, config_name), zato_crypto_manager=crypto_manager, zato_secrets_conf=secrets_conf)
     conf = bunchify(conf) if bunchified else conf
 
     if needs_user_config:
@@ -440,30 +414,6 @@ def get_app_context(config):
     mod = import_module(mod_name)
     class_ = getattr(mod, class_name)()
     return ApplicationContext(class_)
-
-# ################################################################################################################################
-
-def get_crypto_manager(repo_location, app_context, config, load_keys=True, crypto_manager=None):
-    """ Returns a tool for crypto manipulations.
-    """
-    crypto_manager = crypto_manager or app_context.get_object('crypto_manager')
-
-    priv_key_location = config['crypto']['priv_key_location']
-    cert_location = config['crypto']['cert_location']
-    ca_certs_location = config['crypto']['ca_certs_location']
-
-    priv_key_location = absjoin(repo_location, priv_key_location)
-    cert_location = absjoin(repo_location, cert_location)
-    ca_certs_location = absjoin(repo_location, ca_certs_location)
-
-    crypto_manager.priv_key_location = priv_key_location
-    crypto_manager.cert_location = cert_location
-    crypto_manager.ca_certs_location = ca_certs_location
-
-    if load_keys:
-        crypto_manager.load_keys()
-
-    return crypto_manager
 
 # ################################################################################################################################
 
@@ -1005,7 +955,7 @@ def parse_extra_into_dict(lines, convert_bool=True):
         for line in extra.split(';'):
             original_line = line
             if line:
-                line = line.split('=')
+                line = line.split('=', 1)
                 if not len(line) == 2:
                     raise ValueError('Each line must be a single key=value entry, not `{}`'.format(original_line))
 
@@ -1068,11 +1018,21 @@ def get_free_port(start=30000):
 # ################################################################################################################################
 
 # Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
-def is_port_taken(port):
-    for conn in psutil.net_connections(kind='tcp'):
-        if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
-            return True
-    return False
+def is_port_taken(port, is_linux=platform_system().lower()=='linux'):
+    # Short for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
+    if is_linux:
+        for conn in psutil.net_connections(kind='tcp'):
+            if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
+                return True
+    else:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.bind(('', port))
+            sock.close()
+        except socket.error as e:
+            if e[0] == errno.EADDRINUSE:
+                return True
+            raise
 
 # ################################################################################################################################
 
@@ -1524,7 +1484,7 @@ def invoke_startup_services(
                 if name != service_name:
                     continue
 
-        if payload.startswith('file://'):
+        if isinstance(payload, basestring) and payload.startswith('file://'):
             payload = startup_service_payload_from_path(name, payload, repo_location)
             if not payload:
                 continue
