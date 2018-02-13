@@ -323,9 +323,28 @@ salt_size=32 # In bytes = 256 bits
 [sql]
 name=zato
 
-[password_validation]
-service=zato.sso.password.validate
-reject = """
+[apps]
+all=CRM
+signup_allowed=CRM
+login_allowed=CRM
+
+[signup]
+inform_if_user_exists=True
+inform_if_email_exists=True
+inform_if_password_invalid=True
+inform_if_app_invalid=True
+email_required=True
+max_length_username=128
+max_length_email=128
+max_length_password=256
+password_allow_whitespace=True
+always_return_confirm_token=True
+
+[user_validation]
+service=zato.sso.user.validate
+reject_username=zato, admin, root
+reject_email=
+reject_password = """
   111111
   123123
   123321
@@ -344,8 +363,16 @@ reject = """
   7777777
   987654321
   google
+  letmein
   mynoob
   password
+  password1
+  password12
+  password123
+  password!
+  password1!
+  password12!
+  password123!
   qwerty
   qwertyuiop
   zxcvbnm

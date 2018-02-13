@@ -162,11 +162,11 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
     # Construct a set of common passwords to reject out of a multi-line list
     reject = set()
-    for line in sso_config.password_complexity.reject.strip().splitlines():
+    for line in sso_config.user_validation.reject_password.strip().splitlines():
         line = str(line.strip())
         reject.add(line)
 
-    sso_config.password_complexity.reject = reject
+    sso_config.user_validation.reject_password = reject
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
     preferred_address = server_config.preferred_address.get('address')
