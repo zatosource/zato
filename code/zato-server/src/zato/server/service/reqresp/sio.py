@@ -346,8 +346,9 @@ def is_secret(param_name, _secrets_params=SECRETS.PARAMS):
 # ################################################################################################################################
 
 def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, bool_parameter_prefixes, int_parameters,
-    int_parameter_suffixes, encrypt_func, date_time_format=None, data_format=ZATO_NONE, from_sio_to_external=False,
-    special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC), _is_bool=is_bool, _is_int=is_int, _is_secret=is_secret):
+    int_parameter_suffixes, encrypt_func, encrypt_secrets, date_time_format=None, data_format=ZATO_NONE,
+    from_sio_to_external=False, special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC), _is_bool=is_bool, _is_int=is_int,
+    _is_secret=is_secret):
     try:
         if _is_bool(param, param_name, bool_parameter_prefixes):
             value = asbool(value or None) # value can be an empty string and asbool chokes on that
@@ -364,7 +365,7 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
                 if value and (value not in special_values) and has_simple_io_config:
                     if _is_int(param_name, int_parameters, int_parameter_suffixes):
                         value = int(value)
-                    elif _is_secret(param_name):
+                    elif encrypt_secrets and _is_secret(param_name):
                         # It will be None in SIO responses
                         if encrypt_func:
                             value = encrypt_func(value)
@@ -432,7 +433,8 @@ convert_impl = {
 # ################################################################################################################################
 
 def convert_param(cid, payload, param, data_format, is_required, default_value, path_prefix, use_text, channel_params,
-    has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes, encrypt_func, params_priority):
+    has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes, encrypt_func,
+    encrypt_secrets, params_priority):
     """ Converts request parameters from any data format supported into Python objects.
     """
     param_name = param.name if isinstance(param, ForceType) else param
@@ -447,7 +449,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
     # Convert it to a native Python data type
     if channel_value != ZATO_NONE:
         channel_value = convert_sio(cid, param, param_name, channel_value, has_simple_io_config, False, bool_parameter_prefixes,
-            int_parameters, int_parameter_suffixes, encrypt_func, None, data_format, False)
+            int_parameters, int_parameter_suffixes, encrypt_func, encrypt_secrets, None, data_format, False)
 
     # Return the value immediately if we already know channel_params are of higer priority
     if params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG and channel_value != ZATO_NONE:
@@ -488,7 +490,8 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
 
         if not isinstance(param, (AsIs, Opaque)):
             return param_name, convert_sio(cid, param, param_name, value, has_simple_io_config, data_format==DATA_FORMAT.XML,
-                bool_parameter_prefixes, int_parameters, int_parameter_suffixes, encrypt_func, None, data_format, False)
+                bool_parameter_prefixes, int_parameters, int_parameter_suffixes, encrypt_func, encrypt_secrets,
+                None, data_format, False)
 
     return param_name, value
 
