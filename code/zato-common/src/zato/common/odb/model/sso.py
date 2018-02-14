@@ -15,7 +15,7 @@ from sqlalchemy import Boolean, Column, DateTime, Index, Integer, Sequence, Stri
 
 # ################################################################################################################################
 
-class SSOUser:
+class _SSOUser:
     __tablename__ = 'zato_sso_user'
     __table_args__ = (
         UniqueConstraint('username', name='zato_u_usrn_uq'),
