@@ -338,6 +338,7 @@ inform_if_app_invalid=True
 email_required=True
 max_length_username=128
 max_length_email=128
+min_length_password=8
 max_length_password=256
 password_allow_whitespace=True
 return_confirm_token=True

@@ -20,14 +20,16 @@ class reason_code:
         has_whitespace = 'zsv.usr.004'
 
     class email:
+        invalid        = 'zsv.email.001'
         exists         = 'zsv.email.002'
         too_long       = 'zsv.email.003'
         has_whitespace = 'zsv.email.004'
+        missing        = 'zsv.email.005'
 
     class password:
-        invalid  = 'zsv.passwd.001'
-        too_long = 'zsv.passwd.003'
-        has_ws   = 'zsv.passwd.004'
+        invalid   = 'zsv.passwd.001'
+        too_short = 'zsv.passwd.002'
+        too_long  = 'zsv.passwd.003'
 
     class app_list:
         invalid   = 'zsi.appl.001'

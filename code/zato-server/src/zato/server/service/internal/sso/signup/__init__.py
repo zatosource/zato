@@ -108,6 +108,10 @@ class Validate(Service):
     def _validate_email(self, session, sso_conf, email):
         """ Raises ValidationError if email is invalid, e.g. already exists.
         """
+        # E-mail may be required
+        if sso_conf.signup.is_email_required and not email:
+            raise ValidationError(reason_code.email.missing, sso_conf.signup.inform_if_email_invalid)
+
         # E-mail must not be too long
         if len(email) > sso_conf.signup.max_length_email:
             raise ValidationError(reason_code.email.too_long, sso_conf.signup.inform_if_email_invalid)
@@ -126,6 +130,21 @@ class Validate(Service):
     def _validate_password(self, session, sso_conf, password):
         """ Raises ValidationError if password is invalid, e.g. it is too simple.
         """
+        # Password may not be too short
+        if len(password) < sso_conf.signup.min_length_password:
+            raise ValidationError(reason_code.password.too_short, sso_conf.signup.inform_if_password_invalid)
+
+        # Password may not be too long
+        if len(password) > sso_conf.signup.max_length_password:
+            raise ValidationError(reason_code.password.too_long, sso_conf.signup.inform_if_password_invalid)
+
+        # Password's default complexity is checked case-insensitively
+        password = password.lower()
+
+        # Password may not contain most commonly used ones
+        for elem in sso_conf.user_validation.reject_password:
+            if elem in password:
+                raise ValidationError(reason_code.password.invalid, sso_conf.signup.inform_if_password_invalid)
 
 # ################################################################################################################################
 
