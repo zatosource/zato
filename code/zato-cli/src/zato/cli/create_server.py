@@ -397,7 +397,7 @@ exact=id
 suffix=_count, _id, _size, _timeout
 
 [bool]
-prefix=by_, has_, is_, needs_, should_
+prefix=by_, has_, is_, may_, needs_, should_
 
 [secret]
 exact=auth_data, auth_token, password, password1, password2, secret_key, token
