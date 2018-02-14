@@ -324,9 +324,9 @@ salt_size=32 # In bytes = 256 bits
 name=zato
 
 [apps]
-all=CRM
-signup_allowed=CRM
-login_allowed=CRM
+all=
+signup_allowed=
+login_allowed=
 
 [signup]
 inform_if_user_exists=True

@@ -177,6 +177,11 @@ def run(base_dir, start_gunicorn_app=True, options=None):
         reject.add(line)
     sso_config.user_validation.reject_password = reject
 
+    # Turn all app lists into sets to make lookups faster
+    sso_config.apps.all = set(sso_config.apps.all)
+    sso_config.apps.signup_allowed = set(sso_config.apps.signup_allowed)
+    sso_config.apps.login_allowed = set(sso_config.apps.login_allowed)
+
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
     preferred_address = server_config.preferred_address.get('address')
 
