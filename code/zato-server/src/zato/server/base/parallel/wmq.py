@@ -24,8 +24,8 @@ from requests import get, post
 # Zato
 from zato.common import IPC, WebSphereMQCallData
 from zato.common.broker_message import CHANNEL, DEFINITION, OUTGOING
-from zato.common.proc_util import start_python_process
 from zato.common.util import get_free_port
+from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
 

@@ -25,15 +25,6 @@ from zato.common.settings_db import SettingsDB
 from zato.common.util import get_engine_url
 from zato_settings import * # noqa
 
-if 'DEBUG' not in globals():
-    DEBUG = os.environ.get('ZATO_WEB_ADMIN_DEBUG', False)
-
-if DEBUG:
-    try:
-        from debug_settings import * # noqa
-    except ImportError:
-        pass
-
 logging.addLevelName('TRACE1', TRACE1)
 if 'log_config' in globals():
     with open(log_config) as f:
@@ -98,6 +89,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.humanize',
+    'django.contrib.staticfiles',
     'zato.admin.web',
 )
 
