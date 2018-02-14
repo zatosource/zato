@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -367,6 +367,7 @@ class TestRequestHandler(TestCase):
         expected_channel_item.data_format = uuid4().hex
         expected_channel_item.transport = uuid4().hex
         expected_channel_item.params_pri = uuid4().hex
+        expected_channel_item.cache_type = None
 
         expected_worker_store = Bunch()
         expected_worker_store.broker_client = uuid4().hex

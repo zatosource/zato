@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -20,6 +20,9 @@ cloghandler = cloghandler # For pyflakes
 from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log
+
+# ConfigObj
+from configobj import ConfigObj
 
 # gunicorn
 import gunicorn
@@ -42,10 +45,14 @@ import yaml
 
 # Zato
 from zato.common import TRACE1
-from zato.common.repo import RepoManager
+from zato.common.crypto import ServerCryptoManager
 from zato.common.ipaddress_ import get_preferred_ip
-from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_crypto_manager, \
-     get_kvdb_config_for_log, parse_cmd_line_options, register_diag_handlers, store_pidfile
+from zato.common.repo import RepoManager
+from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_kvdb_config_for_log, \
+     parse_cmd_line_options, register_diag_handlers, store_pidfile
+from zato.common.util.cli import read_stdin_data
+
+# ################################################################################################################################
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
@@ -58,6 +65,8 @@ class ZatoGunicornApplication(Application):
         self.zato_config = {}
         super(ZatoGunicornApplication, self).__init__(*args, **kwargs)
 
+# ################################################################################################################################
+
     def init(self, *ignored_args, **ignored_kwargs):
         self.cfg.set('post_fork', self.zato_wsgi_app.post_fork) # Initializes a worker
         self.cfg.set('on_starting', self.zato_wsgi_app.on_starting) # Generates the deployment key
@@ -68,7 +77,7 @@ class ZatoGunicornApplication(Application):
                 k = k.replace('gunicorn_', '')
                 if k == 'bind':
                     if not ':' in v:
-                        raise ValueError('No port found in main.gunicorn_bind [{v}]; a proper value is, for instance, [{v}:17010]'.format(v=v))
+                        raise ValueError('No port found in main.gunicorn_bind `{}`, such as `{}:17010`'.format(v))
                     else:
                         host, port = v.split(':')
                         self.zato_host = host
@@ -83,9 +92,7 @@ class ZatoGunicornApplication(Application):
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
 
-        # TLS is new in 2.0 and we need to assume it's not enabled. In Zato 2.1 or later
-        # this will be changed to assume that we are always over TLS by default.
-        if asbool(self.crypto_config.get('use_tls', False)):
+        if asbool(self.crypto_config.use_tls):
             self.cfg.set('ssl_version', getattr(ssl, 'PROTOCOL_{}'.format(self.crypto_config.tls_protocol)))
             self.cfg.set('ciphers', self.crypto_config.tls_ciphers)
             self.cfg.set('cert_reqs', getattr(ssl, 'CERT_{}'.format(self.crypto_config.tls_client_certs.upper())))
@@ -98,6 +105,8 @@ class ZatoGunicornApplication(Application):
 
     def load(self):
         return self.zato_wsgi_app.on_wsgi_request
+
+# ################################################################################################################################
 
 def run(base_dir, start_gunicorn_app=True, options=None):
     options = options or {}
@@ -144,36 +153,39 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     logger = logging.getLogger(__name__)
     kvdb_logger = logging.getLogger('zato_kvdb')
 
-    config = get_config(repo_location, 'server.conf')
+    crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
+    secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
+    server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
+    sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
-    preferred_address = config.preferred_address.get('address')
+    preferred_address = server_config.preferred_address.get('address')
 
     if not preferred_address:
-        preferred_address = get_preferred_ip(config.main.gunicorn_bind, config.preferred_address)
+        preferred_address = get_preferred_ip(server_config.main.gunicorn_bind, server_config.preferred_address)
 
-    if not preferred_address and not config.server_to_server.boot_if_preferred_not_found:
+    if not preferred_address and not server_config.server_to_server.boot_if_preferred_not_found:
         msg = 'Unable to start the server. Could not obtain a preferred address, please configure [bind_options] in server.conf'
         logger.warn(msg)
         raise Exception(msg)
 
     # New in 2.0 - Start monitoring as soon as possible
-    if config.get('newrelic', {}).get('config'):
+    if server_config.get('newrelic', {}).get('config'):
         import newrelic.agent
         newrelic.agent.initialize(
-            config.newrelic.config, config.newrelic.environment or None, config.newrelic.ignore_errors or None,
-            config.newrelic.log_file or None, config.newrelic.log_level or None)
+            server_config.newrelic.config, server_config.newrelic.environment or None, server_config.newrelic.ignore_errors or None,
+            server_config.newrelic.log_file or None, server_config.newrelic.log_level or None)
 
     # New in 2.0 - override gunicorn-set Server HTTP header
-    gunicorn.SERVER_SOFTWARE = config.misc.get('http_server_header', 'Zato')
+    gunicorn.SERVER_SOFTWARE = server_config.misc.get('http_server_header', 'Zato')
 
     # Store KVDB config in logs, possibly replacing its password if told to
-    kvdb_config = get_kvdb_config_for_log(config.kvdb)
+    kvdb_config = get_kvdb_config_for_log(server_config.kvdb)
     kvdb_logger.info('Master process config `%s`', kvdb_config)
 
     # New in 2.0 hence optional
-    user_locale = config.misc.get('locale', None)
+    user_locale = server_config.misc.get('locale', None)
     if user_locale:
         locale.setlocale(locale.LC_ALL, user_locale)
         value = 12345
@@ -181,24 +193,26 @@ def run(base_dir, start_gunicorn_app=True, options=None):
             value, grouping=True).decode('utf-8'))
 
     # Spring Python
-    app_context = get_app_context(config)
+    app_context = get_app_context(server_config)
 
     # Makes queries against Postgres asynchronous
-    if asbool(config.odb.use_async_driver) and config.odb.engine == 'postgresql':
+    if asbool(server_config.odb.use_async_driver) and server_config.odb.engine == 'postgresql':
         make_psycopg_green()
 
-    # New in 2.0 - Put HTTP_PROXY in os.environ.
-    http_proxy = config.misc.get('http_proxy', False)
-    if http_proxy:
-        os.environ['http_proxy'] = http_proxy
+    if server_config.misc.http_proxy:
+        os.environ['http_proxy'] = server_config.misc.http_proxy
 
-    crypto_manager = get_crypto_manager(repo_location, app_context, config)
     server = app_context.get_object('server')
+    zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
-    zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, config.main, config.crypto)
+    #_sio_config = {
+    #    'int_parameters': sio_config.int.exact,
+    #    'int_parameter_suffixes': sio_config.int.suffix,
+    #    'bool_parameter_prefixes': sio_config.bool.prefix,
+    #}
 
     server.crypto_manager = crypto_manager
-    server.odb_data = config.odb
+    server.odb_data = server_config.odb
     server.host = zato_gunicorn_app.zato_host
     server.port = zato_gunicorn_app.zato_port
     server.repo_location = repo_location
@@ -206,12 +220,13 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.base_dir = base_dir
     server.logs_dir = os.path.join(server.base_dir, 'logs')
     server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
-    server.fs_server_config = config
+    server.fs_server_config = server_config
     server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
     server.pickup_config = pickup_config
     server.logging_config = logging_config
     server.logging_conf_path = logging_conf_path
-    server.user_config.update(config.user_config_items)
+    server.sio_config = sio_config
+    server.user_config.update(server_config.user_config_items)
     server.app_context = app_context
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
@@ -220,20 +235,20 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     # Remove all locks possibly left over by previous server instances
     kvdb = app_context.get_object('kvdb')
     kvdb.component = 'master-proc'
-    clear_locks(kvdb, config.main.token, config.kvdb, crypto_manager.decrypt)
+    clear_locks(kvdb, server_config.main.token, server_config.kvdb, crypto_manager.decrypt)
 
     # New in 2.0.8
-    server.return_tracebacks = asbool(config.misc.get('return_tracebacks', True))
-    server.default_error_message = config.misc.get('default_error_message', 'An error has occurred')
+    server.return_tracebacks = asbool(server_config.misc.get('return_tracebacks', True))
+    server.default_error_message = server_config.misc.get('default_error_message', 'An error has occurred')
 
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
 
     # New in 2.0 so it's optional.
-    profiler_enabled = config.get('profiler', {}).get('enabled', False)
+    profiler_enabled = server_config.get('profiler', {}).get('enabled', False)
 
     # New in 2.0 so it's optional.
-    sentry_config = config.get('sentry')
+    sentry_config = server_config.get('sentry')
 
     dsn = sentry_config.pop('dsn', None)
     if dsn:
@@ -256,18 +271,18 @@ def run(base_dir, start_gunicorn_app=True, options=None):
                 logger.addHandler(handler)
 
     if asbool(profiler_enabled):
-        profiler_dir = os.path.abspath(os.path.join(base_dir, config.profiler.profiler_dir))
+        profiler_dir = os.path.abspath(os.path.join(base_dir, server_config.profiler.profiler_dir))
         server.on_wsgi_request = ProfileMiddleware(
             server.on_wsgi_request,
-            log_filename = os.path.join(profiler_dir, config.profiler.log_filename),
-            cachegrind_filename = os.path.join(profiler_dir, config.profiler.cachegrind_filename),
-            discard_first_request = config.profiler.discard_first_request,
-            flush_at_shutdown = config.profiler.flush_at_shutdown,
-            path = config.profiler.url_path,
-            unwind = config.profiler.unwind)
+            log_filename = os.path.join(profiler_dir, server_config.profiler.log_filename),
+            cachegrind_filename = os.path.join(profiler_dir, server_config.profiler.cachegrind_filename),
+            discard_first_request = server_config.profiler.discard_first_request,
+            flush_at_shutdown = server_config.profiler.flush_at_shutdown,
+            path = server_config.profiler.url_path,
+            unwind = server_config.profiler.unwind)
 
     # New in 2.0 - set environmet variables for servers to inherit
-    os_environ = config.get('os_environ', {})
+    os_environ = server_config.get('os_environ', {})
     for key, value in os_environ.items():
         os.environ[key] = value
 
@@ -277,9 +292,13 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     else:
         return zato_gunicorn_app.zato_wsgi_app
 
+# ################################################################################################################################
+
 if __name__ == '__main__':
     base_dir = sys.argv[1]
     if not os.path.isabs(base_dir):
         base_dir = os.path.abspath(os.path.join(os.getcwd(), base_dir))
 
     run(base_dir, options=parse_cmd_line_options(sys.argv[2]))
+
+# ################################################################################################################################

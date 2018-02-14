@@ -364,7 +364,6 @@ class Attrs(type):
 
 class DATA_FORMAT(Attrs):
     DICT = 'dict'
-    FIXED_WIDTH = 'fixed-width'
     XML = 'xml'
     JSON = 'json'
     CSV = 'csv'
@@ -383,14 +382,6 @@ class SIMPLE_IO:
     class FORMAT(Attrs):
         JSON = DATA_FORMAT.JSON
         XML = DATA_FORMAT.XML
-        FIXED_WIDTH = DATA_FORMAT.FIXED_WIDTH
-
-    class INT_PARAMETERS:
-        VALUES = ['id']
-        SUFFIXES = ['_id', '_count', '_size', '_timeout']
-
-    class BOOL_PARAMETERS:
-        PREFIXES = ['is_', 'needs_', 'should_', 'by_', 'has_']
 
     COMMON_FORMAT = OrderedDict()
     COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
@@ -399,7 +390,6 @@ class SIMPLE_IO:
     HTTP_SOAP_FORMAT = OrderedDict()
     HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
     HTTP_SOAP_FORMAT[DATA_FORMAT.XML] = 'XML'
-    HTTP_SOAP_FORMAT[DATA_FORMAT.FIXED_WIDTH] = 'Fixed-width'
 
 class DEPLOYMENT_STATUS(Attrs):
     DEPLOYED = 'deployed'
@@ -741,7 +731,6 @@ class PUBSUB:
     class DATA_FORMAT:
         CSV         = NameId('CSV', DATA_FORMAT.CSV)
         DICT        = NameId('Dict', DATA_FORMAT.DICT)
-        FIXED_WIDTH = NameId('Fixed-width', DATA_FORMAT.FIXED_WIDTH)
         JSON        = NameId('JSON', DATA_FORMAT.JSON)
         POST        = NameId('POST', DATA_FORMAT.POST)
         SOAP        = NameId('SOAP', DATA_FORMAT.SOAP)
@@ -749,7 +738,7 @@ class PUBSUB:
 
         class __metaclass__(type):
             def __iter__(self):
-                return iter((self.CSV, self.DICT, self.FIXED_WIDTH, self.JSON, self.POST, self.SOAP, self.XML))
+                return iter((self.CSV, self.DICT, self.JSON, self.POST, self.SOAP, self.XML))
 
     class HOOK_TYPE:
         PUB = 'pub'
@@ -1015,6 +1004,14 @@ class AMQP:
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
 
 ZATO_INFO_FILE = b'.zato-info'
+
+class SECRETS:
+
+    # These parameters will be automatically encrypted in SimpleIO input
+    PARAMS = ('auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'token')
+
+    # Zato secret (Fernet)
+    PREFIX = 'zato.secf.'
 
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):

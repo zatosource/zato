@@ -1312,7 +1312,6 @@ urlpatterns += [
 
 # ################################################################################################################################
 
-if settings.DEBUG:
-    urlpatterns += [
-        url(r'^static/(?P<path>.*)$', django_static_serve, {'document_root': settings.MEDIA_ROOT}),
-    ]
+urlpatterns += [
+    url(r'^static/(?P<path>.*)$', django_static_serve, {'document_root': settings.MEDIA_ROOT}),
+]

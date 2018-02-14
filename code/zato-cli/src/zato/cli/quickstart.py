@@ -26,8 +26,8 @@ from cryptography.fernet import Fernet
 from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agent, ca_create_scheduler, ca_create_server, \
      ca_create_web_admin, create_cluster, create_lb, create_odb, create_scheduler, create_server, create_web_admin, \
      ZatoCommand
+from zato.common.crypto import CryptoManager
 from zato.common.defaults import http_plain_server_port
-from zato.common.markov_passwords import generate_password
 from zato.common.odb.model import Cluster
 from zato.common.util import get_engine, get_session, make_repr
 
@@ -337,6 +337,7 @@ class Create(ZatoCommand):
 
         # Must be shared by all servers
         jwt_secret = Fernet.generate_key()
+        secret_key = Fernet.generate_key()
 
         for name in server_names:
             server_path = os.path.join(args_path, server_names[name])
@@ -350,6 +351,7 @@ class Create(ZatoCommand):
             create_server_args.priv_key_path = server_crypto_loc[name].priv_path
             create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path
             create_server_args.jwt_secret = jwt_secret
+            create_server_args.secret_key = secret_key
 
             create_server.Create(create_server_args).execute(create_server_args, next_port.next(), False)
 
@@ -393,7 +395,7 @@ class Create(ZatoCommand):
         create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path
         create_web_admin_args.admin_invoke_password = admin_invoke_password
 
-        web_admin_password = generate_password()
+        web_admin_password = CryptoManager.generate_password()
         admin_created = create_web_admin.Create(create_web_admin_args).execute(
             create_web_admin_args, False, web_admin_password, True)
 
@@ -425,8 +427,7 @@ class Create(ZatoCommand):
         create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
         create_scheduler_args.cluster_id = cluster_id
 
-        scheduler_password = generate_password()
-        create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, scheduler_password, True)
+        create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True)
         self.logger.info('[{}/{}] Scheduler created'.format(next_step.next(), total_steps))
 
 # ################################################################################################################################

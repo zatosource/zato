@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -o pipefail
 shopt -s compat31
 
 
