@@ -330,7 +330,9 @@ login_allowed=CRM
 
 [signup]
 inform_if_user_exists=True
+inform_if_user_invalid=True
 inform_if_email_exists=True
+inform_if_email_invalid=True
 inform_if_password_invalid=True
 inform_if_app_invalid=True
 email_required=True
@@ -338,43 +340,37 @@ max_length_username=128
 max_length_email=128
 max_length_password=256
 password_allow_whitespace=True
-always_return_confirm_token=True
+return_confirm_token=True
+is_email_required=True
 
 [user_validation]
 service=zato.sso.user.validate
 reject_username=zato, admin, root
-reject_email=
+reject_email=zato, admin, root
 reject_password = """
   111111
   123123
   123321
   123456
-  1234567
-  12345678
-  123456789
-  1234567890
   123qwe
   1q2w3e
   1q2w3e4r
   1q2w3e4r5t
+  222222
+  333333
+  444444
   555555
   654321
   666666
-  7777777
+  777777
+  888888
+  999999
   987654321
   google
   letmein
   mynoob
   password
-  password1
-  password12
-  password123
-  password!
-  password1!
-  password12!
-  password123!
   qwerty
-  qwertyuiop
   zxcvbnm
 """
 '''
