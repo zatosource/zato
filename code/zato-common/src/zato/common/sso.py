@@ -14,13 +14,15 @@ class reason_code:
     """ Reason codes pointing to specific API validation errors.
     """
     class username:
-        invalid  = 'zsv.usr.001'
-        exists   = 'zsv.usr.002'
-        too_long = 'zsv.usr.003'
+        invalid        = 'zsv.usr.001'
+        exists         = 'zsv.usr.002'
+        too_long       = 'zsv.usr.003'
+        has_whitespace = 'zsv.usr.004'
 
     class email:
-        exists   = 'zsv.email.002'
-        email_too_long = 'zsv.email.003'
+        exists         = 'zsv.email.002'
+        too_long       = 'zsv.email.003'
+        has_whitespace = 'zsv.email.004'
 
     class password:
         invalid  = 'zsv.passwd.001'

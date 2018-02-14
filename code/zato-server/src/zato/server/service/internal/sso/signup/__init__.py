@@ -23,6 +23,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 from uuid import uuid4
 
+# regex
+import regex as re
+
 # Zato
 from zato.common.sso import reason_code
 from zato.common.odb.query.sso import user_exists
@@ -35,7 +38,7 @@ class ValidationError(Exception):
     """ Raised if any input SSO data is invalid, subcode contains details of what was rejected.
     """
     def __init__(self, reason_code, return_rc):
-        self.reason_code = reason_code if isinstance(reason_code, list) else reason_code
+        self.reason_code = reason_code if isinstance(reason_code, list) else [reason_code]
         self.return_rc = return_rc
 
 # ################################################################################################################################
@@ -50,6 +53,13 @@ class Validate(Service):
         output_optional = (List('reason_code'), 'return_rc')
         encrypt_secrets = False
         response_elem = None
+
+# ################################################################################################################################
+
+    def _has_whitespace(self, data, _regexp=re.compile('\s', re.UNICODE), _multiline=re.MULTILINE):
+        """ Returns True if data contains ASCII whitespace of any sort.
+        """
+        return _regexp.match(data, _multiline)
 
 # ################################################################################################################################
 
@@ -80,12 +90,38 @@ class Validate(Service):
     def _validate_username(self, session, sso_conf, username):
         """ Raises ValidationError if username is invalid, e.g. is not too long.
         """
+        # Username must not be too long
+        if len(username) > sso_conf.signup.max_length_username:
+            raise ValidationError(reason_code.username.too_long, sso_conf.signup.inform_if_user_invalid)
+
+        # Username must not contain whitespace
+        if self._has_whitespace(username):
+            raise ValidationError(reason_code.username.has_whitespace, sso_conf.signup.inform_if_user_invalid)
+
+        # Username must not contain restricted keywords
+        for elem in sso_conf.user_validation.reject_username:
+            if elem in username:
+                raise ValidationError(reason_code.username.invalid, sso_conf.signup.inform_if_user_invalid)
 
 # ################################################################################################################################
 
     def _validate_email(self, session, sso_conf, email):
         """ Raises ValidationError if email is invalid, e.g. already exists.
         """
+        # E-mail must not be too long
+        if len(email) > sso_conf.signup.max_length_email:
+            raise ValidationError(reason_code.email.too_long, sso_conf.signup.inform_if_email_invalid)
+
+        # E-mail must not contain whitespace
+        if self._has_whitespace(email):
+            raise ValidationError(reason_code.email.has_whitespace, sso_conf.signup.inform_if_email_invalid)
+
+        # E-mail must not contain restricted keywords
+        for elem in sso_conf.user_validation.reject_email:
+            if elem in email:
+                raise ValidationError(reason_code.email.invalid, sso_conf.signup.inform_if_email_invalid)
+
+# ################################################################################################################################
 
     def _validate_password(self, session, sso_conf, password):
         """ Raises ValidationError if password is invalid, e.g. it is too simple.
@@ -111,18 +147,20 @@ class Validate(Service):
             # Each of these calls may raise ValidationError, which we catch and return its subcode to our caller.
             try:
 
-                # This checks if username or email are not already taken using one SQL query
+                # This one checks if username or email are not already taken using one SQL query
                 self._validate_username_email(session, sso_conf, input.username, email)
 
+                # These check individual elements
                 self._validate_username(session, sso_conf, input.username)
                 self._validate_email(session, sso_conf, email)
                 self._validate_password(session, sso_conf, input.password)
 
             except ValidationError as e:
+                self.response.payload.is_valid = False
                 if e.return_rc:
                     self.response.payload.reason_code = e.reason_code
-
-        self.response.payload.is_valid = True
+            else:
+                self.response.payload.is_valid = True
 
 # ################################################################################################################################
 
@@ -132,20 +170,19 @@ class SignUp(Service):
     class SimpleIO:
         input_required = ('username', 'password', List('app_list'))
         input_optional = ('email', 'display_name', 'first_name', 'middle_name', 'last_name')
-        output_required = ('confirm_token',)
-        output_optional = (List('reason_code'),)
+        output_optional = ('confirm_token', List('reason_code'),)
         encrypt_secrets = False
         response_elem = None
         skip_empty_keys = True
 
     def handle_POST(self):
 
-        # By default, this is always returned, no matter if successful or not, to prevent exploitation
-        # by attackers trying to find out if a given user/email exists or not.
-        confirm_token = new_confirm_token()
-
-        # Local shortcuts
+        # Local shortcut
         input = self.request.input
+
+        # Always lower-cased so as to be treated in a uniform manner
+        input.username = input.username.lower()
+        input.email = input.get('email', '').lower()
 
         validation_response = self.invoke(Validate.get_name(), {
             'username': input.username,
@@ -158,8 +195,10 @@ class SignUp(Service):
         # so we can just assign it to payload unconditionally.
         self.response.payload.reason_code = validation_response.reason_code
 
-        # This is always returned, no matter if input was valid or not
-        self.response.payload.confirm_token = confirm_token
+        # By default, this is always returned, no matter if successful or not, to prevent exploitation
+        # by attackers trying to find out if a given user/email exists or not.
+        if self.server.sso_config.signup.return_confirm_token:
+            self.response.payload.confirm_token = new_confirm_token()
 
 # ################################################################################################################################
 '''
