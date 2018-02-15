@@ -310,18 +310,23 @@ list_key=sample,list
 sso_conf_contents = '''[main]
 user_class=zato.common.user.User
 user_session_class=zato.common.user.UserSession
+encrypt_email=True
+encrypt_password=True
 
 [backend]
 default=sql
 
-[password_hash]
-method=pbkdf2_sha512
-rounds=
-rounds_target=200 # How long, in milliseconds, password verification for a single user should take
+[sql]
+name=
+
+[hash_secret]
+rounds=100000
+rounds_super_user=300000
 salt_size=32 # In bytes = 256 bits
 
-[sql]
-name=zato
+# How long, in milliseconds, password verification for users should take
+rounds_target=200
+rounds_target_super_user=1000
 
 [apps]
 all=
@@ -343,6 +348,8 @@ max_length_password=256
 password_allow_whitespace=True
 return_confirm_token=True
 is_email_required=True
+is_approval_needed=True
+password_expiry=730 # In days, 365 days * 2 years = 730 days
 
 [user_validation]
 service=zato.sso.user.validate

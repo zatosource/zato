@@ -48,8 +48,37 @@ class const:
 # ################################################################################################################################
 
 class User(object):
-    """ A business-level user, e.g. a person on whose behalf a given service runs.
+    """ An SSO user and related attributes.
     """
+    def __init__(self):
+        self.user_id = None
+        self.is_active = None
+        self.is_internal = None
+        self.is_locked = None
+        self.locked_time = None
+        self.locked_by = None
+        self.username = None
+        self.password = None
+        self.password_is_set = None
+        self.password_must_change = None
+        self.password_expiry = None
+        self.sign_up_status = None
+        self.sign_up_time = None
+        self.sign_up_confirm_time = None
+        self.email = None
+        self.display_name = None
+        self.first_name = None
+        self.middle_name = None
+        self.last_name = None
+        self.display_name_upper = None
+        self.first_name_upper = None
+        self.middle_name_upper = None
+        self.last_name_upper = None
+
+    @staticmethod
+    def signup(session, input):
+        user = User()
+        print(user)
 
 # ################################################################################################################################
 

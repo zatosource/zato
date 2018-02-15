@@ -22,14 +22,16 @@ _user_exists_columns = [SSOUser.user_id, SSOUser.username, SSOUser.email]
 
 # ################################################################################################################################
 
-def user_exists(session, username, email):
+def user_exists(session, username, email, check_email):
     """ Returns a boolean flag indicating whether user exists by username or email.
     """
+    if check_email:
+        condition = or_(SSOUser.username==username, SSOUser.email==email)
+    else:
+        condition = SSOUser.username==username
+
     return session.query(*_user_exists_columns).\
-        filter(or_(
-            SSOUser.username==username,
-            SSOUser.email==email)
-        ).\
+        filter(condition).\
         first()
 
 # ################################################################################################################################

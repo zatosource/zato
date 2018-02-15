@@ -9,16 +9,127 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 # regex
 import regex as re
 
 # Zato
-from zato.common.sso import reason_code
+from zato.common.sso import const, reason_code
+from zato.common.odb.model import SSOUser as UserModel
 from zato.common.odb.query.sso import user_exists
-from zato.common.util.sso import new_confirm_token
+from zato.common.util.sso import new_confirm_token, new_user_id
 from zato.server.service import List, Service
+
+# ################################################################################################################################
+
+_utcnow = datetime.utcnow
+
+# ################################################################################################################################
+
+class User(object):
+    """ An SSO user and related attributes.
+    """
+    def __init__(self):
+        self.user_id = None
+        self.is_active = None
+        self.is_internal = None
+        self.is_locked = None
+        self.locked_time = None
+        self.locked_by = None
+        self.username = None
+        self.password = None
+        self.password_is_set = None
+        self.password_must_change = None
+        self.password_expiry = None
+        self.sign_up_status = None
+        self.sign_up_time = None
+        self.sign_up_confirm_time = None
+        self.email = None
+        self.display_name = None
+        self.first_name = None
+        self.middle_name = None
+        self.last_name = None
+        self.display_name_upper = None
+        self.first_name_upper = None
+        self.middle_name_upper = None
+        self.last_name_upper = None
+
+    @staticmethod
+    def signup(session, input, is_approval_needed, password_expiry, encrypt_password, encrypt_email, encrypt_func,
+        hash_func, _utcnow=_utcnow, _timedelta=timedelta):
+
+        # Always in UTC
+        now = _utcnow()
+
+        # Normalize input
+        input.display_name = input.display_name.strip()
+        input.first_name = input.first_name.strip()
+        input.middle_name = input.middle_name.strip()
+        input.last_name = input.last_name.strip()
+
+        # If display_name is given on input, this will be the final value of that attribute ..
+        if input.display_name:
+            display_name = input.display_name.strip()
+
+        # .. otherwise, display_name is a concatenation of first, middle and last name.
+        else:
+            display_name = ''
+
+            if input.first_name:
+                display_name += input.first_name
+                display_name += ' '
+
+            if input.middle_name:
+                display_name += input.middle_name
+                display_name += ' '
+
+            if input.last_name:
+                display_name += input.last_name
+
+            display_name = display_name.strip()
+
+        user_model = UserModel()
+        user_model.user_id = new_user_id()
+        user_model.is_active = True
+        user_model.is_internal = True
+        user_model.is_approved = False if is_approval_needed else True
+        user_model.is_locked = False
+        user_model.is_super_user = False
+
+        # E.g. PBKDF2-SHA512
+        password = hash_func(input.password)
+
+        # Fernet (AES-128)
+        if encrypt_password:
+            password = encrypt_func(password)
+
+        # Again, Fernet key
+        email = encrypt_func(input.email) if encrypt_email else input.email
+
+        user_model.username = input.username
+        user_model.email = email
+        user_model.password = password
+        user_model.password_is_set = True
+        user_model.password_must_change = False
+        user_model.password_expiry = now + timedelta(days=password_expiry)
+
+        user_model.sign_up_status = const.signup_status.before_confirmation
+        user_model.sign_up_time = now
+
+        user_model.display_name = display_name
+        user_model.first_name = input.first_name
+        user_model.middle_name = input.middle_name
+        user_model.last_name = input.last_name
+
+        # Uppercase any and all names for indexing purposes.
+        user_model.display_name_upper = display_name.upper()
+        user_model.first_name_upper = input.first_name.upper()
+        user_model.middle_name_upper = input.middle_name.upper()
+        user_model.last_name_upper = input.last_name.upper()
+
+        return user_model
 
 # ################################################################################################################################
 
@@ -51,17 +162,18 @@ class Validate(Service):
 
 # ################################################################################################################################
 
-    def _validate_username_email(self, session, sso_conf, username, email):
+    def _validate_username_email(self, session, sso_conf, username, email, check_email):
         """ Validation common to usernames and emails.
         """
         # Check if user exists either by username or email
-        user = user_exists(session, username, email)
+        user = user_exists(session, username, email, check_email)
 
         if user:
 
-            if user.username == username and user.email == email:
-                rc = [reason_code.username.exists, reason_code.email.exists]
-                return_rc = sso_conf.signup.inform_if_user_exists and sso_conf.signup.inform_if_email_exists
+            if check_email:
+                if user.username == username and user.email == email:
+                    rc = [reason_code.username.exists, reason_code.email.exists]
+                    return_rc = sso_conf.signup.inform_if_user_exists and sso_conf.signup.inform_if_email_exists
 
             elif user.username == username:
                 rc = reason_code.username.exists
@@ -155,7 +267,11 @@ class Validate(Service):
         # Local aliases
         sso_conf = self.server.sso_config
         input = self.request.input
-        email = input.get('email') or _invalid # To make it never matches anything if not given on input
+        email = input.get('email') or _invalid # To make sure it never matches anything if not given on input
+
+        # If e-mails are encrypted, we cannot look them up without decrypting them all,
+        # which is not currently implemented.
+        check_email = not sso_conf.main.encrypt_email
 
         with closing(self.odb.session()) as session:
 
@@ -163,12 +279,13 @@ class Validate(Service):
             try:
 
                 # This one checks if username or email are not already taken using one SQL query
-                self._validate_username_email(session, sso_conf, input.username, email)
+                self._validate_username_email(session, sso_conf, input.username, email, check_email)
 
                 # These check individual elements
                 self._validate_username(session, sso_conf, input.username)
-                self._validate_email(session, sso_conf, email)
                 self._validate_password(session, sso_conf, input.password)
+                if check_email:
+                    self._validate_email(session, sso_conf, email)
 
             except ValidationError as e:
                 self.response.payload.is_valid = False
@@ -190,15 +307,18 @@ class SignUp(Service):
         response_elem = None
         skip_empty_keys = True
 
+# ################################################################################################################################
+
     def handle_POST(self):
+
+        # Local aliases
+        input = self.request.input
+        sso_conf = self.server.sso_config
 
         # By default, this is always returned, no matter if successful or not, to prevent exploitation
         # by attackers trying to find out if a given user/email exists or not.
-        if self.server.sso_config.signup.return_confirm_token:
+        if sso_conf.signup.return_confirm_token:
             self.response.payload.confirm_token = new_confirm_token()
-
-        # Local shortcut
-        input = self.request.input
 
         # Always lower-cased so as to be treated in a uniform manner
         input.username = input.username.lower()
@@ -212,9 +332,20 @@ class SignUp(Service):
             'app_list': input.app_list,
         }, as_bunch=True)
 
-        # Reason code list is returned only if validation failed and it was confirmed that we are safe to return it
-        # so we can just assign it to payload unconditionally.
-        self.response.payload.reason_code = validation_response.reason_code
+        if not validation_response.is_valid:
+            # Reason code list is returned only if validation failed and it was confirmed that we are safe to return it
+            # so we can just assign it to payload unconditionally.
+            self.response.payload.reason_code = validation_response.reason_code
+            return
+
+        # Input was valid so we can create the user now
+        with closing(self.odb.session()) as session:
+            user = User.signup(session, input, sso_conf.signup.is_approval_needed, sso_conf.signup.password_expiry,
+                sso_conf.main.encrypt_password, sso_conf.main.encrypt_email, self.server.encrypt, self.server.hash_secret)
+            session.add(user)
+            session.commit()
+
+        # Invoke any callback services configured
 
 # ################################################################################################################################
 '''
