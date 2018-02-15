@@ -38,9 +38,13 @@ class reason_code:
         missing        = 'zsv.email.005'
 
     class password:
-        invalid   = 'zsv.passwd.001'
-        too_short = 'zsv.passwd.002'
-        too_long  = 'zsv.passwd.003'
+        invalid   = 'zsv.ps.001.001'
+        too_short = 'zsv.ps.001.002'
+        too_long  = 'zsv.ps.001.003'
+
+        expired       = 'zsa.ps.002.001'
+        about_to_exp  = 'zsa.ps.002.002'
+        must_change   = 'zsa.ps.002.003'
 
     class app_list:
         invalid   = 'zsi.appl.001'
