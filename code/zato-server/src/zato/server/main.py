@@ -160,28 +160,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
     sso_config = get_config(repo_location, 'sso.conf', needs_user_config=False)
 
-    # Lower-case elements that must not be substrings in usernames ..
-    reject_username = sso_config.user_validation.get('reject_username', [])
-    reject_username = [elem.strip().lower() for elem in reject_username]
-    sso_config.user_validation.reject_username = reject_username
-
-    # .. and emails too.
-    reject_email = sso_config.user_validation.get('reject_email', [])
-    reject_email = [elem.strip().lower() for elem in reject_email]
-    sso_config.user_validation.reject_email = reject_email
-
-    # Construct a set of common passwords to reject out of a multi-line list
-    reject = set()
-    for line in sso_config.user_validation.get('reject_password', '').strip().splitlines():
-        line = str(line.strip().lower())
-        reject.add(line)
-    sso_config.user_validation.reject_password = reject
-
-    # Turn all app lists into sets to make lookups faster
-    sso_config.apps.all = set(sso_config.apps.all)
-    sso_config.apps.signup_allowed = set(sso_config.apps.signup_allowed)
-    sso_config.apps.login_allowed = set(sso_config.apps.login_allowed)
-
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
     preferred_address = server_config.preferred_address.get('address')
 
@@ -227,12 +205,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
     server = app_context.get_object('server')
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
-
-    #_sio_config = {
-    #    'int_parameters': sio_config.int.exact,
-    #    'int_parameter_suffixes': sio_config.int.suffix,
-    #    'bool_parameter_prefixes': sio_config.bool.prefix,
-    #}
 
     server.crypto_manager = crypto_manager
     server.odb_data = server_config.odb

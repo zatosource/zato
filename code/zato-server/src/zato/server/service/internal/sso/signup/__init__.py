@@ -324,21 +324,22 @@ class SignUp(Service):
         input.username = input.username.lower()
         input.email = input.get('email', '').lower()
 
-        validation_response = self.invoke(Validate.get_name(), {
-            'username': input.username,
-            'email': input.email,
-            'password': input.password,
-            'current_app': input.current_app,
-            'app_list': input.app_list,
-        }, as_bunch=True)
+        for name in sso_conf.user_validation.service:
+            validation_response = self.invoke(name, {
+                'username': input.username,
+                'email': input.email,
+                'password': input.password,
+                'current_app': input.current_app,
+                'app_list': input.app_list,
+            }, as_bunch=True)
 
-        if not validation_response.is_valid:
-            # Reason code list is returned only if validation failed and it was confirmed that we are safe to return it
-            # so we can just assign it to payload unconditionally.
-            self.response.payload.reason_code = validation_response.reason_code
-            return
+            if not validation_response.is_valid:
+                # Reason code list is returned only if validation failed and it was confirmed that we are safe to return it
+                # so we can just assign it to payload unconditionally.
+                self.response.payload.reason_code = validation_response.reason_code
+                return
 
-        # Input was valid so we can create the user now
+        # None of validation services returned an error so we can create the user now
         with closing(self.odb.session()) as session:
             user = User.signup(session, input, sso_conf.signup.is_approval_needed, sso_conf.signup.password_expiry,
                 sso_conf.main.encrypt_password, sso_conf.main.encrypt_email, self.server.encrypt, self.server.hash_secret)
