@@ -23,6 +23,9 @@ from configobj import ConfigObj
 # cryptography
 from cryptography.fernet import Fernet, InvalidToken
 
+# hashlib
+from passlib.hash import pbkdf2_sha512
+
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
@@ -56,6 +59,16 @@ class CryptoManager(object):
 
         # .. no matter if given on input or through repo_dir, we can set up crypto keys now.
         self.set_config(secret_key, well_known_data)
+
+        # Callers will be able to register their hashing scheme which will end up in this dict by name
+        self.hash_scheme = {}
+
+# ################################################################################################################################
+
+    def add_hash_scheme(self, name, rounds, salt_size):
+        """ Adds a new named PBKDF2 hashing scheme, i.e. a set of named variables and a hashing object.
+        """
+        self.hash_scheme[name] = pbkdf2_sha512.using(rounds=rounds, salt_size=salt_size)
 
 # ################################################################################################################################
 
@@ -172,6 +185,13 @@ class CryptoManager(object):
         """
         decrypted = self.secret_key.decrypt(encrypted.encode('utf8'))
         return decrypted
+
+# ################################################################################################################################
+
+    def hash_secret(self, data, name):
+        """ Hashes input secret using a named configured (e.g. PBKDF2-SHA512, 100k rounds, salt 32 bytes).
+        """
+        return self.hash_scheme[name].hash(data)
 
 # ################################################################################################################################
 

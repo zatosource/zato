@@ -135,6 +135,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
         self.keyutils = KeyUtils()
+        self._hash_secret_method = None
+        self._hash_secret_rounds = None
+        self._hash_secret_salt_size = None
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -430,6 +433,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
 
+        # Cannot be done in __init__ because self.sso_config is not available there yet
+        salt_size = self.sso_config.hash_secret.salt_size
+        self.crypto_manager.add_hash_scheme('zato.default', self.sso_config.hash_secret.rounds, salt_size)
+        self.crypto_manager.add_hash_scheme('zato.super_user', self.sso_config.hash_secret.rounds_super_user, salt_size)
+
         for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pick_up'):
 
             # New in 2.0
@@ -659,6 +667,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         """ Returns data encrypted using server's CryptoManager.
         """
         return '{}{}'.format(_prefix, self.crypto_manager.encrypt(data.encode('utf8')))
+
+# ################################################################################################################################
+
+    def hash_secret(self, data, name='zato.default'):
+        return self.crypto_manager.hash_secret(data, name)
 
 # ################################################################################################################################
 
