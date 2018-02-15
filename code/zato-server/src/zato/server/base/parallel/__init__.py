@@ -433,6 +433,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
 
+        # Fix up SSO config
+        self.normalize_sso_config()
+
         # Cannot be done in __init__ because self.sso_config is not available there yet
         salt_size = self.sso_config.hash_secret.salt_size
         self.crypto_manager.add_hash_scheme('zato.default', self.sso_config.hash_secret.rounds, salt_size)
@@ -490,6 +493,43 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         spawn_greenlet(self.ipc_api.run)
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def normalize_sso_config(self):
+
+        # Lower-case elements that must not be substrings in usernames ..
+        reject_username = self.sso_config.user_validation.get('reject_username', [])
+        reject_username = [elem.strip().lower() for elem in reject_username]
+        self.sso_config.user_validation.reject_username = reject_username
+
+        # .. and emails too.
+        reject_email = self.sso_config.user_validation.get('reject_email', [])
+        reject_email = [elem.strip().lower() for elem in reject_email]
+        self.sso_config.user_validation.reject_email = reject_email
+
+        # Construct a set of common passwords to reject out of a multi-line list
+        reject = set()
+        for line in self.sso_config.user_validation.get('reject_password', '').strip().splitlines():
+            line = str(line.strip().lower())
+            reject.add(line)
+        self.sso_config.user_validation.reject_password = reject
+
+        # Turn all app lists into sets to make lookups faster
+        self.sso_config.apps.all = set(self.sso_config.apps.all)
+        self.sso_config.apps.signup_allowed = set(self.sso_config.apps.signup_allowed)
+        self.sso_config.apps.login_allowed = set(self.sso_config.apps.login_allowed)
+
+        # There may be a single service in a relevant part of configuration
+        # so for ease of use we always turn tjem into lists.
+        signup_cb_srv = self.sso_config.signup.callback_service
+        signup_cb_srv = signup_cb_srv if isinstance(signup_cb_srv, list) else [signup_cb_srv]
+
+        usr_valid_srv = self.sso_config.user_validation.service
+        usr_valid_srv = usr_valid_srv if isinstance(usr_valid_srv, list) else [usr_valid_srv]
+
+        self.sso_config.signup.callback_service = signup_cb_srv
+        self.sso_config.user_validation.service = usr_valid_srv
 
 # ################################################################################################################################
 

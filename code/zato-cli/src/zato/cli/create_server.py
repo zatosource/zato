@@ -350,6 +350,7 @@ return_confirm_token=True
 is_email_required=True
 is_approval_needed=True
 password_expiry=730 # In days, 365 days * 2 years = 730 days
+callback_service=
 
 [user_validation]
 service=zato.sso.user.validate
