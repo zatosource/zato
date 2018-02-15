@@ -595,7 +595,7 @@ class ZatoCommand(object):
             if self.verbose:
                 msg = get_full_stack()
             else:
-                msg = '{}: {} (Hint: re-run with --verbose for full traceback)'.format(e.__class__.__name__, e.message)
+                msg = '{}: {} (Hint: re-run with --verbose for full traceback)'.format(e.__class__.__name__, e.args)
             self.logger.error(msg)
             sys.exit(self.SYS_ERROR.EXCEPTION_CAUGHT)
 

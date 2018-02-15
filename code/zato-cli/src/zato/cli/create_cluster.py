@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -516,6 +516,9 @@ class Create(ZatoCommand):
         # For IBM MQ connections / connectors
         self.add_internal_callback_wmq(session, cluster)
 
+        # SSO
+        self.add_sso_endpoints(session, cluster)
+
         try:
             session.commit()
         except IntegrityError, e:
@@ -981,5 +984,19 @@ class Create(ZatoCommand):
         session.add(wmq_sec)
         session.add(service)
         session.add(channel)
+
+# ################################################################################################################################
+
+    def add_sso_endpoints(self, session, cluster):
+
+        signup_name = 'zato.sso.user.signup.signup'
+        signup_impl_name = 'zato.server.service.internal.sso.user.signup.Signup'
+        signup_service = Service(None, signup_name, True, signup_impl_name, True, cluster)
+
+        signup_channel = HTTPSOAP(None, '/zato/sso/user/signup', True, True, 'channel', 'plain_http', None,
+            '/zato/sso/user/signup', None, '', None, DATA_FORMAT.JSON, security=None, service=signup_service, cluster=cluster)
+
+        session.add(signup_service)
+        session.add(signup_channel)
 
 # ################################################################################################################################
