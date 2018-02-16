@@ -16,14 +16,14 @@ from uuid import uuid4
 import regex as re
 
 # Zato
-from zato.common.odb.query.sso import user_exists
-from zato.common.sso import status_code, ValidationError
-from zato.server.service import List
+from zato.common.odb.query.sso import get_user_by_username, user_exists
+from zato.common.sso import const, status_code, ValidationError
+from zato.server.service import List, Service
 from zato.server.service.internal.sso import BaseService, BaseSIO
 
 # ################################################################################################################################
 
-class Validate(BaseService):
+class Validate(Service):
     """ Validates creation of user data in accordance with configuration from sso.conf.
     """
     class SimpleIO(BaseSIO):
@@ -136,19 +136,19 @@ class Validate(BaseService):
         # All of input apps must have been already defined in configuration
         for app in app_list:
             if app not in sso_conf.apps.all:
-                raise ValidationError(status_code.app_list.invalid, sso_conf.signup.inform_if_app_invalid)
+                raise ValidationError(status_code.app_list.invalid, sso_conf.main.inform_if_app_invalid)
 
         # Current app, the one the user is signed up through, must allow user signup
         if current_app not in sso_conf.apps.signup_allowed:
-            raise ValidationError(status_code.app_list.no_signup, sso_conf.signup.inform_if_app_invalid)
+            raise ValidationError(status_code.app_list.no_signup, sso_conf.main.inform_if_app_invalid)
 
 # ################################################################################################################################
 
     def handle(self, _invalid=uuid4().hex):
 
         # Local aliases
-        sso_conf = self.server.sso_config
         input = self.request.input
+        sso_conf = self.server.sso_config
         email = input.get('email') or _invalid # To make sure it never matches anything if not given on input
 
         # If e-mails are encrypted, we cannot look them up without decrypting them all,
@@ -176,5 +176,64 @@ class Validate(BaseService):
                     self.response.payload.sub_status = e.sub_status
             else:
                 self.response.payload.is_valid = True
+
+# ################################################################################################################################
+
+class Login(BaseService):
+    """ Logs a user in, provided that all authentication and authorization checks succeed.
+    """
+    class SimpleIO(BaseSIO):
+        input_required = ('username', 'password', 'current_app')
+        input_optional = ('new_password',)
+        output_optional = BaseSIO.output_optional + ('ust',)
+
+# ################################################################################################################################
+
+    def _handle_sso(self, ctx):
+
+        # Look up user and return if not found by username
+        with closing(self.odb.session()) as session:
+            user = get_user_by_username(session, ctx.input.username)
+            if not user:
+                return
+
+        # Check credentials first to make sure that attackers do not learn about any sort
+        # of metadata (e.g. is the account locked) if they do not know username and password.
+        password_decrypted = self.server.decrypt(user.password)
+        if not self.server.verify_hash(ctx.input.password, password_decrypted):
+            return
+
+        # It must be possible to log into the application requested (CRM above)
+        if ctx.input.current_app not in ctx.sso_conf.apps.login_allowed:
+            if ctx.sso_conf.main.inform_if_app_invalid:
+                self.response.payload.sub_status.append(status_code.app_list.invalid)
+            return
+
+        # If applicable, requests must originate in a white-listed IP address
+
+        # User must not have been locked out of the authentication system by a super-user
+        if user.is_locked:
+            if ctx.sso_conf.login.inform_if_locked:
+                self.response.payload.sub_status.append(status_code.auth.locked)
+            return
+
+        # If applicable, user must be fully signed up, including account creation's confirmation
+        if user.sign_up_status != const.signup_status.final:
+            if ctx.sso_conf.login.inform_if_not_confirmed:
+                self.response.payload.sub_status.append(status_code.auth.invalid_signup_status)
+            return
+
+        # If applicable, user must be approved by a super-user
+        if not user.is_approved != const.signup_status.final:
+            if ctx.sso_conf.login.inform_if_not_confirmed:
+                self.response.payload.sub_status.append(status_code.auth.invalid_signup_status)
+            return
+
+        # If applicable, password may not be about to expire
+        # Password must not have expired
+        # Password must not be marked as requiring a change upon next login
+
+        # All checks done, session is created, we can signal OK now
+        self.response.payload.status = status_code.ok
 
 # ################################################################################################################################

@@ -33,7 +33,7 @@ class _SSOUser:
     # Publicly visible
     user_id = Column(String(191), nullable=False)
 
-    is_active = Column(Boolean(), nullable=False)
+    is_active = Column(Boolean(), nullable=False) # Currently unused and always set to True
     is_internal = Column(Boolean(), nullable=False, default=False)
     is_super_user = Column(Boolean(), nullable=False, default=False)
     is_approved = Column(Boolean(), nullable=False, default=False)

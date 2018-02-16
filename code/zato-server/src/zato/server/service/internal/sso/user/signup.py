@@ -14,7 +14,7 @@ from contextlib import closing
 # Zato
 from zato.common.sso import create_user, status_code
 from zato.common.util.sso import new_confirm_token
-from zato.server.service import List, Service
+from zato.server.service import List
 from zato.server.service.internal.sso import BaseService, BaseSIO
 
 # ################################################################################################################################
@@ -29,26 +29,22 @@ class Signup(BaseService):
 
 # ################################################################################################################################
 
-    def handle_POST(self):
-
-        # Local aliases
-        input = self.request.input
-        sso_conf = self.server.sso_config
+    def _handle_sso(self, ctx):
 
         # Used to confirm that an account should be really opened
         confirm_token = new_confirm_token()
 
         # Always lower-cased so as to be treated in a uniform manner
-        input.username = input.username.lower()
-        input.email = input.get('email', '').lower()
+        ctx.input.username = ctx.input.username.lower()
+        ctx.input.email = ctx.input.get('email', '').lower()
 
-        for name in sso_conf.user_validation.service:
+        for name in ctx.sso_conf.user_validation.service:
             validation_response = self.invoke(name, {
-                'username': input.username,
-                'email': input.email,
-                'password': input.password,
-                'current_app': input.current_app,
-                'app_list': input.app_list,
+                'username': ctx.input.username,
+                'email': ctx.input.email,
+                'password': ctx.input.password,
+                'current_app': ctx.input.current_app,
+                'app_list': ctx.input.app_list,
             }, as_bunch=True)
 
             if not validation_response.is_valid:
@@ -59,15 +55,15 @@ class Signup(BaseService):
 
                 # By default, this is always returned, no matter if successful or not, to prevent exploitation
                 # by attackers trying to find out if a given user/email exists or not.
-                if sso_conf.signup.always_return_confirm_token:
+                if ctx.sso_conf.signup.always_return_confirm_token:
                     self.response.payload.confirm_token = confirm_token
 
                 return
 
         # None of validation services returned an error so we can create the user now
         with closing(self.odb.session()) as session:
-            user = create_user(session, input, sso_conf.signup.is_approval_needed, sso_conf.password.expiry,
-                sso_conf.main.encrypt_password, sso_conf.main.encrypt_email, self.server.encrypt, self.server.hash_secret,
+            user = create_user(session, ctx.input, ctx.sso_conf.signup.is_approval_needed, ctx.sso_conf.password.expiry,
+                ctx.sso_conf.main.encrypt_password, ctx.sso_conf.main.encrypt_email, self.server.encrypt, self.server.hash_secret,
                 confirm_token)
             session.add(user)
             session.commit()

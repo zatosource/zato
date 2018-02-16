@@ -183,8 +183,7 @@ class CryptoManager(object):
     def decrypt(self, encrypted):
         """ Returns input data in a clear-text, decrypted, form.
         """
-        decrypted = self.secret_key.decrypt(encrypted.encode('utf8'))
-        return decrypted
+        return self.secret_key.decrypt(encrypted.encode('utf8'))
 
 # ################################################################################################################################
 
@@ -192,6 +191,11 @@ class CryptoManager(object):
         """ Hashes input secret using a named configured (e.g. PBKDF2-SHA512, 100k rounds, salt 32 bytes).
         """
         return self.hash_scheme[name].hash(data)
+
+# ################################################################################################################################
+
+    def verify_hash(self, given, expected, name):
+        return self.hash_scheme[name].verify(given, expected)
 
 # ################################################################################################################################
 
