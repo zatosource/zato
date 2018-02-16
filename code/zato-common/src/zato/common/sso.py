@@ -54,8 +54,11 @@ class status_code:
         invalid   = 'E004001'
         no_signup = 'E004002'
 
-    class login:
-        invalid_creds = 'E005001'
+    class auth:
+        not_allowed           = 'E005001' # Generic 'You are not allowed to access this resource'
+        locked                = 'E005002'
+        invalid_signup_status = 'E005003'
+        not_approved          = 'E005004'
 
 # ################################################################################################################################
 

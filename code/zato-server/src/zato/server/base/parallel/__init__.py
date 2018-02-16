@@ -516,9 +516,18 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.sso_config.user_validation.reject_password = reject
 
         # Turn all app lists into sets to make lookups faster
-        self.sso_config.apps.all = set(self.sso_config.apps.all)
-        self.sso_config.apps.signup_allowed = set(self.sso_config.apps.signup_allowed)
-        self.sso_config.apps.login_allowed = set(self.sso_config.apps.login_allowed)
+
+        apps_all = self.sso_config.apps.all
+        apps_signup_allowed = self.sso_config.apps.signup_allowed
+        apps_login_allowed = self.sso_config.apps.login_allowed
+
+        apps_all = apps_all if isinstance(apps_all, list) else [apps_all]
+        apps_signup_allowed = apps_signup_allowed if isinstance(apps_signup_allowed, list) else [apps_signup_allowed]
+        apps_login_allowed = apps_login_allowed if isinstance(apps_login_allowed, list) else [apps_login_allowed]
+
+        self.sso_config.apps.all = set(apps_all)
+        self.sso_config.apps.signup_allowed = set(apps_signup_allowed)
+        self.sso_config.apps.login_allowed = set(apps_login_allowed)
 
         # There may be a single service in a relevant part of configuration
         # so for ease of use we always turn tjem into lists.
@@ -712,6 +721,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
     def hash_secret(self, data, name='zato.default'):
         return self.crypto_manager.hash_secret(data, name)
+
+# ################################################################################################################################
+
+    def verify_hash(self, given, expected, name='zato.default'):
+        return self.crypto_manager.verify_hash(given, expected, name)
 
 # ################################################################################################################################
 
