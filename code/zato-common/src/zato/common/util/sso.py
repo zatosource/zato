@@ -14,9 +14,6 @@ from uuid import uuid4
 # Base32 Crockford
 from base32_crockford import encode as crockford_encode
 
-# Zato
-from zato.common.util import new_cid
-
 # ################################################################################################################################
 
 def _new_id(prefix, _uuid4=uuid4, _crockford_encode=crockford_encode):

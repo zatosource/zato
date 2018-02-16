@@ -52,6 +52,7 @@ class _SSOUser:
     password = Column(Text(), nullable=False)
     password_is_set = Column(Boolean(), nullable=False)
     password_must_change = Column(Boolean(), nullable=False)
+    password_last_set = Column(DateTime(), nullable=False)
     password_expiry = Column(DateTime(), nullable=False)
 
     # Sign-up information, possibly used in API workflows

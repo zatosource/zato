@@ -46,10 +46,10 @@ class status_code:
         too_short = 'E003002'
         too_long  = 'E003003'
 
-        expired        = 'E003001'
-        w_about_to_exp = 'W003002'
-        e_about_to_exp = 'E003003'
-        must_change    = 'E003004'
+        expired        = 'E003004'
+        w_about_to_exp = 'W003005'
+        e_about_to_exp = 'E003006'
+        must_send_new  = 'E003007'
 
     class app_list:
         invalid   = 'E004001'
@@ -60,6 +60,9 @@ class status_code:
         locked                = 'E005002'
         invalid_signup_status = 'E005003'
         not_approved          = 'E005004'
+
+    class metadata:
+        not_allowed = 'E006001'
 
 # ################################################################################################################################
 
@@ -138,6 +141,7 @@ def create_user(session, input, is_approval_needed, password_expiry, encrypt_pas
     user_model.email = email
     user_model.password = password
     user_model.password_is_set = True
+    user_model.password_last_set = now
     user_model.password_must_change = False
     user_model.password_expiry = now + timedelta(days=password_expiry)
 
