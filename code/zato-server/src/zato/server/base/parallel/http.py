@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,6 +21,7 @@ from pytz import UTC
 from tzlocal import get_localzone
 
 # Zato
+from zato.common import NO_REMOTE_ADDRESS
 from zato.common.util import new_cid
 
 # ################################################################################################################################
@@ -37,7 +38,8 @@ class HTTPHandler(object):
     """ Handles incoming HTTP requests.
     """
     def on_wsgi_request(self, wsgi_environ, start_response, _new_cid=new_cid, _local_zone=get_localzone(),
-        _utcnow=datetime.utcnow, _INFO=INFO, _UTC=UTC, _ACCESS_LOG_DT_FORMAT=ACCESS_LOG_DT_FORMAT, **kwargs):
+        _utcnow=datetime.utcnow, _INFO=INFO, _UTC=UTC, _ACCESS_LOG_DT_FORMAT=ACCESS_LOG_DT_FORMAT,
+        _no_remote_address=NO_REMOTE_ADDRESS, **kwargs):
         """ Handles incoming HTTP requests.
         """
         cid = kwargs.get('cid', _new_cid())
@@ -48,7 +50,7 @@ class HTTPHandler(object):
 
         wsgi_environ['zato.http.response.headers'] = {'X-Zato-CID': cid}
 
-        remote_addr = '(None)'
+        remote_addr = _no_remote_address
         for name in self.client_address_headers:
             remote_addr = wsgi_environ.get(name)
             if remote_addr:

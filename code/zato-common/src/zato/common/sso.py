@@ -46,9 +46,10 @@ class status_code:
         too_short = 'E003002'
         too_long  = 'E003003'
 
-        expired      = 'E003001'
-        about_to_exp = 'W003002'
-        must_change  = 'E003003'
+        expired        = 'E003001'
+        w_about_to_exp = 'W003002'
+        e_about_to_exp = 'E003003'
+        must_change    = 'E003004'
 
     class app_list:
         invalid   = 'E004001'
