@@ -189,6 +189,91 @@ class Login(BaseService):
 
 # ################################################################################################################################
 
+    def _check_credentials(self, ctx, user):
+        password_decrypted = self.server.decrypt(user.password)
+        return self.server.verify_hash(ctx.input.password, password_decrypted)
+
+# ################################################################################################################################
+
+    def _check_login_to_app_allowed(self, ctx):
+        if ctx.input.current_app not in ctx.sso_conf.apps.login_allowed:
+            if ctx.sso_conf.main.inform_if_app_invalid:
+                self.response.payload.sub_status.append(status_code.app_list.invalid)
+        else:
+            return True
+
+# ################################################################################################################################
+
+    def _check_remote_ip_allowed(self, ctx, user, _invalid=object()):
+
+        ip_allowed = ctx.sso_conf.login_list.get('my-admin', _invalid)
+
+        # Shortcut in the simplest case
+        if ip_allowed == '*':
+            return True
+
+        # Do not continue if user is not whitelisted but is required to
+        if ip_allowed is _invalid:
+            if ctx.sso_conf.login.reject_if_not_listed:
+                return
+
+        # User was found in configuration so now we need to check IPs allowed ..
+        else:
+
+            # .. but if there are no IPs configured for user, it means the person may not log in
+            # regardless of reject_if_not_whitelisted, which is why it is checked separately.
+            if not ip_allowed:
+                return
+
+            # There is at least one address or pattern to check again
+            else:
+                print(ctx.remote_addr, ip_allowed)
+                return True
+
+# ################################################################################################################################
+
+    def _check_user_not_locked(self, ctx, user):
+        if user.is_locked:
+            if ctx.sso_conf.login.inform_if_locked:
+                self.response.payload.sub_status.append(status_code.auth.locked)
+        else:
+            return True
+
+# ################################################################################################################################
+
+    def _check_signup_status(self, ctx, user):
+        if user.sign_up_status != const.signup_status.final:
+            if ctx.sso_conf.login.inform_if_not_confirmed:
+                self.response.payload.sub_status.append(status_code.auth.invalid_signup_status)
+        else:
+            return True
+
+# ################################################################################################################################
+
+    def _check_is_approved(self, ctx, user):
+        if not user.is_approved != const.signup_status.final:
+            if ctx.sso_conf.login.inform_if_not_confirmed:
+                self.response.payload.sub_status.append(status_code.auth.invalid_signup_status)
+        else:
+            return True
+
+# ################################################################################################################################
+
+    def _check_password_about_to_expire(self, ctx, user):
+        return True
+
+# ################################################################################################################################
+
+    def _check_password_expired(self, ctx, user):
+        return True
+
+# ################################################################################################################################
+
+    def _check_must_change_password(self, ctx, user):
+        return True
+
+# ################################################################################################################################
+
     def _handle_sso(self, ctx):
 
         # Look up user and return if not found by username
@@ -199,39 +284,40 @@ class Login(BaseService):
 
         # Check credentials first to make sure that attackers do not learn about any sort
         # of metadata (e.g. is the account locked) if they do not know username and password.
-        password_decrypted = self.server.decrypt(user.password)
-        if not self.server.verify_hash(ctx.input.password, password_decrypted):
-            return
+        #if not self._check_credentials(ctx, user):
+        #    return
 
         # It must be possible to log into the application requested (CRM above)
-        if ctx.input.current_app not in ctx.sso_conf.apps.login_allowed:
-            if ctx.sso_conf.main.inform_if_app_invalid:
-                self.response.payload.sub_status.append(status_code.app_list.invalid)
+        if not self._check_login_to_app_allowed(ctx):
             return
 
         # If applicable, requests must originate in a white-listed IP address
+        if not self._check_remote_ip_allowed(ctx, user):
+            return
 
-        # User must not have been locked out of the authentication system by a super-user
-        if user.is_locked:
-            if ctx.sso_conf.login.inform_if_locked:
-                self.response.payload.sub_status.append(status_code.auth.locked)
+        # User must not have been locked out of the auth system
+        if not self._check_user_not_locked(ctx, user):
             return
 
         # If applicable, user must be fully signed up, including account creation's confirmation
-        if user.sign_up_status != const.signup_status.final:
-            if ctx.sso_conf.login.inform_if_not_confirmed:
-                self.response.payload.sub_status.append(status_code.auth.invalid_signup_status)
+        if not self._check_signup_status(ctx, user):
             return
 
         # If applicable, user must be approved by a super-user
-        if not user.is_approved != const.signup_status.final:
-            if ctx.sso_conf.login.inform_if_not_confirmed:
-                self.response.payload.sub_status.append(status_code.auth.invalid_signup_status)
+        if not self._check_is_approved(ctx, user):
             return
 
         # If applicable, password may not be about to expire
+        if not self._check_password_about_to_expire(ctx, user):
+            return
+
         # Password must not have expired
+        if not self._check_password_expired(ctx, user):
+            return
+
         # Password must not be marked as requiring a change upon next login
+        if not self._check_must_change_password(ctx, user):
+            return
 
         # All checks done, session is created, we can signal OK now
         self.response.payload.status = status_code.ok

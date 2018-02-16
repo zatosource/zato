@@ -312,6 +312,7 @@ user_class=zato.common.user.User
 user_session_class=zato.common.user.UserSession
 encrypt_email=True
 encrypt_password=True
+inform_if_app_invalid=True
 
 [backend]
 default=sql
@@ -329,16 +330,19 @@ rounds_target=200
 rounds_target_super_user=1000
 
 [apps]
-all=
-signup_allowed=
-login_allowed=
-login_metadata_allowed=
+all=CRM
+signup_allowed=CRM
+login_allowed=CRM
+login_metadata_allowed=ERP
 
 [login]
-reject_if_not_whitelisted=False
+reject_if_not_listed=False
+inform_if_locked=True
+inform_if_not_confirmed=True
+inform_if_not_approved=True
 
-[login_whitelist]
-my-admin=
+[login_list]
+my-admin=127.0.0.1
 
 [password]
 expiry=730 # In days, 365 days * 2 years = 730 days
@@ -354,7 +358,6 @@ inform_if_user_invalid=True
 inform_if_email_exists=True
 inform_if_email_invalid=True
 inform_if_password_invalid=True
-inform_if_app_invalid=True
 email_required=True
 max_length_username=128
 max_length_email=128
