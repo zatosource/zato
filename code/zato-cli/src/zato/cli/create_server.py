@@ -332,6 +332,21 @@ rounds_target_super_user=1000
 all=
 signup_allowed=
 login_allowed=
+login_metadata_allowed=
+
+[login]
+reject_if_not_whitelisted=False
+
+[login_whitelist]
+my-admin=
+
+[password]
+expiry=730 # In days, 365 days * 2 years = 730 days
+inform_if_expired=False
+inform_if_about_to_expire=True
+inform_if_needs_be_changed=True
+about_to_expire_threshold=10
+log_in_if_about_to_expire=True
 
 [signup]
 inform_if_user_exists=True
@@ -346,10 +361,9 @@ max_length_email=128
 min_length_password=8
 max_length_password=256
 password_allow_whitespace=True
-return_confirm_token=True
+always_return_confirm_token=True
 is_email_required=True
 is_approval_needed=True
-password_expiry=730 # In days, 365 days * 2 years = 730 days
 callback_service=
 
 [user_validation]
