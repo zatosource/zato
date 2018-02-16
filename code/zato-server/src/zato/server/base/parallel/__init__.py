@@ -27,6 +27,9 @@ import gevent.monkey # Needed for Cassandra
 # globre
 import globre
 
+# ipaddress
+from ipaddress import ip_address, ip_network
+
 # Paste
 from paste.util.converters import asbool
 
@@ -539,6 +542,22 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         self.sso_config.signup.callback_service = signup_cb_srv
         self.sso_config.user_validation.service = usr_valid_srv
+
+        # Convert all white/black-listed IP addresses to sets of network objects
+        # which will let serviced in run-time efficiently check for membership of an address in that network.
+
+        login_list = self.sso_config.login_list
+        for username, ip_allowed in login_list.iteritems():
+            if ip_allowed:
+                ip_allowed = login_list if isinstance(ip_allowed, list) else [ip_allowed]
+                ip_allowed = [ip_network(elem.decode('utf8')) for elem in ip_allowed if elem != '*']
+            else:
+                ip_allowed = []
+
+            login_list[username] = ip_allowed
+
+        print(1111, `login_list`)
+        print(2222, ip_address(u'127.0.0.1') in login_list['my-admin'][0])
 
 # ################################################################################################################################
 

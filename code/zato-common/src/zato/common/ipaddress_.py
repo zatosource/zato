@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,6 +18,8 @@ from ipaddress import ip_address, ip_network
 # netifaces
 from netifaces import AF_INET, ifaddresses as net_ifaddresses, interfaces as net_ifaces
 
+# ################################################################################################################################
+
 def to_ip_network(adddress):
     """ Converts address to a network object assuming it is feasible at all, otherwise returns None.
     """
@@ -27,6 +29,8 @@ def to_ip_network(adddress):
         pass
     else:
         return True
+
+# ################################################################################################################################
 
 def ip_list_from_interface(interface, allow_loopback=False):
     """ Return the list of IP address for the given interface, possibly including loopback addresses
@@ -47,6 +51,8 @@ def ip_list_from_interface(interface, allow_loopback=False):
             addresses.append(address)
 
     return addresses
+
+# ################################################################################################################################
 
 def get_preferred_ip(base_bind, user_prefs):
     """ Given user preferences, iterate over all address in all interfaces and check if any matches what users prefer.
@@ -108,3 +114,5 @@ def get_preferred_ip(base_bind, user_prefs):
     # If there is only loopback and we are allowed to use it then so be it
     if user_prefs.allow_loopback:
         return loopback_ip
+
+# ################################################################################################################################

@@ -17,11 +17,12 @@ from zato.server.service import List, Service
 class SSOCtx(object):
     """ A set of attributes describing current SSO request.
     """
-    __slots__ = ('input', 'sso_conf')
+    __slots__ = ('input', 'sso_conf', 'remote_addr')
 
-    def __init__(self, input, sso_conf):
+    def __init__(self, input, sso_conf, remote_addr):
         self.input = input
         self.sso_conf = sso_conf
+        self.remote_addr = remote_addr
 
 # ################################################################################################################################
 
@@ -66,7 +67,7 @@ class BaseService(Service):
             return
 
         # OK, we can proceed to the actual call now
-        self._handle_sso(SSOCtx(self.request.input, sso_conf))
+        self._handle_sso(SSOCtx(self.request.input, sso_conf, self.wsgi_environ['zato.http.remote_addr']))
 
 # ################################################################################################################################
 
