@@ -168,6 +168,9 @@ DEFAULT_HTTP_POOL_SIZE = 20
 # TODO: Move it to MISC
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
 
+# Used if it could not be established what remote address a request came from
+NO_REMOTE_ADDRESS = '(None)'
+
 # https://tools.ietf.org/html/rfc6585
 TOO_MANY_REQUESTS = 429
 

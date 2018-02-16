@@ -8,7 +8,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# ipaddress
+from ipaddress import ip_address
+
 # Zato
+from zato.common import NO_REMOTE_ADDRESS
 from zato.common.sso import status_code
 from zato.server.service import List, Service
 
@@ -66,8 +70,17 @@ class BaseService(Service):
                 self.response.payload.sub_status.append(status_code.app_list.invalid)
             return
 
+        # Parse remote_addr into a series of IP address objects, possibly more than one,
+        # depending on how many were sent in the request.
+        remote_addr = self.wsgi_environ['zato.http.remote_addr']
+        if remote_addr == NO_REMOTE_ADDRESS:
+            remote_addr = None
+        else:
+            remote_addr = [elem.strip() for elem in remote_addr.strip().split(',')]
+            remote_addr =  [ip_address(elem) for elem in remote_addr]
+
         # OK, we can proceed to the actual call now
-        self._handle_sso(SSOCtx(self.request.input, sso_conf, self.wsgi_environ['zato.http.remote_addr']))
+        self._handle_sso(SSOCtx(self.request.input, sso_conf, remote_addr))
 
 # ################################################################################################################################
 

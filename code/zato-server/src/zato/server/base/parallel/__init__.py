@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -553,11 +553,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
                 ip_allowed = [ip_network(elem.decode('utf8')) for elem in ip_allowed if elem != '*']
             else:
                 ip_allowed = []
-
             login_list[username] = ip_allowed
-
-        print(1111, `login_list`)
-        print(2222, ip_address(u'127.0.0.1') in login_list['my-admin'][0])
 
 # ################################################################################################################################
 
