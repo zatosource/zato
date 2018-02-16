@@ -348,8 +348,8 @@ my-admin=127.0.0.1
 expiry=730 # In days, 365 days * 2 years = 730 days
 inform_if_expired=False
 inform_if_about_to_expire=True
-inform_if_needs_be_changed=True
-about_to_expire_threshold=10
+inform_if_must_be_changed=True
+about_to_expire_threshold=30 # In days
 log_in_if_about_to_expire=True
 
 [signup]

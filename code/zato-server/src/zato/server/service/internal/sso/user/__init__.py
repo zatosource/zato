@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 # regex
@@ -225,10 +226,20 @@ class Login(BaseService):
             if not ip_allowed:
                 return
 
-            # There is at least one address or pattern to check again
+            # There is at least one address or pattern to check again ..
             else:
-                print(ctx.remote_addr, ip_allowed)
-                return True
+                # .. but if no remote address was sent, we cannot continue.
+                if not ctx.remote_addr:
+                    return False
+                else:
+                    for _remote_addr in ctx.remote_addr:
+                        for _ip_allowed in ip_allowed:
+                            if _remote_addr in _ip_allowed:
+                                return True # OK, there was at least that one match so we report success
+
+                    # If we get here, it means that none of remote addresses from input matched
+                    # so we can return False to be explicit.
+                    return False
 
 # ################################################################################################################################
 
@@ -259,22 +270,52 @@ class Login(BaseService):
 
 # ################################################################################################################################
 
-    def _check_password_about_to_expire(self, ctx, user):
-        return True
+    def _check_password_expired(self, ctx, user, _now=datetime.utcnow):
+        if _now() > user.password_expiry:
+            if ctx.sso_conf.password.inform_if_expired:
+                self.response.payload.sub_status.append(status_code.password.expired)
+        else:
+            return True
 
 # ################################################################################################################################
 
-    def _check_password_expired(self, ctx, user):
-        return True
+    def _check_password_about_to_expire(self, ctx, user, _now=datetime.utcnow, _timedelta=timedelta):
+
+        # Find time after which the password is considered to be about to expire
+        threshold_time = user.password_expiry - _timedelta(days=ctx.sso_conf.password.about_to_expire_threshold)
+
+        # .. check if current time is already past that threshold ..
+        if _now() > threshold_time:
+
+            # .. if it is, we may either return a warning and continue ..
+            if ctx.sso_conf.password.inform_if_about_to_expire:
+                self.response.payload.status = status_code.warning
+                self.response.payload.sub_status.append(status_code.password.w_about_to_exp)
+                return status_code.warning
+
+            # .. or it can considered an error, which rejects the request.
+            else:
+                self.response.payload.status = status_code.error
+                self.response.payload.sub_status.append(status_code.password.e_about_to_exp)
+                return status_code.error
+
+        # No approaching expiry, we may continue
+        else:
+            return True
 
 # ################################################################################################################################
 
-    def _check_must_change_password(self, ctx, user):
-        return True
+    def _check_must_send_new_password(self, ctx, user):
+        if user.password_must_change:
+            if not ctx.input.get('new_password'):
+                if ctx.sso_conf.password.inform_if_must_be_changed:
+                    self.response.payload.sub_status.append(status_code.password.must_send_new)
+        else:
+            return True
 
 # ################################################################################################################################
 
-    def _handle_sso(self, ctx):
+    def _handle_sso(self, ctx, _ok=status_code.ok):
 
         # Look up user and return if not found by username
         with closing(self.odb.session()) as session:
@@ -307,17 +348,22 @@ class Login(BaseService):
         if not self._check_is_approved(ctx, user):
             return
 
-        # If applicable, password may not be about to expire
-        if not self._check_password_about_to_expire(ctx, user):
-            return
-
         # Password must not have expired
         if not self._check_password_expired(ctx, user):
             return
 
-        # Password must not be marked as requiring a change upon next login
-        if not self._check_must_change_password(ctx, user):
+        # If applicable, password may not be about to expire (this must be after checking that it has not already).
+        # Note that it may return a specific status to return (warning or error)
+        _about_status = self._check_password_about_to_expire(ctx, user)
+        if _about_status is not True:
+            self.response.payload.status = _about_status
             return
+
+        # If password is marked as as requiring a change upon next login but a new one was not sent, reject the request.
+        if not self._check_must_send_new_password(ctx, user):
+            return
+
+        # If new password is required, we need to validate and save it before session can be created.
 
         # All checks done, session is created, we can signal OK now
         self.response.payload.status = status_code.ok
