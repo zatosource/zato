@@ -19,13 +19,12 @@ class _SSOUser:
     __tablename__ = 'zato_sso_user'
     __table_args__ = (
         UniqueConstraint('username', name='zato_u_usrn_uq'),
-        UniqueConstraint('sign_up_status', name='zato_u_sigs_uq'),
         UniqueConstraint('user_id', name='zato_user_id_uq'),
         Index('zato_u_email_idx', 'email', unique=False, mysql_length={'email':767}),
         Index('zato_u_dspn_idx', 'display_name_upper', unique=False),
-        Index('zato_u_alln_idx', 'first_name_upper', 'middle_name_upper', 'last_name_upper',
-              unique=False),
+        Index('zato_u_alln_idx', 'first_name_upper', 'middle_name_upper', 'last_name_upper', unique=False),
         Index('zato_u_lastn_idx', 'last_name_upper', unique=False),
+        Index('zato_u_sigst_idx', 'sign_up_status', unique=False),
     {})
 
     # Not used publicly

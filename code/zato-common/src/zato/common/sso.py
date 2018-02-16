@@ -21,34 +21,41 @@ _utcnow = datetime.utcnow
 
 # ################################################################################################################################
 
-class reason_code:
+class status_code:
     """ Reason codes pointing to specific API validation errors.
     """
+    ok       = 'ok'
+    error    = 'error'
+    warning  = 'warning'
+
     class username:
-        invalid        = 'zsv.usr.001'
-        exists         = 'zsv.usr.002'
-        too_long       = 'zsv.usr.003'
-        has_whitespace = 'zsv.usr.004'
+        invalid        = 'E001001'
+        exists         = 'E001002'
+        too_long       = 'E001003'
+        has_whitespace = 'E001004'
 
     class email:
-        invalid        = 'zsv.email.001'
-        exists         = 'zsv.email.002'
-        too_long       = 'zsv.email.003'
-        has_whitespace = 'zsv.email.004'
-        missing        = 'zsv.email.005'
+        invalid        = 'E002001'
+        exists         = 'E002002'
+        too_long       = 'E002003'
+        has_whitespace = 'E002004'
+        missing        = 'E002005'
 
     class password:
-        invalid   = 'zsv.ps.001.001'
-        too_short = 'zsv.ps.001.002'
-        too_long  = 'zsv.ps.001.003'
+        invalid   = 'E003001'
+        too_short = 'E003002'
+        too_long  = 'E003003'
 
-        expired       = 'zsa.ps.002.001'
-        about_to_exp  = 'zsa.ps.002.002'
-        must_change   = 'zsa.ps.002.003'
+        expired      = 'E003001'
+        about_to_exp = 'W003002'
+        must_change  = 'E003003'
 
     class app_list:
-        invalid   = 'zsi.appl.001'
-        no_signup = 'zsi.appl.002'
+        invalid   = 'E004001'
+        no_signup = 'E004002'
+
+    class login:
+        invalid_creds = 'E005001'
 
 # ################################################################################################################################
 
@@ -65,14 +72,15 @@ class const:
 class ValidationError(Exception):
     """ Raised if any input SSO data is invalid, subcode contains details of what was rejected.
     """
-    def __init__(self, reason_code, return_rc):
-        self.reason_code = reason_code if isinstance(reason_code, list) else [reason_code]
-        self.return_rc = return_rc
+    def __init__(self, status, sub_status, return_rc):
+        self.status = status
+        self.sub_status = sub_status if isinstance(sub_status, list) else [sub_status]
+        self.return_status = return_rc
 
 # ################################################################################################################################
 
 def create_user(session, input, is_approval_needed, password_expiry, encrypt_password, encrypt_email, encrypt_func,
-    hash_func, _utcnow=_utcnow, _timedelta=timedelta):
+    hash_func, confirm_token, _utcnow=_utcnow, _timedelta=timedelta):
 
     # Always in UTC
     now = _utcnow()
