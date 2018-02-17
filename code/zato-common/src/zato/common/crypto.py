@@ -249,7 +249,7 @@ class HashParamsComputer(object):
     """ Computes parameters for hashing purposes, e.g. number of rounds in PBKDF2.
     """
     def __init__(self, goal, header_func=None, progress_func=None, footer_func=None, scheme='pbkdf2_sha512', loops=10,
-            iters_per_loop=10, salt_size=128, rounds_per_iter=20000):
+            iters_per_loop=10, salt_size=128, rounds_per_iter=200):
         self.goal = goal
         self.header_func = header_func
         self.progress_func = progress_func
@@ -273,18 +273,18 @@ class HashParamsComputer(object):
         """ Returns metadata about current CPU the computation is executed on.
         """
         cpu_info = get_cpu_info()
-        return bunchify({
+        return {
             'vendor_id': cpu_info['vendor_id'],
             'brand': cpu_info['brand'],
             'hz_actual': cpu_info['hz_actual']
-        })
+        }
 
 # ################################################################################################################################
 
     def get_info(self, _utcnow=datetime.utcnow):
 
         if self.header_func:
-            header_func(self.cpu_info, self.goal)
+            self.header_func(self.cpu_info, self.goal)
 
         all_results = []
         current_iter = 0
@@ -326,13 +326,13 @@ class HashParamsComputer(object):
         rounds_per_goal_str = '{:,d}'.format(rounds_per_goal).rjust(len(rounds_per_second_str))
 
         if self.footer_func:
-            footer_func(rounds_per_second_str, rounds_per_goal_str)
+            self.footer_func(rounds_per_second_str, rounds_per_goal_str)
 
         return {
             'rounds_per_second': int(rounds_per_second),
-            'rounds_per_second_str': rounds_per_second_str,
+            'rounds_per_second_str': rounds_per_second_str.strip(),
             'rounds_per_goal': int(rounds_per_goal),
-            'rounds_per_goal_str': rounds_per_goal_str,
+            'rounds_per_goal_str': rounds_per_goal_str.strip(),
             'cpu_info': self.cpu_info,
         }
 
@@ -347,29 +347,3 @@ class HashParamsComputer(object):
         return int(ceil(value / self._round_up_to_nearest) * self._round_up_to_nearest)
 
 # ################################################################################################################################
-
-def header_func(cpu_info, goal):
-    print('-' * 70)
-    print('CPU brand ........... {}'.format(cpu_info.brand))
-    print('CPU frequency........ {}'.format(cpu_info.hz_actual))
-    print('Goal ................ {} sec'.format(goal))
-    print('-' * 70)
-
-def footer_func(rounds_per_second_str, rounds_per_goal_str):
-    print('-' * 70)
-    print('Performance ......... {} rounds/s'.format(rounds_per_second_str))
-    print('Required for goal ... {} rounds'.format(rounds_per_goal_str))
-    print('-' * 70)
-
-# ################################################################################################################################
-
-def progress_func(current_per_cent):
-    if current_per_cent >= 100:
-        current_per_cent = 100
-
-    print('Done % .............. {:<3}'.format(current_per_cent))
-
-# ################################################################################################################################
-
-if __name__ == '__main__':
-    CryptoManager.get_hash_params(0.2, header_func, progress_func, footer_func)
