@@ -314,7 +314,7 @@ def run_command(args):
         ('encrypt', 'zato.cli.crypto.Encrypt'),
         ('enmasse', 'zato.cli.enmasse.EnMasse'),
         ('from_config', 'zato.cli.FromConfig'),
-        ('hash_params', 'zato.cli.crypto.GetHashParams'),
+        ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
         ('info', 'zato.cli.info.Info'),
         ('migrate', 'zato.cli.migrate.Migrate'),
         ('quickstart_create', 'zato.cli.quickstart.Create'),
