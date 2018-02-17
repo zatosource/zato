@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,6 +19,8 @@ from zato.cli import ManageCommand, ZatoCommand
 from zato.common.crypto import CryptoManager
 from zato.common.util import get_config
 
+# ################################################################################################################################
+
 class Encrypt(ZatoCommand):
     """ Encrypts secrets using a public key
     """
@@ -30,6 +32,8 @@ class Encrypt(ZatoCommand):
         cm.load_keys()
 
         self.logger.info('Encrypted value is [{}]'.format(cm.encrypt(args.secret)))
+
+# ################################################################################################################################
 
 class Decrypt(ZatoCommand):
     """ Decrypts secrets using a private key
@@ -43,6 +47,8 @@ class Decrypt(ZatoCommand):
 
         self.logger.info('Secret is [{}]'.format(cm.decrypt(args.secret)))
 
+# ################################################################################################################################
+
 class UpdateCrypto(ManageCommand):
     """ Updates cryptographic material of a given Zato component
     """
@@ -52,6 +58,8 @@ class UpdateCrypto(ManageCommand):
         {'name':'cert_path', 'help':"Path to a component's certificate in PEM"},
         {'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates in PEM"},
     ]
+
+# ################################################################################################################################
 
     def _update_crypto(
             self, args, copy_crypto_func, update_secrets=False, load_secrets_func=None,
@@ -79,8 +87,12 @@ class UpdateCrypto(ManageCommand):
 
             store_secrets_func(secrets, secret_names, cm, conf_location, conf)
 
+# ################################################################################################################################
+
     def _on_lb(self, args):
         self._update_crypto(args, self.copy_lb_crypto)
+
+# ################################################################################################################################
 
     def _on_web_admin(self, args):
         def load_secrets(secrets, secret_names, crypto_manager, conf_location, ignored):
@@ -98,6 +110,8 @@ class UpdateCrypto(ManageCommand):
         self._update_crypto(
             args, self.copy_web_admin_crypto, True, load_secrets, store_secrets, 'web-admin.conf',
             'web-admin-priv-key.pem', 'web-admin-pub-key.pem', ['DATABASE_PASSWORD', 'TECH_ACCOUNT_PASSWORD'])
+
+# ################################################################################################################################
 
     def _on_server(self, args):
         def load_secrets(secrets, secret_names, crypto_manager, conf_location, conf_file_name):
@@ -121,3 +135,59 @@ class UpdateCrypto(ManageCommand):
         self._update_crypto(
             args, self.copy_server_crypto, True, load_secrets, store_secrets, 'server.conf',
             'zato-server-priv-key.pem', 'zato-server-pub-key.pem', ['odb:password', 'kvdb:password'])
+
+# ################################################################################################################################
+
+class GetHashParams(ZatoCommand):
+    """ Encrypts secrets using a public key
+    """
+    allow_empty_secrets = True
+    opts = [
+        {'name':'--json', 'help':'Output full info in JSON', 'action':'store_true'},
+        {'name':'--text', 'help':'Output only rounds in plain text', 'action':'store_true'},
+        {'name':'goal',   'help':'How long a single hash should take in seconds (e.g. 0.2)'},
+    ]
+
+# ################################################################################################################################
+
+    def header_func(self, cpu_info, goal):
+        print('-' * 70)
+        print('CPU brand ........... {}'.format(cpu_info['brand']))
+        print('CPU frequency........ {}'.format(cpu_info['hz_actual']))
+        print('Goal ................ {} sec'.format(goal))
+        print('-' * 70)
+
+# ################################################################################################################################
+
+    def footer_func(self, rounds_per_second_str, rounds_per_goal_str):
+        print('-' * 70)
+        print('Performance ......... {} rounds/s'.format(rounds_per_second_str))
+        print('Required for goal ... {} rounds'.format(rounds_per_goal_str))
+        print('-' * 70)
+
+# ################################################################################################################################
+
+    def progress_func(self, current_per_cent):
+        if current_per_cent >= 100:
+            current_per_cent = 100
+
+        print('Done % .............. {:<3}'.format(current_per_cent))
+
+# ################################################################################################################################
+
+    def execute(self, args):
+        goal = round(float(args.goal), 2)
+
+        if args.json or args.text:
+            header_func, progress_func, footer_func = None, None, None
+        else:
+            header_func, progress_func, footer_func = self.header_func, self.progress_func, self.footer_func
+
+        info = CryptoManager.get_hash_params(goal, header_func, progress_func, footer_func)
+
+        if args.json:
+            self.logger.info(anyjson.dumps(info))
+        elif args.text:
+            self.logger.info(info['rounds_per_goal'])
+
+# ################################################################################################################################

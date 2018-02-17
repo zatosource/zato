@@ -175,6 +175,18 @@ def get_parser():
     add_opts(enmasse, enmasse_mod.EnMasse.opts)
 
     #
+    # update
+    #
+    hash = subs.add_parser('hash', description='Updates Zato components and users')
+    hash_subs = hash.add_subparsers()
+
+    # .. hash info
+
+    hash_params = hash_subs.add_parser('info', description=crypto_mod.GetHashParams.__doc__, parents=[base_parser])
+    hash_params.set_defaults(command='hash_params')
+    add_opts(hash_params, crypto_mod.GetHashParams.opts)
+
+    #
     # info
     #
     info = subs.add_parser('info', description=info_mod.Info.__doc__, parents=[base_parser])
