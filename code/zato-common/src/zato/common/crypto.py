@@ -205,7 +205,7 @@ class CryptoManager(object):
 # ################################################################################################################################
 
     @staticmethod
-    def get_hash_params(goal, header_func=None, progress_func=None, footer_func=None):
+    def get_hash_rounds(goal, header_func=None, progress_func=None, footer_func=None):
         return HashParamsComputer(goal, header_func, progress_func, footer_func).get_info()
 
 # ################################################################################################################################
@@ -249,7 +249,7 @@ class HashParamsComputer(object):
     """ Computes parameters for hashing purposes, e.g. number of rounds in PBKDF2.
     """
     def __init__(self, goal, header_func=None, progress_func=None, footer_func=None, scheme='pbkdf2_sha512', loops=10,
-            iters_per_loop=10, salt_size=128, rounds_per_iter=200):
+            iters_per_loop=10, salt_size=64, rounds_per_iter=25000):
         self.goal = goal
         self.header_func = header_func
         self.progress_func = progress_func
@@ -265,7 +265,7 @@ class HashParamsComputer(object):
         self.hash_scheme = getattr(passlib_hash, scheme).using(salt_size=salt_size, rounds=rounds_per_iter)
         self.cpu_info = self.get_cpu_info()
         self._round_down_to_nearest = 1000
-        self._round_up_to_nearest = 10000
+        self._round_up_to_nearest = 5000
 
 # ################################################################################################################################
 
@@ -274,7 +274,6 @@ class HashParamsComputer(object):
         """
         cpu_info = get_cpu_info()
         return {
-            'vendor_id': cpu_info['vendor_id'],
             'brand': cpu_info['brand'],
             'hz_actual': cpu_info['hz_actual']
         }
@@ -319,21 +318,23 @@ class HashParamsComputer(object):
         rounds_per_second = int(self.rounds_per_iter / sec_needed)
         rounds_per_second = self.round_down(rounds_per_second)
 
-        rounds_per_goal = int(rounds_per_second * self.goal)
-        rounds_per_goal = self.round_up(rounds_per_goal)
+        rounds = int(rounds_per_second * self.goal)
+        rounds = self.round_up(rounds)
 
         rounds_per_second_str = '{:,d}'.format(rounds_per_second)
-        rounds_per_goal_str = '{:,d}'.format(rounds_per_goal).rjust(len(rounds_per_second_str))
+        rounds_str = '{:,d}'.format(rounds).rjust(len(rounds_per_second_str))
 
         if self.footer_func:
-            self.footer_func(rounds_per_second_str, rounds_per_goal_str)
+            self.footer_func(rounds_per_second_str, rounds_str)
 
         return {
             'rounds_per_second': int(rounds_per_second),
             'rounds_per_second_str': rounds_per_second_str.strip(),
-            'rounds_per_goal': int(rounds_per_goal),
-            'rounds_per_goal_str': rounds_per_goal_str.strip(),
+            'rounds': int(rounds),
+            'rounds_str': rounds_str.strip(),
             'cpu_info': self.cpu_info,
+            'algorithm': 'PBKDF2-SHA512',
+            'salt_size': self.salt_size,
         }
 
 # ################################################################################################################################

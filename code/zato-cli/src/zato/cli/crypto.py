@@ -138,56 +138,54 @@ class UpdateCrypto(ManageCommand):
 
 # ################################################################################################################################
 
-class GetHashParams(ZatoCommand):
+class GetHashRounds(ZatoCommand):
     """ Encrypts secrets using a public key
     """
     allow_empty_secrets = True
     opts = [
         {'name':'--json', 'help':'Output full info in JSON', 'action':'store_true'},
-        {'name':'--text', 'help':'Output only rounds in plain text', 'action':'store_true'},
+        {'name':'--rounds-only', 'help':'Output only rounds in plain text', 'action':'store_true'},
         {'name':'goal',   'help':'How long a single hash should take in seconds (e.g. 0.2)'},
     ]
 
 # ################################################################################################################################
 
     def header_func(self, cpu_info, goal):
-        print('-' * 70)
-        print('CPU brand ........... {}'.format(cpu_info['brand']))
-        print('CPU frequency........ {}'.format(cpu_info['hz_actual']))
-        print('Goal ................ {} sec'.format(goal))
-        print('-' * 70)
+        self.logger.info('-' * 70)
+        self.logger.info('Algorithm ........... PBKDF2-SHA512, salt size 64 bytes (512 bits)')
+        self.logger.info('CPU brand ........... {}'.format(cpu_info['brand']))
+        self.logger.info('CPU frequency........ {}'.format(cpu_info['hz_actual']))
+        self.logger.info('Goal ................ {} sec'.format(goal))
+        self.logger.info('-' * 70)
 
 # ################################################################################################################################
 
-    def footer_func(self, rounds_per_second_str, rounds_per_goal_str):
-        print('-' * 70)
-        print('Performance ......... {} rounds/s'.format(rounds_per_second_str))
-        print('Required for goal ... {} rounds'.format(rounds_per_goal_str))
-        print('-' * 70)
+    def footer_func(self, rounds_per_second_str, rounds_str):
+        self.logger.info('-' * 70)
+        self.logger.info('Performance ......... {} rounds/s'.format(rounds_per_second_str))
+        self.logger.info('Required for goal ... {} rounds'.format(rounds_str))
+        self.logger.info('-' * 70)
 
 # ################################################################################################################################
 
     def progress_func(self, current_per_cent):
-        if current_per_cent >= 100:
-            current_per_cent = 100
-
-        print('Done % .............. {:<3}'.format(current_per_cent))
+        self.logger.info('Done % .............. {:<3}'.format(100 if current_per_cent >= 100 else current_per_cent))
 
 # ################################################################################################################################
 
     def execute(self, args):
         goal = round(float(args.goal), 2)
 
-        if args.json or args.text:
+        if args.json or args.rounds_only:
             header_func, progress_func, footer_func = None, None, None
         else:
             header_func, progress_func, footer_func = self.header_func, self.progress_func, self.footer_func
 
-        info = CryptoManager.get_hash_params(goal, header_func, progress_func, footer_func)
+        info = CryptoManager.get_hash_rounds(goal, header_func, progress_func, footer_func)
 
         if args.json:
             self.logger.info(anyjson.dumps(info))
-        elif args.text:
-            self.logger.info(info['rounds_per_goal'])
+        elif args.rounds_only:
+            self.logger.info(info['rounds'])
 
 # ################################################################################################################################

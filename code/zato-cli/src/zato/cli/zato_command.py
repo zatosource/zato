@@ -182,9 +182,9 @@ def get_parser():
 
     # .. hash info
 
-    hash_params = hash_subs.add_parser('info', description=crypto_mod.GetHashParams.__doc__, parents=[base_parser])
-    hash_params.set_defaults(command='hash_params')
-    add_opts(hash_params, crypto_mod.GetHashParams.opts)
+    hash_get_rounds = hash_subs.add_parser('get-rounds', description=crypto_mod.GetHashRounds.__doc__, parents=[base_parser])
+    hash_get_rounds.set_defaults(command='hash_get_rounds')
+    add_opts(hash_get_rounds, crypto_mod.GetHashRounds.opts)
 
     #
     # info
