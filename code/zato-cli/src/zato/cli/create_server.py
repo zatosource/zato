@@ -323,7 +323,7 @@ name=
 [hash_secret]
 rounds=100000
 rounds_super_user=300000
-salt_size=32 # In bytes = 256 bits
+salt_size=64 # In bytes = 512 bits
 
 # How long, in milliseconds, password verification for users should take
 rounds_target=200
