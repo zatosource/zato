@@ -349,31 +349,13 @@ expiry=730 # In days, 365 days * 2 years = 730 days
 inform_if_expired=False
 inform_if_about_to_expire=True
 inform_if_must_be_changed=True
+inform_if_invalid=True
 about_to_expire_threshold=30 # In days
 log_in_if_about_to_expire=True
-
-[signup]
-inform_if_user_exists=True
-inform_if_user_invalid=True
-inform_if_email_exists=True
-inform_if_email_invalid=True
-inform_if_password_invalid=True
-email_required=True
-max_length_username=128
-max_length_email=128
-min_length_password=8
-max_length_password=256
-password_allow_whitespace=True
-always_return_confirm_token=True
-is_email_required=True
-is_approval_needed=True
-callback_service=
-
-[user_validation]
-service=zato.sso.user.validate
-reject_username=zato, admin, root
-reject_email=zato, admin, root
-reject_password = """
+min_length=8
+max_length=256
+validate_service=
+reject_list = """
   111111
   123123
   123321
@@ -399,6 +381,25 @@ reject_password = """
   qwerty
   zxcvbnm
 """
+
+[signup]
+inform_if_user_exists=True
+inform_if_user_invalid=True
+inform_if_email_exists=True
+inform_if_email_invalid=True
+email_required=True
+max_length_username=128
+max_length_email=128
+password_allow_whitespace=True
+always_return_confirm_token=True
+is_email_required=True
+is_approval_needed=True
+callback_service=
+
+[user_validation]
+service=zato.sso.user.validate
+reject_username=zato, admin, root
+reject_email=zato, admin, root
 '''
 
 secrets_conf_template = b"""
