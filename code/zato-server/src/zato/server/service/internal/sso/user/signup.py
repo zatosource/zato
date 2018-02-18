@@ -13,7 +13,7 @@ from contextlib import closing
 
 # Zato
 from zato.common.sso import create_user, status_code
-from zato.common.util.sso import new_confirm_token
+from zato.common.util.sso import new_confirm_token, new_user_id
 from zato.server.service import List
 from zato.server.service.internal.sso import BaseService, BaseSIO
 
@@ -64,7 +64,7 @@ class Signup(BaseService):
         with closing(self.odb.session()) as session:
             user = create_user(session, ctx.input, ctx.sso_conf.signup.is_approval_needed, ctx.sso_conf.password.expiry,
                 ctx.sso_conf.main.encrypt_password, ctx.sso_conf.main.encrypt_email, self.server.encrypt, self.server.hash_secret,
-                confirm_token)
+                confirm_token, new_user_id)
             session.add(user)
             session.commit()
 

@@ -13,11 +13,12 @@ from datetime import datetime, timedelta
 
 # Zato
 from zato.common.odb.model import SSOUser as UserModel
-from zato.common.util.sso import new_user_id
 
 # ################################################################################################################################
 
 _utcnow = datetime.utcnow
+
+UserModelTable = UserModelTable.__table__
 
 # ################################################################################################################################
 
@@ -79,15 +80,37 @@ class const:
 class ValidationError(Exception):
     """ Raised if any input SSO data is invalid, subcode contains details of what was rejected.
     """
-    def __init__(self, status, sub_status, return_rc):
-        self.status = status
+    def __init__(self, sub_status, return_status, status=status_code.error):
         self.sub_status = sub_status if isinstance(sub_status, list) else [sub_status]
-        self.return_status = return_rc
+        self.return_status = return_status
+        self.status = status
+
+# ################################################################################################################################
+
+def make_data_secret(data, encrypt_func=None, hash_func=None):
+    """ Turns data into a secret by hashing it (stretching) and then encrypting the result.
+    """
+    # E.g. PBKDF2-SHA512
+    if hash_func:
+        data = hash_func(data)
+
+    # E.g. Fernet (AES-128)
+    if encrypt_func:
+        data = encrypt_func(data)
+
+    return data
+
+# ################################################################################################################################
+
+def make_password_secret(password, encrypt_password, encrypt_func=None, hash_func=None):
+    """ Encrypts and hashes a user password.
+    """
+    return make_data_secret(password, encrypt_func if encrypt_password else None, hash_func)
 
 # ################################################################################################################################
 
 def create_user(session, input, is_approval_needed, password_expiry, encrypt_password, encrypt_email, encrypt_func,
-    hash_func, confirm_token, _utcnow=_utcnow, _timedelta=timedelta):
+    hash_func, confirm_token, new_user_id_func, _utcnow=_utcnow, _timedelta=timedelta):
 
     # Always in UTC
     now = _utcnow()
@@ -127,18 +150,16 @@ def create_user(session, input, is_approval_needed, password_expiry, encrypt_pas
     user_model.is_locked = False
     user_model.is_super_user = False
 
-    # E.g. PBKDF2-SHA512
-    password = hash_func(input.password)
+    # Passwords are always at least hashed and possibly encrypted too ..
+    password = make_password_secret(input.password, encrypt_password, encrypt_func, hash_func)
 
-    # Fernet (AES-128)
-    if encrypt_password:
-        password = encrypt_func(password)
-
-    # Again, Fernet key
-    email = encrypt_func(input.email) if encrypt_email else input.email
+    # .. while emails are only encrypted, and it is optional.
+    if encrypt_email:
+        email = make_data_secret(input.email, encrypt_func)
 
     user_model.username = input.username
     user_model.email = email
+
     user_model.password = password
     user_model.password_is_set = True
     user_model.password_last_set = now
@@ -160,5 +181,23 @@ def create_user(session, input, is_approval_needed, password_expiry, encrypt_pas
     user_model.last_name_upper = input.last_name.upper()
 
     return user_model
+
+# ################################################################################################################################
+
+def set_password(session, user_id, password, encrypt_password, encrypt_func, hash_func, must_change, password_expiry,
+    _utcnow=_utcnow):
+    """ Sets a new password of a user. The password must have been already validated.
+    """
+    session.execute(
+        update(UserModelTable).\
+        values({
+            'password': make_password_secret(password, encrypt_password, encrypt_func, hash_func),
+            'password_must_change': must_change,
+            'password_is_set': True,
+            'password_last_set': _utcnow(),
+            'password_expiry': now + timedelta(days=password_expiry),
+            }).\
+        where(UserModelTable.c.user_id==user_id)
+    )
 
 # ################################################################################################################################

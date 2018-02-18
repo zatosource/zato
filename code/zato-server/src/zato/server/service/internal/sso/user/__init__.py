@@ -19,6 +19,7 @@ import regex as re
 # Zato
 from zato.common.odb.query.sso import get_user_by_username, user_exists
 from zato.common.sso import const, status_code, ValidationError
+from zato.common.util.sso import validate_password
 from zato.server.service import List, Service
 from zato.server.service.internal.sso import BaseService, BaseSIO
 
@@ -66,7 +67,7 @@ class Validate(Service):
                 sub_status = status_code.email.exists
                 return_status = sso_conf.signup.inform_if_email_exists
 
-            raise ValidationError(status, sub_status, return_status)
+            raise ValidationError(sub_status, return_status, status)
 
 # ################################################################################################################################
 
@@ -110,27 +111,6 @@ class Validate(Service):
 
 # ################################################################################################################################
 
-    def _validate_password(self, session, sso_conf, password):
-        """ Raises ValidationError if password is invalid, e.g. it is too simple.
-        """
-        # Password may not be too short
-        if len(password) < sso_conf.signup.min_length_password:
-            raise ValidationError(status_code.password.too_short, sso_conf.signup.inform_if_password_invalid)
-
-        # Password may not be too long
-        if len(password) > sso_conf.signup.max_length_password:
-            raise ValidationError(status_code.password.too_long, sso_conf.signup.inform_if_password_invalid)
-
-        # Password's default complexity is checked case-insensitively
-        password = password.lower()
-
-        # Password may not contain most commonly used ones
-        for elem in sso_conf.user_validation.reject_password:
-            if elem in password:
-                raise ValidationError(status_code.password.invalid, sso_conf.signup.inform_if_password_invalid)
-
-# ################################################################################################################################
-
     def _validate_app_list(self, session, sso_conf, current_app, app_list):
         """ Raises ValidationError if input app_list is invalid, e.g. includes an unknown one.
         """
@@ -166,7 +146,7 @@ class Validate(Service):
 
                 # These check individual elements
                 self._validate_username(session, sso_conf, input.username)
-                self._validate_password(session, sso_conf, input.password)
+                validate_password(sso_conf, input.password)
                 if check_email:
                     self._validate_email(session, sso_conf, email)
 
@@ -306,10 +286,9 @@ class Login(BaseService):
 # ################################################################################################################################
 
     def _check_must_send_new_password(self, ctx, user):
-        if user.password_must_change:
-            if not ctx.input.get('new_password'):
-                if ctx.sso_conf.password.inform_if_must_be_changed:
-                    self.response.payload.sub_status.append(status_code.password.must_send_new)
+        if user.password_must_change and not ctx.input.get('new_password'):
+            if ctx.sso_conf.password.inform_if_must_be_changed:
+                self.response.payload.sub_status.append(status_code.password.must_send_new)
         else:
             return True
 
@@ -364,6 +343,17 @@ class Login(BaseService):
             return
 
         # If new password is required, we need to validate and save it before session can be created.
+        # Note that at this point we already know that the old password was correct so it is safe to set the new one
+        # if it is confirmed to be valid. Passwords are rarely changed to it is OK to open a new SQL session here
+        # in addition to the one above instead of re-using it.
+        try:
+            validate_password(ctx.sso_conf, ctx.input.new_password)
+        except ValidationError as e:
+            if e.return_status:
+                self.response.payload.status = e.status
+                self.response.payload.sub_status = e.sub_status
+        else:
+
 
         # All checks done, session is created, we can signal OK now
         self.response.payload.status = status_code.ok
