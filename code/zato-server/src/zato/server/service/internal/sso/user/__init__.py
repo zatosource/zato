@@ -17,11 +17,11 @@ from uuid import uuid4
 import regex as re
 
 # Zato
-from zato.common.odb.query.sso import get_user_by_username, user_exists
-from zato.common.sso import const, status_code, ValidationError
-from zato.common.util.sso import validate_password
 from zato.server.service import List, Service
 from zato.server.service.internal.sso import BaseService, BaseSIO
+from zato.sso import const, status_code, ValidationError
+from zato.sso.odb.query import get_user_by_username, user_exists
+from zato.sso.util import validate_password
 
 # ################################################################################################################################
 
@@ -353,7 +353,8 @@ class Login(BaseService):
                 self.response.payload.status = e.status
                 self.response.payload.sub_status = e.sub_status
         else:
-
+            # TODO: Create user here
+            pass
 
         # All checks done, session is created, we can signal OK now
         self.response.payload.status = status_code.ok

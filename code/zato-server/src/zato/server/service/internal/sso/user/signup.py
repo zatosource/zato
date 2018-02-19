@@ -12,10 +12,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 
 # Zato
-from zato.common.sso import create_user, status_code
-from zato.common.util.sso import new_confirm_token, new_user_id
 from zato.server.service import List
 from zato.server.service.internal.sso import BaseService, BaseSIO
+from zato.sso import create_user, status_code
+from zato.sso.util import new_confirm_token, new_user_id
 
 # ################################################################################################################################
 
