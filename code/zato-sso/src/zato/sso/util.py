@@ -15,7 +15,7 @@ from uuid import uuid4
 from base32_crockford import encode as crockford_encode
 
 # Zato
-from zato.common.sso import status_code, ValidationError
+from zato.sso import status_code, ValidationError
 
 # ################################################################################################################################
 

@@ -13,8 +13,8 @@ from ipaddress import ip_address
 
 # Zato
 from zato.common import NO_REMOTE_ADDRESS
-from zato.common.sso import status_code
 from zato.server.service import List, Service
+from zato.sso import status_code
 
 # ################################################################################################################################
 
