@@ -27,6 +27,8 @@ from zato.sso.util import new_user_id, normalize_password_reject_list
 class SSOCommand(ZatoCommand):
     """ Base class for SSO-related commands.
     """
+    user_required = True
+
     def _get_sso_config(self, args):
         repo_location = os.path.join(args.path, 'config', 'repo')
         secrets_conf = get_config(repo_location, 'secrets.conf', needs_user_config=False)
@@ -51,16 +53,27 @@ class SSOCommand(ZatoCommand):
 # ################################################################################################################################
 
     def execute(self, args):
-        return self._on_sso_command(args, self._get_sso_config(args))
+        user_api = self._get_sso_config(args)
+
+        if self.user_required:
+            user = user_api.get_user_by_username(args.username)
+            if not user:
+                self.logger.warn('No such user `%s`', args.username)
+                return self.SYS_ERROR.NO_SUCH_SSO_USER
+        else:
+            user = None
+
+        return self._on_sso_command(args, user, user_api)
 
 # ################################################################################################################################
 
-    def _on_sso_command(self, args, user_api):
+    def _on_sso_command(self, args, user, user_api):
         raise NotImplementedError('Must be implement by subclasses')
 
 # ################################################################################################################################
 
 class _CreateUser(SSOCommand):
+    user_required = False
     create_func = None
     user_type = None
 
@@ -77,10 +90,10 @@ class _CreateUser(SSOCommand):
 
 # ################################################################################################################################
 
-    def _on_sso_command(self, args, user_api):
+    def _on_sso_command(self, args, user, user_api):
 
         if user_api.get_user_by_username(args.username):
-            self.logger.warn('Error, user already exists `%s`', args.username)
+            self.logger.warn('User already exists `%s`', args.username)
             return self.SYS_ERROR.USER_EXISTS
 
         try:
@@ -132,13 +145,9 @@ class DeleteUser(SSOCommand):
         {'name': '--delete-self', 'help': "Force deletion of user's own account"},
     ]
 
-    def _on_sso_command(self, args, user_api):
-        if not user_api.get_user_by_username(args.username):
-            self.logger.warn('No such user `%s`', args.username)
-            return self.SYS_ERROR.NO_SUCH_SSO_USER
-        else:
-            user_api.delete_user(username=args.username)
-            self.logger.info('Deleted user `%s`', args.username)
+    def _on_sso_command(self, args, user, user_api):
+        user_api.delete_user(username=args.username)
+        self.logger.info('Deleted user `%s`', args.username)
 
 # ################################################################################################################################
 
@@ -149,7 +158,8 @@ class LockUser(SSOCommand):
         {'name': 'username', 'help': 'User account to lock'},
     ]
 
-    def _on_sso_command(self, args, user_api):
+    def _on_sso_command(self, args, user, user_api):
+        user_api.lock_user(user.user_id)
         self.logger.info('Locked user account `%s`', args.username)
 
 # ################################################################################################################################
@@ -161,19 +171,37 @@ class UnlockUser(SSOCommand):
         {'name': 'username', 'help': 'User account to unlock'},
     ]
 
-    def _on_sso_command(self, args, user_api):
+    def _on_sso_command(self, args, user, user_api):
+        user_api.unlock_user(user.user_id)
         self.logger.info('Unlocked user account `%s`', args.username)
 
 # ################################################################################################################################
 
 class ChangeUserPassword(SSOCommand):
-    """ Changes password of a user given on input.
+    """ Changes password of a user given on input. Use reset-user-password if new password should be auto-generated.
     """
     opts = [
         {'name': 'username', 'help': 'User to change the password of'},
+        {'name': '--password', 'help': 'New password'},
+        {'name': '--expiry', 'help': "Password's expiry in hours or days"},
+        {'name': '--must-change', 'help': "A flag indicating whether the password must be changed on next login"},
     ]
 
-    def _on_sso_command(self, args, user_api):
-        self.logger.info('Changed password of user `%s`', args.username)
+    def _on_sso_command(self, args, user, user_api):
+        self.logger.info('Changed password for user `%s`', args.username)
+
+# ################################################################################################################################
+
+class ResetUserPassword(SSOCommand):
+    """ Sets a new random for user and returns it on output. Use change-password if new password must be given on input.
+    """
+    opts = [
+        {'name': 'username', 'help': 'User to reset the password of'},
+        {'name': '--expiry', 'help': "Password's expiry in hours or days"},
+        {'name': '--must-change', 'help': "A flag indicating whether the password must be changed on next login"},
+    ]
+
+    def _on_sso_command(self, args, user, user_api):
+        self.logger.info('Reset password for user `%s`', args.username)
 
 # ################################################################################################################################
