@@ -15,7 +15,8 @@ from datetime import datetime, timedelta
 # Zato
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const
-from zato.sso.util import make_data_secret, make_password_secret
+from zato.sso.odb.query import get_user_by_username
+from zato.sso.util import make_data_secret, make_password_secret, validate_password
 
 # ################################################################################################################################
 
@@ -154,7 +155,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def set_password(session, user_id, password, encrypt_password, encrypt_func, hash_func, must_change, password_expiry,
+    def set_password(self, session, user_id, password, encrypt_password, encrypt_func, hash_func, must_change, password_expiry,
         _utcnow=_utcnow):
         """ Sets a new password of a user. The password must have been already validated.
         """
@@ -169,5 +170,18 @@ class UserAPI(object):
                 }).\
             where(UserModelTable.c.user_id==user_id)
         )
+
+# ################################################################################################################################
+
+    def get_user_by_username(self, username):
+        """ Returns a user object by username or None, if there is no such username.
+        """
+        with closing(self.odb_session_func()) as session:
+            return get_user_by_username(session, username)
+
+# ################################################################################################################################
+
+    def validate_password(self, password):
+        return validate_password(self.sso_conf, password)
 
 # ################################################################################################################################
