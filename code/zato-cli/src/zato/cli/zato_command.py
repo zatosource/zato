@@ -264,7 +264,7 @@ def get_parser():
     #
     # unlock-user
     #
-    sso_unlock_user = sso_subs.add_parser('delete-user', description=sso_mod.UnlockUser.__doc__, parents=[base_parser])
+    sso_unlock_user = sso_subs.add_parser('unlock-user', description=sso_mod.UnlockUser.__doc__, parents=[base_parser])
     sso_unlock_user.add_argument('path', help='Path to a Zato server')
     sso_unlock_user.set_defaults(command='sso_unlock_user')
     add_opts(sso_unlock_user, sso_mod.UnlockUser.opts)

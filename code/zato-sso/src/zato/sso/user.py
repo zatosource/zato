@@ -210,3 +210,32 @@ class UserAPI(object):
             session.commit()
 
 # ################################################################################################################################
+
+    def _lock_user(self, user_id, is_locked):
+        """ Locks or unlocks a user account.
+        """
+        with closing(self.odb_session_func()) as session:
+            session.execute(
+                update(UserModelTable).\
+                values({
+                    'is_locked': is_locked,
+                    }).\
+                where(UserModelTable.c.user_id==user_id)
+            )
+            session.commit()
+
+# ################################################################################################################################
+
+    def lock_user(self, user_id):
+        """ Locks a user account.
+        """
+        self._lock_user(user_id, True)
+
+# ################################################################################################################################
+
+    def unlock_user(self, user_id):
+        """ Unlocks a user account.
+        """
+        self._lock_user(user_id, False)
+
+# ################################################################################################################################
