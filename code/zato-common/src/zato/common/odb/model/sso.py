@@ -40,6 +40,9 @@ class _SSOUser:
     is_locked = Column(Boolean(), nullable=False, default=False)
     locked_time = Column(DateTime(), nullable=True)
 
+    # Creation metadata, e.g. what this user's remote IP was
+    creation_ctx = Column(Text(), nullable=False)
+
     # Note that this is not an FK - this is on purpose to keep this information around
     # even if parent row is deleted.
     locked_by = Column(String(191), nullable=True)

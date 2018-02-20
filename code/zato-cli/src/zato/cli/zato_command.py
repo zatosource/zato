@@ -23,8 +23,8 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_scheduler as create_scheduler_mod, \
      create_server as create_server_mod, create_web_admin as create_web_admin_mod, crypto as crypto_mod, \
      delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, migrate as migrate_mod, \
-     quickstart as quickstart_mod, run_command, service as service_mod, start as start_mod, stop as stop_mod, \
-     web_admin_auth as web_admin_auth_mod
+     quickstart as quickstart_mod, run_command, service as service_mod, sso as sso_mod, start as start_mod, \
+     stop as stop_mod, web_admin_auth as web_admin_auth_mod
 from zato.common import version
 
 def add_opts(parser, opts):
@@ -229,6 +229,17 @@ def get_parser():
     service_invoke = service_subs.add_parser('invoke', description=service_mod.Invoke.__doc__, parents=[base_parser])
     service_invoke.set_defaults(command='service_invoke')
     add_opts(service_invoke, service_mod.Invoke.opts)
+
+    #
+    # sso
+    #
+    sso = subs.add_parser('sso', description='SSO management')
+    sso_subs = sso.add_subparsers()
+
+    sso_create_super_user = sso_subs.add_parser('create-super-user', description=sso_mod.CreateSuperUser.__doc__, parents=[base_parser])
+    sso_create_super_user.add_argument('path', help='Path to a Zato component')
+    sso_create_super_user.set_defaults(command='sso_create_super_user')
+    add_opts(sso_create_super_user, sso_mod.CreateSuperUser.opts)
 
     #
     # start

@@ -86,25 +86,3 @@ class ValidationError(Exception):
         self.status = status
 
 # ################################################################################################################################
-
-def make_data_secret(data, encrypt_func=None, hash_func=None):
-    """ Turns data into a secret by hashing it (stretching) and then encrypting the result.
-    """
-    # E.g. PBKDF2-SHA512
-    if hash_func:
-        data = hash_func(data)
-
-    # E.g. Fernet (AES-128)
-    if encrypt_func:
-        data = encrypt_func(data)
-
-    return data
-
-# ################################################################################################################################
-
-def make_password_secret(password, encrypt_password, encrypt_func=None, hash_func=None):
-    """ Encrypts and hashes a user password.
-    """
-    return make_data_secret(password, encrypt_func if encrypt_password else None, hash_func)
-
-# ################################################################################################################################
