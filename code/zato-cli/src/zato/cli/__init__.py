@@ -319,9 +319,10 @@ def run_command(args):
         ('migrate', 'zato.cli.migrate.Migrate'),
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('service_invoke', 'zato.cli.service.Invoke'),
+        ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),
+        ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
         ('start', 'zato.cli.start.Start'),
         ('stop', 'zato.cli.stop.Stop'),
-        ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),
         ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
     )
     for k, v in command_imports:
