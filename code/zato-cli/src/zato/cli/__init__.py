@@ -370,6 +370,8 @@ class ZatoCommand(object):
         CANNOT_MIGRATE = 17
         FAILED_TO_START = 18
         FOUND_PIDFILE = 19
+        USER_EXISTS = 20
+        VALIDATION_ERROR = 21
 
 # ################################################################################################################################
 
