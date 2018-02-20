@@ -142,7 +142,6 @@ class DeleteUser(SSOCommand):
     """
     opts = [
         {'name': 'username', 'help': 'Username to delete'},
-        {'name': '--delete-self', 'help': "Force deletion of user's own account"},
     ]
 
     def _on_sso_command(self, args, user, user_api):
