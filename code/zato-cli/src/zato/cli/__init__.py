@@ -320,7 +320,12 @@ def run_command(args):
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('service_invoke', 'zato.cli.service.Invoke'),
         ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),
+        ('sso_change_password', 'zato.cli.sso.ChangeUserPassword'),
+        ('sso_create_user', 'zato.cli.sso.CreateUser'),
         ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
+        ('sso_delete_user', 'zato.cli.sso.DeleteUser'),
+        ('sso_lock_user', 'zato.cli.sso.LockUser'),
+        ('sso_unlock_user', 'zato.cli.sso.UnlockUser'),
         ('start', 'zato.cli.start.Start'),
         ('stop', 'zato.cli.stop.Stop'),
         ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
@@ -372,6 +377,7 @@ class ZatoCommand(object):
         FOUND_PIDFILE = 19
         USER_EXISTS = 20
         VALIDATION_ERROR = 21
+        NO_SUCH_SSO_USER = 22
 
 # ################################################################################################################################
 

@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from datetime import datetime, timedelta
 
+# SQLAlchemy
+from sqlalchemy import delete, update
+
 # Zato
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const
@@ -21,6 +24,7 @@ from zato.sso.util import make_data_secret, make_password_secret, validate_passw
 # ################################################################################################################################
 
 _utcnow = datetime.utcnow
+UserModelTable = UserModel.__table__
 
 # ################################################################################################################################
 
@@ -183,5 +187,26 @@ class UserAPI(object):
 
     def validate_password(self, password):
         return validate_password(self.sso_conf, password)
+
+# ################################################################################################################################
+
+    def delete_user(self, user_id=None, username=None):
+        if not(user_id or username):
+            raise ValueError('Exactly one of user_id and username is required')
+        else:
+            if user_id and username:
+                raise ValueError('Cannot provide both user_id and username on input')
+
+        if user_id:
+            where = UserModelTable.c.user_id==user_id
+        elif username:
+            where = UserModelTable.c.username==username
+
+        with closing(self.odb_session_func()) as session:
+            session.execute(
+                UserModelTable.delete().\
+                where(where)
+            )
+            session.commit()
 
 # ################################################################################################################################

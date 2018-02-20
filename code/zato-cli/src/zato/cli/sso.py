@@ -19,8 +19,8 @@ from zato.cli import ManageCommand, ZatoCommand
 from zato.common.crypto import CryptoManager
 from zato.common.util import get_config
 from zato.sso import ValidationError
-from zato.sso.util import new_user_id
 from zato.sso.user import CreateUserCtx, UserAPI
+from zato.sso.util import new_user_id, normalize_password_reject_list
 
 # ################################################################################################################################
 
@@ -29,8 +29,10 @@ class SSOCommand(ZatoCommand):
     """
     def _get_sso_config(self, args):
         repo_location = os.path.join(args.path, 'config', 'repo')
-        sso_conf = get_config(repo_location, 'sso.conf', needs_user_config=False)
         secrets_conf = get_config(repo_location, 'secrets.conf', needs_user_config=False)
+
+        sso_conf = get_config(repo_location, 'sso.conf', needs_user_config=False)
+        normalize_password_reject_list(sso_conf)
 
         crypto_manager = CryptoManager.from_secret_key(secrets_conf.secret_keys.key1)
         crypto_manager.add_hash_scheme('sso.super-user', sso_conf.hash_secret.rounds_super_user, sso_conf.hash_secret.salt_size)
@@ -48,9 +50,20 @@ class SSOCommand(ZatoCommand):
 
 # ################################################################################################################################
 
-class CreateSuperUser(SSOCommand):
-    """ Creates a new SSO super-user
-    """
+    def execute(self, args):
+        return self._on_sso_command(args, self._get_sso_config(args))
+
+# ################################################################################################################################
+
+    def _on_sso_command(self, args, user_api):
+        raise NotImplementedError('Must be implement by subclasses')
+
+# ################################################################################################################################
+
+class _CreateUser(SSOCommand):
+    create_func = None
+    user_type = None
+
     allow_empty_secrets = True
     opts = [
         {'name': 'username', 'help': 'Username to use'},
@@ -64,9 +77,7 @@ class CreateSuperUser(SSOCommand):
 
 # ################################################################################################################################
 
-    def execute(self, args):
-
-        user_api = self._get_sso_config(args)
+    def _on_sso_command(self, args, user_api):
 
         if user_api.get_user_by_username(args.username):
             self.logger.warn('Error, user already exists `%s`', args.username)
@@ -90,13 +101,30 @@ class CreateSuperUser(SSOCommand):
         ctx = CreateUserCtx()
         ctx.data = data
 
-        user_api.create_super_user(ctx)
+        func = getattr(user_api, self.create_func)
+        func(ctx)
 
-        self.logger.info('Created super-user `%s`', data.username)
+        self.logger.info('Created %s `%s`', self.user_type, data.username)
 
 # ################################################################################################################################
 
-class DeleteUser(ZatoCommand):
+class CreateUser(_CreateUser):
+    """ Creates a new regular SSO user
+    """
+    create_func = 'create_user'
+    user_type = 'user'
+
+# ################################################################################################################################
+
+class CreateSuperUser(_CreateUser):
+    """ Creates a new SSO super-user
+    """
+    create_func = 'create_super_user'
+    user_type = 'super-user'
+
+# ################################################################################################################################
+
+class DeleteUser(SSOCommand):
     """ Deletes an existing user from SSO (super-user or a regular one).
     """
     opts = [
@@ -104,43 +132,48 @@ class DeleteUser(ZatoCommand):
         {'name': '--delete-self', 'help': "Force deletion of user's own account"},
     ]
 
-    def execute(self, args):
-        self.logger.info('Deleted user `%s`', args.username)
+    def _on_sso_command(self, args, user_api):
+        if not user_api.get_user_by_username(args.username):
+            self.logger.warn('No such user `%s`', args.username)
+            return self.SYS_ERROR.NO_SUCH_SSO_USER
+        else:
+            user_api.delete_user(username=args.username)
+            self.logger.info('Deleted user `%s`', args.username)
 
 # ################################################################################################################################
 
-class LockUser(ZatoCommand):
+class LockUser(SSOCommand):
     """ Locks a user account. The person may not log in.
     """
     opts = [
         {'name': 'username', 'help': 'User account to lock'},
     ]
 
-    def execute(self, args):
+    def _on_sso_command(self, args, user_api):
         self.logger.info('Locked user account `%s`', args.username)
 
 # ################################################################################################################################
 
-class UnlockUser(ZatoCommand):
+class UnlockUser(SSOCommand):
     """ Unlocks a user account
     """
     opts = [
         {'name': 'username', 'help': 'User account to unlock'},
     ]
 
-    def execute(self, args):
+    def _on_sso_command(self, args, user_api):
         self.logger.info('Unlocked user account `%s`', args.username)
 
 # ################################################################################################################################
 
-class ChangePassword(ZatoCommand):
+class ChangeUserPassword(SSOCommand):
     """ Changes password of a user given on input.
     """
     opts = [
         {'name': 'username', 'help': 'User to change the password of'},
     ]
 
-    def execute(self, args):
+    def _on_sso_command(self, args, user_api):
         self.logger.info('Changed password of user `%s`', args.username)
 
 # ################################################################################################################################

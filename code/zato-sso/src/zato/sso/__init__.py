@@ -18,8 +18,6 @@ from zato.common.odb.model import SSOUser as UserModel
 
 _utcnow = datetime.utcnow
 
-UserModelTable = UserModel.__table__
-
 # ################################################################################################################################
 
 class status_code:
