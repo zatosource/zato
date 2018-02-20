@@ -58,6 +58,7 @@ from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.wmq import WMQIPC
 from zato.server.pickup import PickupManager
+from zato.sso.util import normalize_password_reject_list
 
 # ################################################################################################################################
 
@@ -512,11 +513,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.sso_config.user_validation.reject_email = reject_email
 
         # Construct a set of common passwords to reject out of a multi-line list
-        reject = set()
-        for line in self.sso_config.user_validation.get('reject_password', '').strip().splitlines():
-            line = str(line.strip().lower())
-            reject.add(line)
-        self.sso_config.user_validation.reject_password = reject
+        normalize_password_reject_list(self.sso_config)
 
         # Turn all app lists into sets to make lookups faster
 

@@ -76,3 +76,14 @@ def make_password_secret(password, encrypt_password, encrypt_func=None, hash_fun
     return make_data_secret(password, encrypt_func if encrypt_password else None, hash_func)
 
 # ################################################################################################################################
+
+def normalize_password_reject_list(sso_conf):
+    """ Turns a multi-line string with passwords to be rejected into a set.
+    """
+    reject = set()
+    for line in sso_conf.password.get('reject_list', '').strip().splitlines():
+        line = str(line.strip().lower())
+        reject.add(line)
+    sso_conf.password.reject_list = reject
+
+# ################################################################################################################################
