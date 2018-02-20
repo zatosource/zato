@@ -66,9 +66,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    #def _create_user(session, data, is_active, is_internal, is_approval_needed, is_super_user, password_expiry, encrypt_password,
-    #    encrypt_email, encrypt_func, hash_func, new_user_id_func, _utcnow=_utcnow, _timedelta=timedelta):
-    def _create_user(self, ctx, _utcnow=_utcnow, _timedelta=timedelta):
+    def _create_sql_user(self, ctx, _utcnow=_utcnow, _timedelta=timedelta):
 
         # Always in UTC
         now = _utcnow()
@@ -142,20 +140,34 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def create_super_user(self, ctx, new_user_id_func=None):
-        """ Creates a new super-user out of initial user data.
+    def _create_user(self, ctx, is_super_user, new_user_id_func=None):
+        """ Creates a new regular or super-user out of initial user data.
         """
         ctx.is_active = True
         ctx.is_internal = False
         ctx.is_approval_needed = False
-        ctx.is_super_user = True
+        ctx.is_super_user = is_super_user
         ctx.new_user_id_func = new_user_id_func or self.new_user_id_func
         ctx.confirm_token = None
 
         with closing(self.odb_session_func()) as session:
-            user = self._create_user(ctx)
+            user = self._create_sql_user(ctx)
             session.add(user)
             session.commit()
+
+# ################################################################################################################################
+
+    def create_user(self, ctx, new_user_id_func=None):
+        """ Creates a new regular user.
+        """
+        return self._create_user(ctx, False, new_user_id_func)
+
+# ################################################################################################################################
+
+    def create_super_user(self, ctx, new_user_id_func=None):
+        """ Creates a new super-user.
+        """
+        return self._create_user(ctx, True, new_user_id_func)
 
 # ################################################################################################################################
 
