@@ -182,7 +182,7 @@ class ChangeUserPassword(SSOCommand):
     opts = [
         {'name': 'username', 'help': 'User to change the password of'},
         {'name': '--password', 'help': 'New password'},
-        {'name': '--expiry', 'help': "Password's expiry in hours or days"},
+        {'name': '--expiry', 'help': "Password's expiry in days"},
         {'name': '--must-change', 'help': "A flag indicating whether the password must be changed on next login"},
     ]
 
