@@ -28,6 +28,62 @@ UserModelTable = UserModel.__table__
 
 # ################################################################################################################################
 
+# Attributes accessible to both account owner and super-users
+_regular_attrs = {
+    'user_id': None,
+    'username': None,
+    'email': b'',
+    'display_name': '',
+    'first_name': '',
+    'middle_name': '',
+    'last_name': ''
+}
+
+# Attributes accessible only to super-users
+_super_user_attrs = {
+    'is_active': False,
+    'is_internal': False,
+    'is_super_user': False,
+    'is_approved': False,
+    'is_locked': True,
+    'locked_time': None,
+    'creation_ctx': '',
+    'locked_by': None,
+    'approv_rej_time': None,
+    'approv_rej_by': None,
+    'password_expiry': 0,
+    'password_is_set': False,
+    'password_must_change': True,
+    'password_last_set': None,
+}
+
+# This can be only changed but never read
+_write_only = {
+    'password': None,
+}
+
+_all_attrs = {}
+_all_attrs.update(_regular_attrs)
+_all_attrs.update(_super_user_attrs)
+_all_attrs.update(_write_only)
+
+# ################################################################################################################################
+
+class User(object):
+    """ A user entity representing a person in SSO.
+    """
+    __slots__ = _all_attrs.keys()
+
+    def __init__(self, **kwargs):
+        for kwarg_name, kwarg_value in kwargs.items():
+            setattr(self, kwarg_name, kwarg_value)
+
+        for attr_name, attr_value in _all_attrs.items():
+            if attr_name not in kwargs:
+                setattr(self, attr_name, attr_value)
+
+# ################################################################################################################################
+
 class CreateUserCtx(object):
     """ A business object to carry user creation configuration around.
     """
@@ -35,8 +91,8 @@ class CreateUserCtx(object):
         'encrypt_password', 'encrypt_email', 'encrypt_func', 'hash_func', 'new_user_id_func', 'confirm_token',
         'sign_up_status')
 
-    def __init__(self):
-        self.data = None
+    def __init__(self, data=None):
+        self.data = data
         self.is_active = None
         self.is_internal = None
         self.is_approval_needed = None
@@ -157,17 +213,17 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def create_user(self, ctx, new_user_id_func=None):
+    def create_user(self, data, new_user_id_func=None):
         """ Creates a new regular user.
         """
-        return self._create_user(ctx, False, new_user_id_func)
+        return self._create_user(CreateUserCtx(data), False, new_user_id_func)
 
 # ################################################################################################################################
 
-    def create_super_user(self, ctx, new_user_id_func=None):
+    def create_super_user(self, data, new_user_id_func=None):
         """ Creates a new super-user.
         """
-        return self._create_user(ctx, True, new_user_id_func)
+        return self._create_user(CreateUserCtx(data), True, new_user_id_func)
 
 # ################################################################################################################################
 

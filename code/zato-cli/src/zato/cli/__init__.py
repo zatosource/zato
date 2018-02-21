@@ -469,6 +469,17 @@ class ZatoCommand(object):
 
 # ################################################################################################################################
 
+    def get_confirmation(self, template, yes_char='y', no_char='n'):
+        template = '{} [{}/{}] '.format(template, yes_char, no_char)
+        while True:
+            value = raw_input(template)
+            if value == yes_char:
+                return True
+            elif value == no_char:
+                return False
+
+# ################################################################################################################################
+
     def _get_now(self, time_=None):
         if not time_:
             time_ = time.gmtime() # noqa

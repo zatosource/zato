@@ -19,7 +19,8 @@ from zato.cli import ManageCommand, ZatoCommand
 from zato.common.crypto import CryptoManager
 from zato.common.util import asbool, get_config
 from zato.sso import ValidationError
-from zato.sso.user import CreateUserCtx, UserAPI
+from zato.sso.api import User
+from zato.sso.user import UserAPI
 from zato.sso.util import new_user_id, normalize_password_reject_list
 
 # ################################################################################################################################
@@ -117,11 +118,8 @@ class _CreateUser(SSOCommand):
         data.last_name = args.last_name or b''
         data.password = args.password
 
-        ctx = CreateUserCtx()
-        ctx.data = data
-
         func = getattr(user_api, self.create_func)
-        func(ctx)
+        func(User(**data))
 
         self.logger.info('Created %s `%s`', self.user_type, data.username)
 
@@ -148,9 +146,16 @@ class DeleteUser(SSOCommand):
     """
     opts = [
         {'name': 'username', 'help': 'Username to delete'},
+        {'name': '--yes', 'help': 'Do not prompt for confirmation, assume yes', 'action': 'store_true'},
     ]
 
     def _on_sso_command(self, args, user, user_api):
+        if not args.yes:
+            template = 'Delete user? `{}`'.format(user.username)
+            if not self.get_confirmation(template):
+                self.logger.info('User `%s` kept intact', user.username)
+                return
+
         user_api.delete_user(username=args.username)
         self.logger.info('Deleted user `%s`', args.username)
 

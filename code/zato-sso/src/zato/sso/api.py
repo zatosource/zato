@@ -9,7 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.sso.user import UserAPI
+from zato.sso.user import User, UserAPI
+
+# For pyflakes
+User = User
 
 # ################################################################################################################################
 
