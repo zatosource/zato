@@ -58,7 +58,8 @@ from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.wmq import WMQIPC
 from zato.server.pickup import PickupManager
-from zato.sso.util import normalize_password_reject_list
+from zato.sso.api import SSOAPI
+from zato.sso.util import new_user_id, normalize_password_reject_list
 
 # ################################################################################################################################
 
@@ -139,6 +140,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
         self.keyutils = KeyUtils()
+        self.sso_api = None
         self._hash_secret_method = None
         self._hash_secret_rounds = None
         self._hash_secret_salt_size = None
@@ -438,7 +440,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
 
         # Fix up SSO config
-        self.normalize_sso_config()
+        self.configure_sso()
 
         # Cannot be done in __init__ because self.sso_config is not available there yet
         salt_size = self.sso_config.hash_secret.salt_size
@@ -500,7 +502,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
-    def normalize_sso_config(self):
+    def configure_sso(self):
 
         # Lower-case elements that must not be substrings in usernames ..
         reject_username = self.sso_config.user_validation.get('reject_username', [])
@@ -551,6 +553,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             else:
                 ip_allowed = []
             login_list[username] = ip_allowed
+
+        self.sso_api = SSOAPI(self.sso_config, self.odb.session, self.crypto_manager.encrypt,
+            self.crypto_manager.decrypt, self.crypto_manager.hash_secret, new_user_id)
 
 # ################################################################################################################################
 

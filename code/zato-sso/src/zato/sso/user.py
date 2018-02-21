@@ -171,21 +171,39 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def set_password(self, session, user_id, password, encrypt_password, encrypt_func, hash_func, must_change, password_expiry,
-        _utcnow=_utcnow):
-        """ Sets a new password of a user. The password must have been already validated.
+    def set_password(self, user_id, password, must_change, password_expiry, _utcnow=_utcnow):
+        """ Sets a new password of a user.
         """
-        session.execute(
-            update(UserModelTable).\
-            values({
-                'password': make_password_secret(password, encrypt_password, encrypt_func, hash_func),
-                'password_must_change': must_change,
-                'password_is_set': True,
-                'password_last_set': _utcnow(),
-                'password_expiry': now + timedelta(days=password_expiry),
-                }).\
-            where(UserModelTable.c.user_id==user_id)
-        )
+        # Just to be doubly sure, validate the password before saving it to DB.
+        # Will raise ValidationError if anything is wrong.
+        self.validate_password(password)
+
+        now = _utcnow()
+        password = make_password_secret(password, self.sso_conf.main.encrypt_password, self.encrypt_func, self.hash_func)
+        password_expiry = password_expiry or self.sso_conf.password.expiry
+
+        new_values = {
+            'password': password,
+            'password_is_set': True,
+            'password_last_set': now,
+            'password_expiry': now + timedelta(days=password_expiry),
+        }
+
+        # Must be a boolean because the underlying SQL column is a bool
+        if must_change is not None:
+            if not isinstance(must_change, bool):
+                raise ValueError('Expected for must_change to be a boolean instead of `{}`, `{}`'.format(
+                    type(must_change), repr(must_change)))
+            else:
+                new_values['password_must_change'] = must_change
+
+        with closing(self.odb_session_func()) as session:
+            session.execute(
+                update(UserModelTable).\
+                values(new_values).\
+                where(UserModelTable.c.user_id==user_id)
+            )
+            session.commit()
 
 # ################################################################################################################################
 
