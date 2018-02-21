@@ -14,7 +14,7 @@ from contextlib import closing
 # Zato
 from zato.server.service import List
 from zato.server.service.internal.sso import BaseService, BaseSIO
-from zato.sso import create_user, status_code
+from zato.sso import status_code
 from zato.sso.util import new_confirm_token, new_user_id
 
 # ################################################################################################################################

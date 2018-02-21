@@ -155,10 +155,18 @@ class CryptoManager(object):
 # ################################################################################################################################
 
     @staticmethod
-    def generate_password(bits=128):
-        """ Generates a string strong enough to be a password (default: 128 bits)
+    def generate_secret(bits=256):
+        """ Generates a secret string of bits size.
         """
         return base64.urlsafe_b64encode(os.urandom(int(bits / 8)))
+
+# ################################################################################################################################
+
+    @staticmethod
+    def generate_password(bits=192):
+        """ Generates a string strong enough to be a password (default: 192 bits)
+        """
+        return CryptoManager.generate_secret(bits)
 
 # ################################################################################################################################
 
@@ -192,7 +200,7 @@ class CryptoManager(object):
 
 # ################################################################################################################################
 
-    def hash_secret(self, data, name):
+    def hash_secret(self, data, name='zato.default'):
         """ Hashes input secret using a named configured (e.g. PBKDF2-SHA512, 100k rounds, salt 32 bytes).
         """
         return self.hash_scheme[name].hash(data)

@@ -17,7 +17,7 @@ from bunch import Bunch
 # Zato
 from zato.cli import ManageCommand, ZatoCommand
 from zato.common.crypto import CryptoManager
-from zato.common.util import get_config
+from zato.common.util import asbool, get_config
 from zato.sso import ValidationError
 from zato.sso.user import CreateUserCtx, UserAPI
 from zato.sso.util import new_user_id, normalize_password_reject_list
@@ -183,10 +183,11 @@ class ChangeUserPassword(SSOCommand):
         {'name': 'username', 'help': 'User to change the password of'},
         {'name': '--password', 'help': 'New password'},
         {'name': '--expiry', 'help': "Password's expiry in days"},
-        {'name': '--must-change', 'help': "A flag indicating whether the password must be changed on next login"},
+        {'name': '--must-change', 'help': "A flag indicating whether the password must be changed on next login",  'type':asbool},
     ]
 
     def _on_sso_command(self, args, user, user_api):
+        user_api.set_password(user.user_id, args.password, args.must_change, args.expiry)
         self.logger.info('Changed password for user `%s`', args.username)
 
 # ################################################################################################################################
@@ -197,10 +198,12 @@ class ResetUserPassword(SSOCommand):
     opts = [
         {'name': 'username', 'help': 'User to reset the password of'},
         {'name': '--expiry', 'help': "Password's expiry in hours or days"},
-        {'name': '--must-change', 'help': "A flag indicating whether the password must be changed on next login"},
+        {'name': '--must-change', 'help': "A flag indicating whether the password must be changed on next login", 'type':asbool},
     ]
 
     def _on_sso_command(self, args, user, user_api):
-        self.logger.info('Reset password for user `%s`', args.username)
+        new_password = CryptoManager.generate_password()
+        user_api.set_password(user.user_id, new_password, args.must_change, args.expiry)
+        self.logger.info('Password for user `%s` reset to `%s`', args.username, new_password)
 
 # ################################################################################################################################

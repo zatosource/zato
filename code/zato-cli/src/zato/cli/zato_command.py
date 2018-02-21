@@ -32,7 +32,7 @@ def add_opts(parser, opts):
     """
     for opt in opts:
         arguments = {}
-        for name in ('help', 'action', 'default', 'choices'):
+        for name in ('help', 'action', 'default', 'choices', 'type'):
             # Almost no command uses 'action' or 'default' parameters
             if name in opt:
                 arguments[name] = opt[name]
@@ -285,6 +285,15 @@ def get_parser():
     sso_change_user_password.add_argument('path', help='Path to a Zato server')
     sso_change_user_password.set_defaults(command='sso_change_user_password')
     add_opts(sso_change_user_password, sso_mod.ChangeUserPassword.opts)
+
+    #
+    # reset-user-password
+    #
+    sso_reset_user_password = sso_subs.add_parser(
+        'reset-user-password', description=sso_mod.ResetUserPassword.__doc__, parents=[base_parser])
+    sso_reset_user_password.add_argument('path', help='Path to a Zato server')
+    sso_reset_user_password.set_defaults(command='sso_reset_user_password')
+    add_opts(sso_reset_user_password, sso_mod.ResetUserPassword.opts)
 
     #
     # start
