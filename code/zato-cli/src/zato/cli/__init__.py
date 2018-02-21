@@ -379,6 +379,10 @@ class ZatoCommand(object):
         USER_EXISTS = 20
         VALIDATION_ERROR = 21
         NO_SUCH_SSO_USER = 22
+        NOT_A_ZATO_SERVER = 23
+        NOT_A_ZATO_WEB_ADMIN = 24
+        NOT_A_ZATO_LB = 25
+        NOT_A_ZATO_SCHEDULER = 26
 
 # ################################################################################################################################
 
