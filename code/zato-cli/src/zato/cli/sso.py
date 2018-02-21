@@ -29,10 +29,7 @@ class SSOCommand(ZatoCommand):
     """
     user_required = True
 
-    def _get_sso_config(self, args):
-        repo_location = os.path.join(args.path, 'config', 'repo')
-        secrets_conf = get_config(repo_location, 'secrets.conf', needs_user_config=False)
-
+    def _get_sso_config(self, args, repo_location, secrets_conf):
         sso_conf = get_config(repo_location, 'sso.conf', needs_user_config=False)
         normalize_password_reject_list(sso_conf)
 
@@ -53,7 +50,16 @@ class SSOCommand(ZatoCommand):
 # ################################################################################################################################
 
     def execute(self, args):
-        user_api = self._get_sso_config(args)
+
+        repo_location = os.path.join(args.path, 'config', 'repo')
+        secrets_conf = get_config(repo_location, 'secrets.conf', needs_user_config=False)
+
+        # This file must exist, otherwise it's not a path to a server
+        if not secrets_conf:
+            self.logger.warn('Could not find file `secrets.conf` in `%s`', repo_location)
+            return self.SYS_ERROR.NOT_A_ZATO_SERVER
+
+        user_api = self._get_sso_config(args, repo_location, secrets_conf)
 
         if self.user_required:
             user = user_api.get_user_by_username(args.username)
