@@ -15,7 +15,7 @@ from uuid import uuid4
 from base32_crockford import encode as crockford_encode
 
 # ipaddress
-from ipaddress import ip_address, ip_network
+from ipaddress import ip_network
 
 # Zato
 from zato.sso import status_code, ValidationError

@@ -22,7 +22,7 @@ from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, DATA_FORMAT, HTTP_SO
      MSG_PATTERN_TYPE, ODOO, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base
-from zato.common.odb.model.sso import _SSOUser
+from zato.common.odb.model.sso import _SSOSession, _SSOUser
 
 # ################################################################################################################################
 
@@ -43,9 +43,13 @@ def to_json(model, return_as_dict=False):
 
 # ################################################################################################################################
 
+class SSOSession(_SSOSession, Base):
+    pass
+
+# ################################################################################################################################
+
 class SSOUser(_SSOUser, Base):
-    def to_bunch(self):
-        self.__tablename__
+    pass
 
 # ################################################################################################################################
 

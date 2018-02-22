@@ -9,10 +9,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.sso.user import User, UserAPI
+from zato.sso import const, status_code, ValidationError
+from zato.sso.user import Forbidden, User, UserAPI
 
 # For pyflakes
+const = const
+Forbidden = Forbidden
+status_code = status_code
 User = User
+ValidationError = ValidationError
 
 # ################################################################################################################################
 

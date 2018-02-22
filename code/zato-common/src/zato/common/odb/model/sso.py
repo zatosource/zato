@@ -11,7 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # ################################################################################################################################
 
 # SQLAlchemy
-from sqlalchemy import Boolean, Column, DateTime, Index, Integer, Sequence, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, Sequence, String, Text, UniqueConstraint
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import backref, relationship
 
 # ################################################################################################################################
 
@@ -28,7 +30,7 @@ class _SSOUser:
         Index('zato_u_sigctok_idx', 'sign_up_confirm_token', unique=True),
     {})
 
-    # Not used publicly
+    # Not exposed publicly, used only for SQL joins
     id = Column(Integer, Sequence('zato_sso_user_id_seq'), primary_key=True)
 
     # Publicly visible
@@ -79,5 +81,26 @@ class _SSOUser:
     first_name_upper = Column(String(191), nullable=True)
     middle_name_upper = Column(String(191), nullable=True)
     last_name_upper = Column(String(191), nullable=True)
+
+# ################################################################################################################################
+
+class _SSOSession:
+    __tablename__ = 'zato_sso_session'
+    __table_args__ = (
+        Index('zato_sso_sust_idx', 'ust', unique=True),
+    {})
+
+    # Not exposed publicly, used only for SQL joins
+    id = Column(Integer, Sequence('zato_sso_sid_seq'), primary_key=True)
+
+    # Publicly visible session identifier (user session token)
+    ust = Column(String(191), nullable=False)
+
+    creation_time = Column(DateTime(), nullable=False)
+    expiration_time = Column(DateTime(), nullable=False)
+
+    @declared_attr
+    def user_id(cls):
+        return Column(Integer, ForeignKey('zato_sso_user.id', ondelete='CASCADE'), nullable=True)
 
 # ################################################################################################################################
