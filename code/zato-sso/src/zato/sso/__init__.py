@@ -9,10 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from datetime import datetime, timedelta
-
-# Zato
-from zato.common.odb.model import SSOUser as UserModel
+from datetime import datetime
 
 # ################################################################################################################################
 

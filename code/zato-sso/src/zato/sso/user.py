@@ -13,9 +13,10 @@ from contextlib import closing
 from datetime import datetime, timedelta
 
 # SQLAlchemy
-from sqlalchemy import delete, update
+from sqlalchemy import update
 
 # Zato
+from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const
 from zato.sso.odb.query import get_user_by_username
@@ -24,19 +25,22 @@ from zato.sso.util import make_data_secret, make_password_secret, validate_passw
 # ################################################################################################################################
 
 _utcnow = datetime.utcnow
+_gen_secret = CryptoManager.generate_secret
 UserModelTable = UserModel.__table__
+
 
 # ################################################################################################################################
 
 # Attributes accessible to both account owner and super-users
 _regular_attrs = {
-    'user_id': None,
+    'id': None,       # Note that it is read from SQL's .user_id rather than .id but outwardly we call it .id.
     'username': None,
     'email': b'',
     'display_name': '',
     'first_name': '',
     'middle_name': '',
-    'last_name': ''
+    'last_name': '',
+    'sign_up_confirm_token': '',
 }
 
 # Attributes accessible only to super-users
@@ -55,6 +59,8 @@ _super_user_attrs = {
     'password_is_set': False,
     'password_must_change': True,
     'password_last_set': None,
+    'sign_up_status': None,
+    'sign_up_time': None,
 }
 
 # This can be only changed but never read
@@ -102,7 +108,7 @@ class CreateUserCtx(object):
         self.encrypt_email = None
         self.new_user_id_func = None
         self.confirm_token = None
-        self.sign_up_status = const.signup_status.before_confirmation
+        self.sign_up_status = None
 
 # ################################################################################################################################
 
@@ -155,7 +161,7 @@ class UserAPI(object):
             display_name = display_name.strip()
 
         user_model = UserModel()
-        user_model.user_id = (ctx.new_user_id_func or self.new_user_id_func)()
+        user_model.user_id = ctx.data.id or self.new_user_id_func()
         user_model.is_active = ctx.is_active
         user_model.is_internal = ctx.is_internal
         user_model.is_approved = False if ctx.is_approval_needed else True
@@ -178,8 +184,9 @@ class UserAPI(object):
         user_model.password_must_change = False
         user_model.password_expiry = now + timedelta(days=self.password_expiry)
 
-        user_model.sign_up_status = ctx.sign_up_status
+        user_model.sign_up_status = ctx.data.sign_up_status
         user_model.sign_up_time = now
+        user_model.sign_up_confirm_token = _gen_secret(192)
 
         user_model.display_name = display_name
         user_model.first_name = ctx.data.first_name
@@ -196,34 +203,68 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _create_user(self, ctx, is_super_user, new_user_id_func=None):
+    def _require_super_user(self, ust, current_user_id):
+        print(333, ust, current_user_id)
+
+# ################################################################################################################################
+
+    def _create_user(self, ctx, is_super_user, ust, current_user_id, skip_sec):
         """ Creates a new regular or super-user out of initial user data.
         """
+        if not skip_sec:
+            self._require_super_user(ust, current_user_id)
+
         ctx.is_active = True
         ctx.is_internal = False
         ctx.is_approval_needed = False
         ctx.is_super_user = is_super_user
-        ctx.new_user_id_func = new_user_id_func or self.new_user_id_func
         ctx.confirm_token = None
+
+        if not ctx.data.sign_up_status:
+            ctx.data.sign_up_status = const.signup_status.before_confirmation
 
         with closing(self.odb_session_func()) as session:
             user = self._create_sql_user(ctx)
+
+            # Note that externally visible .id is .user_id on SQL level,
+            # this is on purpose because internally SQL .id is used only for joins.
+            ctx.data.id = user.user_id
+            ctx.data.display_name = user.display_name
+            ctx.data.first_name = user.first_name
+            ctx.data.middle_name = user.middle_name
+            ctx.data.last_name = user.last_name
+            ctx.data.is_active = user.is_active
+            ctx.data.is_internal = user.is_internal
+            ctx.data.is_approved = user.is_approved
+            ctx.data.is_locked = user.is_locked
+            ctx.data.is_super_user = user.is_super_user
+            ctx.data.password_is_set = user.password_is_set
+            ctx.data.password_last_set = user.password_last_set
+            ctx.data.password_must_change = user.password_must_change
+            ctx.data.password_expiry = user.password_expiry
+            ctx.data.sign_up_status = user.sign_up_status
+            ctx.data.sign_up_time = user.sign_up_time
+            ctx.data.sign_up_confirm_token = user.sign_up_confirm_token
+
             session.add(user)
             session.commit()
 
 # ################################################################################################################################
 
-    def create_user(self, data, new_user_id_func=None):
+    def create_user(self, data, ust=None, current_user_id=None, skip_sec=False):
         """ Creates a new regular user.
         """
-        return self._create_user(CreateUserCtx(data), False, new_user_id_func)
+        return self._create_user(CreateUserCtx(data), False, ust, current_user_id, skip_sec)
 
 # ################################################################################################################################
 
-    def create_super_user(self, data, new_user_id_func=None):
+    def create_super_user(self, data, ust=None, current_user_id=None, skip_sec=False):
         """ Creates a new super-user.
         """
-        return self._create_user(CreateUserCtx(data), True, new_user_id_func)
+        # Super-users don't need to confirmation their own creation
+        data.sign_up_status = const.signup_status.final
+
+        return self._create_user(CreateUserCtx(data), True, ust, current_user_id, skip_sec)
 
 # ################################################################################################################################
 

@@ -25,6 +25,7 @@ class _SSOUser:
         Index('zato_u_alln_idx', 'first_name_upper', 'middle_name_upper', 'last_name_upper', unique=False),
         Index('zato_u_lastn_idx', 'last_name_upper', unique=False),
         Index('zato_u_sigst_idx', 'sign_up_status', unique=False),
+        Index('zato_u_sigctok_idx', 'sign_up_confirm_token', unique=True),
     {})
 
     # Not used publicly
@@ -62,6 +63,7 @@ class _SSOUser:
     sign_up_status = Column(String(191), nullable=False)
     sign_up_time = Column(DateTime(), nullable=False)
     sign_up_confirm_time = Column(DateTime(), nullable=True)
+    sign_up_confirm_token = Column(String(191), nullable=False)
 
     # Won't be always needed
     email = Column(Text(), nullable=True)
