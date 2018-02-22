@@ -56,6 +56,7 @@ class status_code:
         locked                = 'E005002'
         invalid_signup_status = 'E005003'
         not_approved          = 'E005004'
+        no_such_user          = 'E005005'
 
     class metadata:
         not_allowed = 'E006001'

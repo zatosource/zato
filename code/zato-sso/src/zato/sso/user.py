@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from datetime import datetime, timedelta
+from json import dumps
 
 # SQLAlchemy
 from sqlalchemy import update
@@ -75,7 +76,8 @@ _all_attrs.update(_write_only)
 # ################################################################################################################################
 
 class Forbidden(Exception):
-    pass
+    def __init__(self, message='You are not authorized to access this resource'):
+        super(Forbidden, self).__init__(message)
 
 # ################################################################################################################################
 
@@ -171,6 +173,7 @@ class UserAPI(object):
         user_model.is_approved = False if ctx.is_approval_needed else True
         user_model.is_locked = False
         user_model.is_super_user = ctx.is_super_user
+        user_model.creation_ctx = dumps(ctx.data.creation_ctx)
 
         # Passwords are always at least hashed and possibly encrypted too ..
         password = make_password_secret(ctx.data.password, self.encrypt_password, self.encrypt_func, self.hash_func)
@@ -223,7 +226,7 @@ class UserAPI(object):
 
         # If we get here, it means that we were not able to ascertain
         # whether current input points to a super-user or not hence an exception must be raised.
-        raise Forbidden('You are not allowed to access this resource')
+        raise Forbidden()
 
 # ################################################################################################################################
 

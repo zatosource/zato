@@ -308,8 +308,6 @@ list_key=sample,list
 """
 
 sso_conf_contents = '''[main]
-user_class=zato.common.user.User
-user_session_class=zato.common.user.UserSession
 encrypt_email=True
 encrypt_password=True
 inform_if_app_invalid=True
@@ -322,12 +320,7 @@ name=
 
 [hash_secret]
 rounds=100000
-rounds_super_user=300000
 salt_size=64 # In bytes = 512 bits
-
-# How long, in milliseconds, password verification for users should take
-rounds_target=200
-rounds_target_super_user=1000
 
 [apps]
 all=CRM

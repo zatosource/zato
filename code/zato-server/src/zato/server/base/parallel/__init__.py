@@ -440,7 +440,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         # Cannot be done in __init__ because self.sso_config is not available there yet
         salt_size = self.sso_config.hash_secret.salt_size
         self.crypto_manager.add_hash_scheme('zato.default', self.sso_config.hash_secret.rounds, salt_size)
-        self.crypto_manager.add_hash_scheme('zato.super_user', self.sso_config.hash_secret.rounds_super_user, salt_size)
 
         for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pick_up'):
 
