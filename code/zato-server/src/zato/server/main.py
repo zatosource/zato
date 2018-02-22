@@ -51,6 +51,8 @@ from zato.common.repo import RepoManager
 from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_kvdb_config_for_log, \
      parse_cmd_line_options, register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
+from zato.sso.api import SSOAPI
+from zato.sso.util import new_user_id, normalize_sso_config
 
 # ################################################################################################################################
 
@@ -159,6 +161,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     pickup_config = get_config(repo_location, 'pickup.conf')
     sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
     sso_config = get_config(repo_location, 'sso.conf', needs_user_config=False)
+    normalize_sso_config(sso_config)
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
     preferred_address = server_config.preferred_address.get('address')
@@ -227,6 +230,8 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
     server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
+    server.sso_api = SSOAPI(sso_config, None, crypto_manager.encrypt, crypto_manager.decrypt, crypto_manager.hash_secret,
+        new_user_id)
 
     # Remove all locks possibly left over by previous server instances
     kvdb = app_context.get_object('kvdb')

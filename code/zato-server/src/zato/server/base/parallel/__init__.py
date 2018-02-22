@@ -27,9 +27,6 @@ import gevent.monkey # Needed for Cassandra
 # globre
 import globre
 
-# ipaddress
-from ipaddress import ip_address, ip_network
-
 # Paste
 from paste.util.converters import asbool
 
@@ -58,8 +55,6 @@ from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.wmq import WMQIPC
 from zato.server.pickup import PickupManager
-from zato.sso.api import SSOAPI
-from zato.sso.util import new_user_id, normalize_password_reject_list
 
 # ################################################################################################################################
 
@@ -503,59 +498,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 # ################################################################################################################################
 
     def configure_sso(self):
-
-        # Lower-case elements that must not be substrings in usernames ..
-        reject_username = self.sso_config.user_validation.get('reject_username', [])
-        reject_username = [elem.strip().lower() for elem in reject_username]
-        self.sso_config.user_validation.reject_username = reject_username
-
-        # .. and emails too.
-        reject_email = self.sso_config.user_validation.get('reject_email', [])
-        reject_email = [elem.strip().lower() for elem in reject_email]
-        self.sso_config.user_validation.reject_email = reject_email
-
-        # Construct a set of common passwords to reject out of a multi-line list
-        normalize_password_reject_list(self.sso_config)
-
-        # Turn all app lists into sets to make lookups faster
-
-        apps_all = self.sso_config.apps.all
-        apps_signup_allowed = self.sso_config.apps.signup_allowed
-        apps_login_allowed = self.sso_config.apps.login_allowed
-
-        apps_all = apps_all if isinstance(apps_all, list) else [apps_all]
-        apps_signup_allowed = apps_signup_allowed if isinstance(apps_signup_allowed, list) else [apps_signup_allowed]
-        apps_login_allowed = apps_login_allowed if isinstance(apps_login_allowed, list) else [apps_login_allowed]
-
-        self.sso_config.apps.all = set(apps_all)
-        self.sso_config.apps.signup_allowed = set(apps_signup_allowed)
-        self.sso_config.apps.login_allowed = set(apps_login_allowed)
-
-        # There may be a single service in a relevant part of configuration
-        # so for ease of use we always turn tjem into lists.
-        signup_cb_srv = self.sso_config.signup.callback_service
-        signup_cb_srv = signup_cb_srv if isinstance(signup_cb_srv, list) else [signup_cb_srv]
-
-        usr_valid_srv = self.sso_config.user_validation.service
-        usr_valid_srv = usr_valid_srv if isinstance(usr_valid_srv, list) else [usr_valid_srv]
-
-        self.sso_config.signup.callback_service = signup_cb_srv
-        self.sso_config.user_validation.service = usr_valid_srv
-
-        # Convert all white/black-listed IP addresses to sets of network objects
-        # which will let serviced in run-time efficiently check for membership of an address in that network.
-
-        login_list = self.sso_config.login_list
-        for username, ip_allowed in login_list.iteritems():
-            if ip_allowed:
-                ip_allowed = login_list if isinstance(ip_allowed, list) else [ip_allowed]
-                ip_allowed = [ip_network(elem.decode('utf8')) for elem in ip_allowed if elem != '*']
-            else:
-                ip_allowed = []
-            login_list[username] = ip_allowed
-
-        self.sso_api = SSOAPI(self.sso_config, self.odb.session, self.crypto_manager.encrypt,
-            self.crypto_manager.decrypt, self.crypto_manager.hash_secret, new_user_id)
+        self.sso_api.set_odb_session_func(self.odb.session)
 
 # ################################################################################################################################
 

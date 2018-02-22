@@ -19,7 +19,7 @@ from sqlalchemy import update
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const
-from zato.sso.odb.query import get_user_by_username
+from zato.sso.odb.query import get_user_by_username, is_super_user_by_user_id, is_super_user_by_ust
 from zato.sso.util import make_data_secret, make_password_secret, validate_password
 
 # ################################################################################################################################
@@ -27,7 +27,6 @@ from zato.sso.util import make_data_secret, make_password_secret, validate_passw
 _utcnow = datetime.utcnow
 _gen_secret = CryptoManager.generate_secret
 UserModelTable = UserModel.__table__
-
 
 # ################################################################################################################################
 
@@ -72,6 +71,11 @@ _all_attrs = {}
 _all_attrs.update(_regular_attrs)
 _all_attrs.update(_super_user_attrs)
 _all_attrs.update(_write_only)
+
+# ################################################################################################################################
+
+class Forbidden(Exception):
+    pass
 
 # ################################################################################################################################
 
@@ -203,27 +207,43 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _require_super_user(self, ust, current_user_id):
-        print(333, ust, current_user_id)
+    def _require_super_user(self, session, ust, current_user_id):
+        """ Raises Forbidden if either current user session token or user ID directly
+        does not point to a user who is a super-user.
+        """
+        if not(ust or current_user_id):
+            raise ValueError('At least one of ust or current_user_id is required')
+        else:
+            if ust:
+                if is_super_user_by_ust(session, ust):
+                    return True
+            else:
+                if is_super_user_by_user_id(session, current_user_id):
+                    return True
+
+        # If we get here, it means that we were not able to ascertain
+        # whether current input points to a super-user or not hence an exception must be raised.
+        raise Forbidden('You are not allowed to access this resource')
 
 # ################################################################################################################################
 
     def _create_user(self, ctx, is_super_user, ust, current_user_id, skip_sec):
         """ Creates a new regular or super-user out of initial user data.
         """
-        if not skip_sec:
-            self._require_super_user(ust, current_user_id)
-
-        ctx.is_active = True
-        ctx.is_internal = False
-        ctx.is_approval_needed = False
-        ctx.is_super_user = is_super_user
-        ctx.confirm_token = None
-
-        if not ctx.data.sign_up_status:
-            ctx.data.sign_up_status = const.signup_status.before_confirmation
-
         with closing(self.odb_session_func()) as session:
+
+            if not skip_sec:
+                self._require_super_user(session, ust, current_user_id)
+
+            ctx.is_active = True
+            ctx.is_internal = False
+            ctx.is_approval_needed = False
+            ctx.is_super_user = is_super_user
+            ctx.confirm_token = None
+
+            if not ctx.data.sign_up_status:
+                ctx.data.sign_up_status = const.signup_status.before_confirmation
+
             user = self._create_sql_user(ctx)
 
             # Note that externally visible .id is .user_id on SQL level,
