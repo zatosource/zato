@@ -36,21 +36,31 @@ def user_exists(session, username, email, check_email):
 
 # ################################################################################################################################
 
-def _get_user(session):
-    return session.query(*_user_basic_columns)
+def _get_user(session, columns):
+    return session.query(*columns)
 
 # ################################################################################################################################
 
 def get_user_by_id(session, user_id):
-    return _get_user(session).\
+    return _get_user(session, _user_basic_columns).\
         filter(SSOUser.user_id==user_id).\
         first()
 
 # ################################################################################################################################
 
 def get_user_by_username(session, username):
-    return _get_user(session).\
+    return _get_user(session, _user_basic_columns).\
         filter(SSOUser.username==username).\
         first()
+
+# ################################################################################################################################
+
+def is_super_user_by_user_id(session, user_id):
+    zzz
+
+# ################################################################################################################################
+
+def is_super_user_by_ust(session, ust):
+    zzz
 
 # ################################################################################################################################

@@ -33,4 +33,8 @@ class SSOAPI(object):
         # User management, including passwords
         self.user = UserAPI(sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, new_user_id_func)
 
+    def set_odb_session_func(self, func):
+        self.odb_session_func = func
+        self.user.odb_session_func = func
+
 # ################################################################################################################################
