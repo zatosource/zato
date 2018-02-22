@@ -19,13 +19,19 @@ from zato.sso.odb.query import get_user_by_username
 
 # ################################################################################################################################
 
-class LoginAPI(object):
-    """ Logs a user in, provided that all authentication and authorization checks succeed.
+class SessionAPI(object):
+    """ Logs a user in or out, provided that all authentication and authorization checks succeed,
+    or returns details about already existing sessions.
     """
-    def __init__(self, decrypt_func, verify_hash_func, odb_session_func):
+    def __init__(self, decrypt_func, verify_hash_func):
         self.decrypt_func = decrypt_func
-        self.verify_hash_func = self.verify_hash_func
-        self.odb_session_func = odb_session_func
+        self.verify_hash_func = verify_hash_func
+        self.odb_session_func = None
+
+# ################################################################################################################################
+
+    def set_odb_session_func(self, func):
+        self.odb_session_func = func
 
 # ################################################################################################################################
 
@@ -38,7 +44,7 @@ class LoginAPI(object):
     def _check_login_to_app_allowed(self, ctx):
         if ctx.input['current_app'] not in ctx.sso_conf.apps.login_allowed:
             if ctx.sso_conf.main.inform_if_app_invalid:
-                self.response.payload.sub_status.append(status_code.app_list.invalid)
+                raise ValidationError(status_code.app_list.invalid)
         else:
             return True
 
@@ -85,7 +91,7 @@ class LoginAPI(object):
     def _check_user_not_locked(self, ctx, user):
         if user.is_locked:
             if ctx.sso_conf.login.inform_if_locked:
-                self.response.payload.sub_status.append(status_code.auth.locked)
+                raise ValidationError(status_code.auth.locked)
         else:
             return True
 
@@ -94,7 +100,7 @@ class LoginAPI(object):
     def _check_signup_status(self, ctx, user):
         if user.sign_up_status != const.signup_status.final:
             if ctx.sso_conf.login.inform_if_not_confirmed:
-                self.response.payload.sub_status.append(status_code.auth.invalid_signup_status)
+                raise ValidationError(status_code.auth.invalid_signup_status)
         else:
             return True
 
@@ -103,7 +109,7 @@ class LoginAPI(object):
     def _check_is_approved(self, ctx, user):
         if not user.is_approved != const.signup_status.final:
             if ctx.sso_conf.login.inform_if_not_confirmed:
-                self.response.payload.sub_status.append(status_code.auth.invalid_signup_status)
+                raise ValidationError(status_code.auth.invalid_signup_status)
         else:
             return True
 
@@ -112,7 +118,7 @@ class LoginAPI(object):
     def _check_password_expired(self, ctx, user, _now=datetime.utcnow):
         if _now() > user.password_expiry:
             if ctx.sso_conf.password.inform_if_expired:
-                self.response.payload.sub_status.append(status_code.password.expired)
+                raise ValidationError(status_code.password.expired)
         else:
             return True
 
@@ -128,14 +134,10 @@ class LoginAPI(object):
 
             # .. if it is, we may either return a warning and continue ..
             if ctx.sso_conf.password.inform_if_about_to_expire:
-                self.response.payload.status = status_code.warning
-                self.response.payload.sub_status.append(status_code.password.w_about_to_exp)
                 return status_code.warning
 
             # .. or it can considered an error, which rejects the request.
             else:
-                self.response.payload.status = status_code.error
-                self.response.payload.sub_status.append(status_code.password.e_about_to_exp)
                 return status_code.error
 
         # No approaching expiry, we may continue
@@ -147,7 +149,7 @@ class LoginAPI(object):
     def _check_must_send_new_password(self, ctx, user):
         if user.password_must_change and not ctx.input.get('new_password'):
             if ctx.sso_conf.password.inform_if_must_be_changed:
-                self.response.payload.sub_status.append(status_code.password.must_send_new)
+                raise ValidationError(status_code.password.must_send_new)
         else:
             return True
 
@@ -161,61 +163,54 @@ class LoginAPI(object):
             if not user:
                 return
 
-        # Check credentials first to make sure that attackers do not learn about any sort
-        # of metadata (e.g. is the account locked) if they do not know username and password.
-        #if not self._check_credentials(ctx, user):
-        #    return
+            # Check credentials first to make sure that attackers do not learn about any sort
+            # of metadata (e.g. is the account locked) if they do not know username and password.
+            #if not self._check_credentials(ctx, user):
+            #    return
 
-        # It must be possible to log into the application requested (CRM above)
-        if not self._check_login_to_app_allowed(ctx):
-            return
+            # It must be possible to log into the application requested (CRM above)
+            self._check_login_to_app_allowed(ctx)
 
-        # If applicable, requests must originate in a white-listed IP address
-        if not self._check_remote_ip_allowed(ctx, user):
-            return
+            # If applicable, requests must originate in a white-listed IP address
+            self._check_remote_ip_allowed(ctx, user)
 
-        # User must not have been locked out of the auth system
-        if not self._check_user_not_locked(ctx, user):
-            return
+            # User must not have been locked out of the auth system
+            self._check_user_not_locked(ctx, user)
 
-        # If applicable, user must be fully signed up, including account creation's confirmation
-        if not self._check_signup_status(ctx, user):
-            return
+            # If applicable, user must be fully signed up, including account creation's confirmation
+            self._check_signup_status(ctx, user)
 
-        # If applicable, user must be approved by a super-user
-        if not self._check_is_approved(ctx, user):
-            return
+            # If applicable, user must be approved by a super-user
+            self._check_is_approved(ctx, user)
 
-        # Password must not have expired
-        if not self._check_password_expired(ctx, user):
-            return
+            # Password must not have expired
+            self._check_password_expired(ctx, user)
 
-        # If applicable, password may not be about to expire (this must be after checking that it has not already).
-        # Note that it may return a specific status to return (warning or error)
-        _about_status = self._check_password_about_to_expire(ctx, user)
-        if _about_status is not True:
-            self.response.payload.status = _about_status
-            return
+            # If applicable, password may not be about to expire (this must be after checking that it has not already).
+            # Note that it may return a specific status to return (warning or error)
+            _about_status = self._check_password_about_to_expire(ctx, user)
+            if _about_status is not True:
+                if _about_status == status_code.warning:
+                    _status_code = status_code.password.w_about_to_exp
+                    inform = True
+                else:
+                    _status_code = status_code.password.e_about_to_exp
+                    inform = False
 
-        # If password is marked as as requiring a change upon next login but a new one was not sent, reject the request.
-        if not self._check_must_send_new_password(ctx, user):
-            return
+                raise ValidationError(_status_code, inform, _about_status)
 
-        # If new password is required, we need to validate and save it before session can be created.
-        # Note that at this point we already know that the old password was correct so it is safe to set the new one
-        # if it is confirmed to be valid. Passwords are rarely changed to it is OK to open a new SQL session here
-        # in addition to the one above instead of re-using it.
-        try:
-            validate_password(ctx.sso_conf, ctx.input['new_password'])
-        except ValidationError as e:
-            if e.return_status:
-                self.response.payload.status = e.status
-                self.response.payload.sub_status = e.sub_status
-        else:
-            # TODO: Create user here
-            pass
+            # If password is marked as as requiring a change upon next login but a new one was not sent, reject the request.
+            self._check_must_send_new_password(ctx, user)
 
-        # All checks done, session is created, we can signal OK now
-        self.response.payload.status = status_code.ok
+            # If new password is required, we need to validate and save it before session can be created.
+            # Note that at this point we already know that the old password was correct so it is safe to set the new one
+            # if it is confirmed to be valid. We also know that there is some new password on input because otherwise
+            # the check above would have raised a ValidationError.
+            if user.password_must_change:
+                try:
+                    validate_password(ctx.sso_conf, ctx.input['new_password'])
+                except ValidationError as e:
+                    if e.return_status:
+                        raise ValidationError(e.sub_status, e.return_status, e.status)
 
 # ################################################################################################################################

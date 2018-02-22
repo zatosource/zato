@@ -21,6 +21,7 @@ from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const
 from zato.sso.odb.query import get_user_by_username, is_super_user_by_user_id, is_super_user_by_ust
+from zato.sso.session import SessionAPI
 from zato.sso.util import make_data_secret, make_password_secret, validate_password
 
 # ################################################################################################################################
@@ -121,16 +122,26 @@ class CreateUserCtx(object):
 class UserAPI(object):
     """ The main object through SSO users are managed.
     """
-    def __init__(self, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, new_user_id_func):
+    def __init__(self, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func, new_user_id_func):
         self.sso_conf = sso_conf
         self.odb_session_func = odb_session_func
         self.encrypt_func = encrypt_func
         self.decrypt_func = decrypt_func
         self.hash_func = hash_func
+        self.verify_hash_func = verify_hash_func
         self.new_user_id_func = new_user_id_func
         self.encrypt_email = self.sso_conf.main.encrypt_email
         self.encrypt_password = self.sso_conf.main.encrypt_password
         self.password_expiry = self.sso_conf.password.expiry
+
+        # For convenience, sessions are accessible through user API.
+        self.session = SessionAPI(self.decrypt_func, self.verify_hash_func)
+
+# ################################################################################################################################
+
+    def set_odb_session_func(self, func):
+        self.odb_session_func = func
+        self.session.set_odb_session_func(func)
 
 # ################################################################################################################################
 
