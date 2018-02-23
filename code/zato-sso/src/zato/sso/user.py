@@ -21,7 +21,7 @@ from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const
 from zato.sso.odb.query import get_user_by_username, is_super_user_by_user_id, is_super_user_by_ust
-from zato.sso.session import SessionAPI
+from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.util import make_data_secret, make_password_secret, validate_password
 
 # ################################################################################################################################
@@ -398,5 +398,19 @@ class UserAPI(object):
         """ Unlocks a user account.
         """
         self._lock_user(user_id, False)
+
+# ################################################################################################################################
+
+    def login(self, username, password, current_app, remote_addr, new_password=''):
+        """ Logs a user in if username and password are correct, returning a user session token (UST) on success,
+        or a ValidationError on error.
+        """
+        return self.session.login(
+            LoginCtx(self.sso_conf, remote_addr, {
+                'username': username,
+                'password': password,
+                'current_app': current_app,
+                'new_password': new_password
+        }))
 
 # ################################################################################################################################

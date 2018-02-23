@@ -12,10 +12,54 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from datetime import datetime, timedelta
 
+# ipaddress
+from ipaddress import ip_address
+
+# SQLAlchemy
+from sqlalchemy import insert
+
 # Zato
 from zato.sso.api import const, status_code, ValidationError
-from zato.sso.util import validate_password
+from zato.common.odb.model import SSOSession as SessionModel
+from zato.sso.util import validate_password, new_user_id, new_user_session_token
 from zato.sso.odb.query import get_user_by_username
+
+# ################################################################################################################################
+
+SessionModelInsert = SessionModel.__table__.insert
+
+# ################################################################################################################################
+
+class LoginCtx(object):
+    """ A set of data about a login request.
+    """
+    def __init__(self, sso_conf, remote_addr, input):
+        self.sso_conf = sso_conf
+        self.remote_addr = [ip_address(remote_addr)]
+        self.input = input
+
+# ################################################################################################################################
+
+class SessionInfo(object):
+    """ Details about an individual session.
+    """
+    __slots__ = ('username', 'user_id', 'ust', 'creation_time', 'expiration_time')
+
+    def __init__(self):
+        self.username = None
+        self.user_id = None
+        self.ust = None
+        self.creation_time = None
+        self.expiration_time = None
+
+    def to_dict(self, serialize_dt=True):
+        return {
+            'username': self.username,
+            'user_id': self.user_id,
+            'ust': self.ust,
+            'creation_time': self.creation_time.isoformat() if serialize_dt else self.creation_time,
+            'expiration_time': self.expiration_time.isoformat() if serialize_dt else self.expiration_time,
+        }
 
 # ################################################################################################################################
 
@@ -155,13 +199,13 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def login(self, ctx, _ok=status_code.ok):
+    def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta):
 
         # Look up user and return if not found by username
         with closing(self.odb_session_func()) as session:
             user = get_user_by_username(session, ctx.input['username'])
             if not user:
-                return
+                raise ValidationError(status_code.auth.no_such_user)
 
             # Check credentials first to make sure that attackers do not learn about any sort
             # of metadata (e.g. is the account locked) if they do not know username and password.
@@ -212,5 +256,30 @@ class SessionAPI(object):
                 except ValidationError as e:
                     if e.return_status:
                         raise ValidationError(e.sub_status, e.return_status, e.status)
+                else:
+                    zzz # Set new password here
+
+            # All validated, we can create a session object now
+            creation_time = _now()
+            expiration_time = creation_time + timedelta(minutes=ctx.sso_conf.session.expiry)
+            ust = new_user_session_token()
+
+            session.execute(
+                SessionModelInsert().values({
+                    'ust': ust,
+                    'creation_time': creation_time,
+                    'expiration_time': expiration_time,
+                    'user_id': user.id,
+            }))
+            session.commit()
+
+            info = SessionInfo()
+            info.username = user.username
+            info.user_id = user.user_id
+            info.ust = ust
+            info.creation_time = creation_time
+            info.expiration_time = expiration_time
+
+            return info
 
 # ################################################################################################################################

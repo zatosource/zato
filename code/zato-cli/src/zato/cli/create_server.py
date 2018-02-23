@@ -337,6 +337,9 @@ inform_if_not_approved=True
 [login_list]
 my-admin=127.0.0.1
 
+[session]
+expiry=60 # In minutes
+
 [password]
 expiry=730 # In days, 365 days * 2 years = 730 days
 inform_if_expired=False
