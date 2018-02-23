@@ -135,7 +135,7 @@ class UserAPI(object):
         self.password_expiry = self.sso_conf.password.expiry
 
         # For convenience, sessions are accessible through user API.
-        self.session = SessionAPI(self.decrypt_func, self.verify_hash_func)
+        self.session = SessionAPI(self.sso_conf, self.encrypt_func, self.decrypt_func, self.verify_hash_func)
 
 # ################################################################################################################################
 
@@ -407,7 +407,6 @@ class UserAPI(object):
         """
         return self.session.login(
             LoginCtx(
-                self.sso_conf,
                 remote_addr,
                 user_agent, {
                     'username': username,

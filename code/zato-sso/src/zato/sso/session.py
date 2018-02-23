@@ -22,7 +22,7 @@ from sqlalchemy import insert
 from zato.sso.api import const, status_code, ValidationError
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.sso.util import validate_password, new_user_id, new_user_session_token
-from zato.sso.odb.query import get_user_by_username
+from zato.sso.odb.query import get_session_by_ust, get_user_by_username
 
 # ################################################################################################################################
 
@@ -33,11 +33,26 @@ SessionModelInsert = SessionModel.__table__.insert
 class LoginCtx(object):
     """ A set of data about a login request.
     """
-    def __init__(self, sso_conf, remote_addr, user_agent, input):
-        self.sso_conf = sso_conf
+    __slots__ = ('remote_addr', 'user_agent', 'input')
+
+    def __init__(self, remote_addr, user_agent, input):
         self.remote_addr = [ip_address(remote_addr)]
         self.user_agent = user_agent
         self.input = input
+
+# ################################################################################################################################
+
+class VerifyCtx(object):
+    """ Wraps information about a verification request.
+    """
+    __slots__ = ('ust', 'remote_addr', 'input')
+
+    def __init__(self, ust, remote_addr, current_app):
+        self.ust = ust
+        self.remote_addr = remote_addr
+        self.input = {
+            'current_app': current_app
+        }
 
 # ################################################################################################################################
 
@@ -68,7 +83,9 @@ class SessionAPI(object):
     """ Logs a user in or out, provided that all authentication and authorization checks succeed,
     or returns details about already existing sessions.
     """
-    def __init__(self, decrypt_func, verify_hash_func):
+    def __init__(self, sso_conf, encrypt_func, decrypt_func, verify_hash_func):
+        self.sso_conf = sso_conf
+        self.encrypt_func = encrypt_func
         self.decrypt_func = decrypt_func
         self.verify_hash_func = verify_hash_func
         self.odb_session_func = None
@@ -87,9 +104,9 @@ class SessionAPI(object):
 # ################################################################################################################################
 
     def _check_login_to_app_allowed(self, ctx):
-        if ctx.input['current_app'] not in ctx.sso_conf.apps.login_allowed:
-            if ctx.sso_conf.main.inform_if_app_invalid:
-                raise ValidationError(status_code.app_list.invalid)
+        if ctx.input['current_app'] not in self.sso_conf.apps.login_allowed:
+            if self.sso_conf.main.inform_if_app_invalid:
+                raise ValidationError(status_code.app_list.invalid, False)
         else:
             return True
 
@@ -97,7 +114,7 @@ class SessionAPI(object):
 
     def _check_remote_ip_allowed(self, ctx, user, _invalid=object()):
 
-        ip_allowed = ctx.sso_conf.login_list.get('my-admin', _invalid)
+        ip_allowed = self.sso_conf.login_list.get(user.username, _invalid)
 
         # Shortcut in the simplest case
         if ip_allowed == '*':
@@ -105,7 +122,7 @@ class SessionAPI(object):
 
         # Do not continue if user is not whitelisted but is required to
         if ip_allowed is _invalid:
-            if ctx.sso_conf.login.reject_if_not_listed:
+            if self.sso_conf.login.reject_if_not_listed:
                 return
 
         # User was found in configuration so now we need to check IPs allowed ..
@@ -133,52 +150,52 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def _check_user_not_locked(self, ctx, user):
+    def _check_user_not_locked(self, user):
         if user.is_locked:
-            if ctx.sso_conf.login.inform_if_locked:
+            if self.sso_conf.login.inform_if_locked:
                 raise ValidationError(status_code.auth.locked)
         else:
             return True
 
 # ################################################################################################################################
 
-    def _check_signup_status(self, ctx, user):
+    def _check_signup_status(self, user):
         if user.sign_up_status != const.signup_status.final:
-            if ctx.sso_conf.login.inform_if_not_confirmed:
+            if self.sso_conf.login.inform_if_not_confirmed:
                 raise ValidationError(status_code.auth.invalid_signup_status)
         else:
             return True
 
 # ################################################################################################################################
 
-    def _check_is_approved(self, ctx, user):
+    def _check_is_approved(self, user):
         if not user.is_approved != const.signup_status.final:
-            if ctx.sso_conf.login.inform_if_not_confirmed:
+            if self.sso_conf.login.inform_if_not_confirmed:
                 raise ValidationError(status_code.auth.invalid_signup_status)
         else:
             return True
 
 # ################################################################################################################################
 
-    def _check_password_expired(self, ctx, user, _now=datetime.utcnow):
+    def _check_password_expired(self, user, _now=datetime.utcnow):
         if _now() > user.password_expiry:
-            if ctx.sso_conf.password.inform_if_expired:
+            if self.sso_conf.password.inform_if_expired:
                 raise ValidationError(status_code.password.expired)
         else:
             return True
 
 # ################################################################################################################################
 
-    def _check_password_about_to_expire(self, ctx, user, _now=datetime.utcnow, _timedelta=timedelta):
+    def _check_password_about_to_expire(self, user, _now=datetime.utcnow, _timedelta=timedelta):
 
         # Find time after which the password is considered to be about to expire
-        threshold_time = user.password_expiry - _timedelta(days=ctx.sso_conf.password.about_to_expire_threshold)
+        threshold_time = user.password_expiry - _timedelta(days=self.sso_conf.password.about_to_expire_threshold)
 
         # .. check if current time is already past that threshold ..
         if _now() > threshold_time:
 
             # .. if it is, we may either return a warning and continue ..
-            if ctx.sso_conf.password.inform_if_about_to_expire:
+            if self.sso_conf.password.inform_if_about_to_expire:
                 return status_code.warning
 
             # .. or it can considered an error, which rejects the request.
@@ -193,16 +210,37 @@ class SessionAPI(object):
 
     def _check_must_send_new_password(self, ctx, user):
         if user.password_must_change and not ctx.input.get('new_password'):
-            if ctx.sso_conf.password.inform_if_must_be_changed:
+            if self.sso_conf.password.inform_if_must_be_changed:
                 raise ValidationError(status_code.password.must_send_new)
         else:
             return True
 
 # ################################################################################################################################
 
-    def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta):
+    def _run_user_checks(self, ctx, user):
+        """ Runs a series of checks for incoming request and user.
+        """
+        # If applicable, requests must originate in a white-listed IP address
+        self._check_remote_ip_allowed(ctx, user)
 
-        # Look up user and return if not found by username
+        # User must not have been locked out of the auth system
+        self._check_user_not_locked(user)
+
+        # If applicable, user must be fully signed up, including account creation's confirmation
+        self._check_signup_status(user)
+
+        # If applicable, user must be approved by a super-user
+        self._check_is_approved(user)
+
+        # Password must not have expired
+        self._check_password_expired(user)
+
+# ################################################################################################################################
+
+    def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta):
+        """ Logs a user in, returning session info on success or raising ValidationError on any error.
+        """
+        # Look up user and raise exception if not found by username
         with closing(self.odb_session_func()) as session:
             user = get_user_by_username(session, ctx.input['username'])
             if not user:
@@ -216,24 +254,12 @@ class SessionAPI(object):
             # It must be possible to log into the application requested (CRM above)
             self._check_login_to_app_allowed(ctx)
 
-            # If applicable, requests must originate in a white-listed IP address
-            self._check_remote_ip_allowed(ctx, user)
-
-            # User must not have been locked out of the auth system
-            self._check_user_not_locked(ctx, user)
-
-            # If applicable, user must be fully signed up, including account creation's confirmation
-            self._check_signup_status(ctx, user)
-
-            # If applicable, user must be approved by a super-user
-            self._check_is_approved(ctx, user)
-
-            # Password must not have expired
-            self._check_password_expired(ctx, user)
+            # Common auth checks
+            self._run_user_checks(ctx, user)
 
             # If applicable, password may not be about to expire (this must be after checking that it has not already).
             # Note that it may return a specific status to return (warning or error)
-            _about_status = self._check_password_about_to_expire(ctx, user)
+            _about_status = self._check_password_about_to_expire(user)
             if _about_status is not True:
                 if _about_status == status_code.warning:
                     _status_code = status_code.password.w_about_to_exp
@@ -253,7 +279,7 @@ class SessionAPI(object):
             # the check above would have raised a ValidationError.
             if user.password_must_change:
                 try:
-                    validate_password(ctx.sso_conf, ctx.input['new_password'])
+                    validate_password(self.sso_conf, ctx.input['new_password'])
                 except ValidationError as e:
                     if e.return_status:
                         raise ValidationError(e.sub_status, e.return_status, e.status)
@@ -262,7 +288,7 @@ class SessionAPI(object):
 
             # All validated, we can create a session object now
             creation_time = _now()
-            expiration_time = creation_time + timedelta(minutes=ctx.sso_conf.session.expiry)
+            expiration_time = creation_time + timedelta(minutes=self.sso_conf.session.expiry)
             ust = new_user_session_token()
 
             session.execute(
@@ -279,10 +305,28 @@ class SessionAPI(object):
             info = SessionInfo()
             info.username = user.username
             info.user_id = user.user_id
-            info.ust = ust
+            info.ust = self.encrypt_func(ust.encode('utf8'))
             info.creation_time = creation_time
             info.expiration_time = expiration_time
 
             return info
+
+# ################################################################################################################################
+
+    def verify(self, ust, remote_addr, target_app):
+        """ Verifies if input user session token is valid and if the user is allowed to access target_app.
+        """
+        ctx = VerifyCtx(self.decrypt_func(ust), remote_addr, target_app)
+
+        # Look up user and raise exception if not found by input UST
+        with closing(self.odb_session_func()) as session:
+            sso_info = get_session_by_ust(session, ctx.ust)
+            if not sso_info:
+                raise ValidationError(status_code.session.no_such_session, False)
+
+            # Common auth checks
+            self._run_user_checks(ctx, sso_info)
+
+        return True
 
 # ################################################################################################################################
