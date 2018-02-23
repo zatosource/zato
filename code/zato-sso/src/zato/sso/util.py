@@ -37,6 +37,11 @@ def new_user_id(_new_id=_new_id):
 
 # ################################################################################################################################
 
+def new_user_session_token(_new_id=_new_id):
+    return _new_id('zust')
+
+# ################################################################################################################################
+
 def validate_password(sso_conf, password):
     """ Raises ValidationError if password is invalid, e.g. it is too simple.
     """

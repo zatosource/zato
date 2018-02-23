@@ -101,6 +101,6 @@ class _SSOSession:
 
     @declared_attr
     def user_id(cls):
-        return Column(Integer, ForeignKey('zato_sso_user.id', ondelete='CASCADE'), nullable=True)
+        return Column(Integer, ForeignKey('zato_sso_user.id', ondelete='CASCADE'), nullable=False)
 
 # ################################################################################################################################
