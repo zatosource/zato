@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from datetime import datetime
+
 # SQLAlchemy
 from sqlalchemy import or_
 
@@ -57,10 +60,11 @@ def get_user_by_username(session, username):
 
 # ################################################################################################################################
 
-def get_session_by_ust(session, ust):
+def get_session_by_ust(session, ust, now):
     return _get_user(session, _session_columns_with_user).\
         filter(SSOSession.user_id==SSOUser.id).\
         filter(SSOSession.ust==ust).\
+        filter(SSOSession.expiration_time > now).\
         first()
 
 # ################################################################################################################################
