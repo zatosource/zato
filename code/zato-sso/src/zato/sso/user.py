@@ -401,16 +401,19 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def login(self, username, password, current_app, remote_addr, new_password=''):
+    def login(self, username, password, current_app, remote_addr, user_agent, new_password=''):
         """ Logs a user in if username and password are correct, returning a user session token (UST) on success,
         or a ValidationError on error.
         """
         return self.session.login(
-            LoginCtx(self.sso_conf, remote_addr, {
-                'username': username,
-                'password': password,
-                'current_app': current_app,
-                'new_password': new_password
-        }))
+            LoginCtx(
+                self.sso_conf,
+                remote_addr,
+                user_agent, {
+                    'username': username,
+                    'password': password,
+                    'current_app': current_app,
+                    'new_password': new_password
+            }))
 
 # ################################################################################################################################
