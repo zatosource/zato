@@ -61,6 +61,9 @@ class status_code:
     class metadata:
         not_allowed = 'E006001'
 
+    class session:
+        no_such_session = 'E007001'
+
 # ################################################################################################################################
 
 class const:

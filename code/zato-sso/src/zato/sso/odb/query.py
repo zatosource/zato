@@ -12,13 +12,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from sqlalchemy import or_
 
 # Zato
-from zato.common.odb.model import SSOUser
+from zato.common.odb.model import SSOSession, SSOUser
 
 # ################################################################################################################################
 
 _skip_user_columns=('password',)
 _user_basic_columns = [elem for elem in SSOUser.__table__.c if elem not in _skip_user_columns]
 _user_exists_columns = [SSOUser.user_id, SSOUser.username, SSOUser.email]
+_session_columns = [elem for elem in SSOSession.__table__.c]
+_session_columns_with_user = _session_columns + _user_basic_columns
 
 # ################################################################################################################################
 
@@ -51,6 +53,14 @@ def get_user_by_id(session, user_id):
 def get_user_by_username(session, username):
     return _get_user(session, _user_basic_columns).\
         filter(SSOUser.username==username).\
+        first()
+
+# ################################################################################################################################
+
+def get_session_by_ust(session, ust):
+    return _get_user(session, _session_columns_with_user).\
+        filter(SSOSession.user_id==SSOUser.id).\
+        filter(SSOSession.ust==ust).\
         first()
 
 # ################################################################################################################################
