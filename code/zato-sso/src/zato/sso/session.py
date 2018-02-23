@@ -15,9 +15,6 @@ from datetime import datetime, timedelta
 # ipaddress
 from ipaddress import ip_address
 
-# SQLAlchemy
-from sqlalchemy import insert
-
 # Zato
 from zato.sso.api import const, status_code, ValidationError
 from zato.common.odb.model import SSOSession as SessionModel
@@ -26,7 +23,9 @@ from zato.sso.odb.query import get_session_by_ust, get_user_by_username
 
 # ################################################################################################################################
 
-SessionModelInsert = SessionModel.__table__.insert
+SessionModelTable = SessionModel.__table__
+SessionModelInsert = SessionModelTable.insert
+SessionModelUpdate = SessionModelTable.update
 
 # ################################################################################################################################
 
@@ -313,20 +312,49 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def verify(self, ust, remote_addr, target_app):
+    def _renew_verify(self, ust, remote_addr, target_app, renew, _now=datetime.utcnow):
         """ Verifies if input user session token is valid and if the user is allowed to access target_app.
+        On success, if renew is True, renews the session.
         """
+        now = _now()
         ctx = VerifyCtx(self.decrypt_func(ust), remote_addr, target_app)
 
         # Look up user and raise exception if not found by input UST
         with closing(self.odb_session_func()) as session:
-            sso_info = get_session_by_ust(session, ctx.ust)
+            sso_info = get_session_by_ust(session, ctx.ust, now)
+
+            # Invalid UST or the session has already expired but in either case
+            # we can not access it.
             if not sso_info:
                 raise ValidationError(status_code.session.no_such_session, False)
 
             # Common auth checks
             self._run_user_checks(ctx, sso_info)
 
+        # Everything is validated, we can renew the session, if told to.
+        if renew:
+            session.execute(
+                SessionModelUpdate().values({
+                    'expiration_time': now + timedelta(minutes=self.sso_conf.session.expiry),
+            }).where(SessionModelTable.c.ust==ctx.ust)
+            )
+            session.commit()
+
+        # Indicate success
         return True
+
+# ################################################################################################################################
+
+    def verify(self, *args):
+        """ Verifies a user session.
+        """
+        return self._renew_verify(*args, renew=False)
+
+# ################################################################################################################################
+
+    def renew(self, *args):
+        """ Renew timelife of a user session, if it is valid.
+        """
+        return self._renew_verify(*args, renew=True)
 
 # ################################################################################################################################
