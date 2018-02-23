@@ -207,7 +207,7 @@ class CryptoManager(object):
 
 # ################################################################################################################################
 
-    def verify_hash(self, given, expected, name):
+    def verify_hash(self, given, expected, name='zato.default'):
         return self.hash_scheme[name].verify(given, expected)
 
 # ################################################################################################################################

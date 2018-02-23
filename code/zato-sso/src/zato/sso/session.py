@@ -33,9 +33,10 @@ SessionModelInsert = SessionModel.__table__.insert
 class LoginCtx(object):
     """ A set of data about a login request.
     """
-    def __init__(self, sso_conf, remote_addr, input):
+    def __init__(self, sso_conf, remote_addr, user_agent, input):
         self.sso_conf = sso_conf
         self.remote_addr = [ip_address(remote_addr)]
+        self.user_agent = user_agent
         self.input = input
 
 # ################################################################################################################################
@@ -205,12 +206,12 @@ class SessionAPI(object):
         with closing(self.odb_session_func()) as session:
             user = get_user_by_username(session, ctx.input['username'])
             if not user:
-                raise ValidationError(status_code.auth.no_such_user)
+                raise ValidationError(status_code.auth.no_such_user, False)
 
             # Check credentials first to make sure that attackers do not learn about any sort
             # of metadata (e.g. is the account locked) if they do not know username and password.
-            #if not self._check_credentials(ctx, user):
-            #    return
+            if not self._check_credentials(ctx, user):
+                raise ValidationError(status_code.auth.no_such_user, False)
 
             # It must be possible to log into the application requested (CRM above)
             self._check_login_to_app_allowed(ctx)
@@ -270,6 +271,8 @@ class SessionAPI(object):
                     'creation_time': creation_time,
                     'expiration_time': expiration_time,
                     'user_id': user.id,
+                    'remote_addr': ', '.join(str(elem) for elem in ctx.remote_addr),
+                    'user_agent': ctx.user_agent,
             }))
             session.commit()
 

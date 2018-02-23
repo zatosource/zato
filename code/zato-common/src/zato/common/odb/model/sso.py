@@ -99,6 +99,9 @@ class _SSOSession:
     creation_time = Column(DateTime(), nullable=False)
     expiration_time = Column(DateTime(), nullable=False)
 
+    remote_addr = Column(Text(), nullable=False)
+    user_agent = Column(Text(), nullable=False)
+
     @declared_attr
     def user_id(cls):
         return Column(Integer, ForeignKey('zato_sso_user.id', ondelete='CASCADE'), nullable=False)
