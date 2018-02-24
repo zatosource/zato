@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from httplib import FORBIDDEN
+
 # ipaddress
 from ipaddress import ip_address
 
@@ -36,13 +39,28 @@ class BaseSIO:
     encrypt_secrets = False
     response_elem = None
     skip_empty_keys = True
-    output_optional = ('status', List('sub_status'))
+    output_optional = ('cid', 'status', List('sub_status'))
 
 # ################################################################################################################################
 
 class BaseService(Service):
     """ Base class for SSO sevices.
     """
+
+# ################################################################################################################################
+
+    def _set_response_ok(self):
+        self.response.payload.status = status_code.ok
+
+# ################################################################################################################################
+
+    def _set_response_error(self, sub_status=status_code.auth.not_allowed, status=status_code.error):
+        self.response.status_code = FORBIDDEN
+        self.response.payload.status = status
+        self.response.payload.sub_status.append(sub_status)
+
+# ################################################################################################################################
+
     def before_handle(self):
 
         # Assume that all calls always fail unless explicitly set to status_code.ok
@@ -57,6 +75,9 @@ class BaseService(Service):
         # set yet, return generic information that user is not allowed to access this resource.
         if self.response.payload.status != status_code.ok and not self.response.payload.sub_status:
             self.response.payload.sub_status.append(status_code.auth.not_allowed)
+
+        # Always returned if any response is produced at all
+        self.response.payload.cid = self.cid
 
 # ################################################################################################################################
 

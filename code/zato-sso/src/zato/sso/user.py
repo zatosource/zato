@@ -100,7 +100,7 @@ class User(object):
 class CreateUserCtx(object):
     """ A business object to carry user creation configuration around.
     """
-    __slots__ = ('data', 'is_active', 'is_internal', 'is_approval_needed', 'is_super_user', 'password_expiry',
+    __slots__ = ('data', 'is_active', 'is_internal', 'is_approval_needed', 'is_approved', 'is_super_user', 'password_expiry',
         'encrypt_password', 'encrypt_email', 'encrypt_func', 'hash_func', 'new_user_id_func', 'confirm_token',
         'sign_up_status')
 
@@ -109,6 +109,7 @@ class CreateUserCtx(object):
         self.is_active = None
         self.is_internal = None
         self.is_approval_needed = None
+        self.is_approved = None
         self.is_super_user = None
         self.password_expiry = None
         self.encrypt_password = None
@@ -252,11 +253,12 @@ class UserAPI(object):
             ctx.is_active = True
             ctx.is_internal = False
             ctx.is_approval_needed = False
+            ctx.is_approved = True
             ctx.is_super_user = is_super_user
             ctx.confirm_token = None
 
             if not ctx.data.sign_up_status:
-                ctx.data.sign_up_status = const.signup_status.before_confirmation
+                ctx.data.sign_up_status = const.signup_status.final
 
             user = self._create_sql_user(ctx)
 
@@ -414,5 +416,12 @@ class UserAPI(object):
                     'current_app': current_app,
                     'new_password': new_password
             }))
+
+# ################################################################################################################################
+
+    def logout(self, ust, current_app, remote_addr):
+        """ Logs a user out of SSO.
+        """
+        return self.session.logout(ust, current_app, remote_addr)
 
 # ################################################################################################################################

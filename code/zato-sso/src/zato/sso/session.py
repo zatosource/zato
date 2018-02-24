@@ -18,7 +18,7 @@ from ipaddress import ip_address
 # Zato
 from zato.sso.api import const, status_code, ValidationError
 from zato.common.odb.model import SSOSession as SessionModel
-from zato.sso.util import validate_password, new_user_id, new_user_session_token
+from zato.sso.util import validate_password, new_user_session_token
 from zato.sso.odb.query import get_session_by_ust, get_user_by_username
 
 # ################################################################################################################################
@@ -98,7 +98,7 @@ class SessionAPI(object):
 # ################################################################################################################################
 
     def _check_credentials(self, ctx, user):
-        password_decrypted = self.decrypt_func(user.password)
+        password_decrypted = self.decrypt_func(user.password) # It is decrypted but still hashed
         return self.verify_hash_func(ctx.input['password'], password_decrypted)
 
 # ################################################################################################################################
@@ -162,16 +162,16 @@ class SessionAPI(object):
     def _check_signup_status(self, user):
         if user.sign_up_status != const.signup_status.final:
             if self.sso_conf.login.inform_if_not_confirmed:
-                raise ValidationError(status_code.auth.invalid_signup_status)
+                raise ValidationError(status_code.auth.invalid_signup_status, True)
         else:
             return True
 
 # ################################################################################################################################
 
     def _check_is_approved(self, user):
-        if not user.is_approved != const.signup_status.final:
-            if self.sso_conf.login.inform_if_not_confirmed:
-                raise ValidationError(status_code.auth.invalid_signup_status)
+        if not user.is_approved:
+            if self.sso_conf.login.inform_if_not_approved:
+                raise ValidationError(status_code.auth.invalid_signup_status, True)
         else:
             return True
 
@@ -313,12 +313,12 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def _renew_verify(self, session, ust, remote_addr, target_app, ust_decrypted=False, renew=False, _now=datetime.utcnow):
-        """ Verifies if input user session token is valid and if the user is allowed to access target_app.
+    def _renew_verify(self, session, ust, current_app, remote_addr, ust_decrypted=False, renew=False, _now=datetime.utcnow):
+        """ Verifies if input user session token is valid and if the user is allowed to access current_app.
         On success, if renew is True, renews the session.
         """
         now = _now()
-        ctx = VerifyCtx(ust if ust_decrypted else self.decrypt_func(ust), remote_addr, target_app)
+        ctx = VerifyCtx(ust if ust_decrypted else self.decrypt_func(ust), remote_addr, current_app)
 
         # Look up user and raise exception if not found by input UST
         sso_info = get_session_by_ust(session, ctx.ust, now)
@@ -364,7 +364,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def logout(self, ust, remote_addr, target_app):
+    def logout(self, ust, current_app, remote_addr):
         """ Logs a user out of SSO.
         """
         ust = self.decrypt_func(ust)
@@ -372,7 +372,7 @@ class SessionAPI(object):
         with closing(self.odb_session_func()) as session:
 
             # Check that the session and user exist ..
-            if self._renew_verify(session, ust, remote_addr, target_app, ust_decrypted=True, renew=False):
+            if self._renew_verify(session, ust, current_app, remote_addr, ust_decrypted=True, renew=False):
 
                 # .. and if so, delete the session now.
                 session.execute(
