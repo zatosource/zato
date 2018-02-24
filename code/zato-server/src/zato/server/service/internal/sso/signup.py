@@ -15,7 +15,7 @@ from contextlib import closing
 from zato.server.service import List
 from zato.server.service.internal.sso import BaseService, BaseSIO
 from zato.sso import status_code
-from zato.sso.util import new_confirm_token, new_user_id
+from zato.sso.util import new_confirm_token
 
 # ################################################################################################################################
 
@@ -62,9 +62,7 @@ class Signup(BaseService):
 
         # None of validation services returned an error so we can create the user now
         with closing(self.odb.session()) as session:
-            user = create_user(session, ctx.input, ctx.sso_conf.signup.is_approval_needed, ctx.sso_conf.password.expiry,
-                ctx.sso_conf.main.encrypt_password, ctx.sso_conf.main.encrypt_email, self.server.encrypt, self.server.hash_secret,
-                confirm_token, new_user_id)
+            user = self.sso.user.create_user(ctx.input)
             session.add(user)
             session.commit()
 

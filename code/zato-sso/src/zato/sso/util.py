@@ -9,6 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from contextlib import closing
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 # Base32 Crockford
@@ -17,8 +19,17 @@ from base32_crockford import encode as crockford_encode
 # ipaddress
 from ipaddress import ip_network
 
+# SQLAlchemy
+from sqlalchemy import update
+
 # Zato
+from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import status_code, ValidationError
+
+# ################################################################################################################################
+
+_utcnow = datetime.utcnow
+UserModelTable = UserModel.__table__
 
 # ################################################################################################################################
 
@@ -93,6 +104,43 @@ def normalize_password_reject_list(sso_conf):
         line = str(line.strip().lower())
         reject.add(line)
     sso_conf.password.reject_list = reject
+
+# ################################################################################################################################
+
+def set_password(odb_session_func, encrypt_func, hash_func, sso_conf, user_id, password, must_change=None, password_expiry=None,
+        _utcnow=_utcnow):
+    """ Sets a new password for user.
+    """
+    # Just to be doubly sure, validate the password before saving it to DB.
+    # Will raise ValidationError if anything is wrong.
+    validate_password(sso_conf, password)
+
+    now = _utcnow()
+    password = make_password_secret(password, sso_conf.main.encrypt_password, encrypt_func, hash_func)
+    password_expiry = password_expiry or sso_conf.password.expiry
+
+    new_values = {
+        'password': password,
+        'password_is_set': True,
+        'password_last_set': now,
+        'password_expiry': now + timedelta(days=password_expiry),
+    }
+
+    # Must be a boolean because the underlying SQL column is a bool
+    if must_change is not None:
+        if not isinstance(must_change, bool):
+            raise ValueError('Expected for must_change to be a boolean instead of `{}`, `{}`'.format(
+                type(must_change), repr(must_change)))
+        else:
+            new_values['password_must_change'] = must_change
+
+    with closing(odb_session_func()) as session:
+        session.execute(
+            update(UserModelTable).\
+            values(new_values).\
+            where(UserModelTable.c.user_id==user_id)
+        )
+        session.commit()
 
 # ################################################################################################################################
 

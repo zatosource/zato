@@ -18,7 +18,7 @@ from ipaddress import ip_address
 # Zato
 from zato.sso.api import const, status_code, ValidationError
 from zato.common.odb.model import SSOSession as SessionModel
-from zato.sso.util import validate_password, new_user_session_token
+from zato.sso.util import set_password, validate_password, new_user_session_token
 from zato.sso.odb.query import get_session_by_ust, get_user_by_username
 
 # ################################################################################################################################
@@ -85,10 +85,11 @@ class SessionAPI(object):
     """ Logs a user in or out, provided that all authentication and authorization checks succeed,
     or returns details about already existing sessions.
     """
-    def __init__(self, sso_conf, encrypt_func, decrypt_func, verify_hash_func):
+    def __init__(self, sso_conf, encrypt_func, decrypt_func, hash_func, verify_hash_func):
         self.sso_conf = sso_conf
         self.encrypt_func = encrypt_func
         self.decrypt_func = decrypt_func
+        self.hash_func = hash_func
         self.verify_hash_func = verify_hash_func
         self.odb_session_func = None
 
@@ -296,7 +297,8 @@ class SessionAPI(object):
                     if e.return_status:
                         raise ValidationError(e.sub_status, e.return_status, e.status)
                 else:
-                    zzz # Set new password here
+                    set_password(self.odb_session_func, self.encrypt_func, self.hash_func, self.sso_conf, user.user_id,
+                            ctx.input['new_password'], False)
 
             # All validated, we can create a session object now
             creation_time = _now()

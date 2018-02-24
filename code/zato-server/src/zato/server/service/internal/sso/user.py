@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.server.service.internal.sso import BaseService, BaseSIO
-from zato.sso.api import status_code, ValidationError
 
 # ################################################################################################################################
 
@@ -28,7 +27,6 @@ class Login(BaseService):
     def _handle_sso(self, ctx):
 
         input = ctx.input
-        current_app = input.current_app
         has_remote_addr = input.get('remote_addr')
         has_user_agent = input.get('user_agent')
 
