@@ -22,7 +22,7 @@ from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const
 from zato.sso.odb.query import get_user_by_username, is_super_user_by_user_id, is_super_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
-from zato.sso.util import make_data_secret, make_password_secret, validate_password
+from zato.sso.util import make_data_secret, make_password_secret, set_password, validate_password
 
 # ################################################################################################################################
 
@@ -136,7 +136,7 @@ class UserAPI(object):
         self.password_expiry = self.sso_conf.password.expiry
 
         # For convenience, sessions are accessible through user API.
-        self.session = SessionAPI(self.sso_conf, self.encrypt_func, self.decrypt_func, self.verify_hash_func)
+        self.session = SessionAPI(self.sso_conf, self.encrypt_func, self.decrypt_func, self.hash_func, self.verify_hash_func)
 
 # ################################################################################################################################
 
@@ -305,38 +305,10 @@ class UserAPI(object):
 # ################################################################################################################################
 
     def set_password(self, user_id, password, must_change, password_expiry, _utcnow=_utcnow):
-        """ Sets a new password of a user.
+        """ Sets a new password for user.
         """
-        # Just to be doubly sure, validate the password before saving it to DB.
-        # Will raise ValidationError if anything is wrong.
-        self.validate_password(password)
-
-        now = _utcnow()
-        password = make_password_secret(password, self.sso_conf.main.encrypt_password, self.encrypt_func, self.hash_func)
-        password_expiry = password_expiry or self.sso_conf.password.expiry
-
-        new_values = {
-            'password': password,
-            'password_is_set': True,
-            'password_last_set': now,
-            'password_expiry': now + timedelta(days=password_expiry),
-        }
-
-        # Must be a boolean because the underlying SQL column is a bool
-        if must_change is not None:
-            if not isinstance(must_change, bool):
-                raise ValueError('Expected for must_change to be a boolean instead of `{}`, `{}`'.format(
-                    type(must_change), repr(must_change)))
-            else:
-                new_values['password_must_change'] = must_change
-
-        with closing(self.odb_session_func()) as session:
-            session.execute(
-                update(UserModelTable).\
-                values(new_values).\
-                where(UserModelTable.c.user_id==user_id)
-            )
-            session.commit()
+        set_password(self.odb_session_func, self.encrypt_func, self.hash_func, self.sso_conf, user_id, password,
+            must_change, password_expiry)
 
 # ################################################################################################################################
 
