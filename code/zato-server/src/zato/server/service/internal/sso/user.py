@@ -23,6 +23,8 @@ class Login(BaseService):
         output_required = ('status',)
         output_optional = BaseSIO.output_optional + ('ust',)
 
+# ################################################################################################################################
+
     def _handle_sso(self, ctx):
 
         input = ctx.input
@@ -38,17 +40,8 @@ class Login(BaseService):
         input.remote_addr = input.remote_addr if has_remote_addr else self.wsgi_environ['zato.http.remote_addr'].decode('utf8')
         input.user_agent = input.user_agent if has_user_agent else self.wsgi_environ['HTTP_USER_AGENT']
 
-        try:
-            out = self.sso.user.login(**input)
-        except ValidationError as e:
-            self.logger.warn('SSO user `%s` cannot log in to `%s`, e:`%s`, cid:`%s`',
-                input.username, input.current_app, e, self.cid)
-            if e.return_status:
-                self._set_response_error(e.sub_status, e.status)
-            else:
-                self._set_response_error()
-        else:
+        out = self._call_sso_api(self.sso.user.login, 'SSO user `{username}` cannot log in to `{current_app}`', **ctx.input)
+        if out:
             self.response.payload.ust = out.ust
-            self._set_response_ok()
 
 # ################################################################################################################################
