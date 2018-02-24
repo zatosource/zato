@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from httplib import FORBIDDEN
+from traceback import format_exc
 
 # ipaddress
 from ipaddress import ip_address
@@ -17,7 +18,7 @@ from ipaddress import ip_address
 # Zato
 from zato.common import NO_REMOTE_ADDRESS
 from zato.server.service import List, Service
-from zato.sso import status_code
+from zato.sso import status_code, ValidationError
 
 # ################################################################################################################################
 
@@ -102,6 +103,33 @@ class BaseService(Service):
 
         # OK, we can proceed to the actual call now
         self._handle_sso(SSOCtx(self.request.input, sso_conf, remote_addr))
+
+# ################################################################################################################################
+
+    def _call_sso_api(self, func, log_prefix, **kwargs):
+
+        try:
+            # Call the business functionality
+            out = func(**kwargs)
+        except ValidationError as e:
+
+            # Log only if needed (likely WARN will be always enabled but still, it's better to check it first)
+            if self.server.is_enabled_for_warn:
+                kwargs['cid'] = self.cid
+                log_msg = log_prefix.format(**kwargs)
+                log_msg = log_msg + ', cid:`{}`, e:`{}`'.format(self.cid, format_exc())
+                self.logger.warn(log_msg)
+
+            # Make sure we don't return specific status codes if we are not allowed to
+            if e.return_status:
+                self._set_response_error(e.sub_status, e.status)
+            else:
+                self._set_response_error()
+
+        # All went fine, we can set status OK and return business data
+        else:
+            self._set_response_ok()
+            return out
 
 # ################################################################################################################################
 
