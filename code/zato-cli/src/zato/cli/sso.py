@@ -15,7 +15,7 @@ import os
 from bunch import Bunch
 
 # Zato
-from zato.cli import ManageCommand, ZatoCommand
+from zato.cli import ZatoCommand
 from zato.common.crypto import CryptoManager
 from zato.common.util import asbool, get_config
 from zato.sso import ValidationError
@@ -35,7 +35,7 @@ class SSOCommand(ZatoCommand):
         normalize_password_reject_list(sso_conf)
 
         crypto_manager = CryptoManager.from_secret_key(secrets_conf.secret_keys.key1)
-        crypto_manager.add_hash_scheme('sso.super-user', sso_conf.hash_secret.rounds_super_user, sso_conf.hash_secret.salt_size)
+        crypto_manager.add_hash_scheme('sso.super-user', sso_conf.hash_secret.rounds, sso_conf.hash_secret.salt_size)
 
         server_conf = get_config(
             repo_location, 'server.conf', needs_user_config=False, crypto_manager=crypto_manager, secrets_conf=secrets_conf)
@@ -119,7 +119,7 @@ class _CreateUser(SSOCommand):
         data.password = args.password
 
         func = getattr(user_api, self.create_func)
-        func(User(**data))
+        func(User(**data), skip_sec=True)
 
         self.logger.info('Created %s `%s`', self.user_type, data.username)
 

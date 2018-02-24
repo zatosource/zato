@@ -989,14 +989,33 @@ class Create(ZatoCommand):
 
     def add_sso_endpoints(self, session, cluster):
 
-        signup_name = 'zato.sso.user.signup.signup'
-        signup_impl_name = 'zato.server.service.internal.sso.user.signup.Signup'
-        signup_service = Service(None, signup_name, True, signup_impl_name, True, cluster)
+        data = [
+            ['zato.sso.user.create', 'zato.server.service.internal.sso.user.Create', '/zato/sso/user/create'],
+            ['zato.sso.user.signup', 'zato.server.service.internal.sso.user.Signup', '/zato/sso/user/signup'],
+            ['zato.sso.user.approve', 'zato.server.service.internal.sso.user.Approve', '/zato/sso/user/approve'],
+            ['zato.sso.user.reject', 'zato.server.service.internal.sso.user.Reject', '/zato/sso/user/reject'],
+            ['zato.sso.user.login', 'zato.server.service.internal.sso.user.Login', '/zato/sso/user/login'],
+            ['zato.sso.user.logout', 'zato.server.service.internal.sso.user.Logout', '/zato/sso/user/logout'],
+            ['zato.sso.user.user', 'zato.server.service.internal.sso.user.User', '/zato/sso/user'],
+            ['zato.sso.user.password', 'zato.server.service.internal.sso.user.Password', '/zato/sso/user/password'],
 
-        signup_channel = HTTPSOAP(None, '/zato/sso/user/signup', True, True, 'channel', 'plain_http', None,
-            '/zato/sso/user/signup', None, '', None, DATA_FORMAT.JSON, security=None, service=signup_service, cluster=cluster)
+            ['zato.sso.session.validate', 'zato.server.service.internal.sso.session.Validate', '/zato/sso/session/validate'],
+            ['zato.sso.session.get', 'zato.server.service.internal.sso.session.Get', '/zato/sso/session'],
 
-        session.add(signup_service)
-        session.add(signup_channel)
+            ['zato.sso.user.password-reset.begin', 'zato.server.service.internal.sso.password_reset.Begin', '/zato/sso/user/password/reset/begin'],
+            ['zato.sso.user.password-reset.complete', 'zato.server.service.internal.sso.password_reset.Complete', '/zato/sso/user/password/reset/complete'],
+
+            ['zato.sso.user-attr.user-attr', 'zato.server.service.internal.sso.user_attr.UserAttr.', '/zato/sso/user/attr'],
+
+            ['zato.sso.session-attr.session-attr', 'zato.server.service.internal.sso.session_attr.SessionAttr.', '/zato/sso/user/session/attr'],
+        ]
+
+        for name, impl_name, url_path in data:
+            service = Service(None, name, True, impl_name, True, cluster)
+            channel = HTTPSOAP(None, url_path, True, True, 'channel', 'plain_http', None, url_path, None, '', None,
+                DATA_FORMAT.JSON, security=None, service=service, cluster=cluster)
+
+            session.add(service)
+            session.add(channel)
 
 # ################################################################################################################################
