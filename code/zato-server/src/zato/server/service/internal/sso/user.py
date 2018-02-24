@@ -32,10 +32,8 @@ class Login(BaseService):
         has_remote_addr = input.get('remote_addr')
         has_user_agent = input.get('user_agent')
 
-        if has_remote_addr or has_user_agent:
-            if current_app not in self.server.sso_config.apps.login_metadata_allowed:
-                self._set_response_error(status_code.metadata.not_allowed)
-                return
+        input.has_remote_addr = has_remote_addr
+        input.has_user_agent = has_user_agent
 
         input.remote_addr = input.remote_addr if has_remote_addr else self.wsgi_environ['zato.http.remote_addr'].decode('utf8')
         input.user_agent = input.user_agent if has_user_agent else self.wsgi_environ['HTTP_USER_AGENT']

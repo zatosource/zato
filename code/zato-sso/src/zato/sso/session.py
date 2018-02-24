@@ -33,11 +33,13 @@ SessionModelDelete = SessionModelTable.delete
 class LoginCtx(object):
     """ A set of data about a login request.
     """
-    __slots__ = ('remote_addr', 'user_agent', 'input')
+    __slots__ = ('remote_addr', 'user_agent', 'has_remote_addr', 'has_user_agent', 'input')
 
-    def __init__(self, remote_addr, user_agent, input):
+    def __init__(self, remote_addr, user_agent, has_remote_addr, has_user_agent, input):
         self.remote_addr = [ip_address(remote_addr)]
         self.user_agent = user_agent
+        self.has_remote_addr = has_remote_addr
+        self.has_user_agent = has_user_agent
         self.input = input
 
 # ################################################################################################################################
@@ -217,6 +219,13 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
+    def _check_login_metadata_allowed(self, ctx):
+        if ctx.has_remote_addr or ctx.has_user_agent:
+            if ctx.input['current_app'] not in self.sso_conf.apps.login_metadata_allowed:
+                raise ValidationError(status_code.password.must_send_new, False)
+
+# ################################################################################################################################
+
     def _run_user_checks(self, ctx, user):
         """ Runs a series of checks for incoming request and user.
         """
@@ -234,6 +243,9 @@ class SessionAPI(object):
 
         # Password must not have expired
         self._check_password_expired(user)
+
+        # Current application must be allowed to send login metadata
+        self._check_login_metadata_allowed(ctx)
 
 # ################################################################################################################################
 
