@@ -310,7 +310,6 @@ list_key=sample,list
 sso_conf_contents = '''[main]
 encrypt_email=True
 encrypt_password=True
-inform_if_app_invalid=True
 
 [backend]
 default=sql
@@ -323,10 +322,11 @@ rounds=100000
 salt_size=64 # In bytes = 512 bits
 
 [apps]
-all=CRM
-signup_allowed=CRM
-login_allowed=CRM
-login_metadata_allowed=ERP
+all=
+signup_allowed=
+login_allowed=
+login_metadata_allowed=
+inform_if_app_invalid=True
 
 [login]
 reject_if_not_listed=False
@@ -335,7 +335,6 @@ inform_if_not_confirmed=True
 inform_if_not_approved=True
 
 [login_list]
-my-admin=127.0.0.1
 
 [session]
 expiry=60 # In minutes
@@ -350,7 +349,6 @@ about_to_expire_threshold=30 # In days
 log_in_if_about_to_expire=True
 min_length=8
 max_length=256
-validate_service=
 reject_list = """
   111111
   123123
@@ -379,10 +377,10 @@ reject_list = """
 """
 
 [signup]
-inform_if_user_exists=True
-inform_if_user_invalid=True
-inform_if_email_exists=True
-inform_if_email_invalid=True
+inform_if_user_exists=False
+inform_if_user_invalid=False
+inform_if_email_exists=False
+inform_if_email_invalid=False
 email_required=True
 max_length_username=128
 max_length_email=128
@@ -390,12 +388,11 @@ password_allow_whitespace=True
 always_return_confirm_token=True
 is_email_required=True
 is_approval_needed=True
-callback_service=
 
 [user_validation]
 service=zato.sso.user.validate
-reject_username=zato, admin, root
-reject_email=zato, admin, root
+reject_username=zato, admin, root, system, sso
+reject_email=zato, admin, root, system, sso
 '''
 
 secrets_conf_template = b"""
