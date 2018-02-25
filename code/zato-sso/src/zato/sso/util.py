@@ -175,13 +175,8 @@ def normalize_sso_config(sso_conf):
 
     # There may be a single service in a relevant part of configuration
     # so for ease of use we always turn tjem into lists.
-    signup_cb_srv = sso_conf.signup.callback_service
-    signup_cb_srv = signup_cb_srv if isinstance(signup_cb_srv, list) else [signup_cb_srv]
-
     usr_valid_srv = sso_conf.user_validation.service
     usr_valid_srv = usr_valid_srv if isinstance(usr_valid_srv, list) else [usr_valid_srv]
-
-    sso_conf.signup.callback_service = signup_cb_srv
     sso_conf.user_validation.service = usr_valid_srv
 
     # Convert all white/black-listed IP addresses to sets of network objects
