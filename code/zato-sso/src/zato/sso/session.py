@@ -108,8 +108,10 @@ class SessionAPI(object):
 
     def _check_login_to_app_allowed(self, ctx):
         if ctx.input['current_app'] not in self.sso_conf.apps.login_allowed:
-            if self.sso_conf.main.inform_if_app_invalid:
-                raise ValidationError(status_code.app_list.invalid, False)
+            if self.sso_conf.apps.inform_if_app_invalid:
+                raise ValidationError(status_code.app_list.invalid, True)
+            else:
+                raise ValidationError(status_code.auth.not_allowed, True)
         else:
             return True
 
@@ -156,7 +158,7 @@ class SessionAPI(object):
     def _check_user_not_locked(self, user):
         if user.is_locked:
             if self.sso_conf.login.inform_if_locked:
-                raise ValidationError(status_code.auth.locked)
+                raise ValidationError(status_code.auth.locked, True)
         else:
             return True
 
@@ -183,7 +185,7 @@ class SessionAPI(object):
     def _check_password_expired(self, user, _now=datetime.utcnow):
         if _now() > user.password_expiry:
             if self.sso_conf.password.inform_if_expired:
-                raise ValidationError(status_code.password.expired)
+                raise ValidationError(status_code.password.expired, True)
         else:
             return True
 
@@ -214,7 +216,7 @@ class SessionAPI(object):
     def _check_must_send_new_password(self, ctx, user):
         if user.password_must_change and not ctx.input.get('new_password'):
             if self.sso_conf.password.inform_if_must_be_changed:
-                raise ValidationError(status_code.password.must_send_new)
+                raise ValidationError(status_code.password.must_send_new, True)
         else:
             return True
 
@@ -231,22 +233,28 @@ class SessionAPI(object):
         """ Runs a series of checks for incoming request and user.
         """
         # If applicable, requests must originate in a white-listed IP address
-        self._check_remote_ip_allowed(ctx, user)
+        if not self._check_remote_ip_allowed(ctx, user):
+            raise ValidationError(status_code.auth.not_allowed, True)
 
         # User must not have been locked out of the auth system
-        self._check_user_not_locked(user)
+        if not self._check_user_not_locked(user):
+            raise ValidationError(status_code.auth.not_allowed, True)
 
         # If applicable, user must be fully signed up, including account creation's confirmation
-        self._check_signup_status(user)
+        if not self._check_signup_status(user):
+            raise ValidationError(status_code.auth.not_allowed, True)
 
         # If applicable, user must be approved by a super-user
-        self._check_is_approved(user)
+        if not self._check_is_approved(user):
+            raise ValidationError(status_code.auth.not_allowed, True)
 
         # Password must not have expired
-        self._check_password_expired(user)
+        if not self._check_password_expired(user):
+            raise ValidationError(status_code.auth.not_allowed, True)
 
         # Current application must be allowed to send login metadata
-        self._check_login_metadata_allowed(ctx)
+        if not self._check_login_metadata_allowed(ctx):
+            raise ValidationError(status_code.auth.not_allowed, True)
 
 # ################################################################################################################################
 
