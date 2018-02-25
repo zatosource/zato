@@ -129,6 +129,10 @@ class SessionAPI(object):
         if ip_allowed is _invalid:
             if self.sso_conf.login.reject_if_not_listed:
                 return
+            else:
+                # We are not to reject users if they are not listed, in other words,
+                # we are to accept them even if they are not so we return a success flag.
+                return True
 
         # User was found in configuration so now we need to check IPs allowed ..
         else:
@@ -227,6 +231,8 @@ class SessionAPI(object):
             if ctx.input['current_app'] not in self.sso_conf.apps.login_metadata_allowed:
                 raise ValidationError(status_code.password.must_send_new, False)
 
+        return True
+
 # ################################################################################################################################
 
     def _run_user_checks(self, ctx, user):
@@ -265,12 +271,12 @@ class SessionAPI(object):
         with closing(self.odb_session_func()) as session:
             user = get_user_by_username(session, ctx.input['username'])
             if not user:
-                raise ValidationError(status_code.auth.no_such_user, False)
+                raise ValidationError(status_code.auth.not_allowed, False)
 
             # Check credentials first to make sure that attackers do not learn about any sort
             # of metadata (e.g. is the account locked) if they do not know username and password.
             if not self._check_credentials(ctx, user):
-                raise ValidationError(status_code.auth.no_such_user, False)
+                raise ValidationError(status_code.auth.not_allowed, False)
 
             # It must be possible to log into the application requested (CRM above)
             self._check_login_to_app_allowed(ctx)
