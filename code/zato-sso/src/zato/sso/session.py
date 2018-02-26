@@ -12,14 +12,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from datetime import datetime, timedelta
 
-# gevent
-from gevent import spawn
-
 # ipaddress
 from ipaddress import ip_address
 
 # Zato
-from zato.common.util import spawn_greenlet
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.sso.api import const, status_code, ValidationError
 from zato.sso.odb.query import get_session_by_ust, get_user_by_username
@@ -362,9 +358,11 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def _renew_verify(self, session, ust, current_app, remote_addr, needs_decrypt=True, renew=False, _now=datetime.utcnow):
+    def _get(self, session, ust, current_app, remote_addr, needs_decrypt=True, renew=False, needs_attrs=False,
+        _now=datetime.utcnow):
         """ Verifies if input user session token is valid and if the user is allowed to access current_app.
-        On success, if renew is True, renews the session.
+        On success, if renew is True, renews the session. Returns all session attributes or True,
+        depending on needs_attrs's value.
         """
         now = _now()
         ctx = VerifyCtx(self.decrypt_func(ust) if needs_decrypt else ust, remote_addr, current_app)
@@ -389,7 +387,7 @@ class SessionAPI(object):
             )
 
         # Indicate success
-        return True
+        return sso_info if needs_attrs else True
 
 # ################################################################################################################################
 
@@ -397,8 +395,7 @@ class SessionAPI(object):
         """ Verifies a user session.
         """
         with closing(self.odb_session_func()) as session:
-            out = self._renew_verify(session, *args, renew=False)
-            session.commit()
+            out = self._get(session, *args, renew=False)
             return out
 
 # ################################################################################################################################
@@ -407,8 +404,17 @@ class SessionAPI(object):
         """ Renew timelife of a user session, if it is valid.
         """
         with closing(self.odb_session_func()) as session:
-            out = self._renew_verify(session, *args, renew=True)
+            out = self._get(session, *args, renew=True)
             session.commit()
+            return out
+
+# ################################################################################################################################
+
+    def get(self, *args):
+        """ Gets details of a session given by its UST on input.
+        """
+        with closing(self.odb_session_func()) as session:
+            out = self._get(session, *args, renew=False, needs_attrs=True)
             return out
 
 # ################################################################################################################################
@@ -421,7 +427,7 @@ class SessionAPI(object):
         with closing(self.odb_session_func()) as session:
 
             # Check that the session and user exist ..
-            if self._renew_verify(session, ust, current_app, remote_addr, needs_decrypt=False, renew=False):
+            if self._get(session, ust, current_app, remote_addr, needs_decrypt=False, renew=False):
 
                 # .. and if so, delete the session now.
                 session.execute(
