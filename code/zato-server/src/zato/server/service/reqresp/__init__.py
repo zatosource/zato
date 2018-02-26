@@ -348,8 +348,8 @@ class SimpleIOPayload(SIOConverter):
             return elem_value
         else:
             return self.convert(self.zato_cid, name, lookup_name, elem_value, True, self.zato_is_xml,
-                self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes, None, None,
-                None, self.zato_data_format, True)
+                self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes, self.zato_skip_empty_keys,
+                None, None, None, self.zato_data_format, True)
 
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.

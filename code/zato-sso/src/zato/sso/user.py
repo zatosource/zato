@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from datetime import datetime, timedelta
 from json import dumps
+from logging import getLogger
 
 # SQLAlchemy
 from sqlalchemy import update
@@ -19,10 +20,14 @@ from sqlalchemy import update
 # Zato
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
-from zato.sso import const
-from zato.sso.odb.query import get_user_by_username, is_super_user_by_user_id, is_super_user_by_ust
+from zato.sso import const, status_code, ValidationError
+from zato.sso.odb.query import get_user_by_username, get_user_by_ust, is_super_user_by_user_id, is_super_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.util import make_data_secret, make_password_secret, set_password, validate_password
+
+# ################################################################################################################################
+
+logger = getLogger('zato_sso')
 
 # ################################################################################################################################
 
@@ -33,19 +38,18 @@ UserModelTable = UserModel.__table__
 # ################################################################################################################################
 
 # Attributes accessible to both account owner and super-users
-_regular_attrs = {
-    'id': None,       # Note that it is read from SQL's .user_id rather than .id but outwardly we call it .id.
+regular_attrs = {
+    'user_id': None,
     'username': None,
     'email': b'',
     'display_name': '',
     'first_name': '',
     'middle_name': '',
     'last_name': '',
-    'sign_up_confirm_token': '',
 }
 
 # Attributes accessible only to super-users
-_super_user_attrs = {
+super_user_attrs = {
     'is_active': False,
     'is_internal': False,
     'is_super_user': False,
@@ -70,8 +74,8 @@ _write_only = {
 }
 
 _all_attrs = {}
-_all_attrs.update(_regular_attrs)
-_all_attrs.update(_super_user_attrs)
+_all_attrs.update(regular_attrs)
+_all_attrs.update(super_user_attrs)
 _all_attrs.update(_write_only)
 
 # ################################################################################################################################
@@ -317,6 +321,42 @@ class UserAPI(object):
         """
         with closing(self.odb_session_func()) as session:
             return get_user_by_username(session, username)
+
+# ################################################################################################################################
+
+    def get_user_by_ust(self, ust, current_app, remote_addr, _utcnow=_utcnow):
+        """ Returns a user object by that person's UST which must be valid.
+        """
+        with closing(self.odb_session_func()) as session:
+
+            # Verify current session first
+            self.session.verify(ust, current_app, remote_addr)
+
+            # If we are here, it means the session was valid
+            info = get_user_by_ust(session, self.decrypt_func(ust), _utcnow())
+
+            # Input UST is invalid for any reason (perhaps has just expired), raise an exception in that case
+            if not info:
+                raise ValidationError(status_code.auth.not_allowed, True)
+
+            # UST is valid, let's return data then ..
+            else:
+
+                # .. but they into account if current user is a super-user or a regular one.
+                out = {}
+                attrs = super_user_attrs if info.is_super_user else regular_attrs
+
+                for key in attrs:
+                    out[key] = getattr(info, key)
+
+                if out.get('email'):
+                    if self.sso_conf.main.encrypt_email:
+                        try:
+                            out['email'] = self.decrypt_func(out['email'])
+                        except Exception:
+                            logger.warn('Could not decrypt email, user_id:`%s`', out['user_id'])
+
+                return out
 
 # ################################################################################################################################
 

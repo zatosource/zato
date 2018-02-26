@@ -346,12 +346,15 @@ def is_secret(param_name, _secrets_params=SECRETS.PARAMS):
 # ################################################################################################################################
 
 def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, bool_parameter_prefixes, int_parameters,
-    int_parameter_suffixes, encrypt_func, encrypt_secrets, date_time_format=None, data_format=ZATO_NONE,
+    int_parameter_suffixes, force_empty_keys, encrypt_func, encrypt_secrets, date_time_format=None, data_format=ZATO_NONE,
     from_sio_to_external=False, special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC), _is_bool=is_bool, _is_int=is_int,
     _is_secret=is_secret):
     try:
         if _is_bool(param, param_name, bool_parameter_prefixes):
-            value = asbool(value or None) # value can be an empty string and asbool chokes on that
+            if value == '' and force_empty_keys:
+                value = None
+            else:
+                value = asbool(value or None) # value can be an empty string and asbool chokes on that
 
         if value is not None:
             if isinstance(param, ForceType):

@@ -347,6 +347,21 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
+    def _get_session_by_ust(self, session, ust, now):
+        """ Low-level implementation of self.get_session_by_ust.
+        """
+        return get_session_by_ust(session, ust, now)
+
+# ################################################################################################################################
+
+    def get_session_by_ust(self, session, ust, now):
+        """ Returns details of an SSO session by its UST.
+        """
+        with closing(self.odb_session_func()) as session:
+            return self._get_session_by_ust(session, ust, now)
+
+# ################################################################################################################################
+
     def _renew_verify(self, session, ust, current_app, remote_addr, needs_decrypt=True, renew=False, _now=datetime.utcnow):
         """ Verifies if input user session token is valid and if the user is allowed to access current_app.
         On success, if renew is True, renews the session.
@@ -355,7 +370,7 @@ class SessionAPI(object):
         ctx = VerifyCtx(self.decrypt_func(ust) if needs_decrypt else ust, remote_addr, current_app)
 
         # Look up user and raise exception if not found by input UST
-        sso_info = get_session_by_ust(session, ctx.ust, now)
+        sso_info = self._get_session_by_ust(session, ctx.ust, now)
 
         # Invalid UST or the session has already expired but in either case
         # we can not access it.

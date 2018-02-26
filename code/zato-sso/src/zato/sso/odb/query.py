@@ -64,6 +64,8 @@ def get_session_by_ust(session, ust, now):
         filter(SSOSession.expiration_time > now).\
         first()
 
+get_user_by_ust = get_session_by_ust
+
 # ################################################################################################################################
 
 def is_super_user_by_user_id(session, user_id):
