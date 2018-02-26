@@ -12,14 +12,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from datetime import datetime, timedelta
 
+# gevent
+from gevent import spawn
+
 # ipaddress
 from ipaddress import ip_address
 
 # Zato
-from zato.sso.api import const, status_code, ValidationError
+from zato.common.util import spawn_greenlet
 from zato.common.odb.model import SSOSession as SessionModel
-from zato.sso.util import set_password, validate_password, new_user_session_token
+from zato.sso.api import const, status_code, ValidationError
 from zato.sso.odb.query import get_session_by_ust, get_user_by_username
+from zato.sso.util import set_password, validate_password, new_user_session_token
 
 # ################################################################################################################################
 
@@ -47,11 +51,13 @@ class LoginCtx(object):
 class VerifyCtx(object):
     """ Wraps information about a verification request.
     """
-    __slots__ = ('ust', 'remote_addr', 'input')
+    __slots__ = ('ust', 'remote_addr', 'input', 'has_remote_addr', 'has_user_agent')
 
-    def __init__(self, ust, remote_addr, current_app):
+    def __init__(self, ust, remote_addr, current_app, has_remote_addr=None, has_user_agent=None):
         self.ust = ust
         self.remote_addr = remote_addr
+        self.has_remote_addr = has_remote_addr
+        self.has_user_agent = has_user_agent
         self.input = {
             'current_app': current_app
         }
@@ -341,12 +347,12 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def _renew_verify(self, session, ust, current_app, remote_addr, ust_decrypted=False, renew=False, _now=datetime.utcnow):
+    def _renew_verify(self, session, ust, current_app, remote_addr, needs_decrypt=True, renew=False, _now=datetime.utcnow):
         """ Verifies if input user session token is valid and if the user is allowed to access current_app.
         On success, if renew is True, renews the session.
         """
         now = _now()
-        ctx = VerifyCtx(ust if ust_decrypted else self.decrypt_func(ust), remote_addr, current_app)
+        ctx = VerifyCtx(self.decrypt_func(ust) if needs_decrypt else ust, remote_addr, current_app)
 
         # Look up user and raise exception if not found by input UST
         sso_info = get_session_by_ust(session, ctx.ust, now)
@@ -393,14 +399,14 @@ class SessionAPI(object):
 # ################################################################################################################################
 
     def logout(self, ust, current_app, remote_addr):
-        """ Logs a user out of SSO.
+        """ Logs a user out of an SSO session.
         """
         ust = self.decrypt_func(ust)
 
         with closing(self.odb_session_func()) as session:
 
             # Check that the session and user exist ..
-            if self._renew_verify(session, ust, current_app, remote_addr, ust_decrypted=True, renew=False):
+            if self._renew_verify(session, ust, current_app, remote_addr, needs_decrypt=False, renew=False):
 
                 # .. and if so, delete the session now.
                 session.execute(
