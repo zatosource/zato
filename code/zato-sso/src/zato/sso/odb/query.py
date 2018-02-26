@@ -43,7 +43,7 @@ def _get_user(session, columns):
 
 # ################################################################################################################################
 
-def get_user_by_id(session, user_id):
+def get_user_by_id(session, user_id, *ignored_args):
     return _get_user(session, _user_basic_columns).\
         filter(SSOUser.user_id==user_id).\
         first()

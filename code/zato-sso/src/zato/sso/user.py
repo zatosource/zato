@@ -13,6 +13,7 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from json import dumps
 from logging import getLogger
+from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy import update
@@ -21,13 +22,14 @@ from sqlalchemy import update
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const, status_code, ValidationError
-from zato.sso.odb.query import get_user_by_username, get_user_by_ust, is_super_user_by_user_id, is_super_user_by_ust
+from zato.sso.odb.query import get_user_by_id, get_user_by_username, get_user_by_ust, is_super_user_by_user_id, \
+     is_super_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.util import make_data_secret, make_password_secret, set_password, validate_password
 
 # ################################################################################################################################
 
-logger = getLogger('zato_sso')
+logger = getLogger('zato')
 
 # ################################################################################################################################
 
@@ -183,7 +185,7 @@ class UserAPI(object):
             display_name = display_name.strip()
 
         user_model = UserModel()
-        user_model.user_id = ctx.data.id or self.new_user_id_func()
+        user_model.user_id = ctx.data.user_id or self.new_user_id_func()
         user_model.is_active = ctx.is_active
         user_model.is_internal = ctx.is_internal
         user_model.is_approved = False if ctx.is_approval_needed else True
@@ -268,7 +270,7 @@ class UserAPI(object):
 
             # Note that externally visible .id is .user_id on SQL level,
             # this is on purpose because internally SQL .id is used only for joins.
-            ctx.data.id = user.user_id
+            ctx.data.user_id = user.user_id
             ctx.data.display_name = user.display_name
             ctx.data.first_name = user.first_name
             ctx.data.middle_name = user.middle_name
@@ -284,7 +286,6 @@ class UserAPI(object):
             ctx.data.password_expiry = user.password_expiry
             ctx.data.sign_up_status = user.sign_up_status
             ctx.data.sign_up_time = user.sign_up_time
-            ctx.data.sign_up_confirm_token = user.sign_up_confirm_token
 
             session.add(user)
             session.commit()
@@ -324,16 +325,33 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def get_user_by_ust(self, ust, current_app, remote_addr, _utcnow=_utcnow):
-        """ Returns a user object by that person's UST which must be valid.
+    def _get_user_by_attr(self, func, attr_value, current_ust, current_app, remote_addr, _needs_super_user,
+        queries_current_session, _utcnow=_utcnow):
+        """ Returns a user by a specific function and business value.
         """
         with closing(self.odb_session_func()) as session:
 
-            # Verify current session first
-            self.session.verify(ust, current_app, remote_addr)
+            # Verify current session's very existence first ..
+            current_session = self.session.get(current_ust, current_app, remote_addr)
+            if not current_session:
+                logger.warn('Could not verify session `%s` `%s` `%s` `%s`',
+                    current_ust, current_app, remote_addr, format_exc())
+                raise ValidationError(status_code.auth.not_allowed, True)
 
-            # If we are here, it means the session was valid
-            info = get_user_by_ust(session, self.decrypt_func(ust), _utcnow())
+            # .. the session exists but it may be still the case that we require a super-user on input.
+            if _needs_super_user:
+                if not current_session.is_super_user:
+                    logger.warn(
+                        'Current UST does not belong to a super-user, cannot look up attr `%s`, current user is `%s` `%s`',
+                        attr_value, current_session.user_id, current_session.username)
+                    raise ValidationError(status_code.auth.not_allowed, True)
+
+            # If func was to query current session, we can just re-use what we have fetched above,
+            # so as to have one SQL query less in a piece of code that will be likely used very often.
+            if queries_current_session:
+                info = current_session
+            else:
+                info = func(session, attr_value, _utcnow())
 
             # Input UST is invalid for any reason (perhaps has just expired), raise an exception in that case
             if not info:
@@ -357,6 +375,21 @@ class UserAPI(object):
                             logger.warn('Could not decrypt email, user_id:`%s`', out['user_id'])
 
                 return out
+
+# ################################################################################################################################
+
+    def get_user_by_ust(self, current_ust, current_app, remote_addr):
+        """ Returns a user object by that person's current UST.
+        """
+        return self._get_user_by_attr(
+            get_user_by_ust, self.decrypt_func(current_ust), current_ust, current_app, remote_addr, False, True)
+
+# ################################################################################################################################
+
+    def get_user_by_id(self, user_id, current_ust, current_app, remote_addr):
+        """ Returns a user object by that person's ID.
+        """
+        return self._get_user_by_attr(get_user_by_id, user_id, current_ust, current_app, remote_addr, True, False)
 
 # ################################################################################################################################
 
