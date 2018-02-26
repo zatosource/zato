@@ -8,8 +8,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from traceback import format_exc
+
 # Zato
 from zato.server.service.internal.sso import BaseService, BaseSIO
+from zato.sso import status_code
 
 # ################################################################################################################################
 
@@ -39,5 +43,25 @@ class Login(BaseService):
         out = self._call_sso_api(self.sso.user.login, 'SSO user `{username}` cannot log in to `{current_app}`', **ctx.input)
         if out:
             self.response.payload.ust = out.ust
+
+# ################################################################################################################################
+
+class Logout(BaseService):
+    """ Logs a user out of SSO.
+    """
+    class SimpleIO(BaseSIO):
+        input_required = ('ust', 'current_app')
+        output_required = ('status',)
+
+    def _handle_sso(self, ctx):
+
+        # Note that "ok" is always returned no matter the outcome - this is to thwart any attempts
+        # to learn which USTs are/were valid or not.
+        try:
+            self.sso.user.logout(ctx.input.ust, ctx.input.current_app, ctx.input.remote_addr)
+        except Exception:
+            self.logger.warn('CID: `%s`, e:`%s`', self.cid, format_exc())
+        finally:
+            self.response.payload.status = status_code.ok
 
 # ################################################################################################################################

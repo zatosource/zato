@@ -79,7 +79,7 @@ class const:
 class ValidationError(Exception):
     """ Raised if any input SSO data is invalid, subcode contains details of what was rejected.
     """
-    def __init__(self, sub_status, return_status, status=status_code.error):
+    def __init__(self, sub_status, return_status=False, status=status_code.error):
         super(ValidationError, self).__init__('{} {}'.format(status, sub_status))
         self.sub_status = sub_status if isinstance(sub_status, list) else [sub_status]
         self.return_status = return_status
