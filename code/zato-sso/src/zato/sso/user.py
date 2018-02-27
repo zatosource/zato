@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from copy import deepcopy
 from datetime import datetime, timedelta
 from json import dumps
 from logging import getLogger
@@ -75,9 +76,11 @@ _write_only = {
     'password': None,
 }
 
-_all_attrs = {}
-_all_attrs.update(regular_attrs)
-_all_attrs.update(super_user_attrs)
+_all_super_user_attrs = {}
+_all_super_user_attrs.update(regular_attrs)
+_all_super_user_attrs.update(super_user_attrs)
+
+_all_attrs = deepcopy(_all_super_user_attrs)
 _all_attrs.update(_write_only)
 
 # ################################################################################################################################
@@ -362,10 +365,13 @@ class UserAPI(object):
 
                 # .. but they into account if current user is a super-user or a regular one.
                 out = {}
-                attrs = super_user_attrs if info.is_super_user else regular_attrs
+                attrs = _all_super_user_attrs if current_session.is_super_user else regular_attrs
 
                 for key in attrs:
-                    out[key] = getattr(info, key)
+                    value = getattr(info, key)
+                    if isinstance(value, datetime):
+                        value = value.isoformat()
+                    out[key] = value
 
                 if out.get('email'):
                     if self.sso_conf.main.encrypt_email:
