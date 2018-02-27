@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from traceback import format_exc
 
 # Zato
+from zato.server.service import AsIs
 from zato.server.service.internal.sso import BaseService, BaseSIO
 from zato.sso import status_code
 
@@ -63,5 +64,56 @@ class Logout(BaseService):
             self.logger.warn('CID: `%s`, e:`%s`', self.cid, format_exc())
         finally:
             self.response.payload.status = status_code.ok
+
+# ################################################################################################################################
+
+class User(BaseService):
+    """ User manipulation through REST.
+    """
+    class SimpleIO(BaseSIO):
+        input_required = ('ust', 'current_app')
+        input_optional = (AsIs('user_id'),)
+
+        # For GET
+        output_optional = BaseSIO.output_optional + (AsIs('user_id'), 'username', 'email', 'display_name', 'first_name',
+            'middle_name', 'last_name', 'is_active', 'is_internal', 'is_super_user', 'is_approved', 'is_locked', 'locked_time',
+            'creation_ctx', 'locked_by', 'approv_rej_time', 'approv_rej_by', 'password_expiry', 'password_is_set',
+            'password_must_change', 'password_last_set', 'sign_up_status','sign_up_time')
+
+# ################################################################################################################################
+
+    def _handle_sso_GET(self, ctx):
+        """ Returns details of a particular user by UST or ID.
+        """
+        user_id = ctx.input.get('user_id')
+        attrs = []
+
+        if user_id:
+            func = self.sso.user.get_user_by_id
+            attrs.append(user_id)
+        else:
+            func = self.sso.user.get_user_by_ust
+
+        # These will be always needed, no matter which function is used
+        attrs += [ctx.input.ust, ctx.input.current_app, ctx.remote_addr]
+
+        # Func will return a dictionary describing the required user, already taking permissions into account
+        self.response.payload = func(*attrs)
+
+# ################################################################################################################################
+
+    def _handle_sso(self, ctx):
+        http_verb = self.wsgi_environ['REQUEST_METHOD']
+
+        try:
+            getattr(self, '_handle_sso_{}'.format(http_verb))(ctx)
+        except Exception as e:
+            self.logger.info('CID: `%s`, e:`%s`', self.cid, format_exc())
+            self.response.payload.status = status_code.error
+            self.response.payload.sub_status = [status_code.auth.not_allowed]
+        else:
+            self.response.payload.status = status_code.ok
+        finally:
+            self.response.payload.cid = self.cid
 
 # ################################################################################################################################
