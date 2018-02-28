@@ -23,7 +23,7 @@ from sqlalchemy import update
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const, status_code, ValidationError
-from zato.sso.odb.query import get_user_by_id, get_user_by_username, get_user_by_ust, is_super_user_by_ust
+from zato.sso.odb.query import get_user_by_id, get_user_by_username, get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.util import make_data_secret, make_password_secret, set_password, validate_password
 
@@ -355,6 +355,8 @@ class UserAPI(object):
                     current_session.user_id, current_session.username)
                 raise ValidationError(status_code.auth.not_allowed, True)
 
+        return current_session
+
 # ################################################################################################################################
 
     def _get_user_by_attr(self, func, attr_value, current_ust, current_app, remote_addr, _needs_super_user,
@@ -424,8 +426,10 @@ class UserAPI(object):
     def _delete_user(self, user_id, username, current_ust, current_app, remote_addr, skip_sec=False):
         """ Deletes a user by ID or username.
         """
+        current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=False)
         if not skip_sec:
-            self._require_super_user(current_ust, current_app, remote_addr)
+            if not current_session.is_super_user:
+                raise ValidationError(status_code.auth.not_allowed, False)
 
         if not(user_id or username):
             raise ValueError('Exactly one of user_id and username is required')
@@ -438,24 +442,24 @@ class UserAPI(object):
             # Make sure user_id actually exists ..
             if user_id:
                 user = get_user_by_id(session, user_id)
-                if not user:
-                    raise ValidationError(status_code.user_id.invalid, False)
-                else:
-                    if user.user_id == user_id:
-                        raise ValidationError(status_code.common.invalid_operation, False)
+                where = UserModelTable.c.user_id==user_id
 
             # .. or use username if this is what was given on input.
             elif username:
                 user = get_user_by_username(session, username)
-                if not user:
-                    raise ValidationError(status_code.username.invalid, False)
-                else:
-                    if user.user_id == user_id:
-                        raise ValidationError(status_code.common.invalid_operation, False)
+                where = UserModelTable.c.username==username
+
+            # Make sure the user exists at all
+            if not user:
+                raise ValidationError(status_code.common.invalid_operation, False)
+
+            # Users cannot delete themselves
+            if user.user_id == current_session.user_id:
+                raise ValidationError(status_code.common.invalid_operation, False)
 
             rows_matched = session.execute(
                 UserModelTable.delete().\
-                where(UserModelTable.c.user_id==user_id if user_id else UserModelTable.c.username==username)
+                where(where)
             ).rowcount
             session.commit()
 

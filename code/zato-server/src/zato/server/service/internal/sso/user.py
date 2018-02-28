@@ -136,12 +136,21 @@ class User(BaseService):
 
 # ################################################################################################################################
 
+    def _handle_sso_DELETE(self, ctx):
+        """ Deletes an existing user.
+        """
+        # Will take care of permissions / access rights and if everything is successful,
+        # the user pointed to by user_id will be deleted.
+        self.sso.user.delete_user_by_id(ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+
+# ################################################################################################################################
+
     def _handle_sso(self, ctx):
         http_verb = self.wsgi_environ['REQUEST_METHOD']
 
         try:
             getattr(self, '_handle_sso_{}'.format(http_verb))(ctx)
-        except Exception as e:
+        except Exception:
             self.logger.info('CID: `%s`, e:`%s`', self.cid, format_exc())
             self.response.payload.status = status_code.error
             self.response.payload.sub_status = [status_code.auth.not_allowed]
