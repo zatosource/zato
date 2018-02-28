@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from datetime import datetime
+
 # SQLAlchemy
 from sqlalchemy import or_
 
@@ -16,7 +19,12 @@ from zato.common.odb.model import SSOSession, SSOUser
 
 # ################################################################################################################################
 
+_utcnow = datetime.utcnow
+
+# ################################################################################################################################
+
 _skip_user_columns=('password',)
+_user_id_column = [SSOUser.user_id]
 _user_basic_columns = [elem for elem in SSOUser.__table__.c if elem not in _skip_user_columns]
 _user_exists_columns = [SSOUser.user_id, SSOUser.username, SSOUser.email]
 _session_columns = [elem for elem in SSOSession.__table__.c]
@@ -57,23 +65,25 @@ def get_user_by_username(session, username):
 
 # ################################################################################################################################
 
-def get_session_by_ust(session, ust, now):
-    return _get_user(session, _session_columns_with_user).\
+def _get_session_by_ust(session, ust, now, _columns=_session_columns_with_user):
+    return _get_user(session, _columns).\
         filter(SSOSession.user_id==SSOUser.id).\
         filter(SSOSession.ust==ust).\
-        filter(SSOSession.expiration_time > now).\
+        filter(SSOSession.expiration_time > now)
+
+# ################################################################################################################################
+
+def get_session_by_ust(session, ust, now):
+    return _get_session_by_ust(session, ust, now).\
         first()
 
 get_user_by_ust = get_session_by_ust
 
 # ################################################################################################################################
 
-def is_super_user_by_user_id(session, user_id):
-    raise NotImplementedError()
-
-# ################################################################################################################################
-
-def is_super_user_by_ust(session, ust):
-    raise NotImplementedError()
+def is_super_user_by_ust(session, ust, now=None):
+    return _get_session_by_ust(session, ust, now or _utcnow(), _user_id_column).\
+        filter(SSOUser.is_super_user==True).\
+        first()
 
 # ################################################################################################################################

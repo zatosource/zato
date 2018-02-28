@@ -436,7 +436,7 @@ convert_impl = {
 # ################################################################################################################################
 
 def convert_param(cid, payload, param, data_format, is_required, default_value, path_prefix, use_text, channel_params,
-    has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes, encrypt_func,
+    has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes, force_empty_keys, encrypt_func,
     encrypt_secrets, params_priority):
     """ Converts request parameters from any data format supported into Python objects.
     """
@@ -493,7 +493,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
 
         if not isinstance(param, (AsIs, Opaque)):
             return param_name, convert_sio(cid, param, param_name, value, has_simple_io_config, data_format==DATA_FORMAT.XML,
-                bool_parameter_prefixes, int_parameters, int_parameter_suffixes, encrypt_func, encrypt_secrets,
+                bool_parameter_prefixes, int_parameters, int_parameter_suffixes, force_empty_keys, encrypt_func, encrypt_secrets,
                 None, data_format, False)
 
     return param_name, value

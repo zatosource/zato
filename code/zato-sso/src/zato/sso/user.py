@@ -23,8 +23,7 @@ from sqlalchemy import update
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const, status_code, ValidationError
-from zato.sso.odb.query import get_user_by_id, get_user_by_username, get_user_by_ust, is_super_user_by_user_id, \
-     is_super_user_by_ust
+from zato.sso.odb.query import get_user_by_id, get_user_by_username, get_user_by_ust, is_super_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.util import make_data_secret, make_password_secret, set_password, validate_password
 
@@ -161,103 +160,92 @@ class UserAPI(object):
         now = _utcnow()
 
         # Normalize input
-        ctx.data.display_name = ctx.data.display_name.strip()
-        ctx.data.first_name = ctx.data.first_name.strip()
-        ctx.data.middle_name = ctx.data.middle_name.strip()
-        ctx.data.last_name = ctx.data.last_name.strip()
+        ctx.data['display_name'] = ctx.data.get('display_name', '').strip()
+        ctx.data['first_name'] = ctx.data.get('first_name', '').strip()
+        ctx.data['middle_name'] = ctx.data.get('middle_name', '').strip()
+        ctx.data['last_name'] = ctx.data.get('last_name', '').strip()
 
         # If display_name is given on input, this will be the final value of that attribute ..
-        if ctx.data.display_name:
-            display_name = ctx.data.display_name.strip()
+        if ctx.data['display_name']:
+            display_name = ctx.data['display_name'].strip()
 
         # .. otherwise, display_name is a concatenation of first, middle and last name.
         else:
             display_name = ''
 
-            if ctx.data.first_name:
-                display_name += ctx.data.first_name
+            if ctx.data['first_name']:
+                display_name += ctx.data['first_name']
                 display_name += ' '
 
-            if ctx.data.middle_name:
-                display_name += ctx.data.middle_name
+            if ctx.data['middle_name']:
+                display_name += ctx.data['middle_name']
                 display_name += ' '
 
-            if ctx.data.last_name:
-                display_name += ctx.data.last_name
+            if ctx.data['last_name']:
+                display_name += ctx.data['last_name']
 
             display_name = display_name.strip()
 
         user_model = UserModel()
-        user_model.user_id = ctx.data.user_id or self.new_user_id_func()
+        user_model.user_id = ctx.data.get('user_id') or self.new_user_id_func()
         user_model.is_active = ctx.is_active
         user_model.is_internal = ctx.is_internal
         user_model.is_approved = False if ctx.is_approval_needed else True
-        user_model.is_locked = False
+        user_model.is_locked = ctx.data.get('is_locked', False)
         user_model.is_super_user = ctx.is_super_user
-        user_model.creation_ctx = dumps(ctx.data.creation_ctx)
+        user_model.creation_ctx = dumps(ctx.data.get('creation_ctx'))
 
-        # Passwords are always at least hashed and possibly encrypted too ..
-        password = make_password_secret(ctx.data.password, self.encrypt_password, self.encrypt_func, self.hash_func)
+        # Passwords must be strong and are always at least hashed and possibly encrypted too ..
+        if not ctx.data.get('password'):
+            ctx.data['password'] = CryptoManager.generate_password()
+        password = make_password_secret(ctx.data['password'], self.encrypt_password, self.encrypt_func, self.hash_func)
 
         # .. while emails are only encrypted, and it is optional.
         if self.encrypt_email:
-            email = make_data_secret(ctx.data.email, self.encrypt_func)
+            email = make_data_secret(ctx.data.get('email', b''), self.encrypt_func)
 
-        user_model.username = ctx.data.username
+        user_model.username = ctx.data['username']
         user_model.email = email
 
         user_model.password = password
         user_model.password_is_set = True
         user_model.password_last_set = now
-        user_model.password_must_change = False
+        user_model.password_must_change = ctx.data.get('password_must_change', False)
         user_model.password_expiry = now + timedelta(days=self.password_expiry)
 
-        user_model.sign_up_status = ctx.data.sign_up_status
+        user_model.sign_up_status = ctx.data.get('sign_up_status')
         user_model.sign_up_time = now
         user_model.sign_up_confirm_token = _gen_secret(192)
 
         user_model.display_name = display_name
-        user_model.first_name = ctx.data.first_name
-        user_model.middle_name = ctx.data.middle_name
-        user_model.last_name = ctx.data.last_name
+        user_model.first_name = ctx.data['first_name']
+        user_model.middle_name = ctx.data['middle_name']
+        user_model.last_name = ctx.data['last_name']
 
         # Uppercase any and all names for indexing purposes.
         user_model.display_name_upper = display_name.upper()
-        user_model.first_name_upper = ctx.data.first_name.upper()
-        user_model.middle_name_upper = ctx.data.middle_name.upper()
-        user_model.last_name_upper = ctx.data.last_name.upper()
+        user_model.first_name_upper = ctx.data['first_name'].upper()
+        user_model.middle_name_upper = ctx.data['middle_name'].upper()
+        user_model.last_name_upper = ctx.data['last_name'].upper()
 
         return user_model
 
 # ################################################################################################################################
 
-    def _require_super_user(self, session, ust, current_user_id):
-        """ Raises Forbidden if either current user session token or user ID directly
-        does not point to a user who is a super-user.
+    def _require_super_user(self, ust, current_app, remote_addr):
+        """ Raises an exception if either current user session token does not belong to a super user.
         """
-        if not(ust or current_user_id):
-            raise ValueError('At least one of ust or current_user_id is required')
-        else:
-            if ust:
-                if is_super_user_by_ust(session, ust):
-                    return True
-            else:
-                if is_super_user_by_user_id(session, current_user_id):
-                    return True
-
-        # If we get here, it means that we were not able to ascertain
-        # whether current input points to a super-user or not hence an exception must be raised.
-        raise Forbidden()
+        self._get_current_session(ust, current_app, remote_addr, needs_super_user=True)
 
 # ################################################################################################################################
 
-    def _create_user(self, ctx, is_super_user, ust, current_user_id, skip_sec):
+    def _create_user(self, ctx, is_super_user, ust=None, current_app=None, remote_addr=None, skip_sec=None):
         """ Creates a new regular or super-user out of initial user data.
         """
         with closing(self.odb_session_func()) as session:
 
             if not skip_sec:
-                self._require_super_user(session, ust, current_user_id)
+                self._require_super_user(ust, current_app, remote_addr)
 
             ctx.is_active = True
             ctx.is_internal = False
@@ -266,49 +254,52 @@ class UserAPI(object):
             ctx.is_super_user = is_super_user
             ctx.confirm_token = None
 
-            if not ctx.data.sign_up_status:
-                ctx.data.sign_up_status = const.signup_status.final
+            if not ctx.data.get('sign_up_status', None):
+                ctx.data['sign_up_status'] = const.signup_status.final
 
             user = self._create_sql_user(ctx)
 
             # Note that externally visible .id is .user_id on SQL level,
             # this is on purpose because internally SQL .id is used only for joins.
-            ctx.data.user_id = user.user_id
-            ctx.data.display_name = user.display_name
-            ctx.data.first_name = user.first_name
-            ctx.data.middle_name = user.middle_name
-            ctx.data.last_name = user.last_name
-            ctx.data.is_active = user.is_active
-            ctx.data.is_internal = user.is_internal
-            ctx.data.is_approved = user.is_approved
-            ctx.data.is_locked = user.is_locked
-            ctx.data.is_super_user = user.is_super_user
-            ctx.data.password_is_set = user.password_is_set
-            ctx.data.password_last_set = user.password_last_set
-            ctx.data.password_must_change = user.password_must_change
-            ctx.data.password_expiry = user.password_expiry
-            ctx.data.sign_up_status = user.sign_up_status
-            ctx.data.sign_up_time = user.sign_up_time
+            ctx.data['user_id'] = user.user_id
+            ctx.data['display_name'] = user.display_name
+            ctx.data['first_name'] = user.first_name
+            ctx.data['middle_name'] = user.middle_name
+            ctx.data['last_name'] = user.last_name
+            ctx.data['is_active'] = user.is_active
+            ctx.data['is_internal'] = user.is_internal
+            ctx.data['is_approved'] = user.is_approved
+            ctx.data['is_locked'] = user.is_locked
+            ctx.data['is_super_user'] = user.is_super_user
+            ctx.data['password_is_set'] = user.password_is_set
+            ctx.data['password_last_set'] = user.password_last_set
+            ctx.data['password_must_change'] = user.password_must_change
+            ctx.data['password_expiry'] = user.password_expiry
+            ctx.data['sign_up_status'] = user.sign_up_status
+            ctx.data['sign_up_time'] = user.sign_up_time
+
+            # This one we do not want to reveal back
+            ctx.data.pop('password', None)
 
             session.add(user)
             session.commit()
 
 # ################################################################################################################################
 
-    def create_user(self, data, ust=None, current_user_id=None, skip_sec=False):
+    def create_user(self, data, ust=None, current_app=None, remote_addr=None, skip_sec=False):
         """ Creates a new regular user.
         """
-        return self._create_user(CreateUserCtx(data), False, ust, current_user_id, skip_sec)
+        return self._create_user(CreateUserCtx(data), False, ust, current_app, remote_addr, skip_sec)
 
 # ################################################################################################################################
 
-    def create_super_user(self, data, ust=None, current_user_id=None, skip_sec=False):
+    def create_super_user(self, data, ust=None, current_app=None, remote_addr=None, skip_sec=False):
         """ Creates a new super-user.
         """
         # Super-users don't need to confirmation their own creation
-        data.sign_up_status = const.signup_status.final
+        data['sign_up_status'] = const.signup_status.final
 
-        return self._create_user(CreateUserCtx(data), True, ust, current_user_id, skip_sec)
+        return self._create_user(CreateUserCtx(data), True, ust, current_app, remote_addr, skip_sec)
 
 # ################################################################################################################################
 
@@ -328,26 +319,36 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
+    def _get_current_session(self, current_ust, current_app, remote_addr, needs_super_user):
+        """ Returns current session info or raises an exception if it could not be found.
+        Optionally, requires that a super-user be owner of current_ust.
+        """
+        # Verify current session's very existence first ..
+        current_session = self.session.get(current_ust, current_app, remote_addr)
+        print(333, current_session, current_ust, current_app, remote_addr)
+        if not current_session:
+            logger.warn('Could not verify session `%s` `%s` `%s` `%s`',
+                current_ust, current_app, remote_addr, format_exc())
+            raise ValidationError(status_code.auth.not_allowed, True)
+
+        # .. the session exists but it may be still the case that we require a super-user on input.
+        if needs_super_user:
+            if not current_session.is_super_user:
+                logger.warn(
+                    'Current UST does not belong to a super-user, cannot continue, current user is `%s` `%s`',
+                    current_session.user_id, current_session.username)
+                raise ValidationError(status_code.auth.not_allowed, True)
+
+# ################################################################################################################################
+
     def _get_user_by_attr(self, func, attr_value, current_ust, current_app, remote_addr, _needs_super_user,
         queries_current_session, _utcnow=_utcnow):
         """ Returns a user by a specific function and business value.
         """
         with closing(self.odb_session_func()) as session:
 
-            # Verify current session's very existence first ..
-            current_session = self.session.get(current_ust, current_app, remote_addr)
-            if not current_session:
-                logger.warn('Could not verify session `%s` `%s` `%s` `%s`',
-                    current_ust, current_app, remote_addr, format_exc())
-                raise ValidationError(status_code.auth.not_allowed, True)
-
-            # .. the session exists but it may be still the case that we require a super-user on input.
-            if _needs_super_user:
-                if not current_session.is_super_user:
-                    logger.warn(
-                        'Current UST does not belong to a super-user, cannot look up attr `%s`, current user is `%s` `%s`',
-                        attr_value, current_session.user_id, current_session.username)
-                    raise ValidationError(status_code.auth.not_allowed, True)
+            # Validate and get session
+            current_session = self._get_current_session(current_ust, current_app, remote_addr, _needs_super_user)
 
             # If func was to query current session, we can just re-use what we have fetched above,
             # so as to have one SQL query less in a piece of code that will be likely used very often.
