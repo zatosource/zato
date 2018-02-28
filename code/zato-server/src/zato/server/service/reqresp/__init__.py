@@ -202,7 +202,7 @@ class Request(SIOConverter):
                     self.cid, '' if use_channel_params_only else self.payload, param, self.data_format, is_required,
                     default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
                     self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes,
-                    self.encrypt_func, self.encrypt_secrets, self.params_priority)
+                    True, self.encrypt_func, self.encrypt_secrets, self.params_priority)
                 params[param_name] = value
 
             except Exception, e:

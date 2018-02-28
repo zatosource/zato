@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from datetime import datetime, timedelta
+from logging import getLogger
 
 # ipaddress
 from ipaddress import ip_address
@@ -20,6 +21,10 @@ from zato.common.odb.model import SSOSession as SessionModel
 from zato.sso.api import const, status_code, ValidationError
 from zato.sso.odb.query import get_session_by_ust, get_user_by_username
 from zato.sso.util import set_password, validate_password, new_user_session_token
+
+# ################################################################################################################################
+
+logger = getLogger('zato')
 
 # ################################################################################################################################
 
@@ -105,6 +110,14 @@ class SessionAPI(object):
     def _check_credentials(self, ctx, user):
         password_decrypted = self.decrypt_func(user.password) # It is decrypted but still hashed
         return self.verify_hash_func(ctx.input['password'], password_decrypted)
+
+# ################################################################################################################################
+
+    def _check_remote_app_exists(self, ctx):
+        if ctx.input['current_app'] not in self.sso_conf.apps.all:
+            logger.warn('Invalid current_app `%s`, not among `%s', ctx.input['current_app'], self.sso_conf.apps.all)
+        else:
+            return True
 
 # ################################################################################################################################
 
@@ -240,6 +253,10 @@ class SessionAPI(object):
     def _run_user_checks(self, ctx, user):
         """ Runs a series of checks for incoming request and user.
         """
+        # Input application must have been previously defined
+        if not self._check_remote_app_exists(ctx):
+            raise ValidationError(status_code.auth.not_allowed, True)
+
         # If applicable, requests must originate in a white-listed IP address
         if not self._check_remote_ip_allowed(ctx, user):
             raise ValidationError(status_code.auth.not_allowed, True)
