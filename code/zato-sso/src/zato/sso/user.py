@@ -191,18 +191,18 @@ class UserAPI(object):
         user_model.is_active = ctx.is_active
         user_model.is_internal = ctx.is_internal
         user_model.is_approved = False if ctx.is_approval_needed else True
-        user_model.is_locked = ctx.data.get('is_locked', False)
+        user_model.is_locked = ctx.data.get('is_locked') or False
         user_model.is_super_user = ctx.is_super_user
         user_model.creation_ctx = dumps(ctx.data.get('creation_ctx'))
 
         # Passwords must be strong and are always at least hashed and possibly encrypted too ..
         if not ctx.data.get('password'):
             ctx.data['password'] = CryptoManager.generate_password()
-        password = make_password_secret(ctx.data['password'], self.encrypt_password, self.encrypt_func, self.hash_func)
+        password = make_password_secret(ctx.data['password'].encode('utf8'), self.encrypt_password, self.encrypt_func, self.hash_func)
 
         # .. while emails are only encrypted, and it is optional.
         if self.encrypt_email:
-            email = make_data_secret(ctx.data.get('email', b''), self.encrypt_func)
+            email = make_data_secret(ctx.data.get('email').encode('utf8') or b'', self.encrypt_func)
 
         user_model.username = ctx.data['username']
         user_model.email = email
@@ -210,7 +210,7 @@ class UserAPI(object):
         user_model.password = password
         user_model.password_is_set = True
         user_model.password_last_set = now
-        user_model.password_must_change = ctx.data.get('password_must_change', False)
+        user_model.password_must_change = ctx.data.get('password_must_change') or False
         user_model.password_expiry = now + timedelta(days=self.password_expiry)
 
         user_model.sign_up_status = ctx.data.get('sign_up_status')
@@ -246,6 +246,16 @@ class UserAPI(object):
 
             if not skip_sec:
                 self._require_super_user(ust, current_app, remote_addr)
+
+            # The only field always required
+            if not ctx.data.get('username'):
+                logger.warn('Missing `username` on input')
+                raise ValidationError(status_code.username.invalid, True)
+
+            # Make sure the username is unique
+            if get_user_by_username(session, ctx.data['username']):
+                logger.warn('Username `%s` already exists', ctx.data['username'])
+                raise ValidationError(status_code.username.exists, False)
 
             ctx.is_active = True
             ctx.is_internal = False

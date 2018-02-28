@@ -12,9 +12,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from traceback import format_exc
 
 # Zato
-from zato.server.service import AsIs
+from zato.server.service import AsIs, Bool
 from zato.server.service.internal.sso import BaseService, BaseSIO
 from zato.sso import status_code
+
+# ################################################################################################################################
+
+_create_user_attrs = ('username', 'password', 'password_must_change', 'display_name', 'first_name', 'middle_name', 'last_name', \
+    'email', 'is_locked', 'sign_up_status')
+_date_time_attrs = ('approv_rej_time', 'locked_time', 'password_expiry', 'password_last_set', 'sign_up_time')
 
 # ################################################################################################################################
 
@@ -72,9 +78,9 @@ class User(BaseService):
     """
     class SimpleIO(BaseSIO):
         input_required = ('ust', 'current_app')
-        input_optional = (AsIs('user_id'),)
+        input_optional = (AsIs('user_id'), 'remote_addr', 'username', 'password', Bool('password_must_change'), 'display_name',
+            'first_name', 'middle_name', 'last_name', 'email', 'is_locked', 'sign_up_status')
 
-        # For GET
         output_optional = BaseSIO.output_optional + (AsIs('user_id'), 'username', 'email', 'display_name', 'first_name',
             'middle_name', 'last_name', 'is_active', 'is_internal', 'is_super_user', 'is_approved', 'is_locked', 'locked_time',
             'creation_ctx', 'locked_by', 'approv_rej_time', 'approv_rej_by', 'password_expiry', 'password_is_set',
@@ -99,6 +105,34 @@ class User(BaseService):
 
         # Func will return a dictionary describing the required user, already taking permissions into account
         self.response.payload = func(*attrs)
+
+# ################################################################################################################################
+
+    def _handle_sso_POST(self, ctx, _create_user_attrs=_create_user_attrs, _date_time_attrs=_date_time_attrs):
+        """ Creates a new regular user (will not create super-users).
+        """
+        # Create input data explicitly, field-by-field, to make sure only well known parameters can be used
+        # to create a new user.
+        data = {}
+        for name in _create_user_attrs:
+            data[name] = ctx.input.get(name)
+
+        # This will update 'data' in place ..
+        self.sso.user.create_user(data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+
+        # .. and we can now assign it to response..
+
+        # .. first making sure that password is not returned
+        data.pop('password', None)
+
+        # .. then serializing all datetime objects to string ..
+        for name in _date_time_attrs:
+            value = data.get(name)
+            if value:
+                data[name] = value.isoformat()
+
+        # .. and finally we can assign it.
+        self.response.payload = data
 
 # ################################################################################################################################
 
