@@ -156,7 +156,7 @@ class DeleteUser(SSOCommand):
                 self.logger.info('User `%s` kept intact', user.username)
                 return
 
-        user_api.delete_user(username=args.username)
+        user_api.delete_user_by_username(username=args.username)
         self.logger.info('Deleted user `%s`', args.username)
 
 # ################################################################################################################################
