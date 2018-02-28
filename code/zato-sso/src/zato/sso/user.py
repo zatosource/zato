@@ -195,10 +195,17 @@ class UserAPI(object):
         user_model.is_super_user = ctx.is_super_user
         user_model.creation_ctx = dumps(ctx.data.get('creation_ctx'))
 
-        # Passwords must be strong and are always at least hashed and possibly encrypted too ..
+        # Generate a strong password if one is not given on input ..
         if not ctx.data.get('password'):
             ctx.data['password'] = CryptoManager.generate_password()
-        password = make_password_secret(ctx.data['password'].encode('utf8'), self.encrypt_password, self.encrypt_func, self.hash_func)
+
+        # .. and if it is, make sure it gets past validation.
+        else:
+            self.validate_password(ctx.data['password'])
+
+        # Passwords must be strong and are always at least hashed and possibly encrypted too ..
+        password = make_password_secret(
+            ctx.data['password'].encode('utf8'), self.encrypt_password, self.encrypt_func, self.hash_func)
 
         # .. while emails are only encrypted, and it is optional.
         if self.encrypt_email:
