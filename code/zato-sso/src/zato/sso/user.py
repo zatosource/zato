@@ -433,15 +433,29 @@ class UserAPI(object):
             if user_id and username:
                 raise ValueError('Cannot provide both user_id and username on input')
 
-        if user_id:
-            where = UserModelTable.c.user_id==user_id
-        elif username:
-            where = UserModelTable.c.username==username
-
         with closing(self.odb_session_func()) as session:
+
+            # Make sure user_id actually exists ..
+            if user_id:
+                user = get_user_by_id(session, user_id)
+                if not user:
+                    raise ValidationError(status_code.user_id.invalid, False)
+                else:
+                    if user.user_id == user_id:
+                        raise ValidationError(status_code.common.invalid_operation, False)
+
+            # .. or use username if this is what was given on input.
+            elif username:
+                user = get_user_by_username(session, username)
+                if not user:
+                    raise ValidationError(status_code.username.invalid, False)
+                else:
+                    if user.user_id == user_id:
+                        raise ValidationError(status_code.common.invalid_operation, False)
+
             rows_matched = session.execute(
                 UserModelTable.delete().\
-                where(where)
+                where(UserModelTable.c.user_id==user_id if user_id else UserModelTable.c.username==username)
             ).rowcount
             session.commit()
 

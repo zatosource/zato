@@ -30,6 +30,9 @@ class status_code:
         too_long       = 'E001003'
         has_whitespace = 'E001004'
 
+    class user_id:
+        invalid        = 'E001100'
+
     class email:
         invalid        = 'E002001'
         exists         = 'E002002'
@@ -64,6 +67,9 @@ class status_code:
     class session:
         no_such_session = 'E007001'
         expired         = 'E007002'
+
+    class common:
+        invalid_operation = 'E008001'
 
 # ################################################################################################################################
 
