@@ -335,7 +335,6 @@ class UserAPI(object):
         """
         # Verify current session's very existence first ..
         current_session = self.session.get(current_ust, current_app, remote_addr)
-        print(333, current_session, current_ust, current_app, remote_addr)
         if not current_session:
             logger.warn('Could not verify session `%s` `%s` `%s` `%s`',
                 current_ust, current_app, remote_addr, format_exc())
