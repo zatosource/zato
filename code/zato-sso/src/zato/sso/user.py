@@ -209,7 +209,7 @@ class UserAPI(object):
 
         # .. while emails are only encrypted, and it is optional.
         if self.encrypt_email:
-            email = make_data_secret(ctx.data.get('email').encode('utf8') or b'', self.encrypt_func)
+            email = make_data_secret(ctx.data.get('email', '').encode('utf8') or b'', self.encrypt_func)
 
         user_model.username = ctx.data['username']
         user_model.email = email
@@ -421,7 +421,12 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def delete_user(self, user_id=None, username=None):
+    def _delete_user(self, user_id, username, current_ust, current_app, remote_addr, skip_sec=False):
+        """ Deletes a user by ID or username.
+        """
+        if not skip_sec:
+            self._require_super_user(current_ust, current_app, remote_addr)
+
         if not(user_id or username):
             raise ValueError('Exactly one of user_id and username is required')
         else:
@@ -434,11 +439,29 @@ class UserAPI(object):
             where = UserModelTable.c.username==username
 
         with closing(self.odb_session_func()) as session:
-            session.execute(
+            rows_matched = session.execute(
                 UserModelTable.delete().\
                 where(where)
-            )
+            ).rowcount
             session.commit()
+
+            if rows_matched != 1:
+                msg = 'Expected for rows_matched to be 1 instead of %d, user_id:`%s`, username:`%s`'
+                logger.warn(msg, rows_matched, user_id, username)
+
+# ################################################################################################################################
+
+    def delete_user_by_id(self, user_id, current_ust, current_app, remote_addr, skip_sec=False):
+        """ Deletes a user by that person's ID.
+        """
+        return self._delete_user(user_id, None, current_ust, current_app, remote_addr, skip_sec)
+
+# ################################################################################################################################
+
+    def delete_user_by_username(self, username, current_ust, current_app, remote_addr, skip_sec=False):
+        """ Deletes a user by that person's username.
+        """
+        return self._delete_user(None, username, current_ust, current_app, remote_addr, skip_sec)
 
 # ################################################################################################################################
 
