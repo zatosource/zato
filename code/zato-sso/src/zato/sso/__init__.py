@@ -70,6 +70,8 @@ class status_code:
 
     class common:
         invalid_operation = 'E008001'
+        invalid_input     = 'E008002'
+        missing_input     = 'E008003'
 
 # ################################################################################################################################
 
@@ -80,6 +82,9 @@ class const:
         before_confirmation = 'before_confirmation'
         to_approve          = 'to_approve'
         final               = 'final'
+
+        def __iter__(self):
+            return iter([self.before_confirmation, self.to_approve, self.final])
 
 # ################################################################################################################################
 
