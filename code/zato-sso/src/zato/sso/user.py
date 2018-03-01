@@ -17,7 +17,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # SQLAlchemy
-from sqlalchemy import update
+from sqlalchemy import update as sql_update
 
 # Zato
 from zato.common.crypto import CryptoManager
@@ -81,6 +81,34 @@ _all_super_user_attrs.update(super_user_attrs)
 
 _all_attrs = deepcopy(_all_super_user_attrs)
 _all_attrs.update(_write_only)
+
+# ################################################################################################################################
+
+class update:
+
+    # Accessible to regular users only
+    regular_update_attrs = set(('email', 'display_name', 'first_name', 'middle_name', 'last_name'))
+
+    # Accessible to super-users only
+    super_user_update_attrs = set(('is_approved', 'is_locked', 'password_expiry', 'password_must_change', 'sign_up_status'))
+
+    # All updateable attributes
+    all_update_attrs = regular_update_attrs.union(super_user_update_attrs)
+
+    # There cannot be more than this many attributes on input
+    max_len_attrs = len(all_update_attrs)
+
+    # All boolean attributes
+    boolean_attrs = ('is_approved', 'is_locked', 'password_must_change')
+
+    # All datetime attributes
+    datetime_attrs = ('password_expiry',)
+
+    # All attributes that may be set to None / NULL
+    none_allowed = set(regular_update_attrs)
+
+    # A singleton to indicate that value for a given key was not given on input
+    _no_such_value = object()
 
 # ################################################################################################################################
 
@@ -483,8 +511,8 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _lock_user(self, user_id, is_locked):
-        """ Locks or unlocks a user account.
+    def _lock_user_cli(self, user_id, is_locked):
+        """ Locks or unlocks a user account. Used by CLI, does not check any permissions.
         """
         with closing(self.odb_session_func()) as session:
             session.execute(
@@ -498,15 +526,15 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def lock_user(self, user_id):
-        """ Locks a user account.
+    def lock_user_cli(self, user_id):
+        """ Locks a user account. Does not check any permissions.
         """
         self._lock_user(user_id, True)
 
 # ################################################################################################################################
 
-    def unlock_user(self, user_id):
-        """ Unlocks a user account.
+    def unlock_user_cli(self, user_id):
+        """ Unlocks a user account. Does not check any permissions.
         """
         self._lock_user(user_id, False)
 
@@ -536,5 +564,128 @@ class UserAPI(object):
         """ Logs a user out of SSO.
         """
         return self.session.logout(ust, current_app, remote_addr)
+
+# ################################################################################################################################
+
+    def _ensure_no_unknown_update_attrs(self, attrs_allowed, data):
+        """ Makes sure that update data contains only attributes explicitly allowed.
+        """
+        unexpected = []
+        for attr in data:
+            if attr not in attrs_allowed:
+                unexpected.append(attr)
+
+        if unexpected:
+            logger.warn('Unexpected data on input %s', unexpected)
+            raise ValidationError(status_code.common.invalid_input, False)
+
+# ################################################################################################################################
+
+    def _check_basic_update_attrs(self, data):
+        """ Checks basic validity of update attributes.
+        """
+        # Double-check we have data to update a user with ..
+        if not data:
+            raise ValidationError(status_code.common.missing_input, False)
+        else:
+            # .. and that no one attempts to overload us with it ..
+            if len(data) > update.max_len_attrs:
+                logger.warn('Too many data arguments %d > %d', len(data), update.max_len_attrs)
+                raise ValidationError(status_code.common.invalid_input, False)
+
+            # .. also, make sure that, no matter what kind of user this is, only supported arguments are given on input.
+            # Later on we will fine-check it again to take the user's role into account, but we want to want to check it here
+            # first on a rough level so as to avoid an SQL query in case of an error at this early stage.
+            else:
+                self._ensure_no_unknown_update_attrs(update.all_update_attrs, data)
+
+# ################################################################################################################################
+
+    def _update_user(self, data, current_ust, current_app, remote_addr, user_id=None, update_self=None):
+        """ Low-level implementation of user updates.
+        """
+        if not(user_id or update_self):
+            logger.warn('At least one of user_id or update_self is required')
+            raise ValidationError(status_code.common.invalid_input, False)
+
+        # Basic checks first
+        self._check_basic_update_attrs(data)
+
+        with closing(self.odb_session_func()) as session:
+            current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=False)
+
+            # We will be updating our own account or another user, depending on input flags/parameters.
+            _user_id = current_session.user_id if update_self else user_id
+
+            # Super-users may update the whole set of attributes in existence.
+            if current_session.is_super_user:
+                attrs_allowed = update.all_update_attrs
+
+            else:
+
+                # If current session belongs to a regular user yet a user_id was given on input,
+                # we may not continue because only super-users may update other users.
+                if user_id:
+                    logger.warn('Current user `%s` is not a super-user, cannot update user `%s`',
+                        current_session.user_id, user_id)
+                    raise ValidationError(status_code.common.invalid_input, False)
+
+                # whereas regular users may change only basic attributes.
+                attrs_allowed = update.regular_update_attrs
+
+            # Make sure current user provided only these attributes that have been explicitly allowed
+            self._ensure_no_unknown_update_attrs(attrs_allowed, data)
+
+            # If sign_up_status was given on input, it must be among allowed values
+            sign_up_status = data.get('sign_up_status')
+            if sign_up_status and sign_up_status not in const.signup_status():
+                logger.warn('Invalid sign_up_status `%s`', sign_up_status)
+                raise ValidationError(status_code.common.invalid_input, False)
+
+            # All booleans must be actually booleans
+            for attr in update.boolean_attrs:
+                value = data.get(attr, update._no_such_value)
+                if value is not update._no_such_value:
+                    if not isinstance(value, bool):
+                        logger.warn('Expected for `%s` to be a boolean instead of `%r` (%s)', attr, value, type(value))
+                        raise ValidationError(status_code.common.invalid_input, False)
+
+            # All datetime objects must be actual Python datetime objects
+            for attr in update.datetime_attrs:
+                value = data.get(attr, update._no_such_value)
+                if value is not update._no_such_value:
+                    if not isinstance(value, datetime):
+                        logger.warn('Expected for `%s` to be a datetime instead of `%r` (%s)', attr, value, type(value))
+                        raise ValidationError(status_code.common.invalid_input, False)
+
+            # Only certain attributes may be set to None / NULL
+            for key, value in data.items():
+                if value is None:
+                    if key not in update.none_allowed:
+                        logger.warn('Key `%s` must not be None', key)
+                        raise ValidationError(status_code.common.invalid_input, False)
+
+            # Everything is validated - we can save the data now
+            with closing(self.odb_session_func()) as session:
+                session.execute(
+                    sql_update(UserModelTable).\
+                    values(data).\
+                    where(UserModelTable.c.user_id==_user_id)
+                )
+                session.commit()
+
+# ################################################################################################################################
+
+    def update_current_user(self, data, current_ust, current_app, remote_addr):
+        """ Updates current user as identified by current_ust.
+        """
+        return self._update_user(data, current_ust, current_app, remote_addr, update_self=True)
+
+# ################################################################################################################################
+
+    def update_user_by_id(self, user_id, data, current_ust, current_app, remote_addr):
+        """ Updates current user as identified by ID.
+        """
+        return self._update_user(data, current_ust, current_app, remote_addr, user_id=user_id)
 
 # ################################################################################################################################
