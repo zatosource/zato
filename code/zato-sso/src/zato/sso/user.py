@@ -620,12 +620,11 @@ class UserAPI(object):
             # Super-users may update the whole set of attributes in existence.
             if current_session.is_super_user:
                 attrs_allowed = update.all_update_attrs
-
             else:
 
                 # If current session belongs to a regular user yet a user_id was given on input,
                 # we may not continue because only super-users may update other users.
-                if user_id:
+                if user_id and user_id != current_session.user_id:
                     logger.warn('Current user `%s` is not a super-user, cannot update user `%s`',
                         current_session.user_id, user_id)
                     raise ValidationError(status_code.common.invalid_input, False)
