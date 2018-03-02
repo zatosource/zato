@@ -10,17 +10,24 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from traceback import format_exc
+from uuid import uuid4
 
 # Zato
 from zato.server.service import AsIs, Bool
 from zato.server.service.internal.sso import BaseService, BaseSIO
 from zato.sso import status_code
+from zato.sso.user import update
 
 # ################################################################################################################################
 
 _create_user_attrs = ('username', 'password', 'password_must_change', 'display_name', 'first_name', 'middle_name', 'last_name', \
     'email', 'is_locked', 'sign_up_status')
 _date_time_attrs = ('approv_rej_time', 'locked_time', 'password_expiry', 'password_last_set', 'sign_up_time')
+
+# ################################################################################################################################
+
+# A marker that indicates a value that will never exist
+_invalid = '_invalid.{}'.format(uuid4().hex)
 
 # ################################################################################################################################
 
@@ -86,6 +93,8 @@ class User(BaseService):
             'creation_ctx', 'locked_by', 'approv_rej_time', 'approv_rej_by', 'password_expiry', 'password_is_set',
             'password_must_change', 'password_last_set', 'sign_up_status','sign_up_time')
 
+        default_value = _invalid
+
 # ################################################################################################################################
 
     def _handle_sso_GET(self, ctx):
@@ -115,7 +124,9 @@ class User(BaseService):
         # to create a new user.
         data = {}
         for name in _create_user_attrs:
-            data[name] = ctx.input.get(name)
+            value = ctx.input.get(name)
+            if value != _invalid:
+                data[name] = value
 
         # This will update 'data' in place ..
         self.sso.user.create_user(data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
@@ -142,6 +153,40 @@ class User(BaseService):
         # Will take care of permissions / access rights and if everything is successful,
         # the user pointed to by user_id will be deleted.
         self.sso.user.delete_user_by_id(ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+
+# ################################################################################################################################
+
+    def _handle_sso_PATCH(self, ctx):
+        """ Updates an existing user.
+        """
+        current_ust = ctx.input.pop('ust')
+        current_app = ctx.input.pop('current_app')
+        remote_addr = ctx.input.pop('remote_addr')
+
+        # Explicitly provide only what we know is allowed
+        data = {}
+        for name in update.all_attrs:
+            value = ctx.input.get(name)
+            if value != _invalid:
+
+                if value is None:
+
+                    # Boolean values will never be None ..
+                    if name in update.boolean_attrs:
+                        continue
+
+                    # .. same goes for datetime ones.
+                    elif name in update.datetime_attrs:
+                        continue
+
+                data[name] = value
+
+        user_id = data.pop('user_id', None)
+
+        if user_id:
+            self.sso.user.update_user_by_id(user_id, data, current_ust, current_app, remote_addr)
+        else:
+            self.sso.user.update_current_user(data, current_ust, current_app, remote_addr)
 
 # ################################################################################################################################
 
