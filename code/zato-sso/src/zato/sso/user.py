@@ -95,6 +95,9 @@ class update:
     # All updateable attributes
     all_update_attrs = regular_update_attrs.union(super_user_update_attrs)
 
+    # All updateable attributes + user_id
+    all_attrs = all_update_attrs.union(set(['user_id']))
+
     # There cannot be more than this many attributes on input
     max_len_attrs = len(all_update_attrs)
 
