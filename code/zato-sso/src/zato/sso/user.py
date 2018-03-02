@@ -431,7 +431,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def get_user_by_ust(self, current_ust, current_app, remote_addr):
+    def get_current_user(self, current_ust, current_app, remote_addr):
         """ Returns a user object by that person's current UST.
         """
         return self._get_user_by_attr(
