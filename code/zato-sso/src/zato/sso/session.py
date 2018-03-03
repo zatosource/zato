@@ -20,7 +20,7 @@ from ipaddress import ip_address
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.sso.api import const, status_code, ValidationError
 from zato.sso.odb.query import get_session_by_ust, get_user_by_username
-from zato.sso.util import set_password, validate_password, new_user_session_token
+from zato.sso.util import check_credentials, new_user_session_token, set_password, validate_password
 
 # ################################################################################################################################
 
@@ -108,8 +108,7 @@ class SessionAPI(object):
 # ################################################################################################################################
 
     def _check_credentials(self, ctx, user):
-        password_decrypted = self.decrypt_func(user.password) # It is decrypted but still hashed
-        return self.verify_hash_func(ctx.input['password'], password_decrypted)
+        return check_credentials(self.decrypt_func, self.verify_hash_func, user.password, ctx.input['password'])
 
 # ################################################################################################################################
 

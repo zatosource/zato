@@ -144,6 +144,14 @@ def set_password(odb_session_func, encrypt_func, hash_func, sso_conf, user_id, p
 
 # ################################################################################################################################
 
+def check_credentials(decrypt_func, verify_hash_func, stored_password, input_password):
+    """ Checks that an incoming password is equal to the one that is stored in the database.
+    """
+    password_decrypted = decrypt_func(stored_password) # At this point it is decrypted but still hashed
+    return verify_hash_func(input_password, password_decrypted)
+
+# ################################################################################################################################
+
 def normalize_sso_config(sso_conf):
 
     # Lower-case elements that must not be substrings in usernames ..
