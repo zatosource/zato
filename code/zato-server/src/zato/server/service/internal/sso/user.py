@@ -12,7 +12,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from traceback import format_exc
 from uuid import uuid4
 
+# dateutil
+from dateutil.parser import parser as DateTimeParser
+
 # Zato
+from zato.common.util import asbool
 from zato.server.service import AsIs, Bool
 from zato.server.service.internal.sso import BaseService, BaseSIO
 from zato.sso import status_code
@@ -28,6 +32,10 @@ _date_time_attrs = ('approv_rej_time', 'locked_time', 'password_expiry', 'passwo
 
 # A marker that indicates a value that will never exist
 _invalid = '_invalid.{}'.format(uuid4().hex)
+
+# ################################################################################################################################
+
+dt_parser = DateTimeParser()
 
 # ################################################################################################################################
 
@@ -85,8 +93,8 @@ class User(BaseService):
     """
     class SimpleIO(BaseSIO):
         input_required = ('ust', 'current_app')
-        input_optional = (AsIs('user_id'), 'remote_addr', 'username', 'password', Bool('password_must_change'), 'display_name',
-            'first_name', 'middle_name', 'last_name', 'email', 'is_locked', 'sign_up_status')
+        input_optional = (AsIs('user_id'), 'remote_addr', 'username', 'password', Bool('password_must_change'), 'password_expiry',
+            'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'is_locked', 'sign_up_status')
 
         output_optional = BaseSIO.output_optional + (AsIs('user_id'), 'username', 'email', 'display_name', 'first_name',
             'middle_name', 'last_name', 'is_active', 'is_internal', 'is_super_user', 'is_approved', 'is_locked', 'locked_time',
@@ -169,15 +177,18 @@ class User(BaseService):
             value = ctx.input.get(name)
             if value != _invalid:
 
-                if value is None:
-
-                    # Boolean values will never be None ..
-                    if name in update.boolean_attrs:
+                # Boolean values will never be None on input (SIO will convert them to a default value of an empty string)..
+                if name in update.boolean_attrs:
+                    if value is None:
                         continue
+                    else:
+                        value = asbool(value)
 
-                    # .. same goes for datetime ones.
-                    elif name in update.datetime_attrs:
+                # .. same goes for datetime ones.
+                elif name in update.datetime_attrs:
+                    if value is None:
                         continue
+                    value = dt_parser.parse(value)
 
                 data[name] = value
 
