@@ -250,7 +250,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def _run_user_checks(self, ctx, user):
+    def _run_user_checks(self, ctx, user, check_if_password_expired=True):
         """ Runs a series of checks for incoming request and user.
         """
         # Input application must have been previously defined
@@ -273,9 +273,14 @@ class SessionAPI(object):
         if not self._check_is_approved(user):
             raise ValidationError(status_code.auth.not_allowed, True)
 
-        # Password must not have expired
-        if not self._check_password_expired(user):
-            raise ValidationError(status_code.auth.not_allowed, True)
+        # Password must not have expired, but only if input flag tells us to,
+        # it may be possible that a user's password has already expired
+        # and that person wants to change it in this very call, in which case
+        # we cannot reject it on the basis that it is expired - no one would be able
+        # to change expired passwords then.
+        if check_if_password_expired:
+            if not self._check_password_expired(user):
+                raise ValidationError(status_code.auth.not_allowed, True)
 
         # Current application must be allowed to send login metadata
         if not self._check_login_metadata_allowed(ctx):
@@ -376,7 +381,7 @@ class SessionAPI(object):
 # ################################################################################################################################
 
     def _get(self, session, ust, current_app, remote_addr, needs_decrypt=True, renew=False, needs_attrs=False,
-        _now=datetime.utcnow):
+        check_if_password_expired=True, _now=datetime.utcnow):
         """ Verifies if input user session token is valid and if the user is allowed to access current_app.
         On success, if renew is True, renews the session. Returns all session attributes or True,
         depending on needs_attrs's value.
@@ -393,7 +398,7 @@ class SessionAPI(object):
             raise ValidationError(status_code.session.no_such_session, False)
 
         # Common auth checks
-        self._run_user_checks(ctx, sso_info)
+        self._run_user_checks(ctx, sso_info, check_if_password_expired)
 
         # Everything is validated, we can renew the session, if told to.
         if renew:
@@ -408,30 +413,31 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def verify(self, *args):
+    def verify(self, ust, current_app, remote_addr):
         """ Verifies a user session.
         """
         with closing(self.odb_session_func()) as session:
-            out = self._get(session, *args, renew=False)
+            out = self._get(session, ust, current_app, remote_addr, renew=False)
             return out
 
 # ################################################################################################################################
 
-    def renew(self, *args):
+    def renew(self, ust, current_app, remote_addr):
         """ Renew timelife of a user session, if it is valid.
         """
         with closing(self.odb_session_func()) as session:
-            out = self._get(session, *args, renew=True)
+            out = self._get(session, ust, current_app, remote_addr, renew=True)
             session.commit()
             return out
 
 # ################################################################################################################################
 
-    def get(self, *args):
+    def get(self, ust, current_app, remote_addr, check_if_password_expired=True):
         """ Gets details of a session given by its UST on input.
         """
         with closing(self.odb_session_func()) as session:
-            out = self._get(session, *args, renew=False, needs_attrs=True)
+            out = self._get(session, ust, current_app, remote_addr, renew=False, needs_attrs=True,
+                check_if_password_expired=check_if_password_expired)
             return out
 
 # ################################################################################################################################
