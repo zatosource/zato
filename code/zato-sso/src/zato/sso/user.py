@@ -25,7 +25,7 @@ from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const, status_code, ValidationError
 from zato.sso.odb.query import get_user_by_id, get_user_by_username, get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
-from zato.sso.util import make_data_secret, make_password_secret, set_password, validate_password
+from zato.sso.util import check_credentials, make_data_secret, make_password_secret, set_password, validate_password
 
 # ################################################################################################################################
 
@@ -84,16 +84,20 @@ _all_attrs.update(_write_only)
 
 # ################################################################################################################################
 
+_no_such_value = object()
+
+# ################################################################################################################################
+
 class update:
 
     # Accessible to regular users only
-    regular_update_attrs = set(('email', 'display_name', 'first_name', 'middle_name', 'last_name'))
+    regular_attrs = set(('email', 'display_name', 'first_name', 'middle_name', 'last_name'))
 
     # Accessible to super-users only
-    super_user_update_attrs = set(('is_approved', 'is_locked', 'password_expiry', 'password_must_change', 'sign_up_status'))
+    super_user_attrs = set(('is_approved', 'is_locked', 'password_expiry', 'password_must_change', 'sign_up_status'))
 
     # All updateable attributes
-    all_update_attrs = regular_update_attrs.union(super_user_update_attrs)
+    all_update_attrs = regular_attrs.union(super_user_attrs)
 
     # All updateable attributes + user_id
     all_attrs = all_update_attrs.union(set(['user_id']))
@@ -108,10 +112,23 @@ class update:
     datetime_attrs = ('password_expiry',)
 
     # All attributes that may be set to None / NULL
-    none_allowed = set(regular_update_attrs)
+    none_allowed = set(regular_attrs)
 
-    # A singleton to indicate that value for a given key was not given on input
-    _no_such_value = object()
+# ################################################################################################################################
+
+class change_password:
+
+    # Accessible to regular users only
+    regular_attrs = set(('old_password', 'new_password'))
+
+    # Accessible to super-users only
+    super_user_attrs = set(('new_password', 'password_expiry', 'password_must_change'))
+
+    # This is used only for input validation which is why it is not called 'all_update_attrs'
+    all_attrs = regular_attrs.union(super_user_attrs)
+
+    # There cannot be more than this many attributes on input
+    max_len_attrs = len(all_attrs)
 
 # ################################################################################################################################
 
@@ -351,14 +368,6 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def set_password(self, user_id, password, must_change, password_expiry, _utcnow=_utcnow):
-        """ Sets a new password for user.
-        """
-        set_password(self.odb_session_func, self.encrypt_func, self.hash_func, self.sso_conf, user_id, password,
-            must_change, password_expiry)
-
-# ################################################################################################################################
-
     def get_user_by_username(self, username):
         """ Returns a user object by username or None, if there is no such username.
         """
@@ -584,23 +593,23 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _check_basic_update_attrs(self, data):
-        """ Checks basic validity of update attributes.
+    def _check_basic_update_attrs(self, data, max_len_attrs, all_update_attrs):
+        """ Checks basic validity of user attributes that are about to be changed.
         """
         # Double-check we have data to update a user with ..
         if not data:
             raise ValidationError(status_code.common.missing_input, False)
         else:
             # .. and that no one attempts to overload us with it ..
-            if len(data) > update.max_len_attrs:
-                logger.warn('Too many data arguments %d > %d', len(data), update.max_len_attrs)
+            if len(data) > max_len_attrs:
+                logger.warn('Too many data arguments %d > %d', len(data), max_len_attrs)
                 raise ValidationError(status_code.common.invalid_input, False)
 
             # .. also, make sure that, no matter what kind of user this is, only supported arguments are given on input.
             # Later on we will fine-check it again to take the user's role into account, but we want to want to check it here
             # first on a rough level so as to avoid an SQL query in case of an error at this early stage.
             else:
-                self._ensure_no_unknown_update_attrs(update.all_update_attrs, data)
+                self._ensure_no_unknown_update_attrs(all_update_attrs, data)
 
 # ################################################################################################################################
 
@@ -612,7 +621,7 @@ class UserAPI(object):
             raise ValidationError(status_code.common.invalid_input, False)
 
         # Basic checks first
-        self._check_basic_update_attrs(data)
+        self._check_basic_update_attrs(data, update.max_len_attrs, update.all_update_attrs)
 
         with closing(self.odb_session_func()) as session:
             current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=False)
@@ -633,7 +642,7 @@ class UserAPI(object):
                     raise ValidationError(status_code.common.invalid_input, False)
 
                 # whereas regular users may change only basic attributes.
-                attrs_allowed = update.regular_update_attrs
+                attrs_allowed = update.regular_attrs
 
             # Make sure current user provided only these attributes that have been explicitly allowed
             self._ensure_no_unknown_update_attrs(attrs_allowed, data)
@@ -646,16 +655,16 @@ class UserAPI(object):
 
             # All booleans must be actually booleans
             for attr in update.boolean_attrs:
-                value = data.get(attr, update._no_such_value)
-                if value is not update._no_such_value:
+                value = data.get(attr, _no_such_value)
+                if value is not _no_such_value:
                     if not isinstance(value, bool):
                         logger.warn('Expected for `%s` to be a boolean instead of `%r` (%s)', attr, value, type(value))
                         raise ValidationError(status_code.common.invalid_input, False)
 
             # All datetime objects must be actual Python datetime objects
             for attr in update.datetime_attrs:
-                value = data.get(attr, update._no_such_value)
-                if value is not update._no_such_value:
+                value = data.get(attr, _no_such_value)
+                if value is not _no_such_value:
                     if not isinstance(value, datetime):
                         logger.warn('Expected for `%s` to be a datetime instead of `%r` (%s)', attr, value, type(value))
                         raise ValidationError(status_code.common.invalid_input, False)
@@ -689,5 +698,84 @@ class UserAPI(object):
         """ Updates current user as identified by ID.
         """
         return self._update_user(data, current_ust, current_app, remote_addr, user_id=user_id)
+
+# ################################################################################################################################
+
+    def set_password(self, user_id, password, must_change, password_expiry, _utcnow=_utcnow):
+        """ Sets a new password for user.
+        """
+        set_password(self.odb_session_func, self.encrypt_func, self.hash_func, self.sso_conf, user_id, password,
+            must_change, password_expiry)
+
+# ################################################################################################################################
+
+    def change_password(self, data, current_ust, current_app, remote_addr):
+        """ Changes a user's password. Super-admins may also set its expiration
+        and whether the user must set it to a new one on next login.
+        """
+        # Basic checks first
+        self._check_basic_update_attrs(data, change_password.max_len_attrs, change_password.all_attrs)
+
+        with closing(self.odb_session_func()) as session:
+
+            # Get current user's session ..
+            current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=False)
+
+            # . only super-users may send user_id on input ..
+            user_id = data.get('user_id', _no_such_value)
+
+            # .. so if it is sent ..
+            if user_id != _no_such_value:
+
+                # .. we must confirm we have a super-user's session.
+                if not current_session.is_super_user:
+                    logger.warn('Current user `%s` is not a super-user, cannot change password for user `%s`',
+                        current_session.user_id, user_id)
+                    raise ValidationError(status_code.common.invalid_input, False)
+
+            # .. if ID is not given on input, we change current user's password.
+            else:
+                user_id = current_session.user_id
+
+            # If current user is a super-user we can just set the new password immediately ..
+            if current_session.is_super_user:
+
+                # .. but only if the user changes another user's password ..
+                if current_session.user_id != user_id:
+                    self.set_password(user_id, data['new_password'], data.get('must_change'), data.get('password_expiry'))
+
+                    # All done, another user's password has been changed
+                    return
+
+            # .. otherwise, if we are a regular user or a super-user changing his or her own password,
+            # we must check if the old password is correct.
+            try:
+                check_credentials(self.decrypt_func, self.verify_hash_func, current_session.password, data['new_password'])
+            except Exception:
+                logger.warn('Could not verify existing password for user_id:`%s`, e:`%s`', current_session.user_id, format_exc())
+                raise ValidationError(status_code.auth.not_allowed, True)
+            else:
+
+                # At this point we know that the user provided a correct old password so we are free to set the new one ..
+
+                # .. but we still need to consider regular vs. super-users and make sure that the former does not
+                # provide attributes that only the latter may use.
+
+                # Super-users may provide these optionally ..
+                if current_session.is_super_user:
+                    must_change = data.get('must_change')
+                    password_expiry = data.get('password_expiry')
+
+                # .. but regular ones never.
+                else:
+                    must_change = None
+                    password_expiry = None
+
+                # All done, we can set the new password now.
+                try:
+                    self.set_password(user_id, data['new_password'], must_change, password_expiry)
+                except Exception:
+                    logger.warn('Could not set a new password for user_id:`%s`, e:`%s`', current_session.user_id, format_exc())
+                    raise ValidationError(status_code.auth.not_allowed, True)
 
 # ################################################################################################################################
