@@ -190,13 +190,13 @@ def normalize_sso_config(sso_conf):
     # Convert all white/black-listed IP addresses to sets of network objects
     # which will let serviced in run-time efficiently check for membership of an address in that network.
 
-    login_list = sso_conf.login_list
-    for username, ip_allowed in login_list.iteritems():
+    user_address_list = sso_conf.user_address_list
+    for username, ip_allowed in user_address_list.iteritems():
         if ip_allowed:
-            ip_allowed = login_list if isinstance(ip_allowed, list) else [ip_allowed]
+            ip_allowed = user_address_list if isinstance(ip_allowed, list) else [ip_allowed]
             ip_allowed = [ip_network(elem.decode('utf8')) for elem in ip_allowed if elem != '*']
         else:
             ip_allowed = []
-        login_list[username] = ip_allowed
+        user_address_list[username] = ip_allowed
 
 # ################################################################################################################################

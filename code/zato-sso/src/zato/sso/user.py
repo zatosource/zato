@@ -125,7 +125,7 @@ class change_password:
     super_user_attrs = set(('new_password', 'password_expiry', 'password_must_change'))
 
     # This is used only for input validation which is why it is not called 'all_update_attrs'
-    all_attrs = regular_attrs.union(super_user_attrs)
+    all_attrs = regular_attrs.union(super_user_attrs).union(set(['user_id']))
 
     # There cannot be more than this many attributes on input
     max_len_attrs = len(all_attrs)
@@ -748,11 +748,9 @@ class UserAPI(object):
                     return
 
             # .. otherwise, if we are a regular user or a super-user changing his or her own password,
-            # we must check if the old password is correct.
-            try:
-                check_credentials(self.decrypt_func, self.verify_hash_func, current_session.password, data['new_password'])
-            except Exception:
-                logger.warn('Could not verify existing password for user_id:`%s`, e:`%s`', current_session.user_id, format_exc())
+            # so we must check first if the old password is correct.
+            if not check_credentials(self.decrypt_func, self.verify_hash_func, current_session.password, data['old_password']):
+                logger.warn('Password verification failed, user_id:`%s`', current_session.user_id)
                 raise ValidationError(status_code.auth.not_allowed, True)
             else:
 

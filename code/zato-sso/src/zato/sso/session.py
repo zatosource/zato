@@ -133,7 +133,7 @@ class SessionAPI(object):
 
     def _check_remote_ip_allowed(self, ctx, user, _invalid=object()):
 
-        ip_allowed = self.sso_conf.login_list.get(user.username, _invalid)
+        ip_allowed = self.sso_conf.user_address_list.get(user.username, _invalid)
 
         # Shortcut in the simplest case
         if ip_allowed == '*':
