@@ -23,6 +23,7 @@ class _SSOUser:
         UniqueConstraint('username', name='zato_u_usrn_uq'),
         UniqueConstraint('user_id', name='zato_user_id_uq'),
         Index('zato_u_email_idx', 'email', unique=False, mysql_length={'email':767}),
+        Index('zato_u_appr_stat_idx', 'approval_status', unique=False, mysql_length={'email':767}),
         Index('zato_u_dspn_idx', 'display_name_upper', unique=False),
         Index('zato_u_alln_idx', 'first_name_upper', 'middle_name_upper', 'last_name_upper', unique=False),
         Index('zato_u_lastn_idx', 'last_name_upper', unique=False),
@@ -39,7 +40,6 @@ class _SSOUser:
     is_active = Column(Boolean(), nullable=False) # Currently unused and always set to True
     is_internal = Column(Boolean(), nullable=False, default=False)
     is_super_user = Column(Boolean(), nullable=False, default=False)
-    is_approved = Column(Boolean(), nullable=False, default=False)
     is_locked = Column(Boolean(), nullable=False, default=False)
     locked_time = Column(DateTime(), nullable=True)
 
@@ -50,8 +50,9 @@ class _SSOUser:
     # even if parent row is deleted.
     locked_by = Column(String(191), nullable=True)
 
-    approv_rej_time = Column(DateTime(), nullable=True) # When user was approved or rejected
-    approv_rej_by = Column(String(191), nullable=True) # Same comment as in locked_by
+    approval_status = Column(String(191), nullable=False)
+    approval_status_mod_time = Column(String(191), nullable=True) # When user was approved or rejected
+    approval_status_mod_by = Column(String(191), nullable=True) # Same comment as in locked_by
 
     # Basic information, always required
     username = Column(String(191), nullable=False)
