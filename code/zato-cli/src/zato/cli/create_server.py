@@ -334,7 +334,7 @@ inform_if_locked=True
 inform_if_not_confirmed=True
 inform_if_not_approved=True
 
-[login_list]
+[user_address_list]
 
 [session]
 expiry=60 # In minutes

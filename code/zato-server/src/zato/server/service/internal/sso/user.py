@@ -17,7 +17,7 @@ from dateutil.parser import parser as DateTimeParser
 
 # Zato
 from zato.common.util import asbool
-from zato.server.service import AsIs, Bool
+from zato.server.service import AsIs, Bool, Int
 from zato.server.service.internal.sso import BaseService, BaseSIO
 from zato.sso import status_code
 from zato.sso.user import update
@@ -36,6 +36,25 @@ _invalid = '_invalid.{}'.format(uuid4().hex)
 # ################################################################################################################################
 
 dt_parser = DateTimeParser()
+
+# ################################################################################################################################
+
+class _BaseRESTService(BaseService):
+    """ Base class for services reacting to specific HTTP verbs.
+    """
+    def _handle_sso(self, ctx):
+        http_verb = self.wsgi_environ['REQUEST_METHOD']
+
+        try:
+            getattr(self, '_handle_sso_{}'.format(http_verb))(ctx)
+        except Exception:
+            self.logger.info('CID: `%s`, e:`%s`', self.cid, format_exc())
+            self.response.payload.status = status_code.error
+            self.response.payload.sub_status = [status_code.auth.not_allowed]
+        else:
+            self.response.payload.status = status_code.ok
+        finally:
+            self.response.payload.cid = self.cid
 
 # ################################################################################################################################
 
@@ -80,7 +99,7 @@ class Logout(BaseService):
         # Note that "ok" is always returned no matter the outcome - this is to thwart any attempts
         # to learn which USTs are/were valid or not.
         try:
-            self.sso.user.logout(ctx.input.ust, ctx.input.current_app, ctx.input.remote_addr)
+            self.sso.user.logout(ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
         except Exception:
             self.logger.warn('CID: `%s`, e:`%s`', self.cid, format_exc())
         finally:
@@ -88,12 +107,12 @@ class Logout(BaseService):
 
 # ################################################################################################################################
 
-class User(BaseService):
+class User(_BaseRESTService):
     """ User manipulation through REST.
     """
     class SimpleIO(BaseSIO):
         input_required = ('ust', 'current_app')
-        input_optional = (AsIs('user_id'), 'remote_addr', 'username', 'password', Bool('password_must_change'), 'password_expiry',
+        input_optional = (AsIs('user_id'), 'username', 'password', Bool('password_must_change'), 'password_expiry',
             'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'is_locked', 'sign_up_status')
 
         output_optional = BaseSIO.output_optional + (AsIs('user_id'), 'username', 'email', 'display_name', 'first_name',
@@ -169,7 +188,6 @@ class User(BaseService):
         """
         current_ust = ctx.input.pop('ust')
         current_app = ctx.input.pop('current_app')
-        remote_addr = ctx.input.pop('remote_addr')
 
         # Explicitly provide only what we know is allowed
         data = {}
@@ -195,24 +213,51 @@ class User(BaseService):
         user_id = data.pop('user_id', None)
 
         if user_id:
-            self.sso.user.update_user_by_id(user_id, data, current_ust, current_app, remote_addr)
+            self.sso.user.update_user_by_id(user_id, data, current_ust, current_app, ctx.remote_addr)
         else:
-            self.sso.user.update_current_user(data, current_ust, current_app, remote_addr)
+            self.sso.user.update_current_user(data, current_ust, current_app, ctx.remote_addr)
 
 # ################################################################################################################################
 
-    def _handle_sso(self, ctx):
-        http_verb = self.wsgi_environ['REQUEST_METHOD']
+class Password(_BaseRESTService):
+    """ User password management.
+    """
+    class SimpleIO(BaseSIO):
+        input_required = ('ust', 'current_app', 'new_password')
+        input_optional = (AsIs('user_id'), 'old_password', Int('password_expiry'), Bool('must_change'))
 
-        try:
-            getattr(self, '_handle_sso_{}'.format(http_verb))(ctx)
-        except Exception:
-            self.logger.info('CID: `%s`, e:`%s`', self.cid, format_exc())
-            self.response.payload.status = status_code.error
-            self.response.payload.sub_status = [status_code.auth.not_allowed]
-        else:
-            self.response.payload.status = status_code.ok
-        finally:
-            self.response.payload.cid = self.cid
+# ################################################################################################################################
+
+    def _log_invalid_password_expiry(self, value):
+        self.logger.warn('CID: `%s`, invalid password_expiry `%r`, forcing default of `%s`',
+            self.cid, value, self.sso.password.expiry)
+
+# ################################################################################################################################
+
+    def _handle_sso_PATCH(self, ctx):
+        """ Changes a user's password.
+        """
+        data = {
+            'old_password': ctx.input.get('old_password') or uuid4().hex, # So it will never match anything
+            'new_password': ctx.input['new_password'],
+        }
+
+        user_id = ctx.input.get('user_id')
+        if user_id:
+            data['user_id'] = user_id
+
+        password_expiry = ctx.input.get('password_expiry')
+        if password_expiry != '':
+            if password_expiry < 0:
+                self._log_invalid_password_expiry(password_expiry)
+                password_expiry = self.sso.password.expiry
+            data['password_expiry'] = password_expiry
+
+        must_change = ctx.input.get('must_change')
+        if must_change != '':
+            must_change = asbool(must_change)
+            data['must_change'] = must_change
+
+        self.sso.user.change_password(data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
