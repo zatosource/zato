@@ -192,7 +192,7 @@ class SessionAPI(object):
 # ################################################################################################################################
 
     def _check_is_approved(self, user):
-        if not user.is_approved:
+        if not user.approval_status == const.approval_status.approved:
             if self.sso_conf.login.inform_if_not_approved:
                 raise ValidationError(status_code.auth.invalid_signup_status, True)
         else:

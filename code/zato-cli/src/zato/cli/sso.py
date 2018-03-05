@@ -119,7 +119,7 @@ class _CreateUser(SSOCommand):
         data.password = args.password
 
         func = getattr(user_api, self.create_func)
-        func(User(**data), skip_sec=True)
+        func(data, skip_sec=True)
 
         self.logger.info('Created %s `%s`', self.user_type, data.username)
 
