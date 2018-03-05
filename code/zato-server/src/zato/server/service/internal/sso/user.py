@@ -26,7 +26,8 @@ from zato.sso.user import update
 
 _create_user_attrs = ('username', 'password', 'password_must_change', 'display_name', 'first_name', 'middle_name', 'last_name', \
     'email', 'is_locked', 'sign_up_status')
-_date_time_attrs = ('approv_rej_time', 'locked_time', 'password_expiry', 'password_last_set', 'sign_up_time')
+_date_time_attrs = ('approv_rej_time', 'locked_time', 'password_expiry', 'password_last_set', 'sign_up_time',
+    'approval_status_mod_time')
 
 # ################################################################################################################################
 

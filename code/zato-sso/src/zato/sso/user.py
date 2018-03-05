@@ -55,13 +55,13 @@ super_user_attrs = {
     'is_active': False,
     'is_internal': False,
     'is_super_user': False,
-    'is_approved': False,
     'is_locked': True,
     'locked_time': None,
     'creation_ctx': '',
     'locked_by': None,
-    'approv_rej_time': None,
-    'approv_rej_by': None,
+    'approval_status': None,
+    'approval_status_mod_by': None,
+    'approval_status_mod_time': None,
     'password_expiry': 0,
     'password_is_set': False,
     'password_must_change': True,
@@ -156,16 +156,13 @@ class User(object):
 class CreateUserCtx(object):
     """ A business object to carry user creation configuration around.
     """
-    __slots__ = ('data', 'is_active', 'is_internal', 'is_approval_needed', 'is_approved', 'is_super_user', 'password_expiry',
-        'encrypt_password', 'encrypt_email', 'encrypt_func', 'hash_func', 'new_user_id_func', 'confirm_token',
-        'sign_up_status')
+    __slots__ = ('data', 'is_active', 'is_internal', 'is_super_user', 'password_expiry', 'encrypt_password', 'encrypt_email',
+        'encrypt_func', 'hash_func', 'new_user_id_func', 'confirm_token', 'sign_up_status')
 
     def __init__(self, data=None):
         self.data = data
         self.is_active = None
         self.is_internal = None
-        self.is_approval_needed = None
-        self.is_approved = None
         self.is_super_user = None
         self.password_expiry = None
         self.encrypt_password = None
@@ -442,8 +439,15 @@ class UserAPI(object):
             else:
 
                 # .. but they into account if current user is a super-user or a regular one.
-                out = {}
-                attrs = _all_super_user_attrs if current_session.is_super_user else regular_attrs
+                if current_session.is_super_user:
+                    attrs = _all_super_user_attrs
+                    out = {
+                        'is_approval_needed': self.sso_conf.signup.is_approval_needed
+                    }
+                else:
+                    attrs = regular_attrs
+                    out = {}
+
 
                 for key in attrs:
                     value = getattr(info, key)
