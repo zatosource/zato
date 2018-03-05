@@ -94,7 +94,8 @@ class update:
     regular_attrs = set(('email', 'display_name', 'first_name', 'middle_name', 'last_name'))
 
     # Accessible to super-users only
-    super_user_attrs = set(('is_approved', 'is_locked', 'password_expiry', 'password_must_change', 'sign_up_status'))
+    super_user_attrs = set(('is_approved', 'is_locked', 'password_expiry', 'password_must_change', 'sign_up_status',
+        'approval_status'))
 
     # All updateable attributes
     all_update_attrs = regular_attrs.union(super_user_attrs)
@@ -699,6 +700,17 @@ class UserAPI(object):
                         logger.warn('Key `%s` must not be None', key)
                         raise ValidationError(status_code.common.invalid_input, False)
 
+            # If approval_status is on input, it must be of correct value
+            # and if it is, its related attributes need to bet set along with it.
+            if 'approval_status' in data:
+                value = data['approval_status']
+                if value not in const.approval_status():
+                    logger.warn('Invalid approval_status `%s`', value)
+                    raise ValidationError(status_code.common.invalid_input, False)
+                else:
+                    data['approval_status_mod_by'] = current_session.user_id
+                    data['approval_status_mod_time'] = _utcnow()
+
             # Everything is validated - we can save the data now
             with closing(self.odb_session_func()) as session:
                 session.execute(
@@ -796,5 +808,26 @@ class UserAPI(object):
             except Exception:
                 logger.warn('Could not set a new password for user_id:`%s`, e:`%s`', current_session.user_id, format_exc())
                 raise ValidationError(status_code.auth.not_allowed, True)
+
+# ################################################################################################################################
+
+    def _change_approval_status(self, user_id, new_value, current_ust, current_app, remote_addr):
+        """ Changes a given user's approval_status to 'value'.
+        """
+        return self._update_user({'approval_status': new_value}, current_ust, current_app, remote_addr, user_id=user_id)
+
+# ################################################################################################################################
+
+    def approve_user(self, user_id, current_ust, current_app, remote_addr):
+        """ Changes a user's approval_status to 'approved'. Must be called with a UST pointing to a super-user.
+        """
+        return self._change_approval_status(user_id, const.approval_status.approved, current_ust, current_app, remote_addr)
+
+# ################################################################################################################################
+
+    def reject_user(self, user_id, current_ust, current_app, remote_addr):
+        """ Changes a user's approval_status to 'approved'. Must be called with a UST pointing to a super-user.
+        """
+        return self._change_approval_status(user_id, const.approval_status.rejected, current_ust, current_app, remote_addr)
 
 # ################################################################################################################################

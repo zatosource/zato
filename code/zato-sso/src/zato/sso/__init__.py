@@ -92,7 +92,7 @@ class const:
         before_decision = 'before_decision'
 
         def __iter__(self):
-            return iter([self.before_confirmation, self.to_approve, self.final])
+            return iter([self.approved, self.rejected, self.before_decision])
 
 # ################################################################################################################################
 
