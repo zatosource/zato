@@ -61,10 +61,14 @@ def get_user_by_id(session, user_id, *ignored_args):
 
 # ################################################################################################################################
 
-def get_user_by_username(session, username):
-    return _get_user(session, _user_basic_columns).\
-        filter(SSOUser.username==username).\
-        first()
+def get_user_by_username(session, username, needs_approved=True, _approved=_approved):
+    q = _get_user(session, _user_basic_columns).\
+        filter(SSOUser.username==username)
+
+    if needs_approved:
+        q = q.filter(SSOUser.approval_status==_approved)
+
+    return q.first()
 
 # ################################################################################################################################
 
