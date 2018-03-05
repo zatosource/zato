@@ -238,7 +238,6 @@ class UserAPI(object):
         user_model.user_id = ctx.data.get('user_id') or self.new_user_id_func()
         user_model.is_active = ctx.is_active
         user_model.is_internal = ctx.is_internal
-        user_model.is_approved = False if ctx.is_approval_needed else True
         user_model.is_locked = ctx.data.get('is_locked') or False
         user_model.is_super_user = ctx.is_super_user
         user_model.creation_ctx = dumps(ctx.data.get('creation_ctx'))
@@ -272,6 +271,14 @@ class UserAPI(object):
         user_model.sign_up_time = now
         user_model.sign_up_confirm_token = _gen_secret(192)
 
+        user_model.sign_up_status = ctx.data.get('sign_up_status')
+        user_model.sign_up_time = now
+        user_model.sign_up_confirm_token = _gen_secret(192)
+
+        user_model.approval_status = ctx.data['approval_status']
+        user_model.approval_status_mod_time = now
+        user_model.approval_status_mod_by = ctx.data['approval_status_mod_by']
+
         user_model.display_name = display_name
         user_model.first_name = ctx.data['first_name']
         user_model.middle_name = ctx.data['middle_name']
@@ -290,7 +297,7 @@ class UserAPI(object):
     def _require_super_user(self, ust, current_app, remote_addr):
         """ Raises an exception if either current user session token does not belong to a super user.
         """
-        self._get_current_session(ust, current_app, remote_addr, needs_super_user=True)
+        return self._get_current_session(ust, current_app, remote_addr, needs_super_user=True)
 
 # ################################################################################################################################
 
@@ -300,7 +307,18 @@ class UserAPI(object):
         with closing(self.odb_session_func()) as session:
 
             if not skip_sec:
-                self._require_super_user(ust, current_app, remote_addr)
+                current_session = self._require_super_user(ust, current_app, remote_addr)
+                ctx.data['approval_status_mod_by'] = current_session.user_id
+                if self.sso_conf.signup.is_approval_needed:
+                    approval_status = const.approval_status.before_decision
+                else:
+                    approval_status = const.approval_status.approved
+
+                ctx.data['approval_status'] = approval_status
+
+            else:
+                ctx.data['approval_status_mod_by'] = 'auto'
+                ctx.data['approval_status'] = const.approval_status.approved
 
             # The only field always required
             if not ctx.data.get('username'):
@@ -314,8 +332,6 @@ class UserAPI(object):
 
             ctx.is_active = True
             ctx.is_internal = False
-            ctx.is_approval_needed = False
-            ctx.is_approved = True
             ctx.is_super_user = is_super_user
             ctx.confirm_token = None
 
@@ -333,7 +349,10 @@ class UserAPI(object):
             ctx.data['last_name'] = user.last_name
             ctx.data['is_active'] = user.is_active
             ctx.data['is_internal'] = user.is_internal
-            ctx.data['is_approved'] = user.is_approved
+            ctx.data['approval_status'] = user.approval_status
+            ctx.data['approval_status_mod_time'] = user.approval_status_mod_time
+            ctx.data['approval_status_mod_by'] = user.approval_status_mod_by
+            ctx.data['is_approval_needed'] = self.sso_conf.signup.is_approval_needed
             ctx.data['is_locked'] = user.is_locked
             ctx.data['is_super_user'] = user.is_super_user
             ctx.data['password_is_set'] = user.password_is_set
@@ -716,64 +735,62 @@ class UserAPI(object):
         # Basic checks first
         self._check_basic_update_attrs(data, change_password.max_len_attrs, change_password.all_attrs)
 
-        with closing(self.odb_session_func()) as session:
+        # Get current user's session ..
+        current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=False)
 
-            # Get current user's session ..
-            current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=False)
+        # . only super-users may send user_id on input ..
+        user_id = data.get('user_id', _no_such_value)
 
-            # . only super-users may send user_id on input ..
-            user_id = data.get('user_id', _no_such_value)
+        # .. so if it is sent ..
+        if user_id != _no_such_value:
 
-            # .. so if it is sent ..
-            if user_id != _no_such_value:
+            # .. we must confirm we have a super-user's session.
+            if not current_session.is_super_user:
+                logger.warn('Current user `%s` is not a super-user, cannot change password for user `%s`',
+                    current_session.user_id, user_id)
+                raise ValidationError(status_code.common.invalid_input, False)
 
-                # .. we must confirm we have a super-user's session.
-                if not current_session.is_super_user:
-                    logger.warn('Current user `%s` is not a super-user, cannot change password for user `%s`',
-                        current_session.user_id, user_id)
-                    raise ValidationError(status_code.common.invalid_input, False)
+        # .. if ID is not given on input, we change current user's password.
+        else:
+            user_id = current_session.user_id
 
-            # .. if ID is not given on input, we change current user's password.
-            else:
-                user_id = current_session.user_id
+        # If current user is a super-user we can just set the new password immediately ..
+        if current_session.is_super_user:
 
-            # If current user is a super-user we can just set the new password immediately ..
+            # .. but only if the user changes another user's password ..
+            if current_session.user_id != user_id:
+                self.set_password(user_id, data['new_password'], data.get('must_change'), data.get('password_expiry'))
+
+                # All done, another user's password has been changed
+                return
+
+        # .. otherwise, if we are a regular user or a super-user changing his or her own password,
+        # so we must check first if the old password is correct.
+        if not check_credentials(self.decrypt_func, self.verify_hash_func, current_session.password, data['old_password']):
+            logger.warn('Password verification failed, user_id:`%s`', current_session.user_id)
+            raise ValidationError(status_code.auth.not_allowed, True)
+        else:
+
+            # At this point we know that the user provided a correct old password so we are free to set the new one ..
+
+            # .. but we still need to consider regular vs. super-users and make sure that the former does not
+            # provide attributes that only the latter may use.
+
+            # Super-users may provide these optionally ..
             if current_session.is_super_user:
+                must_change = data.get('must_change')
+                password_expiry = data.get('password_expiry')
 
-                # .. but only if the user changes another user's password ..
-                if current_session.user_id != user_id:
-                    self.set_password(user_id, data['new_password'], data.get('must_change'), data.get('password_expiry'))
-
-                    # All done, another user's password has been changed
-                    return
-
-            # .. otherwise, if we are a regular user or a super-user changing his or her own password,
-            # so we must check first if the old password is correct.
-            if not check_credentials(self.decrypt_func, self.verify_hash_func, current_session.password, data['old_password']):
-                logger.warn('Password verification failed, user_id:`%s`', current_session.user_id)
-                raise ValidationError(status_code.auth.not_allowed, True)
+            # .. but regular ones never.
             else:
+                must_change = None
+                password_expiry = None
 
-                # At this point we know that the user provided a correct old password so we are free to set the new one ..
-
-                # .. but we still need to consider regular vs. super-users and make sure that the former does not
-                # provide attributes that only the latter may use.
-
-                # Super-users may provide these optionally ..
-                if current_session.is_super_user:
-                    must_change = data.get('must_change')
-                    password_expiry = data.get('password_expiry')
-
-                # .. but regular ones never.
-                else:
-                    must_change = None
-                    password_expiry = None
-
-                # All done, we can set the new password now.
-                try:
-                    self.set_password(user_id, data['new_password'], must_change, password_expiry)
-                except Exception:
-                    logger.warn('Could not set a new password for user_id:`%s`, e:`%s`', current_session.user_id, format_exc())
-                    raise ValidationError(status_code.auth.not_allowed, True)
+            # All done, we can set the new password now.
+            try:
+                self.set_password(user_id, data['new_password'], must_change, password_expiry)
+            except Exception:
+                logger.warn('Could not set a new password for user_id:`%s`, e:`%s`', current_session.user_id, format_exc())
+                raise ValidationError(status_code.auth.not_allowed, True)
 
 # ################################################################################################################################

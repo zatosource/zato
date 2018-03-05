@@ -15,6 +15,9 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, Se
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import backref, relationship
 
+# Zato
+from zato.sso import const
+
 # ################################################################################################################################
 
 class _SSOUser:
@@ -51,8 +54,8 @@ class _SSOUser:
     locked_by = Column(String(191), nullable=True)
 
     approval_status = Column(String(191), nullable=False)
-    approval_status_mod_time = Column(String(191), nullable=True) # When user was approved or rejected
-    approval_status_mod_by = Column(String(191), nullable=True) # Same comment as in locked_by
+    approval_status_mod_time = Column(String(191), nullable=False) # When user was approved or rejected
+    approval_status_mod_by = Column(String(191), nullable=False) # Same comment as in locked_by
 
     # Basic information, always required
     username = Column(String(191), nullable=False)

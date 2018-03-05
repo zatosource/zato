@@ -86,6 +86,14 @@ class const:
         def __iter__(self):
             return iter([self.before_confirmation, self.to_approve, self.final])
 
+    class approval_status:
+        approved = 'approved'
+        rejected = 'rejected'
+        before_decision = 'before_decision'
+
+        def __iter__(self):
+            return iter([self.before_confirmation, self.to_approve, self.final])
+
 # ################################################################################################################################
 
 class ValidationError(Exception):
