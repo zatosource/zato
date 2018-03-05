@@ -323,7 +323,7 @@ class UserAPI(object):
                 raise ValidationError(status_code.username.invalid, True)
 
             # Make sure the username is unique
-            if get_user_by_username(session, ctx.data['username']):
+            if get_user_by_username(session, ctx.data['username'], needs_approved=False):
                 logger.warn('Username `%s` already exists', ctx.data['username'])
                 raise ValidationError(status_code.username.exists, False)
 
@@ -384,11 +384,11 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def get_user_by_username(self, username):
+    def get_user_by_username(self, username, needs_approved=True):
         """ Returns a user object by username or None, if there is no such username.
         """
         with closing(self.odb_session_func()) as session:
-            return get_user_by_username(session, username)
+            return get_user_by_username(session, username, needs_approved=needs_approved)
 
 # ################################################################################################################################
 
@@ -509,7 +509,7 @@ class UserAPI(object):
 
             # .. or use username if this is what was given on input.
             elif username:
-                user = get_user_by_username(session, username)
+                user = get_user_by_username(session, username, needs_approved=False)
                 where = UserModelTable.c.username==username
 
             # Make sure the user exists at all
