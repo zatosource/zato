@@ -263,3 +263,31 @@ class Password(_BaseRESTService):
         self.sso.user.change_password(data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
+
+class _ChangeApprovalStatus(_BaseRESTService):
+    """ Base class for services changing a user's approval_status.
+    """
+    func_name = None
+
+    class SimpleIO(BaseSIO):
+        input_required = ('ust', 'current_app', AsIs('user_id'))
+
+    def _handle_sso_POST(self, ctx):
+        func = getattr(self.sso.user, self.func_name)
+        func(ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+
+# ################################################################################################################################
+
+class Approve(_ChangeApprovalStatus):
+    """ Approves a user - changes his or her approval_status to 'approved'
+    """
+    func_name = 'approve_user'
+
+# ################################################################################################################################
+
+class Reject(_ChangeApprovalStatus):
+    """ Rejects a user - changes his or her approval_status to 'rejected'
+    """
+    func_name = 'reject_user'
+
+# ################################################################################################################################
