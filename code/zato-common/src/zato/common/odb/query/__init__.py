@@ -75,7 +75,7 @@ class _SearchWrapper(object):
 def query_wrapper(func):
     """ A decorator for queries which works out whether a given query function should return the result only
     or a column list retrieved in addition to the result. This is useful because some callers prefer the former
-    and some need the latter. Also, paginages the results if requested to by the caller.
+    and some need the latter. Also, paginates the results if requested to by the caller.
     """
     @wraps(func)
     def inner(*args, **kwargs):
