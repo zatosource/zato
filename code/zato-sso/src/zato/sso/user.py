@@ -75,6 +75,14 @@ _write_only = {
     'password': None,
 }
 
+# If any of these attributes exists on input to .update, its uppercased counterpart must also be updated
+_name_attrs = {
+    'display_name': 'display_name_upper',
+    'first_name': 'first_name_upper',
+    'middle_name': 'middle_name_upper',
+    'last_name': 'last_name_upper'
+}
+
 _all_super_user_attrs = {}
 _all_super_user_attrs.update(regular_attrs)
 _all_super_user_attrs.update(super_user_attrs)
@@ -232,6 +240,12 @@ class UserAPI(object):
 
             display_name = display_name.strip()
 
+        # If we still don't have any names, turn them all into NULLs
+        for attr_name, attr_name_upper in _name_attrs.items():
+            if not ctx.data[attr_name]:
+                ctx.data[attr_name] = None
+                ctx.data[attr_name_upper] = None
+
         user_model = UserModel()
         user_model.user_id = ctx.data.get('user_id') or self.new_user_id_func()
         user_model.is_active = ctx.is_active
@@ -283,10 +297,10 @@ class UserAPI(object):
         user_model.last_name = ctx.data['last_name']
 
         # Uppercase any and all names for indexing purposes.
-        user_model.display_name_upper = display_name.upper()
-        user_model.first_name_upper = ctx.data['first_name'].upper()
-        user_model.middle_name_upper = ctx.data['middle_name'].upper()
-        user_model.last_name_upper = ctx.data['last_name'].upper()
+        for attr_name, attr_name_upper in _name_attrs.items():
+            value = ctx.data[attr_name]
+            if value:
+                setattr(user_model, attr_name_upper, value.upper())
 
         return user_model
 
@@ -436,10 +450,8 @@ class UserAPI(object):
             if not info:
                 raise ValidationError(status_code.auth.not_allowed, True)
 
-            # UST is valid, let's return data then ..
+            # UST is valid, let's return data then
             else:
-
-                # .. but they into account if current user is a super-user or a regular one.
                 if current_session.is_super_user:
                     attrs = _all_super_user_attrs
                     out = {
@@ -448,7 +460,6 @@ class UserAPI(object):
                 else:
                     attrs = regular_attrs
                     out = {}
-
 
                 for key in attrs:
                     value = getattr(info, key)
@@ -710,6 +721,15 @@ class UserAPI(object):
                 else:
                     data['approval_status_mod_by'] = current_session.user_id
                     data['approval_status_mod_time'] = _utcnow()
+
+            # Uppercase or remove attributes that are later on used for search
+            for attr_name, attr_name_upper in _name_attrs.items():
+                if attr_name in data:
+                    if attr_name is None:
+                        data[attr_name_upper] = None
+                    else:
+                        if attr_name and isinstance(data[attr_name], basestring):
+                            data[attr_name_upper] = data[attr_name].upper()
 
             # Everything is validated - we can save the data now
             with closing(self.odb_session_func()) as session:

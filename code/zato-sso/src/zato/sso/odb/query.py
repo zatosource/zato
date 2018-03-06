@@ -24,9 +24,9 @@ _utcnow = datetime.utcnow
 
 # ################################################################################################################################
 
-_skip_user_columns=('password',)
+_skip_user_columns = ('first_name_upper', 'middle_name_upper', 'last_name_upper')
 _user_id_column = [SSOUser.user_id]
-_user_basic_columns = [elem for elem in SSOUser.__table__.c if elem not in _skip_user_columns]
+_user_basic_columns = [elem for elem in SSOUser.__table__.c if elem.name not in _skip_user_columns]
 _user_exists_columns = [SSOUser.user_id, SSOUser.username, SSOUser.email]
 _session_columns = [elem for elem in SSOSession.__table__.c]
 _session_columns_with_user = _session_columns + _user_basic_columns
