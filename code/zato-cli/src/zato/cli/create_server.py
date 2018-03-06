@@ -310,6 +310,7 @@ list_key=sample,list
 sso_conf_contents = '''[main]
 encrypt_email=True
 encrypt_password=True
+smtp_conn=
 
 [backend]
 default=sql
@@ -322,9 +323,9 @@ rounds=100000
 salt_size=64 # In bytes = 512 bits
 
 [apps]
-all=
+all=CRM
 signup_allowed=
-login_allowed=
+login_allowed=CRM
 login_metadata_allowed=
 inform_if_app_invalid=True
 
@@ -389,11 +390,52 @@ always_return_confirm_token=True
 is_email_required=True
 is_approval_needed=True
 
+email_confirm_enabled=True
+email_confirm_from=confirm@example.com
+email_confirm_cc=
+email_confirm_bcc=
+email_confirm_template=sso-confirm.txt
+
+email_welcome_enabled=True
+email_welcome_from=welcome@example.com
+email_welcome_cc=
+email_welcome_bcc=
+email_welcome_template=sso-welcome.txt
+
+
 [user_validation]
 service=zato.sso.user.validate
 reject_username=zato, admin, root, system, sso
 reject_email=zato, admin, root, system, sso
 '''
+
+sso_confirm_template = """
+Hello {data.display_name},
+
+your account is almost ready - all we need to do is make sure that this is your email.
+
+Use this URL to confirm your address:
+
+https://example.com/zato/sso/confirm?token={data.token}
+
+If you didn't want to create the account, just delete this email and everything will go back to the way it was.
+
+--
+Your Zato SSO team.
+""".strip()
+
+sso_welcome_template = """
+Hello {data.display_name}!
+
+Thanks for joining us. Here are a couple great ways to get started:
+
+* https://example.com/link/1
+* https://example.com/link/2
+* https://example.com/link/3
+
+--
+Your Zato SSO team.
+""".strip()
 
 secrets_conf_template = b"""
 [secret_keys]
@@ -467,6 +509,7 @@ directories = (
     'config/repo/lua/internal',
     'config/repo/lua/user',
     'config/repo/static',
+    'config/repo/static/email',
     'config/repo/tls',
     'config/repo/tls/keys-certs',
     'config/repo/tls/ca-certs',
@@ -476,7 +519,9 @@ files = {
     'config/repo/logging.conf': common_logging_conf_contents.format(log_path='./logs/server.log'),
     'config/repo/service-sources.txt': service_sources_contents,
     'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists,
-    'config/repo/sql.conf': sql_conf_contents
+    'config/repo/sql.conf': sql_conf_contents,
+    'config/repo/static/email/sso-confirm.txt': sso_confirm_template,
+    'config/repo/static/email/sso-welcome.txt': sso_welcome_template,
 }
 
 priv_key_location = './config/repo/config-priv.pem'
