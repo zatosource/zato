@@ -13,10 +13,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # SQLAlchemy
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, Sequence, String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import backref, relationship
-
-# Zato
-from zato.sso import const
 
 # ################################################################################################################################
 

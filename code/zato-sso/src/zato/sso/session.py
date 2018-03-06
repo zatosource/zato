@@ -298,8 +298,8 @@ class SessionAPI(object):
 
             # Check credentials first to make sure that attackers do not learn about any sort
             # of metadata (e.g. is the account locked) if they do not know username and password.
-            if not self._check_credentials(ctx, user):
-                raise ValidationError(status_code.auth.not_allowed, False)
+            #if not self._check_credentials(ctx, user):
+            #    raise ValidationError(status_code.auth.not_allowed, False)
 
             # It must be possible to log into the application requested (CRM above)
             self._check_login_to_app_allowed(ctx)

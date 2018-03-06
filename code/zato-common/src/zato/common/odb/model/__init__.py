@@ -29,17 +29,17 @@ from zato.common.odb.model.sso import _SSOSession, _SSOUser
 def to_json(model, return_as_dict=False):
     """ Returns a JSON representation of an SQLAlchemy-backed object.
     """
-    json = {}
-    json['fields'] = {}
-    json['pk'] = getattr(model, 'id')
+    out = {}
+    out['fields'] = {}
+    out['pk'] = getattr(model, 'id')
 
     for col in model._sa_class_manager.mapper.mapped_table.columns:
-        json['fields'][col.name] = getattr(model, col.name)
+        out['fields'][col.name] = getattr(model, col.name)
 
     if return_as_dict:
-        return json
+        return out
     else:
-        return dumps([json])
+        return dumps([out])
 
 # ################################################################################################################################
 
