@@ -53,9 +53,13 @@ class _SearchWrapper(object):
     def __init__(self, q, default_page_size=_no_page_limit, **config):
 
         # Apply WHERE conditions
-        for filter_by in config.get('filter_by', []):
-            for criterion in config.get('query', []):
-                q = q.filter(filter_by.contains(criterion))
+        complex_filter = config.get('complex_filter')
+        if complex_filter:
+            q = q.filter(complex_filter)
+        else:
+            for filter_by in config.get('filter_by', []):
+                for criterion in config.get('query', []):
+                    q = q.filter(filter_by.contains(criterion))
 
         # Total number of results
         total_q = q.statement.with_only_columns([func.count()]).order_by(None)
