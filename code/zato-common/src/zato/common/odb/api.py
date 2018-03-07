@@ -1236,6 +1236,8 @@ class ODBManager(SessionWrapper):
         """
         return query.cassandra_conn_list(self._session, cluster_id, needs_columns)
 
+# ################################################################################################################################
+
     def get_cassandra_query_list(self, cluster_id, needs_columns=False):
         """ Returns a list of Cassandra queries.
         """

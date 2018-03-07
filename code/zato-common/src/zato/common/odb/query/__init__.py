@@ -84,8 +84,8 @@ def query_wrapper(func):
     @wraps(func)
     def inner(*args, **kwargs):
 
-        # needs_columns is always the last argument
-        # so we don't have to look it up using the 'inspect' module or anything like that.
+        # Each query function will have the last argument either False or True
+        # depending on whether columns are needed or not.
         needs_columns = args[-1]
 
         tool = _SearchWrapper(func(*args), **kwargs)
