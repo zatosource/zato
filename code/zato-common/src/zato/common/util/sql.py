@@ -44,6 +44,7 @@ def search(search_func, config, filter_by, session=None, cluster_id=None, *args,
         'cur_page': cur_page,
         'page_size': page_size,
         'filter_by': filter_by,
+        'where': kwargs.get('where')
     }
 
     query = config.get('query')

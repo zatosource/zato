@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+_does_not_exist = object()
 _no_page_limit = 2 ** 24 # ~16.7 million results, tops
 
 # ################################################################################################################################
@@ -53,9 +54,9 @@ class _SearchWrapper(object):
     def __init__(self, q, default_page_size=_no_page_limit, **config):
 
         # Apply WHERE conditions
-        complex_filter = config.get('complex_filter')
-        if complex_filter:
-            q = q.filter(complex_filter)
+        where = config.get('where', _does_not_exist)
+        if where is not _does_not_exist:
+            q = q.filter(where)
         else:
             for filter_by in config.get('filter_by', []):
                 for criterion in config.get('query', []):
