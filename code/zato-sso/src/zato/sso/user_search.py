@@ -79,10 +79,10 @@ class SSOSearch(object):
             (SSOUser.middle_name_upper, True) : SSOUser.middle_name_upper.__eq__,
             (SSOUser.last_name_upper, True)   : SSOUser.last_name_upper.__eq__,
 
-            (SSOUser.display_name_upper, False): SSOUser.display_name_upper.like,
-            (SSOUser.first_name_upper, False)  : SSOUser.first_name_upper.like,
-            (SSOUser.middle_name_upper, False) : SSOUser.middle_name_upper.like,
-            (SSOUser.last_name_upper, False)   : SSOUser.last_name_upper.like,
+            (SSOUser.display_name_upper, False): SSOUser.display_name_upper.contains,
+            (SSOUser.first_name_upper, False)  : SSOUser.first_name_upper.contains,
+            (SSOUser.middle_name_upper, False) : SSOUser.middle_name_upper.contains,
+            (SSOUser.last_name_upper, False)   : SSOUser.last_name_upper.contains,
         }
 
 # ################################################################################################################################
@@ -127,45 +127,52 @@ class SSOSearch(object):
 
 # ################################################################################################################################
 
-    def _get_where(self, config, name_op_allowed=name_op_allowed, name_op_sa=name_op_sa):
-        """ Creates the WHERE part of a user search query.
+    def _get_where_user_id(self, user_id):
+        """ Constructs a WHERE clause to look up users by user_id (will return at most one row).
         """
-        # Should we look by any name?
-        name = config.get('name')
-        name_exact = config.get('name_exact', True)
+
+# ################################################################################################################################
+
+    def _get_where_username(self, username):
+        """ Constructs a WHERE clause to look up users by username (will return at most one row).
+        """
+
+# ################################################################################################################################
+
+    def _get_where_name(self, name, name_exact, name_op, name_op_allowed=name_op_allowed, name_op_sa=name_op_sa):
+        """ Constructs a WHERE clause to look up users by display/first/middle or last name.
+        """
         name_criteria_raw = []
         name_criteria = []
+        name_where = None
 
-        if name:
+        # Name must be a dict of columns
+        if not isinstance(name, dict):
+            raise ValueError('Invalid name `{}`'.format(name))
 
-            # Name must be a dict of columns
-            if not isinstance(name, dict):
-                raise ValueError('Invalid name `{}`'.format(name))
-
-            # Validate that only allowed columns and values of expected type are passed to the name filter
-            for column_key, value in name.items():
-                if column_key not in self.name_columns:
-                    raise ValueError('Invalid name key `{}`'.format(column_key))
-                elif not isinstance(value, basestring):
-                    raise ValueError('Invalid value `{}`'.format(value))
-                else:
-                    value = value.strip()
-                    if not value:
-                        raise ValueError('Value must not be empty, key `{}`'.format(column_key))
-                    name_criteria_raw.append((self.name_columns[column_key], value.upper()))
-
-            # Name operator is needed only if name is given on input
-            name_op = config.get('name_op')
-            if name_op:
-                if name_op not in name_op_allowed:
-                    raise ValueError('Invalid name_op `{}`'.format(name_op))
+        # Validate that only allowed columns and values of expected type are passed to the name filter
+        for column_key, value in name.items():
+            if column_key not in self.name_columns:
+                raise ValueError('Invalid name key `{}`'.format(column_key))
+            elif not isinstance(value, basestring):
+                raise ValueError('Invalid value `{}`'.format(value))
             else:
-                name_op = const.search.and_
+                value = value.strip()
+                if not value:
+                    raise ValueError('Value must not be empty, key `{}`'.format(column_key))
+                name_criteria_raw.append((self.name_columns[column_key], value.upper()))
 
-            # Convert a label to an actual SQALchemy-level function
-            name_op = name_op_sa[name_op]
+        # Name operator is needed only if name is given on input
+        if name_op:
+            if name_op not in name_op_allowed:
+                raise ValueError('Invalid name_op `{}`'.format(name_op))
+        else:
+            name_op = const.search.and_
 
-            # We need to have a reference to a Python-level function suc
+        # Convert a label to an actual SQALchemy-level function
+        name_op = name_op_sa[name_op]
+
+        # We need to have a reference to a Python-level function suc
 
         # At this point we know all name-related input is correct and we have both criteria
         # and an operator to joined them with.
@@ -177,6 +184,47 @@ class SSOSearch(object):
             name_where = name_op(*name_criteria)
 
         return name_where
+
+# ################################################################################################################################
+
+    def _get_where(self, config):
+        """ Creates the WHERE part of a user search query.
+        """
+
+        # Check shorter paths first
+        username = config.get('username')
+        user_id = config.get('user_id')
+
+        # If either username or user_id are given on input, we cut it short and ignore
+        # other parameters - this is because both of them are unique in the DB so any other
+        # parameter would have no influence over results ..
+
+        # .. also, if both of them are given on input, we only take user_id into account.
+        if username or user_id:
+            if user_id:
+                return self._get_where_user_id(user_id)
+            else:
+                return self._get_where_username(username)
+
+        # If we are here it means there was neither user_id nor username on input
+
+        # Should we search by any name?
+        name_where = None
+
+        # Should we search by any non-name criteria?
+        non_name_where = []
+
+        if 'name' in config:
+            name_where = self._get_where_name(config.get('name'), config.get('name_exact'), config.get('name_op'))
+
+        # Now we have both name-related and non-name related WHERE conditions, yet both possibly empty,
+        # but even if they are empty we can construct the final AND-joined WHERE condition now.
+
+        # Names are given but other attributes are not, in this case WHERE will be names only.
+        if name_where is not None and (not non_name_where):
+            where = name_where
+
+        return where
 
 # ################################################################################################################################
 
@@ -208,10 +256,10 @@ def sql_search(self, data, current_ust, current_app, remote_addr):
     config = {
         'paginate': True,
         'page_size': 2,
-        'name_op': const.search.or_,
+        'name_op': const.search.and_,
+        'name_exact': False,
         'name': {
-            'first_name': 'John',
-            'last_name': 'Smith'
+            'first_name': 'ohn',
         }
     }
 
