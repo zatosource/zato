@@ -25,11 +25,17 @@ from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const, status_code, ValidationError
 from zato.sso.odb.query import get_user_by_id, get_user_by_username, get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
+from zato.sso.user_search import SSOSearch
 from zato.sso.util import check_credentials, make_data_secret, make_password_secret, set_password, validate_password
 
 # ################################################################################################################################
 
 logger = getLogger('zato')
+
+# ################################################################################################################################
+
+sso_search = SSOSearch()
+sso_search.set_up()
 
 # ################################################################################################################################
 
@@ -849,5 +855,31 @@ class UserAPI(object):
         """ Changes a user's approval_status to 'approved'. Must be called with a UST pointing to a super-user.
         """
         return self._change_approval_status(user_id, const.approval_status.rejected, current_ust, current_app, remote_addr)
+
+# ################################################################################################################################
+
+    def search(self, data, current_ust, current_app, remote_addr):
+        """ Looks up users by specific search criteria from the 'data' dictionary.
+        Must be called with a UST belonging to a super-user.
+        """
+        current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=True)
+
+        config = {
+            'paginate': True,
+            'page_size': 2,
+            'email_search_enabled': not self.sso_conf.main.encrypt_email,
+            'name_op': const.search.and_,
+            'name_exact': False,
+            'name': {
+                'last_name': 'smith'
+            },
+            'sign_up_status': 'zzz',
+        }
+
+        with closing(self.odb_session_func()) as session:
+            out = sso_search.search(session, config)
+
+            for row in out.result:
+                print(row._asdict())
 
 # ################################################################################################################################

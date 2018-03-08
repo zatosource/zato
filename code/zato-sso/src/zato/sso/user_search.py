@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+"""
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
@@ -295,53 +301,5 @@ class SSOSearch(object):
         order_by = self._get_order_by(order_by) if order_by else self.order_by.default
 
         return util_search(self.sql_search_func, config, [], session, None, order_by, False, where=where)
-
-# ################################################################################################################################
-
-sso_search = SSOSearch()
-sso_search.set_up()
-
-# ################################################################################################################################
-
-def sql_search(self, data, current_ust, current_app, remote_addr):
-    """ Looks up users by specific search criteria from the 'data' dictionary.
-    Must be called with a UST belonging to a super-user.
-    """
-    current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=True)
-
-    config = {
-        'paginate': True,
-        'page_size': 2,
-        'email_search_enabled': not self.sso_conf.main.encrypt_email,
-        'name_op': const.search.and_,
-        'name_exact': False,
-        'name': {
-            'last_name': 'smith'
-        },
-        'sign_up_status': 'zzz',
-    }
-
-    with closing(self.odb_session_func()) as session:
-        out = sso_search.search(session, config)
-
-        for row in out.result:
-            print(row._asdict())
-
-# ################################################################################################################################
-
-class MyService(Service):
-    def handle(self):
-
-        username = 'admin1'
-        password = '****'
-        session = self.sso.user.login(username, password, 'CRM', '127.0.0.1', 'my-user-agent', False, False)
-
-        # Request metadata
-        current_ust = session.ust
-        current_app = 'CRM'
-        remote_addr = '127.0.0.1'
-
-        data = {}
-        sql_search(self.sso.user, data, current_ust, current_app, remote_addr)
 
 # ################################################################################################################################
