@@ -94,6 +94,13 @@ class const:
         def __iter__(self):
             return iter([self.approved, self.rejected, self.before_decision])
 
+    class search:
+        and_ = 'and'
+        or_ = 'or'
+
+        def __iter__(self):
+            return iter([self.and_, self.or_])
+
 # ################################################################################################################################
 
 class ValidationError(Exception):
