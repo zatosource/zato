@@ -25,6 +25,10 @@ from zato.sso.odb.query import _user_basic_columns
 
 # ################################################################################################################################
 
+_does_not_exist = object()
+
+# ################################################################################################################################
+
 name_op_allowed = set(const.search())
 name_op_sa = {
     const.search.and_: sql_and,
@@ -83,6 +87,12 @@ class SSOSearch(object):
             (SSOUser.first_name_upper, False)  : SSOUser.first_name_upper.contains,
             (SSOUser.middle_name_upper, False) : SSOUser.middle_name_upper.contains,
             (SSOUser.last_name_upper, False)   : SSOUser.last_name_upper.contains,
+        }
+
+        self._non_name_column_op = {
+            'email': SSOUser.email.__eq__,
+            'sign_up_status': SSOUser.sign_up_status.__eq__,
+            'approval_status': SSOUser.approval_status.__eq__,
         }
 
 # ################################################################################################################################
@@ -187,10 +197,36 @@ class SSOSearch(object):
 
 # ################################################################################################################################
 
+    def _get_where_non_name(self, config):
+        """ Constructs a WHERE clause for criteria other than display-related names.
+        """
+        # We can search by email only if emails are not encrypted
+        email = config.get('email')
+        if email:
+            if not config.get('email_search_enabled'):
+                raise ValueError('Cannot look up users by email')
+
+        non_name_where = None
+        non_name_criteria = []
+
+        for non_name in self._non_name_column_op:
+            value = config.get(non_name, _does_not_exist)
+            if value is not _does_not_exist:
+                if value is not None:
+                    if not isinstance(value, basestring):
+                        raise ValueError('Invalid value `{}`'.format(value))
+                non_name_criteria.append(self._non_name_column_op[non_name](value))
+
+        if non_name_criteria:
+            non_name_where = sql_and(*non_name_criteria)
+
+        return non_name_where
+
+# ################################################################################################################################
+
     def _get_where(self, config):
         """ Creates the WHERE part of a user search query.
         """
-
         # Check shorter paths first
         username = config.get('username')
         user_id = config.get('user_id')
@@ -212,17 +248,32 @@ class SSOSearch(object):
         name_where = None
 
         # Should we search by any non-name criteria?
-        non_name_where = []
+        non_name_where = None
 
+        # Get all name-related criteria
         if 'name' in config:
             name_where = self._get_where_name(config.get('name'), config.get('name_exact'), config.get('name_op'))
+
+        # Get all non-name related criteria
+        non_name_where = self._get_where_non_name(config)
 
         # Now we have both name-related and non-name related WHERE conditions, yet both possibly empty,
         # but even if they are empty we can construct the final AND-joined WHERE condition now.
 
-        # Names are given but other attributes are not, in this case WHERE will be names only.
-        if name_where is not None and (not non_name_where):
-            where = name_where
+        # Names are given ..
+        if name_where is not None:
+
+            # .. but other attributes are not, in this case WHERE will be names only.
+            if non_name_where is None:
+                where = name_where
+
+            # .. there are both names and non-names.
+            else:
+                where = sql_and(name_where, non_name_where)
+
+        # .. there are only non-names.
+        elif non_name_where is not None:
+            where = non_name_where
 
         return where
 
@@ -256,11 +307,13 @@ def sql_search(self, data, current_ust, current_app, remote_addr):
     config = {
         'paginate': True,
         'page_size': 2,
+        'email_search_enabled': not self.sso_conf.main.encrypt_email,
         'name_op': const.search.and_,
         'name_exact': False,
         'name': {
-            'first_name': 'ohn',
-        }
+            'last_name': 'smith'
+        },
+        'sign_up_status': 'zzz'
     }
 
     with closing(self.odb_session_func()) as session:
