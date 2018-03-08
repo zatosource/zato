@@ -38,10 +38,10 @@ class OrderBy(object):
 
         # How results will be sorted if no user-defined order is given
         self.default = (
-            {'display_name': self.asc},
-            {'username': self.asc},
-            {'sign_up_time': self.asc},
-            {'user_id': self.asc},
+            asc('display_name'),
+            asc('username'),
+            asc('sign_up_time'),
+            asc('user_id'),
         )
 
 # ################################################################################################################################
@@ -68,15 +68,10 @@ class SSOSearch(object):
 
 # ################################################################################################################################
 
-    def search(self, session, config):
-        """ Looks up users with the configuration given on input.
+    def _get_order_by(self, order_by):
+        """ Constructs an ORDER BY clause for the user search query.
         """
-        # Build the order by list, validating the input first to make sure
-        # only explicitly allowed columns and sort directions are used.
-
-        order_by = config.get('order_by')
-        order_by = order_by if order_by else self.order_by.default
-        _order_by = []
+        out = []
 
         for item in order_by:
             items = item.items()
@@ -94,9 +89,22 @@ class SSOSearch(object):
                 # Columns and directions are valid, we can construct the ORDER BY clause now
 
                 func = asc if dir == self.order_by.asc else desc
-                _order_by.append(func(column))
+                out.append(func(column))
 
-        return util_search(self.sql_search_func, config, [], session, None, _order_by, False)
+        return out
+
+# ################################################################################################################################
+
+    def search(self, session, config):
+        """ Looks up users with the configuration given on input.
+        """
+        # Build the order by list, validating the input first to make sure
+        # only explicitly allowed columns and sort directions are used.
+
+        order_by = config.get('order_by')
+        order_by = self._get_order_by(order_by) if order_by else self.order_by.default
+
+        return util_search(self.sql_search_func, config, [], session, None, order_by, False)
 
 # ################################################################################################################################
 
@@ -130,7 +138,7 @@ class MyService(Service):
     def handle(self):
 
         username = 'admin1'
-        password = '***'
+        password = '5c5Apw67534s55ukR_EZSVyH3DKr2ajNaa'
         session = self.sso.user.login(username, password, 'CRM', '127.0.0.1', 'my-user-agent', False, False)
 
         # Request metadata
