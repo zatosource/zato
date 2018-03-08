@@ -95,6 +95,9 @@ class SSOSearch(object):
             'approval_status': SSOUser.approval_status.__eq__,
         }
 
+        self._user_id_op = SSOUser.user_id.__eq__
+        self._username_op = SSOUser.username.__eq__
+
 # ################################################################################################################################
 
     def set_up(self):
@@ -140,12 +143,14 @@ class SSOSearch(object):
     def _get_where_user_id(self, user_id):
         """ Constructs a WHERE clause to look up users by user_id (will return at most one row).
         """
+        return self._user_id_op(user_id)
 
 # ################################################################################################################################
 
     def _get_where_username(self, username):
         """ Constructs a WHERE clause to look up users by username (will return at most one row).
         """
+        return self._username_op(username)
 
 # ################################################################################################################################
 
@@ -313,16 +318,14 @@ def sql_search(self, data, current_ust, current_app, remote_addr):
         'name': {
             'last_name': 'smith'
         },
-        'sign_up_status': 'zzz'
+        'sign_up_status': 'zzz',
     }
 
     with closing(self.odb_session_func()) as session:
         out = sso_search.search(session, config)
 
-        print()
-        print(out.num_pages)
-        print(out.total)
-        print()
+        for row in out.result:
+            print(row._asdict())
 
 # ################################################################################################################################
 
