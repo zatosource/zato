@@ -402,11 +402,14 @@ email_welcome_cc=
 email_welcome_bcc=
 email_welcome_template=sso-welcome.txt
 
-
 [user_validation]
 service=zato.sso.user.validate
 reject_username=zato, admin, root, system, sso
 reject_email=zato, admin, root, system, sso
+
+[search]
+default_page_size=50
+max_page_size=100
 '''
 
 sso_confirm_template = """

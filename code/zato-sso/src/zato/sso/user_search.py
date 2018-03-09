@@ -69,40 +69,42 @@ class OrderBy(object):
 class SSOSearch(object):
     """ SSO search functions, constants and defaults.
     """
+    # Maps publicly visible column names to SQL ones
+    name_columns = {
+        'display_name': SSOUser.display_name_upper,
+        'first_name': SSOUser.first_name_upper,
+        'middle_name': SSOUser.middle_name_upper,
+        'last_name': SSOUser.last_name_upper,
+    }
+
+    # Maps columns and exactness flags to sqlalchemy-level functions that look up data
+    name_column_op = {
+
+        (SSOUser.display_name_upper, True): SSOUser.display_name_upper.__eq__,
+        (SSOUser.first_name_upper, True)  : SSOUser.first_name_upper.__eq__,
+        (SSOUser.middle_name_upper, True) : SSOUser.middle_name_upper.__eq__,
+        (SSOUser.last_name_upper, True)   : SSOUser.last_name_upper.__eq__,
+
+        (SSOUser.display_name_upper, False): SSOUser.display_name_upper.contains,
+        (SSOUser.first_name_upper, False)  : SSOUser.first_name_upper.contains,
+        (SSOUser.middle_name_upper, False) : SSOUser.middle_name_upper.contains,
+        (SSOUser.last_name_upper, False)   : SSOUser.last_name_upper.contains,
+    }
+
+    # What columns to use for non-name criteria
+    non_name_column_op = {
+        'email': SSOUser.email.__eq__,
+        'sign_up_status': SSOUser.sign_up_status.__eq__,
+        'approval_status': SSOUser.approval_status.__eq__,
+    }
+
+    # What columns to use for user ID and username
+    user_id_op = SSOUser.user_id.__eq__
+    username_op = SSOUser.username.__eq__
+
     def __init__(self):
         self.out_columns = []
         self.order_by = OrderBy()
-
-        # Maps publicly visible column names to SQL ones
-        self.name_columns = {
-            'display_name': SSOUser.display_name_upper,
-            'first_name': SSOUser.first_name_upper,
-            'middle_name': SSOUser.middle_name_upper,
-            'last_name': SSOUser.last_name_upper,
-        }
-
-        # Maps columns and exactness flags to sqlalchemy-level functions that look up data
-        self._name_column_op = {
-
-            (SSOUser.display_name_upper, True): SSOUser.display_name_upper.__eq__,
-            (SSOUser.first_name_upper, True)  : SSOUser.first_name_upper.__eq__,
-            (SSOUser.middle_name_upper, True) : SSOUser.middle_name_upper.__eq__,
-            (SSOUser.last_name_upper, True)   : SSOUser.last_name_upper.__eq__,
-
-            (SSOUser.display_name_upper, False): SSOUser.display_name_upper.contains,
-            (SSOUser.first_name_upper, False)  : SSOUser.first_name_upper.contains,
-            (SSOUser.middle_name_upper, False) : SSOUser.middle_name_upper.contains,
-            (SSOUser.last_name_upper, False)   : SSOUser.last_name_upper.contains,
-        }
-
-        self._non_name_column_op = {
-            'email': SSOUser.email.__eq__,
-            'sign_up_status': SSOUser.sign_up_status.__eq__,
-            'approval_status': SSOUser.approval_status.__eq__,
-        }
-
-        self._user_id_op = SSOUser.user_id.__eq__
-        self._username_op = SSOUser.username.__eq__
 
 # ################################################################################################################################
 
@@ -149,14 +151,14 @@ class SSOSearch(object):
     def _get_where_user_id(self, user_id):
         """ Constructs a WHERE clause to look up users by user_id (will return at most one row).
         """
-        return self._user_id_op(user_id)
+        return self.user_id_op(user_id)
 
 # ################################################################################################################################
 
     def _get_where_username(self, username):
         """ Constructs a WHERE clause to look up users by username (will return at most one row).
         """
-        return self._username_op(username)
+        return self.username_op(username)
 
 # ################################################################################################################################
 
@@ -199,7 +201,7 @@ class SSOSearch(object):
         # and an operator to joined them with.
         if name_criteria_raw:
             for column, value in name_criteria_raw:
-                func = self._name_column_op[(column, name_exact)]
+                func = self.name_column_op[(column, name_exact)]
                 name_criteria.append(func(value))
 
             name_where = name_op(*name_criteria)
@@ -220,13 +222,13 @@ class SSOSearch(object):
         non_name_where = None
         non_name_criteria = []
 
-        for non_name in self._non_name_column_op:
+        for non_name in self.non_name_column_op:
             value = config.get(non_name, _does_not_exist)
             if value is not _does_not_exist:
                 if value is not None:
                     if not isinstance(value, basestring):
                         raise ValueError('Invalid value `{}`'.format(value))
-                non_name_criteria.append(self._non_name_column_op[non_name](value))
+                non_name_criteria.append(self.non_name_column_op[non_name](value))
 
         if non_name_criteria:
             non_name_where = sql_and(*non_name_criteria)
@@ -285,6 +287,9 @@ class SSOSearch(object):
         # .. there are only non-names.
         elif non_name_where is not None:
             where = non_name_where
+
+        else:
+            where = ''
 
         return where
 

@@ -14,6 +14,7 @@ from datetime import datetime
 # ################################################################################################################################
 
 _utcnow = datetime.utcnow
+not_given = object()
 
 # ################################################################################################################################
 
@@ -97,6 +98,7 @@ class const:
     class search:
         and_ = 'and'
         or_ = 'or'
+        page_size = 50
 
         def __iter__(self):
             return iter([self.and_, self.or_])
@@ -111,5 +113,30 @@ class ValidationError(Exception):
         self.sub_status = sub_status if isinstance(sub_status, list) else [sub_status]
         self.return_status = return_status
         self.status = status
+
+# ################################################################################################################################
+
+class SearchCtx(object):
+    """ A container for SSO user search parameters.
+    """
+    def __init__(self):
+
+        # Query criteria
+        self.user_id = not_given
+        self.username = not_given
+        self.email = not_given
+        self.display_name = not_given
+        self.first_name = not_given
+        self.middle_name = not_given
+        self.last_name = not_given
+        self.sign_up_status = not_given
+        self.approval_status = not_given
+
+        # Query config
+        self.paginate = True
+        self.cur_page = 1
+        self.page_size = None
+        self.name_op = const.search.and_
+        self.name_exact = True
 
 # ################################################################################################################################
