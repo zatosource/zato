@@ -22,7 +22,7 @@ from sqlalchemy import update as sql_update
 # Zato
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
-from zato.sso import const, status_code, ValidationError
+from zato.sso import const, not_given, status_code, ValidationError
 from zato.sso.odb.query import get_user_by_id, get_user_by_username, get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.user_search import SSOSearch
@@ -858,28 +858,99 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def search(self, data, current_ust, current_app, remote_addr):
-        """ Looks up users by specific search criteria from the 'data' dictionary.
+    def search(self, ctx, current_ust, current_app, remote_addr, _all_super_user_attrs=_all_super_user_attrs):
+        """ Looks up users by specific search criteria from the SearchCtx ctx object.
         Must be called with a UST belonging to a super-user.
         """
-        current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=True)
+        # Will raise an exception if current user is not an admin
+        self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=True)
+
+        if ctx.cur_page < 1:
+            ctx.cur_page = 1
+
+        if (not ctx.page_size) or (ctx.page_size < 1):
+            ctx.page_size = self.sso_conf.search.default_page_size
+
+        elif ctx.page_size > self.sso_conf.search.max_page_size:
+            ctx.page_size = self.sso_conf.search.max_page_size
+
+        # Local alias, useful in decryption of emails later on
+        is_email_encrypted = self.sso_conf.main.encrypt_email
 
         config = {
-            'paginate': True,
-            'page_size': 2,
-            'email_search_enabled': not self.sso_conf.main.encrypt_email,
-            'name_op': const.search.and_,
-            'name_exact': False,
-            'name': {
-                'last_name': 'smith'
-            },
-            'sign_up_status': 'zzz',
+            'paginate': ctx.paginate,
+            'page_size': ctx.page_size,
+            'cur_page': ctx.cur_page,
+            'email_search_enabled': not is_email_encrypted,
+            'name_op': ctx.name_op,
+            'name_exact': ctx.name_exact,
         }
 
-        with closing(self.odb_session_func()) as session:
-            out = sso_search.search(session, config)
+        # User ID has priority over everything ..
+        if ctx.user_id is not not_given:
+            config['user_id'] = ctx.user_id
 
-            for row in out.result:
-                print(row._asdict())
+        # .. followed up by username ..
+        elif ctx.username is not not_given:
+            config['username'] = ctx.username
+
+        # .. and only then goes everything else.
+        else:
+
+            for name in SSOSearch.name_columns:
+                value = getattr(ctx, name)
+                if value is not not_given:
+                    name_key = config.setdefault('name', {})
+                    name_key[name] = value
+
+            for name in SSOSearch.non_name_column_op:
+                value = getattr(ctx, name)
+                if value is not not_given:
+                    config[name] = value
+
+        with closing(self.odb_session_func()) as session:
+
+            # Output dictionary with all the data found, if any, along with pagination metadata
+            out = {
+                'total': None,
+                'num_pages': None,
+                'page_size': None,
+                'cur_page': None,
+                'has_next_page': None,
+                'has_prev_page': None,
+                'next_page': None,
+                'prev_page': None,
+                'result': []
+            }
+
+            # Get data from SQL ..
+            sql_result = sso_search.search(session, config)
+
+            # .. attach metadata ..
+            out['total'] = sql_result.total
+            out['num_pages'] = sql_result.num_pages
+            out['page_size'] = sql_result.page_size
+            out['cur_page'] = sql_result.cur_page
+            out['has_next_page'] = sql_result.has_next_page
+            out['has_prev_page'] = sql_result.has_prev_page
+            out['next_page'] = sql_result.next_page
+            out['prev_page'] = sql_result.prev_page
+
+            # .. and append any data found.
+            for sql_item in sql_result.result:
+                sql_item = sql_item._asdict()
+                item = {}
+
+                # Write out all super-user accessible attributes for each output row
+                for name in _all_super_user_attrs:
+                    value = sql_item[name]
+                    if name == 'email':
+                        if is_email_encrypted:
+                            value = self.decrypt_func(value)
+                    item[name] = value
+
+                out['result'].append(item)
+
+            return out
 
 # ################################################################################################################################

@@ -50,7 +50,7 @@ class _SSOUser:
     locked_by = Column(String(191), nullable=True)
 
     approval_status = Column(String(191), nullable=False)
-    approval_status_mod_time = Column(String(191), nullable=False) # When user was approved or rejected
+    approval_status_mod_time = Column(DateTime(), nullable=False) # When user was approved or rejected
     approval_status_mod_by = Column(String(191), nullable=False) # Same comment as in locked_by
 
     # Basic information, always required
