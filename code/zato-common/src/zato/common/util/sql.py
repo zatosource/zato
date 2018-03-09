@@ -21,10 +21,6 @@ _max_page_size = _default_page_size * 5
 def search(search_func, config, filter_by, session=None, cluster_id=None, *args, **kwargs):
     """ Adds search criteria to an SQLAlchemy query based on current search configuration.
     """
-    # No pagination requested at all
-    if not config.get('paginate'):
-        return search_func(session, cluster_id, *args)
-
     try:
         cur_page = int(config.get('cur_page', 1))
     except(ValueError, TypeError):

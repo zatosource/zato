@@ -48,8 +48,6 @@ class SearchTool(object):
     def set_output_meta(self, result):
         meta = self.output_meta['search']
 
-        print(result)
-
         for name in self._search_attrs:
             meta[name] = getattr(result, name, None)
 
@@ -115,9 +113,15 @@ class AdminService(Service):
     def _search(self, search_func, session=None, cluster_id=None, *args, **kwargs):
         """ Adds search criteria to an SQLAlchemy query based on the service's (self) search configuration.
         """
-        result = sql_search(search_func, self.request.input, self._filter_by, session, cluster_id, *args, **kwargs)
-        self._search_tool.set_output_meta(result)
-        return result
+        config = self.request.input
+
+        # No pagination requested at all
+        if not config.get('paginate'):
+            return search_func(session, cluster_id, *args)
+        else:
+            result = sql_search(search_func, self.request.input, self._filter_by, session, cluster_id, *args, **kwargs)
+            self._search_tool.set_output_meta(result)
+            return result
 
 # ################################################################################################################################
 
