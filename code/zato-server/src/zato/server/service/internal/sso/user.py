@@ -17,7 +17,7 @@ from dateutil.parser import parser as DateTimeParser
 
 # Zato
 from zato.common.util import asbool
-from zato.server.service import AsIs, Bool, Int
+from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal.sso import BaseService, BaseSIO
 from zato.sso import status_code
 from zato.sso.user import update
@@ -289,5 +289,25 @@ class Reject(_ChangeApprovalStatus):
     """ Rejects a user - changes his or her approval_status to 'rejected'
     """
     func_name = 'reject_user'
+
+# ################################################################################################################################
+
+class Search(BaseService):
+    """ Looks up SSO users by input criteria.
+    """
+    class SimpleIO(BaseSIO):
+        input_required = ('ust', 'current_app')
+        input_optional = ('user_id', 'username', 'email', 'display_name', 'first_name', 'middle_name', 'last_name',
+            'sign_up_status', 'approval_status', Bool('paginate'), Int('cur_page'), Int('page_size'), 'name_op',
+            'is_name_exact')
+        output_required = ('status',)
+        output_optional = BaseSIO.output_optional + (Int('total'), Int('num_pages'), Int('page_size'), Int('cur_page'),
+            'has_next_page', 'has_prev_page', Int('next_page'), Int('prev_page'), List('result'))
+        default_value = _invalid
+
+# ################################################################################################################################
+
+    def handle(self):
+        self.logger.warn(self.request.input)
 
 # ################################################################################################################################
