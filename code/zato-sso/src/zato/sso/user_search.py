@@ -265,7 +265,7 @@ class SSOSearch(object):
 
         # Get all name-related criteria
         if 'name' in config:
-            name_where = self._get_where_name(config.get('name'), config.get('name_exact'), config.get('name_op'))
+            name_where = self._get_where_name(config.get('name'), config['is_name_exact'], config['name_op'])
 
         # Get all non-name related criteria
         non_name_where = self._get_where_non_name(config)

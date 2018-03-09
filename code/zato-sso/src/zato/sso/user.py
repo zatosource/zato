@@ -883,7 +883,7 @@ class UserAPI(object):
             'cur_page': ctx.cur_page,
             'email_search_enabled': not is_email_encrypted,
             'name_op': ctx.name_op,
-            'name_exact': ctx.name_exact,
+            'is_name_exact': ctx.is_name_exact,
         }
 
         # User ID has priority over everything ..

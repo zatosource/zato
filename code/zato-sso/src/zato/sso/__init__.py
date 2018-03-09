@@ -137,6 +137,6 @@ class SearchCtx(object):
         self.cur_page = 1
         self.page_size = None
         self.name_op = const.search.and_
-        self.name_exact = True
+        self.is_name_exact = True
 
 # ################################################################################################################################

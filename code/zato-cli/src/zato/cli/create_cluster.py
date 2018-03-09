@@ -998,6 +998,7 @@ class Create(ZatoCommand):
             ['zato.sso.user.logout', 'zato.server.service.internal.sso.user.Logout', '/zato/sso/user/logout'],
             ['zato.sso.user.user', 'zato.server.service.internal.sso.user.User', '/zato/sso/user'],
             ['zato.sso.user.password', 'zato.server.service.internal.sso.user.Password', '/zato/sso/user/password'],
+            ['zato.sso.user.search', 'zato.server.service.internal.sso.user.Search', '/zato/sso/user/search'],
 
             ['zato.sso.session.validate', 'zato.server.service.internal.sso.session.Validate', '/zato/sso/session/validate'],
             ['zato.sso.session.get', 'zato.server.service.internal.sso.session.Get', '/zato/sso/session'],
