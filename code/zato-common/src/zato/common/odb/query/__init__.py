@@ -54,7 +54,7 @@ class _SearchWrapper(object):
     def __init__(self, q, default_page_size=_no_page_limit, **config):
 
         # Apply WHERE conditions
-        where = config.get('where', _not_given)
+        where = config.get('where') or _not_given
         if where is not _not_given:
             q = q.filter(where)
         else:
