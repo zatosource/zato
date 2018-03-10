@@ -117,11 +117,12 @@ class AdminService(Service):
 
         # No pagination requested at all
         if not config.get('paginate'):
-            return search_func(session, cluster_id, *args)
+            result = search_func(session, cluster_id, *args)
         else:
             result = sql_search(search_func, self.request.input, self._filter_by, session, cluster_id, *args, **kwargs)
             self._search_tool.set_output_meta(result)
-            return result
+
+        return result
 
 # ################################################################################################################################
 

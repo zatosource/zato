@@ -368,7 +368,6 @@ class Index(_BaseView):
             else:
                 logger.info('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)
 
-
             return_data['req'] = self.req
             return_data['items'] = self.items
             return_data['item'] = self.item
