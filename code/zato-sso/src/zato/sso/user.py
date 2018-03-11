@@ -858,7 +858,8 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def search(self, ctx, current_ust, current_app, remote_addr, _all_super_user_attrs=_all_super_user_attrs):
+    def search(self, ctx, current_ust, current_app, remote_addr, serialize_dt=False, _all_super_user_attrs=_all_super_user_attrs,
+        _dt=('sign_up_time', 'password_expiry', 'approv_rej_time', 'locked_time', 'approval_status_mod_time')):
         """ Looks up users by specific search criteria from the SearchCtx ctx object.
         Must be called with a UST belonging to a super-user.
         """
@@ -942,11 +943,18 @@ class UserAPI(object):
                 item = {}
 
                 # Write out all super-user accessible attributes for each output row
-                for name in _all_super_user_attrs:
+                for name in sorted(_all_super_user_attrs):
                     value = sql_item[name]
+
+                    # Serialize datetime objects to string, if needed
+                    if serialize_dt and isinstance(value, datetime):
+                        value = value.isoformat()
+
+                    # Decrypt email, if needed
                     if name == 'email':
                         if is_email_encrypted:
                             value = self.decrypt_func(value)
+
                     item[name] = value
 
                 out['result'].append(item)

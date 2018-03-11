@@ -119,6 +119,9 @@ class ValidationError(Exception):
 class SearchCtx(object):
     """ A container for SSO user search parameters.
     """
+    __slots__ = ('user_id', 'username', 'email', 'display_name', 'first_name', 'middle_name', 'last_name', 'sign_up_status',
+        'approval_status', 'paginate', 'cur_page', 'page_size', 'name_op', 'is_name_exact')
+
     def __init__(self):
 
         # Query criteria

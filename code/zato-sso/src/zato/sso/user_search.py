@@ -115,8 +115,9 @@ class SSOSearch(object):
 # ################################################################################################################################
 
     @query_wrapper
-    def sql_search_func(self, session, ignored_cluster_id, order_by, needs_columns=False):
+    def sql_search_func(self, session, ignored_cluster_id, order_by, where, needs_columns=False):
         return session.query(*self.out_columns).\
+               filter(where).\
                order_by(*order_by)
 
 # ################################################################################################################################
@@ -305,6 +306,6 @@ class SSOSearch(object):
         order_by = config.get('order_by')
         order_by = self._get_order_by(order_by) if order_by else self.order_by.default
 
-        return util_search(self.sql_search_func, config, [], session, None, order_by, False, where=where)
+        return util_search(self.sql_search_func, config, [], session, None, order_by, where)
 
 # ################################################################################################################################
