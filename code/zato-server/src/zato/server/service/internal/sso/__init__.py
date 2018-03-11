@@ -88,7 +88,7 @@ class BaseService(Service):
         # Basic checks, applicable to all requests
         if self.request.input.current_app not in sso_conf.apps.all:
             self.response.payload.status = status_code.error
-            if sso_conf.main.inform_if_app_invalid:
+            if sso_conf.apps.inform_if_app_invalid:
                 self.response.payload.sub_status.append(status_code.app_list.invalid)
             return
 

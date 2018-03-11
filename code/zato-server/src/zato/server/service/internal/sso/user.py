@@ -19,7 +19,7 @@ from dateutil.parser import parser as DateTimeParser
 from zato.common.util import asbool
 from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal.sso import BaseService, BaseSIO
-from zato.sso import status_code
+from zato.sso import status_code, SearchCtx
 from zato.sso.user import update
 
 # ################################################################################################################################
@@ -307,7 +307,21 @@ class Search(BaseService):
 
 # ################################################################################################################################
 
-    def handle(self):
-        self.logger.warn(self.request.input)
+    def _handle_sso(self, req_ctx, _skip_ctx=('ust', 'current_app'), _invalid=_invalid):
+
+        # Search data built from all input parameters that were given on input
+        search_ctx = SearchCtx()
+
+        for key, value in sorted(self.request.input.items()):
+            if key not in _skip_ctx:
+                if value != _invalid:
+                    setattr(search_ctx, key, value)
+
+        # Assign to response all the matching elements
+        self.response.payload = self.sso.user.search(
+            search_ctx, req_ctx.input.ust, req_ctx.input.current_app, req_ctx.remote_addr, serialize_dt=True)
+
+        # All went fine, return status code OK
+        self.response.payload.status = status_code.ok
 
 # ################################################################################################################################
