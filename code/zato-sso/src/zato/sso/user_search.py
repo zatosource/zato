@@ -306,6 +306,6 @@ class SSOSearch(object):
         order_by = config.get('order_by')
         order_by = self._get_order_by(order_by) if order_by else self.order_by.default
 
-        return util_search(self.sql_search_func, config, [], session, None, order_by, where)
+        return util_search(self.sql_search_func, config, [], session, None, order_by, where, False)
 
 # ################################################################################################################################
