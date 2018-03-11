@@ -452,7 +452,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
     # Convert it to a native Python data type
     if channel_value != ZATO_NONE:
         channel_value = convert_sio(cid, param, param_name, channel_value, has_simple_io_config, False, bool_parameter_prefixes,
-            int_parameters, int_parameter_suffixes, encrypt_func, encrypt_secrets, None, data_format, False)
+            int_parameters, int_parameter_suffixes, force_empty_keys, encrypt_func, encrypt_secrets, None, data_format, False)
 
     # Return the value immediately if we already know channel_params are of higer priority
     if params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG and channel_value != ZATO_NONE:
