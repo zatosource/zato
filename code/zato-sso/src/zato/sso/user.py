@@ -26,7 +26,8 @@ from zato.sso import const, not_given, status_code, ValidationError
 from zato.sso.odb.query import get_user_by_id, get_user_by_username, get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.user_search import SSOSearch
-from zato.sso.util import check_credentials, make_data_secret, make_password_secret, set_password, validate_password
+from zato.sso.util import check_credentials, make_data_secret, make_password_secret, new_confirm_token, set_password, \
+     validate_password
 
 # ################################################################################################################################
 
@@ -191,7 +192,9 @@ class CreateUserCtx(object):
 class UserAPI(object):
     """ The main object through SSO users are managed.
     """
-    def __init__(self, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func, new_user_id_func):
+    def __init__(self, server, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func,
+            new_user_id_func):
+        self.server = server
         self.sso_conf = sso_conf
         self.odb_session_func = odb_session_func
         self.encrypt_func = encrypt_func
@@ -335,8 +338,13 @@ class UserAPI(object):
                 ctx.data['approval_status'] = approval_status
 
             else:
+                if self.sso_conf.signup.is_approval_needed:
+                    approval_status = const.approval_status.before_decision
+                else:
+                    approval_status = const.approval_status.approved
+
                 ctx.data['approval_status_mod_by'] = 'auto'
-                ctx.data['approval_status'] = const.approval_status.approved
+                ctx.data['approval_status'] = approval_status
 
             # The only field always required
             if not ctx.data.get('username'):
@@ -386,6 +394,8 @@ class UserAPI(object):
             session.add(user)
             session.commit()
 
+        return user
+
 # ################################################################################################################################
 
     def create_user(self, data, ust=None, current_app=None, remote_addr=None, skip_sec=False):
@@ -402,6 +412,29 @@ class UserAPI(object):
         data['sign_up_status'] = const.signup_status.final
 
         return self._create_user(CreateUserCtx(data), True, ust, current_app, remote_addr, skip_sec)
+
+# ################################################################################################################################
+
+    def signup(self, ctx, current_app, remote_addr, user_agent, has_remote_addr=False, has_user_agent=False):
+        """ Signs up a user with SSO, assuming that all validation services confirm correctness of input data.
+        On success, invokes callback services interested in the signup process.
+        """
+        # Used to confirm by users that an account should be really opened
+        confirm_token = new_confirm_token()
+
+        # Neeed in a couple of places below
+        ctx_dict = ctx.to_dict()
+
+        for name in self.sso_conf.user_validation.service:
+            validation_response = self.server.invoke(name, ctx_dict, serialize=False).getvalue(serialize=False)
+            if not validation_response['is_valid']:
+                raise ValidationError(validation_response['sub_status'])
+
+        # None of validation services returned an error so we can create the user now
+        with closing(self.odb_session_func()) as session:
+            self.create_user(ctx_dict, skip_sec=True)
+
+        return confirm_token
 
 # ################################################################################################################################
 
