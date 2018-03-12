@@ -389,6 +389,7 @@ password_allow_whitespace=True
 always_return_confirm_token=True
 is_email_required=True
 is_approval_needed=True
+callback_service_list=
 
 email_confirm_enabled=True
 email_confirm_from=confirm@example.com

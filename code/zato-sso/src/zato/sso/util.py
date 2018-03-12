@@ -199,4 +199,10 @@ def normalize_sso_config(sso_conf):
             ip_allowed = []
         user_address_list[username] = ip_allowed
 
+    # Make sure signup service list is a list
+    callback_service_list = sso_conf.signup.callback_service_list or []
+    if callback_service_list:
+        callback_service_list = callback_service_list if isinstance(callback_service_list, list) else [callback_service_list]
+    sso_conf.signup.callback_service_list = callback_service_list
+
 # ################################################################################################################################
