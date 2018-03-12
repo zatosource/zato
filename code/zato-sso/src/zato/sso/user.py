@@ -434,6 +434,12 @@ class UserAPI(object):
         with closing(self.odb_session_func()) as session:
             self.create_user(ctx_dict, skip_sec=True)
 
+        # Callback services may need the token
+        ctx_dict['confirm_token'] = confirm_token
+
+        for name in self.sso_conf.signup.callback_service_list:
+            self.server.invoke(name, ctx_dict)
+
         return confirm_token
 
 # ################################################################################################################################
