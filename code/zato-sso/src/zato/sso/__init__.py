@@ -143,3 +143,28 @@ class SearchCtx(object):
         self.is_name_exact = True
 
 # ################################################################################################################################
+
+class SignupCtx(object):
+    """ A container for SSO user signup parameters.
+    """
+    __slots__ = ('username', 'email', 'password', 'current_app', 'app_list', 'sign_up_status')
+
+    def __init__(self):
+        self.username = None
+        self.email = None
+        self.password = None
+        self.current_app = None
+        self.app_list = None
+        self.sign_up_status = const.signup_status.before_confirmation
+
+    def to_dict(self):
+        return {
+            'username': self.username,
+            'email': self.email,
+            'password': self.password,
+            'current_app': self.current_app,
+            'app_list': self.app_list,
+            'sign_up_status': self.sign_up_status
+        }
+
+# ################################################################################################################################

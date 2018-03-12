@@ -129,6 +129,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.sso.password_reset',
             'zato.server.service.internal.sso.session',
             'zato.server.service.internal.sso.session_attr',
+            'zato.server.service.internal.sso.signup',
             'zato.server.service.internal.sso.user',
             'zato.server.service.internal.sso.user_attr',
             'zato.server.service.internal.stats',
