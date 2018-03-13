@@ -19,7 +19,7 @@ from dateutil.parser import parser as DateTimeParser
 from zato.common.util import asbool
 from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal.sso import BaseService, BaseSIO
-from zato.sso import status_code, SearchCtx, SignupCtx, ValidationError
+from zato.sso import status_code, SearchCtx, SignupCtx
 from zato.sso.user import update
 
 # ################################################################################################################################

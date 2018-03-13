@@ -8,24 +8,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from contextlib import closing
-from datetime import datetime, timedelta
-from functools import wraps
-from inspect import getargspec
-from logging import getLogger
-from random import randint
-
 # SQALchemy
-from sqlalchemy import asc, desc, func
+from sqlalchemy import asc, desc
 from sqlalchemy.sql import and_ as sql_and, or_ as sql_or
 
 # Zato
 from zato.common.odb.model import SSOUser
 from zato.common.odb.query import query_wrapper
-from zato.common.util.search import SearchResults as _SearchResults
 from zato.common.util.sql import search as util_search
-from zato.server.service import Service
 from zato.sso import const
 from zato.sso.odb.query import _user_basic_columns
 

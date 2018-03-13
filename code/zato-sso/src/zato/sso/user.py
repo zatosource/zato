@@ -431,8 +431,7 @@ class UserAPI(object):
                 raise ValidationError(validation_response['sub_status'])
 
         # None of validation services returned an error so we can create the user now
-        with closing(self.odb_session_func()) as session:
-            self.create_user(ctx_dict, skip_sec=True)
+        self.create_user(ctx_dict, skip_sec=True)
 
         # Callback services may need the token
         ctx_dict['confirm_token'] = confirm_token
