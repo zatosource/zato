@@ -19,7 +19,7 @@ from dateutil.parser import parser as DateTimeParser
 from zato.common.util import asbool
 from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal.sso import BaseService, BaseSIO
-from zato.sso import status_code, SearchCtx
+from zato.sso import status_code, SearchCtx, SignupCtx, ValidationError
 from zato.sso.user import update
 
 # ################################################################################################################################
@@ -292,10 +292,30 @@ class Reject(_ChangeApprovalStatus):
 
 # ################################################################################################################################
 
-class Search(BaseService):
-    """ Looks up SSO users by input criteria.
+class _CtxInputUsing(BaseService):
+    """ Base class for services that create context objects based on their self.request.input
+    which may possibly use _invalid default values.
     """
     class SimpleIO(BaseSIO):
+        default_value = _invalid
+
+    def _get_ctx_from_input(self, CtxClass, skip=None, _invalid=_invalid):
+
+        ctx = CtxClass()
+        skip = skip or []
+
+        for key, value in sorted(self.request.input.items()):
+            if key not in skip:
+                if value != _invalid:
+                    setattr(ctx, key, value)
+        return ctx
+
+# ################################################################################################################################
+
+class Search(_CtxInputUsing):
+    """ Looks up SSO users by input criteria.
+    """
+    class SimpleIO(_CtxInputUsing.SimpleIO):
         input_required = ('ust', 'current_app')
         input_optional = ('user_id', 'username', 'email', 'display_name', 'first_name', 'middle_name', 'last_name',
             'sign_up_status', 'approval_status', Bool('paginate'), Int('cur_page'), Int('page_size'), 'name_op',
@@ -307,21 +327,30 @@ class Search(BaseService):
 
 # ################################################################################################################################
 
-    def _handle_sso(self, req_ctx, _skip_ctx=('ust', 'current_app'), _invalid=_invalid):
+    def _handle_sso(self, ctx, _skip_ctx=('ust', 'current_app')):
 
         # Search data built from all input parameters that were given on input
-        search_ctx = SearchCtx()
-
-        for key, value in sorted(self.request.input.items()):
-            if key not in _skip_ctx:
-                if value != _invalid:
-                    setattr(search_ctx, key, value)
+        search_ctx = self._get_ctx_from_input(SearchCtx, _skip_ctx)
 
         # Assign to response all the matching elements
         self.response.payload = self.sso.user.search(
-            search_ctx, req_ctx.input.ust, req_ctx.input.current_app, req_ctx.remote_addr, serialize_dt=True)
+            search_ctx, ctx.input.ust, ctx.input.current_app, ctx.remote_addr, serialize_dt=True)
 
         # All went fine, return status code OK
+        self.response.payload.status = status_code.ok
+
+# ################################################################################################################################
+
+class Signup(_CtxInputUsing):
+    """ Lets users sign up with the system.
+    """
+    class SimpleIO(_CtxInputUsing.SimpleIO):
+        input_required = ('username', 'password', 'current_app', List('app_list'))
+        input_optional = ('email',)
+
+    def _handle_sso(self, ctx, _skip_ctx=('ust', 'current_app')):
+        signup_ctx = self._get_ctx_from_input(SignupCtx)
+        self.sso.user.signup(signup_ctx, ctx.input.current_app, ctx.remote_addr)
         self.response.payload.status = status_code.ok
 
 # ################################################################################################################################

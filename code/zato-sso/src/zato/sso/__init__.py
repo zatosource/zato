@@ -150,9 +150,9 @@ class SignupCtx(object):
     __slots__ = ('username', 'email', 'password', 'current_app', 'app_list', 'sign_up_status')
 
     def __init__(self):
-        self.username = None
-        self.email = None
-        self.password = None
+        self.username = ''
+        self.email = ''
+        self.password = ''
         self.current_app = None
         self.app_list = None
         self.sign_up_status = const.signup_status.before_confirmation
