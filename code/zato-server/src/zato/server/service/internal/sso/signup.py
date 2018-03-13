@@ -24,21 +24,6 @@ from zato.sso.util import new_confirm_token
 
 # ################################################################################################################################
 
-class Signup(BaseService):
-    """ Lets users sign up with the system.
-    """
-    class SimpleIO(BaseSIO):
-        input_required = ('username', 'password', 'current_app', List('app_list'))
-        input_optional = ('email', 'display_name', 'first_name', 'middle_name', 'last_name')
-        output_optional = BaseSIO.output_optional + ('confirm_token',)
-
-# ################################################################################################################################
-
-    def _handle_sso(self, ctx):
-        zzz
-
-# ################################################################################################################################
-
 class Validate(Service):
     """ Validates creation of user data in accordance with configuration from sso.conf.
     """
@@ -46,7 +31,7 @@ class Validate(Service):
         input_required = ('username', 'password', List('app_list'))
         input_optional = ('email',)
         output_required = ('is_valid',)
-        output_optional = (List('status_code'), 'return_rc')
+        output_optional = (List('sub_status'), 'return_status')
         encrypt_secrets = False
         response_elem = None
 
@@ -69,18 +54,18 @@ class Validate(Service):
 
             if check_email:
                 if user.username == username and user.email == email:
-                    rc = [status_code.username.exists, status_code.email.exists]
-                    return_rc = sso_conf.signup.inform_if_user_exists and sso_conf.signup.inform_if_email_exists
+                    sub_status = [status_code.username.exists, status_code.email.exists]
+                    return_status = sso_conf.signup.inform_if_user_exists and sso_conf.signup.inform_if_email_exists
 
             elif user.username == username:
-                rc = status_code.username.exists
-                return_rc = sso_conf.signup.inform_if_user_exists
+                sub_status = status_code.username.exists
+                return_status = sso_conf.signup.inform_if_user_exists
 
             elif user.email == email:
-                rc = status_code.email.exists
-                return_rc = sso_conf.signup.inform_if_email_exists
+                sub_status = status_code.email.exists
+                return_status = sso_conf.signup.inform_if_email_exists
 
-            raise ValidationError(rc, return_rc)
+            raise ValidationError(sub_status, return_status)
 
 # ################################################################################################################################
 
@@ -129,11 +114,11 @@ class Validate(Service):
         """
         # Password may not be too short
         if len(password) < sso_conf.password.min_length:
-            raise ValidationError(status_code.password.too_short, sso_conf.signup.inform_if_password_invalid)
+            raise ValidationError(status_code.password.too_short, sso_conf.password.inform_if_invalid)
 
         # Password may not be too long
         if len(password) > sso_conf.password.max_length:
-            raise ValidationError(status_code.password.too_long, sso_conf.signup.inform_if_password_invalid)
+            raise ValidationError(status_code.password.too_long, sso_conf.password.inform_if_invalid)
 
         # Password's default complexity is checked case-insensitively
         password = password.lower()
@@ -141,7 +126,7 @@ class Validate(Service):
         # Password may not contain most commonly used ones
         for elem in sso_conf.password.reject_list:
             if elem in password:
-                raise ValidationError(status_code.password.invalid, sso_conf.signup.inform_if_password_invalid)
+                raise ValidationError(status_code.password.invalid, sso_conf.password.inform_if_invalid)
 
 # ################################################################################################################################
 
@@ -185,9 +170,10 @@ class Validate(Service):
                     self._validate_email(session, sso_conf, email)
 
             except ValidationError as e:
+                self.logger.warn('Could not validate user `%s`, sub_status `%s`', input.username, e.sub_status)
                 self.response.payload.is_valid = False
-                if e.return_rc:
-                    self.response.payload.status_code = e.status_code
+                if e.return_status:
+                    self.response.payload.sub_status = e.sub_status
             else:
                 self.response.payload.is_valid = True
 

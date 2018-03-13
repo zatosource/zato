@@ -415,7 +415,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def signup(self, ctx, current_app, remote_addr, user_agent, has_remote_addr=False, has_user_agent=False):
+    def signup(self, ctx, current_app, remote_addr):
         """ Signs up a user with SSO, assuming that all validation services confirm correctness of input data.
         On success, invokes callback services interested in the signup process.
         """
