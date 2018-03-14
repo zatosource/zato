@@ -347,10 +347,11 @@ class Signup(_CtxInputUsing):
     class SimpleIO(_CtxInputUsing.SimpleIO):
         input_required = ('username', 'password', 'current_app', List('app_list'))
         input_optional = ('email',)
+        output_optional = _CtxInputUsing.SimpleIO.output_optional + ('confirm_token',)
 
     def _handle_sso(self, ctx, _skip_ctx=('ust', 'current_app')):
-        signup_ctx = self._get_ctx_from_input(SignupCtx)
-        self.sso.user.signup(signup_ctx, ctx.input.current_app, ctx.remote_addr)
+        self.response.payload.confirm_token = self.sso.user.signup(
+            self._get_ctx_from_input(SignupCtx), ctx.input.current_app, ctx.remote_addr)
         self.response.payload.status = status_code.ok
 
 # ################################################################################################################################
