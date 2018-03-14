@@ -455,22 +455,7 @@ class UserAPI(object):
         """ Returns current session info or raises an exception if it could not be found.
         Optionally, requires that a super-user be owner of current_ust.
         """
-        # Verify current session's very existence first ..
-        current_session = self.session.get(current_ust, current_app, remote_addr)
-        if not current_session:
-            logger.warn('Could not verify session `%s` `%s` `%s` `%s`',
-                current_ust, current_app, remote_addr, format_exc())
-            raise ValidationError(status_code.auth.not_allowed, True)
-
-        # .. the session exists but it may be still the case that we require a super-user on input.
-        if needs_super_user:
-            if not current_session.is_super_user:
-                logger.warn(
-                    'Current UST does not belong to a super-user, cannot continue, current user is `%s` `%s`',
-                    current_session.user_id, current_session.username)
-                raise ValidationError(status_code.auth.not_allowed, True)
-
-        return current_session
+        return self.session.get_current_session(current_ust, current_app, remote_addr, needs_super_user)
 
 # ################################################################################################################################
 
