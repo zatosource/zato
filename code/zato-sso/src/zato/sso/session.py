@@ -438,13 +438,34 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def get(self, ust, current_app, remote_addr, check_if_password_expired=True):
+    def get(self, target_ust, current_ust, current_app, remote_addr, check_if_password_expired=True):
         """ Gets details of a session given by its UST on input, without renewing it.
+        Must be called by a super-user.
+        """
+        # Only super-users are allowed to call us
+        self.require_super_user(current_ust, current_app, remote_addr)
+
+        # This returns all attributes ..
+        session = self._get_session(target_ust, current_app, remote_addr, check_if_password_expired)
+
+
+        # .. and we need to build a dictionary with a few selected ones only
+        return {
+            'ust': session.ust,
+            'creation_time': session.creation_time,
+            'expiration_time': session.expiration_time,
+            'remote_addr': session.remote_addr,
+            'user_agent': session.user_agent,
+        }
+
+# ################################################################################################################################
+
+    def _get_session(self, ust, current_app, remote_addr, check_if_password_expired=True):
+        """ An internal wrapper around self.get which optionally does not require super-user rights.
         """
         with closing(self.odb_session_func()) as session:
-            out = self._get(session, ust, current_app, remote_addr, renew=False, needs_attrs=True,
+            return self._get(session, ust, current_app, remote_addr, renew=False, needs_attrs=True,
                 check_if_password_expired=check_if_password_expired)
-            return out
 
 # ################################################################################################################################
 
@@ -453,7 +474,7 @@ class SessionAPI(object):
         Optionally, requires that a super-user be owner of current_ust.
         """
         # Verify current session's very existence first ..
-        current_session = self.get(current_ust, current_app, remote_addr)
+        current_session = self._get_session(current_ust, current_app, remote_addr)
         if not current_session:
             logger.warn('Could not verify session `%s` `%s` `%s` `%s`',
                 current_ust, current_app, remote_addr, format_exc())
