@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from datetime import datetime, timedelta
 from logging import getLogger
+from traceback import format_exc
 
 # ipaddress
 from ipaddress import ip_address
@@ -412,12 +413,17 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def verify(self, ust, current_app, remote_addr):
+    def verify(self, target_ust, current_ust, current_app, remote_addr):
         """ Verifies a user session.
         """
-        with closing(self.odb_session_func()) as session:
-            out = self._get(session, ust, current_app, remote_addr, renew=False)
-            return out
+        self.require_super_user(current_ust, current_app, remote_addr)
+
+        try:
+            with closing(self.odb_session_func()) as session:
+                return self._get(session, target_ust, current_app, remote_addr, renew=False)
+        except Exception:
+            logger.warn('Could not verify UST, e:`%s`', format_exc())
+            return False
 
 # ################################################################################################################################
 
@@ -438,6 +444,36 @@ class SessionAPI(object):
             out = self._get(session, ust, current_app, remote_addr, renew=False, needs_attrs=True,
                 check_if_password_expired=check_if_password_expired)
             return out
+
+# ################################################################################################################################
+
+    def get_current_session(self, current_ust, current_app, remote_addr, needs_super_user):
+        """ Returns current session info or raises an exception if it could not be found.
+        Optionally, requires that a super-user be owner of current_ust.
+        """
+        # Verify current session's very existence first ..
+        current_session = self.get(current_ust, current_app, remote_addr)
+        if not current_session:
+            logger.warn('Could not verify session `%s` `%s` `%s` `%s`',
+                current_ust, current_app, remote_addr, format_exc())
+            raise ValidationError(status_code.auth.not_allowed, True)
+
+        # .. the session exists but it may be still the case that we require a super-user on input.
+        if needs_super_user:
+            if not current_session.is_super_user:
+                logger.warn(
+                    'Current UST does not belong to a super-user, cannot continue, current user is `%s` `%s`',
+                    current_session.user_id, current_session.username)
+                raise ValidationError(status_code.auth.not_allowed, True)
+
+        return current_session
+
+# ################################################################################################################################
+
+    def require_super_user(self, current_ust, current_app, remote_addr):
+        """ Makes sure that current_ust belongs to a super-user or raises an exception if it does not.
+        """
+        self.get_current_session(current_ust, current_app, remote_addr, True)
 
 # ################################################################################################################################
 

@@ -46,7 +46,8 @@ class SSOCommand(ZatoCommand):
         def _hash_secret(_secret):
             return crypto_manager.hash_secret(_secret, 'sso.super-user')
 
-        return UserAPI(sso_conf, _get_session, crypto_manager.encrypt, crypto_manager.decrypt, _hash_secret, None, new_user_id)
+        return UserAPI(None, sso_conf, _get_session, crypto_manager.encrypt, crypto_manager.decrypt, _hash_secret, None,
+            new_user_id)
 
 # ################################################################################################################################
 
