@@ -18,7 +18,7 @@ from dateutil.parser import parser as DateTimeParser
 # Zato
 from zato.common.util import asbool
 from zato.server.service import AsIs, Bool, Int, List
-from zato.server.service.internal.sso import BaseService, BaseSIO
+from zato.server.service.internal.sso import BaseService, BaseRESTService, BaseSIO
 from zato.sso import status_code, SearchCtx, SignupCtx
 from zato.sso.user import update
 
@@ -37,25 +37,6 @@ _invalid = '_invalid.{}'.format(uuid4().hex)
 # ################################################################################################################################
 
 dt_parser = DateTimeParser()
-
-# ################################################################################################################################
-
-class _BaseRESTService(BaseService):
-    """ Base class for services reacting to specific HTTP verbs.
-    """
-    def _handle_sso(self, ctx):
-        http_verb = self.wsgi_environ['REQUEST_METHOD']
-
-        try:
-            getattr(self, '_handle_sso_{}'.format(http_verb))(ctx)
-        except Exception:
-            self.logger.info('CID: `%s`, e:`%s`', self.cid, format_exc())
-            self.response.payload.status = status_code.error
-            self.response.payload.sub_status = [status_code.auth.not_allowed]
-        else:
-            self.response.payload.status = status_code.ok
-        finally:
-            self.response.payload.cid = self.cid
 
 # ################################################################################################################################
 
@@ -108,7 +89,7 @@ class Logout(BaseService):
 
 # ################################################################################################################################
 
-class User(_BaseRESTService):
+class User(BaseRESTService):
     """ User manipulation through REST.
     """
     class SimpleIO(BaseSIO):
@@ -221,7 +202,7 @@ class User(_BaseRESTService):
 
 # ################################################################################################################################
 
-class Password(_BaseRESTService):
+class Password(BaseRESTService):
     """ User password management.
     """
     class SimpleIO(BaseSIO):
@@ -264,7 +245,7 @@ class Password(_BaseRESTService):
 
 # ################################################################################################################################
 
-class _ChangeApprovalStatus(_BaseRESTService):
+class _ChangeApprovalStatus(BaseRESTService):
     """ Base class for services changing a user's approval_status.
     """
     func_name = None

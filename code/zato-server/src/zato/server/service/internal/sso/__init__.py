@@ -139,3 +139,22 @@ class BaseService(Service):
         raise NotImplementedError('Must be implemented in subclasses')
 
 # ################################################################################################################################
+
+class BaseRESTService(BaseService):
+    """ Base class for services reacting to specific HTTP verbs.
+    """
+    def _handle_sso(self, ctx):
+        http_verb = self.wsgi_environ['REQUEST_METHOD']
+
+        try:
+            getattr(self, '_handle_sso_{}'.format(http_verb))(ctx)
+        except Exception:
+            self.response.payload.status = status_code.error
+            self.response.payload.sub_status = [status_code.auth.not_allowed]
+            raise
+        else:
+            self.response.payload.status = status_code.ok
+        finally:
+            self.response.payload.cid = self.cid
+
+# ################################################################################################################################

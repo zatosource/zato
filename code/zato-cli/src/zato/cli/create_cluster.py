@@ -1000,14 +1000,12 @@ class Create(ZatoCommand):
             ['zato.sso.user.password', 'zato.server.service.internal.sso.user.Password', '/zato/sso/user/password'],
             ['zato.sso.user.search', 'zato.server.service.internal.sso.user.Search', '/zato/sso/user/search'],
 
-            ['zato.sso.session.validate', 'zato.server.service.internal.sso.session.Validate', '/zato/sso/session/validate'],
-            ['zato.sso.session.get', 'zato.server.service.internal.sso.session.Get', '/zato/sso/session'],
+            ['zato.sso.session.session', 'zato.server.service.internal.sso.session.Session', '/zato/sso/user/session'],
 
             ['zato.sso.user.password-reset.begin', 'zato.server.service.internal.sso.password_reset.Begin', '/zato/sso/user/password/reset/begin'],
             ['zato.sso.user.password-reset.complete', 'zato.server.service.internal.sso.password_reset.Complete', '/zato/sso/user/password/reset/complete'],
 
             ['zato.sso.user-attr.user-attr', 'zato.server.service.internal.sso.user_attr.UserAttr.', '/zato/sso/user/attr'],
-
             ['zato.sso.session-attr.session-attr', 'zato.server.service.internal.sso.session_attr.SessionAttr.', '/zato/sso/user/session/attr'],
         ]
 

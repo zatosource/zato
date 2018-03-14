@@ -334,17 +334,11 @@ class UserAPI(object):
                     approval_status = const.approval_status.before_decision
                 else:
                     approval_status = const.approval_status.approved
-
-                ctx.data['approval_status'] = approval_status
-
             else:
-                if self.sso_conf.signup.is_approval_needed:
-                    approval_status = const.approval_status.before_decision
-                else:
-                    approval_status = const.approval_status.approved
-
                 ctx.data['approval_status_mod_by'] = 'auto'
-                ctx.data['approval_status'] = approval_status
+                approval_status = const.approval_status.approved
+
+            ctx.data['approval_status'] = approval_status
 
             # The only field always required
             if not ctx.data.get('username'):
