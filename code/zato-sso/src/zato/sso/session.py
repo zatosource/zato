@@ -402,19 +402,20 @@ class SessionAPI(object):
 
         # Everything is validated, we can renew the session, if told to.
         if renew:
+            expiration_time = now + timedelta(minutes=self.sso_conf.session.expiry)
             session.execute(
                 SessionModelUpdate().values({
-                    'expiration_time': now + timedelta(minutes=self.sso_conf.session.expiry),
-            }).where(SessionModelTable.c.ust==ctx.ust)
-            )
-
-        # Indicate success
-        return sso_info if needs_attrs else True
+                    'expiration_time': expiration_time,
+            }).where(SessionModelTable.c.ust==ctx.ust))
+            return expiration_time
+        else:
+            # Indicate success
+            return sso_info if needs_attrs else True
 
 # ################################################################################################################################
 
     def verify(self, target_ust, current_ust, current_app, remote_addr):
-        """ Verifies a user session.
+        """ Verifies a user session without renewing it.
         """
         self.require_super_user(current_ust, current_app, remote_addr)
 
@@ -428,17 +429,17 @@ class SessionAPI(object):
 # ################################################################################################################################
 
     def renew(self, ust, current_app, remote_addr):
-        """ Renew timelife of a user session, if it is valid.
+        """ Renew timelife of a user session, if it is valid, and returns its new expiration time in UTC.
         """
         with closing(self.odb_session_func()) as session:
-            out = self._get(session, ust, current_app, remote_addr, renew=True)
+            expiration_time = self._get(session, ust, current_app, remote_addr, renew=True, check_if_password_expired=True)
             session.commit()
-            return out
+            return expiration_time
 
 # ################################################################################################################################
 
     def get(self, ust, current_app, remote_addr, check_if_password_expired=True):
-        """ Gets details of a session given by its UST on input.
+        """ Gets details of a session given by its UST on input, without renewing it.
         """
         with closing(self.odb_session_func()) as session:
             out = self._get(session, ust, current_app, remote_addr, renew=False, needs_attrs=True,
