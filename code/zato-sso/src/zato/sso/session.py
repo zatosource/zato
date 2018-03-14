@@ -451,7 +451,6 @@ class SessionAPI(object):
 
         # .. and we need to build a dictionary with a few selected ones only
         return {
-            'ust': session.ust,
             'creation_time': session.creation_time,
             'expiration_time': session.expiration_time,
             'remote_addr': session.remote_addr,
