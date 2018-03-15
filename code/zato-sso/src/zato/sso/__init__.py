@@ -61,6 +61,7 @@ class status_code:
         invalid_signup_status = 'E005003'
         not_approved          = 'E005004'
         super_user_required   = 'E005005'
+        no_such_sign_up_token = 'E005006'
 
     class metadata:
         not_allowed = 'E006001'
@@ -81,11 +82,10 @@ class const:
     """
     class signup_status:
         before_confirmation = 'before_confirmation'
-        to_approve          = 'to_approve'
         final               = 'final'
 
         def __iter__(self):
-            return iter([self.before_confirmation, self.to_approve, self.final])
+            return iter([self.before_confirmation, self.final])
 
     class approval_status:
         approved = 'approved'

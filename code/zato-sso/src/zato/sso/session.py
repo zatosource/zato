@@ -21,7 +21,7 @@ from ipaddress import ip_address
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.sso.api import const, status_code, ValidationError
 from zato.sso.odb.query import get_session_by_ust, get_user_by_username
-from zato.sso.util import check_credentials, new_user_session_token, set_password, validate_password
+from zato.sso.util import check_credentials, check_remote_app_exists, new_user_session_token, set_password, validate_password
 
 # ################################################################################################################################
 
@@ -114,10 +114,7 @@ class SessionAPI(object):
 # ################################################################################################################################
 
     def _check_remote_app_exists(self, ctx):
-        if ctx.input['current_app'] not in self.sso_conf.apps.all:
-            logger.warn('Invalid current_app `%s`, not among `%s', ctx.input['current_app'], self.sso_conf.apps.all)
-        else:
-            return True
+        return check_remote_app_exists(ctx.input['current_app'], self.sso_conf.apps.all, logger)
 
 # ################################################################################################################################
 
@@ -406,7 +403,9 @@ class SessionAPI(object):
             session.execute(
                 SessionModelUpdate().values({
                     'expiration_time': expiration_time,
-            }).where(SessionModelTable.c.ust==ctx.ust))
+            }).where(
+                SessionModelTable.c.ust==ctx.ust
+            ))
             return expiration_time
         else:
             # Indicate success
