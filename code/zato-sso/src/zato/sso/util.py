@@ -23,8 +23,13 @@ from ipaddress import ip_network
 from sqlalchemy import update
 
 # Zato
+from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import status_code, ValidationError
+
+# ################################################################################################################################
+
+_gen_secret = CryptoManager.generate_secret
 
 # ################################################################################################################################
 
@@ -38,8 +43,8 @@ def _new_id(prefix, _uuid4=uuid4, _crockford_encode=crockford_encode):
 
 # ################################################################################################################################
 
-def new_confirm_token(_new_id=_new_id):
-    return _new_id('zcnt')
+def new_confirm_token(_gen_secret=_gen_secret):
+    return _gen_secret(192)
 
 # ################################################################################################################################
 
@@ -204,5 +209,14 @@ def normalize_sso_config(sso_conf):
     if callback_service_list:
         callback_service_list = callback_service_list if isinstance(callback_service_list, list) else [callback_service_list]
     sso_conf.signup.callback_service_list = callback_service_list
+
+# ################################################################################################################################
+
+def check_remote_app_exists(current_app, apps_all, logger):
+    if current_app not in apps_all:
+        logger.warn('Invalid current_app `%s`, not among `%s', current_app, apps_all)
+        raise ValidationError(status_code.app_list.invalid)
+    else:
+        return True
 
 # ################################################################################################################################

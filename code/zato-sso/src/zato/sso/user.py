@@ -20,14 +20,13 @@ from traceback import format_exc
 from sqlalchemy import update as sql_update
 
 # Zato
-from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const, not_given, status_code, ValidationError
-from zato.sso.odb.query import get_user_by_id, get_user_by_username, get_user_by_ust
+from zato.sso.odb.query import get_user_by_id, get_user_by_username, get_user_by_ust, sign_up_confirm_token_exists
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.user_search import SSOSearch
-from zato.sso.util import check_credentials, make_data_secret, make_password_secret, new_confirm_token, set_password, \
-     validate_password
+from zato.sso.util import check_credentials, check_remote_app_exists, make_data_secret, make_password_secret, new_confirm_token, \
+     set_password, validate_password
 
 # ################################################################################################################################
 
@@ -41,8 +40,9 @@ sso_search.set_up()
 # ################################################################################################################################
 
 _utcnow = datetime.utcnow
-_gen_secret = CryptoManager.generate_secret
 UserModelTable = UserModel.__table__
+UserModelTableDelete = UserModelTable.delete
+UserModelTableUpdate = UserModelTable.update
 
 # ################################################################################################################################
 
@@ -290,11 +290,7 @@ class UserAPI(object):
 
         user_model.sign_up_status = ctx.data.get('sign_up_status')
         user_model.sign_up_time = now
-        user_model.sign_up_confirm_token = _gen_secret(192)
-
-        user_model.sign_up_status = ctx.data.get('sign_up_status')
-        user_model.sign_up_time = now
-        user_model.sign_up_confirm_token = _gen_secret(192)
+        user_model.sign_up_confirm_token = ctx.data['sign_up_confirm_token']
 
         user_model.approval_status = ctx.data['approval_status']
         user_model.approval_status_mod_time = now
@@ -417,11 +413,15 @@ class UserAPI(object):
         """ Signs up a user with SSO, assuming that all validation services confirm correctness of input data.
         On success, invokes callback services interested in the signup process.
         """
+        # There is no current user so we cannot do more than only confirm that current_app truly exists.
+        self._ensure_app_exists(current_app)
+
         # Used to confirm by users that an account should be really opened
         confirm_token = new_confirm_token()
 
         # Neeed in a couple of places below
         ctx_dict = ctx.to_dict()
+        ctx_dict['sign_up_confirm_token'] = confirm_token
 
         for name in self.sso_conf.user_validation.service:
             validation_response = self.server.invoke(name, ctx_dict, serialize=False).getvalue(serialize=False)
@@ -431,13 +431,40 @@ class UserAPI(object):
         # None of validation services returned an error so we can create the user now
         self.create_user(ctx_dict, require_super_user=False)
 
-        # Callback services may need the token
-        ctx_dict['confirm_token'] = confirm_token
-
+        # Invoke all callback services interested in the event of user's signup
         for name in self.sso_conf.signup.callback_service_list:
             self.server.invoke(name, ctx_dict)
 
         return confirm_token
+
+# ################################################################################################################################
+
+    def confirm_signup(self, confirm_token, current_app, remote_addr, _utcnow=_utcnow):
+        """ Invoked when users want to confirm their signup with the system.
+        """
+        # There is no current user so we cannot do more than only confirm that current_app truly exists.
+        self._ensure_app_exists(current_app)
+
+        with closing(self.odb_session_func()) as session:
+
+            # No such token, raise an exception then
+            if not sign_up_confirm_token_exists(session, confirm_token):
+                raise ValidationError(status_code.auth.no_such_sign_up_token)
+
+            # OK, found token ..
+            else:
+
+                # .. set signup metadata ..
+                session.execute(
+                    UserModelTableUpdate().values({
+                        'sign_up_status': const.signup_status.final,
+                        'sign_up_confirm_time': _utcnow(),
+                }).where(
+                    UserModelTable.c.sign_up_confirm_token==confirm_token
+                ))
+
+                # .. and commit it to DB.
+                session.commit()
 
 # ################################################################################################################################
 
@@ -560,7 +587,7 @@ class UserAPI(object):
                 raise ValidationError(status_code.common.invalid_operation, False)
 
             rows_matched = session.execute(
-                UserModelTable.delete().\
+                UserModelTableDelete().\
                 where(where)
             ).rowcount
             session.commit()
@@ -638,6 +665,13 @@ class UserAPI(object):
         """ Logs a user out of SSO.
         """
         return self.session.logout(ust, current_app, remote_addr)
+
+# ################################################################################################################################
+
+    def _ensure_app_exists(self, app):
+        """ Raises an exception if input does not exist in SSO configuration.
+        """
+        check_remote_app_exists(app, self.sso_conf.apps.all, logger)
 
 # ################################################################################################################################
 
