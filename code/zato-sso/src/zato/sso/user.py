@@ -322,21 +322,25 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _create_user(self, ctx, is_super_user, ust=None, current_app=None, remote_addr=None, skip_sec=None):
+    def _create_user(self, ctx, is_super_user, ust=None, current_app=None, remote_addr=None, require_super_user=True,
+        auto_approve=False):
         """ Creates a new regular or super-user out of initial user data.
         """
         with closing(self.odb_session_func()) as session:
 
-            if not skip_sec:
+            if require_super_user:
                 current_session = self._require_super_user(ust, current_app, remote_addr)
                 ctx.data['approval_status_mod_by'] = current_session.user_id
+            else:
+                ctx.data['approval_status_mod_by'] = 'auto'
+
+            if auto_approve:
+                approval_status = const.approval_status.approved
+            else:
                 if self.sso_conf.signup.is_approval_needed:
                     approval_status = const.approval_status.before_decision
                 else:
                     approval_status = const.approval_status.approved
-            else:
-                ctx.data['approval_status_mod_by'] = 'auto'
-                approval_status = const.approval_status.approved
 
             ctx.data['approval_status'] = approval_status
 
@@ -392,20 +396,20 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def create_user(self, data, ust=None, current_app=None, remote_addr=None, skip_sec=False):
+    def create_user(self, data, ust=None, current_app=None, remote_addr=None, require_super_user=True, auto_approve=False):
         """ Creates a new regular user.
         """
-        return self._create_user(CreateUserCtx(data), False, ust, current_app, remote_addr, skip_sec)
+        return self._create_user(CreateUserCtx(data), False, ust, current_app, remote_addr, require_super_user, auto_approve)
 
 # ################################################################################################################################
 
-    def create_super_user(self, data, ust=None, current_app=None, remote_addr=None, skip_sec=False):
+    def create_super_user(self, data, ust=None, current_app=None, remote_addr=None, require_super_user=True, auto_approve=False):
         """ Creates a new super-user.
         """
         # Super-users don't need to confirmation their own creation
         data['sign_up_status'] = const.signup_status.final
 
-        return self._create_user(CreateUserCtx(data), True, ust, current_app, remote_addr, skip_sec)
+        return self._create_user(CreateUserCtx(data), True, ust, current_app, remote_addr, require_super_user, auto_approve)
 
 # ################################################################################################################################
 
@@ -425,7 +429,7 @@ class UserAPI(object):
                 raise ValidationError(validation_response['sub_status'])
 
         # None of validation services returned an error so we can create the user now
-        self.create_user(ctx_dict, skip_sec=True)
+        self.create_user(ctx_dict, require_super_user=False)
 
         # Callback services may need the token
         ctx_dict['confirm_token'] = confirm_token
