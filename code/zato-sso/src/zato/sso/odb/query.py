@@ -96,8 +96,8 @@ def is_super_user_by_ust(session, ust, now=None):
 
 # ################################################################################################################################
 
-def sign_up_confirm_token_exists(session, confirm_token):
-    return session.query(SSOUser.sign_up_confirm_token).\
+def get_sign_up_status_by_token(session, confirm_token):
+    return session.query(SSOUser.sign_up_status).\
         filter(SSOUser.sign_up_confirm_token==confirm_token).\
         first()
 
