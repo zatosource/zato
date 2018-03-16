@@ -22,7 +22,7 @@ from sqlalchemy import update as sql_update
 # Zato
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const, not_given, status_code, ValidationError
-from zato.sso.odb.query import get_user_by_id, get_user_by_username, get_user_by_ust, sign_up_confirm_token_exists
+from zato.sso.odb.query import get_sign_up_status_by_token, get_user_by_id, get_user_by_username, get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.user_search import SSOSearch
 from zato.sso.util import check_credentials, check_remote_app_exists, make_data_secret, make_password_secret, new_confirm_token, \
@@ -447,11 +447,17 @@ class UserAPI(object):
 
         with closing(self.odb_session_func()) as session:
 
-            # No such token, raise an exception then
-            if not sign_up_confirm_token_exists(session, confirm_token):
+            sign_up_status = get_sign_up_status_by_token(session, confirm_token)
+
+            # No such token, raise an exception then ..
+            if not sign_up_status:
                 raise ValidationError(status_code.auth.no_such_sign_up_token)
 
-            # OK, found token ..
+            # .. cannot confirm signup processes that are not before confirmation ..
+            elif sign_up_status[0] != const.signup_status.before_confirmation:
+                raise ValidationError(status_code.auth.sign_up_confirmed)
+
+            # .. OK, found a valid token ..
             else:
 
                 # .. set signup metadata ..
