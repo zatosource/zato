@@ -124,6 +124,9 @@ def set_up_class_attributes(class_, service_store=None, name=None):
         class_.generate_secret = service_store.server.crypto_manager.generate_secret
         class_.generate_password = service_store.server.crypto_manager.generate_password
 
+        # Audit log
+        class_.audit_pii = service_store.server.audit_pii
+
     class_._before_job_hooks = []
     class_._after_job_hooks = []
 

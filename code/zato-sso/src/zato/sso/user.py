@@ -20,6 +20,7 @@ from traceback import format_exc
 from sqlalchemy import update as sql_update
 
 # Zato
+from zato.common.audit import audit_pii
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const, not_given, status_code, ValidationError
 from zato.sso.odb.query import get_sign_up_status_by_token, get_user_by_id, get_user_by_username, get_user_by_ust

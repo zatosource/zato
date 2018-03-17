@@ -98,6 +98,7 @@ def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
 # ################################################################################################################################
 
 common_logging_conf_contents = """
+
 loggers:
     '':
         level: INFO
@@ -116,6 +117,11 @@ loggers:
         level: INFO
         handlers: [admin]
         qualname: zato_admin
+        propagate: false
+    zato_audit_pii:
+        level: INFO
+        handlers: [stdout, audit_pii]
+        qualname: zato_audit_pii
         propagate: false
     zato_connector:
         level: INFO
@@ -167,7 +173,7 @@ handlers:
     default:
         formatter: default
         class: logging.handlers.ConcurrentRotatingFileHandler
-        filename: '{log_path}'
+        filename: './logs/server.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
@@ -186,6 +192,13 @@ handlers:
         formatter: default
         class: logging.handlers.ConcurrentRotatingFileHandler
         filename: './logs/admin.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    audit_pii:
+        formatter: default
+        class: logging.handlers.RotatingFileHandler
+        filename: './logs/audit-pii.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
@@ -254,6 +267,8 @@ handlers:
         backupCount: 10
 
 formatters:
+    audit_pii:
+        format: '%(asctime)s,%(levelname)s,%(name)s:%(lineno)d,%(cid)s,%(current_user)s,%(target_user_id)s,%(op)s,%(result)s'
     default:
         format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
     http_access_log:
