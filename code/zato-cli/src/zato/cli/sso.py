@@ -64,7 +64,7 @@ class SSOCommand(ZatoCommand):
         user_api = self._get_sso_config(args, repo_location, secrets_conf)
 
         if self.user_required:
-            user = user_api.get_user_by_username(args.username)
+            user = user_api.get_user_by_username('cli', args.username)
             if not user:
                 self.logger.warn('No such user `%s`', args.username)
                 return self.SYS_ERROR.NO_SUCH_SSO_USER
@@ -120,7 +120,7 @@ class _CreateUser(SSOCommand):
         data.password = args.password
 
         func = getattr(user_api, self.create_func)
-        func(data, require_super_user=False, auto_approve=True)
+        func('cli', data, require_super_user=False, auto_approve=True)
 
         self.logger.info('Created %s `%s`', self.user_type, data.username)
 
@@ -157,7 +157,7 @@ class DeleteUser(SSOCommand):
                 self.logger.info('User `%s` kept intact', user.username)
                 return
 
-        user_api.delete_user_by_username(args.username, None, None, None, skip_sec=True)
+        user_api.delete_user_by_username('cli', args.username, None, None, None, skip_sec=True)
         self.logger.info('Deleted user `%s`', args.username)
 
 # ################################################################################################################################
@@ -170,7 +170,7 @@ class LockUser(SSOCommand):
     ]
 
     def _on_sso_command(self, args, user, user_api):
-        user_api.lock_user(user.user_id)
+        user_api.lock_user('cli', user.user_id)
         self.logger.info('Locked user account `%s`', args.username)
 
 # ################################################################################################################################
@@ -183,7 +183,7 @@ class UnlockUser(SSOCommand):
     ]
 
     def _on_sso_command(self, args, user, user_api):
-        user_api.unlock_user(user.user_id)
+        user_api.unlock_user('cli', user.user_id)
         self.logger.info('Unlocked user account `%s`', args.username)
 
 # ################################################################################################################################
@@ -199,7 +199,7 @@ class ChangeUserPassword(SSOCommand):
     ]
 
     def _on_sso_command(self, args, user, user_api):
-        user_api.set_password(user.user_id, args.password, args.must_change, args.expiry)
+        user_api.set_password('cli', user.user_id, args.password, args.must_change, args.expiry)
         self.logger.info('Changed password for user `%s`', args.username)
 
 # ################################################################################################################################
@@ -215,7 +215,7 @@ class ResetUserPassword(SSOCommand):
 
     def _on_sso_command(self, args, user, user_api):
         new_password = CryptoManager.generate_password()
-        user_api.set_password(user.user_id, new_password, args.must_change, args.expiry)
+        user_api.set_password('cli', user.user_id, new_password, args.must_change, args.expiry)
         self.logger.info('Password for user `%s` reset to `%s`', args.username, new_password)
 
 # ################################################################################################################################
