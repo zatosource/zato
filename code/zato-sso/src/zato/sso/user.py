@@ -399,6 +399,9 @@ class UserAPI(object):
     def create_user(self, cid, data, ust=None, current_app=None, remote_addr=None, require_super_user=True, auto_approve=False):
         """ Creates a new regular user.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'create_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         return self._create_user(CreateUserCtx(data), False, ust, current_app, remote_addr, require_super_user, auto_approve)
 
 # ################################################################################################################################
@@ -406,6 +409,9 @@ class UserAPI(object):
     def create_super_user(self, data, ust=None, current_app=None, remote_addr=None, require_super_user=True, auto_approve=False):
         """ Creates a new super-user.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'create_super_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         # Super-users don't need to confirmation their own creation
         data['sign_up_status'] = const.signup_status.final
 
@@ -417,6 +423,9 @@ class UserAPI(object):
         """ Signs up a user with SSO, assuming that all validation services confirm correctness of input data.
         On success, invokes callback services interested in the signup process.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'signup', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         # There is no current user so we cannot do more than only confirm that current_app truly exists.
         self._ensure_app_exists(current_app)
 
@@ -433,7 +442,7 @@ class UserAPI(object):
                 raise ValidationError(validation_response['sub_status'])
 
         # None of validation services returned an error so we can create the user now
-        self.create_user(ctx_dict, require_super_user=False)
+        self.create_user(cid, ctx_dict, current_app=current_app, remote_addr=remote_addr, require_super_user=False)
 
         # Invoke all callback services interested in the event of user's signup
         for name in self.sso_conf.signup.callback_service_list:
@@ -446,6 +455,9 @@ class UserAPI(object):
     def confirm_signup(self, cid, confirm_token, current_app, remote_addr, _utcnow=_utcnow):
         """ Invoked when users want to confirm their signup with the system.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'confirm_signup', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         # There is no current user so we cannot do more than only confirm that current_app truly exists.
         self._ensure_app_exists(current_app)
 
@@ -481,6 +493,9 @@ class UserAPI(object):
     def get_user_by_username(self, cid, username, needs_approved=True):
         """ Returns a user object by username or None, if there is no such username.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'get_user_by_username', extra={'username':username})
+
         with closing(self.odb_session_func()) as session:
             return get_user_by_username(session, username, needs_approved=needs_approved)
 
@@ -545,6 +560,9 @@ class UserAPI(object):
     def get_current_user(self, cid, current_ust, current_app, remote_addr):
         """ Returns a user object by that person's current UST.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'get_current_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         return self._get_user_by_attr(
             get_user_by_ust, self.decrypt_func(current_ust), current_ust, current_app, remote_addr, False, True)
 
@@ -553,6 +571,9 @@ class UserAPI(object):
     def get_user_by_id(self, cid, user_id, current_ust, current_app, remote_addr):
         """ Returns a user object by that person's ID.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'get_user_by_id', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         return self._get_user_by_attr(get_user_by_id, user_id, current_ust, current_app, remote_addr, True, False)
 
 # ################################################################################################################################
@@ -611,6 +632,9 @@ class UserAPI(object):
     def delete_user_by_id(self, cid, user_id, current_ust, current_app, remote_addr, skip_sec=False):
         """ Deletes a user by that person's ID.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'delete_user_by_id', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         return self._delete_user(user_id, None, current_ust, current_app, remote_addr, skip_sec)
 
 # ################################################################################################################################
@@ -618,6 +642,9 @@ class UserAPI(object):
     def delete_user_by_username(self, cid, username, current_ust, current_app, remote_addr, skip_sec=False):
         """ Deletes a user by that person's username.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'delete_user_by_username', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         return self._delete_user(None, username, current_ust, current_app, remote_addr, skip_sec)
 
 # ################################################################################################################################
@@ -656,6 +683,15 @@ class UserAPI(object):
         """ Logs a user in if username and password are correct, returning a user session token (UST) on success,
         or a ValidationError on error.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'login', target_user=username, extra={
+            'current_app': current_app,
+            'remote_addr': remote_addr,
+            'has_remote_addr': has_remote_addr,
+            'has_user_agent': has_user_agent,
+            'new_password': bool(new_password) # To store information if a new password was sent or not
+        })
+
         return self.session.login(
             LoginCtx(
                 remote_addr,
@@ -674,6 +710,9 @@ class UserAPI(object):
     def logout(self, cid, ust, current_app, remote_addr):
         """ Logs a user out of SSO.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'logout', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         return self.session.logout(ust, current_app, remote_addr)
 
 # ################################################################################################################################
@@ -816,6 +855,9 @@ class UserAPI(object):
     def update_current_user(self, cid, data, current_ust, current_app, remote_addr):
         """ Updates current user as identified by current_ust.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'update_current_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         return self._update_user(data, current_ust, current_app, remote_addr, update_self=True)
 
 # ################################################################################################################################
@@ -823,6 +865,10 @@ class UserAPI(object):
     def update_user_by_id(self, cid, user_id, data, current_ust, current_app, remote_addr):
         """ Updates current user as identified by ID.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'update_user_by_id', target_user=user_id,
+            extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         return self._update_user(data, current_ust, current_app, remote_addr, user_id=user_id)
 
 # ################################################################################################################################
@@ -830,6 +876,9 @@ class UserAPI(object):
     def set_password(self, cid, user_id, password, must_change, password_expiry, _utcnow=_utcnow):
         """ Sets a new password for user.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'set_password', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         set_password(self.odb_session_func, self.encrypt_func, self.hash_func, self.sso_conf, user_id, password,
             must_change, password_expiry)
 
@@ -839,6 +888,9 @@ class UserAPI(object):
         """ Changes a user's password. Super-admins may also set its expiration
         and whether the user must set it to a new one on next login.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'change_password', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         # Basic checks first
         self._check_basic_update_attrs(data, change_password.max_len_attrs, change_password.all_attrs)
 
@@ -912,6 +964,9 @@ class UserAPI(object):
     def approve_user(self, cid, user_id, current_ust, current_app, remote_addr):
         """ Changes a user's approval_status to 'approved'. Must be called with a UST pointing to a super-user.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'approve_user', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         return self._change_approval_status(user_id, const.approval_status.approved, current_ust, current_app, remote_addr)
 
 # ################################################################################################################################
@@ -919,6 +974,9 @@ class UserAPI(object):
     def reject_user(self, cid, user_id, current_ust, current_app, remote_addr):
         """ Changes a user's approval_status to 'approved'. Must be called with a UST pointing to a super-user.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'reject_user', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         return self._change_approval_status(user_id, const.approval_status.rejected, current_ust, current_app, remote_addr)
 
 # ################################################################################################################################
@@ -929,6 +987,9 @@ class UserAPI(object):
         """ Looks up users by specific search criteria from the SearchCtx ctx object.
         Must be called with a UST belonging to a super-user.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'search', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         # Will raise an exception if current user is not an admin
         self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=True)
 
