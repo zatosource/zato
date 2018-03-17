@@ -18,6 +18,7 @@ from traceback import format_exc
 from ipaddress import ip_address
 
 # Zato
+from zato.common.audit import audit_pii
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.sso.api import const, status_code, ValidationError
 from zato.sso.odb.query import get_session_by_ust, get_user_by_username
@@ -416,6 +417,9 @@ class SessionAPI(object):
     def verify(self, cid, target_ust, current_ust, current_app, remote_addr):
         """ Verifies a user session without renewing it.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'verify', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         self.require_super_user(current_ust, current_app, remote_addr)
 
         try:
@@ -430,6 +434,9 @@ class SessionAPI(object):
     def renew(self, cid, ust, current_app, remote_addr):
         """ Renew timelife of a user session, if it is valid, and returns its new expiration time in UTC.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'renew', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         with closing(self.odb_session_func()) as session:
             expiration_time = self._get(session, ust, current_app, remote_addr, renew=True, check_if_password_expired=True)
             session.commit()
@@ -441,6 +448,9 @@ class SessionAPI(object):
         """ Gets details of a session given by its UST on input, without renewing it.
         Must be called by a super-user.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'get', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         # Only super-users are allowed to call us
         self.require_super_user(current_ust, current_app, remote_addr)
 
@@ -470,6 +480,9 @@ class SessionAPI(object):
         """ Returns current session info or raises an exception if it could not be found.
         Optionally, requires that a super-user be owner of current_ust.
         """
+        # PII audit comes first
+        audit_pii.info(cid, 'get_current_session', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
         # Verify current session's very existence first ..
         current_session = self._get_session(current_ust, current_app, remote_addr)
         if not current_session:

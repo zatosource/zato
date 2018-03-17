@@ -26,7 +26,15 @@ class AuditPII(object):
 
 # ################################################################################################################################
 
-    def info(self, cid, op, current_user='', target_user='', result='', extra='', _dumps=dumps):
+    def _log(self, func, cid, op, current_user='', target_user='', result='', extra='', _dumps=dumps):
+
+        if isinstance(extra, dict):
+            remote_addr = extra.get('remote_addr')
+            if not remote_addr:
+                extra['remote_addr'] = ''
+            else:
+                extra['remote_addr'] = ';'.join(elem.exploded for elem in extra['remote_addr'])
+
         self._logger.info('%s,%s,%s,%s,%s,%s' % (
             cid, op, current_user, target_user, result,
             extra if isinstance(extra, basestring) else _dumps(extra),
@@ -34,19 +42,18 @@ class AuditPII(object):
 
 # ################################################################################################################################
 
-    def warn(self, cid, op, current_user='', target_user='', result='', extra='', _dumps=dumps):
-        self._logger.warn('%s,%s,%s,%s,%s,%s' % (
-            cid, op, current_user, target_user, result,
-            extra if isinstance(extra, basestring) else _dumps(extra),
-        ))
+    def info(self, *args, **kwargs):
+        self._log(self._logger.info, *args, **kwargs)
 
 # ################################################################################################################################
 
-    def error(self, cid, op, current_user='', target_user='', result='', extra='', _dumps=dumps):
-        self._logger.error('%s,%s,%s,%s,%s,%s' % (
-            cid, op, current_user, target_user, result,
-            extra if isinstance(extra, basestring) else _dumps(extra),
-        ))
+    def warn(self, *args, **kwargs):
+        self._log(self._logger.warn, *args, **kwargs)
+
+# ################################################################################################################################
+
+    def error(self, *args, **kwargs):
+        self._log(self._logger.error, *args, **kwargs)
 
 # ################################################################################################################################
 

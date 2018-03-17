@@ -63,8 +63,7 @@ class Login(BaseService):
         input.remote_addr = input.remote_addr if has_remote_addr else self.wsgi_environ['zato.http.remote_addr'].decode('utf8')
         input.user_agent = input.user_agent if has_user_agent else self.wsgi_environ['HTTP_USER_AGENT']
 
-        out = self._call_sso_api(self.cid, self.sso.user.login, 'SSO user `{username}` cannot log in to `{current_app}`',
-            **ctx.input)
+        out = self._call_sso_api(self.sso.user.login, 'SSO user `{username}` cannot log in to `{current_app}`', **ctx.input)
         if out:
             self.response.payload.ust = out.ust
 
