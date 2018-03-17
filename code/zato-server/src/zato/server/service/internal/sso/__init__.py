@@ -108,11 +108,11 @@ class BaseService(Service):
 
 # ################################################################################################################################
 
-    def _call_sso_api(self, func, log_prefix, **kwargs):
+    def _call_sso_api(self, cid, func, log_prefix, **kwargs):
 
         try:
             # Call the business functionality
-            out = func(**kwargs)
+            out = func(cid, **kwargs)
         except ValidationError as e:
 
             # Log only if needed (likely WARN will be always enabled but still, it's better to check it first)
