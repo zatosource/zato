@@ -19,7 +19,7 @@ from dateutil.parser import parser as DateTimeParser
 from zato.common.util import asbool
 from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal.sso import BaseService, BaseRESTService, BaseSIO
-from zato.sso import status_code, SearchCtx, SignupCtx
+from zato.sso import status_code, SearchCtx, SignupCtx, ValidationError
 from zato.sso.user import update
 
 # ################################################################################################################################
@@ -322,17 +322,33 @@ class Search(_CtxInputUsing):
 
 # ################################################################################################################################
 
-class Signup(_CtxInputUsing):
-    """ Lets users sign up with the system.
+class Signup(BaseRESTService, _CtxInputUsing):
+    """ Lets users sign up with the system and confirm it afterwards.
     """
     class SimpleIO(_CtxInputUsing.SimpleIO):
-        input_required = ('username', 'password', 'current_app', List('app_list'))
-        input_optional = ('email',)
+        input_optional = ('confirm_token', 'email', 'username', 'password', 'current_app', List('app_list'))
         output_optional = _CtxInputUsing.SimpleIO.output_optional + ('confirm_token',)
 
-    def _handle_sso(self, ctx, _skip_ctx=('ust', 'current_app')):
+# ################################################################################################################################
+
+    def _handle_sso_POST(self, ctx):
         self.response.payload.confirm_token = self.sso.user.signup(
             self._get_ctx_from_input(SignupCtx), ctx.input.current_app, ctx.remote_addr)
         self.response.payload.status = status_code.ok
+
+# ################################################################################################################################
+
+    def _handle_sso_PATCH(self, ctx):
+        try:
+            self.sso.user.confirm_signup(ctx.input.confirm_token, ctx.input.current_app, ctx.remote_addr)
+        except ValidationError as e:
+            self.logger.info(format_exc())
+            self.response.payload.status = status_code.error
+            if e.return_status:
+                self.response.payload.sub_status = e.sub_status
+            else:
+                self.response.payload.sub_status = status_code.auth.not_allowed
+        else:
+            self.response.payload.status = status_code.ok
 
 # ################################################################################################################################
