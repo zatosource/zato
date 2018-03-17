@@ -63,7 +63,8 @@ class Login(BaseService):
         input.remote_addr = input.remote_addr if has_remote_addr else self.wsgi_environ['zato.http.remote_addr'].decode('utf8')
         input.user_agent = input.user_agent if has_user_agent else self.wsgi_environ['HTTP_USER_AGENT']
 
-        out = self._call_sso_api(self.sso.user.login, 'SSO user `{username}` cannot log in to `{current_app}`', **ctx.input)
+        out = self._call_sso_api(self.cid, self.sso.user.login, 'SSO user `{username}` cannot log in to `{current_app}`',
+            **ctx.input)
         if out:
             self.response.payload.ust = out.ust
 
@@ -81,7 +82,7 @@ class Logout(BaseService):
         # Note that "ok" is always returned no matter the outcome - this is to thwart any attempts
         # to learn which USTs are/were valid or not.
         try:
-            self.sso.user.logout(ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+            self.sso.user.logout(self.cid, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
         except Exception:
             self.logger.warn('CID: `%s`, e:`%s`', self.cid, format_exc())
         finally:
@@ -123,7 +124,7 @@ class User(BaseRESTService):
         attrs += [ctx.input.ust, ctx.input.current_app, ctx.remote_addr]
 
         # Func will return a dictionary describing the required user, already taking permissions into account
-        self.response.payload = func(*attrs)
+        self.response.payload = func(self.cid, *attrs)
 
 # ################################################################################################################################
 
@@ -139,7 +140,7 @@ class User(BaseRESTService):
                 data[name] = value
 
         # This will update 'data' in place ..
-        self.sso.user.create_user(data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+        self.sso.user.create_user(self.cid, data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
         # .. and we can now assign it to response..
 
@@ -162,7 +163,7 @@ class User(BaseRESTService):
         """
         # Will take care of permissions / access rights and if everything is successful,
         # the user pointed to by user_id will be deleted.
-        self.sso.user.delete_user_by_id(ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+        self.sso.user.delete_user_by_id(self.cid, ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
 
@@ -196,9 +197,9 @@ class User(BaseRESTService):
         user_id = data.pop('user_id', None)
 
         if user_id:
-            self.sso.user.update_user_by_id(user_id, data, current_ust, current_app, ctx.remote_addr)
+            self.sso.user.update_user_by_id(self.cid, user_id, data, current_ust, current_app, ctx.remote_addr)
         else:
-            self.sso.user.update_current_user(data, current_ust, current_app, ctx.remote_addr)
+            self.sso.user.update_current_user(self.cid, data, current_ust, current_app, ctx.remote_addr)
 
 # ################################################################################################################################
 
@@ -241,7 +242,7 @@ class Password(BaseRESTService):
             must_change = asbool(must_change)
             data['must_change'] = must_change
 
-        self.sso.user.change_password(data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+        self.sso.user.change_password(self.cid, data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
 
@@ -255,7 +256,7 @@ class _ChangeApprovalStatus(BaseRESTService):
 
     def _handle_sso_POST(self, ctx):
         func = getattr(self.sso.user, self.func_name)
-        func(ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+        func(self.cid, ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
 
@@ -314,7 +315,7 @@ class Search(_CtxInputUsing):
         search_ctx = self._get_ctx_from_input(SearchCtx, _skip_ctx)
 
         # Assign to response all the matching elements
-        self.response.payload = self.sso.user.search(
+        self.response.payload = self.sso.user.search(self.cid,
             search_ctx, ctx.input.ust, ctx.input.current_app, ctx.remote_addr, serialize_dt=True)
 
         # All went fine, return status code OK
@@ -332,7 +333,7 @@ class Signup(BaseRESTService, _CtxInputUsing):
 # ################################################################################################################################
 
     def _handle_sso_POST(self, ctx):
-        self.response.payload.confirm_token = self.sso.user.signup(
+        self.response.payload.confirm_token = self.sso.user.signup(self.cid,
             self._get_ctx_from_input(SignupCtx), ctx.input.current_app, ctx.remote_addr)
         self.response.payload.status = status_code.ok
 
@@ -340,7 +341,7 @@ class Signup(BaseRESTService, _CtxInputUsing):
 
     def _handle_sso_PATCH(self, ctx):
         try:
-            self.sso.user.confirm_signup(ctx.input.confirm_token, ctx.input.current_app, ctx.remote_addr)
+            self.sso.user.confirm_signup(self.cid, ctx.input.confirm_token, ctx.input.current_app, ctx.remote_addr)
         except ValidationError as e:
             self.logger.info(format_exc())
             self.response.payload.status = status_code.error
