@@ -208,6 +208,9 @@ class Service(object):
     generate_secret = None
     generate_password = None
 
+    # Audit log
+    audit_pii = None
+
     # For invoking other servers directly
     servers = None
 

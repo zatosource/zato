@@ -186,7 +186,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
     # Store KVDB config in logs, possibly replacing its password if told to
     kvdb_config = get_kvdb_config_for_log(server_config.kvdb)
-    kvdb_logger.info('Master process config `%s`', kvdb_config)
+    kvdb_logger.info('Main process config `%s`', kvdb_config)
 
     # New in 2.0 hence optional
     user_locale = server_config.misc.get('locale', None)

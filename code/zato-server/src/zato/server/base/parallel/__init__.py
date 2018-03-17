@@ -38,6 +38,7 @@ from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
 from zato.common import DATA_FORMAT, KVDB, SECRETS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
 from zato.common.zato_keyutils import KeyUtils
@@ -136,6 +137,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.server_startup_ipc = ServerStartupIPC()
         self.keyutils = KeyUtils()
         self.sso_api = None
+        self.audit_pii = audit_pii
         self._hash_secret_method = None
         self._hash_secret_rounds = None
         self._hash_secret_salt_size = None
