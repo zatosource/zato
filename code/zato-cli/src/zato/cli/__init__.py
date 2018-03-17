@@ -98,7 +98,6 @@ def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
 # ################################################################################################################################
 
 common_logging_conf_contents = """
-
 loggers:
     '':
         level: INFO
@@ -268,7 +267,7 @@ handlers:
 
 formatters:
     audit_pii:
-        format: '%(asctime)s,%(levelname)s,%(name)s:%(lineno)d,%(cid)s,%(current_user)s,%(target_user_id)s,%(op)s,%(result)s'
+        format: '%(message)s'
     default:
         format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
     http_access_log:
