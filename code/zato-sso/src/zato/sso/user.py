@@ -21,6 +21,7 @@ from sqlalchemy import update as sql_update
 
 # Zato
 from zato.common.audit import audit_pii
+from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const, not_given, status_code, ValidationError
 from zato.sso.odb.query import get_sign_up_status_by_token, get_user_by_id, get_user_by_username, get_user_by_ust
@@ -327,9 +328,11 @@ class UserAPI(object):
 
             if require_super_user:
                 current_session = self._require_super_user(ust, current_app, remote_addr)
-                ctx.data['approval_status_mod_by'] = current_session.user_id
+                current_user = current_session.user_id
             else:
-                ctx.data['approval_status_mod_by'] = 'auto'
+                current_user = 'auto'
+
+            ctx.data['approval_status_mod_by'] = current_user
 
             if auto_approve:
                 approval_status = const.approval_status.approved
@@ -393,7 +396,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def create_user(self, data, ust=None, current_app=None, remote_addr=None, require_super_user=True, auto_approve=False):
+    def create_user(self, cid, data, ust=None, current_app=None, remote_addr=None, require_super_user=True, auto_approve=False):
         """ Creates a new regular user.
         """
         return self._create_user(CreateUserCtx(data), False, ust, current_app, remote_addr, require_super_user, auto_approve)
@@ -410,7 +413,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def signup(self, ctx, current_app, remote_addr):
+    def signup(self, cid, ctx, current_app, remote_addr):
         """ Signs up a user with SSO, assuming that all validation services confirm correctness of input data.
         On success, invokes callback services interested in the signup process.
         """
@@ -440,7 +443,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def confirm_signup(self, confirm_token, current_app, remote_addr, _utcnow=_utcnow):
+    def confirm_signup(self, cid, confirm_token, current_app, remote_addr, _utcnow=_utcnow):
         """ Invoked when users want to confirm their signup with the system.
         """
         # There is no current user so we cannot do more than only confirm that current_app truly exists.
@@ -475,7 +478,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def get_user_by_username(self, username, needs_approved=True):
+    def get_user_by_username(self, cid, username, needs_approved=True):
         """ Returns a user object by username or None, if there is no such username.
         """
         with closing(self.odb_session_func()) as session:
@@ -539,7 +542,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def get_current_user(self, current_ust, current_app, remote_addr):
+    def get_current_user(self, cid, current_ust, current_app, remote_addr):
         """ Returns a user object by that person's current UST.
         """
         return self._get_user_by_attr(
@@ -547,7 +550,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def get_user_by_id(self, user_id, current_ust, current_app, remote_addr):
+    def get_user_by_id(self, cid, user_id, current_ust, current_app, remote_addr):
         """ Returns a user object by that person's ID.
         """
         return self._get_user_by_attr(get_user_by_id, user_id, current_ust, current_app, remote_addr, True, False)
@@ -605,14 +608,14 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def delete_user_by_id(self, user_id, current_ust, current_app, remote_addr, skip_sec=False):
+    def delete_user_by_id(self, cid, user_id, current_ust, current_app, remote_addr, skip_sec=False):
         """ Deletes a user by that person's ID.
         """
         return self._delete_user(user_id, None, current_ust, current_app, remote_addr, skip_sec)
 
 # ################################################################################################################################
 
-    def delete_user_by_username(self, username, current_ust, current_app, remote_addr, skip_sec=False):
+    def delete_user_by_username(self, cid, username, current_ust, current_app, remote_addr, skip_sec=False):
         """ Deletes a user by that person's username.
         """
         return self._delete_user(None, username, current_ust, current_app, remote_addr, skip_sec)
@@ -648,7 +651,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def login(self, username, password, current_app, remote_addr, user_agent, has_remote_addr=False,
+    def login(self, cid, username, password, current_app, remote_addr, user_agent, has_remote_addr=False,
         has_user_agent=False, new_password=''):
         """ Logs a user in if username and password are correct, returning a user session token (UST) on success,
         or a ValidationError on error.
@@ -668,7 +671,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def logout(self, ust, current_app, remote_addr):
+    def logout(self, cid, ust, current_app, remote_addr):
         """ Logs a user out of SSO.
         """
         return self.session.logout(ust, current_app, remote_addr)
@@ -810,21 +813,21 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def update_current_user(self, data, current_ust, current_app, remote_addr):
+    def update_current_user(self, cid, data, current_ust, current_app, remote_addr):
         """ Updates current user as identified by current_ust.
         """
         return self._update_user(data, current_ust, current_app, remote_addr, update_self=True)
 
 # ################################################################################################################################
 
-    def update_user_by_id(self, user_id, data, current_ust, current_app, remote_addr):
+    def update_user_by_id(self, cid, user_id, data, current_ust, current_app, remote_addr):
         """ Updates current user as identified by ID.
         """
         return self._update_user(data, current_ust, current_app, remote_addr, user_id=user_id)
 
 # ################################################################################################################################
 
-    def set_password(self, user_id, password, must_change, password_expiry, _utcnow=_utcnow):
+    def set_password(self, cid, user_id, password, must_change, password_expiry, _utcnow=_utcnow):
         """ Sets a new password for user.
         """
         set_password(self.odb_session_func, self.encrypt_func, self.hash_func, self.sso_conf, user_id, password,
@@ -832,7 +835,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def change_password(self, data, current_ust, current_app, remote_addr):
+    def change_password(self, cid, data, current_ust, current_app, remote_addr):
         """ Changes a user's password. Super-admins may also set its expiration
         and whether the user must set it to a new one on next login.
         """
@@ -906,21 +909,22 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def approve_user(self, user_id, current_ust, current_app, remote_addr):
+    def approve_user(self, cid, user_id, current_ust, current_app, remote_addr):
         """ Changes a user's approval_status to 'approved'. Must be called with a UST pointing to a super-user.
         """
         return self._change_approval_status(user_id, const.approval_status.approved, current_ust, current_app, remote_addr)
 
 # ################################################################################################################################
 
-    def reject_user(self, user_id, current_ust, current_app, remote_addr):
+    def reject_user(self, cid, user_id, current_ust, current_app, remote_addr):
         """ Changes a user's approval_status to 'approved'. Must be called with a UST pointing to a super-user.
         """
         return self._change_approval_status(user_id, const.approval_status.rejected, current_ust, current_app, remote_addr)
 
 # ################################################################################################################################
 
-    def search(self, ctx, current_ust, current_app, remote_addr, serialize_dt=False, _all_super_user_attrs=_all_super_user_attrs,
+    def search(self, cid, ctx, current_ust, current_app, remote_addr, serialize_dt=False,
+        _all_super_user_attrs=_all_super_user_attrs,
         _dt=('sign_up_time', 'password_expiry', 'approv_rej_time', 'locked_time', 'approval_status_mod_time')):
         """ Looks up users by specific search criteria from the SearchCtx ctx object.
         Must be called with a UST belonging to a super-user.

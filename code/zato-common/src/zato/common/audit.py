@@ -25,18 +25,18 @@ class AuditPII(object):
 
 # ################################################################################################################################
 
-    def info(self, cid, current_user, target_user, op, result, extra=''):
-        self._logger.info('%s,%s,%s,%s,%s,%s' % (cid, current_user, target_user, op, result, extra))
+    def info(self, cid, op, current_user='', target_user='', result='', extra=''):
+        self._logger.info('%s,%s,%s,%s,%s,%s' % (cid, op, current_user, target_user, result, extra))
 
 # ################################################################################################################################
 
-    def warn(self, cid, current_user, target_user, op, result, extra=''):
-        self._logger.warn('%s,%s,%s,%s,%s,%s' % (cid, current_user, target_user, op, result, extra))
+    def warn(self, cid, op, current_user='', target_user='', result='', extra=''):
+        self._logger.warn('%s,%s,%s,%s,%s,%s' % (cid, op, current_user, target_user, result, extra))
 
 # ################################################################################################################################
 
-    def error(self, cid, current_user, target_user, op, result, extra=''):
-        self._logger.error('%s,%s,%s,%s,%s,%s' % (cid, current_user, target_user, op, result, extra))
+    def error(self, cid, op, current_user='', target_user='', result='', extra=''):
+        self._logger.error('%s,%s,%s,%s,%s,%s' % (cid, op, current_user, target_user, result, extra))
 
 # ################################################################################################################################
 
