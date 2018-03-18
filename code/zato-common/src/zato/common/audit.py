@@ -35,10 +35,26 @@ class AuditPII(object):
             else:
                 extra['remote_addr'] = ';'.join(elem.exploded for elem in extra['remote_addr'])
 
-        self._logger.info('%s,%s,%s,%s,%s,%s' % (
-            cid, op, current_user, target_user, result,
-            extra if isinstance(extra, basestring) else _dumps(extra),
-        ))
+        entry = {
+            'cid': cid,
+            'op': op,
+        }
+
+        if current_user:
+            entry['current_user'] = current_user
+
+        if target_user:
+            entry['target_user'] = target_user
+
+        if result:
+            entry['result'] = result
+
+        if extra:
+            entry['extra'] = extra
+
+        entry = dumps(entry)
+
+        self._logger.info('%s' % entry)
 
 # ################################################################################################################################
 
