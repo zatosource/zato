@@ -1069,7 +1069,7 @@ class UserAPI(object):
             # .. and append any data found.
             for sql_item in sql_result.result:
                 sql_item = sql_item._asdict()
-                item = {}
+                item = UserEntity()
 
                 # Write out all super-user accessible attributes for each output row
                 for name in sorted(_all_super_user_attrs):
@@ -1084,7 +1084,7 @@ class UserAPI(object):
                         if is_email_encrypted:
                             value = self.decrypt_func(value)
 
-                    item[name] = value
+                    setattr(item, name, value)
 
                 out['result'].append(item)
 
