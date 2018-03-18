@@ -78,7 +78,9 @@ class CheckConfig(ManageCommand):
 
         # This will be needed by scheduler but not server
         if needs_decrypt_password:
-            engine_params['password'] = cm.decrypt(engine_params['password'])
+            password = engine_params['password']
+            if password:
+                engine_params['password'] = cm.decrypt(password)
 
         self.ping_sql(cm, engine_params, get_ping_query(fs_sql_config, engine_params))
 
@@ -96,7 +98,9 @@ class CheckConfig(ManageCommand):
         engine_params = {'extra':{}, 'pool_size':1}
         for sqlalch_name, django_name in pairs:
             engine_params[sqlalch_name] = conf[django_name]
-        engine_params['password'] = cm.decrypt(engine_params['password'])
+        password = engine_params['password']
+        if password:
+            engine_params['password'] = cm.decrypt(password)
 
         self.ping_sql(cm, engine_params, ping_queries[engine_params['engine']])
 
@@ -270,7 +274,7 @@ class CheckConfig(ManageCommand):
         repo_dir = join(self.component_dir, 'config', 'repo')
 
         self.check_sql_odb_web_admin(
-            self.get_crypto_manager(args.secret_key, args.stdin_data, WebAdminCryptoManager),
+            self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None), WebAdminCryptoManager),
             self.get_json_conf('web-admin.conf', repo_dir))
 
         self.ensure_no_pidfile('web-admin')
@@ -279,7 +283,7 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def _on_scheduler(self, args, *ignored_args, **ignored_kwargs):
-        cm = self.get_crypto_manager(args.secret_key, args.stdin_data, SchedulerCryptoManager)
+        cm = self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None), SchedulerCryptoManager)
         conf = ConfigObj(join(self.component_dir, 'config', 'repo', 'scheduler.conf'), use_zato=False)
         fs_sql_config = self.get_sql_ini('sql.conf')
 
