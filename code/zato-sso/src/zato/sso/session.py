@@ -420,7 +420,7 @@ class SessionAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'verify', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        self.require_super_user(current_ust, current_app, remote_addr)
+        self.require_super_user(cid, current_ust, current_app, remote_addr)
 
         try:
             with closing(self.odb_session_func()) as session:
@@ -452,7 +452,7 @@ class SessionAPI(object):
         audit_pii.info(cid, 'get', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # Only super-users are allowed to call us
-        self.require_super_user(current_ust, current_app, remote_addr)
+        self.require_super_user(cid, current_ust, current_app, remote_addr)
 
         # This returns all attributes ..
         session = self._get_session(target_ust, current_app, remote_addr, check_if_password_expired)
@@ -476,7 +476,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def get_current_session(self, current_ust, current_app, remote_addr, needs_super_user):
+    def get_current_session(self, cid, current_ust, current_app, remote_addr, needs_super_user):
         """ Returns current session info or raises an exception if it could not be found.
         Optionally, requires that a super-user be owner of current_ust.
         """
@@ -502,10 +502,13 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def require_super_user(self, current_ust, current_app, remote_addr):
+    def require_super_user(self, cid, current_ust, current_app, remote_addr):
         """ Makes sure that current_ust belongs to a super-user or raises an exception if it does not.
         """
-        self.get_current_session(current_ust, current_app, remote_addr, True)
+        # PII audit comes first
+        audit_pii.info(cid, 'require_super_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
+        self.get_current_session(cid, current_ust, current_app, remote_addr, True)
 
 # ################################################################################################################################
 

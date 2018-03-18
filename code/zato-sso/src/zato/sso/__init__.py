@@ -169,3 +169,42 @@ class SignupCtx(object):
         }
 
 # ################################################################################################################################
+
+class User(object):
+    """ Represents a user managed by SSO.
+    """
+    __slots = ('approval_status', 'approval_status_mod_by', 'approval_status_mod_time', 'creation_ctx', 'display_name',
+        'email', 'first_name', 'is_active', 'is_approval_needed', 'is_internal', 'is_locked', 'is_super_user',
+        'last_name', 'locked_by', 'locked_time', 'middle_name', 'password_expiry', 'password_is_set', 'password_last_set',
+        'password_must_change', 'sign_up_status', 'sign_up_time', 'user_id', 'username')
+
+    def __init__(self):
+        self.approval_status = None
+        self.approval_status_mod_by = None
+        self.approval_status_mod_time = None
+        self.creation_ctx = None
+        self.display_name = None
+        self.email = None
+        self.first_name = None
+        self.is_active = None
+        self.is_approval_needed = None
+        self.is_internal = None
+        self.is_locked = None
+        self.is_super_user = None
+        self.last_name = None
+        self.locked_by = None
+        self.locked_time = None
+        self.middle_name = None
+        self.password_expiry = None
+        self.password_is_set = None
+        self.password_last_set = None
+        self.password_must_change = None
+        self.sign_up_status = None
+        self.sign_up_time = None
+        self.user_id = None
+        self.username = None
+
+    def to_dict(self):
+        return dict((name, getattr(self, name)) for name in self.__slots)
+
+# ################################################################################################################################

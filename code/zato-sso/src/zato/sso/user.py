@@ -23,7 +23,7 @@ from sqlalchemy import update as sql_update
 from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
-from zato.sso import const, not_given, status_code, ValidationError
+from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
 from zato.sso.odb.query import get_sign_up_status_by_token, get_user_by_id, get_user_by_username, get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.user_search import SSOSearch
@@ -313,10 +313,10 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _require_super_user(self, ust, current_app, remote_addr):
+    def _require_super_user(self, cid, ust, current_app, remote_addr):
         """ Raises an exception if either current user session token does not belong to a super user.
         """
-        return self._get_current_session(ust, current_app, remote_addr, needs_super_user=True)
+        return self._get_current_session(cid, ust, current_app, remote_addr, needs_super_user=True)
 
 # ################################################################################################################################
 
@@ -406,7 +406,8 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def create_super_user(self, data, ust=None, current_app=None, remote_addr=None, require_super_user=True, auto_approve=False):
+    def create_super_user(self, cid, data, ust=None, current_app=None, remote_addr=None, require_super_user=True,
+        auto_approve=False):
         """ Creates a new super-user.
         """
         # PII audit comes first
@@ -501,22 +502,22 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _get_current_session(self, current_ust, current_app, remote_addr, needs_super_user):
+    def _get_current_session(self, cid, current_ust, current_app, remote_addr, needs_super_user):
         """ Returns current session info or raises an exception if it could not be found.
         Optionally, requires that a super-user be owner of current_ust.
         """
-        return self.session.get_current_session(current_ust, current_app, remote_addr, needs_super_user)
+        return self.session.get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user)
 
 # ################################################################################################################################
 
-    def _get_user_by_attr(self, func, attr_value, current_ust, current_app, remote_addr, _needs_super_user,
+    def _get_user_by_attr(self, cid, func, attr_value, current_ust, current_app, remote_addr, _needs_super_user,
         queries_current_session, _utcnow=_utcnow):
         """ Returns a user by a specific function and business value.
         """
         with closing(self.odb_session_func()) as session:
 
             # Validate and get session
-            current_session = self._get_current_session(current_ust, current_app, remote_addr, _needs_super_user)
+            current_session = self._get_current_session(cid, current_ust, current_app, remote_addr, _needs_super_user)
 
             # If func was to query current session, we can just re-use what we have fetched above,
             # so as to have one SQL query less in a piece of code that will be likely used very often.
@@ -531,27 +532,27 @@ class UserAPI(object):
 
             # UST is valid, let's return data then
             else:
+
+                out = UserEntity()
+
                 if current_session.is_super_user:
                     attrs = _all_super_user_attrs
-                    out = {
-                        'is_approval_needed': self.sso_conf.signup.is_approval_needed
-                    }
+                    out.is_approval_needed = self.sso_conf.signup.is_approval_needed
                 else:
                     attrs = regular_attrs
-                    out = {}
 
                 for key in attrs:
                     value = getattr(info, key)
                     if isinstance(value, datetime):
                         value = value.isoformat()
-                    out[key] = value
+                    setattr(out, key, value)
 
-                if out.get('email'):
+                if out.email:
                     if self.sso_conf.main.encrypt_email:
                         try:
-                            out['email'] = self.decrypt_func(out['email'])
+                            out.email = self.decrypt_func(out.email)
                         except Exception:
-                            logger.warn('Could not decrypt email, user_id:`%s`', out['user_id'])
+                            logger.warn('Could not decrypt email, user_id:`%s`', out.user_id)
 
                 return out
 
@@ -564,7 +565,7 @@ class UserAPI(object):
         audit_pii.info(cid, 'get_current_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         return self._get_user_by_attr(
-            get_user_by_ust, self.decrypt_func(current_ust), current_ust, current_app, remote_addr, False, True)
+            cid, get_user_by_ust, self.decrypt_func(current_ust), current_ust, current_app, remote_addr, False, True)
 
 # ################################################################################################################################
 
@@ -574,7 +575,7 @@ class UserAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'get_user_by_id', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._get_user_by_attr(get_user_by_id, user_id, current_ust, current_app, remote_addr, True, False)
+        return self._get_user_by_attr(cid, get_user_by_id, user_id, current_ust, current_app, remote_addr, True, False)
 
 # ################################################################################################################################
 
@@ -583,10 +584,10 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _delete_user(self, user_id, username, current_ust, current_app, remote_addr, skip_sec=False):
+    def _delete_user(self, cid, user_id, username, current_ust, current_app, remote_addr, skip_sec=False):
         """ Deletes a user by ID or username.
         """
-        current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=False)
+        current_session = self._get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user=False)
         if not skip_sec:
             if not current_session.is_super_user:
                 raise ValidationError(status_code.auth.not_allowed, False)
@@ -758,7 +759,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _update_user(self, data, current_ust, current_app, remote_addr, user_id=None, update_self=None):
+    def _update_user(self, cid, data, current_ust, current_app, remote_addr, user_id=None, update_self=None):
         """ Low-level implementation of user updates.
         """
         if not(user_id or update_self):
@@ -769,7 +770,7 @@ class UserAPI(object):
         self._check_basic_update_attrs(data, update.max_len_attrs, update.all_update_attrs)
 
         with closing(self.odb_session_func()) as session:
-            current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=False)
+            current_session = self._get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user=False)
 
             # We will be updating our own account or another user, depending on input flags/parameters.
             _user_id = current_session.user_id if update_self else user_id
@@ -873,7 +874,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def set_password(self, cid, user_id, password, must_change, password_expiry, _utcnow=_utcnow):
+    def set_password(self, cid, user_id, password, must_change, password_expiry, current_app, remote_addr, _utcnow=_utcnow):
         """ Sets a new password for user.
         """
         # PII audit comes first
@@ -888,9 +889,6 @@ class UserAPI(object):
         """ Changes a user's password. Super-admins may also set its expiration
         and whether the user must set it to a new one on next login.
         """
-        # PII audit comes first
-        audit_pii.info(cid, 'change_password', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
-
         # Basic checks first
         self._check_basic_update_attrs(data, change_password.max_len_attrs, change_password.all_attrs)
 
@@ -899,6 +897,9 @@ class UserAPI(object):
 
         # . only super-users may send user_id on input ..
         user_id = data.get('user_id', _no_such_value)
+
+        # PII audit goes here, once we know the target user's ID
+        audit_pii.info(cid, 'change_password', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # .. so if it is sent ..
         if user_id != _no_such_value:
@@ -918,7 +919,8 @@ class UserAPI(object):
 
             # .. but only if the user changes another user's password ..
             if current_session.user_id != user_id:
-                self.set_password(user_id, data['new_password'], data.get('must_change'), data.get('password_expiry'))
+                self.set_password(user_id, data['new_password'], data.get('must_change'), data.get('password_expiry'),
+                    current_app, remote_addr)
 
                 # All done, another user's password has been changed
                 return
@@ -947,7 +949,7 @@ class UserAPI(object):
 
             # All done, we can set the new password now.
             try:
-                self.set_password(user_id, data['new_password'], must_change, password_expiry)
+                self.set_password(user_id, data['new_password'], must_change, password_expiry, current_app, remote_addr)
             except Exception:
                 logger.warn('Could not set a new password for user_id:`%s`, e:`%s`', current_session.user_id, format_exc())
                 raise ValidationError(status_code.auth.not_allowed, True)
@@ -991,7 +993,7 @@ class UserAPI(object):
         audit_pii.info(cid, 'search', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # Will raise an exception if current user is not an admin
-        self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=True)
+        self._get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user=True)
 
         if ctx.cur_page < 1:
             ctx.cur_page = 1

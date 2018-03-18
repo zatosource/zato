@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from json import dumps
 
+# ipaddress
+from ipaddress import IPv4Address, IPv6Address
+
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
@@ -33,7 +36,8 @@ class AuditPII(object):
             if not remote_addr:
                 extra['remote_addr'] = ''
             else:
-                extra['remote_addr'] = ';'.join(elem.exploded for elem in extra['remote_addr'])
+                if isinstance(extra['remote_addr'], (IPv4Address, IPv6Address)):
+                    extra['remote_addr'] = ';'.join(elem.exploded for elem in extra['remote_addr'])
 
         entry = {
             'cid': cid,
