@@ -218,7 +218,8 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def _on_server(self, args):
-        cm = self.get_crypto_manager(args.secret_key, args.stdin_data, class_=ServerCryptoManager)
+        cm = self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None),
+            class_=ServerCryptoManager)
         fs_sql_config = self.get_sql_ini('sql.conf')
         repo_dir = join(self.component_dir, 'config', 'repo')
         server_conf_path = join(repo_dir, 'server.conf')
