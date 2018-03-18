@@ -100,7 +100,7 @@ class _CreateUser(SSOCommand):
 
     def _on_sso_command(self, args, user, user_api):
 
-        if user_api.get_user_by_username(args.username):
+        if user_api.get_user_by_username('', args.username):
             self.logger.warn('User already exists `%s`', args.username)
             return self.SYS_ERROR.USER_EXISTS
 
@@ -118,6 +118,7 @@ class _CreateUser(SSOCommand):
         data.middle_name = args.middle_name or b''
         data.last_name = args.last_name or b''
         data.password = args.password
+        data.sign_up_confirm_token = 'cli.{}'.format(CryptoManager.generate_secret())
 
         func = getattr(user_api, self.create_func)
         func('cli', data, require_super_user=False, auto_approve=True)
