@@ -8,15 +8,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# ################################################################################################################################
-
 # SQLAlchemy
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, Sequence, String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declared_attr
 
+# Zato
+from zato.common.odb.model.base import Base
+
 # ################################################################################################################################
 
-class _SSOUser:
+class _SSOUser(Base):
     __tablename__ = 'zato_sso_user'
     __table_args__ = (
         UniqueConstraint('username', name='zato_u_usrn_uq'),
@@ -84,7 +85,7 @@ class _SSOUser:
 
 # ################################################################################################################################
 
-class _SSOSession:
+class _SSOSession(Base):
     __tablename__ = 'zato_sso_session'
     __table_args__ = (
         Index('zato_sso_sust_idx', 'ust', unique=True),
@@ -105,5 +106,35 @@ class _SSOSession:
     @declared_attr
     def user_id(cls):
         return Column(Integer, ForeignKey('zato_sso_user.id', ondelete='CASCADE'), nullable=False)
+
+# ################################################################################################################################
+
+class _SSOAttr(Base):
+    __tablename__ = 'zato_sso_attr'
+
+    __table_args__ = (
+        UniqueConstraint('name', 'is_session_attr', name='zato_attr_name_uq'),
+        Index('zato_attr_usr', 'user_id', unique=False),
+        Index('zato_attr_usr_ust', 'user_id', 'ust', unique=False),
+        Index('zato_attr_usr_name', 'user_id', 'name', unique=True),
+        Index('zato_attr_usr_ust_name', 'user_id', 'ust', 'name', unique=True),
+    {})
+
+    # Not exposed publicly, used only because SQLAlchemy requires an FK
+    id = Column(Integer, Sequence('zato_sso_attr_seq'), primary_key=True)
+
+    creation_time = Column(DateTime(), nullable=False)
+    last_modified = Column(DateTime(), nullable=True)
+    expiration_time = Column(DateTime(), nullable=True)
+
+    is_session_attr = Column(Boolean(), nullable=False)
+    is_encrypted = Column(Boolean(), nullable=False, default=False)
+    serial_method = Column(String(20), nullable=False, default='json')
+
+    name = Column(String(191), nullable=False)
+    value = Column(Text(), nullable=True)
+
+    user_id = Column(String(191), ForeignKey('zato_sso_user.user_id', ondelete='CASCADE'), nullable=False)
+    ust = Column(String(191), ForeignKey('zato_sso_session.ust', ondelete='CASCADE'), nullable=True)
 
 # ################################################################################################################################

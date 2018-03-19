@@ -76,6 +76,10 @@ class status_code:
         invalid_input     = 'E008002'
         missing_input     = 'E008003'
 
+    class attr:
+        already_exists = 'E009001'
+        no_such_attr   = 'E009002'
+
 # ################################################################################################################################
 
 class const:
