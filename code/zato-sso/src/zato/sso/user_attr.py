@@ -67,6 +67,19 @@ class AttrEntity(object):
 
 # ################################################################################################################################
 
+    @staticmethod
+    def from_sql(item, needs_decrypt, decrypt_func, serialize_dt):
+        """ Builds a new AttrEntity out of an SQL row.
+        """
+        return AttrEntity(item.name,
+            decrypt_func(loads(item.value)) if (needs_decrypt and item.is_encrypted) else loads(item.value),
+            item.creation_time.isoformat() if serialize_dt else item.creation_time,
+            item.last_modified.isoformat() if serialize_dt else item.last_modified,
+            item.expiration_time.isoformat() if serialize_dt else item.expiration_time,
+            item.is_encrypted, item.is_session_attr)
+
+# ################################################################################################################################
+
 class Attr(object):
     """ A base class for both user and session SSO attributes.
     """
@@ -164,7 +177,7 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def _get(self, session, data, decrypt, columns=AttrModel, exists_only=False):
+    def _get(self, session, data, decrypt, serialize_dt, columns=AttrModel, exists_only=False):
         """ A low-level implementation of self.get which knows how to return one or more named attributes.
         """
         data = [data] if isinstance(data, basestring) else data
@@ -175,9 +188,7 @@ class Attr(object):
             all()
 
         for item in result:
-            out[item.name] = True if exists_only else AttrEntity(item.name,
-                self.decrypt_func(loads(item.value)) if (decrypt and item.is_encrypted) else loads(item.value),
-                item.creation_time, item.last_modified, item.expiration_time, item.is_encrypted, item.is_session_attr)
+            out[item.name] = True if exists_only else AttrEntity.from_sql(item, decrypt, self.decrypt_func, serialize_dt)
 
         if len(data) == 1:
             return out[data[0]]
@@ -186,7 +197,7 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def get(self, name, decrypt=True):
+    def get(self, name, decrypt=True, serialize_dt=False):
         """ Returns a named attribute.
         """
         with closing(self.odb_session_func()) as session:
@@ -194,16 +205,29 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def list(self, decrypt=True):
+    def to_dict(self, decrypt=True, value_to_dict=False, serialize_dt=False):
         """ Returns a list of all attributes.
         """
+        out = {}
+
+        with closing(self.odb_session_func()) as session:
+            result = session.query(AttrModel).\
+                filter(AttrModel.user_id==self.user_id).\
+                filter(AttrModel.ust==self.ust).\
+                all()
+
+        for item in result:
+            value = AttrEntity.from_sql(item, decrypt, self.decrypt_func, serialize_dt)
+            out[item.name] = value.to_dict() if value_to_dict else value
+
+        return out
 
 # ################################################################################################################################
 
     def _exists(self, session, data):
         """ A low-level implementation of self.exists which expects an SQL session on input.
         """
-        return self._get(session, data, False, AttrModel.name, True)
+        return self._get(session, data, False, False, AttrModel.name, True)
 
 # ################################################################################################################################
 
@@ -239,8 +263,11 @@ class MyService(Service):
 
         user.attr.set(name, 'vvv', is_encrypted=True)
 
-        attr = user.attr.get(name)
-        print(555, name, attr.to_dict())
+        #attr = user.attr.get(name)
+        #print(555, name, attr.to_dict())
+
+        print()
+        print(user.attr.to_dict(value_to_dict=True, serialize_dt=True))
 
         '''
         user.attr.set('name', 'value')
