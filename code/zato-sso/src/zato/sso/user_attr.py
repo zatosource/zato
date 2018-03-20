@@ -231,6 +231,19 @@ class Attr(object):
 
 # ################################################################################################################################
 
+    def names(self):
+        """ Returns names of all attributes as a list (unsorted).
+        """
+        with closing(self.odb_session_func()) as session:
+            result = session.query(AttrModel.name).\
+                filter(AttrModel.user_id==self.user_id).\
+                filter(AttrModel.ust==self.ust).\
+                all()
+
+        return [item.name for item in result]
+
+# ################################################################################################################################
+
     def exists(self, data):
         """ Returns a boolean flag to indicate if input attribute(s) exist(s) or not.
         """
@@ -244,7 +257,7 @@ class MyService(Service):
 
         # Current user's data
         username = 'admin1'
-        password = '*****'
+        password = 'abxqDJpXMVXYEO8NOGx9nVZvv4xSew9-'
         current_app = 'CRM'
         remote_addr = '127.0.0.1'
         user_agent = 'Firefox 139.0'
@@ -267,7 +280,7 @@ class MyService(Service):
         #print(555, name, attr.to_dict())
 
         print()
-        print(user.attr.to_dict(value_to_dict=True, serialize_dt=True))
+        print(user.attr.names())
 
         '''
         user.attr.set('name', 'value')
