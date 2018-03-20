@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from datetime import datetime, timedelta
+from json import dumps, loads
 from logging import getLogger
 from random import randint
 from traceback import format_exc
@@ -35,12 +36,44 @@ AttrModelTableUpdate = AttrModelTable.update
 
 # ################################################################################################################################
 
+class AttrEntity(object):
+    """ Holds information about a particular attribute.
+    """
+    __slots__ = ('name', 'value', 'creation_time', 'last_modified', 'expiration_time', 'is_encrypted', '_is_session_attr')
+
+    def __init__(self, name, value, creation_time, last_modified, expiration_time, is_encrypted, _is_session_attr):
+        self.name = name
+        self.value = value
+        self.creation_time = creation_time
+        self.last_modified = last_modified
+        self.expiration_time = expiration_time
+        self.is_encrypted = is_encrypted
+        self._is_session_attr = _is_session_attr
+
+# ################################################################################################################################
+
+    def to_dict(self):
+        """ Serializes this attribute to a Python dictionary.
+        """
+        # Note that we do not serialize _is_session_attr - this is internal only
+        return {
+            'name': self.name,
+            'value': self.value,
+            'creation_time': self.creation_time,
+            'last_modified': self.last_modified,
+            'expiration_time': self.expiration_time,
+            'is_encrypted': self.is_encrypted,
+        }
+
+# ################################################################################################################################
+
 class Attr(object):
     """ A base class for both user and session SSO attributes.
     """
-    def __init__(self, odb_session_func, encrypt_func, user_id, ust=None):
+    def __init__(self, odb_session_func, encrypt_func, decrypt_func, user_id, ust=None):
         self.odb_session_func = odb_session_func
         self.encrypt_func = encrypt_func
+        self.decrypt_func = decrypt_func
         self.user_id = user_id
         self.ust = ust
         self.is_session_attr = bool(ust)
@@ -57,7 +90,7 @@ class Attr(object):
         attr_model.ust = self.ust
         attr_model.is_session_attr = self.is_session_attr
         attr_model.name = name
-        attr_model.value = self.encrypt_func(value.encode('utf8')) if is_encrypted else value
+        attr_model.value = dumps(self.encrypt_func(value.encode('utf8')) if is_encrypted else value)
         attr_model.is_encrypted = is_encrypted
         attr_model.creation_time = now
         attr_model.last_modified = now
@@ -103,7 +136,7 @@ class Attr(object):
         """ A low-level implementation of self.set which expects an SQL session on input.
         """
         values = {
-            'value': self.encrypt_func(value.encode('utf8')) if is_encrypted else value,
+            'value': dumps(self.encrypt_func(value.encode('utf8')) if is_encrypted else value),
             'last_modified': _utcnow(),
         }
         if expiration:
@@ -131,14 +164,38 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def get(self, name, details=False, decrypt=True):
-        """ Returns a named attribute.
+    def _get(self, session, data, decrypt, columns=AttrModel, exists_only=False):
+        """ A low-level implementation of self.get which knows how to return one or more named attributes.
         """
+        data = [data] if isinstance(data, basestring) else data
+        out = dict.fromkeys(data, False)
+
+        result = session.query(columns).\
+            filter(AttrModel.name.in_(data)).\
+            all()
+
+        for item in result:
+            out[item.name] = True if exists_only else AttrEntity(item.name,
+                self.decrypt_func(loads(item.value)) if (decrypt and item.is_encrypted) else loads(item.value),
+                item.creation_time, item.last_modified, item.expiration_time, item.is_encrypted, item.is_session_attr)
+
+        if len(data) == 1:
+            return out[data[0]]
+        else:
+            return out
 
 # ################################################################################################################################
 
-    def list(self, details=False, decrypt=True):
-        """ Returns a list of attributes.
+    def get(self, name, decrypt=True):
+        """ Returns a named attribute.
+        """
+        with closing(self.odb_session_func()) as session:
+            return self._get(session, name, decrypt)
+
+# ################################################################################################################################
+
+    def list(self, decrypt=True):
+        """ Returns a list of all attributes.
         """
 
 # ################################################################################################################################
@@ -146,20 +203,7 @@ class Attr(object):
     def _exists(self, session, data):
         """ A low-level implementation of self.exists which expects an SQL session on input.
         """
-        data = [data] if isinstance(data, basestring) else data
-        out = dict.fromkeys(data, False)
-
-        result = session.query(AttrModel.name).\
-            filter(AttrModel.name.in_(data)).\
-            all()
-
-        for item in result:
-            out[item.name] = True
-
-        if len(data) == 1:
-            return out[data[0]]
-        else:
-            return out
+        return self._get(session, data, False, AttrModel.name, True)
 
 # ################################################################################################################################
 
@@ -186,12 +230,17 @@ class MyService(Service):
 
         user = self.sso.user.get_user_by_id(self.cid, session.user_id, session.ust, current_app, remote_addr)
 
-        user.attr = Attr(self.sso.user.odb_session_func, self.sso.user.encrypt_func, user.user_id)
+        user.attr = Attr(self.sso.user.odb_session_func, self.sso.user.encrypt_func, self.sso.user.decrypt_func, user.user_id)
 
         #user.attr.create('name', 'value')
         #exists = user.attr.exists(['zxc', 'name'])
 
-        user.attr.set('zzz3', 'vvv')
+        name = 'zz11'
+
+        user.attr.set(name, 'vvv', is_encrypted=True)
+
+        attr = user.attr.get(name)
+        print(555, name, attr.to_dict())
 
         '''
         user.attr.set('name', 'value')
