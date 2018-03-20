@@ -252,12 +252,29 @@ class Attr(object):
 
 # ################################################################################################################################
 
+    def delete(self, data):
+        """ Deletes one or more names attributes.
+        """
+        data = [data] if isinstance(data, basestring) else data
+
+        with closing(self.odb_session_func()) as session:
+            session.execute(
+                AttrModelTableDelete().\
+                where(and_(
+                    AttrModelTable.c.user_id==self.user_id,
+                    AttrModelTable.c.ust==self.ust,
+                    AttrModelTable.c.name.in_(data),
+            )))
+            session.commit()
+
+# ################################################################################################################################
+
 class MyService(Service):
     def handle(self):
 
         # Current user's data
         username = 'admin1'
-        password = 'abxqDJpXMVXYEO8NOGx9nVZvv4xSew9-'
+        password = '*****'
         current_app = 'CRM'
         remote_addr = '127.0.0.1'
         user_agent = 'Firefox 139.0'
@@ -274,13 +291,16 @@ class MyService(Service):
 
         name = 'zz11'
 
-        user.attr.set(name, 'vvv', is_encrypted=True)
+        #user.attr.set(name, 'vvv', is_encrypted=True)
 
         #attr = user.attr.get(name)
         #print(555, name, attr.to_dict())
 
-        print()
-        print(user.attr.names())
+        names = user.attr.names()
+
+        print(554, names)
+
+        print(667, user.attr.delete(names[0]))
 
         '''
         user.attr.set('name', 'value')
