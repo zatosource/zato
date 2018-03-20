@@ -12,6 +12,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # SQLAlchemy
+from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 
 # Zato
@@ -37,12 +38,12 @@ AttrModelTableUpdate = AttrModelTable.update
 class Attr(object):
     """ A base class for both user and session SSO attributes.
     """
-    def __init__(self, odb_session_func, encrypt_func, user_id, session_id=None):
+    def __init__(self, odb_session_func, encrypt_func, user_id, ust=None):
         self.odb_session_func = odb_session_func
         self.encrypt_func = encrypt_func
         self.user_id = user_id
-        self.session_id = session_id
-        self.is_session_attr = bool(session_id)
+        self.ust = ust
+        self.is_session_attr = bool(ust)
 
 # ################################################################################################################################
 
@@ -53,7 +54,7 @@ class Attr(object):
 
         attr_model = AttrModel()
         attr_model.user_id = self.user_id
-        attr_model.session_id = self.session_id
+        attr_model.ust = self.ust
         attr_model.is_session_attr = self.is_session_attr
         attr_model.name = name
         attr_model.value = self.encrypt_func(value.encode('utf8')) if is_encrypted else value
@@ -84,12 +85,49 @@ class Attr(object):
     def set(self, name, value, expiration=None, is_encrypted=False):
         """ Set value of a named attribute, creating it if it does not already exist.
         """
+        with closing(self.odb_session_func()) as session:
+
+            # Check if the attribute exists ..
+            if self._exists(session, name):
+
+                # .. it does, so we need to set its new value.
+                self._update(session, name, value, expiration, is_encrypted)
+
+            # .. does not exist, so we need to create it
+            else:
+                self._create(session, name, value, expiration, is_encrypted)
+
+# ################################################################################################################################
+
+    def _update(self, session, name, value, expiration=None, is_encrypted=False, needs_commit=True, _utcnow=_utcnow):
+        """ A low-level implementation of self.set which expects an SQL session on input.
+        """
+        values = {
+            'value': self.encrypt_func(value.encode('utf8')) if is_encrypted else value,
+            'last_modified': _utcnow(),
+        }
+        if expiration:
+            values['expiration_time'] = now + timedelta(seconds=expiration)
+
+        out = session.execute(
+            AttrModelTableUpdate().\
+            values(values).\
+            where(and_(
+                AttrModelTable.c.user_id==self.user_id,
+                AttrModelTable.c.ust==self.ust,
+                AttrModelTable.c.name==name,
+        )))
+
+        if needs_commit:
+            session.commit()
 
 # ################################################################################################################################
 
     def update(self, name, value, expiration=None, is_encrypted=False):
         """ Updates an existing attribute, raising an exception if it does not already exist.
         """
+        with closing(self.odb_session_func()) as session:
+            return self._update(session, name, value, expiration, is_encrypted)
 
 # ################################################################################################################################
 
@@ -151,9 +189,9 @@ class MyService(Service):
         user.attr = Attr(self.sso.user.odb_session_func, self.sso.user.encrypt_func, user.user_id)
 
         #user.attr.create('name', 'value')
+        #exists = user.attr.exists(['zxc', 'name'])
 
-        exists = user.attr.exists(['zxc', 'name'])
-        print(333, exists)
+        user.attr.set('zzz3', 'vvv')
 
         '''
         user.attr.set('name', 'value')
