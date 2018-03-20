@@ -93,13 +93,13 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def _create(self, session, name, value, expiration=None, is_encrypted=False, _utcnow=_utcnow):
+    def _create(self, session, name, value, expiration=None, is_encrypted=False, user_id=None, _utcnow=_utcnow):
         """ A low-level implementation of self.create which expects an SQL session on input.
         """
         now = _utcnow()
 
         attr_model = AttrModel()
-        attr_model.user_id = self.user_id
+        attr_model.user_id = user_id or self.user_id
         attr_model.ust = self.ust
         attr_model.is_session_attr = self.is_session_attr
         attr_model.name = name
@@ -116,42 +116,47 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def create(self, name, value, expiration=None, is_encrypted=False):
+    def create(self, name, value, expiration=None, is_encrypted=False, user_id=None):
         """ Creates a new named attribute, raising an exception if it already exists.
         """
         with closing(self.odb_session_func()) as session:
             try:
-                return self._create(session, name, value, expiration, is_encrypted)
+                return self._create(session, name, value, expiration, is_encrypted, user_id)
             except IntegrityError:
                 logger.warn(format_exc())
                 raise ValidationError(status_code.attr.already_exists)
 
 # ################################################################################################################################
 
-    def set(self, name, value, expiration=None, is_encrypted=False):
+    def set(self, name, value, expiration=None, is_encrypted=False, user_id=None):
         """ Set value of a named attribute, creating it if it does not already exist.
         """
         with closing(self.odb_session_func()) as session:
 
             # Check if the attribute exists ..
-            if self._exists(session, name):
+            if self._exists(session, name, user_id):
 
                 # .. it does, so we need to set its new value.
-                self._update(session, name, value, expiration, is_encrypted)
+                self._update(session, name, value, expiration, is_encrypted, user_id)
 
             # .. does not exist, so we need to create it
             else:
-                self._create(session, name, value, expiration, is_encrypted)
+                self._create(session, name, value, expiration, is_encrypted, user_id)
 
 # ################################################################################################################################
 
-    def _update(self, session, name, value, expiration=None, is_encrypted=False, needs_commit=True, _utcnow=_utcnow):
+    def _update(self, session, name, value=None, expiration=None, is_encrypted=False, user_id=None, needs_commit=True,
+        _utcnow=_utcnow):
         """ A low-level implementation of self.set which expects an SQL session on input.
         """
+        now = _utcnow()
         values = {
-            'value': dumps(self.encrypt_func(value.encode('utf8')) if is_encrypted else value),
-            'last_modified': _utcnow(),
+            'last_modified': now
         }
+
+        if value:
+            values['value'] = dumps(self.encrypt_func(value.encode('utf8')) if is_encrypted else value)
+
         if expiration:
             values['expiration_time'] = now + timedelta(seconds=expiration)
 
@@ -159,7 +164,7 @@ class Attr(object):
             AttrModelTableUpdate().\
             values(values).\
             where(and_(
-                AttrModelTable.c.user_id==self.user_id,
+                AttrModelTable.c.user_id==(user_id or self.user_id),
                 AttrModelTable.c.ust==self.ust,
                 AttrModelTable.c.name==name,
         )))
@@ -169,21 +174,23 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def update(self, name, value, expiration=None, is_encrypted=False):
+    def update(self, name, value, expiration=None, is_encrypted=False, user_id=None):
         """ Updates an existing attribute, raising an exception if it does not already exist.
         """
         with closing(self.odb_session_func()) as session:
-            return self._update(session, name, value, expiration, is_encrypted)
+            return self._update(session, name, value, expiration, is_encrypted, user_id)
 
 # ################################################################################################################################
 
-    def _get(self, session, data, decrypt, serialize_dt, columns=AttrModel, exists_only=False):
+    def _get(self, session, data, decrypt, serialize_dt, user_id=None, columns=AttrModel, exists_only=False):
         """ A low-level implementation of self.get which knows how to return one or more named attributes.
         """
         data = [data] if isinstance(data, basestring) else data
         out = dict.fromkeys(data, False)
 
         result = session.query(columns).\
+            filter(AttrModel.user_id==(user_id or self.user_id)).\
+            filter(AttrModel.ust==self.ust).\
             filter(AttrModel.name.in_(data)).\
             all()
 
@@ -197,22 +204,22 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def get(self, name, decrypt=True, serialize_dt=False):
+    def get(self, name, decrypt=True, serialize_dt=False, user_id=None):
         """ Returns a named attribute.
         """
         with closing(self.odb_session_func()) as session:
-            return self._get(session, name, decrypt)
+            return self._get(session, name, decrypt, serialize_dt, user_id)
 
 # ################################################################################################################################
 
-    def to_dict(self, decrypt=True, value_to_dict=False, serialize_dt=False):
+    def to_dict(self, decrypt=True, value_to_dict=False, serialize_dt=False, user_id=None):
         """ Returns a list of all attributes.
         """
         out = {}
 
         with closing(self.odb_session_func()) as session:
             result = session.query(AttrModel).\
-                filter(AttrModel.user_id==self.user_id).\
+                filter(AttrModel.user_id==(user_id or self.user_id)).\
                 filter(AttrModel.ust==self.ust).\
                 all()
 
@@ -224,19 +231,19 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def _exists(self, session, data):
+    def _exists(self, session, data, user_id=None):
         """ A low-level implementation of self.exists which expects an SQL session on input.
         """
-        return self._get(session, data, False, False, AttrModel.name, True)
+        return self._get(session, data, False, False, user_id, AttrModel.name, True)
 
 # ################################################################################################################################
 
-    def names(self):
+    def names(self, user_id=None):
         """ Returns names of all attributes as a list (unsorted).
         """
         with closing(self.odb_session_func()) as session:
             result = session.query(AttrModel.name).\
-                filter(AttrModel.user_id==self.user_id).\
+                filter(AttrModel.user_id==(user_id or self.user_id)).\
                 filter(AttrModel.ust==self.ust).\
                 all()
 
@@ -244,15 +251,15 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def exists(self, data):
+    def exists(self, data, user_id=None):
         """ Returns a boolean flag to indicate if input attribute(s) exist(s) or not.
         """
         with closing(self.odb_session_func()) as session:
-            return self._exists(session, data)
+            return self._exists(session, data, user_id)
 
 # ################################################################################################################################
 
-    def delete(self, data):
+    def delete(self, data, user_id=None):
         """ Deletes one or more names attributes.
         """
         data = [data] if isinstance(data, basestring) else data
@@ -261,11 +268,19 @@ class Attr(object):
             session.execute(
                 AttrModelTableDelete().\
                 where(and_(
-                    AttrModelTable.c.user_id==self.user_id,
+                    AttrModelTable.c.user_id==(user_id or self.user_id),
                     AttrModelTable.c.ust==self.ust,
                     AttrModelTable.c.name.in_(data),
             )))
             session.commit()
+
+# ################################################################################################################################
+
+    def set_expiry(self, name, expiration, user_id=None):
+        """ Sets expiration for a named attribute.
+        """
+        with closing(self.odb_session_func()) as session:
+            return self._update(session, name, expiration=expiration, user_id=user_id)
 
 # ################################################################################################################################
 
@@ -291,7 +306,7 @@ class MyService(Service):
 
         name = 'zz11'
 
-        #user.attr.set(name, 'vvv', is_encrypted=True)
+        user.attr.set(name, 'vvv', is_encrypted=True)
 
         #attr = user.attr.get(name)
         #print(555, name, attr.to_dict())
@@ -300,7 +315,9 @@ class MyService(Service):
 
         print(554, names)
 
-        print(667, user.attr.delete(names[0]))
+        user.attr.set_expiry(names[0], 50)
+
+        #print(667, user.attr.delete(names[0]))
 
         '''
         user.attr.set('name', 'value')
