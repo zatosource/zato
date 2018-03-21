@@ -20,7 +20,9 @@ from ipaddress import ip_address
 # Zato
 from zato.common.audit import audit_pii
 from zato.common.odb.model import SSOSession as SessionModel
+from zato.sso import Session as SessionEntity
 from zato.sso.api import const, status_code, ValidationError
+from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_session_by_ust, get_user_by_username
 from zato.sso.util import check_credentials, check_remote_app_exists, new_user_session_token, set_password, validate_password
 
@@ -457,13 +459,15 @@ class SessionAPI(object):
         # This returns all attributes ..
         session = self._get_session(target_ust, current_app, remote_addr, check_if_password_expired)
 
-        # .. and we need to build a dictionary with a few selected ones only
-        return {
-            'creation_time': session.creation_time,
-            'expiration_time': session.expiration_time,
-            'remote_addr': session.remote_addr,
-            'user_agent': session.user_agent,
-        }
+        # .. and we need to build a session entity with a few selected ones only
+        out = SessionEntity()
+        out.creation_time = session.creation_time
+        out.expiration_time = session.expiration_time
+        out.remote_addr = session.remote_addr
+        out.user_agent = session.user_agent
+        out.attr = AttrAPI(self.odb_session_func, self.encrypt_func, self.decrypt_func, session.user_id, session.ust)
+
+        return out
 
 # ################################################################################################################################
 

@@ -213,3 +213,20 @@ class User(object):
         return dict((name, getattr(self, name)) for name in self.__slots__ if name != 'attr')
 
 # ################################################################################################################################
+
+class Session(object):
+    """ Represents a session opened by a particular SSO user.
+    """
+    __slots__ = ('attr', 'creation_time', 'expiration_time', 'remote_addr', 'user_agent')
+
+    def __init__(self):
+        self.attr = None
+        self.creation_time = None
+        self.expiration_time = None
+        self.remote_addr = None
+        self.user_agent = None
+
+    def to_dict(self):
+        return dict((name, getattr(self, name)) for name in self.__slots__ if name != 'attr')
+
+# ################################################################################################################################
