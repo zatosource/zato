@@ -24,6 +24,7 @@ from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
+from zato.sso.attr import Attr
 from zato.sso.odb.query import get_sign_up_status_by_token, get_user_by_id, get_user_by_username, get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.user_search import SSOSearch
@@ -533,6 +534,7 @@ class UserAPI(object):
             # UST is valid, let's return data then
             else:
 
+                # Main user entity
                 out = UserEntity()
 
                 if current_session.is_super_user:
@@ -553,6 +555,9 @@ class UserAPI(object):
                             out.email = self.decrypt_func(out.email)
                         except Exception:
                             logger.warn('Could not decrypt email, user_id:`%s`', out.user_id)
+
+                # Custom attributes
+                out.attr = Attr(self.odb_session_func, self.encrypt_func, self.decrypt_func, out.user_id)
 
                 return out
 
@@ -1069,7 +1074,12 @@ class UserAPI(object):
             # .. and append any data found.
             for sql_item in sql_result.result:
                 sql_item = sql_item._asdict()
+
+                # Main user entity
                 item = UserEntity()
+
+                # Custom attributes
+                item.attr = Attr(self.odb_session_func, self.encrypt_func, self.decrypt_func, sql_item.user_id)
 
                 # Write out all super-user accessible attributes for each output row
                 for name in sorted(_all_super_user_attrs):

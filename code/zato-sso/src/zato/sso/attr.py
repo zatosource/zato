@@ -192,7 +192,7 @@ class Attr(object):
         """ A low-level implementation of self.get which knows how to return one or more named attributes.
         """
         data = [data] if isinstance(data, basestring) else data
-        out = dict.fromkeys(data, False)
+        out = dict.fromkeys(data, None)
 
         result = session.query(columns).\
             filter(AttrModel.user_id==(user_id or self.user_id)).\
@@ -202,6 +202,13 @@ class Attr(object):
 
         for item in result:
             out[item.name] = True if exists_only else AttrEntity.from_sql(item, decrypt, self.decrypt_func, serialize_dt)
+
+        # Explicitly convert None to False to satisfy the requirement of returning a boolean value
+        # if we are being called from self.exist (otherwise, None is fine).
+        if exists_only:
+            for key, value in out.items():
+                if value is None:
+                    out[key] = False
 
         if len(data) == 1:
             return out[data[0]]
@@ -265,6 +272,9 @@ class Attr(object):
         """
         with closing(self.odb_session_func()) as session:
             return self._exists(session, data, user_id)
+
+    # Same API for both calls ('exist' could be another name but its exists_many for consistence with other methods)
+    exists_many = exists
 
 # ################################################################################################################################
 
