@@ -299,8 +299,8 @@ class SessionAPI(object):
 
             # Check credentials first to make sure that attackers do not learn about any sort
             # of metadata (e.g. is the account locked) if they do not know username and password.
-            #if not self._check_credentials(ctx, user):
-            #    raise ValidationError(status_code.auth.not_allowed, False)
+            if not self._check_credentials(ctx, user):
+                raise ValidationError(status_code.auth.not_allowed, False)
 
             # It must be possible to log into the application requested (CRM above)
             self._check_login_to_app_allowed(ctx)
@@ -420,7 +420,7 @@ class SessionAPI(object):
         """ Verifies a user session without renewing it.
         """
         # PII audit comes first
-        audit_pii.info(cid, 'verify', extra={'current_app':current_app, 'remote_addr':remote_addr})
+        audit_pii.info(cid, 'session.verify', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         self.require_super_user(cid, current_ust, current_app, remote_addr)
 
@@ -437,7 +437,7 @@ class SessionAPI(object):
         """ Renew timelife of a user session, if it is valid, and returns its new expiration time in UTC.
         """
         # PII audit comes first
-        audit_pii.info(cid, 'renew', extra={'current_app':current_app, 'remote_addr':remote_addr})
+        audit_pii.info(cid, 'session.renew', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         with closing(self.odb_session_func()) as session:
             expiration_time = self._get(session, ust, current_app, remote_addr, renew=True, check_if_password_expired=True)
@@ -451,7 +451,7 @@ class SessionAPI(object):
         Must be called by a super-user.
         """
         # PII audit comes first
-        audit_pii.info(cid, 'get', extra={'current_app':current_app, 'remote_addr':remote_addr})
+        audit_pii.info(cid, 'session.get', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # Only super-users are allowed to call us
         self.require_super_user(cid, current_ust, current_app, remote_addr)
@@ -485,7 +485,7 @@ class SessionAPI(object):
         Optionally, requires that a super-user be owner of current_ust.
         """
         # PII audit comes first
-        audit_pii.info(cid, 'get_current_session', extra={'current_app':current_app, 'remote_addr':remote_addr})
+        audit_pii.info(cid, 'session.get_current_session', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # Verify current session's very existence first ..
         current_session = self._get_session(current_ust, current_app, remote_addr)
@@ -510,7 +510,7 @@ class SessionAPI(object):
         """ Makes sure that current_ust belongs to a super-user or raises an exception if it does not.
         """
         # PII audit comes first
-        audit_pii.info(cid, 'require_super_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
+        audit_pii.info(cid, 'session.require_super_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         self.get_current_session(cid, current_ust, current_app, remote_addr, True)
 
