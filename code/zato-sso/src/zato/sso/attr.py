@@ -17,7 +17,7 @@ from sqlalchemy.exc import IntegrityError
 # Zato
 from zato.common.audit import audit_pii
 from zato.common.odb.model import SSOAttr as AttrModel
-from zato.sso import status_code, ValidationError
+from zato.sso import const, status_code, ValidationError
 
 # ################################################################################################################################
 
@@ -97,13 +97,36 @@ class AttrAPI(object):
 
 # ################################################################################################################################
 
+    def _require_correct_user(self, op, target_user_id):
+        """ Makes sure that during current operation self.current_user_id is the same as target_user_id (which means that
+        a person accesses his or her own attribute) or that current operation is performed by a super-user.
+        """
+        if self.is_super_user or self.current_user_id == target_user_id:
+            result = status_code.ok
+            log_func = audit_pii.info
+        else:
+            result = status_code.error
+            log_func = audit_pii.warn
+
+        log_func(self.cid, '_require_correct_user', self.current_user_id,
+            target_user_id, result, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
+                'op':op, 'is_super_user':self.is_super_user})
+
+        if result != status_code.ok:
+            raise ValidationError(status_code.auth.not_allowed)
+
+# ################################################################################################################################
+
     def _create(self, session, name, value, expiration=None, encrypt=False, user_id=None, needs_commit=True,
         _utcnow=_utcnow):
         """ A low-level implementation of self.create which expects an SQL session on input.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr._create', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
-                'name':name, 'expiration':expiration, 'encrypt':encrypt})
+                'name':name, 'expiration':expiration, 'encrypt':encrypt, 'is_super_user':self.is_super_user})
+
+        self._require_correct_user('_create', user_id)
 
         now = _utcnow()
 
@@ -130,8 +153,12 @@ class AttrAPI(object):
     def create(self, name, value, expiration=None, encrypt=False, user_id=None):
         """ Creates a new named attribute, raising an exception if it already exists.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr.create', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('create', user_id)
 
         with closing(self.odb_session_func()) as session:
             try:
@@ -145,9 +172,14 @@ class AttrAPI(object):
     def _set(self, session, name, value, expiration=None, encrypt=False, user_id=None, needs_commit=True):
         """ A low-level implementation of self.set which expects an SQL session on input.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr._set', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
-                'name':name, 'expiration':expiration, 'encrypt':encrypt})
+                'name':name, 'expiration':expiration, 'encrypt':encrypt,
+                'is_super_user':self.is_super_user})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('_set', user_id)
 
         # Check if the attribute exists ..
         if self._exists(session, name, user_id):
@@ -164,8 +196,12 @@ class AttrAPI(object):
     def set(self, name, value, expiration=None, encrypt=False, user_id=None):
         """ Set value of a named attribute, creating it if it does not already exist.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr.set', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('set', user_id)
 
         with closing(self.odb_session_func()) as session:
             self._set(session, name, value, expiration, encrypt)
@@ -176,9 +212,14 @@ class AttrAPI(object):
         _utcnow=_utcnow):
         """ A low-level implementation of self.update which expects an SQL session on input.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr._update', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
-                'name':name, 'expiration':expiration, 'encrypt':encrypt})
+                'name':name, 'expiration':expiration, 'encrypt':encrypt,
+                'is_super_user':self.is_super_user})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('_update', user_id)
 
         now = _utcnow()
         values = {
@@ -208,8 +249,12 @@ class AttrAPI(object):
     def update(self, name, value, expiration=None, encrypt=False, user_id=None):
         """ Updates an existing attribute, raising an exception if it does not already exist.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr.update', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('update', user_id)
 
         with closing(self.odb_session_func()) as session:
             return self._update(session, name, value, expiration, encrypt, user_id)
@@ -219,9 +264,13 @@ class AttrAPI(object):
     def _get(self, session, data, decrypt, serialize_dt, user_id=None, columns=AttrModel, exists_only=False):
         """ A low-level implementation of self.get which knows how to return one or more named attributes.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr._get', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
-                'data':data})
+                'data':data, 'is_super_user':self.is_super_user})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('_get', user_id)
 
         data = [data] if isinstance(data, basestring) else data
         out = dict.fromkeys(data, None)
@@ -252,8 +301,12 @@ class AttrAPI(object):
     def get(self, data, decrypt=True, serialize_dt=False, user_id=None):
         """ Returns a named attribute.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr.get/get_many', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('get', user_id)
 
         with closing(self.odb_session_func()) as session:
             return self._get(session, data, decrypt, serialize_dt, user_id)
@@ -266,8 +319,13 @@ class AttrAPI(object):
     def _exists(self, session, data, user_id=None):
         """ A low-level implementation of self.exists which expects an SQL session on input.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr._exists', self.current_user_id,
-            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
+                'is_super_user':self.is_super_user})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('_exists', user_id)
 
         return self._get(session, data, False, False, user_id, AttrModel.name, True)
 
@@ -276,8 +334,13 @@ class AttrAPI(object):
     def names(self, user_id=None):
         """ Returns names of all attributes as a list (unsorted).
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr.names', self.current_user_id,
-            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
+            'is_super_user':self.is_super_user})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('names', user_id)
 
         with closing(self.odb_session_func()) as session:
             result = session.query(AttrModel.name).\
@@ -292,8 +355,12 @@ class AttrAPI(object):
     def exists(self, data, user_id=None):
         """ Returns a boolean flag to indicate if input attribute(s) exist(s) or not.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr.exists/exists_many', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('exists', user_id)
 
         with closing(self.odb_session_func()) as session:
             return self._exists(session, data, user_id)
@@ -306,9 +373,13 @@ class AttrAPI(object):
     def delete(self, data, user_id=None):
         """ Deletes one or more names attributes.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr.delete/delete_many', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
-                'data'})
+                'data':data, 'is_super_user':self.is_super_user})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('delete', user_id)
 
         data = [data] if isinstance(data, basestring) else data
 
@@ -330,8 +401,13 @@ class AttrAPI(object):
     def _set_expiry(self, session, name, expiration, user_id=None, needs_commit=True):
         """ A low-level implementation of self.set_expiry which expects an SQL session on input.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr._set_expiry', self.current_user_id,
-            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
+                'is_super_user':self.is_super_user})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('_set_expiry', user_id)
 
         return self._update(session, name, expiration=expiration, user_id=user_id, needs_commit=needs_commit)
 
@@ -340,8 +416,12 @@ class AttrAPI(object):
     def set_expiry(self, name, expiration, user_id=None):
         """ Sets expiration for a named attribute.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr.set_expiry', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('set_expiry', user_id)
 
         with closing(self.odb_session_func()) as session:
             return self._set_expiry(session, name, expiration, user_id)
@@ -351,13 +431,20 @@ class AttrAPI(object):
     def _call_many(self, func, data, expiration=None, encrypt=False, user_id=None):
         """ A reusable method for manipulation of multiple attributes at a time.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr._call_many', self.current_user_id,
-            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
+                'is_super_user':self.is_super_user, 'func':func.im_func.func_name})
 
         with closing(self.odb_session_func()) as session:
             for item in data:
+
+                # Check access permissions to that user's attributes
+                _user_id = item.get('user_id', user_id)
+                self._require_correct_user('_call_many', _user_id)
+
                 func(session, item['name'], item['value'], item.get('expiration', expiration),
-                    item.get('encrypt', encrypt), item.get('user_id', user_id), needs_commit=False)
+                    item.get('encrypt', encrypt), _user_id, needs_commit=False)
 
             # Commit now everything added to session thus far
             session.commit()
@@ -367,8 +454,12 @@ class AttrAPI(object):
     def create_many(self, data, expiration=None, encrypt=False, user_id=None):
         """ Creates multiple attributes in one call.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr.create_many', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('set_many', user_id)
 
         self._call_many(self._create, data, expiration, encrypt, user_id)
 
@@ -377,8 +468,12 @@ class AttrAPI(object):
     def set_many(self, data, expiration=None, encrypt=False, user_id=None):
         """ Sets values of multiple attributes in one call.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr.set_many', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('set_many', user_id)
 
         self._call_many(self._set, data, expiration, encrypt, user_id)
 
@@ -387,13 +482,19 @@ class AttrAPI(object):
     def set_expiry_many(self, data, expiration=None, user_id=None):
         """ Sets expiry for multiple attributes in one call.
         """
+        # Audit comes first
         audit_pii.info(self.cid, 'attr.set_expiry_many', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
 
         with closing(self.odb_session_func()) as session:
             for item in data:
-                self._set_expiry(session, item['name'], item.get('expiration', expiration),
-                    item.get('user_id', user_id), needs_commit=False)
+
+                # Check access permissions to that user's attributes
+                _user_id = item.get('user_id', user_id)
+                self._require_correct_user('set_expiry_many', _user_id)
+
+                # Check OK
+                self._set_expiry(session, item['name'], item.get('expiration', expiration), _user_id, needs_commit=False)
 
             # Commit now everything added to session thus far
             session.commit()
