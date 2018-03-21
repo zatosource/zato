@@ -333,8 +333,18 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def set_expiry_many():
-        pass
+    def set_expiry_many(self, data, expiration=None, user_id=None):
+        """ Sets expiry for multiple attributes in one call.
+        """
+        """ def _set_expiry(self, session, name, expiration, user_id=None, needs_commit=True):
+        """
+        with closing(self.odb_session_func()) as session:
+            for item in data:
+                self._set_expiry(session, item['name'], item.get('expiration', expiration),
+                    item.get('user_id', user_id), needs_commit=False)
+
+            # Commit now everything added to session thus far
+            session.commit()
 
 # ################################################################################################################################
 
@@ -365,6 +375,11 @@ class MyService(Service):
         result = user.attr.get(['abc', 'def'])
 
         print(result)
+
+        user.attr.set_expiry_many([
+            {'name':'abc', 'expiration':9090},
+            {'name':'def'},
+        ], expiration=123)
 
         '''
         user.attr.set('name', 'value')
