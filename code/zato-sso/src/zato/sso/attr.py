@@ -8,18 +8,15 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from json import dumps, loads
 from logging import getLogger
-from random import randint
 from traceback import format_exc
-from uuid import uuid4
 
 # SQLAlchemy
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common.odb.model import SSOAttr as AttrModel, SSOUser as UserModel
-from zato.server.service import Service
-from zato.sso import const, SearchCtx, SignupCtx, status_code, ValidationError
+from zato.common.odb.model import SSOAttr as AttrModel
+from zato.sso import status_code, ValidationError
 
 # ################################################################################################################################
 
@@ -169,7 +166,7 @@ class Attr(object):
         if expiration:
             values['expiration_time'] = now + timedelta(seconds=expiration)
 
-        out = session.execute(
+        session.execute(
             AttrModelTableUpdate().\
             values(values).\
             where(and_(
@@ -302,7 +299,7 @@ class Attr(object):
         """ Sets expiration for a named attribute.
         """
         with closing(self.odb_session_func()) as session:
-            return self._set_expiry(name, expiration, user_id)
+            return self._set_expiry(session, name, expiration, user_id)
 
 # ################################################################################################################################
 
