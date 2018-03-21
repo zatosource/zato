@@ -177,7 +177,7 @@ class SignupCtx(object):
 class User(object):
     """ Represents a user managed by SSO.
     """
-    __slots = ('approval_status', 'approval_status_mod_by', 'approval_status_mod_time', 'creation_ctx', 'display_name',
+    __slots__ = ('approval_status', 'approval_status_mod_by', 'approval_status_mod_time','attr', 'creation_ctx', 'display_name',
         'email', 'first_name', 'is_active', 'is_approval_needed', 'is_internal', 'is_locked', 'is_super_user',
         'last_name', 'locked_by', 'locked_time', 'middle_name', 'password_expiry', 'password_is_set', 'password_last_set',
         'password_must_change', 'sign_up_status', 'sign_up_time', 'user_id', 'username')
@@ -186,6 +186,7 @@ class User(object):
         self.approval_status = None
         self.approval_status_mod_by = None
         self.approval_status_mod_time = None
+        self.attr = None
         self.creation_ctx = None
         self.display_name = None
         self.email = None
@@ -209,6 +210,6 @@ class User(object):
         self.username = None
 
     def to_dict(self):
-        return dict((name, getattr(self, name)) for name in self.__slots)
+        return dict((name, getattr(self, name)) for name in self.__slots__ if name != 'attr')
 
 # ################################################################################################################################
