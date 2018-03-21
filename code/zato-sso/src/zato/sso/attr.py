@@ -77,7 +77,7 @@ class AttrEntity(object):
 
 # ################################################################################################################################
 
-class Attr(object):
+class AttrAPI(object):
     """ A base class for both user and session SSO attributes.
     """
     def __init__(self, odb_session_func, encrypt_func, decrypt_func, user_id, ust=None):
@@ -90,7 +90,7 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def _create(self, session, name, value, expiration=None, is_encrypted=False, user_id=None, needs_commit=True,
+    def _create(self, session, name, value, expiration=None, encrypt=False, user_id=None, needs_commit=True,
         _utcnow=_utcnow):
         """ A low-level implementation of self.create which expects an SQL session on input.
         """
@@ -101,8 +101,8 @@ class Attr(object):
         attr_model.ust = self.ust
         attr_model.is_session_attr = self.is_session_attr
         attr_model.name = name
-        attr_model.value = dumps(self.encrypt_func(value.encode('utf8')) if is_encrypted else value)
-        attr_model.is_encrypted = is_encrypted
+        attr_model.value = dumps(self.encrypt_func(value.encode('utf8')) if encrypt else value)
+        attr_model.is_encrypted = encrypt
         attr_model.creation_time = now
         attr_model.last_modified = now
 
@@ -116,42 +116,42 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def create(self, name, value, expiration=None, is_encrypted=False, user_id=None):
+    def create(self, name, value, expiration=None, encrypt=False, user_id=None):
         """ Creates a new named attribute, raising an exception if it already exists.
         """
         with closing(self.odb_session_func()) as session:
             try:
-                return self._create(session, name, value, expiration, is_encrypted, user_id)
+                return self._create(session, name, value, expiration, encrypt, user_id)
             except IntegrityError:
                 logger.warn(format_exc())
                 raise ValidationError(status_code.attr.already_exists)
 
 # ################################################################################################################################
 
-    def _set(self, session, name, value, expiration=None, is_encrypted=False, user_id=None, needs_commit=True):
+    def _set(self, session, name, value, expiration=None, encrypt=False, user_id=None, needs_commit=True):
         """ A low-level implementation of self.set which expects an SQL session on input.
         """
         # Check if the attribute exists ..
         if self._exists(session, name, user_id):
 
             # .. it does, so we need to set its new value.
-            self._update(session, name, value, expiration, is_encrypted, user_id, needs_commit)
+            self._update(session, name, value, expiration, encrypt, user_id, needs_commit)
 
         # .. does not exist, so we need to create it
         else:
-            self._create(session, name, value, expiration, is_encrypted, user_id, needs_commit)
+            self._create(session, name, value, expiration, encrypt, user_id, needs_commit)
 
 # ################################################################################################################################
 
-    def set(self, name, value, expiration=None, is_encrypted=False, user_id=None):
+    def set(self, name, value, expiration=None, encrypt=False, user_id=None):
         """ Set value of a named attribute, creating it if it does not already exist.
         """
         with closing(self.odb_session_func()) as session:
-            self._set(session, name, value, expiration, is_encrypted)
+            self._set(session, name, value, expiration, encrypt)
 
 # ################################################################################################################################
 
-    def _update(self, session, name, value=None, expiration=None, is_encrypted=False, user_id=None, needs_commit=True,
+    def _update(self, session, name, value=None, expiration=None, encrypt=False, user_id=None, needs_commit=True,
         _utcnow=_utcnow):
         """ A low-level implementation of self.update which expects an SQL session on input.
         """
@@ -161,7 +161,7 @@ class Attr(object):
         }
 
         if value:
-            values['value'] = dumps(self.encrypt_func(value.encode('utf8')) if is_encrypted else value)
+            values['value'] = dumps(self.encrypt_func(value.encode('utf8')) if encrypt else value)
 
         if expiration:
             values['expiration_time'] = now + timedelta(seconds=expiration)
@@ -180,11 +180,11 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def update(self, name, value, expiration=None, is_encrypted=False, user_id=None):
+    def update(self, name, value, expiration=None, encrypt=False, user_id=None):
         """ Updates an existing attribute, raising an exception if it does not already exist.
         """
         with closing(self.odb_session_func()) as session:
-            return self._update(session, name, value, expiration, is_encrypted, user_id)
+            return self._update(session, name, value, expiration, encrypt, user_id)
 
 # ################################################################################################################################
 
@@ -313,30 +313,30 @@ class Attr(object):
 
 # ################################################################################################################################
 
-    def _call_many(self, func, data, expiration=None, is_encrypted=False, user_id=None):
+    def _call_many(self, func, data, expiration=None, encrypt=False, user_id=None):
         """ A reusable method for manipulation of multiple attributes at a time.
         """
         with closing(self.odb_session_func()) as session:
             for item in data:
                 func(session, item['name'], item['value'], item.get('expiration', expiration),
-                    item.get('is_encrypted', is_encrypted), item.get('user_id', user_id), needs_commit=False)
+                    item.get('encrypt', encrypt), item.get('user_id', user_id), needs_commit=False)
 
             # Commit now everything added to session thus far
             session.commit()
 
 # ################################################################################################################################
 
-    def create_many(self, data, expiration=None, is_encrypted=False, user_id=None):
+    def create_many(self, data, expiration=None, encrypt=False, user_id=None):
         """ Creates multiple attributes in one call.
         """
-        self._call_many(self._create, data, expiration, is_encrypted, user_id)
+        self._call_many(self._create, data, expiration, encrypt, user_id)
 
 # ################################################################################################################################
 
-    def set_many(self, data, expiration=None, is_encrypted=False, user_id=None):
+    def set_many(self, data, expiration=None, encrypt=False, user_id=None):
         """ Sets values of multiple attributes in one call.
         """
-        self._call_many(self._set, data, expiration, is_encrypted, user_id)
+        self._call_many(self._set, data, expiration, encrypt, user_id)
 
 # ################################################################################################################################
 

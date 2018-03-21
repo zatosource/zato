@@ -113,7 +113,7 @@ class _SSOAttr(Base):
     __tablename__ = 'zato_sso_attr'
 
     __table_args__ = (
-        UniqueConstraint('name', 'is_session_attr', name='zato_attr_name_uq'),
+        UniqueConstraint('name', 'is_session_attr', 'ust', name='zato_attr_name_uq'),
         Index('zato_attr_usr', 'user_id', unique=False),
         Index('zato_attr_usr_ust', 'user_id', 'ust', unique=False),
         Index('zato_attr_usr_name', 'user_id', 'name', unique=True),

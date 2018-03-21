@@ -24,7 +24,7 @@ from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
-from zato.sso.attr import Attr
+from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_sign_up_status_by_token, get_user_by_id, get_user_by_username, get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.user_search import SSOSearch
@@ -557,7 +557,7 @@ class UserAPI(object):
                             logger.warn('Could not decrypt email, user_id:`%s`', out.user_id)
 
                 # Custom attributes
-                out.attr = Attr(self.odb_session_func, self.encrypt_func, self.decrypt_func, out.user_id)
+                out.attr = AttrAPI(self.odb_session_func, self.encrypt_func, self.decrypt_func, out.user_id)
 
                 return out
 
@@ -592,8 +592,8 @@ class UserAPI(object):
     def _delete_user(self, cid, user_id, username, current_ust, current_app, remote_addr, skip_sec=False):
         """ Deletes a user by ID or username.
         """
-        current_session = self._get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user=False)
         if not skip_sec:
+            current_session = self._get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user=False)
             if not current_session.is_super_user:
                 raise ValidationError(status_code.auth.not_allowed, False)
 
@@ -620,8 +620,9 @@ class UserAPI(object):
                 raise ValidationError(status_code.common.invalid_operation, False)
 
             # Users cannot delete themselves
-            if user.user_id == current_session.user_id:
-                raise ValidationError(status_code.common.invalid_operation, False)
+            if not skip_sec:
+                if user.user_id == current_session.user_id:
+                    raise ValidationError(status_code.common.invalid_operation, False)
 
             rows_matched = session.execute(
                 UserModelTableDelete().\
@@ -641,7 +642,7 @@ class UserAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'delete_user_by_id', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._delete_user(user_id, None, current_ust, current_app, remote_addr, skip_sec)
+        return self._delete_user(cid, user_id, None, current_ust, current_app, remote_addr, skip_sec)
 
 # ################################################################################################################################
 
@@ -651,7 +652,7 @@ class UserAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'delete_user_by_username', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._delete_user(None, username, current_ust, current_app, remote_addr, skip_sec)
+        return self._delete_user(cid, None, username, current_ust, current_app, remote_addr, skip_sec)
 
 # ################################################################################################################################
 
@@ -1079,7 +1080,7 @@ class UserAPI(object):
                 item = UserEntity()
 
                 # Custom attributes
-                item.attr = Attr(self.odb_session_func, self.encrypt_func, self.decrypt_func, sql_item.user_id)
+                item.attr = AttrAPI(self.odb_session_func, self.encrypt_func, self.decrypt_func, sql_item.user_id)
 
                 # Write out all super-user accessible attributes for each output row
                 for name in sorted(_all_super_user_attrs):

@@ -88,7 +88,7 @@ class _CreateUser(SSOCommand):
     allow_empty_secrets = True
     opts = [
         {'name': 'username', 'help': 'Username to use'},
-        {'name': '--email', 'help': "Super user's email"},
+        {'name': '--email', 'help': "Person's email"},
         {'name': '--display-name', 'help': "Person's display name"},
         {'name': '--first-name', 'help': "Person's first name"},
         {'name': '--middle-name', 'help': "Person's middle name"},
