@@ -454,7 +454,7 @@ class SessionAPI(object):
         audit_pii.info(cid, 'session.get', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # Only super-users are allowed to call us
-        self.require_super_user(cid, current_ust, current_app, remote_addr)
+        current_session = self.require_super_user(cid, current_ust, current_app, remote_addr)
 
         # This returns all attributes ..
         session = self._get_session(target_ust, current_app, remote_addr, check_if_password_expired)
@@ -465,7 +465,8 @@ class SessionAPI(object):
         out.expiration_time = session.expiration_time
         out.remote_addr = session.remote_addr
         out.user_agent = session.user_agent
-        out.attr = AttrAPI(self.odb_session_func, self.encrypt_func, self.decrypt_func, session.user_id, session.ust)
+        out.attr = AttrAPI(cid, current_session.user_id, current_session.is_super_user,
+            current_app, remote_addr, self.odb_session_func, self.encrypt_func, self.decrypt_func, session.user_id, session.ust)
 
         return out
 
@@ -512,7 +513,7 @@ class SessionAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'session.require_super_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        self.get_current_session(cid, current_ust, current_app, remote_addr, True)
+        return self.get_current_session(cid, current_ust, current_app, remote_addr, True)
 
 # ################################################################################################################################
 

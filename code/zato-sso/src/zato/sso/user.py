@@ -557,7 +557,8 @@ class UserAPI(object):
                             logger.warn('Could not decrypt email, user_id:`%s`', out.user_id)
 
                 # Custom attributes
-                out.attr = AttrAPI(self.odb_session_func, self.encrypt_func, self.decrypt_func, out.user_id)
+                out.attr = AttrAPI(cid, current_session.user_id, current_session.is_super_user, current_app, remote_addr,
+                    self.odb_session_func, self.encrypt_func, self.decrypt_func, out.user_id)
 
                 return out
 
@@ -1003,7 +1004,7 @@ class UserAPI(object):
         audit_pii.info(cid, 'user.search', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # Will raise an exception if current user is not an admin
-        self._get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user=True)
+        current_session = self._get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user=True)
 
         if ctx.cur_page < 1:
             ctx.cur_page = 1
@@ -1084,7 +1085,8 @@ class UserAPI(object):
                 item = UserEntity()
 
                 # Custom attributes
-                item.attr = AttrAPI(self.odb_session_func, self.encrypt_func, self.decrypt_func, sql_item.user_id)
+                item.attr = AttrAPI(cid, current_session.user_id, current_session.is_super_user, current_app, remote_addr,
+                    self.odb_session_func, self.encrypt_func, self.decrypt_func, sql_item.user_id)
 
                 # Write out all super-user accessible attributes for each output row
                 for name in sorted(_all_super_user_attrs):
