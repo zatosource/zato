@@ -15,6 +15,7 @@ from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 
 # Zato
+from zato.common.audit import audit_pii
 from zato.common.odb.model import SSOAttr as AttrModel
 from zato.sso import status_code, ValidationError
 
@@ -80,7 +81,13 @@ class AttrEntity(object):
 class AttrAPI(object):
     """ A base class for both user and session SSO attributes.
     """
-    def __init__(self, odb_session_func, encrypt_func, decrypt_func, user_id, ust=None):
+    def __init__(self, cid, current_user_id, is_super_user, current_app, remote_addr, odb_session_func, encrypt_func,
+        decrypt_func, user_id, ust=None):
+        self.cid = cid
+        self.current_user_id = current_user_id
+        self.is_super_user = is_super_user
+        self.current_app = current_app
+        self.remote_addr = remote_addr
         self.odb_session_func = odb_session_func
         self.encrypt_func = encrypt_func
         self.decrypt_func = decrypt_func
@@ -94,6 +101,10 @@ class AttrAPI(object):
         _utcnow=_utcnow):
         """ A low-level implementation of self.create which expects an SQL session on input.
         """
+        audit_pii.info(self.cid, 'attr._create', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
+                'name':name, 'expiration':expiration, 'encrypt':encrypt})
+
         now = _utcnow()
 
         attr_model = AttrModel()
@@ -119,6 +130,9 @@ class AttrAPI(object):
     def create(self, name, value, expiration=None, encrypt=False, user_id=None):
         """ Creates a new named attribute, raising an exception if it already exists.
         """
+        audit_pii.info(self.cid, 'attr.create', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         with closing(self.odb_session_func()) as session:
             try:
                 return self._create(session, name, value, expiration, encrypt, user_id)
@@ -131,6 +145,10 @@ class AttrAPI(object):
     def _set(self, session, name, value, expiration=None, encrypt=False, user_id=None, needs_commit=True):
         """ A low-level implementation of self.set which expects an SQL session on input.
         """
+        audit_pii.info(self.cid, 'attr._set', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
+                'name':name, 'expiration':expiration, 'encrypt':encrypt})
+
         # Check if the attribute exists ..
         if self._exists(session, name, user_id):
 
@@ -146,6 +164,9 @@ class AttrAPI(object):
     def set(self, name, value, expiration=None, encrypt=False, user_id=None):
         """ Set value of a named attribute, creating it if it does not already exist.
         """
+        audit_pii.info(self.cid, 'attr.set', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         with closing(self.odb_session_func()) as session:
             self._set(session, name, value, expiration, encrypt)
 
@@ -155,6 +176,10 @@ class AttrAPI(object):
         _utcnow=_utcnow):
         """ A low-level implementation of self.update which expects an SQL session on input.
         """
+        audit_pii.info(self.cid, 'attr._update', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
+                'name':name, 'expiration':expiration, 'encrypt':encrypt})
+
         now = _utcnow()
         values = {
             'last_modified': now
@@ -183,6 +208,9 @@ class AttrAPI(object):
     def update(self, name, value, expiration=None, encrypt=False, user_id=None):
         """ Updates an existing attribute, raising an exception if it does not already exist.
         """
+        audit_pii.info(self.cid, 'attr.update', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         with closing(self.odb_session_func()) as session:
             return self._update(session, name, value, expiration, encrypt, user_id)
 
@@ -191,6 +219,10 @@ class AttrAPI(object):
     def _get(self, session, data, decrypt, serialize_dt, user_id=None, columns=AttrModel, exists_only=False):
         """ A low-level implementation of self.get which knows how to return one or more named attributes.
         """
+        audit_pii.info(self.cid, 'attr._get', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
+                'data':data})
+
         data = [data] if isinstance(data, basestring) else data
         out = dict.fromkeys(data, None)
 
@@ -220,6 +252,9 @@ class AttrAPI(object):
     def get(self, data, decrypt=True, serialize_dt=False, user_id=None):
         """ Returns a named attribute.
         """
+        audit_pii.info(self.cid, 'attr.get/get_many', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         with closing(self.odb_session_func()) as session:
             return self._get(session, data, decrypt, serialize_dt, user_id)
 
@@ -228,28 +263,12 @@ class AttrAPI(object):
 
 # ################################################################################################################################
 
-    def to_dict(self, decrypt=True, value_to_dict=False, serialize_dt=False, user_id=None):
-        """ Returns a list of all attributes.
-        """
-        out = {}
-
-        with closing(self.odb_session_func()) as session:
-            result = session.query(AttrModel).\
-                filter(AttrModel.user_id==(user_id or self.user_id)).\
-                filter(AttrModel.ust==self.ust).\
-                all()
-
-        for item in result:
-            value = AttrEntity.from_sql(item, decrypt, self.decrypt_func, serialize_dt)
-            out[item.name] = value.to_dict() if value_to_dict else value
-
-        return out
-
-# ################################################################################################################################
-
     def _exists(self, session, data, user_id=None):
         """ A low-level implementation of self.exists which expects an SQL session on input.
         """
+        audit_pii.info(self.cid, 'attr._exists', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         return self._get(session, data, False, False, user_id, AttrModel.name, True)
 
 # ################################################################################################################################
@@ -257,6 +276,9 @@ class AttrAPI(object):
     def names(self, user_id=None):
         """ Returns names of all attributes as a list (unsorted).
         """
+        audit_pii.info(self.cid, 'attr.names', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         with closing(self.odb_session_func()) as session:
             result = session.query(AttrModel.name).\
                 filter(AttrModel.user_id==(user_id or self.user_id)).\
@@ -270,6 +292,9 @@ class AttrAPI(object):
     def exists(self, data, user_id=None):
         """ Returns a boolean flag to indicate if input attribute(s) exist(s) or not.
         """
+        audit_pii.info(self.cid, 'attr.exists/exists_many', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         with closing(self.odb_session_func()) as session:
             return self._exists(session, data, user_id)
 
@@ -281,6 +306,10 @@ class AttrAPI(object):
     def delete(self, data, user_id=None):
         """ Deletes one or more names attributes.
         """
+        audit_pii.info(self.cid, 'attr.delete/delete_many', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
+                'data'})
+
         data = [data] if isinstance(data, basestring) else data
 
         with closing(self.odb_session_func()) as session:
@@ -301,6 +330,9 @@ class AttrAPI(object):
     def _set_expiry(self, session, name, expiration, user_id=None, needs_commit=True):
         """ A low-level implementation of self.set_expiry which expects an SQL session on input.
         """
+        audit_pii.info(self.cid, 'attr._set_expiry', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         return self._update(session, name, expiration=expiration, user_id=user_id, needs_commit=needs_commit)
 
 # ################################################################################################################################
@@ -308,6 +340,9 @@ class AttrAPI(object):
     def set_expiry(self, name, expiration, user_id=None):
         """ Sets expiration for a named attribute.
         """
+        audit_pii.info(self.cid, 'attr.set_expiry', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         with closing(self.odb_session_func()) as session:
             return self._set_expiry(session, name, expiration, user_id)
 
@@ -316,6 +351,9 @@ class AttrAPI(object):
     def _call_many(self, func, data, expiration=None, encrypt=False, user_id=None):
         """ A reusable method for manipulation of multiple attributes at a time.
         """
+        audit_pii.info(self.cid, 'attr._call_many', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         with closing(self.odb_session_func()) as session:
             for item in data:
                 func(session, item['name'], item['value'], item.get('expiration', expiration),
@@ -329,6 +367,9 @@ class AttrAPI(object):
     def create_many(self, data, expiration=None, encrypt=False, user_id=None):
         """ Creates multiple attributes in one call.
         """
+        audit_pii.info(self.cid, 'attr.create_many', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         self._call_many(self._create, data, expiration, encrypt, user_id)
 
 # ################################################################################################################################
@@ -336,6 +377,9 @@ class AttrAPI(object):
     def set_many(self, data, expiration=None, encrypt=False, user_id=None):
         """ Sets values of multiple attributes in one call.
         """
+        audit_pii.info(self.cid, 'attr.set_many', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         self._call_many(self._set, data, expiration, encrypt, user_id)
 
 # ################################################################################################################################
@@ -343,8 +387,9 @@ class AttrAPI(object):
     def set_expiry_many(self, data, expiration=None, user_id=None):
         """ Sets expiry for multiple attributes in one call.
         """
-        """ def _set_expiry(self, session, name, expiration, user_id=None, needs_commit=True):
-        """
+        audit_pii.info(self.cid, 'attr.set_expiry_many', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
         with closing(self.odb_session_func()) as session:
             for item in data:
                 self._set_expiry(session, item['name'], item.get('expiration', expiration),
@@ -352,5 +397,24 @@ class AttrAPI(object):
 
             # Commit now everything added to session thus far
             session.commit()
+
+# ################################################################################################################################
+
+    def to_dict(self, decrypt=True, value_to_dict=False, serialize_dt=False, user_id=None):
+        """ Returns a list of all attributes.
+        """
+        out = {}
+
+        with closing(self.odb_session_func()) as session:
+            result = session.query(AttrModel).\
+                filter(AttrModel.user_id==(user_id or self.user_id)).\
+                filter(AttrModel.ust==self.ust).\
+                all()
+
+        for item in result:
+            value = AttrEntity.from_sql(item, decrypt, self.decrypt_func, serialize_dt)
+            out[item.name] = value.to_dict() if value_to_dict else value
+
+        return out
 
 # ################################################################################################################################
