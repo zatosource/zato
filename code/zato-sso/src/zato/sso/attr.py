@@ -17,7 +17,7 @@ from sqlalchemy.exc import IntegrityError
 # Zato
 from zato.common.audit import audit_pii
 from zato.common.odb.model import SSOAttr as AttrModel
-from zato.sso import const, status_code, ValidationError
+from zato.sso import status_code, ValidationError
 
 # ################################################################################################################################
 
