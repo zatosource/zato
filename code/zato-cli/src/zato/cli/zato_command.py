@@ -296,6 +296,14 @@ def get_parser():
     add_opts(sso_reset_user_password, sso_mod.ResetUserPassword.opts)
 
     #
+    # reset-user-password
+    #
+    sso_create_odb = sso_subs.add_parser(
+        'create-odb', description=sso_mod.CreateODB.__doc__, parents=[base_parser])
+    sso_create_odb.set_defaults(command='sso_create_odb')
+    add_opts(sso_create_odb, sso_mod.CreateODB.opts)
+
+    #
     # start
     #
     start = subs.add_parser(

@@ -15,13 +15,18 @@ import os
 from bunch import Bunch
 
 # Zato
-from zato.cli import ZatoCommand
+from zato.cli import ZatoCommand, common_odb_opts
 from zato.common.crypto import CryptoManager
+from zato.common.odb.model.sso import _SSOAttr, _SSOSession, _SSOUser, Base as SSOModelBase
 from zato.common.util import asbool, get_config
 from zato.sso import ValidationError
 from zato.sso.api import User
 from zato.sso.user import UserAPI
 from zato.sso.util import new_user_id, normalize_password_reject_list
+
+# ################################################################################################################################
+
+_sso_tables = [_SSOAttr.__table__, _SSOSession.__table__, _SSOUser.__table__]
 
 # ################################################################################################################################
 
@@ -218,5 +223,22 @@ class ResetUserPassword(SSOCommand):
         new_password = CryptoManager.generate_password()
         user_api.set_password('cli', user.user_id, new_password, args.must_change, args.expiry)
         self.logger.info('Password for user `%s` reset to `%s`', args.username, new_password)
+
+# ################################################################################################################################
+
+class CreateODB(ZatoCommand):
+    """ Creates a new Zato SSO ODB (Operational Database)
+    """
+    opts = common_odb_opts
+
+    def execute(self, args, show_output=True):
+        engine = self._get_engine(args)
+        SSOModelBase.metadata.create_all(engine, tables=_sso_tables)
+
+        if show_output:
+            if self.verbose:
+                self.logger.debug('SSO ODB created successfully')
+            else:
+                self.logger.info('OK')
 
 # ################################################################################################################################
