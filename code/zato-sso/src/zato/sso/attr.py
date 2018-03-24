@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common.audit import audit_pii
-from zato.common.odb.model import SSOAttr as AttrModel
+from zato.common.odb.model import SSOAttr as AttrModel, SSOSession
 from zato.sso import status_code, ValidationError
 
 # ################################################################################################################################
@@ -212,6 +212,9 @@ class AttrAPI(object):
         _utcnow=_utcnow):
         """ A low-level implementation of self.update which expects an SQL session on input.
         """
+
+        # ZZZZZZZ
+
         # Audit comes first
         audit_pii.info(self.cid, 'attr._update', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
@@ -261,7 +264,7 @@ class AttrAPI(object):
 
 # ################################################################################################################################
 
-    def _get(self, session, data, decrypt, serialize_dt, user_id=None, columns=AttrModel, exists_only=False):
+    def _get(self, session, data, decrypt, serialize_dt, user_id=None, columns=AttrModel, exists_only=False, _utcnow=_utcnow):
         """ A low-level implementation of self.get which knows how to return one or more named attributes.
         """
         # Audit comes first
@@ -275,11 +278,20 @@ class AttrAPI(object):
         data = [data] if isinstance(data, basestring) else data
         out = dict.fromkeys(data, None)
 
-        result = session.query(columns).\
+        now = _utcnow()
+
+        q = session.query(columns).\
             filter(AttrModel.user_id==(user_id or self.user_id)).\
             filter(AttrModel.ust==self.ust).\
             filter(AttrModel.name.in_(data)).\
-            all()
+            filter(AttrModel.expiration_time > now)
+
+        if self.ust:
+            q = q.\
+                filter(AttrModel.ust==SSOSession.ust).\
+                filter(SSOSession.expiration_time > now)
+
+        result = q.all()
 
         for item in result:
             out[item.name] = True if exists_only else AttrEntity.from_sql(item, decrypt, self.decrypt_func, serialize_dt)
@@ -331,7 +343,7 @@ class AttrAPI(object):
 
 # ################################################################################################################################
 
-    def names(self, user_id=None):
+    def names(self, user_id=None, _utcnow=_utcnow):
         """ Returns names of all attributes as a list (unsorted).
         """
         # Audit comes first
@@ -342,11 +354,20 @@ class AttrAPI(object):
         # Check access permissions to that user's attributes
         self._require_correct_user('names', user_id)
 
+        now = _utcnow()
+
         with closing(self.odb_session_func()) as session:
-            result = session.query(AttrModel.name).\
+            q = session.query(AttrModel.name).\
                 filter(AttrModel.user_id==(user_id or self.user_id)).\
                 filter(AttrModel.ust==self.ust).\
-                all()
+                filter(AttrModel.expiration_time > now)
+
+            if self.ust:
+                q = q.\
+                    filter(AttrModel.ust==SSOSession.ust).\
+                    filter(SSOSession.expiration_time > now)
+
+            result = q.all()
 
         return [item.name for item in result]
 
@@ -373,6 +394,9 @@ class AttrAPI(object):
     def delete(self, data, user_id=None):
         """ Deletes one or more names attributes.
         """
+
+        # ZZZZZZZ
+
         # Audit comes first
         audit_pii.info(self.cid, 'attr.delete/delete_many', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
@@ -507,10 +531,17 @@ class AttrAPI(object):
         out = {}
 
         with closing(self.odb_session_func()) as session:
-            result = session.query(AttrModel).\
+            q = session.query(AttrModel).\
                 filter(AttrModel.user_id==(user_id or self.user_id)).\
                 filter(AttrModel.ust==self.ust).\
-                all()
+                filter(AttrModel.expiration_time > now)
+
+            if self.ust:
+                q = q.\
+                    filter(AttrModel.ust==SSOSession.ust).\
+                    filter(SSOSession.expiration_time > now)
+
+            result = q.all()
 
         for item in result:
             value = AttrEntity.from_sql(item, decrypt, self.decrypt_func, serialize_dt)
