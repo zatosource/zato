@@ -32,6 +32,8 @@ AttrModelTable = AttrModel.__table__
 AttrModelTableDelete = AttrModelTable.delete
 AttrModelTableUpdate = AttrModelTable.update
 
+SSOSessionTable = SSOSession.__table__
+
 # ################################################################################################################################
 
 class AttrEntity(object):
@@ -212,9 +214,6 @@ class AttrAPI(object):
         _utcnow=_utcnow):
         """ A low-level implementation of self.update which expects an SQL session on input.
         """
-
-        # ZZZZZZZ
-
         # Audit comes first
         audit_pii.info(self.cid, 'attr._update', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
@@ -235,14 +234,23 @@ class AttrAPI(object):
         if expiration:
             values['expiration_time'] = now + timedelta(seconds=expiration)
 
+        and_condition = [
+            AttrModelTable.c.user_id==(user_id or self.user_id),
+            AttrModelTable.c.ust==self.ust,
+            AttrModelTable.c.name==name,
+            AttrModelTable.c.expiration_time > now,
+        ]
+
+        if self.ust:
+            and_condition.extend([
+                AttrModelTable.c.ust==SSOSessionTable.c.ust,
+                SSOSessionTable.c.expiration_time > now
+            ])
+
         session.execute(
             AttrModelTableUpdate().\
             values(values).\
-            where(and_(
-                AttrModelTable.c.user_id==(user_id or self.user_id),
-                AttrModelTable.c.ust==self.ust,
-                AttrModelTable.c.name==name,
-        )))
+            where(and_(and_condition)))
 
         if needs_commit:
             session.commit()
@@ -394,9 +402,6 @@ class AttrAPI(object):
     def delete(self, data, user_id=None):
         """ Deletes one or more names attributes.
         """
-
-        # ZZZZZZZ
-
         # Audit comes first
         audit_pii.info(self.cid, 'attr.delete/delete_many', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
@@ -407,14 +412,23 @@ class AttrAPI(object):
 
         data = [data] if isinstance(data, basestring) else data
 
+        and_condition = [
+            AttrModelTable.c.user_id==(user_id or self.user_id),
+            AttrModelTable.c.ust==self.ust,
+            AttrModelTable.c.name.in_(data),
+            AttrModelTable.c.expiration_time > now,
+        ]
+
+        if self.ust:
+            and_condition.extend([
+                AttrModelTable.c.ust==SSOSessionTable.c.ust,
+                SSOSessionTable.c.expiration_time > now
+            ])
+
         with closing(self.odb_session_func()) as session:
             session.execute(
                 AttrModelTableDelete().\
-                where(and_(
-                    AttrModelTable.c.user_id==(user_id or self.user_id),
-                    AttrModelTable.c.ust==self.ust,
-                    AttrModelTable.c.name.in_(data),
-            )))
+                where(and_(and_condition)))
             session.commit()
 
     # One method can handle both calls
