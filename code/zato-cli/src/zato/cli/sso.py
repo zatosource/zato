@@ -20,7 +20,6 @@ from zato.common.crypto import CryptoManager
 from zato.common.odb.model.sso import _SSOAttr, _SSOSession, _SSOUser, Base as SSOModelBase
 from zato.common.util import asbool, get_config
 from zato.sso import ValidationError
-from zato.sso.api import User
 from zato.sso.user import UserAPI
 from zato.sso.util import new_user_id, normalize_password_reject_list
 
