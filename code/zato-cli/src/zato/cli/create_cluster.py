@@ -1009,9 +1009,9 @@ class Create(ZatoCommand):
             ['zato.sso.user-attr.user-attr-exists', 'zato.server.service.internal.sso.user_attr.UserAttrExists', '/zato/sso/user/attr/exists'],
             ['zato.sso.user-attr.user-attr-names', 'zato.server.service.internal.sso.user_attr.UserAttrNames', '/zato/sso/user/attr/names'],
 
-            ['zato.sso.session-attr.session-attr', 'zato.server.service.internal.sso.session_attr.UserAttr', '/zato/sso/session/attr'],
-            ['zato.sso.session-attr.session-attr-exists', 'zato.server.service.internal.sso.session_attr.UserAttrExists', '/zato/sso/session/attr/exists'],
-            ['zato.sso.session-attr.session-attr-names', 'zato.server.service.internal.sso.session_attr.UserAttrNames', '/zato/sso/session/attr/names'],
+            ['zato.sso.session-attr.session-attr', 'zato.server.service.internal.sso.session_attr.SessionAttr', '/zato/sso/session/attr'],
+            ['zato.sso.session-attr.session-attr-exists', 'zato.server.service.internal.sso.session_attr.SessionAttrExists', '/zato/sso/session/attr/exists'],
+            ['zato.sso.session-attr.session-attr-names', 'zato.server.service.internal.sso.session_attr.SessionAttrNames', '/zato/sso/session/attr/names'],
         ]
 
         for name, impl_name, url_path in data:
