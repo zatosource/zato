@@ -250,7 +250,7 @@ class AttrAPI(object):
         session.execute(
             AttrModelTableUpdate().\
             values(values).\
-            where(and_(and_condition)))
+            where(and_(*and_condition)))
 
         if needs_commit:
             session.commit()
@@ -428,7 +428,7 @@ class AttrAPI(object):
         with closing(self.odb_session_func()) as session:
             session.execute(
                 AttrModelTableDelete().\
-                where(and_(and_condition)))
+                where(and_(*and_condition)))
             session.commit()
 
     # One method can handle both calls
@@ -500,6 +500,20 @@ class AttrAPI(object):
         self._require_correct_user('create_many', user_id)
 
         self._call_many(self._create, data, expiration, encrypt, user_id)
+
+# ################################################################################################################################
+
+    def update_many(self, data, expiration=None, encrypt=False, user_id=None):
+        """ Update multiple attributes in one call.
+        """
+        # Audit comes first
+        audit_pii.info(self.cid, 'attr.update_many', self.current_user_id,
+            user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
+
+        # Check access permissions to that user's attributes
+        self._require_correct_user('update_many', user_id)
+
+        self._call_many(self._update, data, expiration, encrypt, user_id)
 
 # ################################################################################################################################
 
