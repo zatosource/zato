@@ -497,7 +497,7 @@ class AttrAPI(object):
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr})
 
         # Check access permissions to that user's attributes
-        self._require_correct_user('set_many', user_id)
+        self._require_correct_user('create_many', user_id)
 
         self._call_many(self._create, data, expiration, encrypt, user_id)
 

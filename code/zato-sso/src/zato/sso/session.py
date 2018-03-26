@@ -20,8 +20,7 @@ from ipaddress import ip_address
 # Zato
 from zato.common.audit import audit_pii
 from zato.common.odb.model import SSOSession as SessionModel
-from zato.sso import Session as SessionEntity
-from zato.sso.api import const, status_code, ValidationError
+from zato.sso import const, status_code, Session as SessionEntity, ValidationError
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_session_by_ust, get_user_by_username
 from zato.sso.util import check_credentials, check_remote_app_exists, new_user_session_token, set_password, validate_password
