@@ -399,7 +399,7 @@ class AttrAPI(object):
 
 # ################################################################################################################################
 
-    def delete(self, data, user_id=None):
+    def delete(self, data, user_id=None, _utcnow=_utcnow):
         """ Deletes one or more names attributes.
         """
         # Audit comes first
@@ -410,6 +410,7 @@ class AttrAPI(object):
         # Check access permissions to that user's attributes
         self._require_correct_user('delete', user_id)
 
+        now = _utcnow()
         data = [data] if isinstance(data, basestring) else data
 
         and_condition = [
