@@ -135,6 +135,7 @@ class AttrAPI(object):
         attr_model = AttrModel()
         attr_model.user_id = user_id or self.user_id
         attr_model.ust = self.ust
+        attr_model._ust_string = self.ust or '' # Cannot, and will not be, NULL, check the comment in the model for details
         attr_model.is_session_attr = self.is_session_attr
         attr_model.name = name
         attr_model.value = dumps(self.encrypt_func(value.encode('utf8')) if encrypt else value)
