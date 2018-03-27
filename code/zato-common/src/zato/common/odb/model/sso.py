@@ -113,7 +113,7 @@ class _SSOAttr(Base):
     __tablename__ = 'zato_sso_attr'
 
     __table_args__ = (
-        UniqueConstraint('name', 'is_session_attr', 'user_id', name='zato_attr_name_uq'),
+        UniqueConstraint('name', 'is_session_attr', 'user_id', '_ust_string', name='zato_attr_name_uq'),
         Index('zato_attr_usr', 'user_id', unique=False),
         Index('zato_attr_usr_ust', 'user_id', 'ust', unique=False),
         Index('zato_attr_usr_name', 'user_id', 'name', unique=False),
@@ -133,6 +133,11 @@ class _SSOAttr(Base):
 
     name = Column(String(191), nullable=False)
     value = Column(Text(), nullable=True)
+
+    # Unlike, this cannot be NULL so it may be used for practical purposes in the unique constraint 'zato_attr_name_uq',
+    # otherwise all NULL values are considered different (or at least uncomparable) and API-wise, it is not possible
+    # to construct a sensible unique constraint.
+    _ust_string = Column(String(191), nullable=False)
 
     user_id = Column(String(191), ForeignKey('zato_sso_user.user_id', ondelete='CASCADE'), nullable=False)
     ust = Column(String(191), ForeignKey('zato_sso_session.ust', ondelete='CASCADE'), nullable=True)
