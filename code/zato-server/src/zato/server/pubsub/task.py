@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from bisect import bisect_left
 from copy import deepcopy
 from logging import getLogger
-from random import randint
 from socket import error as SocketError
 from traceback import format_exc
 
@@ -25,7 +24,7 @@ from sortedcontainers import SortedList as _SortedList
 
 # Zato
 from zato.common import PUBSUB
-from zato.common.pubsub import PubSubMessage, SkipDelivery
+from zato.common.pubsub import PubSubMessage
 from zato.common.util import spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.pubsub import PubSub

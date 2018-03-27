@@ -18,7 +18,7 @@ from traceback import format_exc
 from gevent import sleep
 
 # Zato
-from zato.common.odb.query.pubsub.cleanup import delete_expired, delete_delivered
+from zato.common.odb.query.pubsub.cleanup import delete_expired, delete_delivered, delete_marked_deleted
 from zato.common.util.time_ import utcnow_as_ms
 from zato.server.service.internal import AdminService
 
