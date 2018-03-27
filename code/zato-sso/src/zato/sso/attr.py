@@ -555,10 +555,11 @@ class AttrAPI(object):
 
 # ################################################################################################################################
 
-    def to_dict(self, decrypt=True, value_to_dict=False, serialize_dt=False, user_id=None):
+    def to_dict(self, decrypt=True, value_to_dict=False, serialize_dt=False, user_id=None, _utcnow=_utcnow):
         """ Returns a list of all attributes.
         """
         out = {}
+        now = _utcnow()
 
         with closing(self.odb_session_func()) as session:
             q = session.query(AttrModel).\
