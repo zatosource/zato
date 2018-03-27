@@ -307,22 +307,139 @@ string_key=sample_string
 list_key=sample,list
 """
 
-sso_conf_contents = """[main]
-user_class=zato.common.user.User
-user_session_class=zato.common.user.UserSession
+sso_conf_contents = '''[main]
+encrypt_email=True
+encrypt_password=True
+smtp_conn=
 
 [backend]
 default=sql
 
-[password_hash]
-method=pbkdf2_sha512
-rounds=
-rounds_target=200 # How long, in milliseconds, password verification for a single user should take
-salt_size=32 # In bytes = 256 bits
-
 [sql]
-name=zato
+name=
+
+[hash_secret]
+rounds=100000
+salt_size=64 # In bytes = 512 bits
+
+[apps]
+all=CRM
+signup_allowed=
+login_allowed=CRM
+login_metadata_allowed=
+inform_if_app_invalid=True
+
+[login]
+reject_if_not_listed=False
+inform_if_locked=True
+inform_if_not_confirmed=True
+inform_if_not_approved=True
+
+[user_address_list]
+
+[session]
+expiry=60 # In minutes
+
+[password]
+expiry=730 # In days, 365 days * 2 years = 730 days
+inform_if_expired=False
+inform_if_about_to_expire=True
+inform_if_must_be_changed=True
+inform_if_invalid=True
+about_to_expire_threshold=30 # In days
+log_in_if_about_to_expire=True
+min_length=8
+max_length=256
+reject_list = """
+  111111
+  123123
+  123321
+  123456
+  123qwe
+  1q2w3e
+  1q2w3e4r
+  1q2w3e4r5t
+  222222
+  333333
+  444444
+  555555
+  654321
+  666666
+  777777
+  888888
+  999999
+  987654321
+  google
+  letmein
+  mynoob
+  password
+  qwerty
+  zxcvbnm
 """
+
+[signup]
+inform_if_user_exists=False
+inform_if_user_invalid=False
+inform_if_email_exists=False
+inform_if_email_invalid=False
+email_required=True
+max_length_username=128
+max_length_email=128
+password_allow_whitespace=True
+always_return_confirm_token=True
+is_email_required=True
+is_approval_needed=True
+callback_service_list=
+
+email_confirm_enabled=True
+email_confirm_from=confirm@example.com
+email_confirm_cc=
+email_confirm_bcc=
+email_confirm_template=sso-confirm.txt
+
+email_welcome_enabled=True
+email_welcome_from=welcome@example.com
+email_welcome_cc=
+email_welcome_bcc=
+email_welcome_template=sso-welcome.txt
+
+[user_validation]
+service=zato.sso.signup.validate
+reject_username=zato, admin, root, system, sso
+reject_email=zato, admin, root, system, sso
+
+[search]
+default_page_size=50
+max_page_size=100
+'''
+
+sso_confirm_template = """
+Hello {data.display_name},
+
+your account is almost ready - all we need to do is make sure that this is your email.
+
+Use this URL to confirm your address:
+
+https://example.com/zato/sso/confirm?token={data.token}
+
+If you didn't want to create the account, just delete this email and everything will go back to the way it was.
+
+--
+Your Zato SSO team.
+""".strip()
+
+sso_welcome_template = """
+Hello {data.display_name}!
+
+Thanks for joining us. Here are a couple great ways to get started:
+
+* https://example.com/link/1
+* https://example.com/link/2
+* https://example.com/link/3
+
+--
+Your Zato SSO team.
+""".strip()
 
 secrets_conf_template = b"""
 [secret_keys]
@@ -342,7 +459,7 @@ exact=id
 suffix=_count, _id, _size, _timeout
 
 [bool]
-prefix=by_, has_, is_, needs_, should_
+prefix=by_, has_, is_, may_, needs_, should_
 
 [secret]
 exact=auth_data, auth_token, password, password1, password2, secret_key, token
@@ -396,6 +513,7 @@ directories = (
     'config/repo/lua/internal',
     'config/repo/lua/user',
     'config/repo/static',
+    'config/repo/static/email',
     'config/repo/tls',
     'config/repo/tls/keys-certs',
     'config/repo/tls/ca-certs',
@@ -405,7 +523,9 @@ files = {
     'config/repo/logging.conf': common_logging_conf_contents.format(log_path='./logs/server.log'),
     'config/repo/service-sources.txt': service_sources_contents,
     'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists,
-    'config/repo/sql.conf': sql_conf_contents
+    'config/repo/sql.conf': sql_conf_contents,
+    'config/repo/static/email/sso-confirm.txt': sso_confirm_template,
+    'config/repo/static/email/sso-welcome.txt': sso_welcome_template,
 }
 
 priv_key_location = './config/repo/config-priv.pem'

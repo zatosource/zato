@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+_not_given = object()
 _no_page_limit = 2 ** 24 # ~16.7 million results, tops
 
 # ################################################################################################################################
@@ -53,9 +54,13 @@ class _SearchWrapper(object):
     def __init__(self, q, default_page_size=_no_page_limit, **config):
 
         # Apply WHERE conditions
-        for filter_by in config.get('filter_by', []):
-            for criterion in config.get('query', []):
-                q = q.filter(filter_by.contains(criterion))
+        where = config.get('where') or _not_given
+        if where is not _not_given:
+            q = q.filter(where)
+        else:
+            for filter_by in config.get('filter_by', []):
+                for criterion in config.get('query', []):
+                    q = q.filter(filter_by.contains(criterion))
 
         # Total number of results
         total_q = q.statement.with_only_columns([func.count()]).order_by(None)
@@ -75,13 +80,13 @@ class _SearchWrapper(object):
 def query_wrapper(func):
     """ A decorator for queries which works out whether a given query function should return the result only
     or a column list retrieved in addition to the result. This is useful because some callers prefer the former
-    and some need the latter. Also, paginages the results if requested to by the caller.
+    and some need the latter. Also, paginates the results if requested to by the caller.
     """
     @wraps(func)
     def inner(*args, **kwargs):
 
-        # needs_columns is always the last argument
-        # so we don't have to look it up using the 'inspect' module or anything like that.
+        # Each query function will have the last argument either False or True
+        # depending on whether columns are needed or not.
         needs_columns = args[-1]
 
         tool = _SearchWrapper(func(*args), **kwargs)

@@ -121,6 +121,7 @@ class Request(SIOConverter):
         self.amqp = None
         self.wmq = None
         self.encrypt_func = None
+        self.encrypt_secrets = True
 
 # ################################################################################################################################
 
@@ -153,6 +154,7 @@ class Request(SIOConverter):
         default_value = getattr(sio, 'default_value', NO_DEFAULT_VALUE)
         use_text = getattr(sio, 'use_text', True)
         use_channel_params_only = getattr(sio, 'use_channel_params_only', False)
+        self.encrypt_secrets = getattr(sio, 'encrypt_secrets', True)
 
         if self.simple_io_config:
             self.has_simple_io_config = True
@@ -200,7 +202,7 @@ class Request(SIOConverter):
                     self.cid, '' if use_channel_params_only else self.payload, param, self.data_format, is_required,
                     default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
                     self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes,
-                    self.encrypt_func, self.params_priority)
+                    True, self.encrypt_func, self.encrypt_secrets, self.params_priority)
                 params[param_name] = value
 
             except Exception, e:
@@ -346,8 +348,8 @@ class SimpleIOPayload(SIOConverter):
             return elem_value
         else:
             return self.convert(self.zato_cid, name, lookup_name, elem_value, True, self.zato_is_xml,
-                self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes, None, None,
-                self.zato_data_format, True)
+                self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes, self.zato_skip_empty_keys,
+                None, None, None, self.zato_data_format, True)
 
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.
@@ -393,7 +395,7 @@ class SimpleIOPayload(SIOConverter):
                     leave_as_is = isinstance(name, AsIs)
                     elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
 
-                    if elem_value == u'':
+                    if not elem_value and elem_value != 0:
                         if self.zato_skip_empty_keys:
                             if name not in self.zato_force_empty_keys:
                                 continue
