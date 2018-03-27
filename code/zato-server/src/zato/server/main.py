@@ -51,6 +51,8 @@ from zato.common.repo import RepoManager
 from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_kvdb_config_for_log, \
      parse_cmd_line_options, register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
+from zato.sso.api import SSOAPI
+from zato.sso.util import new_user_id, normalize_sso_config
 
 # ################################################################################################################################
 
@@ -158,6 +160,8 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
     sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
+    sso_config = get_config(repo_location, 'sso.conf', needs_user_config=False)
+    normalize_sso_config(sso_config)
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
     preferred_address = server_config.preferred_address.get('address')
@@ -182,7 +186,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
     # Store KVDB config in logs, possibly replacing its password if told to
     kvdb_config = get_kvdb_config_for_log(server_config.kvdb)
-    kvdb_logger.info('Master process config `%s`', kvdb_config)
+    kvdb_logger.info('Main process config `%s`', kvdb_config)
 
     # New in 2.0 hence optional
     user_locale = server_config.misc.get('locale', None)
@@ -205,12 +209,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server = app_context.get_object('server')
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
-    #_sio_config = {
-    #    'int_parameters': sio_config.int.exact,
-    #    'int_parameter_suffixes': sio_config.int.suffix,
-    #    'bool_parameter_prefixes': sio_config.bool.prefix,
-    #}
-
     server.crypto_manager = crypto_manager
     server.odb_data = server_config.odb
     server.host = zato_gunicorn_app.zato_host
@@ -226,11 +224,14 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.logging_config = logging_config
     server.logging_conf_path = logging_conf_path
     server.sio_config = sio_config
+    server.sso_config = sso_config
     server.user_config.update(server_config.user_config_items)
     server.app_context = app_context
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
     server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
+    server.sso_api = SSOAPI(server, sso_config, None, crypto_manager.encrypt, crypto_manager.decrypt,
+        crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
 
     # Remove all locks possibly left over by previous server instances
     kvdb = app_context.get_object('kvdb')

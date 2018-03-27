@@ -117,6 +117,11 @@ loggers:
         handlers: [admin]
         qualname: zato_admin
         propagate: false
+    zato_audit_pii:
+        level: INFO
+        handlers: [stdout, audit_pii]
+        qualname: zato_audit_pii
+        propagate: false
     zato_connector:
         level: INFO
         handlers: [connector]
@@ -167,7 +172,7 @@ handlers:
     default:
         formatter: default
         class: logging.handlers.ConcurrentRotatingFileHandler
-        filename: '{log_path}'
+        filename: './logs/server.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
@@ -186,6 +191,13 @@ handlers:
         formatter: default
         class: logging.handlers.ConcurrentRotatingFileHandler
         filename: './logs/admin.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    audit_pii:
+        formatter: default
+        class: logging.handlers.RotatingFileHandler
+        filename: './logs/audit-pii.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
@@ -254,6 +266,8 @@ handlers:
         backupCount: 10
 
 formatters:
+    audit_pii:
+        format: '%(message)s'
     default:
         format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
     http_access_log:
@@ -314,13 +328,22 @@ def run_command(args):
         ('encrypt', 'zato.cli.crypto.Encrypt'),
         ('enmasse', 'zato.cli.enmasse.EnMasse'),
         ('from_config', 'zato.cli.FromConfig'),
+        ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
         ('info', 'zato.cli.info.Info'),
         ('migrate', 'zato.cli.migrate.Migrate'),
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('service_invoke', 'zato.cli.service.Invoke'),
+        ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),
+        ('sso_change_user_password', 'zato.cli.sso.ChangeUserPassword'),
+        ('sso_create_odb', 'zato.cli.sso.CreateODB'),
+        ('sso_create_user', 'zato.cli.sso.CreateUser'),
+        ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
+        ('sso_delete_user', 'zato.cli.sso.DeleteUser'),
+        ('sso_lock_user', 'zato.cli.sso.LockUser'),
+        ('sso_reset_user_password', 'zato.cli.sso.ResetUserPassword'),
+        ('sso_unlock_user', 'zato.cli.sso.UnlockUser'),
         ('start', 'zato.cli.start.Start'),
         ('stop', 'zato.cli.stop.Stop'),
-        ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),
         ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
     )
     for k, v in command_imports:
@@ -368,6 +391,13 @@ class ZatoCommand(object):
         CANNOT_MIGRATE = 17
         FAILED_TO_START = 18
         FOUND_PIDFILE = 19
+        USER_EXISTS = 20
+        VALIDATION_ERROR = 21
+        NO_SUCH_SSO_USER = 22
+        NOT_A_ZATO_SERVER = 23
+        NOT_A_ZATO_WEB_ADMIN = 24
+        NOT_A_ZATO_LB = 25
+        NOT_A_ZATO_SCHEDULER = 26
 
 # ################################################################################################################################
 
@@ -451,6 +481,17 @@ class ZatoCommand(object):
                     self.logger.info('No {} entered'.format(secret_name))
                 else:
                     return secret1.strip('\n')
+
+# ################################################################################################################################
+
+    def get_confirmation(self, template, yes_char='y', no_char='n'):
+        template = '{} [{}/{}] '.format(template, yes_char, no_char)
+        while True:
+            value = raw_input(template)
+            if value == yes_char:
+                return True
+            elif value == no_char:
+                return False
 
 # ################################################################################################################################
 
@@ -595,7 +636,7 @@ class ZatoCommand(object):
             if self.verbose:
                 msg = get_full_stack()
             else:
-                msg = '{}: {} (Hint: re-run with --verbose for full traceback)'.format(e.__class__.__name__, e.message)
+                msg = '{}: {} (Hint: re-run with --verbose for full traceback)'.format(e.__class__.__name__, e.args)
             self.logger.error(msg)
             sys.exit(self.SYS_ERROR.EXCEPTION_CAUGHT)
 
