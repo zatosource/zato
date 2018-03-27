@@ -51,7 +51,7 @@ sanity_checks_template = """$ZATO_BIN check-config $BASE_DIR/{server_name}"""
 
 start_servers_template = """
 cd $BASE_DIR/{server_name}
-$ZATO_BIN start .
+$ZATO_BIN start . --verbose
 echo [{step_number}/$STEPS] {server_name} started
 """
 
@@ -77,7 +77,7 @@ echo [2/$STEPS] SQL ODB connection OK
 
 # Start the load balancer first ..
 cd $BASE_DIR/load-balancer
-$ZATO_BIN start .
+$ZATO_BIN start . --verbose
 echo [3/$STEPS] Load-balancer started
 
 # .. servers ..
@@ -85,14 +85,14 @@ echo [3/$STEPS] Load-balancer started
 
 # .. scheduler ..
 cd $BASE_DIR/scheduler
-$ZATO_BIN start .
-echo [5/$STEPS] Scheduler started
+$ZATO_BIN start . --verbose
+echo [6/$STEPS] Scheduler started
 """
 
 zato_qs_start_tail = """
 # .. web admin comes as the last one because it may ask Django-related questions.
 cd $BASE_DIR/web-admin
-$ZATO_BIN start .
+$ZATO_BIN start . --verbose
 echo [$STEPS/$STEPS] Web admin started
 
 cd $BASE_DIR
@@ -143,7 +143,7 @@ echo [1/$STEPS] Load-balancer stopped
 
 cd $BASE_DIR/web-admin
 $ZATO_BIN stop .
-echo [$STEPS/$STEPS] Web admin stopped
+echo [4/$STEPS] Web admin stopped
 
 cd $BASE_DIR/scheduler
 $ZATO_BIN stop .
@@ -474,8 +474,8 @@ class Create(ZatoCommand):
         sanity_checks = '\n'.join(sanity_checks)
         start_servers = '\n'.join(start_servers)
         stop_servers = '\n'.join(stop_servers)
-        start_steps = 4 + servers
-        stop_steps = 2 + servers
+        start_steps = 5 + servers
+        stop_steps = 3 + servers
 
         zato_qs_start_head = zato_qs_start_head_template.format(
             zato_bin=zato_bin, script_dir=script_dir, cluster_name=cluster_name, start_steps=start_steps)

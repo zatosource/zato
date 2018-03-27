@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -38,6 +38,7 @@ from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
 from zato.common import DATA_FORMAT, KVDB, SECRETS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
 from zato.common.zato_keyutils import KeyUtils
@@ -95,6 +96,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.logging_config = None
         self.logging_conf_path = None
         self.sio_config = None
+        self.sso_config = None
         self.connector_server_grace_time = None
         self.id = None
         self.name = None
@@ -134,6 +136,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
         self.keyutils = KeyUtils()
+        self.sso_api = None
+        self.audit_pii = audit_pii
+        self._hash_secret_method = None
+        self._hash_secret_rounds = None
+        self._hash_secret_salt_size = None
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -143,6 +150,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.access_logger_log = self.access_logger._log
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)
         self.has_pubsub_audit_log = logging.getLogger('zato_pubsub_audit').isEnabledFor('INFO')
+        self.is_enabled_for_warn = logging.getLogger('zato').isEnabledFor('WARN')
 
         # The main config store
         self.config = ConfigStore()
@@ -429,6 +437,13 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
 
+        # Fix up SSO config
+        self.configure_sso()
+
+        # Cannot be done in __init__ because self.sso_config is not available there yet
+        salt_size = self.sso_config.hash_secret.salt_size
+        self.crypto_manager.add_hash_scheme('zato.default', self.sso_config.hash_secret.rounds, salt_size)
+
         for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pick_up'):
 
             # New in 2.0
@@ -481,6 +496,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         spawn_greenlet(self.ipc_api.run)
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def configure_sso(self):
+        self.sso_api.set_odb_session_func(self.odb.session)
 
 # ################################################################################################################################
 
@@ -658,6 +678,16 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         """ Returns data encrypted using server's CryptoManager.
         """
         return '{}{}'.format(_prefix, self.crypto_manager.encrypt(data.encode('utf8')))
+
+# ################################################################################################################################
+
+    def hash_secret(self, data, name='zato.default'):
+        return self.crypto_manager.hash_secret(data, name)
+
+# ################################################################################################################################
+
+    def verify_hash(self, given, expected, name='zato.default'):
+        return self.crypto_manager.verify_hash(given, expected, name)
 
 # ################################################################################################################################
 

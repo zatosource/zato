@@ -196,6 +196,21 @@ class Service(object):
     _before_job_hooks = []
     _after_job_hooks = []
 
+    # User management and SSO
+    sso = None
+
+    # Crypto operations
+    encrypt = None
+    decrypt = None
+    hash_secret = None
+    sign = None
+    verify = None
+    generate_secret = None
+    generate_password = None
+
+    # Audit log
+    audit_pii = None
+
     # For invoking other servers directly
     servers = None
 

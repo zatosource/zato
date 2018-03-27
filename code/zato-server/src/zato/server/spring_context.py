@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -125,6 +125,13 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.service',
             'zato.server.service.internal.sms',
             'zato.server.service.internal.sms.twilio',
+            'zato.server.service.internal.sso',
+            'zato.server.service.internal.sso.password_reset',
+            'zato.server.service.internal.sso.session',
+            'zato.server.service.internal.sso.session_attr',
+            'zato.server.service.internal.sso.signup',
+            'zato.server.service.internal.sso.user',
+            'zato.server.service.internal.sso.user_attr',
             'zato.server.service.internal.stats',
             'zato.server.service.internal.stats.summary',
             'zato.server.service.internal.stats.trends',

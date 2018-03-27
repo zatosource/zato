@@ -31,7 +31,8 @@ pip install \
     -e ./zato-scheduler \
     -e ./zato-server \
     -e ./zato-web-admin \
-    -e ./zato-zmq
+    -e ./zato-zmq \
+    -e ./zato-sso
 
 # Emulate zc.buildout's split-out eggs directory for simpler local development.
 ln -fs $VIRTUAL_ENV/lib/python*/site-packages eggs
