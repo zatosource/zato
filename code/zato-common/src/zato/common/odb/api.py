@@ -36,7 +36,7 @@ from bunch import Bunch
 from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, ZATO_NONE, \
      ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, JWT, OAuth, SecurityBase, Server, Service, TLSChannelSecurity, TLSKeyCertSecurity, XPathSecurity, WSSDefinition, \
+     HTTPSOAP, HTTSOAPAudit, JWT, OAuth, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, WSSDefinition, \
      VaultConnection
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
@@ -1235,6 +1235,8 @@ class ODBManager(SessionWrapper):
         """ Returns a list of Cassandra connections.
         """
         return query.cassandra_conn_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
 
     def get_cassandra_query_list(self, cluster_id, needs_columns=False):
         """ Returns a list of Cassandra queries.

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,9 +14,10 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common import SEARCH, SECRET_SHADOW, zato_namespace, ZATO_NONE
+from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.util import get_response_value, replace_private_key
+from zato.common.util.sql import search as sql_search
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -28,11 +29,6 @@ has_info = logger.isEnabledFor(logging.INFO)
 
 success_code = 0
 success = '<error_code>{}</error_code>'.format(success_code)
-
-# ################################################################################################################################
-
-_default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
-_max_page_size = _default_page_size * 5
 
 # ################################################################################################################################
 
@@ -53,7 +49,7 @@ class SearchTool(object):
         meta = self.output_meta['search']
 
         for name in self._search_attrs:
-            meta[name] = getattr(result, name)
+            meta[name] = getattr(result, name, None)
 
 # ################################################################################################################################
 
@@ -117,55 +113,14 @@ class AdminService(Service):
     def _search(self, search_func, session=None, cluster_id=None, *args, **kwargs):
         """ Adds search criteria to an SQLAlchemy query based on the service's (self) search configuration.
         """
-        _input = self.request.input
+        config = self.request.input
 
         # No pagination requested at all
-        if not _input.get('paginate'):
-            return search_func(session, cluster_id, *args)
-
-        try:
-            cur_page = int(_input.get('cur_page', 1))
-        except(ValueError, TypeError):
-            cur_page = 1
-
-        try:
-            page_size = min(int(_input.get('page_size', _default_page_size)), _max_page_size)
-        except(ValueError, TypeError):
-            page_size = _default_page_size
-
-        # We need to substract 1 because externally our API exposes human-readable numbers,
-        # i.e. starting from 1, not 0, but internally the database needs 0-based slices.
-        if cur_page > 0:
-            cur_page -= 1
-
-        kwargs = {
-            'cur_page': cur_page,
-            'page_size': page_size,
-            'filter_by': self._filter_by,
-        }
-
-        query = self.request.input.get('query')
-        if query:
-            query = query.strip().split()
-            if query:
-                kwargs['query'] = query
-
-        result = search_func(session, cluster_id, *args, **kwargs)
-        num_pages, rest = divmod(result.total, page_size)
-
-        # Apparently there are some results in rest that did not fit a full page
-        if rest:
-            num_pages += 1
-
-        result.num_pages = num_pages
-        result.cur_page = cur_page + 1 # Adding 1 because, again, the external API is 1-indexed
-        result.prev_page = result.cur_page - 1 if result.cur_page > 1 else None
-        result.next_page = result.cur_page + 1 if result.cur_page <= result.total else None
-        result.has_prev_page = result.prev_page >= 1
-        result.has_next_page = result.next_page <= result.num_pages
-        result.page_size = page_size
-
-        self._search_tool.set_output_meta(result)
+        if not config.get('paginate'):
+            result = search_func(session, cluster_id, *args)
+        else:
+            result = sql_search(search_func, self.request.input, self._filter_by, session, cluster_id, *args, **kwargs)
+            self._search_tool.set_output_meta(result)
 
         return result
 

@@ -23,8 +23,8 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_scheduler as create_scheduler_mod, \
      create_server as create_server_mod, create_web_admin as create_web_admin_mod, crypto as crypto_mod, \
      delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, migrate as migrate_mod, \
-     quickstart as quickstart_mod, run_command, service as service_mod, start as start_mod, stop as stop_mod, \
-     web_admin_auth as web_admin_auth_mod
+     quickstart as quickstart_mod, run_command, service as service_mod, sso as sso_mod, start as start_mod, \
+     stop as stop_mod, web_admin_auth as web_admin_auth_mod
 from zato.common import version
 
 def add_opts(parser, opts):
@@ -32,7 +32,7 @@ def add_opts(parser, opts):
     """
     for opt in opts:
         arguments = {}
-        for name in ('help', 'action', 'default', 'choices'):
+        for name in ('help', 'action', 'default', 'choices', 'type'):
             # Almost no command uses 'action' or 'default' parameters
             if name in opt:
                 arguments[name] = opt[name]
@@ -175,6 +175,18 @@ def get_parser():
     add_opts(enmasse, enmasse_mod.EnMasse.opts)
 
     #
+    # update
+    #
+    hash = subs.add_parser('hash', description='Updates Zato components and users')
+    hash_subs = hash.add_subparsers()
+
+    # .. hash info
+
+    hash_get_rounds = hash_subs.add_parser('get-rounds', description=crypto_mod.GetHashRounds.__doc__, parents=[base_parser])
+    hash_get_rounds.set_defaults(command='hash_get_rounds')
+    add_opts(hash_get_rounds, crypto_mod.GetHashRounds.opts)
+
+    #
     # info
     #
     info = subs.add_parser('info', description=info_mod.Info.__doc__, parents=[base_parser])
@@ -219,9 +231,83 @@ def get_parser():
     add_opts(service_invoke, service_mod.Invoke.opts)
 
     #
+    # sso
+    #
+    sso = subs.add_parser('sso', description='SSO management')
+    sso_subs = sso.add_subparsers()
+
+    #
+    # create-user
+    #
+    sso_create_user = sso_subs.add_parser('create-user', description=sso_mod.CreateUser.__doc__, parents=[base_parser])
+    sso_create_user.add_argument('path', help='Path to a Zato server')
+    sso_create_user.set_defaults(command='sso_create_user')
+    add_opts(sso_create_user, sso_mod.CreateUser.opts)
+
+    #
+    # create-super-user
+    #
+    sso_create_super_user = sso_subs.add_parser(
+        'create-super-user', description=sso_mod.CreateSuperUser.__doc__, parents=[base_parser])
+    sso_create_super_user.add_argument('path', help='Path to a Zato server')
+    sso_create_super_user.set_defaults(command='sso_create_super_user')
+    add_opts(sso_create_super_user, sso_mod.CreateSuperUser.opts)
+
+    #
+    # lock-user
+    #
+    sso_lock_user = sso_subs.add_parser('lock-user', description=sso_mod.LockUser.__doc__, parents=[base_parser])
+    sso_lock_user.add_argument('path', help='Path to a Zato server')
+    sso_lock_user.set_defaults(command='sso_lock_user')
+    add_opts(sso_lock_user, sso_mod.LockUser.opts)
+
+    #
+    # unlock-user
+    #
+    sso_unlock_user = sso_subs.add_parser('unlock-user', description=sso_mod.UnlockUser.__doc__, parents=[base_parser])
+    sso_unlock_user.add_argument('path', help='Path to a Zato server')
+    sso_unlock_user.set_defaults(command='sso_unlock_user')
+    add_opts(sso_unlock_user, sso_mod.UnlockUser.opts)
+
+    #
+    # delete-user
+    #
+    sso_delete_user = sso_subs.add_parser('delete-user', description=sso_mod.DeleteUser.__doc__, parents=[base_parser])
+    sso_delete_user.add_argument('path', help='Path to a Zato server')
+    sso_delete_user.set_defaults(command='sso_delete_user')
+    add_opts(sso_delete_user, sso_mod.DeleteUser.opts)
+
+    #
+    # change-user-password
+    #
+    sso_change_user_password = sso_subs.add_parser(
+        'change-user-password', description=sso_mod.ChangeUserPassword.__doc__, parents=[base_parser])
+    sso_change_user_password.add_argument('path', help='Path to a Zato server')
+    sso_change_user_password.set_defaults(command='sso_change_user_password')
+    add_opts(sso_change_user_password, sso_mod.ChangeUserPassword.opts)
+
+    #
+    # reset-user-password
+    #
+    sso_reset_user_password = sso_subs.add_parser(
+        'reset-user-password', description=sso_mod.ResetUserPassword.__doc__, parents=[base_parser])
+    sso_reset_user_password.add_argument('path', help='Path to a Zato server')
+    sso_reset_user_password.set_defaults(command='sso_reset_user_password')
+    add_opts(sso_reset_user_password, sso_mod.ResetUserPassword.opts)
+
+    #
+    # reset-user-password
+    #
+    sso_create_odb = sso_subs.add_parser(
+        'create-odb', description=sso_mod.CreateODB.__doc__, parents=[base_parser])
+    sso_create_odb.set_defaults(command='sso_create_odb')
+    add_opts(sso_create_odb, sso_mod.CreateODB.opts)
+
+    #
     # start
     #
-    start = subs.add_parser('start', description=start_mod.Start.__doc__, parents=[base_parser], formatter_class=argparse.RawDescriptionHelpFormatter)
+    start = subs.add_parser(
+        'start', description=start_mod.Start.__doc__, parents=[base_parser], formatter_class=argparse.RawDescriptionHelpFormatter)
     start.add_argument('path', help='Path to the Zato component to be started')
     start.set_defaults(command='start')
     add_opts(start, start_mod.Start.opts)
@@ -248,7 +334,8 @@ def get_parser():
 
     # .. update password
 
-    update_password = update_subs.add_parser('password', description=web_admin_auth_mod.UpdatePassword.__doc__, parents=[base_parser])
+    update_password = update_subs.add_parser(
+        'password', description=web_admin_auth_mod.UpdatePassword.__doc__, parents=[base_parser])
     update_password.add_argument('path', help='Path to a web admin directory')
     update_password.set_defaults(command='update_password')
     add_opts(update_password, web_admin_auth_mod.UpdatePassword.opts)

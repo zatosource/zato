@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -22,23 +22,37 @@ from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, DATA_FORMAT, HTTP_SO
      MSG_PATTERN_TYPE, ODOO, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base
+from zato.common.odb.model.sso import _SSOAttr, _SSOSession, _SSOUser
 
 # ################################################################################################################################
 
 def to_json(model, return_as_dict=False):
     """ Returns a JSON representation of an SQLAlchemy-backed object.
     """
-    json = {}
-    json['fields'] = {}
-    json['pk'] = getattr(model, 'id')
+    out = {}
+    out['fields'] = {}
+    out['pk'] = getattr(model, 'id')
 
     for col in model._sa_class_manager.mapper.mapped_table.columns:
-        json['fields'][col.name] = getattr(model, col.name)
+        out['fields'][col.name] = getattr(model, col.name)
 
     if return_as_dict:
-        return json
+        return out
     else:
-        return dumps([json])
+        return dumps([out])
+
+# ################################################################################################################################
+
+class SSOSession(_SSOSession):
+    pass
+
+# ################################################################################################################################
+
+class SSOUser(_SSOUser):
+    pass
+
+class SSOAttr(_SSOAttr):
+    pass
 
 # ################################################################################################################################
 
