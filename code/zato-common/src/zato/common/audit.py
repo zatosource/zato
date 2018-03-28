@@ -31,13 +31,15 @@ class AuditPII(object):
 
     def _log(self, func, cid, op, current_user='', target_user='', result='', extra='', _dumps=dumps):
 
+        remote_addr = extra.get('remote_addr')
+
         if isinstance(extra, dict):
-            remote_addr = extra.get('remote_addr')
             if not remote_addr:
                 extra['remote_addr'] = ''
             else:
-                if isinstance(extra['remote_addr'], (IPv4Address, IPv6Address)):
-                    extra['remote_addr'] = ';'.join(elem.exploded for elem in extra['remote_addr'])
+                if isinstance(remote_addr, list) and remote_addr:
+                    if isinstance(remote_addr[0], (IPv4Address, IPv6Address)):
+                        extra['remote_addr'] = ';'.join(elem.exploded for elem in extra['remote_addr'])
 
         entry = {
             'cid': cid,
