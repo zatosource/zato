@@ -33,8 +33,6 @@ class _AttrBase(object):
     """
     def get_api_call_data(self, cid, ctx, api_name, logger):
 
-        print(111, ctx.input)
-
         if ctx.input.name is not _invalid:
             func_name = api_name
             data_elem_name = 'name'
@@ -66,21 +64,20 @@ class _Attr(_AttrBase, BaseRESTService):
 
 # ################################################################################################################################
 
-    def _handle_sso_POST(self, ctx):
-        """ Creates a new attribute.
+    def _modify_sso_attr(self, ctx, api_name, needs_encrypt=True, needs_expiration=True):
+        """ A common function for all calls modifying attributes.
         """
-        # Make sure a value was provided
-        if ctx.input.data is _invalid:
-            self.logger.warn('No value given on input')
-            raise ValidationError(status_code.common.invalid_input)
-
-        call_data = self.get_api_call_data(self.cid, ctx, 'create', self.logger)
+        call_data = self.get_api_call_data(self.cid, ctx, api_name, self.logger)
 
         kwargs = {
-            'expiration': ctx.input.expiration if ctx.input.expiration is not _invalid else None,
-            'encrypt': ctx.input.encrypt if ctx.input.encrypt is not _invalid else False,
             call_data.elem_name: call_data.elem_value,
         }
+
+        if needs_expiration:
+            kwargs['expiration'] = ctx.input.expiration if ctx.input.expiration is not _invalid else None
+
+        if needs_encrypt:
+            kwargs['encrypt'] = ctx.input.encrypt if ctx.input.encrypt is not _invalid else False
 
         if call_data.elem_name == 'name':
             kwargs['value'] = ctx.input.value
@@ -90,6 +87,34 @@ class _Attr(_AttrBase, BaseRESTService):
         except Exception:
             self.logger.warn(format_exc())
             raise ValidationError(status_code.common.invalid_input)
+
+# ################################################################################################################################
+
+    def _handle_sso_POST(self, ctx):
+        """ Creates a new attribute.
+        """
+        self._modify_sso_attr(ctx, 'create')
+
+# ################################################################################################################################
+
+    def _handle_sso_PATCH(self, ctx):
+        """ Updates an existing attribute.
+        """
+        self._modify_sso_attr(ctx, 'update')
+
+# ################################################################################################################################
+
+    def _handle_sso_PUT(self, ctx):
+        """ Creates a new or updates an existing attribute.
+        """
+        self._modify_sso_attr(ctx, 'set')
+
+# ################################################################################################################################
+
+    def _handle_sso_DELETE(self, ctx):
+        """ Deletes an existing attribute.
+        """
+        self._modify_sso_attr(ctx, 'delete', False, False)
 
 # ################################################################################################################################
 
