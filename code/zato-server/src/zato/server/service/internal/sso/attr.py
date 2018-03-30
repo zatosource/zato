@@ -31,12 +31,12 @@ class _DataElem(object):
 class _AttrBase(object):
     """ Utility base class for attribute-related services.
     """
-    _result_elem = None
+    _api_entity = None
 
     class SimpleIO(BaseSIO):
         input_required = ('ust', 'current_app')
         input_optional = (AsIs('user_id'), 'name', 'value', Opaque('data'), Bool('decrypt'), Bool('serialize_dt'),
-            Int('expiration'), Bool('encrypt'))
+            Int('expiration'), Bool('encrypt'), 'target_ust')
         output_optional = BaseSIO.output_optional + (Bool('found'), 'result', 'name', 'value', 'creation_time',
             'last_modified', 'expiration_time', 'is_encrypted')
         default_value = _invalid
@@ -62,8 +62,16 @@ class _AttrBase(object):
             data_elem_name = None
             data_elem_value = None
 
-        user = self.sso.user.get_user_by_id(cid, ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
-        func = getattr(user.attr, func_name)
+        if self._api_entity == 'user':
+            entity = self.sso.user.get_user_by_id(cid, ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+        elif self._api_entity == 'session':
+            entity = session = self.sso.user.session.get(self.cid, ctx.input.target_ust, ctx.input.ust, ctx.input.current_app,
+                ctx.input.remote_addr)
+        else:
+            logger.warn('Could not establish API entity to use out of `%s`', self._api_entity)
+            raise ValidationError(status_code.common.internal_error)
+
+        func = getattr(entity.attr, func_name)
         return _DataElem(func, data_elem_name, data_elem_value)
 
 # ################################################################################################################################
