@@ -371,7 +371,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def get_session_by_ust(self, session, ust, now):
+    def get_session_by_ust(self, ust, now):
         """ Returns details of an SSO session by its UST.
         """
         with closing(self.odb_session_func()) as session:
