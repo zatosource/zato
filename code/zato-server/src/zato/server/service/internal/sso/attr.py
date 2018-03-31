@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from traceback import format_exc
+from uuid import uuid4
 
 # Zato
 from zato.server.service import AsIs, Bool, Int, Opaque
@@ -16,7 +17,7 @@ from zato.sso.api import status_code, ValidationError
 
 # ################################################################################################################################
 
-_invalid = object()
+_invalid = 'invalid.{}'.format(uuid4().hex)
 
 # ################################################################################################################################
 
@@ -34,7 +35,7 @@ class _AttrBase(object):
     _api_entity = None
 
     class SimpleIO(BaseSIO):
-        input_required = ('ust', 'current_app')
+        input_required = ('current_ust', 'current_app')
         input_optional = (AsIs('user_id'), 'name', 'value', Opaque('data'), Bool('decrypt'), Bool('serialize_dt'),
             Int('expiration'), Bool('encrypt'), 'target_ust')
         output_optional = BaseSIO.output_optional + (Bool('found'), 'result', 'name', 'value', 'creation_time',
@@ -46,11 +47,11 @@ class _AttrBase(object):
     def get_api_call_data(self, cid, ctx, api_name, logger, needs_input):
 
         if needs_input:
-            if ctx.input.name is not _invalid:
+            if ctx.input.name != _invalid:
                 func_name = api_name
                 data_elem_name = 'name'
                 data_elem_value = ctx.input.name
-            elif ctx.input.data is not _invalid:
+            elif ctx.input.data != _invalid:
                 func_name = '{}_many'.format(api_name)
                 data_elem_name = 'data'
                 data_elem_value = ctx.input.data
@@ -63,10 +64,11 @@ class _AttrBase(object):
             data_elem_value = None
 
         if self._api_entity == 'user':
-            entity = self.sso.user.get_user_by_id(cid, ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+            entity = self.sso.user.get_user_by_id(cid, ctx.input.user_id, ctx.input.current_ust, ctx.input.current_app,
+                ctx.remote_addr)
         elif self._api_entity == 'session':
-            entity = session = self.sso.user.session.get(self.cid, ctx.input.target_ust, ctx.input.ust, ctx.input.current_app,
-                ctx.input.remote_addr)
+            entity = session = self.sso.user.session.get(self.cid, ctx.input.target_ust, ctx.input.current_ust,
+                ctx.input.current_app, ctx.input.remote_addr)
         else:
             logger.warn('Could not establish API entity to use out of `%s`', self._api_entity)
             raise ValidationError(status_code.common.internal_error)
@@ -76,22 +78,28 @@ class _AttrBase(object):
 
 # ################################################################################################################################
 
-    def _access_sso_attr(self, ctx, api_name, needs_encrypt=True, needs_expiration=True, needs_result=False, needs_input=True):
+    def _access_sso_attr(self, ctx, api_name, needs_encrypt=True, needs_expiration=True, needs_result=False, needs_input=True,
+        force_elem_name_data=False):
         """ A common function for most calls accessing attributes.
         """
         call_data = self.get_api_call_data(self.cid, ctx, api_name, self.logger, needs_input)
 
+        if force_elem_name_data:
+            elem_name = 'data'
+        else:
+            elem_name = call_data.elem_name
+
         kwargs = {
-            call_data.elem_name: call_data.elem_value,
+            elem_name: call_data.elem_value,
         }
 
         if needs_expiration:
-            kwargs['expiration'] = ctx.input.expiration if ctx.input.expiration is not _invalid else None
+            kwargs['expiration'] = ctx.input.expiration if ctx.input.expiration != _invalid else None
 
         if needs_encrypt:
-            kwargs['encrypt'] = ctx.input.encrypt if ctx.input.encrypt is not _invalid else False
+            kwargs['encrypt'] = ctx.input.encrypt if ctx.input.encrypt != _invalid else False
 
-        if call_data.elem_name == 'name':
+        if elem_name == 'name':
             kwargs['value'] = ctx.input.value
 
         try:
@@ -135,7 +143,7 @@ class _Attr(_AttrBase, BaseRESTService):
     def _handle_sso_DELETE(self, ctx):
         """ Deletes an existing attribute.
         """
-        self._access_sso_attr(ctx, 'delete', False, False)
+        self._access_sso_attr(ctx, 'delete', False, False, force_elem_name_data=True)
 
 # ################################################################################################################################
 
@@ -144,7 +152,7 @@ class _Attr(_AttrBase, BaseRESTService):
         """
         call_data = self.get_api_call_data(self.cid, ctx, 'get', self.logger, True)
         decrypt = ctx.input.decrypt
-        decrypt = True if (decrypt is _invalid or decrypt == '') else ctx.input.decrypt
+        decrypt = True if (decrypt == _invalid or decrypt == '') else ctx.input.decrypt
 
         kwargs = {
             'decrypt': decrypt,
@@ -179,7 +187,7 @@ class _AttrExists(_AttrBase, BaseRESTService):
     """ Checks if an attribute or attributes given on input actually exist(s).
     """
     def _handle_sso_GET(self, ctx):
-        self._access_sso_attr(ctx, 'exists', False, False, True)
+        self._access_sso_attr(ctx, 'exists', False, False, True, force_elem_name_data=True)
 
 # ################################################################################################################################
 
@@ -187,6 +195,6 @@ class _AttrNames(_AttrBase, BaseRESTService):
     """ Returns names of all attributes defined.
     """
     def _handle_sso_GET(self, ctx):
-        self._access_sso_attr(ctx, 'names', False, False, True, False)
+        self._access_sso_attr(ctx, 'names', False, False, True, False, force_elem_name_data=True)
 
 # ################################################################################################################################
