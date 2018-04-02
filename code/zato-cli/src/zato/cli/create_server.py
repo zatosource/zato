@@ -148,6 +148,7 @@ zato.notif.init-notifiers=
 zato.kvdb.log-connection-info=
 zato.pubsub.cleanup.delete-expired=10
 zato.pubsub.cleanup.delete-delivered=10
+zato.sso.cleanup.cleanup=300
 zato.updates.check-updates=
 
 [startup_services_any_worker]

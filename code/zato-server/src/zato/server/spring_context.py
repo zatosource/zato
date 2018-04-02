@@ -126,6 +126,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.sms',
             'zato.server.service.internal.sms.twilio',
             'zato.server.service.internal.sso',
+            'zato.server.service.internal.sso.cleanup',
             'zato.server.service.internal.sso.password_reset',
             'zato.server.service.internal.sso.session',
             'zato.server.service.internal.sso.session_attr',
