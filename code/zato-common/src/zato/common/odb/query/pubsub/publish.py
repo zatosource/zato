@@ -96,7 +96,7 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
 
 # ################################################################################################################################
 
-def update_publish_metadata(session, cluster_id, topic_id, endpoint_id, now, msg_list, pattern_matched,
+def update_publish_metadata(session, cluster_id, topic_id, endpoint_id, now, pattern_matched,
     last_pub_msg_id, last_pub_correl_id, last_ext_client_id, last_in_reply_to):
 
     # Update information when this endpoint last published to the topic
