@@ -75,6 +75,7 @@ class status_code:
         invalid_operation = 'E008001'
         invalid_input     = 'E008002'
         missing_input     = 'E008003'
+        internal_error    = 'E008004'
 
     class attr:
         already_exists = 'E009001'

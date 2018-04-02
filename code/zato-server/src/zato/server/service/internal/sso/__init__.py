@@ -60,7 +60,10 @@ class BaseService(Service):
     def _set_response_error(self, sub_status=status_code.auth.not_allowed, status=status_code.error):
         self.response.status_code = FORBIDDEN
         self.response.payload.status = status
-        self.response.payload.sub_status.append(sub_status)
+
+        # BaseRESTService._handle_sso may have set it already so we need an if check
+        if not self.response.payload.sub_status:
+            self.response.payload.sub_status.append(sub_status)
 
 # ################################################################################################################################
 
@@ -77,7 +80,7 @@ class BaseService(Service):
         # If status is an error set in before_handle or _handle_sso and there is no sub_status
         # set yet, return generic information that user is not allowed to access this resource.
         if self.response.payload.status != status_code.ok and not self.response.payload.sub_status:
-            self.response.payload.sub_status.append(status_code.auth.not_allowed)
+            self.response.payload.sub_status = status_code.auth.not_allowed
 
         # Always returned if any response is produced at all
         self.response.payload.cid = self.cid
