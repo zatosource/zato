@@ -288,9 +288,6 @@ class Publish(AdminService):
                     # Run an SQL commit for all queries above
                     session.commit()
 
-                    # Update metadata in background
-                    spawn(self._update_pub_metadata, cluster_id, topic.id, endpoint_id, now, gd_msg_list, pattern_matched)
-
         # Either commit succeeded or there were no GD messages on input but in both cases we can now,
         # optionally, store data in pub/sub audit log.
         if has_pubsub_audit_log:
@@ -304,11 +301,15 @@ class Publish(AdminService):
         # Also in background, notify pub/sub task runners that there are new messages for them
         if subscriptions_by_topic:
 
-            # Do not notify anything if there are no messages available - this is possible because,
-            # for instance, we had a list of messages on input but a hook service filtered them out.
+            # Notify delivery tasks only if there are some messages available - it is possible
+            # there will not be any here because, for instance, we had a list of messages on input
+            # but a hook service filtered them out.
             if non_gd_msg_list or has_gd_msg_list:
                 self._notify_pubsub_tasks(
                     topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, has_gd_msg_list)
+
+        # Update metadata in background
+        spawn(self._update_pub_metadata, cluster_id, topic.id, endpoint_id, now, gd_msg_list, non_gd_msg_list, pattern_matched)
 
         # Return either a single msg_id if there was only one message published or a list of message IDs,
         # one for each message published.
@@ -321,20 +322,24 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _update_pub_metadata(self, cluster_id, topic_id, endpoint_id, now, gd_msg_list, pattern_matched):
+    def _update_pub_metadata(self, cluster_id, topic_id, endpoint_id, now, gd_msg_list, non_gd_msg_list, pattern_matched):
         """ Updates in background metadata about a topic and publisher after each publication.
         """
-        last_pub_msg_id = gd_msg_list[-1]['pub_msg_id']
-        last_pub_correl_id = gd_msg_list[-1]['pub_correl_id']
-        last_ext_client_id = gd_msg_list[-1]['ext_client_id']
-        last_in_reply_to = gd_msg_list[-1]['in_reply_to']
+        try:
+            msg_list = gd_msg_list if gd_msg_list else non_gd_msg_list
+            last_pub_msg_id = msg_list[-1]['pub_msg_id']
+            last_pub_correl_id = msg_list[-1]['pub_correl_id']
+            last_ext_client_id = msg_list[-1]['ext_client_id']
+            last_in_reply_to = msg_list[-1]['in_reply_to']
 
-        with closing(self.odb.session()) as session:
+            with closing(self.odb.session()) as session:
 
-            # Update last pub time and related metadata for topic and current publisher
-            update_publish_metadata(session, cluster_id, topic_id, endpoint_id, now, gd_msg_list, pattern_matched,
-                last_pub_msg_id, last_pub_correl_id, last_ext_client_id, last_in_reply_to)
+                # Update last pub time and related metadata for topic and current publisher
+                update_publish_metadata(session, cluster_id, topic_id, endpoint_id, now, pattern_matched,
+                    last_pub_msg_id, last_pub_correl_id, last_ext_client_id, last_in_reply_to)
 
-            session.commit()
+                session.commit()
+        except Exception:
+            self.logger.warn('Error while updating pub metadata `%s`', format_exc())
 
 # ################################################################################################################################
