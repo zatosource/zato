@@ -253,7 +253,7 @@ def publish_action(req):
             service_input[name] = req.POST[name]
 
         for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group'):
-            service_input[name] = req.POST[name] or None
+            service_input[name] = req.POST.get(name, None) or None # Always use None instead of ''
 
         req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
 
