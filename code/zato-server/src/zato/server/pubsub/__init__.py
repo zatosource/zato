@@ -442,6 +442,12 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_endpoint_by_id(self, endpoint_id):
+        with self.lock:
+            return self.endpoints[endpoint_id]
+
+# ################################################################################################################################
+
     def get_endpoint_id_by_sec_id(self, sec_id):
         with self.lock:
             return self.sec_id_to_endpoint_id[sec_id]
