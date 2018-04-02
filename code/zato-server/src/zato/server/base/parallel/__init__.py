@@ -437,7 +437,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
 
-        # Fix up SSO config
+        # Configure remaining parts of SSO
         self.configure_sso()
 
         # Cannot be done in __init__ because self.sso_config is not available there yet
@@ -499,8 +499,28 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def _get_sso_session(self):
+        """ Returns a session function suitable for SSO operations.
+        """
+        pool_name = self.sso_config.sql.name
+        if pool_name:
+            try:
+                pool = self.worker_store.sql_pool_store.get(pool_name)
+            except KeyError:
+                pool = None
+            if not pool:
+                raise Exception('SSO pool `{}` not found or inactive'.format(pool_name))
+            else:
+                session_func = pool.session
+        else:
+            session_func = self.odb.session
+
+        return session_func()
+
+# ################################################################################################################################
+
     def configure_sso(self):
-        self.sso_api.set_odb_session_func(self.odb.session)
+        self.sso_api.set_odb_session_func(self._get_sso_session)
 
 # ################################################################################################################################
 
