@@ -96,7 +96,7 @@ class DeliveryTask(object):
         # only if both batch_size is 1 and wrap_one_msg_in_list is True.
         if self.sub_config.delivery_batch_size == 1:
             if self.sub_config.wrap_one_msg_in_list:
-                self.self.wrap_in_list = True
+                self.wrap_in_list = True
             else:
                 self.wrap_in_list = False
 

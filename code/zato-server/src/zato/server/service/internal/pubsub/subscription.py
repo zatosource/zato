@@ -317,8 +317,8 @@ class SubscribeServiceImpl(_Subscribe):
                 # Non-WebSocket clients cannot subscribe to the same topic multiple times
                 if not ctx.ws_channel_id:
                     if has_subscription(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id):
-                        raise PubSubSubscriptionExists(self.cid, 'Subscription to topic `{}` already exists'.format(
-                            ctx.topic.name))
+                        raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
+                            self.pubsub.get_endpoint_by_id(ctx.endpoint_id).name, ctx.topic.name))
 
                 ctx.creation_time = now = utcnow_as_ms()
                 ctx.sub_key = new_sub_key()
