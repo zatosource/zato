@@ -156,11 +156,6 @@ class DeliveryTask(object):
             if to_skip:
                 logger.info('Skipping messages `%s`', to_skip)
 
-            from bunch import bunchify
-
-            print(bunchify(to_deliver[0].to_dict()))
-            print()
-
             # This is the call that actually delivers messages
             self.deliver_pubsub_msg_cb(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
 

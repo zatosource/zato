@@ -50,7 +50,7 @@ class Cleanup(Service):
                 self.logger.warn('Error in SSO cleanup: `%s`', format_exc())
                 sleep(sleep_time)
             else:
-                self.logger.info('SSO cleanup completed succesfully')
+                self.logger.info('SSO cleanup completed successfully')
 
 # ################################################################################################################################
 
