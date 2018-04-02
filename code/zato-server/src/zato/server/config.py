@@ -216,9 +216,6 @@ class ConfigDict(object):
                             if original is None:
                                 original = ''
                             config['_encryption_needed'] = True
-                            if original is None:
-                                print()
-                                print(4444, item, attr_name)
                             if original.startswith(SECRETS.PREFIX):
                                 config['_encrypted_in_odb'] = True
                             else:

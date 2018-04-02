@@ -857,6 +857,16 @@ class PUBSUB:
                 return iter((self.AMQP, self.FILES, self.FTP, self.IMAP, self.REST, self.SERVICE, self.SMS_TWILIO, self.SMTP,
                     self.SOAP, self.SQL, self.WEB_SOCKETS))
 
+# Not available yet
+skip_endpoint_types = (
+    PUBSUB.ENDPOINT_TYPE.AMQP.id,
+    PUBSUB.ENDPOINT_TYPE.FTP.id,
+    PUBSUB.ENDPOINT_TYPE.IMAP.id,
+    PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id,
+    PUBSUB.ENDPOINT_TYPE.SMTP.id,
+    PUBSUB.ENDPOINT_TYPE.SQL.id,
+)
+
 class EMAIL:
     class DEFAULT:
         TIMEOUT = 10
