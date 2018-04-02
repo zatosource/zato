@@ -3,7 +3,7 @@
 {% block html_title %}
 
     {% ifequal transport 'plain_http' %}
-        Plain HTTP
+        REST
     {% else %}
         SOAP
     {% endifequal %}
@@ -126,42 +126,65 @@
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
+
+                        <!-- 1,2 -->
                         <th>&nbsp;</th> {% comment %} _numbering {% endcomment %}
                         <th>&nbsp;</th> {% comment %} _selection {% endcomment %}
+
+                        <!-- 3 -->
                         <th><a href="#">Name</a></th>
+
+                        <!-- 4 -->
                         <th><a href="#">Active</a></th>
+
+                        <!-- 5 -->
                         {% ifequal connection 'outgoing' %}
                             <th><a href="#">Host</a></th>
                         {% endifequal %}
+
+                        <!-- 6 -->
                         <th><a href="#">URL path</a></th>
+
+                        <!-- 7,8 -->
                         {% ifequal connection 'channel' %}
                             <th><a href="#">Service</a></th>
                             <th><a href="#">Cache</a></th>
                         {% endifequal %}
+
+                        <!-- 9 -->
                         <th><a href="#">Security</a></th>
+
+                        <!-- 10,11 -->
                         {% ifequal transport 'soap' %}
                             <th><a href="#">SOAP action</a></th>
                             <th><a href="#">SOAP version</a></th>
                         {% endifequal %}
+
+                        <!-- 12,13 -->
                         {% ifequal connection 'channel' %}
                             <th><a href="#">Method</a></th>
                             <th class='ignore'>&nbsp;</th> {% comment %} service {% endcomment %}
                         {% endifequal %}
 
+                        <!-- 14,15,16 -->
                         <th class='ignore'>&nbsp;</th> {% comment %} id {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} is_active {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} security {% endcomment %}
 
+                        <!-- 17,18,19 -->
                         <th class='ignore'>&nbsp;</th> {% comment %} cache_id {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} cache_type {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} cache_expiry {% endcomment %}
 
+                        <!-- 20,21 -->
                         <th class='ignore'>&nbsp;</th> {% comment %} has_rbac {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} data_format {% endcomment %}
 
+                        <!-- 22,23 -->
                         <th class='ignore'>&nbsp;</th> {% comment %} timeout {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} sec_tls_ca_cert_id {% endcomment %}
 
+                        <!-- 24,25,26,27 -->
                         {% ifequal connection 'outgoing' %}
                             <th class='ignore'>&nbsp;</th> {% comment %} ping_method {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} pool_size {% endcomment %}
@@ -169,18 +192,23 @@
                             <th class='ignore'>&nbsp;</th> {% comment %} content_type {% endcomment %}
                         {% endifequal %}
 
+                        <!-- 28,29,30 -->
                         {% ifequal connection 'channel' %}
                             <th class='ignore'>&nbsp;</th> {% comment %} merge_url_params_req {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} url_params_pri {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} params_pri {% endcomment %}
                         {% endifequal %}
 
+                        <!-- 31,32 -->
                         <th>&nbsp;</th> {% comment %} _edit {% endcomment %}
                         <th>&nbsp;</th> {% comment %} _delete {% endcomment %}
+
+                        <!-- 33 -->
                         {% ifequal connection 'outgoing' %}
                             <th>&nbsp;</th> {% comment %} _ping {% endcomment %}
                         {% endifequal %}
 
+                        <!-- 34 -->
                         {% ifequal connection 'outgoing' %}
                           {% ifequal transport 'soap' %}
                             <th>&nbsp;</th> {% comment %} _reload_wsdl {% endcomment %}
@@ -192,25 +220,33 @@
                 {% if items %}
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+
+                        <!-- 1,2 -->
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
                         <td>
-                            {% comment %}
-                                No audit for outconns yet
-                            {% endcomment %}
 
+                            <!-- 3 -->
                             {% ifequal connection 'channel' %}
                                 <a href="{% url "http-soap-details" connection transport item.id item.name cluster_id %}">{{ item.name }}</a>
                             {% else %}
                                 {{ item.name }}
                             {% endifequal %}
                         </td>
+
+                        <!-- 4 -->
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+
+                        <!-- 5 -->
                         {% ifequal connection 'outgoing' %}
                             <td>{{ item.host }}</td>
                         {% endifequal %}
+
+                        <!-- 6 -->
                         <td>{{ item.url_path }}</td>
+
+                        <!-- 7,8 -->
                         {% ifequal connection 'channel' %}
                             <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                             <td>
@@ -221,30 +257,41 @@
                             {% endif %}
                             </td>
                         {% endifequal %}
+
+                        <!-- 9 -->
                         <td>{{ item.security_name|safe }}</td>
+
+                        <!-- 10,11 -->
                         {% ifequal transport 'soap' %}
                             <td>{{ item.soap_action }}</td>
                             <td>{{ item.soap_version }}</td>
                         {% endifequal %}
+
+                        <!-- 12,13 -->
                         {% ifequal connection 'channel' %}
                             <td>{{ item.method|default:'' }}</td>
                             <td class='ignore'>{{ item.service_name }}</td>
                         {% endifequal %}
 
+                        <!-- 14,15,16 -->
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.security_id }}</td>
 
+                        <!-- 17,18,19 -->
                         <td class='ignore'>{{ item.cache_id }}</td>
                         <td class='ignore'>{{ item.cache_type }}</td>
                         <td class='ignore'>{{ item.cache_expiry }}</td>
 
+                        <!-- 20,21 -->
                         <td class='ignore'>{{ item.has_rbac }}</td>
                         <td class='ignore'>{{ item.data_format }}</td>
 
+                        <!-- 22,23 -->
                         <td class='ignore'>{{ item.timeout }}</td>
                         <td class='ignore'>{{ item.sec_tls_ca_cert_id }}</td>
 
+                        <!-- 24,25,26,27 -->
                         {% ifequal connection 'outgoing' %}
                             <td class='ignore'>{{ item.ping_method }}</td>
                             <td class='ignore'>{{ item.pool_size }}</td>
@@ -252,18 +299,23 @@
                             <td class='ignore'>{{ item.content_type }}</td>
                         {% endifequal %}
 
+                        <!-- 28,29,30 -->
                         {% ifequal connection 'channel' %}
                             <td class='ignore'>{{ item.merge_url_params_req }}</td>
                             <td class='ignore'>{{ item.url_params_pri }}</td>
                             <td class='ignore'>{{ item.params_pri }}</td>
                         {% endifequal %}
 
+                        <!-- 31,32 -->
                         <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
+
+                        <!-- 33 -->
                         {% ifequal connection 'outgoing' %}
                             <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
                         {% endifequal %}
 
+                        <!-- 34 -->
                         {% ifequal connection 'outgoing' %}
                           {% ifequal transport 'soap' %}
                             <td>{% ifequal item.serialization_type 'suds' %}<a href="javascript:$.fn.zato.http_soap.reload_wsdl('{{ item.id }}')">Reload WSDL</a>{% endifequal %}</td>
