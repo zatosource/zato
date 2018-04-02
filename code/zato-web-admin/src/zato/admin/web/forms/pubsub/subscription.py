@@ -16,9 +16,11 @@ from zato.common import CONNECTION, PUBSUB, URL_TYPE
 from zato.admin.web.forms import add_http_soap_select, add_select, add_select_from_service
 
 skip_endpoint_types = (
+    PUBSUB.ENDPOINT_TYPE.FTP.id,
     PUBSUB.ENDPOINT_TYPE.IMAP.id,
+    PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id,
+    PUBSUB.ENDPOINT_TYPE.SMTP.id,
     PUBSUB.ENDPOINT_TYPE.SQL.id,
-    PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
 )
 
 # ################################################################################################################################
