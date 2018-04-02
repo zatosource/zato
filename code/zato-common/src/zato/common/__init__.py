@@ -857,7 +857,7 @@ class PUBSUB:
                 return iter((self.AMQP, self.FILES, self.FTP, self.IMAP, self.REST, self.SERVICE, self.SMS_TWILIO, self.SMTP,
                     self.SOAP, self.SQL, self.WEB_SOCKETS))
 
-# Not available yet
+# Not to be made available externally yet.
 skip_endpoint_types = (
     PUBSUB.ENDPOINT_TYPE.AMQP.id,
     PUBSUB.ENDPOINT_TYPE.FTP.id,
@@ -865,6 +865,7 @@ skip_endpoint_types = (
     PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id,
     PUBSUB.ENDPOINT_TYPE.SMTP.id,
     PUBSUB.ENDPOINT_TYPE.SQL.id,
+    PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id, # This will never be made because WSX clients need to use APIs to subscribe
 )
 
 class EMAIL:
