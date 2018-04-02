@@ -53,9 +53,6 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', data.current_depth_link);
     row += String.format('<td>{0}</td>', last_pub_time);
 
-    row += String.format('<td>{0}</td>', data.publishers_link);
-    row += String.format('<td>{0}</td>', data.subscribers_link);
-
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"/zato/pubsub/message/publish/cluster/{0}/topic/{1}\">Publish</a>", item.cluster_id, data.id));
 
@@ -72,6 +69,11 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", data.is_internal);
     row += String.format("<td class='ignore'>{0}</td>", data.is_active);
     row += String.format("<td class='ignore'>{0}</td>", data.has_gd);
+
+    row += String.format("<td class='ignore'>{0}</td>", data.is_api_sub_allowed);
+    row += String.format("<td class='ignore'>{0}</td>", data.max_depth_gd);
+    row += String.format("<td class='ignore'>{0}</td>", data.max_depth_non_gd);
+    row += String.format("<td class='ignore'>{0}</td>", data.gd_depth_check_freq);
 
     if(include_tr) {
         row += '</tr>';
