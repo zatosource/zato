@@ -110,7 +110,7 @@ class _CreateEdit(CreateEdit):
         )
 
     def success_message(self, item):
-        return 'Successfully {} the pub/sub topic `{}`'.format(self.verb, item.name)
+        return 'Pub/sub topic `{}` {} successfully '.format(item.name, self.verb)
 
 # ################################################################################################################################
 
@@ -129,7 +129,7 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'pubsub-topic-delete'
-    error_message = 'Could not delete the pub/sub topic'
+    error_message = 'Could not delete pub/sub topic'
     service_name = 'zato.pubsub.topic.delete'
 
 # ################################################################################################################################
