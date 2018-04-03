@@ -28,6 +28,10 @@ class Cleanup(Service):
     def handle(self):
         sleep_time = int(self.request.raw_request)
 
+        if not self.server.is_sso_enabled:
+            self.logger.info('SSO not enabled, cleanup task skipped')
+            return
+
         while True:
             try:
                 sleep(sleep_time)

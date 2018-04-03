@@ -230,8 +230,10 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
     server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
-    server.sso_api = SSOAPI(server, sso_config, None, crypto_manager.encrypt, crypto_manager.decrypt,
-        crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
+    server.is_sso_enabled = server.fs_server_config.component_enabled.sso
+    if server.is_sso_enabled:
+        server.sso_api = SSOAPI(server, sso_config, None, crypto_manager.encrypt, crypto_manager.decrypt,
+            crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
 
     # Remove all locks possibly left over by previous server instances
     kvdb = app_context.get_object('kvdb')
