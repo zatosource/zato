@@ -113,7 +113,8 @@ def set_up_class_attributes(class_, service_store=None, name=None):
         class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
 
         # User management and SSO
-        class_.sso = service_store.server.sso_api
+        if service_store.server.is_sso_enabled:
+            class_.sso = service_store.server.sso_api
 
         # Crypto operations
         class_.encrypt = service_store.server.crypto_manager.encrypt
@@ -379,6 +380,11 @@ class ServiceStore(InitializingObject):
                     if not hasattr(item, DONT_DEPLOY_ATTR_NAME):
 
                         service_name = item.get_name()
+
+                        # Don't deploy SSO services if SSO as such is not enabled
+                        if not self.server.is_sso_enabled:
+                            if 'zato.sso' in service_name:
+                                return False
 
                         if self.patterns_matcher.is_allowed(service_name):
                             return True

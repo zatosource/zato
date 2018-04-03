@@ -1467,14 +1467,19 @@ def startup_service_payload_from_path(name, value, repo_location):
 
 # ################################################################################################################################
 
-def invoke_startup_services(
-        source, key, fs_server_config, repo_location, broker_client=None, service_name=None, skip_include=True, worker_store=None):
+def invoke_startup_services(source, key, fs_server_config, repo_location, broker_client=None, service_name=None,
+    skip_include=True, worker_store=None, is_sso_enabled=False):
     """ Invoked when we are the first worker and we know we have a broker client and all the other config is ready
     so we can publish the request to execute startup services. In the worst case the requests will get back to us but it's
     also possible that other workers are already running. In short, there is no guarantee that any server or worker in particular
     will receive the requests, only that there will be exactly one.
     """
     for name, payload in fs_server_config.get(key, {}).items():
+
+        # Don't invoke SSO services if the feature is not enabled
+        if not is_sso_enabled:
+            if 'zato.sso' in name:
+                continue
 
         if service_name:
 

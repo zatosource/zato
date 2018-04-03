@@ -206,6 +206,7 @@ patterns=True
 target_matcher=False
 invoke_matcher=False
 sms=True
+sso=False
 
 [live_msg_browser]
 include_internal=False

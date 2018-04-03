@@ -137,6 +137,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.server_startup_ipc = ServerStartupIPC()
         self.keyutils = KeyUtils()
         self.sso_api = None
+        self.is_sso_enabled = False
         self.audit_pii = audit_pii
         self._hash_secret_method = None
         self._hash_secret_rounds = None
@@ -520,14 +521,15 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 # ################################################################################################################################
 
     def configure_sso(self):
-        self.sso_api.set_odb_session_func(self._get_sso_session)
+        if self.is_sso_enabled:
+            self.sso_api.set_odb_session_func(self._get_sso_session)
 
 # ################################################################################################################################
 
     def invoke_startup_services(self, is_first):
-        _invoke_startup_services(
-            'Parallel', 'startup_services_first_worker' if is_first else 'startup_services_any_worker',
-            self.fs_server_config, self.repo_location, self.broker_client, 'zato.notif.init-notifiers')
+        _invoke_startup_services('Parallel', 'startup_services_first_worker' if is_first else 'startup_services_any_worker',
+            self.fs_server_config, self.repo_location, self.broker_client, 'zato.notif.init-notifiers',
+            is_sso_enabled=self.is_sso_enabled)
 
 # ################################################################################################################################
 
