@@ -121,7 +121,7 @@ enforce_service_invokes=False
 return_tracebacks=True
 default_error_message="An error has occurred"
 
-[websphere_mq]
+[ibm_mq]
 ipc_tcp_start_port=34567
 
 [stats]
@@ -197,7 +197,7 @@ cassandra=True
 email=True
 search=True
 msg_path=True
-websphere_mq=False
+ibm_mq=False
 odoo=True
 stomp=True
 zeromq=True

@@ -163,7 +163,7 @@ def enrich_with_static_config(object_):
     """ Adds to an object (service instance or class) all attributes that are added by service store.
     Useful during tests since there is no service store around to do it.
     """
-    object_.component_enabled_websphere_mq = True
+    object_.component_enabled_ibm_mq = True
     object_.component_enabled_zeromq = True
     object_.component_enabled_patterns = True
     object_.component_enabled_target_matcher = True
