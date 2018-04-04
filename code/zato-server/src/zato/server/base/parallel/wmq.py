@@ -56,7 +56,7 @@ class WMQIPC(object):
         which is the starting point to find a free port from.
         """
         self.wmq_ipc_tcp_port = get_free_port(ipc_tcp_start_port)
-        logger.info('Starting IBM MQ connector for server `%s` on `%s`', self.wmq_ipc_tcp_port, self.name)
+        logger.info('Starting IBM MQ connector for server `%s` on `%s`', self.name, self.wmq_ipc_tcp_port)
 
         # Credentials for both servers and connectors
         username, password = self.get_wmq_credentials()
