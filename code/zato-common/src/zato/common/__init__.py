@@ -951,7 +951,7 @@ class IPC:
         LENGTH = 12 # Length of either success or failure messages
 
     class CONNECTOR:
-        class WEBSPHERE_MQ:
+        class IBM_MQ:
             USERNAME = 'zato.connector.wmq'
 
 class WEB_SOCKET:

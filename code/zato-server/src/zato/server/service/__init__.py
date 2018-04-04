@@ -251,7 +251,7 @@ class Service(object):
         self.out = self.outgoing = _Outgoing(
             self.amqp,
             self._out_ftp,
-            _WMQFacade(self) if self.component_enabled_websphere_mq else None,
+            _WMQFacade(self) if self.component_enabled_ibm_mq else None,
             self._worker_config.out_odoo,
             self._out_plain_http,
             self._worker_config.out_soap,

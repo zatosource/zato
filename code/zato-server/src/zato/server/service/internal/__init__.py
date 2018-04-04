@@ -18,7 +18,7 @@ from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.util import get_response_value, replace_private_key
 from zato.common.util.sql import search as sql_search
-from zato.server.service import Service
+from zato.server.service import Int, Service
 
 # ################################################################################################################################
 
@@ -169,7 +169,7 @@ class ChangePasswordBase(AdminService):
     password_required = True
 
     class SimpleIO(AdminSIO):
-        input_required = ('id', 'password1', 'password2')
+        input_required = (Int('id'), 'password1', 'password2')
 
     def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL,
                 *args, **kwargs):

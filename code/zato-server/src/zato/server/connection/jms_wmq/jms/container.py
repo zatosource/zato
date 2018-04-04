@@ -57,11 +57,11 @@ from zato.server.connection.jms_wmq.jms.core import TextMessage
 
 default_logging_config = {
     'loggers': {
-        'zato_websphere_mq': {
-            'qualname': 'zato_websphere_mq', 'level': 'INFO', 'propagate': False, 'handlers': ['websphere_mq']}
+        'zato_ibm_mq': {
+            'qualname': 'zato_ibm_mq', 'level': 'INFO', 'propagate': False, 'handlers': ['ibm_mq']}
     },
     'handlers': {
-        'websphere_mq': {
+        'ibm_mq': {
             'formatter': 'default', 'backupCount': 10, 'mode': 'a', 'maxBytes': 20000000, 'filename': './logs/websphere-mq.log'
         },
     },
@@ -242,7 +242,7 @@ class ConnectionContainer(object):
             logging_config = yaml.load(f)
 
         # IBM MQ logging configuration is new in Zato 3.0, so it's optional.
-        if not 'zato_websphere_mq' in logging_config['loggers']:
+        if not 'zato_ibm_mq' in logging_config['loggers']:
             logging_config = default_logging_config
 
         self.set_up_logging(logging_config)
@@ -251,10 +251,9 @@ class ConnectionContainer(object):
 
     def set_up_logging(self, config):
 
-        logger_conf = config['loggers']['zato_websphere_mq']
-        wmq_handler_conf = config['handlers']['websphere_mq']
+        logger_conf = config['loggers']['zato_ibm_mq']
+        wmq_handler_conf = config['handlers']['ibm_mq']
         del wmq_handler_conf['formatter']
-        del wmq_handler_conf['class']
         formatter_conf = config['formatters']['default']['format']
 
         self.logger = getLogger(logger_conf['qualname'])
@@ -293,6 +292,8 @@ class ConnectionContainer(object):
         msg.pop('old_name', None)
         id = msg.pop('id')
         msg['needs_jms'] = msg.pop('use_jms', False)
+        msg.pop('_encryption_needed', False)
+        msg.pop('_encrypted_in_odb', False)
 
         # We always create and add a connetion ..
         conn = WebSphereMQConnection(**msg)
@@ -394,7 +395,7 @@ class ConnectionContainer(object):
             try:
                 conn = self.connections[msg.id]
                 conn.close()
-                conn.password = msg.password1
+                conn.password = msg.password
                 conn.connect()
             except Exception as e:
                 self.logger.warn(format_exc())
