@@ -78,7 +78,7 @@ class WMQIPC(object):
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()
-        until = timedelta(seconds=timeout)
+        until = now + timedelta(seconds=timeout)
         is_ok = False
         address = address_pattern.format(self.wmq_ipc_tcp_port, 'ping')
         auth = self.get_wmq_credentials()

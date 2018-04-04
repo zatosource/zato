@@ -254,6 +254,7 @@ class ConnectionContainer(object):
         logger_conf = config['loggers']['zato_ibm_mq']
         wmq_handler_conf = config['handlers']['ibm_mq']
         del wmq_handler_conf['formatter']
+        wmq_handler_conf.pop('class', False)
         formatter_conf = config['formatters']['default']['format']
 
         self.logger = getLogger(logger_conf['qualname'])
