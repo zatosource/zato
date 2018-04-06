@@ -43,7 +43,7 @@ class WMQIPC(object):
 
 # ################################################################################################################################
 
-    def get_wmq_credentials(self, username=IPC.CONNECTOR.WEBSPHERE_MQ.USERNAME):
+    def get_wmq_credentials(self, username=IPC.CONNECTOR.IBM_MQ.USERNAME):
         """ Returns a username/password pair that authentication with IBM MQ connectors is established with.
         """
         config = self.worker_store.basic_auth_get(username)['config']
@@ -51,12 +51,12 @@ class WMQIPC(object):
 
 # ################################################################################################################################
 
-    def start_websphere_mq_connector(self, ipc_tcp_start_port, timeout=5):
+    def start_ibm_mq_connector(self, ipc_tcp_start_port, timeout=5):
         """ Starts an HTTP server acting as an IBM MQ MQ connector. Its port will be greater than ipc_tcp_start_port,
         which is the starting point to find a free port from.
         """
         self.wmq_ipc_tcp_port = get_free_port(ipc_tcp_start_port)
-        logger.info('Starting IBM MQ connector for server `%s` on `%s`', self.wmq_ipc_tcp_port, self.name)
+        logger.info('Starting IBM MQ connector for server `%s` on `%s`', self.name, self.wmq_ipc_tcp_port)
 
         # Credentials for both servers and connectors
         username, password = self.get_wmq_credentials()
@@ -78,7 +78,7 @@ class WMQIPC(object):
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()
-        until = timedelta(seconds=timeout)
+        until = now + timedelta(seconds=timeout)
         is_ok = False
         address = address_pattern.format(self.wmq_ipc_tcp_port, 'ping')
         auth = self.get_wmq_credentials()
@@ -130,6 +130,7 @@ class WMQIPC(object):
 
     def invoke_wmq_connector(self, msg, raise_on_error=True, address_pattern=address_pattern):
         address = address_pattern.format(self.wmq_ipc_tcp_port, 'api')
+
         response = post(address, data=dumps(msg), auth=self.get_wmq_credentials())
 
         if not response.ok:

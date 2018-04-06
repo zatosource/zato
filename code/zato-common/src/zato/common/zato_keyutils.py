@@ -67,7 +67,7 @@ class KeyUtils(object):
     def user_get(self, key=None, pid=None):
         """ Returns value of key from current user's keyring.
         """
-        return _keyutils.read_key(self._get_user_key_id(key))
+        return _keyutils.read_key(self._get_user_key_id(key, pid))
 
 # ################################################################################################################################
 

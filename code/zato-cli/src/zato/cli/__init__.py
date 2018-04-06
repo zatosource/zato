@@ -162,10 +162,10 @@ loggers:
         handlers: [stdout, web_socket]
         qualname: zato_web_socket
         propagate: false
-    zato_websphere_mq:
+    zato_ibm_mq:
         level: INFO
-        handlers: [stdout, websphere_mq]
-        qualname: zato_websphere_mq
+        handlers: [stdout, ibm_mq]
+        qualname: zato_ibm_mq
         propagate: false
 
 handlers:
@@ -257,10 +257,10 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
-    websphere_mq:
+    ibm_mq:
         formatter: default
         class: logging.handlers.RotatingFileHandler
-        filename: './logs/websphere-mq.log'
+        filename: './logs/ibm-mq.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10

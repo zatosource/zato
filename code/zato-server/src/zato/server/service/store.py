@@ -103,7 +103,7 @@ def set_up_class_attributes(class_, service_store=None, name=None):
         class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
         class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
         class_.component_enabled_msg_path = service_store.server.fs_server_config.component_enabled.msg_path
-        class_.component_enabled_websphere_mq = service_store.server.fs_server_config.component_enabled.websphere_mq
+        class_.component_enabled_ibm_mq = service_store.server.fs_server_config.component_enabled.ibm_mq
         class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
         class_.component_enabled_stomp = service_store.server.fs_server_config.component_enabled.stomp
         class_.component_enabled_zeromq = service_store.server.fs_server_config.component_enabled.zeromq

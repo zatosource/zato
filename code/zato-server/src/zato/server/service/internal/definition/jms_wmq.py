@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from copy import deepcopy
 from datetime import datetime
 from traceback import format_exc
 from uuid import uuid4
@@ -18,7 +19,7 @@ from uuid import uuid4
 from zato.common.broker_message import DEFINITION
 from zato.common.odb.model import Cluster, ConnDefWMQ
 from zato.common.odb.query import definition_wmq, definition_wmq_list
-from zato.server.service import Boolean, Integer
+from zato.server.service import Boolean, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 # ################################################################################################################################
@@ -34,7 +35,7 @@ class GetList(AdminService):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'host', 'port', 'channel', Boolean('cache_open_send_queues'),
             Boolean('cache_open_receive_queues'), Boolean('use_shared_connections'), Boolean('ssl'), 'needs_mcd',
-            Integer('max_chars_printed'), Boolean('use_jms'))
+            Int('max_chars_printed'), Boolean('use_jms'))
         output_optional = ('ssl_cipher_spec', 'ssl_key_repository', 'queue_manager', 'username')
 
     def get_data(self, session):
@@ -55,7 +56,7 @@ class GetByID(AdminService):
         input_required = ('id', 'cluster_id',)
         output_required = ('id', 'name', 'host', 'port', 'channel', Boolean('cache_open_send_queues'),
             Boolean('cache_open_receive_queues'), Boolean('use_shared_connections'), Boolean('ssl'), 'needs_mcd',
-            Integer('max_chars_printed'))
+            Int('max_chars_printed'))
         output_optional = ('ssl_cipher_spec', 'ssl_key_repository', 'queue_manager', 'username', Boolean('use_jms'))
 
     def get_data(self, session):
@@ -75,7 +76,7 @@ class Create(AdminService):
         response_elem = 'zato_definition_jms_wmq_create_response'
         input_required = ('cluster_id', 'name', 'host', 'port', 'channel', Boolean('cache_open_send_queues'),
             Boolean('cache_open_receive_queues'), Boolean('use_shared_connections'), Boolean('ssl'), 'needs_mcd',
-            Integer('max_chars_printed'), Boolean('use_jms'))
+            Int('max_chars_printed'), Boolean('use_jms'))
         input_optional = ('ssl_cipher_spec', 'ssl_key_repository', 'queue_manager', 'username')
         output_required = ('id', 'name')
 
@@ -127,9 +128,9 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_definition_jms_wmq_edit_request'
         response_elem = 'zato_definition_jms_wmq_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'channel',
+        input_required = (Int('id'), 'cluster_id', 'name', 'host', 'port', 'channel',
             Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'), Boolean('use_shared_connections'),
-            Boolean('ssl'), 'needs_mcd', Integer('max_chars_printed'), Boolean('use_jms'))
+            Boolean('ssl'), 'needs_mcd', Int('max_chars_printed'), Boolean('use_jms'))
         input_optional = ('queue_manager', 'username')
         output_required = ('id', 'name')
 
@@ -192,7 +193,7 @@ class Delete(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_definition_jms_wmq_delete_request'
         response_elem = 'zato_definition_jms_wmq_delete_response'
-        input_required = ('id',)
+        input_required = (Int('id'),)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -227,10 +228,6 @@ class ChangePassword(ChangePasswordBase):
     def handle(self):
         def _auth(instance, password):
             instance.password = password
-
-        self.request.input.action = DEFINITION.WMQ_CHANGE_PASSWORD.value
-        self.broker_client.publish(self.request.input)
-
         return self._handle(ConnDefWMQ, _auth, DEFINITION.WMQ_CHANGE_PASSWORD.value)
 
 # ################################################################################################################################
@@ -241,7 +238,7 @@ class Ping(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_definition_jms_wmq_ping_request'
         response_elem = 'zato_definition_jms_wmq_ping_response'
-        input_required = ('id',)
+        input_required = (Int('id'),)
         output_required = ('info',)
 
     def handle(self):

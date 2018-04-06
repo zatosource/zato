@@ -930,7 +930,7 @@ class ConnDefWMQ(Base):
     use_jms = Column(Boolean(), nullable=False)
     max_chars_printed = Column(Integer, nullable=False)
     username = Column(String(100), nullable=True)
-    password = Column(String(100), nullable=True)
+    password = Column(String(200), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('wmq_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
