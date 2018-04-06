@@ -117,7 +117,7 @@
                 <form action="{% url "channel-web-socket-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:22%">Name</td>
+                            <td style="vertical-align:middle;width:14%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
@@ -142,15 +142,16 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">New token wait time<br/><span class="form_hint">(in seconds)</span></td>
-                            <td>{{ create_form.new_token_wait_time }}</td>
-                        </tr>
+                            <td style="vertical-align:middle">New token<br/>wait time</td>
+                            <td>{{ create_form.new_token_wait_time }}
+                            <span class="form_hint">(in seconds)</span>
+                            |
 
-                        <tr>
-                            <td style="vertical-align:middle">Token TTL<br/><span class="form_hint">(in seconds)</span></td>
-                            <td>{{ create_form.token_ttl }}</td>
+                            Token TTL
+                            {{ create_form.token_ttl }}
+                            <span class="form_hint">(in seconds)</span>
+                            </td>
                         </tr>
-
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -170,7 +171,7 @@
                 <form action="{% url "channel-web-socket-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:22%">Name</td>
+                            <td style="vertical-align:middle;width:14%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
 
@@ -195,15 +196,16 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">New token wait time<br/><span class="form_hint">(in seconds)</span></td>
-                            <td>{{ edit_form.new_token_wait_time }}</td>
-                        </tr>
+                            <td style="vertical-align:middle">New token<br/>wait time</td>
+                            <td>{{ edit_form.new_token_wait_time }}
+                            <span class="form_hint">(in seconds)</span>
+                            |
 
-                        <tr>
-                            <td style="vertical-align:middle">Token TTL<br/><span class="form_hint">(in seconds)</span></td>
-                            <td>{{ edit_form.token_ttl }}</td>
+                            Token TTL
+                            {{ edit_form.token_ttl }}
+                            <span class="form_hint">(in seconds)</span>
+                            </td>
                         </tr>
-
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
