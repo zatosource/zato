@@ -854,8 +854,7 @@ class PUBSUB:
 
         class __metaclass__(type):
             def __iter__(self):
-                return iter((self.AMQP, self.FILES, self.FTP, self.IMAP, self.REST, self.SERVICE, self.SMS_TWILIO, self.SMTP,
-                    self.SOAP, self.SQL, self.WEB_SOCKETS))
+                return iter((self.REST, self.SERVICE, self.SOAP, self.WEB_SOCKETS))
 
 # Not to be made available externally yet.
 skip_endpoint_types = (
