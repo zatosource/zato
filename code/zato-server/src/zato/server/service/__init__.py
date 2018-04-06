@@ -200,13 +200,7 @@ class Service(object):
     sso = None
 
     # Crypto operations
-    encrypt = None
-    decrypt = None
-    hash_secret = None
-    sign = None
-    verify = None
-    generate_secret = None
-    generate_password = None
+    crypto = None
 
     # Audit log
     audit_pii = None
