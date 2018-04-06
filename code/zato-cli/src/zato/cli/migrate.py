@@ -359,7 +359,7 @@ class Migrate(ManageCommand):
                 section['email'] = True
                 section['search'] = True
                 section['msg_path'] = True
-                section['websphere_mq'] = True
+                section['ibm_mq'] = True
                 section['odoo'] = True
                 section['stomp'] = False
                 section['zeromq'] = True
