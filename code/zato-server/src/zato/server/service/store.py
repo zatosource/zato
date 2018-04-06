@@ -117,13 +117,7 @@ def set_up_class_attributes(class_, service_store=None, name=None):
             class_.sso = service_store.server.sso_api
 
         # Crypto operations
-        class_.encrypt = service_store.server.crypto_manager.encrypt
-        class_.decrypt = service_store.server.crypto_manager.decrypt
-        class_.hash_secret = service_store.server.crypto_manager.hash_secret
-        class_.sign = None   # Not implemented yet
-        class_.verify = None # Ditto
-        class_.generate_secret = service_store.server.crypto_manager.generate_secret
-        class_.generate_password = service_store.server.crypto_manager.generate_password
+        class_.crypto = service_store.server.crypto_manager
 
         # Audit log
         class_.audit_pii = service_store.server.audit_pii
