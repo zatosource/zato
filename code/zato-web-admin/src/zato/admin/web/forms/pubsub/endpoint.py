@@ -17,6 +17,18 @@ from zato.common import PUBSUB, skip_endpoint_types
 
 # ################################################################################################################################
 
+skip_endpoint_types = (
+    PUBSUB.ENDPOINT_TYPE.AMQP.id,
+    PUBSUB.ENDPOINT_TYPE.FILES.id,
+    PUBSUB.ENDPOINT_TYPE.FTP.id,
+    PUBSUB.ENDPOINT_TYPE.IMAP.id,
+    PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id,
+    PUBSUB.ENDPOINT_TYPE.SMTP.id,
+    PUBSUB.ENDPOINT_TYPE.SQL.id,
+)
+
+# ################################################################################################################################
+
 class CreateForm(forms.Form):
 
     # Common ones
