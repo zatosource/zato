@@ -158,7 +158,7 @@
                 <form action="{% url "pubsub-topic-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:15%">Name</td>
+                            <td style="vertical-align:middle; width:14%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
@@ -196,7 +196,7 @@
                             <td>{{ create_form.gd_depth_check_freq }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Hook service</td>
+                            <td style="vertical-align:middle">Service</td>
                             <td>{{ create_form.hook_service_id }} </td>
                         </tr>
                         <tr>
@@ -216,7 +216,7 @@
                 <form action="{% url "pubsub-topic-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:15%">Name</td>
+                            <td style="vertical-align:middle; width:14%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
@@ -254,7 +254,7 @@
                             <td>{{ edit_form.gd_depth_check_freq }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Hook service</td>
+                            <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.hook_service_id }} </td>
                         </tr>
                         <tr>
