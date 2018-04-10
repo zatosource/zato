@@ -989,7 +989,7 @@ class Create(ZatoCommand):
         impl_name = 'zato.server.service.internal.channel.jms_wmq.OnMessageReceived'
         service = Service(None, 'zato.channel.jms-wmq.on-message-received', True, impl_name, True, cluster)
 
-        wmq_username = IPC.CONNECTOR.WEBSPHERE_MQ.USERNAME
+        wmq_username = IPC.CONNECTOR.IBM_MQ.USERNAME
         wmq_sec = HTTPBasicAuth(None, wmq_username, True, wmq_username, 'Zato IBM MQ', uuid4().hex, cluster)
 
         channel = HTTPSOAP(None, 'zato.internal.callback.wmq', True, True, 'channel', 'plain_http', None,
