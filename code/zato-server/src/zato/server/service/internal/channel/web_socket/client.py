@@ -57,6 +57,7 @@ class Create(AdminService):
             client.server_proc_pid = self.server.pid
             client.channel_id = channel.id
             client.server_id = self.server.id
+            client.cluster_id = self.server.cluster_id
             client.server_name = self.server.name
 
             session.add(client)
