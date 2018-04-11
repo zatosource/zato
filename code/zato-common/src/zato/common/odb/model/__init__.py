@@ -2209,7 +2209,7 @@ class PubSubSubscription(Base):
     is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
 
-    active_status = Column(String(200), nullable=False)
+    active_status = Column(String(200), nullable=False, default=PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED)
     is_staging_enabled = Column(Boolean(), nullable=False, default=False)
 
     delivery_method = Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY.id)
