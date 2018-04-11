@@ -207,7 +207,7 @@ class GetInRAMMessageList(AdminService):
         for topic_id, sub_keys in topic_sub_keys.items():
 
             # This is a dictionary of sub_key -> msg_id -> message data ..
-            data = self.pubsub.in_ram_backlog.retrieve_messages_by_sub_keys(topic_id, sub_keys)
+            data = self.pubsub.delivery_backlog.retrieve_messages_by_sub_keys(topic_id, sub_keys)
 
             # .. which is why we can extend out directly - sub_keys are always unique
             out.update(data)

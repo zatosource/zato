@@ -20,7 +20,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.topic.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.topic.before_submit_hook;
-    $.fn.zato.data_table.setup_forms(['name', 'max_depth_gd', 'max_depth_non_gd', 'gd_depth_check_freq']);
+    $.fn.zato.data_table.setup_forms(['name', 'max_depth_gd', 'max_depth_non_gd', 'depth_check_freq']);
 })
 
 
@@ -73,7 +73,7 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", data.is_api_sub_allowed);
     row += String.format("<td class='ignore'>{0}</td>", data.max_depth_gd);
     row += String.format("<td class='ignore'>{0}</td>", data.max_depth_non_gd);
-    row += String.format("<td class='ignore'>{0}</td>", data.gd_depth_check_freq);
+    row += String.format("<td class='ignore'>{0}</td>", data.depth_check_freq);
 
     if(include_tr) {
         row += '</tr>';
