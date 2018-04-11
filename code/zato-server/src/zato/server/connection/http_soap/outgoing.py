@@ -225,6 +225,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
     def set_auth(self):
         self.requests_auth = self.auth if self.config['sec_type'] == SEC_DEF_TYPE.BASIC_AUTH else None
+        self.username = self.requests_auth[0] if self.requests_auth else None
 
         if self.config['sec_type'] == SEC_DEF_TYPE.WSS:
             self.soap[self.config['soap_version']]['header'] = \
@@ -336,7 +337,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             data = data.encode('utf-8')
 
         logger.info(
-            'CID:`%s`, address:`%s`, qs:`%s`, auth:`%s`, kwargs:`%s`', cid, address, qs_params, self.requests_auth, kwargs)
+            'CID:`%s`, address:`%s`, qs:`%s`, auth_user:`%s`, kwargs:`%s`', cid, address, qs_params, self.username, kwargs)
 
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 

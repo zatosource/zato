@@ -13,7 +13,19 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_security_select, add_select
-from zato.common import PUBSUB
+from zato.common import PUBSUB, skip_endpoint_types
+
+# ################################################################################################################################
+
+skip_endpoint_types = (
+    PUBSUB.ENDPOINT_TYPE.AMQP.id,
+    PUBSUB.ENDPOINT_TYPE.FILES.id,
+    PUBSUB.ENDPOINT_TYPE.FTP.id,
+    PUBSUB.ENDPOINT_TYPE.IMAP.id,
+    PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id,
+    PUBSUB.ENDPOINT_TYPE.SMTP.id,
+    PUBSUB.ENDPOINT_TYPE.SQL.id,
+)
 
 # ################################################################################################################################
 
@@ -46,7 +58,7 @@ class CreateForm(forms.Form):
         add_select(self, 'service_id', data_list.service_list)
         add_select(self, 'ws_channel_id', data_list.ws_channel_list)
         add_select(self, 'role', PUBSUB.ROLE)
-        add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE, needs_initial_select=False)
+        add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE, needs_initial_select=False, skip=skip_endpoint_types)
 
         # Let's assume the default type of pub/sub endpoint will be REST clients
         self.initial['endpoint_type'] = PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id

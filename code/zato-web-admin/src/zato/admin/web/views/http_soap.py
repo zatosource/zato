@@ -49,7 +49,7 @@ CONNECTION_PLURAL = {
     }
 
 TRANSPORT = {
-    'plain_http': 'Plain HTTP',
+    'plain_http': 'REST',
     'soap': 'SOAP',
     }
 

@@ -103,7 +103,7 @@ grace_time_multiplier=3
 context_class=zato.server.spring_context.ZatoContext
 
 [misc]
-return_internal_objects=False
+return_internal_objects=True
 internal_services_may_be_deleted=False
 initial_cluster_name={{initial_cluster_name}}
 initial_server_name={{initial_server_name}}
@@ -148,6 +148,7 @@ zato.notif.init-notifiers=
 zato.kvdb.log-connection-info=
 zato.pubsub.cleanup.delete-expired=10
 zato.pubsub.cleanup.delete-delivered=10
+zato.pubsub.cleanup.delete-marked-deleted=120
 zato.sso.cleanup.cleanup=300
 zato.updates.check-updates=
 
@@ -569,7 +570,7 @@ class Create(ZatoCommand):
 
         self.dirs_prepared = True
 
-    def execute(self, args, port=http_plain_server_port, show_output=True):
+    def execute(self, args, port=http_plain_server_port, show_output=True, return_server_id=False):
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
@@ -710,3 +711,8 @@ You can now start it with the 'zato start {}' command.""".format(self.target_dir
                 self.logger.debug(msg)
             else:
                 self.logger.info('OK')
+
+        # This is optional - need only by quickstart.py and needs to be requested explicitly,
+        # otherwise it would be construed as a non-0 return code from this process.
+        if return_server_id:
+            return server.id

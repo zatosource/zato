@@ -34,13 +34,8 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
         '<a href="/zato/pubsub/topic/?cluster={0}&highlight={1}">{2}</a>', data.cluster_id, data.id, data.topic_name);
 
     var depth_func = $.fn.zato.pubsub.endpoint_queue.get_depth_link;
-
-    var has_gd = data.has_gd ? 'Yes' : 'No';
-    var is_staging_enabled = data.is_staging_enabled ? 'Yes' : 'No';
-
     var total_link = depth_func('total', data.cluster_id, data.id, data.name_slug, data.total_depth);
-    var current_link = depth_func('current', data.cluster_id, data.id, data.name_slug, data.current_depth);
-    var staging_link = depth_func('staging', data.cluster_id, data.id, data.name_slug, data.staging_depth);
+
     var sub_key_link = String.format(
         '<a id="sub_key_{0}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key(\'{0}\')">Show</a>', data.id);
     var last_interaction_link = '';
@@ -67,12 +62,7 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     row += String.format('<td>{0}</td>', topic_link);
     row += String.format('<td>{0}</td>', data.active_status);
 
-    row += String.format('<td>{0}</td>', has_gd);
-    row += String.format('<td>{0}</td>', is_staging_enabled);
-
     row += String.format('<td>{0}</td>', total_link);
-    row += String.format('<td>{0}</td>', current_link);
-    row += String.format('<td>{0}</td>', staging_link);
 
     row += String.format('<td>{0}</td>', data.creation_time);
     row += String.format('<td>{0}</td>', sub_key_link);
@@ -105,7 +95,6 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
 
     /* -- 4 -- */
     row += String.format("<td class='ignore'>{0}</td>", data.ftp_directory_list);
-    row += String.format("<td class='ignore'>{0}</td>", data.has_gd);
     row += String.format("<td class='ignore'>{0}</td>", data.is_durable);
     row += String.format("<td class='ignore'>{0}</td>", data.is_internal);
     row += String.format("<td class='ignore'>{0}</td>", data.name);
