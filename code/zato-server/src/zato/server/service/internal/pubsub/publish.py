@@ -261,17 +261,18 @@ class Publish(AdminService):
 
                 with closing(self.odb.session()) as session:
 
-                    # Abort if max depth is already reached but check first if we should check the depth in this iteration.
-                    topic.incr_gd_depth_check()
+                    # Increase depth check counter..
+                    topic.incr_depth_check()
 
-                    if topic.needs_gd_depth_check():
+                    # .. test first if we should check the depth in this iteration.
+                    if topic.needs_depth_check():
 
-                        # Get current depth of this topic
+                        # Get current depth of this topic ..
                         current_depth = get_topic_depth(session, cluster_id, topic.id)
 
+                        # .. and abort if max depth is already reached.
                         if current_depth + len_gd_msg_list > topic.max_depth_gd:
-                            raise ServiceUnavailable(self.cid,
-                                'Publication rejected - would have exceeded max depth for `{}`'.format(topic.name))
+                            self.reject_publication(topic.name, True)
                         else:
 
                             # This only updates the local variable
@@ -315,7 +316,7 @@ class Publish(AdminService):
         # for in-RAM messages is reached.
         else:
             if non_gd_msg_list:
-                self.queue_up_non_gd_msg(non_gd_msg_list, topic)
+                self.queue_up_non_gd_msg(pubsub, topic, non_gd_msg_list)
 
         # Update metadata in background
         spawn(self._update_pub_metadata, cluster_id, topic.id, endpoint_id, now, gd_msg_list, non_gd_msg_list, pattern_matched)
@@ -331,12 +332,40 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def queue_up_non_gd_msg(self, non_gd_msg_list, topic):
+    def queue_up_non_gd_msg(self, pubsub, topic, non_gd_msg_list):
         """ Enqueues locally all the non-GD messages given on input unless the topic's
         max depth for in-RAM messages has been already reached.
         """
-        print(333, non_gd_msg_list)
-        print(444, topic)
+        # Note how the logic to check current depth does not a globa lock because each server
+        # has its own backlog queue.
+
+        # Increase depth check counter..
+        topic.incr_depth_check()
+
+        # .. if we have already reached max depth, there is no point checking anything else ..
+        if pubsub.topic_backlog.has_max_depth(topic.id, topic.max_depth_non_gd):
+            self.reject_publication(topic.name, False)
+
+        # .. otherwise, test first if we should check the depth in this iteration.
+        if topic.needs_depth_check():
+
+            # Get current depth of this topic ..
+            current_depth = pubsub.topic_backlog.get_depth(topic.id)
+
+            # .. and abort if max depth is already reached ..
+            if current_depth + len(non_gd_msg_list) > topic.max_depth_non_gd:
+                self.reject_publication(topic.name, False)
+
+        # .. max depth was not reached yet so we can queue the message up locally on this server.
+        pubsub.topic_backlog.add_messages(topic.id, non_gd_msg_list)
+
+# ################################################################################################################################
+
+    def reject_publication(self, topic_name, is_gd):
+        """ Raises an exception to indicate that a publication was rejected.
+        """
+        raise ServiceUnavailable(self.cid,
+            'Publication rejected - would exceed {} max depth for `{}`'.format('GD' if is_gd else 'non-GD', topic_name))
 
 # ################################################################################################################################
 

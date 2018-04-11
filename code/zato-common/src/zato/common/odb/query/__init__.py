@@ -934,7 +934,7 @@ def _pubsub_topic(session, cluster_id):
         PubSubTopic.current_depth_gd,
         PubSubTopic.has_gd,
         PubSubTopic.is_api_sub_allowed,
-        PubSubTopic.gd_depth_check_freq,
+        PubSubTopic.depth_check_freq,
         PubSubTopic.hook_service_id,
         Service.name.label('hook_service_name'),
         ).\

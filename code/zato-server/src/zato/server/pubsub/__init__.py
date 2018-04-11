@@ -143,18 +143,18 @@ class Topic(object):
         self.max_depth_gd = config.max_depth_gd
         self.max_depth_non_gd = config.max_depth_non_gd
         self.has_gd = config.has_gd
-        self.gd_depth_check_freq = config.gd_depth_check_freq
-        self.gd_depth_check_iter = 0
+        self.depth_check_freq = config.depth_check_freq
+        self.depth_check_iter = 0
         self.before_publish_hook_service_invoker = config.get('before_publish_hook_service_invoker')
         self.before_delivery_hook_service_invoker = config.get('before_delivery_hook_service_invoker')
 
-    def incr_gd_depth_check(self):
+    def incr_depth_check(self):
         """ Increases counter indicating whether topic's depth should be checked for max_depth reached.
         """
-        self.gd_depth_check_iter += 1
+        self.depth_check_iter += 1
 
-    def needs_gd_depth_check(self):
-        return self.gd_depth_check_iter % self.gd_depth_check_freq == 0
+    def needs_depth_check(self):
+        return self.depth_check_iter % self.depth_check_freq == 0
 
 # ################################################################################################################################
 
@@ -198,8 +198,9 @@ class SubKeyServer(object):
 
 # ################################################################################################################################
 
-class InRAMBacklog(object):
-    """ A backlog of messages kept in RAM. Stores a list of sub_keys and all messages that a sub_key points to.
+class InRAMDeliveryBacklog(object):
+    """ A backlog of messages kept in RAM for whom there are subscriptions - that is, they are known to have subscribers
+    and will be ultimately delivered to them. Stores a list of sub_keys and all messages that a sub_key points to.
     It acts as a multi-key dict and keeps only a single copy of message for each sub_key.
     """
     def __init__(self):
@@ -208,7 +209,7 @@ class InRAMBacklog(object):
         self.topic_msg_id_to_msg = {}     # Topic ID -> Msg ID  -> Message data
         self.msg_id_to_expiration = {}    # Msg ID   -> (Topic ID, sub_keys, expiration time in milliseconds)
 
-        # Start in background a cleanup task that removes all expired messages
+        # Start in background a cleanup task that deletes all expired and removed messages
         spawn_greenlet(self.run_cleanup_task)
 
 # ################################################################################################################################
@@ -337,7 +338,7 @@ class InRAMBacklog(object):
     def log_messages_to_store(self, cid, topic_name, max_depth, sub_key, messages):
 
         # Used by both loggers
-        msg = 'Reached max in-RAM depth of %r for topic `%r` (cid:%r). Extra messages will be stored in logs.'
+        msg = 'Reached max in-RAM delivery depth of %r for topic `%r` (cid:%r). Extra messages will be stored in logs.'
         args = (max_depth, topic_name, cid)
 
         # Log in pub/sub log and the main one as well, just to make sure it will be easily found
@@ -394,6 +395,64 @@ class InRAMBacklog(object):
 
 # ################################################################################################################################
 
+class InRAMTopicBacklog(object):
+    """ Stores information about messages that were published to topics for whom there are no subscribers.
+    They will be kept in RAM of the server that received them until there is a subscription for the topic
+    or until the messages expire.
+    """
+    def __init__(self):
+        self.lock = RLock()
+        self.topic_id_to_msg_list = {} # Topic ID -> a list of messages for that topic
+
+        # Start in background a cleanup task that deletes all expired and removed messages
+        spawn_greenlet(self.run_cleanup_task)
+
+# ################################################################################################################################
+
+    def has_max_depth(self, topic_id, max_depth):
+        """ Returns True if max depth was reached for input topic ID.
+        """
+        with self.lock:
+            return self._get_depth(topic_id) >= max_depth
+
+# ################################################################################################################################
+
+    def _get_depth(self, topic_id):
+        """ Low-level implementation of self.get_depth.
+        """
+        return len(self.topic_id_to_msg_list.get(topic_id, []))
+
+# ################################################################################################################################
+
+    def get_depth(self, topic_id):
+        """ Returns current depth of a topic by its ID
+        """
+        with self.lock:
+            return self._get_depth(topic_id)
+
+# ################################################################################################################################
+
+    def add_messages(self, topic_id, messages):
+        """ Enqueues messages for a given topic ID.
+        """
+        with self.lock:
+            self.topic_id_to_msg_list.setdefault(topic_id, []).extend(messages)
+
+# ################################################################################################################################
+
+    def get_messages(self, topic_id):
+        """ Yields messages for a topic by its ID, filtering out any expired ones.
+        """
+        zzz
+
+# ################################################################################################################################
+
+    def run_cleanup_task(self, _utcnow=utcnow_as_ms, _sleep=sleep):
+        """ A background task waking up periodically to remove all expired messages from backlog.
+        """
+
+# ################################################################################################################################
+
 class PubSub(object):
     def __init__(self, cluster_id, server, broker_client=None):
         self.cluster_id = cluster_id
@@ -416,7 +475,14 @@ class PubSub(object):
         self.pubsub_tool_by_sub_key = {}       # Sub key        -> PubSubTool object
         self.pubsub_tools = []                 # A list of PubSubTool objects, each containing delivery tasks
 
-        self.in_ram_backlog = InRAMBacklog()
+        # A backlog of messages that have at least one subscription,
+        # i.e. this is what delivery servers use.
+        self.delivery_backlog = InRAMDeliveryBacklog()
+
+        # A backlog of messages that don't have any subscription,
+        # i.e. this is what the receiving server uses (the one that
+        # the message was published through to a topic).
+        self.topic_backlog = InRAMTopicBacklog()
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
@@ -891,7 +957,7 @@ class PubSub(object):
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """
-        self.in_ram_backlog.add_messages(cid, topic_id, topic_name, self.topics[topic_id].max_depth_non_gd,
+        self.delivery_backlog.add_messages(cid, topic_id, topic_name, self.topics[topic_id].max_depth_non_gd,
             sub_keys, non_gd_msg_list)
 
 # ################################################################################################################################
@@ -907,7 +973,7 @@ class PubSub(object):
                 topic_id = self.topic_name_to_id[topic_name]
 
                 # Delete subscriptions, and any related messages, from RAM
-                self.in_ram_backlog.unsubscribe(topic_id, sub_keys)
+                self.delivery_backlog.unsubscribe(topic_id, sub_keys)
 
                 # Delete subscription metadata from local pubsub
                 subscriptions_by_topic = self.subscriptions_by_topic[topic_name]
