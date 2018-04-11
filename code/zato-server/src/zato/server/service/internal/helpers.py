@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2013 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -112,6 +112,8 @@ class TLSLogger(Service):
 class WebSocketsGateway(Service):
     """ Dispatches incoming requests to target services.
     """
+    name = 'helpers.web-sockets-gateway'
+
     class SimpleIO:
         input_required = ('service',)
         input_optional = (AsIs('request'),)
