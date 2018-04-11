@@ -38,8 +38,8 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common import broker_message, CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, MSG_PATTERN_TYPE, NOTIF, \
-     PUBSUB, SEC_DEF_TYPE, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+from zato.common import broker_message, CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, \
+     MSG_PATTERN_TYPE, NOTIF, PUBSUB, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
@@ -329,8 +329,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def _http_soap_wrapper_from_config(self, config, has_sec_config=True):
-        """ Creates a new HTTP/SOAP connection wrapper out of a configuration
-        dictionary.
+        """ Creates a new HTTP/SOAP connection wrapper out of a configuration dictionary.
         """
         security_name = config.get('security_name')
         sec_config = {'security_name':security_name, 'sec_type':None, 'username':None, 'password':None, 'password_type':None}
@@ -383,7 +382,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         wrapper_config['tls_verify'] = tls_verify
 
-        if wrapper_config['serialization_type'] == HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id:
+        conn_soap = wrapper_config['transport'] == URL_TYPE.SOAP
+        conn_suds = wrapper_config['serialization_type'] == HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id
+
+        if conn_soap and conn_suds:
             wrapper_config['queue_build_cap'] = float(self.server.fs_server_config.misc.queue_build_cap)
             wrapper = SudsSOAPWrapper(wrapper_config)
             wrapper.build_client_queue()

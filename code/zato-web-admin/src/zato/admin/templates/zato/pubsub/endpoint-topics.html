@@ -32,7 +32,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Topics for endpoint : <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint_id }}">{{ endpoint_name }}</a></h2>
+<h2 class="zato">Topics published to by endpoint : <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint.id }}">{{ endpoint.name }}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}

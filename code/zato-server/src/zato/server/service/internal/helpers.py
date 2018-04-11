@@ -47,6 +47,23 @@ class InputLogger(Service):
 
 # ################################################################################################################################
 
+class RawRequestLogger(Service):
+    """ Writes out self.request.raw_request to server logs.
+    """
+    def handle(self):
+        self.logger.info('RCV raw: `%r`', self.request.raw_request)
+
+# ################################################################################################################################
+
+class JSONRawRequestLogger(RawRequestLogger):
+    """ Same as RawRequestLogger but returns a JSON response.
+    """
+    def handle(self):
+        super(JSONRawRequestLogger, self).handle()
+        self.response.payload = {'status': 'OK'}
+
+# ################################################################################################################################
+
 class SIOInputLogger(Service):
     """ Writes out all SIO input parameters to server logs.
     """

@@ -747,6 +747,15 @@ class PUBSUB:
         PUB = 'pub'
         SUB = 'sub'
 
+    class HOOK_ACTION:
+        SKIP = 'skip'
+        DELETE = 'delete'
+        DELIVER = 'deliver'
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.SKIP, self.DELETE, self.DELIVER))
+
     class DELIVER_BY:
         PRIORITY = 'priority'
         EXT_PUB_TIME = 'ext_pub_time'
@@ -762,7 +771,7 @@ class PUBSUB:
         TOPIC_MAX_DEPTH_NON_GD = 1000
         GD_DEPTH_CHECK_FREQ = 100
         GET_BATCH_SIZE = 50
-        DELIVERY_BATCH_SIZE = 50
+        DELIVERY_BATCH_SIZE = 1
         DELIVERY_MAX_RETRY = 123456789
         DELIVERY_MAX_SIZE = 500000 # 500 kB
         WAIT_TIME_SOCKET_ERROR = 10
@@ -806,9 +815,10 @@ class PUBSUB:
                 return iter((self.NOTIFY, self.PULL))
 
     class DELIVERY_STATUS:
-        INITIALIZED = 'initialized'
-        WAITING_FOR_CONFIRMATION = 'waiting-for-confirmation'
         DELIVERED = 'delivered'
+        INITIALIZED = 'initialized'
+        TO_DELETE = 'to-delete'
+        WAITING_FOR_CONFIRMATION = 'waiting-for-confirmation'
 
     class PRIORITY:
         DEFAULT = 5
@@ -823,6 +833,11 @@ class PUBSUB:
         class __metaclass__(type):
             def __iter__(self):
                 return iter((self.PUBLISHER, self.SUBSCRIBER, self.PUBLISHER_SUBSCRIBER))
+
+    class RUN_DELIVERY_STATUS:
+        NO_MSG = 'no-messages'
+        SOCKET_ERROR = 'socket-error'
+        OTHER_ERROR = 'other-error'
 
     class ENDPOINT_TYPE:
         AMQP = NameId('AMQP', 'amqp')
@@ -839,8 +854,18 @@ class PUBSUB:
 
         class __metaclass__(type):
             def __iter__(self):
-                return iter((self.AMQP, self.FILES, self.FTP, self.IMAP, self.REST, self.SERVICE, self.SMS_TWILIO, self.SMTP,
-                    self.SOAP, self.SQL, self.WEB_SOCKETS))
+                return iter((self.REST, self.SERVICE, self.SOAP, self.WEB_SOCKETS))
+
+# Not to be made available externally yet.
+skip_endpoint_types = (
+    PUBSUB.ENDPOINT_TYPE.AMQP.id,
+    PUBSUB.ENDPOINT_TYPE.FTP.id,
+    PUBSUB.ENDPOINT_TYPE.IMAP.id,
+    PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id,
+    PUBSUB.ENDPOINT_TYPE.SMTP.id,
+    PUBSUB.ENDPOINT_TYPE.SQL.id,
+    PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id, # This will never be made because WSX clients need to use APIs to subscribe
+)
 
 class EMAIL:
     class DEFAULT:

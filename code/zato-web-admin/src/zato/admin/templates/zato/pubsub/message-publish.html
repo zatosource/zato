@@ -22,7 +22,7 @@
 
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-<h2 class="zato">Publish message
+<h2 class="zato">Publish a message
 
 
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
@@ -45,9 +45,8 @@
                     {{ form.publisher_id }}
                 </td>
 
-                <td class='inline_header' style="width:90px">Priority <span class="form_hint">(1-9, 1=min)</span></td>
+                <td style="width:90px"></td>
                 <td>
-                    {{ form.priority }}
                 </td>
             </tr>
             <tr>
@@ -58,24 +57,22 @@
                     {{ form.gd }}
                 </td>
 
-                <td class='inline_header' style="width:90px">
-                    Group ID
-                </td>
-                <td style="width:170px">
-                    {{ form.group_id }}
+                <td class='inline_header' style="width:90px">Priority <span class="form_hint">(1-9, 1=min)</span></td>
+                <td>
+                    {{ form.priority }}
                 </td>
 
-                <td class='inline_header' style="width:90px">Pub ext. client ID</td>
-                <td style="width:140px">{{ form.ext_client_id }}</td>
+                <td style="width:90px"></td>
+                <td style="width:140px"></td>
             </tr>
             <tr>
                 <td class='inline_header' style="width:80px">Msg ID</td>
                 <td style="width:120px">{{ form.msg_id }}</td>
 
-                <td class='inline_header' style="width:90px">Position in group</td>
-                <td style="width:170px">{{ form.position_in_group }}</td>
+                <td class='inline_header' style="width:90px">Pub ext. client ID</td>
+                <td style="width:140px">{{ form.ext_client_id }}</td>
 
-                <td class='inline_header' style="width:90px"></td>
+                <td style="width:90px"></td>
                 <td style="width:140px">
                 </td>
 
@@ -89,7 +86,7 @@
                 <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in s)</span></td>
                 <td style="width:170px">{{ form.expiration }}</td>
 
-                <td class='inline_header' style="width:90px"></td>
+                <td style="width:90px"></td>
                 <td style="width:140px"></td>
 
             </tr>
@@ -102,7 +99,7 @@
                 <td class='inline_header' style="width:90px"></td>
                 <td style="width:170px"></td>
 
-                <td class='inline_header' style="width:90px">
+                <td style="width:90px">
                     {% ifequal object_type "queue" %}
                         Delivery history
                     {% endifequal %}

@@ -101,7 +101,7 @@
                         <th style="width:10%"><a href="#">Endpoint</a></th>
                         <th><a href="#">Type</a></th>
 
-                        <th><a href="#">Role</a></th>
+                        <th><a href="#">State</a></th>
                         <th><a href="#"># of subscriptions</a></th>
 
                         <th><a href="#">Last seen</a></th>
@@ -168,25 +168,15 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle; width:12%">Endpoint</td>
-                            <td>{{ create_form.endpoint_id }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">
-                                State
-                            </td>
                             <td>
-                                {{ create_form.active_status }}
-                                | <label>GD enabled {{ create_form.has_gd }}</label>
-                                | <label>STG enabled {{ create_form.is_staging_enabled }}</label>
+                                {{ create_form.endpoint_id }}
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle; width:12%">Delivery method<br/>and format</td>
+                            <td style="vertical-align:middle; width:12%">Delivery method</td>
                             <td>
                                 {{ create_form.delivery_method }}
-                                {{ create_form.delivery_data_format }}
                             </td>
                         </tr>
 
@@ -198,10 +188,6 @@
                                 |
                                 Deliv. max retries
                                 {{ create_form.delivery_max_retry }}
-                                <label>
-                                Block on err.?
-                                {{ create_form.delivery_err_should_block }}
-                                </label>
                             </td>
                         </tr>
 

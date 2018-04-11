@@ -28,7 +28,7 @@ from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agen
      ZatoCommand
 from zato.common.crypto import CryptoManager
 from zato.common.defaults import http_plain_server_port
-from zato.common.odb.model import Cluster
+from zato.common.odb.model import Cluster, PubSubSubscription, PubSubTopic
 from zato.common.util import get_engine, get_session, make_repr
 
 random.seed()
@@ -222,6 +222,24 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
+    def _set_pubsub_server(self, args, server_id, cluster_name, topic_name):
+        engine = self._get_engine(args)
+        session = self._get_session(engine)
+        sub = session.query(PubSubSubscription).\
+            filter(PubSubTopic.id==PubSubSubscription.topic_id).\
+            filter(PubSubTopic.name==topic_name).\
+            filter(PubSubTopic.cluster_id==Cluster.id).\
+            filter(Cluster.name==cluster_name).\
+            one()
+
+        # Set publishing server for that subscription
+        sub.server_id = server_id
+
+        session.add(sub)
+        session.commit()
+
+# ################################################################################################################################
+
     def execute(self, args):
         """ Quickly creates Zato components
         1) CA and crypto material
@@ -339,7 +357,7 @@ class Create(ZatoCommand):
         jwt_secret = Fernet.generate_key()
         secret_key = Fernet.generate_key()
 
-        for name in server_names:
+        for idx, name in enumerate(server_names):
             server_path = os.path.join(args_path, server_names[name])
             os.mkdir(server_path)
 
@@ -353,7 +371,11 @@ class Create(ZatoCommand):
             create_server_args.jwt_secret = jwt_secret
             create_server_args.secret_key = secret_key
 
-            create_server.Create(create_server_args).execute(create_server_args, next_port.next(), False)
+            server_id = create_server.Create(create_server_args).execute(create_server_args, next_port.next(), False, True)
+
+            # We make the first server a delivery server for sample pub/sub topics.
+            if idx == 0:
+                self._set_pubsub_server(args, server_id, cluster_name, 'zato.demo.sample')
 
             self.logger.info('[{}/{}] server{} created'.format(next_step.next(), total_steps, name))
 

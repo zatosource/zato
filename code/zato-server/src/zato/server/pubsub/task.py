@@ -9,9 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from bisect import bisect_left
 from copy import deepcopy
 from logging import getLogger
-from random import randint
+from socket import error as SocketError
 from traceback import format_exc
 
 # gevent
@@ -19,10 +20,11 @@ from gevent import sleep
 from gevent.lock import RLock
 
 # sortedcontainers
-from sortedcontainers import SortedList
+from sortedcontainers import SortedList as _SortedList
 
 # Zato
-from zato.common.pubsub import PubSubMessage, SkipDelivery
+from zato.common import PUBSUB
+from zato.common.pubsub import PubSubMessage
 from zato.common.util import spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.pubsub import PubSub
@@ -32,7 +34,35 @@ PubSub = PubSub
 
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger('zato_pubsub')
+logger_zato = getLogger('zato')
+
+# ################################################################################################################################
+
+_hook_action = PUBSUB.HOOK_ACTION
+
+# ################################################################################################################################
+
+class SortedList(_SortedList):
+    """ A custom subclass that knows how to remove pubsub messages from SortedList instances.
+    """
+    def remove_pubsub_msg(self, msg):
+        """ Removes a pubsub message from a SortedList instance - we cannot use the regular .remove method
+        because it may triggger __cmp__ per https://github.com/grantjenks/sorted_containers/issues/81.
+        """
+        pos = bisect_left(self._maxes, msg)
+
+        if pos == len(self._maxes):
+            raise ValueError('{0!r} not in list'.format(msg))
+
+        for _list_idx, _list_msg in enumerate(self._lists[pos]):
+            if msg.pub_msg_id == _list_msg.pub_msg_id:
+                idx = _list_idx
+                break
+        else:
+            raise ValueError('{0!r} not in list'.format(msg))
+
+        self._delete(pos, idx)
 
 # ################################################################################################################################
 
@@ -48,50 +78,126 @@ class PubSubTask(object):
 class DeliveryTask(object):
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
-    def __init__(self, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg_cb, confirm_pubsub_msg_delivered_cb):
+    def __init__(self, pubsub, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg_cb, confirm_pubsub_msg_delivered_cb,
+            sub_config):
         self.keep_running = True
+        self.pubsub = pubsub
         self.sub_key = sub_key
         self.delivery_lock = delivery_lock
         self.delivery_list = delivery_list
         self.deliver_pubsub_msg_cb = deliver_pubsub_msg_cb
         self.confirm_pubsub_msg_delivered_cb = confirm_pubsub_msg_delivered_cb
+        self.sub_config = sub_config
+        self.wait_sock_err = self.sub_config.wait_sock_err
+        self.wait_non_sock_err = self.sub_config.wait_non_sock_err
+
+        # If self.wrap_in_list is True, messages will be always wrapped in a list,
+        # even if there is only one message to send. Note that self.wrap_in_list will be False
+        # only if both batch_size is 1 and wrap_one_msg_in_list is True.
+        if self.sub_config.delivery_batch_size == 1:
+            if self.sub_config.wrap_one_msg_in_list:
+                self.wrap_in_list = True
+            else:
+                self.wrap_in_list = False
+
+        # With batch_size > 1, we always send a list, no matter what.
+        else:
+            self.wrap_in_list = True
 
         spawn_greenlet(self.run)
 
-    def _run_delivery(self):
+    def _run_delivery(self, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
-        for msg in self.delivery_list:
-            try:
-                self.deliver_pubsub_msg_cb(msg)
-            except SkipDelivery:
-                # We are not to deliver this message at all
-                logger.info('Skipping delivery of pub_msg_id:`%s`', msg.pub_msg_id)
-                return
+        # Try to deliver a batch of messages or a single message if batch size is 1
+        # and we should not wrap it in a list.
+        try:
 
-            except Exception, e:
-                # Do not attempt to deliver any other message, simply return and our
-                # parent will sleep for a small amount of time and then re-run us,
-                # thanks to which the next time we run we will again iterate over all the messages
-                # currently queued up, including the one that were not able to deliver.
-                logger.warn('Could not deliver pub/sub message, e:`%s`', format_exc(e))
-                return
+            # Deliver up to that many messages in one batch
+            batch = self.delivery_list[:self.sub_config.delivery_batch_size]
 
+            # For each message from batch we invoke a hook, if there is any, which will decide
+            # whether the message should be delivered, skipped in this iteration or perhaps deleted altogether
+            # without even trying to deliver it. If there is no hook, none of messages will be skipped or deleted.
+
+            to_delete = []
+            to_deliver = []
+            to_skip = []
+
+            messages = {
+                _hook_action.DELETE: to_delete,
+                _hook_action.DELIVER: to_deliver,
+                _hook_action.SKIP: to_skip,
+            }
+
+            # An optional pub/sub hook - note that we are checking it here rather than once upfront
+            # because users may change it any time for a topic.
+            hook = self.pubsub.get_before_delivery_hook(self.sub_key)
+
+            # Without a hook we will always try to deliver all messages that we have in a given batch
+            if not hook:
+                to_deliver[:] = batch[:]
             else:
-                # On successful delivery, remove this messages from SQL and our own delivery_list
-                try:
-                    self.confirm_pubsub_msg_delivered_cb(self.sub_key, msg.pub_msg_id)
-                except Exception, e:
-                    logger.warn('Could not update delivery status for msg:`%s`, e:`%s`', msg, format_exc(e))
-                else:
+                # There is a hook so we can invoke it - it will update the 'messages' dict in place
+                self.pubsub.invoke_before_delivery_hook(hook, self.sub_config.topic_id, self.sub_key, batch, messages)
+
+                # Delete these messages, per response from hook (which must have existed)
+                if to_delete:
+
+                    # Mark as deleted in SQL
+                    self.pubsub.set_to_delete(self.sub_key, to_delete)
+
+                    # Delete from our in-RAM delivery list
                     with self.delivery_lock:
-                        self.delivery_list.remove(msg)
+                        for msg in to_delete:
+                            self.delivery_list.remove_pubsub_msg(msg)
 
-        # Indicates that we have successfully delivered all messages currently queued up
-        return True
+            if to_skip:
+                logger.info('Skipping messages `%s`', to_skip)
 
-    def run(self, no_msg_sleep_time=1):
+            # This is the call that actually delivers messages
+            self.deliver_pubsub_msg_cb(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
+
+        except Exception, e:
+            # Do not attempt to deliver any other message, only increment delivery_count for each message
+            # from that batch and return. Our parent will sleep for a small amount of time and then re-run us,
+            # thanks to which the next time we run we will again iterate over all the messages
+            # currently queued up, including the ones that we were not able to deliver in current iteration.
+
+            exc = format_exc(e)
+            logger.warn('Could not deliver pub/sub messages, e:`%s`', exc)
+            logger_zato.warn('Could not deliver pub/sub messages, e:`%s`', exc)
+
+            # ZZZ:
+            #increment delivery_count for each message from to_deliver here
+
+            return _run_deliv_status.SOCKET_ERROR if isinstance(e, SocketError) else _run_deliv_status.OTHER_ERROR
+
+        else:
+            # On successful delivery, remove these messages from SQL and our own delivery_list
+            try:
+                # All message IDs that we have delivered
+                delivered_msg_id_list = [msg.pub_msg_id for msg in to_deliver]
+
+                with self.delivery_lock:
+                    self.confirm_pubsub_msg_delivered_cb(self.sub_key, delivered_msg_id_list)
+            except Exception, e:
+                logger.warn('Could not update delivery status for message(s):`%s`, e:`%s`', to_deliver, format_exc(e))
+                return _run_deliv_status.SOCKET_ERROR
+            else:
+                with self.delivery_lock:
+                    for msg in to_deliver:
+                        self.delivery_list.remove_pubsub_msg(msg)
+
+                # Status of messages is updated in both SQL and RAM so we can now log success
+                logger.info('Successfully delivered message(s) %s', delivered_msg_id_list)
+
+                # Indicates that we have successfully delivered all messages currently queued up
+                # and our delivery list is currently empty.
+                return _run_deliv_status.NO_MSG
+
+    def run(self, no_msg_sleep_time=1, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         logger.info('Starting delivery task for sub_key:`%s`', self.sub_key)
         try:
             while self.keep_running:
@@ -102,10 +208,10 @@ class DeliveryTask(object):
                     # Get the list of all messaged IDs for which delivery was successful,
                     # indicating whether all currently lined up messages have been
                     # successfully delivered.
-                    success = self._run_delivery()
+                    result = self._run_delivery()
 
                     # On success, sleep for a moment because we have just run out of all messages.
-                    if success:
+                    if result == _run_deliv_status.NO_MSG:
                         sleep(no_msg_sleep_time)
 
                     # Otherwise, sleep for a longer time because our endpoint must have returned an error.
@@ -113,9 +219,17 @@ class DeliveryTask(object):
                     # we queued up. Note that we are the only delivery task for this sub_key  so when we sleep here
                     # for a moment, we do not block other deliveries.
                     else:
-                        sleep(randint(10, 20))
+                        sleep_time = self.wait_sock_err if result == _run_deliv_status.SOCKET_ERROR else self.wait_non_sock_err
+                        msg = 'Sleeping for {}s after `{}` in sub_key:`{}`'.format(sleep_time, result, self.sub_key)
+                        logger.warn(msg)
+                        logger_zato.warn(msg)
+                        sleep(sleep_time)
+
         except Exception, e:
-            logger.warn('Exception in delivery task for sub_key:`%s`, e:`%s`', self.sub_key, format_exc(e))
+            error_msg = 'Exception in delivery task for sub_key:`%s`, e:`%s`'
+            e_formatted = format_exc(e)
+            logger.warn(error_msg, self.sub_key, e_formatted)
+            logger_zato.warn(error_msg, self.sub_key, e_formatted)
 
     def stop(self):
         if self.keep_running:
@@ -153,10 +267,8 @@ class Message(PubSubMessage):
     """ Wrapper for messages adding __cmp__ which uses a custom comparison protocol,
     by priority, then ext_pub_time, then pub_time.
     """
-    __slots__ = ('sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id', 'position_in_group',
-        'pub_time', 'data', 'mime_type', 'priority', 'expiration', 'expiration_time', 'has_gd')
-
     def __init__(self):
+        super(Message, self).__init__()
         self.sub_key = None
         self.pub_msg_id = None
         self.pub_correl_id = None
@@ -172,6 +284,21 @@ class Message(PubSubMessage):
         self.expiration = None
         self.expiration_time = None
         self.has_gd = None
+
+        self.pub_time_iso = None
+        self.ext_pub_time_iso = None
+        self.expiration_time_iso = None
+
+    def add_iso_times(self):
+        """ Sets additional attributes for datetime in ISO-8601.
+        """
+        self.pub_time_iso = datetime_from_ms(self.pub_time)
+
+        if self.ext_pub_time:
+            self.ext_pub_time_iso = datetime_from_ms(self.ext_pub_time)
+
+        if self.expiration_time:
+            self.expiration_time_iso = datetime_from_ms(self.expiration_time)
 
     def __cmp__(self, other, max_pri=9):
         return cmp(
@@ -189,6 +316,7 @@ class GDMessage(Message):
     """ A guaranteed delivery message initialized from SQL data.
     """
     def __init__(self, sub_key, msg):
+        super(GDMessage, self).__init__()
         self.sub_key = sub_key
         self.pub_msg_id = msg.pub_msg_id
         self.pub_correl_id = msg.pub_correl_id
@@ -205,12 +333,16 @@ class GDMessage(Message):
         self.expiration_time = msg.expiration_time
         self.has_gd = msg.has_gd
 
+        # Add times in ISO-8601 for external subscribers
+        self.add_iso_times()
+
 # ################################################################################################################################
 
 class NonGDMessage(Message):
     """ A non-guaranteed delivery message initialized from a Python dict.
     """
     def __init__(self, sub_key, msg):
+        super(NonGDMessage, self).__init__()
         self.sub_key = sub_key
         self.pub_msg_id = msg['pub_msg_id']
         self.pub_correl_id = msg['pub_correl_id']
@@ -226,6 +358,9 @@ class NonGDMessage(Message):
         self.expiration = msg['expiration']
         self.expiration_time = msg['expiration_time']
         self.has_gd = msg['has_gd']
+
+        # Add times in ISO-8601 for external subscribers
+        self.add_iso_times()
 
 # ################################################################################################################################
 
@@ -289,7 +424,8 @@ class PubSubTool(object):
 
         self.delivery_lists[sub_key] = delivery_list
         self.delivery_tasks[sub_key] = DeliveryTask(
-            sub_key, delivery_lock, delivery_list, self.parent.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered)
+            self.pubsub, sub_key, delivery_lock, delivery_list, self.pubsub.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered,
+            self.pubsub.get_subscription_by_sub_key(sub_key).config)
 
         self.sub_key_locks[sub_key] = delivery_lock
 
@@ -385,8 +521,8 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def confirm_pubsub_msg_delivered(self, sub_key, pub_msg_id):
-        self.pubsub.confirm_pubsub_msg_delivered(sub_key, pub_msg_id)
+    def confirm_pubsub_msg_delivered(self, sub_key, delivered_list):
+        self.pubsub.confirm_pubsub_msg_delivered(sub_key, delivered_list)
 
 # ################################################################################################################################
 

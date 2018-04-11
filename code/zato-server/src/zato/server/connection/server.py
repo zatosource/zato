@@ -104,9 +104,10 @@ class _RemoteServer(_Server):
 class Servers(object):
     """ A cache of servers already known to exist.
     """
-    def __init__(self, odb, cluster_name):
+    def __init__(self, odb, cluster_name, decrypt_func):
         self.odb = odb
         self.cluster_name = cluster_name
+        self.decrypt_func = decrypt_func
         self._servers = {}
 
     def __getitem__(self, item):
@@ -173,7 +174,7 @@ class Servers(object):
 
             return _RemoteServer(
                 server.cluster_id, cluster_name, server.name, server.preferred_address, server.bind_port,
-                server.crypto_use_tls, invoke_sec_def.password, server.up_status)
+                server.crypto_use_tls, self.decrypt_func(invoke_sec_def.password), server.up_status)
 
 # ################################################################################################################################
 
@@ -186,7 +187,7 @@ class Servers(object):
         for item in server_list(session, None, cluster_name, None, False):
             yield _RemoteServer(
                 item.cluster_id, self.cluster_name, item.name, item.preferred_address, item.bind_port,
-                item.crypto_use_tls, invoke_sec_def.password, item.up_status)
+                item.crypto_use_tls, self.decrypt_func(invoke_sec_def.password), item.up_status)
 
 # ################################################################################################################################
 
@@ -252,9 +253,8 @@ class Servers(object):
                         break
 
                     response['is_ok'] = server_is_ok
-                except Exception, e:
-                    print('aaaa', e)
-                    response['server_data'] = format_exc(e)
+                except Exception:
+                    response['server_data'] = format_exc()
                 finally:
                     out[server.name] = response
 

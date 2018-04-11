@@ -27,6 +27,7 @@ from zato.common.exception import BadRequest
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_delivery_server_for_sub_key, get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
+from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.util import is_func_overridden, make_repr, spawn_greenlet
 from zato.common.util.time_ import utcnow_as_ms
 
@@ -429,15 +430,21 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_subscriptions_by_sub_key(self, sub_key):
+    def get_subscription_by_sub_key(self, sub_key):
         with self.lock:
-            return self.subscriptions_by_sub_key.get(sub_key, [])
+            return self.subscriptions_by_sub_key[sub_key]
 
 # ################################################################################################################################
 
     def has_sub_key(self, sub_key):
         with self.lock:
             return sub_key in self.subscriptions_by_sub_key
+
+# ################################################################################################################################
+
+    def get_endpoint_by_id(self, endpoint_id):
+        with self.lock:
+            return self.endpoints[endpoint_id]
 
 # ################################################################################################################################
 
@@ -869,11 +876,11 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def confirm_pubsub_msg_delivered(self, sub_key, pub_msg_id):
+    def confirm_pubsub_msg_delivered(self, sub_key, delivered_pub_msg_id_list):
         """ Sets in SQL delivery status of a given message to True.
         """
         with closing(self.server.odb.session()) as session:
-            _confirm_pubsub_msg_delivered(session, self.server.cluster_id, sub_key, pub_msg_id, utcnow_as_ms())
+            _confirm_pubsub_msg_delivered(session, self.server.cluster_id, sub_key, delivered_pub_msg_id_list, utcnow_as_ms())
             session.commit()
 
 # ################################################################################################################################
@@ -965,5 +972,52 @@ class PubSub(object):
             'new_delivery_server_name': msg.new_delivery_server_name,
             'endpoint_type': msg.endpoint_type,
         })
+
+# ################################################################################################################################
+
+    def get_before_delivery_hook(self, sub_key):
+        """ Returns a hook for messages to be invoked right before they are about to be delivered
+        or None if such a hook is not defined for sub_key's topic.
+        """
+        with self.lock:
+            sub = self.subscriptions_by_sub_key[sub_key]
+            topic = self.get_topic_by_name(sub.topic_name)
+            return topic.before_delivery_hook_service_invoker
+
+# ################################################################################################################################
+
+    def invoke_before_delivery_hook(self, hook, topic_id, sub_key, batch, messages, actions=list(PUBSUB.HOOK_ACTION),
+        _deliver=PUBSUB.HOOK_ACTION.DELIVER):
+        """ Invokes a hook service for each message from a batch of messages possibly to be delivered and arranges
+        each one to a specific key in messages dict.
+        """
+        for msg in batch:
+            response = hook(self.topics[topic_id], msg)
+            hook_action = response['hook_action'] or _deliver
+
+            if hook_action and hook_action not in actions:
+                raise ValueError('Invalid action returned `{}` for msg `{}`'.format(hook_action, msg))
+            else:
+                messages[hook_action].append(msg)
+
+# ################################################################################################################################
+
+    def deliver_pubsub_msg(self, sub_key, msg):
+        """ A callback method invoked by pub/sub delivery tasks for one or more message that is to be delivered.
+        """
+        self.server.invoke('zato.pubsub.delivery.deliver-message', {
+            'msg':msg,
+            'subscription':self.subscriptions_by_sub_key[sub_key]
+        })
+
+# ################################################################################################################################
+
+    def set_to_delete(self, sub_key, msg_list):
+        """ Marks all input messages as ready to be deleted.
+        """
+        logger.info('Deleting messages `%s`', msg_list)
+
+        with closing(self.server.odb.session()) as session:
+            set_to_delete(session, self.cluster_id, sub_key, [msg.pub_msg_id for msg in msg_list], utcnow_as_ms())
 
 # ################################################################################################################################

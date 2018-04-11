@@ -18,7 +18,7 @@ from traceback import format_exc
 from gevent import sleep
 
 # Zato
-from zato.common.odb.query.pubsub.cleanup import delete_expired, delete_delivered
+from zato.common.odb.query.pubsub.cleanup import delete_expired, delete_delivered, delete_marked_deleted
 from zato.common.util.time_ import utcnow_as_ms
 from zato.server.service.internal import AdminService
 
@@ -87,5 +87,14 @@ class DeleteDelivered(CleanupService):
     def _cleanup(self, session):
         number = delete_delivered(session, self.server.cluster_id)
         return number, 'delivered'
+
+# ################################################################################################################################
+
+class DeleteMarkedDeleted(CleanupService):
+    """ Deletes from all message queues messages that have been explicitly marked for deletion (e.g. by hook services).
+    """
+    def _cleanup(self, session):
+        number = delete_marked_deleted(session, self.server.cluster_id)
+        return number, 'marked to be deleted'
 
 # ################################################################################################################################
