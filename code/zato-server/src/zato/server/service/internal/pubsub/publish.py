@@ -149,13 +149,15 @@ class Publish(AdminService):
                 if msg:
                     msg_id_list.append(msg.pub_msg_id)
                     msg_as_dict = msg.to_dict()
-                    gd_msg_list.append(msg_as_dict) if msg.has_gd else non_gd_msg_list.append(msg_as_dict)
+                    target_list = gd_msg_list if msg.has_gd else non_gd_msg_list
+                    target_list.append(msg_as_dict)
         else:
             msg = self._get_message(topic, input, now, pattern_matched, endpoint_id)
             if msg:
                 msg_id_list.append(msg.pub_msg_id)
                 msg_as_dict = msg.to_dict()
-                gd_msg_list.append(msg_as_dict) if msg.has_gd else non_gd_msg_list.append(msg_as_dict)
+                target_list = gd_msg_list if msg.has_gd else non_gd_msg_list
+                target_list.append(msg_as_dict)
 
         return msg_id_list, gd_msg_list, non_gd_msg_list
 
@@ -298,7 +300,7 @@ class Publish(AdminService):
             logger_audit.info(msg, self.cid, topic.name, self.pubsub.endpoints[endpoint_id].name,
                 input.get('ext_client_id') or'n/a', pattern_matched, current_depth, gd_msg_list, non_gd_msg_list)
 
-        # Also in background, notify pub/sub task runners that there are new messages for them
+        # Also in background, notify pub/sub task runners that there are new messages for them ..
         if subscriptions_by_topic:
 
             # Notify delivery tasks only if there are some messages available - it is possible
@@ -307,6 +309,13 @@ class Publish(AdminService):
             if non_gd_msg_list or has_gd_msg_list:
                 self._notify_pubsub_tasks(
                     topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, has_gd_msg_list)
+
+        # .. however, if there are no subscriptions at the moment while there are non-GD messages,
+        # we need to queue up them locally until subscribers arrive or the topic's depth
+        # for in-RAM messages is reached.
+        else:
+            if non_gd_msg_list:
+                self.queue_up_non_gd_msg(non_gd_msg_list, topic)
 
         # Update metadata in background
         spawn(self._update_pub_metadata, cluster_id, topic.id, endpoint_id, now, gd_msg_list, non_gd_msg_list, pattern_matched)
@@ -319,6 +328,15 @@ class Publish(AdminService):
             self.response.payload.msg_id = msg_id_list[0]
         else:
             self.response.payload.msg_id_list = msg_id_list
+
+# ################################################################################################################################
+
+    def queue_up_non_gd_msg(self, non_gd_msg_list, topic):
+        """ Enqueues locally all the non-GD messages given on input unless the topic's
+        max depth for in-RAM messages has been already reached.
+        """
+        print(333, non_gd_msg_list)
+        print(444, topic)
 
 # ################################################################################################################################
 
