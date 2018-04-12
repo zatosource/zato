@@ -395,64 +395,6 @@ class InRAMDeliveryBacklog(object):
 
 # ################################################################################################################################
 
-class InRAMTopicBacklog(object):
-    """ Stores information about messages that were published to topics for whom there are no subscribers.
-    They will be kept in RAM of the server that received them until there is a subscription for the topic
-    or until the messages expire.
-    """
-    def __init__(self):
-        self.lock = RLock()
-        self.topic_id_to_msg_list = {} # Topic ID -> a list of messages for that topic
-
-        # Start in background a cleanup task that deletes all expired and removed messages
-        spawn_greenlet(self.run_cleanup_task)
-
-# ################################################################################################################################
-
-    def has_max_depth(self, topic_id, max_depth):
-        """ Returns True if max depth was reached for input topic ID.
-        """
-        with self.lock:
-            return self._get_depth(topic_id) >= max_depth
-
-# ################################################################################################################################
-
-    def _get_depth(self, topic_id):
-        """ Low-level implementation of self.get_depth.
-        """
-        return len(self.topic_id_to_msg_list.get(topic_id, []))
-
-# ################################################################################################################################
-
-    def get_depth(self, topic_id):
-        """ Returns current depth of a topic by its ID
-        """
-        with self.lock:
-            return self._get_depth(topic_id)
-
-# ################################################################################################################################
-
-    def add_messages(self, topic_id, messages):
-        """ Enqueues messages for a given topic ID.
-        """
-        with self.lock:
-            self.topic_id_to_msg_list.setdefault(topic_id, []).extend(messages)
-
-# ################################################################################################################################
-
-    def get_messages(self, topic_id):
-        """ Yields messages for a topic by its ID, filtering out any expired ones.
-        """
-        zzz
-
-# ################################################################################################################################
-
-    def run_cleanup_task(self, _utcnow=utcnow_as_ms, _sleep=sleep):
-        """ A background task waking up periodically to remove all expired messages from backlog.
-        """
-
-# ################################################################################################################################
-
 class PubSub(object):
     def __init__(self, cluster_id, server, broker_client=None):
         self.cluster_id = cluster_id
@@ -478,11 +420,6 @@ class PubSub(object):
         # A backlog of messages that have at least one subscription,
         # i.e. this is what delivery servers use.
         self.delivery_backlog = InRAMDeliveryBacklog()
-
-        # A backlog of messages that don't have any subscription,
-        # i.e. this is what the receiving server uses (the one that
-        # the message was published through to a topic).
-        self.topic_backlog = InRAMTopicBacklog()
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
@@ -953,7 +890,7 @@ class PubSub(object):
 
     def store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error):
         """ Stores in RAM up to input non-GD messages for each sub_key. A backlog queue for each sub_key
-        cannot be longer than topic's max_depth_non_gd and overlown messages are not kept in RAM.
+        cannot be longer than topic's max_depth_non_gd and overflowed messages are not kept in RAM.
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """

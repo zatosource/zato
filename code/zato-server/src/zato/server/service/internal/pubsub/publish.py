@@ -59,6 +59,14 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
+    def _get_data_prefixes(self, data):
+        data_prefix = data[:2048].encode('utf8')
+        data_prefix_short = data[:64].encode('utf8')
+
+        return data_prefix, data_prefix_short
+
+# ################################################################################################################################
+
     def _get_message(self, topic, input, now, pattern_matched, endpoint_id, _initialized=_initialized, _zato_none=ZATO_NONE):
 
         priority = get_priority(self.cid, input)
@@ -78,7 +86,7 @@ class Publish(AdminService):
         in_reply_to = input.get('in_reply_to')
         ext_client_id = input.get('ext_client_id')
 
-        ext_pub_time = input.get('ext_pub_time')
+        ext_pub_time = input.get('ext_pub_time') or None
         if ext_pub_time:
             ext_pub_time = dt_parse(ext_pub_time)
             ext_pub_time = datetime_to_ms(ext_pub_time)
@@ -125,8 +133,9 @@ class Publish(AdminService):
 
         # These are needed only for GD messages that are stored in SQL
         if has_gd:
-            ps_msg.data_prefix = ps_msg.data[:2048].encode('utf8')
-            ps_msg.data_prefix_short = ps_msg.data[:64].encode('utf8')
+            data_prefix, data_prefix_short = self._get_data_prefixes(ps_msg.data)
+            ps_msg.data_prefix = data_prefix
+            ps_msg.data_prefix_short = data_prefix_short
 
         return ps_msg
 
@@ -238,25 +247,23 @@ class Publish(AdminService):
 
         # We have all the input data, publish the message(s) now
         self._publish(pubsub, topic, endpoint_id, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,
-            input.get('ext_client_id') or 'n/a', now)
+            input.get('ext_client_id') or 'n/a', False, now)
 
 # ################################################################################################################################
 
     def _publish(self, pubsub, topic, endpoint_id, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,
-        ext_client_id, now):
+        ext_client_id, is_re_run, now):
         """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
         """
         len_gd_msg_list = len(gd_msg_list)
         has_gd_msg_list = bool(len_gd_msg_list)
-
-        print(333, non_gd_msg_list)
 
         # Get all subscribers for that topic from local worker store
         subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic.name)
 
         # Just so it is not overlooked, log information that no subscribers are found for this topic
         if not subscriptions_by_topic:
-            self.logger.warn('No subscribers found for topic `%s`', topic.name)
+            self.logger.warn('No subscribers found for topic `%s` (cid:%s, re-run:%s)', topic.name, self.cid, is_re_run)
 
         # Local aliases
         cluster_id = self.server.cluster_id
@@ -324,11 +331,24 @@ class Publish(AdminService):
                     topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, has_gd_msg_list)
 
         # .. however, if there are no subscriptions at the moment while there are non-GD messages,
-        # we need to queue up them locally until subscribers arrive or the topic's depth
-        # for in-RAM messages is reached.
+        # we need to re-run again and publish all such messages as GD ones. This is because if there
+        # are no subscriptions, we do not know to what delivery server they should go, so it's safest
+        # to store them in SQL.
         else:
-            if non_gd_msg_list:
-                self.queue_up_non_gd_msg(pubsub, topic, non_gd_msg_list)
+            if not is_re_run:
+                if non_gd_msg_list:
+
+                    # Turn all non-GD messages into GD ones.
+                    for msg in non_gd_msg_list:
+                        msg['has_gd'] = True
+
+                        data_prefix, data_prefix_short = self._get_data_prefixes(msg['data'])
+                        msg['data_prefix'] = data_prefix
+                        msg['data_prefix_short'] = data_prefix_short
+
+                    # Note how now non-GD messages are sent as GD ones and the list of non-GD messages is empty.
+                    self._publish(pubsub, topic, endpoint_id, msg_id_list, non_gd_msg_list, [], pattern_matched,
+                        ext_client_id, True, now)
 
         # Update metadata in background
         spawn(self._update_pub_metadata, cluster_id, topic.id, endpoint_id, now, gd_msg_list, non_gd_msg_list, pattern_matched)
@@ -341,35 +361,6 @@ class Publish(AdminService):
             self.response.payload.msg_id = msg_id_list[0]
         else:
             self.response.payload.msg_id_list = msg_id_list
-
-# ################################################################################################################################
-
-    def queue_up_non_gd_msg(self, pubsub, topic, non_gd_msg_list):
-        """ Enqueues locally all the non-GD messages given on input unless the topic's
-        max depth for in-RAM messages has been already reached.
-        """
-
-        # Note how the logic to check current depth does not a global lock because each server has its own backlog queue.
-
-        # Increase depth check counter..
-        topic.incr_depth_check()
-
-        # .. if we have already reached max depth, there is no point checking anything else ..
-        if pubsub.topic_backlog.has_max_depth(topic.id, topic.max_depth_non_gd):
-            self.reject_publication(topic.name, False)
-
-        # .. otherwise, test first if we should check the depth in this iteration.
-        if topic.needs_depth_check():
-
-            # Get current depth of this topic ..
-            current_depth = pubsub.topic_backlog.get_depth(topic.id)
-
-            # .. and abort if max depth is already reached ..
-            if current_depth + len(non_gd_msg_list) > topic.max_depth_non_gd:
-                self.reject_publication(topic.name, False)
-
-        # .. max depth was not reached yet so we can queue the message up locally on this server.
-        pubsub.topic_backlog.add_messages(topic.id, non_gd_msg_list)
 
 # ################################################################################################################################
 
