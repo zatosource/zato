@@ -236,15 +236,27 @@ class Publish(AdminService):
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
             topic, data_list, input, now, pattern_matched, endpoint_id)
 
+        # We have all the input data, publish the message(s) now
+        self._publish(pubsub, topic, endpoint_id, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,
+            input.get('ext_client_id') or 'n/a', now)
+
+# ################################################################################################################################
+
+    def _publish(self, pubsub, topic, endpoint_id, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,
+        ext_client_id, now):
+        """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
+        """
         len_gd_msg_list = len(gd_msg_list)
         has_gd_msg_list = bool(len_gd_msg_list)
 
+        print(333, non_gd_msg_list)
+
         # Get all subscribers for that topic from local worker store
-        subscriptions_by_topic = pubsub.get_subscriptions_by_topic(input.topic_name)
+        subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic.name)
 
         # Just so it is not overlooked, log information that no subscribers are found for this topic
         if not subscriptions_by_topic:
-            self.logger.warn('No subscribers found for topic `%s`', input.topic_name)
+            self.logger.warn('No subscribers found for topic `%s`', topic.name)
 
         # Local aliases
         cluster_id = self.server.cluster_id
@@ -257,7 +269,7 @@ class Publish(AdminService):
         if has_gd_msg_list:
 
             # Operate under a global lock for that topic to rule out any interference from other publishers
-            with self.lock('zato.pubsub.publish.%s' % input.topic_name):
+            with self.lock('zato.pubsub.publish.%s' % topic.name):
 
                 with closing(self.odb.session()) as session:
 
@@ -299,7 +311,7 @@ class Publish(AdminService):
                   ', GD data:`%s`, non-GD data:`%s`'
 
             logger_audit.info(msg, self.cid, topic.name, self.pubsub.endpoints[endpoint_id].name,
-                input.get('ext_client_id') or'n/a', pattern_matched, current_depth, gd_msg_list, non_gd_msg_list)
+                ext_client_id, pattern_matched, current_depth, gd_msg_list, non_gd_msg_list)
 
         # Also in background, notify pub/sub task runners that there are new messages for them ..
         if subscriptions_by_topic:
@@ -336,8 +348,8 @@ class Publish(AdminService):
         """ Enqueues locally all the non-GD messages given on input unless the topic's
         max depth for in-RAM messages has been already reached.
         """
-        # Note how the logic to check current depth does not a globa lock because each server
-        # has its own backlog queue.
+
+        # Note how the logic to check current depth does not a global lock because each server has its own backlog queue.
 
         # Increase depth check counter..
         topic.incr_depth_check()

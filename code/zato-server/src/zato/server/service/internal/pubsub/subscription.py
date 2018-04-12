@@ -410,7 +410,7 @@ class Create(_Subscribe):
             topic_name = [topic_name]
 
         if not(topic_list_text or topic_list_json or topic_name):
-            raise BadRequest(self.cid, 'No topics to subscribe to given on input')
+            raise BadRequest(self.cid, 'No topics to subscribe to were given on input')
         else:
             if topic_list_text:
                 topic_list = topic_list_text
