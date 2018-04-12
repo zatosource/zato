@@ -312,7 +312,7 @@ class SimpleIOPayload(SIOConverter):
             names = attrs._sa_class_manager.keys()
 
         if not names:
-            raise Exception('Could not get the keys out of attrs:[{}]'.format(attrs))
+            raise Exception('Could not get keys out of attrs:`{}`'.format(attrs))
 
         if isinstance(attrs, dict):
             for name in names:
