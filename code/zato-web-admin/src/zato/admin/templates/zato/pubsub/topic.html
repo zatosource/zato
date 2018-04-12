@@ -110,9 +110,9 @@
                         <td>{{ item.has_gd|yesno:"Yes,No" }}</td>
                         <td>{{ item.max_depth_gd }} / {{ item.max_depth_non_gd }}</td>
                         <td id="current_depth_{{ item.id }}">
-                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth_gd }}</a>
+                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;gd=1">{{ item.current_depth_gd }}</a>
                             /
-                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth_gd }}</a>
+                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;gd=0">{{ item.current_depth_non_gd }}</a>
                         </td>
 
                         <td>{{ item.last_pub_time|default:"<span class='form_hint'>---</span>" }}</td>

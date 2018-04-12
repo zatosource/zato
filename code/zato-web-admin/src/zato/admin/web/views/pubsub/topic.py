@@ -39,7 +39,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'is_api_sub_allowed', 'max_depth_gd',
-            'max_depth_non_gd', 'current_depth_gd', 'depth_check_freq', 'hook_service_id')
+            'max_depth_non_gd', 'current_depth_gd', 'current_depth_non_gd', 'depth_check_freq', 'hook_service_id')
         output_optional = ('last_pub_time',)
         output_repeated = True
 
