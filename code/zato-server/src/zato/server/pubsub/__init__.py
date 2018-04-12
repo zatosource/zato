@@ -395,6 +395,14 @@ class InRAMDeliveryBacklog(object):
 
 # ################################################################################################################################
 
+    def get_topic_depth(self, topic_id):
+        """ Returns depth of a given in-RAM queue for the topic.
+        """
+        with self.lock:
+            return self.topic_msg_id_to_msg.get(topic_id) or 0
+
+# ################################################################################################################################
+
 class PubSub(object):
     def __init__(self, cluster_id, server, broker_client=None):
         self.cluster_id = cluster_id
@@ -417,8 +425,7 @@ class PubSub(object):
         self.pubsub_tool_by_sub_key = {}       # Sub key        -> PubSubTool object
         self.pubsub_tools = []                 # A list of PubSubTool objects, each containing delivery tasks
 
-        # A backlog of messages that have at least one subscription,
-        # i.e. this is what delivery servers use.
+        # A backlog of messages that have at least one subscription, i.e. this is what delivery servers use.
         self.delivery_backlog = InRAMDeliveryBacklog()
 
         # Getter methods for each endpoint type that return actual endpoints,
@@ -477,6 +484,14 @@ class PubSub(object):
     def get_topic_id_by_name(self, topic_name):
         with self.lock:
             return self._get_topic_id_by_name(topic_name)
+
+# ################################################################################################################################
+
+    def get_non_gd_topic_depth(self, topic_name):
+        """ Returns of non-GD messages for a given topic by its name.
+        """
+        with self.lock:
+            return self.delivery_backlog.get_topic_depth(self._get_topic_id_by_name(topic_name))
 
 # ################################################################################################################################
 

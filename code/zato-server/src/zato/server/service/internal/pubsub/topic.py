@@ -18,7 +18,7 @@ from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_f
 from zato.common.odb.query.pubsub.topic import get_topics_by_sub_keys
 from zato.common.util import ensure_pubsub_hook_is_valid
 from zato.common.util.time_ import datetime_from_ms
-from zato.server.service import AsIs, Dict, List
+from zato.server.service import AsIs, Dict, Int, List
 from zato.server.service.internal import AdminService, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -31,7 +31,8 @@ broker_message = BROKER_MSG_PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
 skip_input_params = ['current_depth_gd', 'last_pub_time', 'is_internal']
-output_optional_extra = ['current_depth_gd', 'last_pub_time', 'is_internal', 'hook_service_name']
+output_optional_extra = [Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time', 'is_internal',
+    'hook_service_name']
 
 # ################################################################################################################################
 
@@ -50,9 +51,15 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
 # ################################################################################################################################
 
-def response_hook(service, input, instance, attrs, service_type):
+def response_hook(self, input, instance, attrs, service_type):
     if service_type == 'get_list':
-        for item in service.response.payload:
+        for item in self.response.payload:
+
+            # Checks current non-GD depth on all servers
+            item.current_depth_non_gd = response = self.invoke('zato.pubsub.topic.collect-non-gd-depth', {
+                'topic_name': item.name,
+            })['response']['current_depth_non_gd']
+
             if item.last_pub_time:
                 item.last_pub_time = datetime_from_ms(item.last_pub_time)
 
@@ -213,5 +220,45 @@ class GetInRAMMessageList(AdminService):
             out.update(data)
 
         self.response.payload.messages = out
+
+# ################################################################################################################################
+
+class GetNonGDDepth(AdminService):
+    """ Returns depth of non-GD messages in the input topic on current server.
+    """
+    class SimpleIO:
+        input_required = ('topic_name',)
+        output_optional = (Int('depth'),)
+
+    def handle(self):
+        self.response.payload.depth = self.pubsub.get_non_gd_topic_depth(self.request.input.topic_name)
+
+# ################################################################################################################################
+
+class CollectNonGDDepth(AdminService):
+    """ Checks depth of non-GD messages for the input topic on all servers and returns a combined tally.
+    """
+    class SimpleIO:
+        input_required = ('topic_name',)
+        output_optional = (Int('current_depth_non_gd'),)
+
+    def handle(self):
+
+        all_depth = self.servers.invoke_all('zato.pubsub.topic.get-non-gd-depth', {
+            'topic_name':self.request.input.topic_name
+            }, timeout=10)
+
+        total = 0
+
+        data = all_depth[1]
+        for server_name in data:
+            if data[server_name]['is_ok']:
+                server_data = data[server_name]['server_data']
+                for pid in server_data:
+                    if server_data[pid]['is_ok']:
+                        pid_data = server_data[pid]['pid_data']
+                        total += pid_data['response']['depth']
+
+        self.response.payload.current_depth_non_gd = total
 
 # ################################################################################################################################
