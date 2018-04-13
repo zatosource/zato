@@ -18,7 +18,7 @@ from gevent import sleep
 
 # Zato
 from zato.common.odb.model import SSOAttr, SSOSession
-from zato.server.service import List, Service
+from zato.server.service import Service
 
 # ################################################################################################################################
 

@@ -56,7 +56,7 @@ def response_hook(self, input, instance, attrs, service_type):
         for item in self.response.payload:
 
             # Checks current non-GD depth on all servers
-            item.current_depth_non_gd = response = self.invoke('zato.pubsub.topic.collect-non-gd-depth', {
+            item.current_depth_non_gd = self.invoke('zato.pubsub.topic.collect-non-gd-depth', {
                 'topic_name': item.name,
             })['response']['current_depth_non_gd']
 
