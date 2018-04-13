@@ -459,7 +459,15 @@ class GetEndpointSummary(_GetEndpointSummaryBase):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload = pubsub_endpoint_summary(session, self.server.cluster_id, self.request.input.endpoint_id)
+            item = pubsub_endpoint_summary(session, self.server.cluster_id, self.request.input.endpoint_id)
+
+            if item.last_seen:
+                item.last_seen = datetime_from_ms(item.last_seen)
+
+            if item.last_deliv_time:
+                item.last_deliv_time = datetime_from_ms(item.last_deliv_time)
+
+            self.response.payload = item
 
 # ################################################################################################################################
 
