@@ -104,6 +104,7 @@ class _CreateEdit(CreateEdit):
             'endpoint_id': self.input.endpoint_id,
         }).data
 
+
         if response['last_seen']:
             response['last_seen'] = from_utc_to_user(response['last_seen']+'+00:00', self.req.zato.user_profile)
 

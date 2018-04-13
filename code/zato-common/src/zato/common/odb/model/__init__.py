@@ -2344,7 +2344,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     # after delivery_count reaches max retries for subscription or if a hook services decides so.
     is_deliverable = Column(Boolean(), nullable=False, default=True)
 
-    delivery_status = Column(Text, nullable=False)
+    delivery_status = Column(Text, nullable=False, default=PUBSUB.DELIVERY_STATUS.INITIALIZED)
     delivery_time = Column(BigInteger(), nullable=True)
 
     pub_msg_id = Column(String(200), ForeignKey('pubsub_message.pub_msg_id', ondelete='CASCADE'), nullable=False)
