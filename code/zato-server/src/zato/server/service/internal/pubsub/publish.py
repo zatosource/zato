@@ -67,7 +67,8 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_message(self, topic, input, now, pattern_matched, endpoint_id, _initialized=_initialized, _zato_none=ZATO_NONE):
+    def _get_message(self, topic, input, now, pattern_matched, endpoint_id, _initialized=_initialized, _zato_none=ZATO_NONE,
+            _skip=PUBSUB.HOOK_ACTION.SKIP):
 
         priority = get_priority(self.cid, input)
         expiration = get_expiration(self.cid, input)
@@ -124,7 +125,7 @@ class Publish(AdminService):
             response = topic.before_publish_hook_service_invoker(topic, ps_msg)
 
             # Hook service decided that we should not process this message
-            if response['skip_msg']:
+            if response['hook_action'] == _skip:
                 logger_audit.info('Skipping message pub_msg_id:`%s`, pub_correl_id:`%s`, ext_client_id:`%s`',
                     ps_msg.pub_msg_id, ps_msg.pub_correl_id, ps_msg.ext_client_id)
                 return
