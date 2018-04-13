@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -382,9 +382,31 @@ def endpoint_queue_delete(req, sub_id, sub_key, cluster_id):
             'sub_key': sub_key,
             'cluster_id': cluster_id,
         })
-    except Exception, e:
-        return HttpResponseServerError(format_exc(e))
+    except Exception:
+        return HttpResponseServerError(format_exc())
     else:
         return HttpResponse() # 200 OK
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def endpoint_topic_sub_list(req, endpoint_id, cluster_id):
+    """ Returns a list of topics to which a given endpoint has access for subscription,
+    including both endpoints that it's already subscribed to or all the remaining ones
+    the endpoint may be possible subscribe to.
+    """
+
+    # Note that sub_id is always ignored, it's sent by JS but we don't use,
+    # instead we are interested in sub_key.
+
+    try:
+        response = req.zato.client.invoke('pubsub.endpoint.get-topic-sub-list', {
+            'endpoint_id': endpoint_id,
+            'cluster_id': cluster_id,
+        })
+    except Exception:
+        return HttpResponseServerError(format_exc())
+    else:
+        return HttpResponse(dumps(response.data.response.topic_sub_list), content_type='application/javascript')
 
 # ################################################################################################################################

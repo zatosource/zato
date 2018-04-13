@@ -36,7 +36,35 @@ $(document).ready(function() {
         'wait_non_sock_err',
         'topic_list_text',
     ]);
+
+    $('#id_endpoint_id').change(function() {
+        $.fn.zato.pubsub.on_endpoint_changed();
+});
+
 })
+
+$.fn.zato.pubsub.populate_endpoint_topics = function(data, status) {
+    var success = status == 'success';
+    if(success) {
+        var topic_sub_list = $.parseJSON(data.responseText);
+        console.log(topic_sub_list.zzz);
+    }
+    else {
+        console.log(data.responseText);
+    }
+}
+
+$.fn.zato.pubsub.on_endpoint_changed = function() {
+    var endpoint_id = $('#id_endpoint_id').val();
+    if(endpoint_id) {
+        var cluster_id = $('#cluster_id').val();
+        var url = String.format('/zato/pubsub/endpoint/topic-sub-list/{0}/cluster/{1}/', endpoint_id, cluster_id);
+        $.fn.zato.post(url, $.fn.zato.pubsub.populate_endpoint_topics, null, null, true);
+    }
+    else {
+        console.log('TODO clean up topics');
+    }
+}
 
 $.fn.zato.pubsub.subscription.add_row_hook = function(instance, elem_name, html_elem) {
     if(elem_name == 'endpoint_id') {
