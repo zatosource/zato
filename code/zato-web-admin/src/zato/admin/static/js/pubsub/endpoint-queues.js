@@ -5,11 +5,16 @@ $.fn.zato.data_table.PubSubSubscription = new Class({
     toString: function() {
         var s = '<PubSubSubscription id:{0} active_status:{1} sub_key:{2} name_slug:{3}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                this.active_status ? this.active_status : '(none)',
-                                this.sub_key ? this.sub_key : '(none)',
-                                this.name_slug ? this.name_slug : '(none)',
-                                );
+            this.active_status ? this.active_status : '(none)',
+            this.sub_key ? this.sub_key : '(none)',
+            this.name_slug ? this.name_slug : '(none)');
+    },
+
+    get_name: function() {
+        return this.topic_name;
     }
+
+
 });
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -189,8 +194,8 @@ $.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id) {
 $.fn.zato.pubsub.endpoint_queue.delete_ = function(id) {
     var instance = $.fn.zato.data_table.data[id];
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Queue `{0}` deleted',
-        'Are you sure you want to delete sub queue `{0}`?',
+        'Deleted subscription for `{0}`',
+        'Are you sure you want to delete subscription for `{0}`?',
         true, false,
         '/zato/pubsub/endpoint/queue/delete/{0}/' + instance.sub_key + '/');
 }
