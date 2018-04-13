@@ -1,0 +1,18 @@
+div.multi-select {
+    overflow: scroll;
+    height:130px;
+    background-color:#fff;
+}
+
+table.multi-select td {
+     vertical-align:bottom;
+}
+
+table.multi-select td input {
+    display: block;
+    margin-bottom:3px
+}
+
+table.multi-select td span.disabled {
+    color:#555
+}
