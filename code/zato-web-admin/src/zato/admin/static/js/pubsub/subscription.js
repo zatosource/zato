@@ -39,11 +39,26 @@ $(document).ready(function() {
 
     $('#id_endpoint_id').change(function() {
         $.fn.zato.pubsub.on_endpoint_changed();
-});
+    });
+
+    $('#id_delivery_method').change(function() {
+        $.fn.zato.pubsub.on_delivery_method_changed();
+    });
+
+    $('#id_out_rest_http_soap_id').change(function() {
+        $.fn.zato.pubsub.on_rest_soap_outconn_changed('id_out_rest_http_soap_id');
+    });
+
+    $('#id_out_soap_http_soap_id').change(function() {
+        $.fn.zato.pubsub.on_rest_soap_outconn_changed('id_out_soap_http_soap_id');
+    });
+
+    $('#id_endpoint_type').change(function() {
+        $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
+    });
+
 
 })
-
-
 
 $.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
     console.log(topic_sub_list);
@@ -71,6 +86,25 @@ $.fn.zato.pubsub.on_endpoint_changed = function() {
         var blank = '<input class="multi-select-input" id="multi-select-input" disabled="disabled"></input>';
         $('#multi-select-div').html(blank);
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
+    }
+}
+
+$.fn.zato.pubsub.on_delivery_method_changed = function() {
+    var delivery_method = $('#id_delivery_method').val();
+    if(delivery_method != 'notify') {
+        var form = $('#create-form');
+        var outconn_id = $('#id_out_soap_http_soap_id');
+        form.data('bValidator').removeMsg(outconn_id);
+        outconn_id.css('background-color', 'default');
+    }
+}
+
+$.fn.zato.pubsub.on_rest_soap_outconn_changed = function(field_id) {
+    var field = $('#' + field_id);
+    if(field.val()) {
+        var form = $('#create-form');
+        form.data('bValidator').removeMsg(field);
+        field.css('background-color', 'default');
     }
 }
 
