@@ -648,6 +648,7 @@ class WebSphereMQConnection(object):
 
         # jms_expiration is in milliseconds, md.Expiry is in centiseconds.
         if message.jms_expiration:
+            message.jms_expiration = int(message.jms_expiration)
             if message.jms_expiration / 1000 > _WMQ_MAX_EXPIRY_TIME:
                 md.Expiry = self.CMQC.MQEI_UNLIMITED
             else:
