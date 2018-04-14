@@ -76,13 +76,25 @@ class TimeUtil(object):
 
 # ################################################################################################################################
 
-    def now(self, format='YYYY-MM-DD HH:mm:ss', tz=local_tz.zone, needs_format=True):
+    def now(self, format='YYYY-MM-DD HH:mm:ss', tz=local_tz.zone, needs_format=True, delta=None):
         """ Returns now in a specified timezone.
         """
         now = arrow.now(tz=tz)
+        if delta:
+            now = now + delta
         if needs_format:
             return now.format(format)
         return now
+
+# ################################################################################################################################
+
+    def yesterday(self, format='YYYY-MM-DD HH:mm:ss', tz=local_tz.zone, needs_format=True):
+        return self.now(format, tz, needs_format, delta=timedelta(days=-1))
+
+# ################################################################################################################################
+
+    def tomorrow(self, format='YYYY-MM-DD HH:mm:ss', tz=local_tz.zone, needs_format=True):
+        return self.now(format, tz, needs_format, delta=timedelta(days=1))
 
 # ################################################################################################################################
 
