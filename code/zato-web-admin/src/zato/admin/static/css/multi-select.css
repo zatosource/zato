@@ -1,18 +1,42 @@
-div.multi-select {
+.multi-select-div {
     overflow: scroll;
     height:130px;
     background-color:#fff;
 }
 
-table.multi-select td {
+.multi-select-input {
+    height:100%;
+    width:100%;
+    border:none;
+    background-color:#e6e6e6
+}
+
+.multi-select-table td {
      vertical-align:bottom;
 }
 
-table.multi-select td input {
+.multi-select-table td input {
     display: block;
     margin-bottom:3px
 }
 
-table.multi-select td span.disabled {
-    color:#555
+.multi-select-table td a, table.multi-select-table td a:hover {
+    color:#000;
+    text-shadow: none
+}
+
+.multi-select-table td span.disabled {
+    color:#111
+}
+
+label.toggle {
+    text-decoration: underline;
+}
+
+label.toggle:hover {
+    background-color: #e0e030;
+    color:#000033;
+    text-decoration:none;
+    cursor:pointer;
+    text-shadow: none
 }

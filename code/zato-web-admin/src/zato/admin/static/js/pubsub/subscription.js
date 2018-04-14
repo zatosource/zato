@@ -24,6 +24,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func_update_in_place = true;
     $.fn.zato.data_table.add_row_hook = $.fn.zato.pubsub.subscription.add_row_hook;
     $.fn.zato.data_table.parse();
+    $.fn.zato.data_table.before_populate_hook = $.fn.zato.pubsub.subscription.cleanup_hook;
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.subscription.before_submit_hook;
     $.fn.zato.data_table.setup_forms([
         'endpoint_id',
@@ -33,8 +34,7 @@ $(document).ready(function() {
         'delivery_batch_size',
         'delivery_max_retry',
         'wait_sock_err',
-        'wait_non_sock_err',
-        'topic_list_text',
+        'wait_non_sock_err'
     ]);
 
     $('#id_endpoint_id').change(function() {
@@ -42,6 +42,8 @@ $(document).ready(function() {
 });
 
 })
+
+
 
 $.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
     console.log(topic_sub_list);
@@ -66,13 +68,25 @@ $.fn.zato.pubsub.on_endpoint_changed = function() {
         $.fn.zato.post(url, $.fn.zato.pubsub.populate_endpoint_topics_cb, null, null, true);
     }
     else {
-        console.log('TODO clean up topics');
+        var blank = '<input class="multi-select-input" id="multi-select-input" disabled="disabled"></input>';
+        $('#multi-select-div').html(blank);
+        $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     }
 }
 
 $.fn.zato.pubsub.subscription.add_row_hook = function(instance, elem_name, html_elem) {
     if(elem_name == 'endpoint_id') {
         instance.endpoint_name = html_elem.find('option:selected').text();
+    }
+}
+
+$.fn.zato.pubsub.subscription.cleanup_hook = function(form) {
+    var disabled_input = $('#multi-select-input');
+
+    if(disabled_input.length) {
+        form.data('bValidator').removeMsg(disabled_input);
+        disabled_input.css('background-color', '#e6e6e6');
+        return true;
     }
 }
 
@@ -120,12 +134,20 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
         }
     }
 
+    var disabled_input = $('#multi-select-input');
+    if(disabled_input.length) {
+        disabled_input.css('background-color', '#fbffb0');
+        form.data('bValidator').showMsg(disabled_input, 'No topics are available<br/>for the endpoint to subscribe to');
+        return false;
+    }
+
     return true;
 
 }
 
 $.fn.zato.pubsub.subscription.create = function() {
     window.zato_run_dyn_form_handler();
+    $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     $.fn.zato.data_table._create_edit('create', 'Create new pub/sub subscriptions', null);
 }
 
