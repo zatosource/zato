@@ -400,9 +400,10 @@ def endpoint_topic_sub_list(req, endpoint_id, cluster_id):
     # instead we are interested in sub_key.
 
     try:
-        response = req.zato.client.invoke('pubsub.endpoint.get-topic-sub-list', {
-            'endpoint_id': endpoint_id,
+        response = req.zato.client.invoke('zato.pubsub.endpoint.get-topic-sub-list', {
             'cluster_id': cluster_id,
+            'endpoint_id': endpoint_id,
+            'topic_filter_by': req.GET.get('topic_filter_by'),
         })
     except Exception:
         return HttpResponseServerError(format_exc())
