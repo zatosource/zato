@@ -716,6 +716,44 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_topics(self):
+        """ Returns all topics in existence.
+        """
+        with self.lock:
+            return self.topics
+
+# ################################################################################################################################
+
+    def get_sub_topics_for_endpoint(self, endpoint_id):
+        """ Returns all topics to which endpoint_id can subscribe.
+        """
+        out = []
+        with self.lock:
+            for topic in self.topics.values():
+                if self.is_allowed_sub_topic_by_endpoint_id(topic.name, endpoint_id):
+                    out.append(topic)
+
+        return out
+
+# ################################################################################################################################
+
+    def _is_subscribed_to(self, endpoint_id, topic_name):
+        """ Low-level implementation of self.is_subscribed_to.
+        """
+        for sub in self.subscriptions_by_topic.get(topic_name, []):
+            if sub.endpoint_id == endpoint_id:
+                return True
+
+# ################################################################################################################################
+
+    def is_subscribed_to(self, endpoint_id, topic_name):
+        """ Returns True if the endpoint is subscribed to the named topic.
+        """
+        with self.lock:
+            return self._is_subscribed_to(endpoint_id, topic_name)
+
+# ################################################################################################################################
+
     def add_ws_client_pubsub_keys(self, session, sql_ws_client_id, sub_key, channel_name, pub_client_id):
         """ Adds to SQL information that a given WSX client handles messages for sub_key.
         This information is transient - it will be dropped each time a WSX client disconnects
