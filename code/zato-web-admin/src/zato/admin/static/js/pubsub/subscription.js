@@ -63,7 +63,54 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
-    console.log(topic_sub_list);
+    var table = $('<table/>', {
+        'id':'multi-select-table',
+        'class':'multi-select-table'
+    })
+
+    var tr = $('<tr/>');
+
+    var td_checkbox = $('<td/>');
+    var td_toggle = $('<td/>');
+    var td_topic = $('<td/>');
+
+    var checkbox = $('<input/>', {
+        'type': 'checkbox',
+        'id': 'zzz',
+    });
+
+    var toggle = $('<label/>', {
+        'for': 'zzz',
+        'class': 'toggle',
+        'text': 'Toggle',
+    });
+
+    var topic = $('<a/>', {
+        'href': '#',
+        'target': '_blank',
+        'text': 'zato.demo.123',
+    });
+
+    td_checkbox.append(checkbox);
+    td_toggle.append(toggle);
+    td_topic.append(topic);
+
+    tr.append(td_checkbox);
+    tr.append(td_toggle);
+    tr.append(td_topic);
+
+    table.append(tr);
+
+
+    /*
+    <tr>
+        <td><input type="checkbox" id="zzz" /></td>
+        <td><label for="zzz" class="toggle">Toggle</label></td>
+        <td><a href="#" target="_blank">zato.demo.123</a></td>
+    </tr>
+    */
+
+    $('#multi-select-div').html(table);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -72,7 +119,9 @@ $.fn.zato.pubsub.populate_endpoint_topics_cb = function(data, status) {
     var success = status == 'success';
     if(success) {
         var topic_sub_list = $.parseJSON(data.responseText);
-        $.fn.zato.pubsub.populate_endpoint_topics(topic_sub_list);
+        if(topic_sub_list) {
+            $.fn.zato.pubsub.populate_endpoint_topics(topic_sub_list);
+        }
     }
     else {
         console.log(data.responseText);
