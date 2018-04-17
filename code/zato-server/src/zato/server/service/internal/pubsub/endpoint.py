@@ -525,6 +525,7 @@ class GetTopicSubList(AdminService):
 
             # .. add each of them, along with information if the endpoint is already subscribed.
             out.append({
+                'cluster_id': self.request.input.cluster_id,
                 'endpoint_id': endpoint_id,
                 'topic_id': topic.id,
                 'topic_name': topic.name,

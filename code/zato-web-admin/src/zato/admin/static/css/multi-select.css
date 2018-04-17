@@ -29,6 +29,10 @@
     color:#111
 }
 
+label.disabled {
+    color:#444
+}
+
 label.toggle {
     text-decoration: underline;
 }
@@ -38,5 +42,7 @@ label.toggle:hover {
     color:#000033;
     text-decoration:none;
     cursor:pointer;
-    text-shadow: none
+    text-shadow: none;
+    padding-top:3px;
+    padding-bottom:3px;
 }

@@ -68,39 +68,53 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
         'class':'multi-select-table'
     })
 
-    var tr = $('<tr/>');
+    for(var idx=0; idx < topic_sub_list.length; idx++) {
+        var topic = topic_sub_list[idx];
 
-    var td_checkbox = $('<td/>');
-    var td_toggle = $('<td/>');
-    var td_topic = $('<td/>');
+        var tr = $('<tr/>');
+        var td_checkbox = $('<td/>');
+        var td_toggle = $('<td/>');
+        var td_topic = $('<td/>');
 
-    var checkbox = $('<input/>', {
-        'type': 'checkbox',
-        'id': 'zzz',
-    });
+        var topic_checkbox_id = 'topic_checkbox_' + topic.topic_id;
 
-    var toggle = $('<label/>', {
-        'for': 'zzz',
-        'class': 'toggle',
-        'text': 'Toggle',
-    });
+        var checkbox = $('<input/>', {
+            'type': 'checkbox',
+            'id': topic_checkbox_id,
+            'name': topic_checkbox_id,
+        });
 
-    var topic = $('<a/>', {
-        'href': '#',
-        'target': '_blank',
-        'text': 'zato.demo.123',
-    });
+        var toggle = $('<label/>', {
+            'text': 'Toggle',
+        });
 
-    td_checkbox.append(checkbox);
-    td_toggle.append(toggle);
-    td_topic.append(topic);
+        if(topic.is_subscribed) {
+            checkbox.attr('disabled', 'disabled');
+            checkbox.attr('checked', 'checked');
+            toggle.attr('class', 'disabled');
+        }
+        else {
+            toggle.attr('for', topic_checkbox_id);
+            toggle.attr('class', 'toggle');
+        }
 
-    tr.append(td_checkbox);
-    tr.append(td_toggle);
-    tr.append(td_topic);
+        var topic = $('<a/>', {
+            'href': String.format('/zato/pubsub/topic/?cluster={0}&highlight={1}', topic.cluster_id, topic.topic_id),
+            'target': '_blank',
+            'text': topic.topic_name,
+        });
 
-    table.append(tr);
+        td_checkbox.append(checkbox);
+        td_toggle.append(toggle);
+        td_topic.append(topic);
 
+        tr.append(td_checkbox);
+        tr.append(td_toggle);
+        tr.append(td_topic);
+
+        table.append(tr);
+
+    }
 
     /*
     <tr>
