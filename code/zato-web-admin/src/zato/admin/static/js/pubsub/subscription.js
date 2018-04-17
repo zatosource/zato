@@ -77,11 +77,12 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
         var td_topic = $('<td/>');
 
         var topic_checkbox_id = 'topic_checkbox_' + topic.topic_id;
+        var topic_checkbox_name = 'topic_checkbox_' + topic.topic_name;
 
         var checkbox = $('<input/>', {
             'type': 'checkbox',
             'id': topic_checkbox_id,
-            'name': topic_checkbox_id,
+            'name': topic_checkbox_name,
         });
 
         var toggle = $('<label/>', {
@@ -116,14 +117,6 @@ $.fn.zato.pubsub.populate_endpoint_topics = function(topic_sub_list) {
 
     }
 
-    /*
-    <tr>
-        <td><input type="checkbox" id="zzz" /></td>
-        <td><label for="zzz" class="toggle">Toggle</label></td>
-        <td><a href="#" target="_blank">zato.demo.123</a></td>
-    </tr>
-    */
-
     $('#multi-select-div').html(table);
 }
 
@@ -133,7 +126,7 @@ $.fn.zato.pubsub.populate_endpoint_topics_cb = function(data, status) {
     var success = status == 'success';
     if(success) {
         var topic_sub_list = $.parseJSON(data.responseText);
-        if(topic_sub_list) {
+        if(topic_sub_list.length) {
             $.fn.zato.pubsub.populate_endpoint_topics(topic_sub_list);
         }
     }
@@ -152,8 +145,6 @@ $.fn.zato.pubsub.on_endpoint_changed = function() {
         $.fn.zato.post(url, $.fn.zato.pubsub.populate_endpoint_topics_cb, null, null, true);
     }
     else {
-        var blank = '<input class="multi-select-input" id="multi-select-input" disabled="disabled"></input>';
-        $('#multi-select-div').html(blank);
         $.fn.zato.pubsub.subscription.cleanup_hook($('#create-form'));
     }
 }
@@ -192,13 +183,14 @@ $.fn.zato.pubsub.subscription.add_row_hook = function(instance, elem_name, html_
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.pubsub.subscription.cleanup_hook = function(form) {
-    var disabled_input = $('#multi-select-input');
 
-    if(disabled_input.length) {
-        form.data('bValidator').removeMsg(disabled_input);
-        disabled_input.css('background-color', '#e6e6e6');
-        return true;
-    }
+    var blank = '<input class="multi-select-input" id="multi-select-input" disabled="disabled"></input>';
+    $('#multi-select-div').html(blank);
+
+    var disabled_input = $('#multi-select-input');
+    form.data('bValidator').removeMsg(disabled_input);
+    disabled_input.css('background-color', '#e6e6e6');
+    return true;
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

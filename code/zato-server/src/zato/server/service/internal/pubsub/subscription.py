@@ -402,8 +402,14 @@ class Create(_Subscribe):
     """ Creates a new pub/sub subscription by invoking a subscription service specific to input endpoint_type.
     """
     def handle(self):
+
+        # This is a multi-line string of topic names
         topic_list_text = [elem.strip() for elem in (self.request.raw_request.pop('topic_list_text', '') or '').splitlines()]
+
+        # This is a JSON list of topic names
         topic_list_json = self.request.raw_request.pop('topic_list_json', [])
+
+        # This is a single topic
         topic_name = self.request.raw_request.pop('topic_name', '').strip()
 
         if topic_name:
