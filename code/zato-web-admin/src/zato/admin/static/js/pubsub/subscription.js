@@ -291,8 +291,16 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', last_seen);
     row += String.format('<td>{0}</td>', last_deliv_time);
 
-    row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_('{0}')\">Delete all subscriptions</a>", data.id));
+    if(data.is_internal) {
+        row += '<td><span class="form_hint">Delete all subscriptions</span></td>';
+    }
+    else {
+        row += String.format('<td>{0}</td>',
+            String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_('{0}')\">Delete all subscriptions</a>",
+            data.id));
+    }
+
+
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
 
     return row;
