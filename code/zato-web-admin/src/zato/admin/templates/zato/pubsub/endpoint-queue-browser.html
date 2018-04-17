@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Messages for topic{% endblock %}
+{% block html_title %}Messages for queue{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -26,7 +26,6 @@
             'prefix_short',
 
             '_has_gd',
-            '_is_in_staging',
             'delivery_count',
             '_last_delivery',
 
@@ -70,7 +69,6 @@
                         <th style="width:22%"><a href="#">Recv msg prefix</a></th>
 
                         <th><a href="#">GD</a></th>
-                        <th><a href="#">STG</a></th>
                         <th><a href="#">DLV</a></th>
                         <th><a href="#">Last DLV</a></th>
 
@@ -95,9 +93,6 @@
                             {% else %}
                                 No
                             {% endif %}
-                        </td>
-                        <td>
-                            <a href="javascript:$.fn.zato.pubsub.queue_message.toggle_staging('{{ sub_id }}', '{{ item.msg_id }}')">{{ item.is_in_staging|yesno:"Yes,No" }}</a>
                         </td>
                         <td>{{ item.delivery_count }}</td>
                         <td>{{ item.last_delivery_time|default:'<span class="form_hint">---</span>' }}</td>
