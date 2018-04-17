@@ -46,7 +46,9 @@
                         <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ object_id }}">{{ object_name }}</a>
                     {% else %}
                         <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id object_name_slug %}?highlight={{ object_id }}">{{ object_name }}</a>
-                        <span class="form_hint">{{ ws_ext_client_id }}</span>
+                        {% if ws_ext_client_id %}
+                            <span class="form_hint">{{ ws_ext_client_id }}</span>
+                        {% endif %}
                     {% endifequal %}
                 </td>
 
@@ -144,7 +146,7 @@
                     {% endifequal %}
                 </td>
 
-                <td class='inline_header' style="width:90px">Pub hook service</td>
+                <td class='inline_header' style="width:90px">Pub service</td>
                 <td style="width:140px">
                     {% if hook_pub_service_name %}
                         <a href="{% url "service-overview" hook_pub_service_name %}?cluster={{ cluster_id }}">{{ hook_pub_service_name }}</a>
@@ -179,7 +181,7 @@
 
                 <td class='inline_header' style="width:90px">
                     {% ifequal object_type "queue" %}
-                        Sub hook service
+                        Sub service
                     {% endifequal %}
                 </td>
                 <td style="width:140px">
@@ -208,12 +210,12 @@
 
                 <td class='inline_header' style="width:90px">
                     {% ifequal object_type "queue" %}
-                        Delivery history
+                        {% comment %}Delivery history{% endcomment %}
                     {% endifequal %}
                 </td>
                 <td style="width:140px">
                     {% ifequal object_type "queue" %}
-                        <a href="#">Show</a>
+                        {% comment %}<a href="#">Show</a>{% endcomment %}
                     {% endifequal %}
                 </td>
             </tr>
