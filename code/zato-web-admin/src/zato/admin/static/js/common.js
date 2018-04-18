@@ -112,6 +112,7 @@ $.namespace('zato.pubsub.topic');
 $.namespace('zato.pubsub.message');
 $.namespace('zato.pubsub.message.details');
 $.namespace('zato.pubsub.message.publish');
+$.namespace('zato.pubsub.message.queue');
 $.namespace('zato.query');
 $.namespace('zato.query.cassandra');
 $.namespace('zato.scheduler');

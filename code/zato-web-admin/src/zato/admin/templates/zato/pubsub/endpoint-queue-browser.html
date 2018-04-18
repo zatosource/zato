@@ -13,7 +13,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/pubsub/topic.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/queue-message.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -97,7 +97,7 @@
                         <td>{{ item.delivery_count }}</td>
                         <td>{{ item.last_delivery_time|default:'<span class="form_hint">---</span>' }}</td>
 
-                        <td><a href="javascript:$.fn.zato.pubsub.queue_message.delete_('{{ sub_id }}', '{{ item.msg_id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.message.queue.delete_('{{ sub_id }}', '{{ item.msg_id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.msg_id }}'>{{ item.msg_id }}</td>
                     </tr>
                 {% endfor %}
