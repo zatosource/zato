@@ -112,7 +112,10 @@
                         <td id="current_depth_{{ item.id }}">
                             <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;gd=1">{{ item.current_depth_gd }}</a>
                             /
-                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;gd=0">{{ item.current_depth_non_gd }}</a>
+                            <!--
+                                <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;gd=0">{{ item.current_depth_non_gd }}</a>
+                            -->
+                            {{ item.current_depth_non_gd }}
                         </td>
 
                         <td>{{ item.last_pub_time|default:"<span class='form_hint'>---</span>" }}</td>
