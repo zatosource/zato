@@ -567,14 +567,31 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def _add_subscription(self, config):
+        """ Low-level implementation of self.add_subscription.
+        """
+        sub = Subscription(config)
+
+        existing_by_topic = self.subscriptions_by_topic.setdefault(config.topic_name, [])
+        existing_by_topic.append(sub)
+
+        self.subscriptions_by_sub_key[config.sub_key] = sub
+
+# ################################################################################################################################
+
+    def add_subscription(self, config):
+        """ Creates a Subscription object and an associated mapping of the subscription to input topic.
+        """
+        with self.lock:
+            self._add_subscription(config)
+
+# ################################################################################################################################
+
     def create_subscription(self, config):
         with self.lock:
-            sub = Subscription(config)
 
-            existing_by_topic = self.subscriptions_by_topic.setdefault(config.topic_name, [])
-            existing_by_topic.append(sub)
-
-            self.subscriptions_by_sub_key[config.sub_key] = sub
+            if config.add_subscription:
+                self._add_subscription(config)
 
             # We don't start dedicated tasks for WebSockets - they are all dynamic without a fixed server.
             # But for other endpoint types, we create and start a delivery task here.
@@ -1063,7 +1080,7 @@ class PubSub(object):
         """
         self.server.invoke('zato.pubsub.delivery.deliver-message', {
             'msg':msg,
-            'subscription':self.subscriptions_by_sub_key[sub_key]
+            'subscription':self.get_subscription_by_sub_key(sub_key)
         })
 
 # ################################################################################################################################

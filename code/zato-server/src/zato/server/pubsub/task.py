@@ -424,8 +424,8 @@ class PubSubTool(object):
 
         self.delivery_lists[sub_key] = delivery_list
         self.delivery_tasks[sub_key] = DeliveryTask(
-            self.pubsub, sub_key, delivery_lock, delivery_list, self.pubsub.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered,
-            self.pubsub.get_subscription_by_sub_key(sub_key).config)
+            self.pubsub, sub_key, delivery_lock, delivery_list, self.pubsub.deliver_pubsub_msg,
+            self.confirm_pubsub_msg_delivered, self.pubsub.get_subscription_by_sub_key(sub_key).config)
 
         self.sub_key_locks[sub_key] = delivery_lock
 
