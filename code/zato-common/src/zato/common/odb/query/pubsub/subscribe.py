@@ -38,7 +38,7 @@ def add_wsx_subscription(session, cluster_id, is_internal, sub_key, ext_client_i
     """ Adds an object representing a subscription of a WebSockets client.
     """
     ws_sub = WebSocketSubscription()
-    ws_sub.is_internal = is_internal
+    ws_sub.is_internal = is_internal or False
     ws_sub.sub_key = sub_key
     ws_sub.ext_client_id = ext_client_id
     ws_sub.channel_id = ws_channel_id
@@ -70,9 +70,9 @@ def add_subscription(session, cluster_id, ctx):
     ps_sub.delivery_method = ctx.delivery_method
     ps_sub.delivery_data_format = ctx.delivery_data_format
     ps_sub.delivery_batch_size = ctx.delivery_batch_size
-    ps_sub.wrap_one_msg_in_list = ctx.wrap_one_msg_in_list
+    ps_sub.wrap_one_msg_in_list = ctx.wrap_one_msg_in_list if ctx.wrap_one_msg_in_list is not None else True
     ps_sub.delivery_max_retry = ctx.delivery_max_retry
-    ps_sub.delivery_err_should_block = ctx.delivery_err_should_block
+    ps_sub.delivery_err_should_block = ctx.delivery_err_should_block if ctx.delivery_err_should_block is not None else True
     ps_sub.wait_sock_err = ctx.wait_sock_err
     ps_sub.wait_non_sock_err = ctx.wait_non_sock_err
     ps_sub.ext_client_id = ctx.ext_client_id

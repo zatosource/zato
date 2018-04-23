@@ -323,6 +323,17 @@ class SubscribeServiceImpl(_Subscribe):
                 ctx.creation_time = now = utcnow_as_ms()
                 ctx.sub_key = new_sub_key()
 
+                # Create a new subscription object
+                ps_sub = add_subscription(session, ctx.cluster_id, ctx)
+
+                # Common configuration for WSX and broker messages
+                sub_config = Bunch()
+                sub_config.topic_name = ctx.topic.name
+                sub_config.endpoint_type = self.endpoint_type
+
+                for name in sub_broker_attrs:
+                    sub_config[name] = getattr(ps_sub, name, None)
+
                 # If we subscribe a WSX client, we need to create its accompanying SQL models
                 if ctx.ws_channel_id:
 
@@ -330,15 +341,14 @@ class SubscribeServiceImpl(_Subscribe):
                     add_wsx_subscription(
                         session, ctx.cluster_id, ctx.is_internal, ctx.sub_key, ctx.ext_client_id, ctx.ws_channel_id)
 
-                    # This object will be transient - dropped each time a WSX disconnects
+                    # This object will be transient - dropped each time a WSX client disconnects
                     self.pubsub.add_ws_client_pubsub_keys(session, ctx.sql_ws_client_id, ctx.sub_key, ctx.ws_channel_name,
                         ctx.ws_pub_client_id)
 
+                    self.pubsub.add_subscription(sub_config)
+
                     # Let the WebSocket connection object know that it should handle this particular sub_key
                     ctx.web_socket.pubsub_tool.add_sub_key(ctx.sub_key)
-
-                # Create a new subscription object
-                ps_sub = add_subscription(session, ctx.cluster_id, ctx)
 
                 # Flush the session because we need the subscription's ID below in INSERT from SELECT
                 session.flush()
@@ -354,15 +364,11 @@ class SubscribeServiceImpl(_Subscribe):
                 self.response.payload.queue_depth = total_moved
 
                 # Notify workers of a new subscription
-                broker_input = Bunch()
-                broker_input.topic_name = ctx.topic.name
-                broker_input.endpoint_type = self.endpoint_type
+                sub_config.action = BROKER_MSG_PUBSUB.SUBSCRIPTION_CREATE.value
+                sub_config.add_subscription = not ctx.ws_channel_id # WSX clients already had their subscriptions created above
+                self.broker_client.publish(sub_config)
 
-                for name in sub_broker_attrs:
-                    broker_input[name] = getattr(ps_sub, name, None)
-
-                broker_input.action = BROKER_MSG_PUBSUB.SUBSCRIPTION_CREATE.value
-                self.broker_client.publish(broker_input)
+                ctx.web_socket.pubsub_tool.add_sub_key(ctx.sub_key)
 
 # ################################################################################################################################
 

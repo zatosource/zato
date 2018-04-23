@@ -754,7 +754,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.pubsub.create_endpoint(bunchify(value['config']))
 
         for value in self.worker_config.pubsub_subscription.values():
-            self.pubsub.create_subscription(bunchify(value['config']))
+            config = bunchify(value['config'])
+            config.add_subscription = True # We don't create WSX subscriptions here so it is always True
+            self.pubsub.create_subscription(config)
 
         for value in self.worker_config.pubsub_topic.values():
             self.pubsub.create_topic(bunchify(value['config']))
