@@ -119,10 +119,15 @@ def add_subscription(session, cluster_id, ctx):
 def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_sub_id, now, _initialized=_initialized):
     """ Move all unexpired messages from topic to a given subscriber's queue and returns the number of messages moved.
     """
+    enqueued_id_subquery = session.query(
+        PubSubEndpointEnqueuedMessage.pub_msg_id).\
+        filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id)
+
     # SELECT statement used by the INSERT below finds all messages for that topic
     # that haven't expired yet.
     select_messages = session.query(
-        PubSubMessage.pub_msg_id, PubSubMessage.topic_id,
+        PubSubMessage.pub_msg_id,
+        PubSubMessage.topic_id,
         expr.bindparam('is_deliverable', True),
         expr.bindparam('delivery_status', _initialized),
         expr.bindparam('creation_time', now),
@@ -135,7 +140,8 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_su
         ).\
         filter(PubSubMessage.topic_id==topic_id).\
         filter(PubSubMessage.cluster_id==cluster_id).\
-        filter(PubSubMessage.expiration_time > now)
+        filter(PubSubMessage.expiration_time > now).\
+        filter(PubSubMessage.pub_msg_id.notin_(enqueued_id_subquery))
 
     # INSERT references to topic's messages in the subscriber's queue.
     insert_messages = insert(PubSubEndpointEnqueuedMessage).\
