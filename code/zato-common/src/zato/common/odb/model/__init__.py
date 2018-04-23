@@ -1974,7 +1974,7 @@ class WebSocketSubscription(Base):
     __table_args__ = (
         Index('wssub_channel_idx', 'cluster_id', 'channel_id', unique=False),
         Index('wssub_subkey_idx', 'cluster_id', 'sub_key', unique=True),
-        Index('wssub_extcli_idx', 'cluster_id', 'ext_client_id', unique=True),
+        Index('wssub_extcli_idx', 'cluster_id', 'ext_client_id', unique=False),
         Index('wssub_subkey_chan_idx', 'cluster_id', 'sub_key', 'channel_id', unique=True),
     {})
 
@@ -2126,8 +2126,8 @@ class PubSubMessage(Base):
     __table_args__ = (
         Index('pubsb_msg_id_idx', 'cluster_id', 'id', unique=True),
 
-        # This index is needed for FKs from other tables (on MySQL),
-        # otherwise we get error 1215 'Cannot add foreign key constraint'
+        # This index is needed for FKs from other tables,
+        # otherwise with MySQL we get error 1215 'Cannot add foreign key constraint'
         Index('pubsb_msg_pubmsg_id_idx', 'pub_msg_id', unique=True),
 
         Index('pubsb_msg_pubmsg_clu_id_idx', 'cluster_id', 'pub_msg_id', unique=True),
