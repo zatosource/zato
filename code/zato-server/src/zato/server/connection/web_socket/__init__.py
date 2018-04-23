@@ -356,7 +356,7 @@ class WebSocket(_WebSocket):
 
                 # Deletes pub/sub state from RAM in all workers about the client that is disconnecting
                 self.invoke_service(new_cid(), 'zato.channel.web-socket.client.unregister-ws-sub-key', {
-                    'sub_key_list': self.pubsub_tool.sub_keys,
+                    'sub_key_list': list(self.pubsub_tool.sub_keys),
                 })
 
                 # Clears out our own delivery tasks

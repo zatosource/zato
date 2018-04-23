@@ -19,6 +19,7 @@ from zato.common import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, PubSubSubscriptionExists
 from zato.common.odb.model import PubSubSubscription
+from zato.common.odb.query.pubsub.queue import get_queue_depth_by_sub_key
 from zato.common.odb.query.pubsub.subscribe import add_subscription, add_wsx_subscription, has_subscription, \
      move_messages_to_sub_queue
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search
@@ -354,14 +355,14 @@ class SubscribeServiceImpl(_Subscribe):
                 session.flush()
 
                 # Move all available messages to that subscriber's queue
-                total_moved = move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, ps_sub.id, now)
+                move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, ps_sub.id, now)
 
                 # Commit all changes
                 session.commit()
 
                 # Produce response
                 self.response.payload.sub_key = ctx.sub_key
-                self.response.payload.queue_depth = total_moved
+                self.response.payload.queue_depth = get_queue_depth_by_sub_key(session, ctx.cluster_id, ctx.sub_key, now)
 
                 # Notify workers of a new subscription
                 sub_config.action = BROKER_MSG_PUBSUB.SUBSCRIPTION_CREATE.value

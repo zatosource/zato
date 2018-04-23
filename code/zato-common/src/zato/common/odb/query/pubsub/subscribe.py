@@ -171,6 +171,10 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_su
     total_moved_q = moved_q.statement.with_only_columns([func.count()]).order_by(None)
     total_moved = moved_q.session.execute(total_moved_q).scalar()
 
+    print()
+    print(999, total_moved)
+    print()
+
     return total_moved
 
 # ################################################################################################################################
