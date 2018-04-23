@@ -119,6 +119,7 @@ class WebSocketsGateway(Service):
         input_optional = (AsIs('request'),)
 
     def handle(self):
-        self.response.payload = self.invoke(self.request.input.service, self.request.input.request)
+        self.response.payload = self.invoke(self.request.input.service, self.request.input.request,
+            wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
