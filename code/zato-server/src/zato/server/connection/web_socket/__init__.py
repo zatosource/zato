@@ -368,8 +368,8 @@ class WebSocket(_WebSocket):
         if request.is_auth:
             response = self.create_session(cid, request)
             if response:
-                self.send(response)
                 self.register_auth_client()
+                self.send(response)
                 logger.info(
                     'Client %s (%s %s) logged in successfully to %s (%s)', self._peer_address, self._peer_fqdn,
                     self.pub_client_id, self._local_address, self.config.name)
@@ -391,7 +391,7 @@ class WebSocket(_WebSocket):
             'environ': {
                 'web_socket': self,
                 'sql_ws_client_id': self.sql_ws_client_id,
-                'ws_channel_config': self.config,
+            'ws_channel_config': self.config,
                 'ws_token': self.token,
                 'ext_token': self.ext_token,
                 'pub_client_id': self.pub_client_id,
