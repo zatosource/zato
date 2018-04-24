@@ -98,10 +98,6 @@ def get_queue_depth_by_sub_key(session, cluster_id, sub_key, now):
         filter(PubSubSubscription.sub_key==sub_key).\
         filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id)
 
-    print()
-    print(current_q)
-    print()
-
     return count(session, current_q)
 
 # ################################################################################################################################

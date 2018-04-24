@@ -863,12 +863,12 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def add_missing_server_for_sub_key(self, sub_key):
+    def add_missing_server_for_sub_key(self, sub_key, is_wsx):
         """ Adds to self.sub_key_servers information from ODB about which server handles input sub_key.
         Must be called with self.lock held.
         """
         with closing(self.server.odb.session()) as session:
-            data = get_delivery_server_for_sub_key(session, self.server.cluster_id, sub_key)
+            data = get_delivery_server_for_sub_key(session, self.server.cluster_id, sub_key, is_wsx)
             if not data:
                 msg = 'Could not find a delivery server in ODB for sub_key `%s`'
                 logger.info(msg, sub_key)
@@ -892,7 +892,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_task_servers_by_sub_keys(self, sub_keys):
+    def get_task_servers_by_sub_keys(self, sub_key_data):
         """ Returns a dictionary keyed by (server_name, server_pid, pub_client_id, channel_name) tuples
         and values being sub_keys that a WSX client pointed to by each key has subscribed to.
         """
@@ -900,7 +900,10 @@ class PubSub(object):
             found = {}
             not_found = []
 
-            for sub_key in sub_keys:
+            for elem in sub_key_data:
+
+                sub_key = elem['sub_key']
+                is_wsx = elem['is_wsx']
 
                 # If we do not have a server for this sub_key we first attempt to find
                 # if there is an already running server that handles it but we do not know it yet.
@@ -909,8 +912,11 @@ class PubSub(object):
                 # but we are still down so we never receive this message. In this case we attempt to look up
                 # the target server in ODB and then invoke it to get the PID of worker process that handles
                 # sub_key, populating self.sub_key_servers as we go.
+                print()
+                print(888, self.sub_key_servers)
+                print()
                 if not sub_key in self.sub_key_servers:
-                    self.add_missing_server_for_sub_key(sub_key)
+                    self.add_missing_server_for_sub_key(sub_key, is_wsx)
 
                 # At this point, if there is any information about this sub_key at all,
                 # no matter if its server is running or not, info will not be None.

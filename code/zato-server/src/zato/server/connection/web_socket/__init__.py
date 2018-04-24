@@ -354,7 +354,7 @@ class WebSocket(_WebSocket):
 
             if self.pubsub_tool.sub_keys:
 
-                # Deletes pub/sub state from RAM in all workers about the client that is disconnecting
+                # Deletes across all workers the in-RAM pub/sub state about the client that is disconnecting
                 self.invoke_service(new_cid(), 'zato.channel.web-socket.client.unregister-ws-sub-key', {
                     'sub_key_list': list(self.pubsub_tool.sub_keys),
                 })

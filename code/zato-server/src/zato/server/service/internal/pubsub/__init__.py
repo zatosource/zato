@@ -81,7 +81,8 @@ class AfterPublish(AdminService):
         # in which case we keep non-GD messages in our server's RAM.
 
         # Extract sub_keys from live Python subscription objects
-        sub_keys = [sub.config.sub_key for sub in self.request.input.subscriptions]
+        sub_key_data = [{'sub_key':sub.config.sub_key, 'is_wsx':bool(sub.config.ws_channel_id)} \
+            for sub in self.request.input.subscriptions]
 
         #
         # There are two elements returned.
@@ -99,11 +100,11 @@ class AfterPublish(AdminService):
         # we will also store non-GD messages in our RAM store.
         #
         # Note that GD messages are not passed here directly at all - this is because at this point
-        # they have been already stored in SQL by publish service before this service runs.
+        # they have been already stored in SQL by publish service before the current one has run.
         #
 
         try:
-            current_servers, not_found = self.pubsub.get_task_servers_by_sub_keys(sub_keys)
+            current_servers, not_found = self.pubsub.get_task_servers_by_sub_keys(sub_key_data)
 
             # Local aliases
             cid = self.request.input.cid
