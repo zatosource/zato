@@ -813,9 +813,17 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_sub_key_server(self, sub_key):
-        with self.lock:
-            return self.sub_key_servers[sub_key]
+    def _get_sub_key_server(self, sub_key):
+        return self.sub_key_servers[sub_key]
+
+# ################################################################################################################################
+
+    def get_sub_key_server(self, sub_key, needs_lock=True):
+        if needs_lock:
+            with self.lock:
+                return self._get_sub_key_server(sub_key)
+        else:
+            return self._get_sub_key_server(sub_key)
 
 # ################################################################################################################################
 
@@ -853,9 +861,9 @@ class PubSub(object):
             response = self.server.servers[server_name].invoke('zato.pubsub.delivery.get-server-pid-for-sub-key', {
                 'sub_key': sub_key,
             })
-        except Exception, e:
+        except Exception:
             msg = 'Could not invoke server `%s` to get PID for sub_key `%s`, e:`%s`'
-            exc_formatted = format_exc(e)
+            exc_formatted = format_exc()
             logger.warn(msg, server_name, sub_key, exc_formatted)
             logger_zato.warn(msg, server_name, sub_key, exc_formatted)
         else:
@@ -870,9 +878,9 @@ class PubSub(object):
         with closing(self.server.odb.session()) as session:
             data = get_delivery_server_for_sub_key(session, self.server.cluster_id, sub_key, is_wsx)
             if not data:
-                msg = 'Could not find a delivery server in ODB for sub_key `%s`'
-                logger.info(msg, sub_key)
-                logger_zato.info(msg, sub_key)
+                msg = 'Could not find a delivery server in ODB for sub_key `%s` (wsx:%s)'
+                logger.info(msg, sub_key, is_wsx)
+                logger_zato.info(msg, sub_key, is_wsx)
             else:
 
                 # This is common config that we already know is valid but on top of it
@@ -912,9 +920,6 @@ class PubSub(object):
                 # but we are still down so we never receive this message. In this case we attempt to look up
                 # the target server in ODB and then invoke it to get the PID of worker process that handles
                 # sub_key, populating self.sub_key_servers as we go.
-                print()
-                print(888, self.sub_key_servers)
-                print()
                 if not sub_key in self.sub_key_servers:
                     self.add_missing_server_for_sub_key(sub_key, is_wsx)
 

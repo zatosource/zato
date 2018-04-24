@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # SQLAlchemy
 from sqlalchemy import update
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.sql import expression as expr
 
 # Bunch
 from bunch import Bunch
@@ -89,11 +90,25 @@ def get_delivery_server_for_sub_key(session, cluster_id, sub_key, is_wsx):
     Assumes that sub_key belongs to a non-WSX endpoint and then checks WebSockets in case the former query founds
     no matching server.
     """
-    out = Bunch()
-
     # Sub key belongs to a WebSockets client ..
     if is_wsx:
-        pass
+        return Bunch({
+            'server_id': 1,
+            'server_name': 'server1',
+            'cluster_id': 1,
+            'endpoint_type': _wsx
+        })
+        return session.query(
+            Server.id.label('server_id'),
+            Server.name.label('server_name'),
+            Server.cluster_id,
+            expr.bindparam('endpoint_type', _wsx),
+            ).\
+            filter(WebSocketClient.server_id==Server.id).\
+            filter(WebSocketClient.cluster_id==cluster_id).\
+            filter(WebSocketClient.id==WebSocketClientPubSubKeys.client_id).\
+            filter(WebSocketClientPubSubKeys.sub_key==sub_key).\
+            first()
 
     # .. otherwise, it is a REST, SOAP or another kind of client, but for sure it's not WebSockets.
     else:
@@ -108,38 +123,5 @@ def get_delivery_server_for_sub_key(session, cluster_id, sub_key, is_wsx):
             filter(PubSubSubscription.endpoint_id==PubSubEndpoint.id).\
             filter(PubSubSubscription.cluster_id==cluster_id).\
             first()
-
-    # OK, already found data, must be a non-WebSockets endpoint then ..
-    if data:
-        out.server_id = data.server_id
-        out.server_name = data.server_name
-        out.cluster_id = data.cluster_id
-        out.endpoint_type = data.endpoint_type
-        out.is_wsx = False
-
-    # .. try to find this sub_key among currently connected WebSockets clients.
-    else:
-
-        data = session.query(
-            Server.id.label('server_id'),
-            Server.name.label('server_name'),
-            Server.cluster_id,
-            ).\
-            filter(WebSocketClient.server_id==Server.id).\
-            filter(WebSocketClient.cluster_id==cluster_id).\
-            filter(WebSocketClient.id==WebSocketClientPubSubKeys.client_id).\
-            filter(WebSocketClientPubSubKeys.sub_key==sub_key).\
-            first()
-
-        if data:
-            out.server_id = data.server_id
-            out.server_name = data.server_name
-            out.cluster_id = data.cluster_id
-            out.endpoint_type = _wsx
-            out.is_wsx = True
-
-    print('zzz', sub_key, out)
-
-    return out
 
 # ################################################################################################################################
