@@ -95,7 +95,8 @@ class WebSocket(_WebSocket):
         self.ping_last_response_time = None
 
         # For publish/subscribe over WSX
-        self.pubsub_tool = PubSubTool(config.parallel_server.worker_store.pubsub, self, PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
+        self.pubsub_tool = PubSubTool(config.parallel_server.worker_store.pubsub, self, PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
+            self.deliver_pubsub_msg)
 
         # Active WebSocket client ID (WebSocketClient model, web_socket_client.id in SQL)
         self.sql_ws_client_id = None
@@ -156,8 +157,14 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def deliver_pubsub_msg(self, msg):
-        self.invoke_client(msg.pub_msg_id, msg.to_dict())
+    def deliver_pubsub_msg(self, sub_key, data):
+        #self.invoke_client(msg.pub_msg_id, msg.to_dict())
+        print(333, sub_key)
+        print(444, data)
+
+        msg = data[0]
+
+        self.invoke_client(msg.pub_msg_id, msg.data)
 
 # ################################################################################################################################
 
