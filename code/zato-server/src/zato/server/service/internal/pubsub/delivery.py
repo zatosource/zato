@@ -75,6 +75,8 @@ class DeliverMessage(AdminService):
     class SimpleIO(AdminSIO):
         input_required = (Opaque('msg'), Opaque('subscription'))
 
+# ################################################################################################################################
+
     def handle(self):
         msg = self.request.input.msg
 
@@ -83,6 +85,8 @@ class DeliverMessage(AdminService):
 
         func = deliver_func[subscription.config.endpoint_type]
         func(self, msg, subscription, endpoint_impl_getter)
+
+# ################################################################################################################################
 
     def _deliver_rest_soap(self, msg, subscription, impl_getter):
         if not subscription.config.out_http_soap_id:
@@ -102,10 +106,18 @@ class DeliverMessage(AdminService):
 
 # ################################################################################################################################
 
+    def _deliver_wsx(self, msg, subscription, _ignored):
+        print(111, msg)
+        print(222, subscription)
+        z
+
+# ################################################################################################################################
+
 # We need to register it here because it refers to DeliverMessage's methods
 deliver_func = {
     PUBSUB.ENDPOINT_TYPE.REST.id: DeliverMessage._deliver_rest_soap,
     PUBSUB.ENDPOINT_TYPE.SOAP.id: DeliverMessage._deliver_rest_soap,
+    PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: DeliverMessage._deliver_wsx,
 }
 
 # ################################################################################################################################
