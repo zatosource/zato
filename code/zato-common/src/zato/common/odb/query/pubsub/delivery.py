@@ -92,12 +92,6 @@ def get_delivery_server_for_sub_key(session, cluster_id, sub_key, is_wsx):
     """
     # Sub key belongs to a WebSockets client ..
     if is_wsx:
-        return Bunch({
-            'server_id': 1,
-            'server_name': 'server1',
-            'cluster_id': 1,
-            'endpoint_type': _wsx
-        })
         return session.query(
             Server.id.label('server_id'),
             Server.name.label('server_name'),
