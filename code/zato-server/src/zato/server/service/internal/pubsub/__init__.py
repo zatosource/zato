@@ -83,17 +83,9 @@ class AfterPublish(AdminService):
             # We also need to remember that recipients may be currently offline, or in any other way inaccessible,
             # in which case we keep non-GD messages in our server's RAM.
 
-            print()
-            print(555, self.request.input.subscriptions)
-            print()
-
             # Extract sub_keys from live Python subscription objects
             sub_key_data = [{'sub_key':sub.config.sub_key, 'is_wsx':bool(sub.config.ws_channel_id)} \
                 for sub in self.request.input.subscriptions]
-
-            print()
-            print(666, sub_key_data)
-            print()
 
             #
             # There are two elements returned.
@@ -115,11 +107,6 @@ class AfterPublish(AdminService):
             #
 
             current_servers, not_found = self.pubsub.get_task_servers_by_sub_keys(sub_key_data)
-
-            print()
-            print(111, `current_servers`)
-            print(111, `not_found`)
-            print()
 
             # Local aliases
             cid = self.request.input.cid
@@ -161,11 +148,6 @@ class AfterPublish(AdminService):
         for server_info, sub_key_list in current_servers.items():
             server_name, server_pid, pub_client_id, channel_name, endpoint_type = server_info
             service_name = endpoint_type_service[endpoint_type]
-
-            print()
-            print(222, server_info)
-            print(222, server_name)
-            print()
 
             try:
                 self.server.servers[server_name].invoke(service_name, {
