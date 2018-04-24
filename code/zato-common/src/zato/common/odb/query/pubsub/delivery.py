@@ -12,14 +12,19 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from sqlalchemy import update
 from sqlalchemy.orm.exc import NoResultFound
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.common import PUBSUB
-from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, PubSubSubscription, Server
+from zato.common.odb.model import ChannelWebSocket, PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, \
+     PubSubSubscription, Server, WebSocketClient, WebSocketClientPubSubKeys
 
 # ################################################################################################################################
 
 _initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
 _delivered = PUBSUB.DELIVERY_STATUS.DELIVERED
+_wsx = PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
 
 # ################################################################################################################################
 
@@ -79,10 +84,19 @@ def confirm_pubsub_msg_delivered(session, cluster_id, sub_key, delivered_pub_msg
 
 # ################################################################################################################################
 
-def get_delivery_server_for_sub_key(session, cluster_id, sub_key):
+def get_delivery_server_for_sub_key(session, cluster_id, sub_key, is_wsx):
     """ Returns information about which server handles delivery tasks for input sub_key, the latter must exist in DB.
+    Assumes that sub_key belongs to a non-WSX endpoint and then checks WebSockets in case the former query founds
+    no matching server.
     """
-    try:
+    out = Bunch()
+
+    # Sub key belongs to a WebSockets client ..
+    if is_wsx:
+        pass
+
+    # .. otherwise, it is a REST, SOAP or another kind of client, but for sure it's not WebSockets.
+    else:
         return session.query(
             Server.id.label('server_id'),
             Server.name.label('server_name'),
@@ -93,8 +107,39 @@ def get_delivery_server_for_sub_key(session, cluster_id, sub_key):
             filter(PubSubSubscription.sub_key==sub_key).\
             filter(PubSubSubscription.endpoint_id==PubSubEndpoint.id).\
             filter(PubSubSubscription.cluster_id==cluster_id).\
-            one()
-    except NoResultFound:
-        pass # Implicitly returns None
+            first()
+
+    # OK, already found data, must be a non-WebSockets endpoint then ..
+    if data:
+        out.server_id = data.server_id
+        out.server_name = data.server_name
+        out.cluster_id = data.cluster_id
+        out.endpoint_type = data.endpoint_type
+        out.is_wsx = False
+
+    # .. try to find this sub_key among currently connected WebSockets clients.
+    else:
+
+        data = session.query(
+            Server.id.label('server_id'),
+            Server.name.label('server_name'),
+            Server.cluster_id,
+            ).\
+            filter(WebSocketClient.server_id==Server.id).\
+            filter(WebSocketClient.cluster_id==cluster_id).\
+            filter(WebSocketClient.id==WebSocketClientPubSubKeys.client_id).\
+            filter(WebSocketClientPubSubKeys.sub_key==sub_key).\
+            first()
+
+        if data:
+            out.server_id = data.server_id
+            out.server_name = data.server_name
+            out.cluster_id = data.cluster_id
+            out.endpoint_type = _wsx
+            out.is_wsx = True
+
+    print('zzz', sub_key, out)
+
+    return out
 
 # ################################################################################################################################
