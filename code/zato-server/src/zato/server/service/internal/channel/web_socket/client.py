@@ -117,6 +117,9 @@ class NotifyPubSubMessage(AdminService):
 
     def handle(self):
         req = self.request.input
+        print()
+        print(888, req)
+        print()
         try:
             self.response.payload.response = self.server.worker_store.web_socket_api.notify_pubsub_message(
                 req.channel_name, self.cid, req.pub_client_id, req.request)

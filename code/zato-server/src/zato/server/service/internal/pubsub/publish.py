@@ -175,6 +175,13 @@ class Publish(AdminService):
 
     def _notify_pubsub_tasks(self, topic_id, topic_name, subscriptions, non_gd_msg_list, has_gd_msg_list):
         try:
+
+            print()
+            print(234, non_gd_msg_list)
+            print(234, has_gd_msg_list)
+            print(234, subscriptions)
+            print()
+
             spawn(self.invoke, 'zato.pubsub.after-publish', {
                 'cid': self.cid,
                 'topic_id':topic_id,
@@ -183,8 +190,8 @@ class Publish(AdminService):
                 'non_gd_msg_list': non_gd_msg_list,
                 'has_gd_msg_list': has_gd_msg_list,
             })
-        except Exception, e:
-            self.logger.warn('Could not notify pub/sub tasks, e:`%s`', format_exc(e))
+        except Exception:
+            self.logger.warn('Could not notify pub/sub tasks, e:`%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -323,6 +330,11 @@ class Publish(AdminService):
 
         # Also in background, notify pub/sub task runners that there are new messages for them ..
         if subscriptions_by_topic:
+
+            print()
+            print(123, non_gd_msg_list)
+            print(123, has_gd_msg_list)
+            print()
 
             # Notify delivery tasks only if there are some messages available - it is possible
             # there will not be any here because, for instance, we had a list of messages on input
