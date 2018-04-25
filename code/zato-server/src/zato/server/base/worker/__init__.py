@@ -754,13 +754,16 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.pubsub.create_endpoint(bunchify(value['config']))
 
         for value in self.worker_config.pubsub_subscription.values():
-            self.pubsub.create_subscription(bunchify(value['config']))
+            config = bunchify(value['config'])
+            config.add_subscription = True # We don't create WSX subscriptions here so it is always True
+            self.pubsub.create_subscription(config)
 
         for value in self.worker_config.pubsub_topic.values():
             self.pubsub.create_topic(bunchify(value['config']))
 
         self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.REST.id] = self.worker_config.out_plain_http.get_by_id
         self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.SOAP.id] = self.worker_config.out_soap.get_by_id
+        self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id] = None # Not used by needed for API completeness
 
 # ################################################################################################################################
 

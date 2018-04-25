@@ -459,7 +459,15 @@ class GetEndpointSummary(_GetEndpointSummaryBase):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload = pubsub_endpoint_summary(session, self.server.cluster_id, self.request.input.endpoint_id)
+            item = pubsub_endpoint_summary(session, self.server.cluster_id, self.request.input.endpoint_id)
+
+            if item.last_seen:
+                item.last_seen = datetime_from_ms(item.last_seen)
+
+            if item.last_deliv_time:
+                item.last_deliv_time = datetime_from_ms(item.last_deliv_time)
+
+            self.response.payload = item
 
 # ################################################################################################################################
 
@@ -487,5 +495,43 @@ class GetEndpointSummaryList(_GetEndpointSummaryBase):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
+
+# ################################################################################################################################
+
+class GetTopicSubList(AdminService):
+    """ Returns a list of topics to which a given endpoint has access for subscription,
+    including both endpoints that it's already subscribed to or all the remaining ones
+    the endpoint may be possible subscribe to.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('endpoint_id', 'cluster_id')
+        input_optional = ('topic_filter_by',)
+        output_optional = (List('topic_sub_list'),)
+
+    def handle(self):
+
+        # Local shortcuts
+        endpoint_id = self.request.input.endpoint_id
+        filter_by = self.request.input.topic_filter_by
+
+        # Response to produce
+        out = []
+
+        # For all topics this endpoint may in theory subscribe to ..
+        for topic in self.pubsub.get_sub_topics_for_endpoint(endpoint_id):
+
+            if filter_by and (filter_by not in topic.name):
+                continue
+
+            # .. add each of them, along with information if the endpoint is already subscribed.
+            out.append({
+                'cluster_id': self.request.input.cluster_id,
+                'endpoint_id': endpoint_id,
+                'topic_id': topic.id,
+                'topic_name': topic.name,
+                'is_subscribed': self.pubsub.is_subscribed_to(endpoint_id, topic.name)
+            })
+
+        self.response.payload.topic_sub_list = out
 
 # ################################################################################################################################

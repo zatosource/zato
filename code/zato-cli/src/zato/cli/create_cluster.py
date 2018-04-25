@@ -941,13 +941,13 @@ class Create(ZatoCommand):
         endpoint.name = 'zato.pubsub.demo.endpoint'
         endpoint.is_internal = True
         endpoint.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
-        endpoint.topic_patterns = 'pub=zato.demo.*\nsub=zato.demo.*'
+        endpoint.topic_patterns = 'pub=/zato/demo/*\nsub=/zato/demo/*'
         endpoint.security = sec
         endpoint.cluster = cluster
         endpoint.endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
 
         topic = PubSubTopic()
-        topic.name = 'zato.demo.sample'
+        topic.name = '/zato/demo/sample'
         topic.is_active = True
         topic.is_api_sub_allowed = True
         topic.is_internal = True
@@ -961,7 +961,7 @@ class Create(ZatoCommand):
         sub.endpoint = endpoint
         sub.sub_key = new_sub_key()
         sub.has_gd = False
-        sub.pattern_matched = 'sub=zato.demo.*'
+        sub.pattern_matched = 'sub=/zato/demo/*'
         sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
         sub.cluster = cluster
         sub.wrap_one_msg_in_list = False

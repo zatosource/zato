@@ -143,18 +143,18 @@ class Topic(object):
         self.max_depth_gd = config.max_depth_gd
         self.max_depth_non_gd = config.max_depth_non_gd
         self.has_gd = config.has_gd
-        self.gd_depth_check_freq = config.gd_depth_check_freq
-        self.gd_depth_check_iter = 0
+        self.depth_check_freq = config.depth_check_freq
+        self.depth_check_iter = 0
         self.before_publish_hook_service_invoker = config.get('before_publish_hook_service_invoker')
         self.before_delivery_hook_service_invoker = config.get('before_delivery_hook_service_invoker')
 
-    def incr_gd_depth_check(self):
+    def incr_depth_check(self):
         """ Increases counter indicating whether topic's depth should be checked for max_depth reached.
         """
-        self.gd_depth_check_iter += 1
+        self.depth_check_iter += 1
 
-    def needs_gd_depth_check(self):
-        return self.gd_depth_check_iter % self.gd_depth_check_freq == 0
+    def needs_depth_check(self):
+        return self.depth_check_iter % self.depth_check_freq == 0
 
 # ################################################################################################################################
 
@@ -198,8 +198,9 @@ class SubKeyServer(object):
 
 # ################################################################################################################################
 
-class InRAMBacklog(object):
-    """ A backlog of messages kept in RAM. Stores a list of sub_keys and all messages that a sub_key points to.
+class InRAMDeliveryBacklog(object):
+    """ A backlog of messages kept in RAM for whom there are subscriptions - that is, they are known to have subscribers
+    and will be ultimately delivered to them. Stores a list of sub_keys and all messages that a sub_key points to.
     It acts as a multi-key dict and keeps only a single copy of message for each sub_key.
     """
     def __init__(self):
@@ -208,7 +209,7 @@ class InRAMBacklog(object):
         self.topic_msg_id_to_msg = {}     # Topic ID -> Msg ID  -> Message data
         self.msg_id_to_expiration = {}    # Msg ID   -> (Topic ID, sub_keys, expiration time in milliseconds)
 
-        # Start in background a cleanup task that removes all expired messages
+        # Start in background a cleanup task that deletes all expired and removed messages
         spawn_greenlet(self.run_cleanup_task)
 
 # ################################################################################################################################
@@ -337,7 +338,7 @@ class InRAMBacklog(object):
     def log_messages_to_store(self, cid, topic_name, max_depth, sub_key, messages):
 
         # Used by both loggers
-        msg = 'Reached max in-RAM depth of %r for topic `%r` (cid:%r). Extra messages will be stored in logs.'
+        msg = 'Reached max in-RAM delivery depth of %r for topic `%r` (cid:%r). Extra messages will be stored in logs.'
         args = (max_depth, topic_name, cid)
 
         # Log in pub/sub log and the main one as well, just to make sure it will be easily found
@@ -394,6 +395,14 @@ class InRAMBacklog(object):
 
 # ################################################################################################################################
 
+    def get_topic_depth(self, topic_id):
+        """ Returns depth of a given in-RAM queue for the topic.
+        """
+        with self.lock:
+            return self.topic_msg_id_to_msg.get(topic_id) or 0
+
+# ################################################################################################################################
+
 class PubSub(object):
     def __init__(self, cluster_id, server, broker_client=None):
         self.cluster_id = cluster_id
@@ -416,7 +425,8 @@ class PubSub(object):
         self.pubsub_tool_by_sub_key = {}       # Sub key        -> PubSubTool object
         self.pubsub_tools = []                 # A list of PubSubTool objects, each containing delivery tasks
 
-        self.in_ram_backlog = InRAMBacklog()
+        # A backlog of messages that have at least one subscription, i.e. this is what delivery servers use.
+        self.delivery_backlog = InRAMDeliveryBacklog()
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
@@ -474,6 +484,14 @@ class PubSub(object):
     def get_topic_id_by_name(self, topic_name):
         with self.lock:
             return self._get_topic_id_by_name(topic_name)
+
+# ################################################################################################################################
+
+    def get_non_gd_topic_depth(self, topic_name):
+        """ Returns of non-GD messages for a given topic by its name.
+        """
+        with self.lock:
+            return self.delivery_backlog.get_topic_depth(self._get_topic_id_by_name(topic_name))
 
 # ################################################################################################################################
 
@@ -549,14 +567,31 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def _add_subscription(self, config):
+        """ Low-level implementation of self.add_subscription.
+        """
+        sub = Subscription(config)
+
+        existing_by_topic = self.subscriptions_by_topic.setdefault(config.topic_name, [])
+        existing_by_topic.append(sub)
+
+        self.subscriptions_by_sub_key[config.sub_key] = sub
+
+# ################################################################################################################################
+
+    def add_subscription(self, config):
+        """ Creates a Subscription object and an associated mapping of the subscription to input topic.
+        """
+        with self.lock:
+            self._add_subscription(config)
+
+# ################################################################################################################################
+
     def create_subscription(self, config):
         with self.lock:
-            sub = Subscription(config)
 
-            existing_by_topic = self.subscriptions_by_topic.setdefault(config.topic_name, [])
-            existing_by_topic.append(sub)
-
-            self.subscriptions_by_sub_key[config.sub_key] = sub
+            if config.add_subscription:
+                self._add_subscription(config)
 
             # We don't start dedicated tasks for WebSockets - they are all dynamic without a fixed server.
             # But for other endpoint types, we create and start a delivery task here.
@@ -698,6 +733,44 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_topics(self):
+        """ Returns all topics in existence.
+        """
+        with self.lock:
+            return self.topics
+
+# ################################################################################################################################
+
+    def get_sub_topics_for_endpoint(self, endpoint_id):
+        """ Returns all topics to which endpoint_id can subscribe.
+        """
+        out = []
+        with self.lock:
+            for topic in self.topics.values():
+                if self.is_allowed_sub_topic_by_endpoint_id(topic.name, endpoint_id):
+                    out.append(topic)
+
+        return out
+
+# ################################################################################################################################
+
+    def _is_subscribed_to(self, endpoint_id, topic_name):
+        """ Low-level implementation of self.is_subscribed_to.
+        """
+        for sub in self.subscriptions_by_topic.get(topic_name, []):
+            if sub.endpoint_id == endpoint_id:
+                return True
+
+# ################################################################################################################################
+
+    def is_subscribed_to(self, endpoint_id, topic_name):
+        """ Returns True if the endpoint is subscribed to the named topic.
+        """
+        with self.lock:
+            return self._is_subscribed_to(endpoint_id, topic_name)
+
+# ################################################################################################################################
+
     def add_ws_client_pubsub_keys(self, session, sql_ws_client_id, sub_key, channel_name, pub_client_id):
         """ Adds to SQL information that a given WSX client handles messages for sub_key.
         This information is transient - it will be dropped each time a WSX client disconnects
@@ -708,6 +781,16 @@ class PubSub(object):
         ws_sub_key.sub_key = sub_key
         ws_sub_key.cluster_id = self.cluster_id
         session.add(ws_sub_key)
+
+        self._set_sub_key_server({
+            'sub_key': sub_key,
+            'cluster_id': self.cluster_id,
+            'server_name': self.server.name,
+            'server_pid': self.server.pid,
+            'endpoint_type': PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
+            'channel_name': channel_name,
+            'pub_client_id': pub_client_id,
+        })
 
         # Update in-RAM state of workers
         self.broker_client.publish({
@@ -726,7 +809,8 @@ class PubSub(object):
     def _set_sub_key_server(self, config):
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
-        msg = 'Setting info about delivery server{}for sub_key `%(sub_key)s` - `%(server_name)s:%(server_pid)s`'.format(
+        config['wsx'] = config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+        msg = 'Setting info about delivery server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s`'.format(
             ' ' if config['server_pid'] else ' (no PID) ')
         logger.info(msg, config)
         logger_zato.info(msg, config)
@@ -740,9 +824,17 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_sub_key_server(self, sub_key):
-        with self.lock:
-            return self.sub_key_servers[sub_key]
+    def _get_sub_key_server(self, sub_key):
+        return self.sub_key_servers[sub_key]
+
+# ################################################################################################################################
+
+    def get_sub_key_server(self, sub_key, needs_lock=True):
+        if needs_lock:
+            with self.lock:
+                return self._get_sub_key_server(sub_key)
+        else:
+            return self._get_sub_key_server(sub_key)
 
 # ################################################################################################################################
 
@@ -780,9 +872,9 @@ class PubSub(object):
             response = self.server.servers[server_name].invoke('zato.pubsub.delivery.get-server-pid-for-sub-key', {
                 'sub_key': sub_key,
             })
-        except Exception, e:
+        except Exception:
             msg = 'Could not invoke server `%s` to get PID for sub_key `%s`, e:`%s`'
-            exc_formatted = format_exc(e)
+            exc_formatted = format_exc()
             logger.warn(msg, server_name, sub_key, exc_formatted)
             logger_zato.warn(msg, server_name, sub_key, exc_formatted)
         else:
@@ -790,16 +882,16 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def add_missing_server_for_sub_key(self, sub_key):
+    def add_missing_server_for_sub_key(self, sub_key, is_wsx):
         """ Adds to self.sub_key_servers information from ODB about which server handles input sub_key.
         Must be called with self.lock held.
         """
         with closing(self.server.odb.session()) as session:
-            data = get_delivery_server_for_sub_key(session, self.server.cluster_id, sub_key)
+            data = get_delivery_server_for_sub_key(session, self.server.cluster_id, sub_key, is_wsx)
             if not data:
-                msg = 'Could not find a delivery server in ODB for sub_key `%s`'
-                logger.info(msg, sub_key)
-                logger_zato.info(msg, sub_key)
+                msg = 'Could not find a delivery server in ODB for sub_key `%s` (wsx:%s)'
+                logger.info(msg, sub_key, is_wsx)
+                logger_zato.info(msg, sub_key, is_wsx)
             else:
 
                 # This is common config that we already know is valid but on top of it
@@ -819,7 +911,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_task_servers_by_sub_keys(self, sub_keys):
+    def get_task_servers_by_sub_keys(self, sub_key_data):
         """ Returns a dictionary keyed by (server_name, server_pid, pub_client_id, channel_name) tuples
         and values being sub_keys that a WSX client pointed to by each key has subscribed to.
         """
@@ -827,7 +919,10 @@ class PubSub(object):
             found = {}
             not_found = []
 
-            for sub_key in sub_keys:
+            for elem in sub_key_data:
+
+                sub_key = elem['sub_key']
+                is_wsx = elem['is_wsx']
 
                 # If we do not have a server for this sub_key we first attempt to find
                 # if there is an already running server that handles it but we do not know it yet.
@@ -837,7 +932,7 @@ class PubSub(object):
                 # the target server in ODB and then invoke it to get the PID of worker process that handles
                 # sub_key, populating self.sub_key_servers as we go.
                 if not sub_key in self.sub_key_servers:
-                    self.add_missing_server_for_sub_key(sub_key)
+                    self.add_missing_server_for_sub_key(sub_key, is_wsx)
 
                 # At this point, if there is any information about this sub_key at all,
                 # no matter if its server is running or not, info will not be None.
@@ -887,11 +982,11 @@ class PubSub(object):
 
     def store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error):
         """ Stores in RAM up to input non-GD messages for each sub_key. A backlog queue for each sub_key
-        cannot be longer than topic's max_depth_non_gd and overlown messages are not kept in RAM.
+        cannot be longer than topic's max_depth_non_gd and overflowed messages are not kept in RAM.
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """
-        self.in_ram_backlog.add_messages(cid, topic_id, topic_name, self.topics[topic_id].max_depth_non_gd,
+        self.delivery_backlog.add_messages(cid, topic_id, topic_name, self.topics[topic_id].max_depth_non_gd,
             sub_keys, non_gd_msg_list)
 
 # ################################################################################################################################
@@ -907,7 +1002,7 @@ class PubSub(object):
                 topic_id = self.topic_name_to_id[topic_name]
 
                 # Delete subscriptions, and any related messages, from RAM
-                self.in_ram_backlog.unsubscribe(topic_id, sub_keys)
+                self.delivery_backlog.unsubscribe(topic_id, sub_keys)
 
                 # Delete subscription metadata from local pubsub
                 subscriptions_by_topic = self.subscriptions_by_topic[topic_name]
@@ -1007,7 +1102,7 @@ class PubSub(object):
         """
         self.server.invoke('zato.pubsub.delivery.deliver-message', {
             'msg':msg,
-            'subscription':self.subscriptions_by_sub_key[sub_key]
+            'subscription':self.get_subscription_by_sub_key(sub_key)
         })
 
 # ################################################################################################################################

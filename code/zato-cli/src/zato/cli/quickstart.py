@@ -375,7 +375,7 @@ class Create(ZatoCommand):
 
             # We make the first server a delivery server for sample pub/sub topics.
             if idx == 0:
-                self._set_pubsub_server(args, server_id, cluster_name, 'zato.demo.sample')
+                self._set_pubsub_server(args, server_id, cluster_name, '/zato/demo/sample')
 
             self.logger.info('[{}/{}] server{} created'.format(next_step.next(), total_steps, name))
 

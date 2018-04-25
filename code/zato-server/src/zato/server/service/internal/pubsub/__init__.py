@@ -72,38 +72,41 @@ class AfterPublish(AdminService):
         input_optional = (Opaque('subscriptions'), Opaque('non_gd_msg_list'), 'has_gd_msg_list')
 
     def handle(self):
-        # Notify all background tasks that new messages are available for their recipients.
-        # However, this needs to take into account the fact that there may be many notifications
-        # pointing to a single server so instead of sending notifications one by one,
-        # we first find all servers and then notify each server once giving it a list of subscriptions on input.
-        #
-        # We also need to remember that recipients may be currently offline, or in any other way inaccessible,
-        # in which case we keep non-GD messages in our server's RAM.
-
-        # Extract sub_keys from live Python subscription objects
-        sub_keys = [sub.config.sub_key for sub in self.request.input.subscriptions]
-
-        #
-        # There are two elements returned.
-        #
-        # current_servers - a list of servers that we know have currently subscribers
-        #                   for messsages on whose behalf we are being called
-        #
-        # not_found ------- a list of sub_keys for which right now we don't have any servers
-        #                   with delivery tasks
-        #
-        # All servers from current_servers will be invoked and notified about messages published (GD and non-GD).
-        # For all sub_keys from not_found, information about non-GD messages for each of them will be kept in RAM.
-        #
-        # Additionally, for all servers from current_servers that can not be invoked for any reasons,
-        # we will also store non-GD messages in our RAM store.
-        #
-        # Note that GD messages are not passed here directly at all - this is because at this point
-        # they have been already stored in SQL by publish service before this service runs.
-        #
 
         try:
-            current_servers, not_found = self.pubsub.get_task_servers_by_sub_keys(sub_keys)
+
+            # Notify all background tasks that new messages are available for their recipients.
+            # However, this needs to take into account the fact that there may be many notifications
+            # pointing to a single server so instead of sending notifications one by one,
+            # we first find all servers and then notify each server once giving it a list of subscriptions on input.
+            #
+            # We also need to remember that recipients may be currently offline, or in any other way inaccessible,
+            # in which case we keep non-GD messages in our server's RAM.
+
+            # Extract sub_keys from live Python subscription objects
+            sub_key_data = [{'sub_key':sub.config.sub_key, 'is_wsx':bool(sub.config.ws_channel_id)} \
+                for sub in self.request.input.subscriptions]
+
+            #
+            # There are two elements returned.
+            #
+            # current_servers - a list of servers that we know have currently subscribers
+            #                   for messsages on whose behalf we are being called
+            #
+            # not_found ------- a list of sub_keys for which right now we don't have any servers
+            #                   with delivery tasks
+            #
+            # All servers from current_servers will be invoked and notified about messages published (GD and non-GD).
+            # For all sub_keys from not_found, information about non-GD messages for each of them will be kept in RAM.
+            #
+            # Additionally, for all servers from current_servers that can not be invoked for any reasons,
+            # we will also store non-GD messages in our RAM store.
+            #
+            # Note that GD messages are not passed here directly at all - this is because at this point
+            # they have been already stored in SQL by publish service before the current one has run.
+            #
+
+            current_servers, not_found = self.pubsub.get_task_servers_by_sub_keys(sub_key_data)
 
             # Local aliases
             cid = self.request.input.cid
@@ -123,8 +126,8 @@ class AfterPublish(AdminService):
             if notif_error_sub_keys:
                 self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, True)
 
-        except Exception, e:
-            self.logger.warn('Error in after_publish callback, e:`%s`', format_exc(e))
+        except Exception:
+            self.logger.warn('Error in after_publish callback, e:`%r`', format_exc())
 
 # ################################################################################################################################
 
