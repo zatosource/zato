@@ -157,7 +157,6 @@ class DeliveryTask(object):
                 logger.info('Skipping messages `%s`', to_skip)
 
             # This is the call that actually delivers messages
-            print(9090, self.deliver_pubsub_msg_cb)
             self.deliver_pubsub_msg_cb(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
 
         except Exception as e:
@@ -290,6 +289,22 @@ class Message(PubSubMessage):
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None
 
+# ################################################################################################################################
+
+    def __cmp__(self, other, max_pri=9):
+        return cmp(
+            (max_pri - self.priority, self.ext_pub_time, self.pub_time),
+            (max_pri - other.priority, other.ext_pub_time, other.pub_time)
+        )
+
+# ################################################################################################################################
+
+    def __repr__(self):
+        return '<Msg sk:{} id:{} ext:{} exp:{} gd:{}>'.format(
+            self.sub_key, self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time), self.has_gd)
+
+# ################################################################################################################################
+
     def add_iso_times(self):
         """ Sets additional attributes for datetime in ISO-8601.
         """
@@ -300,16 +315,6 @@ class Message(PubSubMessage):
 
         if self.expiration_time:
             self.expiration_time_iso = datetime_from_ms(self.expiration_time)
-
-    def __cmp__(self, other, max_pri=9):
-        return cmp(
-            (max_pri - self.priority, self.ext_pub_time, self.pub_time),
-            (max_pri - other.priority, other.ext_pub_time, other.pub_time)
-        )
-
-    def __repr__(self):
-        return '<Msg sk:{} id:{} ext:{} exp:{} gd:{}>'.format(
-            self.sub_key, self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time), self.has_gd)
 
 # ################################################################################################################################
 
