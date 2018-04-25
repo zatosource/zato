@@ -1974,7 +1974,7 @@ class WebSocketSubscription(Base):
     __table_args__ = (
         Index('wssub_channel_idx', 'cluster_id', 'channel_id', unique=False),
         Index('wssub_subkey_idx', 'cluster_id', 'sub_key', unique=True),
-        Index('wssub_extcli_idx', 'cluster_id', 'ext_client_id', unique=True),
+        Index('wssub_extcli_idx', 'cluster_id', 'ext_client_id', unique=False),
         Index('wssub_subkey_chan_idx', 'cluster_id', 'sub_key', 'channel_id', unique=True),
     {})
 
@@ -2071,7 +2071,7 @@ class PubSubTopic(Base):
     max_depth_gd = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD)
     max_depth_non_gd = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD)
     current_depth_gd = Column(Integer(), nullable=False, default=0)
-    gd_depth_check_freq = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.GD_DEPTH_CHECK_FREQ)
+    depth_check_freq = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DEPTH_CHECK_FREQ)
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
     is_api_sub_allowed = Column(Boolean(), nullable=False)
 
@@ -2126,8 +2126,8 @@ class PubSubMessage(Base):
     __table_args__ = (
         Index('pubsb_msg_id_idx', 'cluster_id', 'id', unique=True),
 
-        # This index is needed for FKs from other tables (on MySQL),
-        # otherwise we get error 1215 'Cannot add foreign key constraint'
+        # This index is needed for FKs from other tables,
+        # otherwise with MySQL we get error 1215 'Cannot add foreign key constraint'
         Index('pubsb_msg_pubmsg_id_idx', 'pub_msg_id', unique=True),
 
         Index('pubsb_msg_pubmsg_clu_id_idx', 'cluster_id', 'pub_msg_id', unique=True),
@@ -2209,7 +2209,7 @@ class PubSubSubscription(Base):
     is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
 
-    active_status = Column(String(200), nullable=False, default=PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED)
+    active_status = Column(String(200), nullable=False, default=PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id)
     is_staging_enabled = Column(Boolean(), nullable=False, default=False)
 
     delivery_method = Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY.id)
@@ -2344,7 +2344,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     # after delivery_count reaches max retries for subscription or if a hook services decides so.
     is_deliverable = Column(Boolean(), nullable=False, default=True)
 
-    delivery_status = Column(Text, nullable=False)
+    delivery_status = Column(Text, nullable=False, default=PUBSUB.DELIVERY_STATUS.INITIALIZED)
     delivery_time = Column(BigInteger(), nullable=True)
 
     pub_msg_id = Column(String(200), ForeignKey('pubsub_message.pub_msg_id', ondelete='CASCADE'), nullable=False)

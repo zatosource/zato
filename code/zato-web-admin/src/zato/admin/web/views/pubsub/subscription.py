@@ -89,13 +89,28 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('endpoint_id', 'is_active', 'cluster_id', 'server_id')
-        input_optional = ('has_gd', 'topic_list_text', 'topic_list_json', 'endpoint_type', 'endpoint_id', 'active_status',
+        input_optional = ('has_gd', 'topic_list_json', 'endpoint_type', 'endpoint_id', 'active_status',
             'delivery_method', 'delivery_data_format', 'delivery_batch_size', 'wrap_one_msg_in_list', 'delivery_max_retry',
-            'delivery_err_should_block', 'wait_sock_err', 'wait_non_sock_err', 'topic_list_text', 'amqp_exchange',
+            'delivery_err_should_block', 'wait_sock_err', 'wait_non_sock_err', 'amqp_exchange',
             'amqp_routing_key', 'files_directory_list', 'ftp_directory_list', 'out_rest_http_soap_id', 'rest_delivery_endpoint',
             'service_id', 'sms_twilio_from', 'sms_twilio_to_list', 'smtp_is_html', 'smtp_subject', 'smtp_from', 'smtp_to_list',
             'smtp_body', 'out_soap_http_soap_id', 'soap_delivery_endpoint', 'out_http_method')
         output_required = ('id',)
+
+# ################################################################################################################################
+
+    def populate_initial_input_dict(self, initial_input_dict):
+
+        topic_list = []
+
+        for key, value in sorted(self.req.POST.items()):
+            if key.startswith('topic_checkbox_'):
+                topic_name = key.replace('topic_checkbox_', '')
+                topic_list.append(topic_name)
+
+        initial_input_dict['topic_list_json'] = topic_list
+
+# ################################################################################################################################
 
     def post_process_return_data(self, return_data):
 
@@ -103,6 +118,7 @@ class _CreateEdit(CreateEdit):
             'cluster_id': self.req.zato.cluster_id,
             'endpoint_id': self.input.endpoint_id,
         }).data
+
 
         if response['last_seen']:
             response['last_seen'] = from_utc_to_user(response['last_seen']+'+00:00', self.req.zato.user_profile)

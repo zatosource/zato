@@ -1,0 +1,48 @@
+.multi-select-div {
+    overflow: scroll;
+    height:130px;
+    background-color:#fff;
+}
+
+.multi-select-input {
+    height:100%;
+    width:100%;
+    border:none;
+    background-color:#e6e6e6
+}
+
+.multi-select-table td {
+     vertical-align:bottom;
+}
+
+.multi-select-table td input {
+    display: block;
+    margin-bottom:3px
+}
+
+.multi-select-table td a, table.multi-select-table td a:hover {
+    color:#000;
+    text-shadow: none
+}
+
+.multi-select-table td span.disabled {
+    color:#111
+}
+
+label.disabled {
+    color:#444
+}
+
+label.toggle {
+    text-decoration: underline;
+}
+
+label.toggle:hover {
+    background-color: #e0e030;
+    color:#000033;
+    text-decoration:none;
+    cursor:pointer;
+    text-shadow: none;
+    padding-top:3px;
+    padding-bottom:3px;
+}

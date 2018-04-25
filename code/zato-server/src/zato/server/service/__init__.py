@@ -610,6 +610,8 @@ class Service(object):
         if self.component_enabled_target_matcher:
             name, target = self.extract_target(name)
             zato_ctx['zato.request_ctx.target'] = target
+        else:
+            target = None
 
         # Let's first find out if the service can be invoked at all
         impl_name = self.server.service_store.name_to_impl_name[name]

@@ -13,7 +13,12 @@ from sqlalchemy import and_, exists, insert
 from sqlalchemy.sql import expression as expr, func
 
 # Zato
+from zato.common import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, WebSocketSubscription
+
+# ################################################################################################################################
+
+_initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
 
 # ################################################################################################################################
 
@@ -33,7 +38,7 @@ def add_wsx_subscription(session, cluster_id, is_internal, sub_key, ext_client_i
     """ Adds an object representing a subscription of a WebSockets client.
     """
     ws_sub = WebSocketSubscription()
-    ws_sub.is_internal = is_internal
+    ws_sub.is_internal = is_internal or False
     ws_sub.sub_key = sub_key
     ws_sub.ext_client_id = ext_client_id
     ws_sub.channel_id = ws_channel_id
@@ -65,9 +70,9 @@ def add_subscription(session, cluster_id, ctx):
     ps_sub.delivery_method = ctx.delivery_method
     ps_sub.delivery_data_format = ctx.delivery_data_format
     ps_sub.delivery_batch_size = ctx.delivery_batch_size
-    ps_sub.wrap_one_msg_in_list = ctx.wrap_one_msg_in_list
+    ps_sub.wrap_one_msg_in_list = ctx.wrap_one_msg_in_list if ctx.wrap_one_msg_in_list is not None else True
     ps_sub.delivery_max_retry = ctx.delivery_max_retry
-    ps_sub.delivery_err_should_block = ctx.delivery_err_should_block
+    ps_sub.delivery_err_should_block = ctx.delivery_err_should_block if ctx.delivery_err_should_block is not None else True
     ps_sub.wait_sock_err = ctx.wait_sock_err
     ps_sub.wait_non_sock_err = ctx.wait_non_sock_err
     ps_sub.ext_client_id = ctx.ext_client_id
@@ -111,14 +116,20 @@ def add_subscription(session, cluster_id, ctx):
 
 # ################################################################################################################################
 
-def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_sub_id, now):
+def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_sub_id, now, _initialized=_initialized):
     """ Move all unexpired messages from topic to a given subscriber's queue and returns the number of messages moved.
     """
+    enqueued_id_subquery = session.query(
+        PubSubEndpointEnqueuedMessage.pub_msg_id).\
+        filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id)
 
     # SELECT statement used by the INSERT below finds all messages for that topic
     # that haven't expired yet.
     select_messages = session.query(
-        PubSubMessage.pub_msg_id, PubSubMessage.topic_id,
+        PubSubMessage.pub_msg_id,
+        PubSubMessage.topic_id,
+        expr.bindparam('is_deliverable', True),
+        expr.bindparam('delivery_status', _initialized),
         expr.bindparam('creation_time', now),
         expr.bindparam('delivery_count', 0),
         expr.bindparam('endpoint_id', endpoint_id),
@@ -129,13 +140,16 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_su
         ).\
         filter(PubSubMessage.topic_id==topic_id).\
         filter(PubSubMessage.cluster_id==cluster_id).\
-        filter(PubSubMessage.expiration_time > now)
+        filter(PubSubMessage.expiration_time > now).\
+        filter(PubSubMessage.pub_msg_id.notin_(enqueued_id_subquery))
 
     # INSERT references to topic's messages in the subscriber's queue.
     insert_messages = insert(PubSubEndpointEnqueuedMessage).\
         from_select((
             PubSubEndpointEnqueuedMessage.pub_msg_id,
             PubSubEndpointEnqueuedMessage.topic_id,
+            expr.column('is_deliverable'),
+            expr.column('delivery_status'),
             expr.column('creation_time'),
             expr.column('delivery_count'),
             expr.column('endpoint_id'),

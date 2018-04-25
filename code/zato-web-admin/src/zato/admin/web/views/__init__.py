@@ -404,6 +404,10 @@ class CreateEdit(_BaseView):
         self.input = Bunch()
         self.input_dict = {}
 
+    def populate_initial_input_dict(self, initial_input_dict):
+        """ May be overridden by subclasses if needed.
+        """
+
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating
         control to the subclass for fetching this view-specific data.
@@ -414,6 +418,7 @@ class CreateEdit(_BaseView):
         try:
             super(CreateEdit, self).__call__(req, *args, **kwargs)
             self.set_input()
+            self.populate_initial_input_dict(initial_input_dict)
 
             input_dict = {'cluster_id': self.cluster_id}
             post_id = self.req.POST.get('id')
@@ -432,6 +437,8 @@ class CreateEdit(_BaseView):
             logger.debug(
                 'Request input dict `%r` out of `%r`, `%r`, `%r`, `%r`, `%r`', self.input_dict,
                 self.SimpleIO.input_required, self.SimpleIO.input_optional, self.input, self.req.GET, self.req.POST)
+
+            logger.info('Sending `%s` to `%s`', self.input_dict, self.service_name)
 
             response = self.req.zato.client.invoke(self.service_name, self.input_dict)
             if response.ok:

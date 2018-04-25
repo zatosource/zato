@@ -19,6 +19,7 @@ from zato.common import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, PubSubSubscriptionExists
 from zato.common.odb.model import PubSubSubscription
+from zato.common.odb.query.pubsub.queue import get_queue_depth_by_sub_key
 from zato.common.odb.query.pubsub.subscribe import add_subscription, add_wsx_subscription, has_subscription, \
      move_messages_to_sub_queue
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search
@@ -323,6 +324,17 @@ class SubscribeServiceImpl(_Subscribe):
                 ctx.creation_time = now = utcnow_as_ms()
                 ctx.sub_key = new_sub_key()
 
+                # Create a new subscription object
+                ps_sub = add_subscription(session, ctx.cluster_id, ctx)
+
+                # Common configuration for WSX and broker messages
+                sub_config = Bunch()
+                sub_config.topic_name = ctx.topic.name
+                sub_config.endpoint_type = self.endpoint_type
+
+                for name in sub_broker_attrs:
+                    sub_config[name] = getattr(ps_sub, name, None)
+
                 # If we subscribe a WSX client, we need to create its accompanying SQL models
                 if ctx.ws_channel_id:
 
@@ -330,39 +342,34 @@ class SubscribeServiceImpl(_Subscribe):
                     add_wsx_subscription(
                         session, ctx.cluster_id, ctx.is_internal, ctx.sub_key, ctx.ext_client_id, ctx.ws_channel_id)
 
-                    # This object will be transient - dropped each time a WSX disconnects
+                    # This object will be transient - dropped each time a WSX client disconnects
                     self.pubsub.add_ws_client_pubsub_keys(session, ctx.sql_ws_client_id, ctx.sub_key, ctx.ws_channel_name,
                         ctx.ws_pub_client_id)
 
+                    self.pubsub.add_subscription(sub_config)
+
                     # Let the WebSocket connection object know that it should handle this particular sub_key
                     ctx.web_socket.pubsub_tool.add_sub_key(ctx.sub_key)
-
-                # Create a new subscription object
-                ps_sub = add_subscription(session, ctx.cluster_id, ctx)
 
                 # Flush the session because we need the subscription's ID below in INSERT from SELECT
                 session.flush()
 
                 # Move all available messages to that subscriber's queue
-                total_moved = move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, ps_sub.id, now)
+                move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, ps_sub.id, now)
 
                 # Commit all changes
                 session.commit()
 
                 # Produce response
                 self.response.payload.sub_key = ctx.sub_key
-                self.response.payload.queue_depth = total_moved
+                self.response.payload.queue_depth = get_queue_depth_by_sub_key(session, ctx.cluster_id, ctx.sub_key, now)
 
                 # Notify workers of a new subscription
-                broker_input = Bunch()
-                broker_input.topic_name = ctx.topic.name
-                broker_input.endpoint_type = self.endpoint_type
+                sub_config.action = BROKER_MSG_PUBSUB.SUBSCRIPTION_CREATE.value
+                sub_config.add_subscription = not ctx.ws_channel_id # WSX clients already had their subscriptions created above
+                self.broker_client.publish(sub_config)
 
-                for name in sub_broker_attrs:
-                    broker_input[name] = getattr(ps_sub, name, None)
-
-                broker_input.action = BROKER_MSG_PUBSUB.SUBSCRIPTION_CREATE.value
-                self.broker_client.publish(broker_input)
+                ctx.web_socket.pubsub_tool.add_sub_key(ctx.sub_key)
 
 # ################################################################################################################################
 
@@ -402,15 +409,21 @@ class Create(_Subscribe):
     """ Creates a new pub/sub subscription by invoking a subscription service specific to input endpoint_type.
     """
     def handle(self):
+
+        # This is a multi-line string of topic names
         topic_list_text = [elem.strip() for elem in (self.request.raw_request.pop('topic_list_text', '') or '').splitlines()]
+
+        # This is a JSON list of topic names
         topic_list_json = self.request.raw_request.pop('topic_list_json', [])
+
+        # This is a single topic
         topic_name = self.request.raw_request.pop('topic_name', '').strip()
 
         if topic_name:
             topic_name = [topic_name]
 
         if not(topic_list_text or topic_list_json or topic_name):
-            raise BadRequest(self.cid, 'No topics to subscribe to given on input')
+            raise BadRequest(self.cid, 'No topics to subscribe to were given on input')
         else:
             if topic_list_text:
                 topic_list = topic_list_text

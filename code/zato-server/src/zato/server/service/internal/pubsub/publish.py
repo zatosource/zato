@@ -59,7 +59,16 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_message(self, topic, input, now, pattern_matched, endpoint_id, _initialized=_initialized, _zato_none=ZATO_NONE):
+    def _get_data_prefixes(self, data):
+        data_prefix = data[:2048].encode('utf8')
+        data_prefix_short = data[:64].encode('utf8')
+
+        return data_prefix, data_prefix_short
+
+# ################################################################################################################################
+
+    def _get_message(self, topic, input, now, pattern_matched, endpoint_id, _initialized=_initialized, _zato_none=ZATO_NONE,
+            _skip=PUBSUB.HOOK_ACTION.SKIP):
 
         priority = get_priority(self.cid, input)
         expiration = get_expiration(self.cid, input)
@@ -78,7 +87,7 @@ class Publish(AdminService):
         in_reply_to = input.get('in_reply_to')
         ext_client_id = input.get('ext_client_id')
 
-        ext_pub_time = input.get('ext_pub_time')
+        ext_pub_time = input.get('ext_pub_time') or None
         if ext_pub_time:
             ext_pub_time = dt_parse(ext_pub_time)
             ext_pub_time = datetime_to_ms(ext_pub_time)
@@ -116,7 +125,7 @@ class Publish(AdminService):
             response = topic.before_publish_hook_service_invoker(topic, ps_msg)
 
             # Hook service decided that we should not process this message
-            if response['skip_msg']:
+            if response['hook_action'] == _skip:
                 logger_audit.info('Skipping message pub_msg_id:`%s`, pub_correl_id:`%s`, ext_client_id:`%s`',
                     ps_msg.pub_msg_id, ps_msg.pub_correl_id, ps_msg.ext_client_id)
                 return
@@ -125,8 +134,9 @@ class Publish(AdminService):
 
         # These are needed only for GD messages that are stored in SQL
         if has_gd:
-            ps_msg.data_prefix = ps_msg.data[:2048].encode('utf8')
-            ps_msg.data_prefix_short = ps_msg.data[:64].encode('utf8')
+            data_prefix, data_prefix_short = self._get_data_prefixes(ps_msg.data)
+            ps_msg.data_prefix = data_prefix
+            ps_msg.data_prefix_short = data_prefix_short
 
         return ps_msg
 
@@ -149,13 +159,15 @@ class Publish(AdminService):
                 if msg:
                     msg_id_list.append(msg.pub_msg_id)
                     msg_as_dict = msg.to_dict()
-                    gd_msg_list.append(msg_as_dict) if msg.has_gd else non_gd_msg_list.append(msg_as_dict)
+                    target_list = gd_msg_list if msg.has_gd else non_gd_msg_list
+                    target_list.append(msg_as_dict)
         else:
             msg = self._get_message(topic, input, now, pattern_matched, endpoint_id)
             if msg:
                 msg_id_list.append(msg.pub_msg_id)
                 msg_as_dict = msg.to_dict()
-                gd_msg_list.append(msg_as_dict) if msg.has_gd else non_gd_msg_list.append(msg_as_dict)
+                target_list = gd_msg_list if msg.has_gd else non_gd_msg_list
+                target_list.append(msg_as_dict)
 
         return msg_id_list, gd_msg_list, non_gd_msg_list
 
@@ -163,6 +175,7 @@ class Publish(AdminService):
 
     def _notify_pubsub_tasks(self, topic_id, topic_name, subscriptions, non_gd_msg_list, has_gd_msg_list):
         try:
+
             spawn(self.invoke, 'zato.pubsub.after-publish', {
                 'cid': self.cid,
                 'topic_id':topic_id,
@@ -171,8 +184,8 @@ class Publish(AdminService):
                 'non_gd_msg_list': non_gd_msg_list,
                 'has_gd_msg_list': has_gd_msg_list,
             })
-        except Exception, e:
-            self.logger.warn('Could not notify pub/sub tasks, e:`%s`', format_exc(e))
+        except Exception:
+            self.logger.warn('Could not notify pub/sub tasks, e:`%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -234,15 +247,25 @@ class Publish(AdminService):
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
             topic, data_list, input, now, pattern_matched, endpoint_id)
 
+        # We have all the input data, publish the message(s) now
+        self._publish(pubsub, topic, endpoint_id, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,
+            input.get('ext_client_id') or 'n/a', False, now)
+
+# ################################################################################################################################
+
+    def _publish(self, pubsub, topic, endpoint_id, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,
+        ext_client_id, is_re_run, now):
+        """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
+        """
         len_gd_msg_list = len(gd_msg_list)
         has_gd_msg_list = bool(len_gd_msg_list)
 
         # Get all subscribers for that topic from local worker store
-        subscriptions_by_topic = pubsub.get_subscriptions_by_topic(input.topic_name)
+        subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic.name)
 
         # Just so it is not overlooked, log information that no subscribers are found for this topic
         if not subscriptions_by_topic:
-            self.logger.warn('No subscribers found for topic `%s`', input.topic_name)
+            self.logger.warn('No subscribers found for topic `%s` (cid:%s, re-run:%s)', topic.name, self.cid, is_re_run)
 
         # Local aliases
         cluster_id = self.server.cluster_id
@@ -255,21 +278,22 @@ class Publish(AdminService):
         if has_gd_msg_list:
 
             # Operate under a global lock for that topic to rule out any interference from other publishers
-            with self.lock('zato.pubsub.publish.%s' % input.topic_name):
+            with self.lock('zato.pubsub.publish.%s' % topic.name):
 
                 with closing(self.odb.session()) as session:
 
-                    # Abort if max depth is already reached but check first if we should check the depth in this iteration.
-                    topic.incr_gd_depth_check()
+                    # Increase depth check counter..
+                    topic.incr_depth_check()
 
-                    if topic.needs_gd_depth_check():
+                    # .. test first if we should check the depth in this iteration.
+                    if topic.needs_depth_check():
 
-                        # Get current depth of this topic
+                        # Get current depth of this topic ..
                         current_depth = get_topic_depth(session, cluster_id, topic.id)
 
+                        # .. and abort if max depth is already reached.
                         if current_depth + len_gd_msg_list > topic.max_depth_gd:
-                            raise ServiceUnavailable(self.cid,
-                                'Publication rejected - would have exceeded max depth for `{}`'.format(topic.name))
+                            self.reject_publication(topic.name, True)
                         else:
 
                             # This only updates the local variable
@@ -296,9 +320,9 @@ class Publish(AdminService):
                   ', GD data:`%s`, non-GD data:`%s`'
 
             logger_audit.info(msg, self.cid, topic.name, self.pubsub.endpoints[endpoint_id].name,
-                input.get('ext_client_id') or'n/a', pattern_matched, current_depth, gd_msg_list, non_gd_msg_list)
+                ext_client_id, pattern_matched, current_depth, gd_msg_list, non_gd_msg_list)
 
-        # Also in background, notify pub/sub task runners that there are new messages for them
+        # Also in background, notify pub/sub task runners that there are new messages for them ..
         if subscriptions_by_topic:
 
             # Notify delivery tasks only if there are some messages available - it is possible
@@ -307,6 +331,26 @@ class Publish(AdminService):
             if non_gd_msg_list or has_gd_msg_list:
                 self._notify_pubsub_tasks(
                     topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, has_gd_msg_list)
+
+        # .. however, if there are no subscriptions at the moment while there are non-GD messages,
+        # we need to re-run again and publish all such messages as GD ones. This is because if there
+        # are no subscriptions, we do not know to what delivery server they should go, so it's safest
+        # to store them in SQL.
+        else:
+            if not is_re_run:
+                if non_gd_msg_list:
+
+                    # Turn all non-GD messages into GD ones.
+                    for msg in non_gd_msg_list:
+                        msg['has_gd'] = True
+
+                        data_prefix, data_prefix_short = self._get_data_prefixes(msg['data'])
+                        msg['data_prefix'] = data_prefix
+                        msg['data_prefix_short'] = data_prefix_short
+
+                    # Note how now non-GD messages are sent as GD ones and the list of non-GD messages is empty.
+                    self._publish(pubsub, topic, endpoint_id, msg_id_list, non_gd_msg_list, [], pattern_matched,
+                        ext_client_id, True, now)
 
         # Update metadata in background
         spawn(self._update_pub_metadata, cluster_id, topic.id, endpoint_id, now, gd_msg_list, non_gd_msg_list, pattern_matched)
@@ -319,6 +363,14 @@ class Publish(AdminService):
             self.response.payload.msg_id = msg_id_list[0]
         else:
             self.response.payload.msg_id_list = msg_id_list
+
+# ################################################################################################################################
+
+    def reject_publication(self, topic_name, is_gd):
+        """ Raises an exception to indicate that a publication was rejected.
+        """
+        raise ServiceUnavailable(self.cid,
+            'Publication rejected - would exceed {} max depth for `{}`'.format('GD' if is_gd else 'non-GD', topic_name))
 
 # ################################################################################################################################
 

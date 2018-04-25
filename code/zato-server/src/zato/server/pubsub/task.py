@@ -159,13 +159,13 @@ class DeliveryTask(object):
             # This is the call that actually delivers messages
             self.deliver_pubsub_msg_cb(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
 
-        except Exception, e:
+        except Exception as e:
             # Do not attempt to deliver any other message, only increment delivery_count for each message
             # from that batch and return. Our parent will sleep for a small amount of time and then re-run us,
             # thanks to which the next time we run we will again iterate over all the messages
             # currently queued up, including the ones that we were not able to deliver in current iteration.
 
-            exc = format_exc(e)
+            exc = format_exc()
             logger.warn('Could not deliver pub/sub messages, e:`%s`', exc)
             logger_zato.warn('Could not deliver pub/sub messages, e:`%s`', exc)
 
@@ -289,6 +289,22 @@ class Message(PubSubMessage):
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None
 
+# ################################################################################################################################
+
+    def __cmp__(self, other, max_pri=9):
+        return cmp(
+            (max_pri - self.priority, self.ext_pub_time, self.pub_time),
+            (max_pri - other.priority, other.ext_pub_time, other.pub_time)
+        )
+
+# ################################################################################################################################
+
+    def __repr__(self):
+        return '<Msg sk:{} id:{} ext:{} exp:{} gd:{}>'.format(
+            self.sub_key, self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time), self.has_gd)
+
+# ################################################################################################################################
+
     def add_iso_times(self):
         """ Sets additional attributes for datetime in ISO-8601.
         """
@@ -299,16 +315,6 @@ class Message(PubSubMessage):
 
         if self.expiration_time:
             self.expiration_time_iso = datetime_from_ms(self.expiration_time)
-
-    def __cmp__(self, other, max_pri=9):
-        return cmp(
-            (max_pri - self.priority, self.ext_pub_time, self.pub_time),
-            (max_pri - other.priority, other.ext_pub_time, other.pub_time)
-        )
-
-    def __repr__(self):
-        return '<Msg sk:{} id:{} ext:{} exp:{} gd:{}>'.format(
-            self.sub_key, self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time), self.has_gd)
 
 # ################################################################################################################################
 
@@ -367,10 +373,13 @@ class NonGDMessage(Message):
 class PubSubTool(object):
     """ A utility object for pub/sub-related tasks.
     """
-    def __init__(self, pubsub, parent, endpoint_type):
+    def __init__(self, pubsub, parent, endpoint_type, deliver_pubsub_msg=None):
         self.pubsub = pubsub # type: PubSub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
         self.endpoint_type = endpoint_type
+
+        # WSX connections will have their own callback but other connections use the default one
+        self.deliver_pubsub_msg = deliver_pubsub_msg or self.pubsub.deliver_pubsub_msg
 
         # A broad lock for generic pub/sub matters
         self.lock = RLock()
@@ -424,8 +433,8 @@ class PubSubTool(object):
 
         self.delivery_lists[sub_key] = delivery_list
         self.delivery_tasks[sub_key] = DeliveryTask(
-            self.pubsub, sub_key, delivery_lock, delivery_list, self.pubsub.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered,
-            self.pubsub.get_subscription_by_sub_key(sub_key).config)
+            self.pubsub, sub_key, delivery_lock, delivery_list, self.deliver_pubsub_msg,
+            self.confirm_pubsub_msg_delivered, self.pubsub.get_subscription_by_sub_key(sub_key).config)
 
         self.sub_key_locks[sub_key] = delivery_lock
 

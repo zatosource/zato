@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from copy import deepcopy
 from datetime import datetime
 from traceback import format_exc
 from uuid import uuid4

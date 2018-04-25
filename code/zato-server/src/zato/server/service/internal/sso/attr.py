@@ -67,7 +67,7 @@ class _AttrBase(object):
             entity = self.sso.user.get_user_by_id(cid, ctx.input.user_id, ctx.input.current_ust, ctx.input.current_app,
                 ctx.remote_addr)
         elif self._api_entity == 'session':
-            entity = session = self.sso.user.session.get(self.cid, ctx.input.target_ust, ctx.input.current_ust,
+            entity = self.sso.user.session.get(self.cid, ctx.input.target_ust, ctx.input.current_ust,
                 ctx.input.current_app, ctx.input.remote_addr)
         else:
             logger.warn('Could not establish API entity to use out of `%s`', self._api_entity)

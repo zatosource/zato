@@ -40,7 +40,7 @@ from zato.common.util import new_cid
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientInvokeRequest, ClientMessage, copy_forbidden, \
      error_response, ErrorResponse, Forbidden, OKResponse
-from zato.server.pubsub.task import PubSubTool
+from zato.server.pubsub.task import Message as TaskMessage, PubSubTool
 from zato.vault.client import VAULT
 
 # ################################################################################################################################
@@ -95,7 +95,8 @@ class WebSocket(_WebSocket):
         self.ping_last_response_time = None
 
         # For publish/subscribe over WSX
-        self.pubsub_tool = PubSubTool(config.parallel_server.worker_store.pubsub, self, PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
+        self.pubsub_tool = PubSubTool(config.parallel_server.worker_store.pubsub, self, PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
+            self.deliver_pubsub_msg)
 
         # Active WebSocket client ID (WebSocketClient model, web_socket_client.id in SQL)
         self.sql_ws_client_id = None
@@ -156,8 +157,22 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def deliver_pubsub_msg(self, msg):
-        self.invoke_client(msg.pub_msg_id, msg.to_dict())
+    def deliver_pubsub_msg(self, sub_key, msg):
+
+        # A list of messages is given on input so we need to serialize each of them individually
+        if isinstance(msg, list):
+            len_msg = len(msg)
+            data = [elem.to_external_dict() for elem in msg]
+
+        # A single message was given on input
+        else:
+            len_msg = 1
+            data = msg.to_external_dict()
+
+        cid = new_cid()
+        logger.info('Delivering %d pub/sub message{} to sub_key `%s`'.format('s' if len_msg > 1 else ''), len_msg, sub_key)
+
+        self.invoke_client(cid, data)
 
 # ################################################################################################################################
 
@@ -354,9 +369,9 @@ class WebSocket(_WebSocket):
 
             if self.pubsub_tool.sub_keys:
 
-                # Deletes pub/sub state from RAM in all workers about the client that is disconnecting
+                # Deletes across all workers the in-RAM pub/sub state about the client that is disconnecting
                 self.invoke_service(new_cid(), 'zato.channel.web-socket.client.unregister-ws-sub-key', {
-                    'sub_key_list': self.pubsub_tool.sub_keys,
+                    'sub_key_list': list(self.pubsub_tool.sub_keys),
                 })
 
                 # Clears out our own delivery tasks
@@ -368,8 +383,8 @@ class WebSocket(_WebSocket):
         if request.is_auth:
             response = self.create_session(cid, request)
             if response:
-                self.send(response)
                 self.register_auth_client()
+                self.send(response)
                 logger.info(
                     'Client %s (%s %s) logged in successfully to %s (%s)', self._peer_address, self._peer_fqdn,
                     self.pub_client_id, self._local_address, self.config.name)
@@ -391,7 +406,7 @@ class WebSocket(_WebSocket):
             'environ': {
                 'web_socket': self,
                 'sql_ws_client_id': self.sql_ws_client_id,
-                'ws_channel_config': self.config,
+            'ws_channel_config': self.config,
                 'ws_token': self.token,
                 'ext_token': self.ext_token,
                 'pub_client_id': self.pub_client_id,
