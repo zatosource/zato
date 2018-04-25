@@ -82,6 +82,8 @@ class PubSubMessage(object):
             if key != 'topic' and key not in skip:
                 out[key] = getattr(self, key)
 
+        out['size'] = len(self.data) if self.data else None
+
         return out
 
     def to_external_dict(self, _skip=_skip_to_external):
