@@ -107,9 +107,7 @@ class DeliverMessage(AdminService):
 # ################################################################################################################################
 
     def _deliver_wsx(self, msg, subscription, _ignored):
-        print(111, msg)
-        print(222, subscription)
-        z
+        raise NotImplementedError('WSX deliveries should be handled by each socket\'s deliver_pubsub_msg')
 
 # ################################################################################################################################
 
