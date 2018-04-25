@@ -40,7 +40,7 @@ from zato.common.util import new_cid
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientInvokeRequest, ClientMessage, copy_forbidden, \
      error_response, ErrorResponse, Forbidden, OKResponse
-from zato.server.pubsub.task import PubSubTool
+from zato.server.pubsub.task import Message as TaskMessage, PubSubTool
 from zato.vault.client import VAULT
 
 # ################################################################################################################################
@@ -157,14 +157,22 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def deliver_pubsub_msg(self, sub_key, data):
-        #self.invoke_client(msg.pub_msg_id, msg.to_dict())
-        print(333, sub_key)
-        print(444, data)
+    def deliver_pubsub_msg(self, sub_key, msg):
 
-        msg = data[0]
+        # A list of messages is given on input so we need to serialize each of them individually
+        if isinstance(msg, list):
+            len_msg = len(msg)
+            data = [elem.to_external_dict() for elem in msg]
 
-        self.invoke_client(msg.pub_msg_id, msg.data)
+        # A single message was given on input
+        else:
+            len_msg = 1
+            data = msg.to_external_dict()
+
+        cid = new_cid()
+        logger.info('Delivering %d pub/sub message{} to sub_key `%s`'.format('s' if len_msg > 1 else ''), len_msg, sub_key)
+
+        self.invoke_client(cid, data)
 
 # ################################################################################################################################
 

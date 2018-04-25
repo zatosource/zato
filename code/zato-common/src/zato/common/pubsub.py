@@ -13,7 +13,8 @@ from zato.common.util import new_cid
 
 # ################################################################################################################################
 
-_skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pattern_matched', 'published_by_id')
+_skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pattern_matched', 'published_by_id', 'data_prefix',
+    'data_prefix_short', 'pub_time', 'expiration_time', 'ext_pub_time', 'pub_correl_id', 'pub_msg_id')
 
 # ################################################################################################################################
 
@@ -87,7 +88,11 @@ class PubSubMessage(object):
         """ Returns a dict representation of self ready to be delivered to external systems,
         i.e. without internal attributes on output.
         """
-        return self.to_dict(_skip)
+        out = self.to_dict(_skip)
+        out['msg_id'] = self.pub_msg_id
+        out['correl_id'] = self.pub_correl_id
+
+        return out
 
 # ################################################################################################################################
 
