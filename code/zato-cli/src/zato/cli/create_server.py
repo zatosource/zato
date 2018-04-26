@@ -208,6 +208,9 @@ invoke_matcher=False
 sms=True
 sso=False
 
+[pubsub]
+wsx_gateway_service_allowed=pubsub.subscription.create-wsx-subscription, pubsub.subscription.get-list, pubsub.subscription.unsubscribe
+
 [live_msg_browser]
 include_internal=False
 service=True
