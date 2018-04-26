@@ -478,3 +478,70 @@ class DeleteAll(AdminService):
                 })
 
 # ################################################################################################################################
+
+'''
+
+# -*- coding: utf-8 -*-
+
+from zato.common.exception import BadRequest, Forbidden
+from zato.server.service import Int, List, Service
+
+
+class MyService(Service):
+    name = 'pubsub.subscription.create-wsx-subscription'
+
+    class SimpleIO:
+        input_optional = ('topic_name', List('topic_name_list'))
+        output_optional = ('sub_key', Int('queue_depth'), 'sub_data')
+        response_elem = None
+        skip_empty_keys = True
+
+    def handle(self):
+
+        # Local aliases
+        topic_name = self.request.input.topic_name
+        topic_name_list = self.request.input.topic_name_list
+        environ = self.wsgi_environ['zato.request_ctx.async_msg']['environ']
+        ws_channel_id = environ['ws_channel_config'].id
+
+        # Make sure the WSX channel actually points to an endpoint. If it does not,
+        # we cannot proceed, i.e. there is no such API client.
+
+        try:
+            self.pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
+        except KeyError:
+            self.logger.warn('There is no endpoint for WSX chan ID `%s`', ws_channel_id)
+            raise Forbidden(self.cid)
+
+        # Either an exact topic name or a list thereof is needed ..
+        if not (topic_name or topic_name_list):
+            raise BadRequest(self.cid, 'Either or topic_name or topic_name_list is required')
+
+        # .. but we cannot accept both of them.
+        elif topic_name and topic_name_list:
+            raise BadRequest(self.cid, 'Cannot provide both topic_name and topic_name_list on input')
+
+        subscribe_to = [topic_name] if topic_name else topic_name_list
+        responses = {}
+
+        for item in subscribe_to:
+            response = self.invoke('zato.pubsub.subscription.subscribe-websockets', {
+                'topic_name': item,
+                'ws_channel_id': ws_channel_id,
+                'ext_client_id': environ['ext_client_id'],
+                'ws_pub_client_id': environ['pub_client_id'],
+                'ws_channel_name': environ['ws_channel_config']['name'],
+                'sql_ws_client_id': environ['sql_ws_client_id'],
+                'web_socket': environ['web_socket'],
+            })['response']
+
+            responses[topic_name] = response
+
+            print(333, response)
+
+        # There was only one topic on input ..
+        if topic_name:
+            self.response.payload = responses[topic_name]
+
+        # .. or a list of topics on input.
+'''
