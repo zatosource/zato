@@ -28,7 +28,7 @@ from zato.common.util.time_ import utcnow_as_ms
 from zato.common.util import get_sa_model_columns
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic
-from zato.server.service import Int
+from zato.server.service import Int, List
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
 
@@ -479,20 +479,11 @@ class DeleteAll(AdminService):
 
 # ################################################################################################################################
 
-'''
-
-# -*- coding: utf-8 -*-
-
-from zato.common.exception import BadRequest, Forbidden
-from zato.server.service import Int, List, Service
-
-
-class MyService(Service):
-    name = 'pubsub.subscription.create-wsx-subscription'
+class CreateWSXSubscription(AdminService):
 
     class SimpleIO:
         input_optional = ('topic_name', List('topic_name_list'))
-        output_optional = ('sub_key', Int('queue_depth'), 'sub_data')
+        output_optional = ('sub_key', 'current_depth', 'sub_data')
         response_elem = None
         skip_empty_keys = True
 
@@ -500,7 +491,7 @@ class MyService(Service):
 
         # Local aliases
         topic_name = self.request.input.topic_name
-        topic_name_list = self.request.input.topic_name_list
+        topic_name_list = set(self.request.input.topic_name_list)
         environ = self.wsgi_environ['zato.request_ctx.async_msg']['environ']
         ws_channel_id = environ['ws_channel_config'].id
 
@@ -535,13 +526,22 @@ class MyService(Service):
                 'web_socket': environ['web_socket'],
             })['response']
 
-            responses[topic_name] = response
-
-            print(333, response)
+            responses[item] = response
 
         # There was only one topic on input ..
         if topic_name:
             self.response.payload = responses[topic_name]
 
-        # .. or a list of topics on input.
-'''
+        # .. or a list of topics on was given on input.
+        else:
+            out = []
+            for key, value in responses.items():
+                out.append({
+                    'topic_name': key,
+                    'sub_key': value['sub_key'],
+                    'queue_depth': value['queue_depth'],
+                })
+
+            self.response.payload.sub_data = out
+
+# ################################################################################################################################
