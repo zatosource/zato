@@ -164,14 +164,14 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_su
 
     # Get the number of messages moved to let the subscriber know
     # how many there are available initially.
-    moved_q = session.query(PubSubEndpointEnqueuedMessage.id).\
+    available_q = session.query(PubSubEndpointEnqueuedMessage.id).\
         filter(PubSubEndpointEnqueuedMessage.subscription_id==ps_sub_id).\
         filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id)
 
-    total_moved_q = moved_q.statement.with_only_columns([func.count()]).order_by(None)
-    total_moved = moved_q.session.execute(total_moved_q).scalar()
+    total_available_q = available_q.statement.with_only_columns([func.count()]).order_by(None)
+    total_available = available_q.session.execute(total_available_q).scalar()
 
-    return total_moved
+    return total_available
 
 # ################################################################################################################################
 

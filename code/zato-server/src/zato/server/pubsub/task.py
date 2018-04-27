@@ -499,6 +499,7 @@ class PubSubTool(object):
             if not non_gd_msg_list:
                 raise ValueError('No messages received ({}) for cid:`{}`, has_gd:`{}` and sub_key_list:`{}`'.format(
                     non_gd_msg_list, cid, has_gd, sub_key_list))
+
         # Iterate over all input sub keys and carry out all operations while holding a lock for each sub_key
         for sub_key in sub_key_list:
             with self.sub_key_locks[sub_key]:

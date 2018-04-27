@@ -257,7 +257,7 @@ class SubscribeServiceImpl(_Subscribe):
     class SimpleIO(AdminSIO):
         input_required = ('topic_name', 'is_internal')
         input_optional = common_sub_data
-        output_optional = ('sub_key', Int('queue_depth'))
+        output_optional = ('sub_key', 'queue_depth')
         default_value = None
 
 # ################################################################################################################################
@@ -308,6 +308,8 @@ class SubscribeServiceImpl(_Subscribe):
         # Ok, we can actually subscribe the caller now
         self._handle_subscription(ctx)
 
+# ################################################################################################################################
+
     def _subscribe_impl(self, ctx):
         """ Invoked by subclasses to subscribe callers using input pub/sub config context.
         """
@@ -338,6 +340,9 @@ class SubscribeServiceImpl(_Subscribe):
                 # If we subscribe a WSX client, we need to create its accompanying SQL models
                 if ctx.ws_channel_id:
 
+                    # This is WebSockets client
+                    has_wsx = True
+
                     # This object persists across multiple WSX connections
                     add_wsx_subscription(
                         session, ctx.cluster_id, ctx.is_internal, ctx.sub_key, ctx.ext_client_id, ctx.ws_channel_id)
@@ -351,6 +356,10 @@ class SubscribeServiceImpl(_Subscribe):
                     # Let the WebSocket connection object know that it should handle this particular sub_key
                     ctx.web_socket.pubsub_tool.add_sub_key(ctx.sub_key)
 
+                # Not a WebSockets client
+                else:
+                    has_wsx = False
+
                 # Flush the session because we need the subscription's ID below in INSERT from SELECT
                 session.flush()
 
@@ -360,16 +369,27 @@ class SubscribeServiceImpl(_Subscribe):
                 # Commit all changes
                 session.commit()
 
+                # Let the pub/sub task know it can fetch any messages possibly enqueued for that subscriber,
+                # note that since this is a new subscription, it is certain that only GD messages may be available,
+                # never non-GD ones.
+                ctx.web_socket.pubsub_tool.fetch_gd_messages_by_sub_key(ctx.sub_key)
+
                 # Produce response
                 self.response.payload.sub_key = ctx.sub_key
-                self.response.payload.queue_depth = get_queue_depth_by_sub_key(session, ctx.cluster_id, ctx.sub_key, now)
+
+                if has_wsx:
+                    gd_depth, non_gd_depth = ctx.web_socket.pubsub_tool.get_queue_depth(ctx.sub_key)
+                    self.response.payload.queue_depth = gd_depth + non_gd_depth
+                else:
+                    # self.response.payload.queue_depth = get_queue_depth_by_sub_key(session, ctx.cluster_id, ctx.sub_key, now)
+                    # This should be read from that client's delivery task instead of SQL so as to include
+                    # non-GD messages too.
+                    raise NotImplementedError()
 
                 # Notify workers of a new subscription
                 sub_config.action = BROKER_MSG_PUBSUB.SUBSCRIPTION_CREATE.value
                 sub_config.add_subscription = not ctx.ws_channel_id # WSX clients already had their subscriptions created above
                 self.broker_client.publish(sub_config)
-
-                ctx.web_socket.pubsub_tool.add_sub_key(ctx.sub_key)
 
 # ################################################################################################################################
 
@@ -539,7 +559,7 @@ class CreateWSXSubscription(AdminService):
                 out.append({
                     'topic_name': key,
                     'sub_key': value['sub_key'],
-                    'queue_depth': value['queue_depth'],
+                    'current_depth': value['queue_depth'],
                 })
 
             self.response.payload.sub_data = out
