@@ -338,6 +338,7 @@ class GDMessage(Message):
         self.expiration = msg.expiration
         self.expiration_time = msg.expiration_time
         self.has_gd = msg.has_gd
+        self.topic_name = msg.topic_name
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
@@ -364,6 +365,7 @@ class NonGDMessage(Message):
         self.expiration = msg['expiration']
         self.expiration_time = msg['expiration_time']
         self.has_gd = msg['has_gd']
+        self.topic_name = msg['topic_name']
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
