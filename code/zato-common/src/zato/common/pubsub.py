@@ -37,11 +37,11 @@ class PubSubMessage(object):
     """ Base container class for pub/sub message wrappers.
     """
     # We are not using __slots__ because they can't be inherited by subclasses
-    # and this class as well as subclasses will be rewritten in Cython anyway.
+    # and this class, as well as its subclasses, will be rewritten in Cython anyway.
     _attrs = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id', 'position_in_group',
         'pub_time', 'ext_pub_time', 'data', 'data_prefix', 'data_prefix_short', 'mime_type', 'priority', 'expiration',
         'expiration_time', 'has_gd', 'delivery_status', 'pattern_matched', 'size', 'published_by_id', 'topic_id',
-        'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso')
+        'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso')
 
     def __init__(self):
         self.topic = None
@@ -67,6 +67,7 @@ class PubSubMessage(object):
         self.size = None
         self.published_by_id = None
         self.topic_id = None
+        self.topic_name = None
         self.cluster_id = None
 
         self.pub_time_iso = None

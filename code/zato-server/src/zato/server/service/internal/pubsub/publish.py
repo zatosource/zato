@@ -112,6 +112,7 @@ class Publish(AdminService):
         ps_msg.expiration_time = expiration_time
         ps_msg.published_by_id = endpoint_id
         ps_msg.topic_id = topic.id
+        ps_msg.topic_name = topic.name
         ps_msg.cluster_id = self.server.cluster_id
         ps_msg.has_gd = has_gd
         ps_msg.ext_client_id = ext_client_id

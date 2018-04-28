@@ -19,7 +19,7 @@ from bunch import Bunch
 # Zato
 from zato.common import PUBSUB
 from zato.common.odb.model import ChannelWebSocket, PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, \
-     PubSubSubscription, Server, WebSocketClient, WebSocketClientPubSubKeys
+     PubSubSubscription, PubSubTopic, Server, WebSocketClient, WebSocketClientPubSubKeys
 
 # ################################################################################################################################
 
@@ -48,7 +48,9 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now,
         PubSubMessage.expiration,
         PubSubMessage.expiration_time,
         PubSubMessage.has_gd,
+        PubSubTopic.name.label('topic_name'),
     ).\
+    filter(PubSubTopic.id==PubSubMessage.topic_id).\
     filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
     filter(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
     filter(PubSubEndpointEnqueuedMessage.delivery_status==_initialized).\
