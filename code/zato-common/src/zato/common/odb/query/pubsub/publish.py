@@ -86,7 +86,7 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
                 'topic_id': topic_id,
                 'subscription_id': sub.id,
                 'cluster_id': cluster_id,
-                'has_gd': False,
+                'has_gd': True,
                 'is_in_staging': False,
                 'delivery_status': _initialized,
             })
