@@ -234,28 +234,31 @@ def publish_action(req):
 
     try:
 
-        msg_id = req.POST.get('msg_id') or new_msg_id()
-        gd = req.POST['gd']
+        for x in range(4):
+            msg_id = req.POST.get('msg_id') or new_msg_id() + '-' + str(x)
+            gd = req.POST['gd']
 
-        if gd == PUBSUB.GD_CHOICE.DEFAULT_PER_TOPIC.id:
-            has_gd = None
-        else:
-            has_gd = asbool(gd)
+            if gd == PUBSUB.GD_CHOICE.DEFAULT_PER_TOPIC.id:
+                has_gd = None
+            else:
+                has_gd = asbool(gd)
 
-        service_input = {
-            'msg_id': msg_id,
-            'has_gd': has_gd,
-            'skip_pattern_matching': True,
-            'endpoint_id': req.POST['publisher_id'],
-        }
+            service_input = {
+                'msg_id': msg_id,
+                'has_gd': has_gd,
+                'skip_pattern_matching': True,
+                'endpoint_id': req.POST['publisher_id'],
+            }
 
-        for name in('cluster_id', 'topic_name', 'data'):
-            service_input[name] = req.POST[name]
+            for name in('cluster_id', 'topic_name', 'data'):
+                service_input[name] = req.POST[name]
 
-        for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group', 'expiration'):
-            service_input[name] = req.POST.get(name, None) or None # Always use None instead of ''
+            service_input['data'] = str(x)
 
-        req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
+            for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group', 'expiration'):
+                service_input[name] = req.POST.get(name, None) or None # Always use None instead of ''
+
+            req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
 
     except Exception, e:
         message = e.message
