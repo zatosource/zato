@@ -26,7 +26,7 @@ from sortedcontainers import SortedList as _SortedList
 from zato.common import PUBSUB
 from zato.common.pubsub import PubSubMessage
 from zato.common.util import spawn_greenlet
-from zato.common.util.time_ import datetime_from_ms
+from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub import PubSub
 
 # For pyflakes
@@ -503,12 +503,21 @@ class PubSubTool(object):
                     non_gd_msg_list, cid, has_gd, sub_key_list))
 
         # Iterate over all input sub keys and carry out all operations while holding a lock for each sub_key
+
+        logger.info('Handle new messages, cid:%s, gd:%s, sub_keys:%s, len_non_gd:%d',
+            cid, int(has_gd), sub_key_list, len(non_gd_msg_list))
+
         for sub_key in sub_key_list:
             with self.sub_key_locks[sub_key]:
 
+                now = utcnow_as_ms()
+
                 # Fetch all GD messages, if there are any at all
                 if has_gd:
+                    logger.info('Using TS %s', str(now))
+
                     self._fetch_gd_messages_by_sub_key(sub_key)
+                    self.last_sql_run[sub_key] = now
 
                 # Accept all input non-GD messages
                 if non_gd_msg_list:
@@ -520,8 +529,19 @@ class PubSubTool(object):
         """ Low-level implementation of fetch_gd_messages_by_sub_key,
         must be called with a lock for input sub_key.
         """
-        for msg in self.pubsub.get_sql_messages_by_sub_key(sub_key, self.last_sql_run[sub_key], session):
-            self.delivery_lists[sub_key].add(GDMessage(sub_key, msg))
+        count = 0
+
+
+        for idx, msg in enumerate(self.pubsub.get_sql_messages_by_sub_key(sub_key, self.last_sql_run[sub_key], session)):
+            #task =
+            #print(sub_key, idx+1, 111, GDMessage(sub_key, msg).to_external_dict())
+            #print()
+            #self.delivery_lists[sub_key].add(GDMessage(sub_key, msg))
+            count += 1
+
+            logger.info('Pushing  %s', GDMessage(sub_key, msg).to_external_dict())
+
+        logger.info('Pushing %d GD message(s) to sub_key task:%s', count, sub_key)
 
 # ################################################################################################################################
 

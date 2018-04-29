@@ -20,6 +20,7 @@ from bunch import Bunch
 from zato.common import PUBSUB
 from zato.common.odb.model import ChannelWebSocket, PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, \
      PubSubSubscription, PubSubTopic, Server, WebSocketClient, WebSocketClientPubSubKeys
+from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 
@@ -58,9 +59,18 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now,
     filter(PubSubMessage.expiration_time > now).\
     filter(PubSubMessage.cluster_id==cluster_id)
 
-    if last_sql_run:
-        query = query.\
-            filter(PubSubMessage.pub_time > last_sql_run)
+    # If there is the last SQL run time given, it means that we have to fetch all messages
+    # enqueued for that subscriber since that time ..
+    #if last_sql_run:
+    #    query = query.\
+    #        filter(PubSubEndpointEnqueuedMessage.creation_time > last_sql_run)
+
+    # .. but if there is no time given on input, it works the other way around. We fetch
+    # all messages enqueued for the subscriber since the beginning of time because if the time
+    # is not given it means that the subscriber itself has just started for the very first time.
+    #if not last_sql_run:
+    #    query = query.\
+    #        filter(PubSubEndpointEnqueuedMessage.creation_time <= utcnow_as_ms())
 
     query = query.\
         order_by(PubSubMessage.priority.desc()).\
