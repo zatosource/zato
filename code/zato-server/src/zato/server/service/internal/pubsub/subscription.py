@@ -369,22 +369,25 @@ class SubscribeServiceImpl(_Subscribe):
                 # Commit all changes
                 session.commit()
 
-                # Let the pub/sub task know it can fetch any messages possibly enqueued for that subscriber,
-                # note that since this is a new subscription, it is certain that only GD messages may be available,
-                # never non-GD ones.
-                ctx.web_socket.pubsub_tool.fetch_gd_messages_by_sub_key(ctx.sub_key)
-
                 # Produce response
                 self.response.payload.sub_key = ctx.sub_key
 
                 if has_wsx:
+
+                    # Let the pub/sub task know it can fetch any messages possibly enqueued for that subscriber,
+                    # note that since this is a new subscription, it is certain that only GD messages may be available,
+                    # never non-GD ones.
+                    ctx.web_socket.pubsub_tool.fetch_gd_messages_by_sub_key(ctx.sub_key)
+
                     gd_depth, non_gd_depth = ctx.web_socket.pubsub_tool.get_queue_depth(ctx.sub_key)
                     self.response.payload.queue_depth = gd_depth + non_gd_depth
                 else:
-                    # self.response.payload.queue_depth = get_queue_depth_by_sub_key(session, ctx.cluster_id, ctx.sub_key, now)
+
+                    # TODO:
                     # This should be read from that client's delivery task instead of SQL so as to include
                     # non-GD messages too.
-                    raise NotImplementedError()
+
+                    self.response.payload.queue_depth = get_queue_depth_by_sub_key(session, ctx.cluster_id, ctx.sub_key, now)
 
                 # Notify workers of a new subscription
                 sub_config.action = BROKER_MSG_PUBSUB.SUBSCRIPTION_CREATE.value
