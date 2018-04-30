@@ -77,7 +77,9 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now,
         order_by(PubSubMessage.ext_pub_time).\
         order_by(PubSubMessage.pub_time)
 
-    return query.all()
+    out = query.all()
+
+    return out
 
 # ################################################################################################################################
 

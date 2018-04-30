@@ -106,9 +106,7 @@ def add_subscription(session, cluster_id, ctx):
 
     # WebSockets
     ps_sub.ws_channel_id = ctx.ws_channel_id
-    ps_sub.ws_channel_name = ctx.ws_channel_name
-    ps_sub.ws_pub_client_id = ctx.ws_pub_client_id
-    ps_sub.sql_ws_client_id = ctx.sql_ws_client_id
+    ps_sub.ws_sub = ctx.ws_sub
 
     session.add(ps_sub)
 

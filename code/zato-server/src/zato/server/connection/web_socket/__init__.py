@@ -406,7 +406,7 @@ class WebSocket(_WebSocket):
             'environ': {
                 'web_socket': self,
                 'sql_ws_client_id': self.sql_ws_client_id,
-            'ws_channel_config': self.config,
+                'ws_channel_config': self.config,
                 'ws_token': self.token,
                 'ext_token': self.ext_token,
                 'pub_client_id': self.pub_client_id,
