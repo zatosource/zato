@@ -531,17 +531,11 @@ class PubSubTool(object):
         """
         count = 0
 
-
         for idx, msg in enumerate(self.pubsub.get_sql_messages_by_sub_key(sub_key, self.last_sql_run[sub_key], session)):
-            #task =
-            #print(sub_key, idx+1, 111, GDMessage(sub_key, msg).to_external_dict())
-            #print()
-            #self.delivery_lists[sub_key].add(GDMessage(sub_key, msg))
+            self.delivery_lists[sub_key].add(GDMessage(sub_key, msg))
             count += 1
 
-            logger.info('Pushing  %s', GDMessage(sub_key, msg).to_external_dict())
-
-        logger.info('Pushing %d GD message(s) to sub_key task:%s', count, sub_key)
+        logger.info('Pushing %d GD message{}to sub_key task:%s'.format(' ' if count==1 else 's '), count, sub_key)
 
 # ################################################################################################################################
 
