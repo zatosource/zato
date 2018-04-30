@@ -120,8 +120,9 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_su
     """ Move all unexpired messages from topic to a given subscriber's queue and returns the number of messages moved.
     """
     enqueued_id_subquery = session.query(
-        PubSubEndpointEnqueuedMessage.pub_msg_id).\
-        filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id)
+        PubSubEndpointEnqueuedMessage.pub_msg_id
+        ).\
+        filter(PubSubEndpointEnqueuedMessage.subscription_id==ps_sub_id)
 
     # SELECT statement used by the INSERT below finds all messages for that topic
     # that haven't expired yet.
