@@ -73,6 +73,7 @@ class SubCtx(object):
         self.out_http_method = None
         self.creation_time = None
         self.sub_key = None
+        self.ws_sub = None
 
     def set_endpoint_id(self):
         if self.endpoint_id:
@@ -323,10 +324,32 @@ class SubscribeServiceImpl(_Subscribe):
                         raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
                             self.pubsub.get_endpoint_by_id(ctx.endpoint_id).name, ctx.topic.name))
 
+                # Is it a WebSockets client?
+                has_wsx = bool(ctx.ws_channel_id)
+
+                # Will be non-None if it is a WSX client later on below
+                ws_sub = None
+
                 ctx.creation_time = now = utcnow_as_ms()
                 ctx.sub_key = new_sub_key()
 
+                # If we subscribe a WSX client, we need to create its accompanying SQL models
+                if has_wsx:
+
+                    # This object persists across multiple WSX connections
+                    ws_sub = add_wsx_subscription(
+                        session, ctx.cluster_id, ctx.is_internal, ctx.sub_key, ctx.ext_client_id, ctx.ws_channel_id)
+
+                    # This object will be transient - dropped each time a WSX client disconnects
+                    self.pubsub.add_ws_client_pubsub_keys(session, ctx.sql_ws_client_id, ctx.sub_key, ctx.ws_channel_name,
+                        ctx.ws_pub_client_id)
+
+                # If we had a WSX subscription, flush the session because the ws_sub.id is needed
+                # to create the higher-level subscription object
+                session.flush()
+
                 # Create a new subscription object
+                ctx.ws_sub = ws_sub
                 ps_sub = add_subscription(session, ctx.cluster_id, ctx)
 
                 # Common configuration for WSX and broker messages
@@ -337,30 +360,15 @@ class SubscribeServiceImpl(_Subscribe):
                 for name in sub_broker_attrs:
                     sub_config[name] = getattr(ps_sub, name, None)
 
-                # If we subscribe a WSX client, we need to create its accompanying SQL models
-                if ctx.ws_channel_id:
+                # Update current server's pub/sub config
+                self.pubsub.add_subscription(sub_config)
 
-                    # This is WebSockets client
-                    has_wsx = True
-
-                    # This object persists across multiple WSX connections
-                    add_wsx_subscription(
-                        session, ctx.cluster_id, ctx.is_internal, ctx.sub_key, ctx.ext_client_id, ctx.ws_channel_id)
-
-                    # This object will be transient - dropped each time a WSX client disconnects
-                    self.pubsub.add_ws_client_pubsub_keys(session, ctx.sql_ws_client_id, ctx.sub_key, ctx.ws_channel_name,
-                        ctx.ws_pub_client_id)
-
-                    self.pubsub.add_subscription(sub_config)
+                if has_wsx:
 
                     # Let the WebSocket connection object know that it should handle this particular sub_key
                     ctx.web_socket.pubsub_tool.add_sub_key(ctx.sub_key)
 
-                # Not a WebSockets client
-                else:
-                    has_wsx = False
-
-                # Flush the session because we need the subscription's ID below in INSERT from SELECT
+                # Flush the session again because we need the subscription's ID below in INSERT from SELECT
                 session.flush()
 
                 # Move all available messages to that subscriber's queue
