@@ -13,7 +13,6 @@ from bisect import bisect_left
 from copy import deepcopy
 from logging import getLogger
 from socket import error as SocketError
-from time import time
 from traceback import format_exc
 
 # gevent
@@ -520,7 +519,7 @@ class PubSubTool(object):
                 if has_gd:
 
                     self._fetch_gd_messages_by_sub_key(sub_key)
-                    now = time() * 1000
+                    now = utcnow_as_ms()
                     self.last_sql_run[sub_key] = now
 
                 # Accept all input non-GD messages
