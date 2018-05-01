@@ -238,7 +238,7 @@ class Publish(AdminService):
             raise NotFound(self.cid, 'No such topic `{}`'.format(input.topic_name))
 
         # We always count time in milliseconds since UNIX epoch
-        now = time() * 1000
+        now = utcnow_as_ms()
 
         # If input.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other input parameters describe it.
