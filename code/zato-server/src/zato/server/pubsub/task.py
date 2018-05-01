@@ -434,7 +434,7 @@ class PubSubTool(object):
 
         self.sub_keys.add(sub_key)
         self.batch_size[sub_key] = 1
-        self.last_sql_run[sub_key] = time() * 1000
+        self.last_sql_run[sub_key] = utcnow_as_ms()
 
         delivery_list = SortedList()
         delivery_lock = RLock()

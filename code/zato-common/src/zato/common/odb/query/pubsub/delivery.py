@@ -90,7 +90,7 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now,
     # is not given it means that the subscriber itself has just started for the very first time.
     else:
         query = query.\
-            filter(PubSubEndpointEnqueuedMessage.creation_time <= time())
+            filter(PubSubEndpointEnqueuedMessage.creation_time <= utcnow_as_ms())
 
     query = query.\
         order_by(PubSubMessage.priority.desc()).\
