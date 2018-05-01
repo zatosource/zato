@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import getLogger
+from time import time
 
 # SQLAlchemy
 from sqlalchemy import update
@@ -69,12 +70,14 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now,
 
     #print('a' * 50)
 
+    '''
     if last_sql_run:
         s = '%f' % last_sql_run
         s = s.rstrip('0').rstrip('.')
         logger.info('2 %s', s)
     else:
         logger.info('2 None')
+        '''
 
     #print('a' * 50)
 
@@ -87,7 +90,7 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now,
     # is not given it means that the subscriber itself has just started for the very first time.
     else:
         query = query.\
-            filter(PubSubEndpointEnqueuedMessage.creation_time <= utcnow_as_ms())
+            filter(PubSubEndpointEnqueuedMessage.creation_time <= time())
 
     query = query.\
         order_by(PubSubMessage.priority.desc()).\

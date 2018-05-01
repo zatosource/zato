@@ -838,6 +838,7 @@ class PUBSUB:
         NO_MSG = 'no-messages'
         SOCKET_ERROR = 'socket-error'
         OTHER_ERROR = 'other-error'
+        OK = 'ok'
 
     class ENDPOINT_TYPE:
         AMQP = NameId('AMQP', 'amqp')

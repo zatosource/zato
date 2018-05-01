@@ -196,13 +196,14 @@ class DeliveryTask(object):
 
                 # Indicates that we have successfully delivered all messages currently queued up
                 # and our delivery list is currently empty.
-                return _run_deliv_status.NO_MSG
+                return _run_deliv_status.OK
 
-    def run(self, no_msg_sleep_time=1, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
+    def run(self, no_msg_sleep_time=2, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         logger.info('Starting delivery task for sub_key:`%s`', self.sub_key)
         try:
             while self.keep_running:
                 if not self.delivery_list:
+                    logger_zato.info('LEN-1 %s', len(self.delivery_list))
                     sleep(no_msg_sleep_time) # No need to wake up too often if there is not much to do
                 else:
 
@@ -212,7 +213,9 @@ class DeliveryTask(object):
                     result = self._run_delivery()
 
                     # On success, sleep for a moment because we have just run out of all messages.
-                    if result == _run_deliv_status.NO_MSG:
+                    if result == _run_deliv_status.OK:
+                        continue
+                    elif result == _run_deliv_status.NO_MSG:
                         sleep(no_msg_sleep_time)
 
                     # Otherwise, sleep for a longer time because our endpoint must have returned an error.
@@ -516,13 +519,13 @@ class PubSubTool(object):
 
                 # Fetch all GD messages, if there are any at all
                 if has_gd:
-                    logger.info('Using TS %s', self.last_sql_run[sub_key])
+                    #logger.info('Using TS %s', self.last_sql_run[sub_key])
 
                     self._fetch_gd_messages_by_sub_key(sub_key)
                     now = time() * 1000
-                    s = '%f' % now
-                    s = s.rstrip('0').rstrip('.')
-                    logger_zato.info('Storing TS %s', s)
+                    #s = '%f' % now
+                    #s = s.rstrip('0').rstrip('.')
+                    #logger_zato.info('Storing TS %s', s)
                     self.last_sql_run[sub_key] = now
 
                 # Accept all input non-GD messages
