@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from logging import getLogger
+
 # SQLAlchemy
 from sqlalchemy import update
 from sqlalchemy.orm.exc import NoResultFound
@@ -21,6 +24,8 @@ from zato.common import PUBSUB
 from zato.common.odb.model import ChannelWebSocket, PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, \
      PubSubSubscription, PubSubTopic, Server, WebSocketClient, WebSocketClientPubSubKeys
 from zato.common.util.time_ import utcnow_as_ms
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 
@@ -61,16 +66,28 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now,
 
     # If there is the last SQL run time given, it means that we have to fetch all messages
     # enqueued for that subscriber since that time ..
-    #if last_sql_run:
-    #    query = query.\
-    #        filter(PubSubEndpointEnqueuedMessage.creation_time > last_sql_run)
+
+    #print('a' * 50)
+
+    if last_sql_run:
+        s = '%f' % last_sql_run
+        s = s.rstrip('0').rstrip('.')
+        logger.info('2 %s', s)
+    else:
+        logger.info('2 None')
+
+    #print('a' * 50)
+
+    if last_sql_run:
+        query = query.\
+            filter(PubSubEndpointEnqueuedMessage.creation_time > last_sql_run)
 
     # .. but if there is no time given on input, it works the other way around. We fetch
     # all messages enqueued for the subscriber since the beginning of time because if the time
     # is not given it means that the subscriber itself has just started for the very first time.
-    #if not last_sql_run:
-    #    query = query.\
-    #        filter(PubSubEndpointEnqueuedMessage.creation_time <= utcnow_as_ms())
+    else:
+        query = query.\
+            filter(PubSubEndpointEnqueuedMessage.creation_time <= utcnow_as_ms())
 
     query = query.\
         order_by(PubSubMessage.priority.desc()).\

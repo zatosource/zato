@@ -440,9 +440,16 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def _get_subscription_by_sub_key(self, sub_key):
+        """ Low-level implementation of self.get_subscription_by_sub_key.
+        """
+        return self.subscriptions_by_sub_key[sub_key]
+
+# ################################################################################################################################
+
     def get_subscription_by_sub_key(self, sub_key):
         with self.lock:
-            return self.subscriptions_by_sub_key[sub_key]
+            return self._get_subscription_by_sub_key(sub_key)
 
 # ################################################################################################################################
 
@@ -495,9 +502,22 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def _get_topic_by_name(self, topic_name):
+        """ Low-level implementation of self.get_topic_by_name.
+        """
+        return self.topics[self._get_topic_id_by_name(topic_name)]
+
+# ################################################################################################################################
+
     def get_topic_by_name(self, topic_name):
         with self.lock:
-            return self.topics[self._get_topic_id_by_name(topic_name)]
+            return self._get_topic_by_name(topic_name)
+
+# ################################################################################################################################
+
+    def get_topic_by_sub_key(self, sub_key):
+        with self.lock:
+            return self._get_topic_by_name(self._get_subscription_by_sub_key(sub_key).topic_name)
 
 # ################################################################################################################################
 
@@ -1114,5 +1134,10 @@ class PubSub(object):
 
         with closing(self.server.odb.session()) as session:
             set_to_delete(session, self.cluster_id, sub_key, [msg.pub_msg_id for msg in msg_list], utcnow_as_ms())
+
+# ################################################################################################################################
+
+    def topic_lock(self, topic_name):
+        return self.server.zato_lock_manager('zato.pubsub.publish.%s' % topic_name)
 
 # ################################################################################################################################

@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from logging import getLogger
+from time import time
 from traceback import format_exc
 
 # datetutil
@@ -176,8 +177,7 @@ class Publish(AdminService):
 
     def _notify_pubsub_tasks(self, topic_id, topic_name, subscriptions, non_gd_msg_list, has_gd_msg_list):
         try:
-
-            spawn(self.invoke, 'zato.pubsub.after-publish', {
+            self.invoke('zato.pubsub.after-publish', {
                 'cid': self.cid,
                 'topic_id':topic_id,
                 'topic_name':topic_name,
@@ -238,7 +238,11 @@ class Publish(AdminService):
             raise NotFound(self.cid, 'No such topic `{}`'.format(input.topic_name))
 
         # We always count time in milliseconds since UNIX epoch
-        now = utcnow_as_ms()
+        now = time() * 1000 #utcnow_as_ms()
+
+        s = '%f' % now
+        s = s.rstrip('0').rstrip('.')
+
 
         # If input.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other input parameters describe it.
@@ -247,6 +251,8 @@ class Publish(AdminService):
         # Input messages may contain a mix of GD and non-GD messages, and we need to extract them separately.
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
             topic, data_list, input, now, pattern_matched, endpoint_id)
+
+        self.logger.info('1 %s %s', s, str([msg['pub_msg_id'] for msg in gd_msg_list]))
 
         # We have all the input data, publish the message(s) now
         self._publish(pubsub, topic, endpoint_id, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,

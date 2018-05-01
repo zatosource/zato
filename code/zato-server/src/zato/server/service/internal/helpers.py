@@ -52,7 +52,8 @@ class RawRequestLogger(Service):
     """ Writes out self.request.raw_request to server logs.
     """
     def handle(self):
-        self.logger.info('RCV raw: `%r`', self.request.raw_request)
+        #self.logger.info('RCV raw: `%r`', self.request.raw_request)
+        pass
 
 # ################################################################################################################################
 

@@ -51,6 +51,8 @@ class CleanupService(AdminService):
 
                 with closing(self.odb.session()) as session:
 
+                    return
+
                     # Clean up what is needed
                     number, kind = self._cleanup(session)
 
