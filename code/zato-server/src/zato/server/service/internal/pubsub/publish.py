@@ -177,7 +177,6 @@ class Publish(AdminService):
 
     def _notify_pubsub_tasks(self, topic_id, topic_name, subscriptions, non_gd_msg_list, has_gd_msg_list):
         try:
-            #spawn(self.invoke, 'zato.pubsub.after-publish', {
             self.invoke('zato.pubsub.after-publish', {
                 'cid': self.cid,
                 'topic_id':topic_id,
@@ -239,10 +238,7 @@ class Publish(AdminService):
             raise NotFound(self.cid, 'No such topic `{}`'.format(input.topic_name))
 
         # We always count time in milliseconds since UNIX epoch
-        now = time() * 1000 #utcnow_as_ms()
-
-        #s = '%f' % now
-        #s = s.rstrip('0').rstrip('.')
+        now = time() * 1000
 
         # If input.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other input parameters describe it.
