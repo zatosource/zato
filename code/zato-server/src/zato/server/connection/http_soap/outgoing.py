@@ -336,9 +336,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if isinstance(data, unicode):
             data = data.encode('utf-8')
 
-        #logger.info(
-        #    'CID:`%s`, address:`%s`, qs:`%s`, auth_user:`%s`, kwargs:`%s`', cid, address, qs_params, self.username, kwargs)
-        #logger.info('..')
+        logger.info(
+            'CID:`%s`, address:`%s`, qs:`%s`, auth_user:`%s`, kwargs:`%s`', cid, address, qs_params, self.username, kwargs)
 
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 

@@ -198,12 +198,11 @@ class DeliveryTask(object):
                 # and our delivery list is currently empty.
                 return _run_deliv_status.OK
 
-    def run(self, no_msg_sleep_time=2, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
+    def run(self, no_msg_sleep_time=0.5, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         logger.info('Starting delivery task for sub_key:`%s`', self.sub_key)
         try:
             while self.keep_running:
                 if not self.delivery_list:
-                    logger_zato.info('LEN-1 %s', len(self.delivery_list))
                     sleep(no_msg_sleep_time) # No need to wake up too often if there is not much to do
                 else:
 
@@ -413,6 +412,9 @@ class PubSubTool(object):
         # Register with this server's pubsub
         self.register_pubsub_tool()
 
+        # How many times self.handle_new_messages has been called
+        self.msg_handler_counter = 0
+
 # ################################################################################################################################
 
     def register_pubsub_tool(self):
@@ -514,18 +516,11 @@ class PubSubTool(object):
         for sub_key in sub_key_list:
             with self.sub_key_locks[sub_key]:
 
-                #topic_name = self.pubsub.get_subscription_by_sub_key(sub_key).topic_name
-                #with self.pubsub.topic_lock(topic_name):
-
                 # Fetch all GD messages, if there are any at all
                 if has_gd:
-                    #logger.info('Using TS %s', self.last_sql_run[sub_key])
 
                     self._fetch_gd_messages_by_sub_key(sub_key)
                     now = time() * 1000
-                    #s = '%f' % now
-                    #s = s.rstrip('0').rstrip('.')
-                    #logger_zato.info('Storing TS %s', s)
                     self.last_sql_run[sub_key] = now
 
                 # Accept all input non-GD messages
@@ -535,6 +530,7 @@ class PubSubTool(object):
 # ################################################################################################################################
 
     def handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list):
+        self.msg_handler_counter += 1
         spawn(self._handle_new_messages, cid, has_gd, sub_key_list, non_gd_msg_list)
 
 # ################################################################################################################################
