@@ -248,8 +248,6 @@ class Publish(AdminService):
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
             topic, data_list, input, now, pattern_matched, endpoint_id)
 
-        #self.logger.info('1 %s %s', s, str([msg['pub_msg_id'] for msg in gd_msg_list]))
-
         # We have all the input data, publish the message(s) now
         self._publish(pubsub, topic, endpoint_id, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,
             input.get('ext_client_id') or 'n/a', False, now)
