@@ -13,10 +13,11 @@ from bisect import bisect_left
 from copy import deepcopy
 from logging import getLogger
 from socket import error as SocketError
+from time import time
 from traceback import format_exc
 
 # gevent
-from gevent import sleep
+from gevent import sleep, spawn
 from gevent.lock import RLock
 
 # sortedcontainers
@@ -428,7 +429,7 @@ class PubSubTool(object):
 
         self.sub_keys.add(sub_key)
         self.batch_size[sub_key] = 1
-        self.last_sql_run[sub_key] = None
+        self.last_sql_run[sub_key] = time() * 1000
 
         delivery_list = SortedList()
         delivery_lock = RLock()
@@ -492,7 +493,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list):
+    def _handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list):
         """ A callback invoked when there is at least one new message to be handled for input sub_keys.
         If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
         it is a list of non-GD message for sub_keys.
@@ -510,18 +511,28 @@ class PubSubTool(object):
         for sub_key in sub_key_list:
             with self.sub_key_locks[sub_key]:
 
-                now = utcnow_as_ms()
+                #topic_name = self.pubsub.get_subscription_by_sub_key(sub_key).topic_name
+                #with self.pubsub.topic_lock(topic_name):
 
                 # Fetch all GD messages, if there are any at all
                 if has_gd:
-                    logger.info('Using TS %s', str(now))
+                    logger.info('Using TS %s', self.last_sql_run[sub_key])
 
                     self._fetch_gd_messages_by_sub_key(sub_key)
+                    now = time() * 1000
+                    s = '%f' % now
+                    s = s.rstrip('0').rstrip('.')
+                    logger_zato.info('Storing TS %s', s)
                     self.last_sql_run[sub_key] = now
 
                 # Accept all input non-GD messages
                 if non_gd_msg_list:
                     self._add_non_gd_messages_by_sub_key(sub_key, non_gd_msg_list)
+
+# ################################################################################################################################
+
+    def handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list):
+        spawn(self._handle_new_messages, cid, has_gd, sub_key_list, non_gd_msg_list)
 
 # ################################################################################################################################
 
