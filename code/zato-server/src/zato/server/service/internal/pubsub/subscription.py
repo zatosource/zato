@@ -28,7 +28,7 @@ from zato.common.util.time_ import utcnow_as_ms
 from zato.common.util import get_sa_model_columns
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic
-from zato.server.service import Int, List
+from zato.server.service import List
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
 

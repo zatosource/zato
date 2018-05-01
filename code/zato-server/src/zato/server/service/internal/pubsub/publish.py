@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from logging import getLogger
-from time import time
 from traceback import format_exc
 
 # datetutil

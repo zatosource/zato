@@ -10,19 +10,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import getLogger
-from time import time
 
 # SQLAlchemy
 from sqlalchemy import update
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import expression as expr
-
-# Bunch
-from bunch import Bunch
 
 # Zato
 from zato.common import PUBSUB
-from zato.common.odb.model import ChannelWebSocket, PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, \
+from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, \
      PubSubSubscription, PubSubTopic, Server, WebSocketClient, WebSocketClientPubSubKeys
 from zato.common.util.time_ import utcnow_as_ms
 
