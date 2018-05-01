@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from cStringIO import StringIO
+from json import loads
 from logging import DEBUG
 from pprint import pprint
 
@@ -52,8 +53,7 @@ class RawRequestLogger(Service):
     """ Writes out self.request.raw_request to server logs.
     """
     def handle(self):
-        #self.logger.info('RCV raw: `%r`', self.request.raw_request)
-        pass
+        self.logger.info('RCV raw: `%r`', loads(self.request.raw_request)[0]['data'])
 
 # ################################################################################################################################
 
