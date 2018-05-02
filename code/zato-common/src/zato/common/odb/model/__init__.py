@@ -2172,7 +2172,12 @@ class PubSubMessage(Base):
     priority = Column(Integer, nullable=False)
     expiration = Column(Integer, nullable=False, default=0)
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
-    # is_in_sub_queue = Column(Boolean(), nullable=False) # Is the message in at least one delivery queue
+
+    # Is the message in at least one delivery queue, meaning that there is at least one
+    # subscriber to whom this message will be sent so the message is no longer considered
+    # to be available in the topic for other subscribers to receive it,
+    # i.e. it can be said that it has been already transported to all subsriber queues (possibly to one only).
+    is_in_sub_queue = Column(Boolean(), nullable=False, default=False)
 
     published_by_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
     published_by = relationship(
