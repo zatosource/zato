@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 # Zato
 from zato.common import PUBSUB
 from zato.common.exception import BadRequest
-from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage
+from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, PubSubTopic
 
 # ################################################################################################################################
 
@@ -32,38 +32,23 @@ _initialized=PUBSUB.DELIVERY_STATUS.INITIALIZED
 
 # ################################################################################################################################
 
-def get_topic_depth(session, cluster_id, topic_id):
-    """ Returns current depth of input topic by its ID.
-    """
-    return session.execute(
-        select([TopicTable.c.current_depth_gd]).\
-        where(TopicTable.c.id==topic_id).\
-        where(TopicTable.c.cluster_id==cluster_id)
-        ).\
-        fetchone()[0]
-
-# ################################################################################################################################
-
-def incr_topic_depth(session, cluster_id, topic_id, now, incr_by):
-    """ Increments current depth of input topic by incr_by.
-    """
-    session.execute(
-        update(TopicTable).\
-        values({
-            'current_depth_gd': TopicTable.c.current_depth_gd + incr_by,
-            'last_pub_time': now
-            }).\
-        where(TopicTable.c.id==topic_id).\
-        where(TopicTable.c.cluster_id==cluster_id)
-    )
-
-# ################################################################################################################################
-
-def insert_topic_messages(session, cid, msg_list):
+def insert_topic_messages(session, cid, msg_list, cluster_id, topic_id, now):
     """ Publishes messages to a topic, i.e. runs an INSERT that inserts rows, one for each message.
     """
     try:
+        # Insert all messages
         session.execute(MsgInsert().values(msg_list))
+
+        # Update metadata - set last publication time
+        session.execute(
+            update(TopicTable).\
+            values({
+                'last_pub_time': now
+                }).\
+            where(TopicTable.c.id==topic_id).\
+            where(TopicTable.c.cluster_id==cluster_id)
+        )
+
     except IntegrityError, e:
         if 'pubsb_msg_pubmsg_id_idx' in e.message:
             raise BadRequest(cid, 'Duplicate msg_id:`{}`'.format(e.message))

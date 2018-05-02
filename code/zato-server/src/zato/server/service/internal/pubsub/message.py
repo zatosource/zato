@@ -104,12 +104,10 @@ class Delete(AdminService):
                 filter(PubSubTopic.id==ps_msg.topic_id).\
                 one()
 
-            # Delete the message and decrement its topic's current depth ..
-            session.delete(ps_msg)
-            ps_topic.current_depth_gd = ps_topic.current_depth_gd - 1
-
-            # .. but do it under a global lock because other transactions may want to update the topic in parallel.
+            # Delete the message  but do it under a global lock because other transactions
+            # may want to update the topic in parallel.
             with self.lock('zato.pubsub.publish.%s' % ps_topic.name):
+                session.delete(ps_msg)
                 session.commit()
 
 # ################################################################################################################################

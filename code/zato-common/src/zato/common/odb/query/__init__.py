@@ -931,7 +931,6 @@ def _pubsub_topic(session, cluster_id):
         PubSubTopic.last_pub_time,
         PubSubTopic.max_depth_gd,
         PubSubTopic.max_depth_non_gd,
-        PubSubTopic.current_depth_gd,
         PubSubTopic.has_gd,
         PubSubTopic.is_api_sub_allowed,
         PubSubTopic.depth_check_freq,
