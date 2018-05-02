@@ -22,8 +22,9 @@ from gevent import spawn
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
-from zato.common.odb.query.pubsub.publish import get_topic_depth, incr_topic_depth, insert_queue_messages, insert_topic_messages, \
+from zato.common.odb.query.pubsub.publish import insert_queue_messages, insert_topic_messages, \
      update_publish_metadata
+from zato.common.odb.query.pubsub.topic import get_topic_gd_depth
 from zato.common.pubsub import PubSubMessage
 from zato.common.pubsub import new_msg_id
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
@@ -289,7 +290,7 @@ class Publish(AdminService):
                     if topic.needs_depth_check():
 
                         # Get current depth of this topic ..
-                        current_depth = get_topic_depth(session, cluster_id, topic.id)
+                        current_depth = get_topic_gd_depth(session, cluster_id, topic.id)
 
                         # .. and abort if max depth is already reached.
                         if current_depth + len_gd_msg_list > topic.max_depth_gd:
@@ -299,11 +300,8 @@ class Publish(AdminService):
                             # This only updates the local variable
                             current_depth = current_depth + len_gd_msg_list
 
-                    # This updates data in SQL
-                    incr_topic_depth(session, cluster_id, topic.id, now, len_gd_msg_list)
-
                     # Publish messages - INSERT rows, each representing an individual message
-                    insert_topic_messages(session, self.cid, gd_msg_list)
+                    insert_topic_messages(session, self.cid, gd_msg_list, cluster_id, topic.id, now)
 
                     # Move messages to each subscriber's queue
                     if subscriptions_by_topic:
