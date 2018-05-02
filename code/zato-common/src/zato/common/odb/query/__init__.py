@@ -1006,7 +1006,8 @@ def _pubsub_topic_message(session, cluster_id):
         ).\
         filter(PubSubMessage.published_by_id==PubSubEndpoint.id).\
         filter(PubSubMessage.cluster_id==cluster_id).\
-        filter(PubSubMessage.topic_id==PubSubTopic.id)
+        filter(PubSubMessage.topic_id==PubSubTopic.id).\
+        filter(~PubSubMessage.is_in_sub_queue)
 
 # ################################################################################################################################
 

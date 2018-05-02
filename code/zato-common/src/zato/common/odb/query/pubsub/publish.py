@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import select, update
+from sqlalchemy import and_, select, update
 from sqlalchemy.exc import IntegrityError
 
 # Zato
@@ -21,9 +21,10 @@ MsgInsert = PubSubMessage.__table__.insert
 EndpointTopicInsert = PubSubEndpointTopic.__table__.insert
 EnqueuedMsgInsert = PubSubEndpointEnqueuedMessage.__table__.insert
 
-Topic = PubSubTopic.__table__
-Endpoint = PubSubEndpoint.__table__
-EndpointTopic = PubSubEndpointTopic.__table__
+MsgTable = PubSubMessage.__table__
+TopicTable = PubSubTopic.__table__
+EndpointTable = PubSubEndpoint.__table__
+EndpointTopicTable = PubSubEndpointTopic.__table__
 
 # ################################################################################################################################
 
@@ -35,9 +36,9 @@ def get_topic_depth(session, cluster_id, topic_id):
     """ Returns current depth of input topic by its ID.
     """
     return session.execute(
-        select([Topic.c.current_depth_gd]).\
-        where(Topic.c.id==topic_id).\
-        where(Topic.c.cluster_id==cluster_id)
+        select([TopicTable.c.current_depth_gd]).\
+        where(TopicTable.c.id==topic_id).\
+        where(TopicTable.c.cluster_id==cluster_id)
         ).\
         fetchone()[0]
 
@@ -47,13 +48,13 @@ def incr_topic_depth(session, cluster_id, topic_id, now, incr_by):
     """ Increments current depth of input topic by incr_by.
     """
     session.execute(
-        update(Topic).\
+        update(TopicTable).\
         values({
-            'current_depth_gd': Topic.c.current_depth_gd + incr_by,
+            'current_depth_gd': TopicTable.c.current_depth_gd + incr_by,
             'last_pub_time': now
             }).\
-        where(Topic.c.id==topic_id).\
-        where(Topic.c.cluster_id==cluster_id)
+        where(TopicTable.c.id==topic_id).\
+        where(TopicTable.c.cluster_id==cluster_id)
     )
 
 # ################################################################################################################################
@@ -72,12 +73,15 @@ def insert_topic_messages(session, cid, msg_list):
 # ################################################################################################################################
 
 def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list, topic_id, now, _initialized=_initialized):
-    """ Moves messages to each subscriber's queue, i.e. runs an INSERT that add relevant references
-    to the topic message.
+    """ Moves messages to each subscriber's queue, i.e. runs an INSERT that adds relevant references to the topic message.
+    Also, updates each message's is_in_sub_queue flag to indicate that it is no longer available for other subscribers.
     """
     queue_msgs = []
+    msg_ids = set()
     for sub in subscriptions_by_topic:
         for msg in msg_list:
+
+            # Enqueues the message for each subscriber
             queue_msgs.append({
                 'creation_time': now,
                 'delivery_count': 0,
@@ -91,8 +95,25 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
                 'delivery_status': _initialized,
             })
 
+            # Needed to update is_in_sub_queue
+            msg_ids.add(msg['pub_msg_id'])
+
     # Move the message to endpoint queues
     session.execute(EnqueuedMsgInsert().values(queue_msgs))
+    #msg_ids = list(msg_ids)
+
+    # Set the flag indicating that this message is no longer available in the topic itself,
+    # i.e. it's been already moved to at least one subscriber queue.
+    session.execute(
+        update(MsgTable).\
+        values({
+            'is_in_sub_queue': True,
+            }).\
+        where(and_(
+            MsgTable.c.pub_msg_id.in_(msg_ids),
+            ~MsgTable.c.is_in_sub_queue
+        ))
+    )
 
 # ################################################################################################################################
 
@@ -101,10 +122,10 @@ def update_publish_metadata(session, cluster_id, topic_id, endpoint_id, now, pat
 
     # Update information when this endpoint last published to the topic
     endpoint_topic = session.execute(
-        select([EndpointTopic.c.id]).\
-        where(EndpointTopic.c.topic_id==topic_id).\
-        where(EndpointTopic.c.endpoint_id==endpoint_id).\
-        where(EndpointTopic.c.cluster_id==cluster_id)
+        select([EndpointTopicTable.c.id]).\
+        where(EndpointTopicTable.c.topic_id==topic_id).\
+        where(EndpointTopicTable.c.endpoint_id==endpoint_id).\
+        where(EndpointTopicTable.c.cluster_id==cluster_id)
         ).\
         fetchone()
 
@@ -127,7 +148,7 @@ def update_publish_metadata(session, cluster_id, topic_id, endpoint_id, now, pat
     # Already published before - update its metadata in that case.
     else:
         session.execute(
-            update(EndpointTopic).\
+            update(EndpointTopicTable).\
             values({
                 'last_pub_time': now,
                 'pub_msg_id': last_pub_msg_id,
@@ -136,20 +157,20 @@ def update_publish_metadata(session, cluster_id, topic_id, endpoint_id, now, pat
                 'pattern_matched': pattern_matched,
                 'ext_client_id': last_ext_client_id,
                 }).\
-            where(EndpointTopic.c.topic_id==topic_id).\
-            where(EndpointTopic.c.endpoint_id==endpoint_id).\
-            where(EndpointTopic.c.cluster_id==cluster_id)
+            where(EndpointTopicTable.c.topic_id==topic_id).\
+            where(EndpointTopicTable.c.endpoint_id==endpoint_id).\
+            where(EndpointTopicTable.c.cluster_id==cluster_id)
         )
 
     # Update metatadata for endpoint
     session.execute(
-        update(Endpoint).\
+        update(EndpointTable).\
         values({
             'last_seen': now,
             'last_pub_time': now,
             }).\
-        where(Endpoint.c.id==endpoint_id).\
-        where(Endpoint.c.cluster_id==cluster_id)
+        where(EndpointTable.c.id==endpoint_id).\
+        where(EndpointTable.c.cluster_id==cluster_id)
     )
 
 # ################################################################################################################################
