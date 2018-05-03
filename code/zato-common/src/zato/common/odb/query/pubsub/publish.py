@@ -63,6 +63,7 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
     """
     queue_msgs = []
     msg_ids = set()
+
     for sub in subscriptions_by_topic:
         for msg in msg_list:
 
@@ -85,7 +86,6 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
 
     # Move the message to endpoint queues
     session.execute(EnqueuedMsgInsert().values(queue_msgs))
-    #msg_ids = list(msg_ids)
 
     # Set the flag indicating that this message is no longer available in the topic itself,
     # i.e. it's been already moved to at least one subscriber queue.

@@ -911,7 +911,6 @@ class PubSub(object):
             if not data:
                 msg = 'Could not find a delivery server in ODB for sub_key `%s` (wsx:%s)'
                 logger.info(msg, sub_key, is_wsx)
-                logger_zato.info(msg, sub_key, is_wsx)
             else:
 
                 # This is common config that we already know is valid but on top of it

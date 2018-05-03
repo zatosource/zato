@@ -360,6 +360,17 @@ class SubscribeServiceImpl(_Subscribe):
                 for name in sub_broker_attrs:
                     sub_config[name] = getattr(ps_sub, name, None)
 
+                # Flush the session again because we need the subscription's ID below in INSERT from SELECT
+                # and in calls to self.pubsub
+                session.flush()
+
+                # Move all available messages to that subscriber's queue
+                move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, ps_sub.id, now)
+
+
+                # Subscription's ID is available only now, after the session was flushed
+                sub_config.id = ps_sub.id
+
                 # Update current server's pub/sub config
                 self.pubsub.add_subscription(sub_config)
 
@@ -367,12 +378,6 @@ class SubscribeServiceImpl(_Subscribe):
 
                     # Let the WebSocket connection object know that it should handle this particular sub_key
                     ctx.web_socket.pubsub_tool.add_sub_key(ctx.sub_key)
-
-                # Flush the session again because we need the subscription's ID below in INSERT from SELECT
-                session.flush()
-
-                # Move all available messages to that subscriber's queue
-                move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, ps_sub.id, now)
 
                 # Commit all changes
                 session.commit()
@@ -400,6 +405,7 @@ class SubscribeServiceImpl(_Subscribe):
                 # Notify workers of a new subscription
                 sub_config.action = BROKER_MSG_PUBSUB.SUBSCRIPTION_CREATE.value
                 sub_config.add_subscription = not ctx.ws_channel_id # WSX clients already had their subscriptions created above
+
                 self.broker_client.publish(sub_config)
 
 # ################################################################################################################################
