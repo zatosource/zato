@@ -210,6 +210,8 @@ sso=False
 
 [pubsub]
 wsx_gateway_service_allowed=zato.pubsub.subscription.create-wsx-subscription, pubsub.subscription.get-list, pubsub.subscription.unsubscribe
+log_if_deliv_server_not_found=True
+log_if_wsx_deliv_server_not_found=False
 
 [live_msg_browser]
 include_internal=False

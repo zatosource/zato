@@ -410,6 +410,9 @@ class PubSub(object):
         self.broker_client = broker_client
         self.lock = RLock()
 
+        self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
+        self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
+
         self.subscriptions_by_topic = {}       # Topic name     -> Subscription object
         self.subscriptions_by_sub_key = {}     # Sub key        -> Subscription object
         self.sub_key_servers = {}              # Sub key        -> Server/PID handling it
@@ -909,8 +912,11 @@ class PubSub(object):
         with closing(self.server.odb.session()) as session:
             data = get_delivery_server_for_sub_key(session, self.server.cluster_id, sub_key, is_wsx)
             if not data:
-                msg = 'Could not find a delivery server in ODB for sub_key `%s` (wsx:%s)'
-                logger.info(msg, sub_key, is_wsx)
+                if self.log_if_deliv_server_not_found:
+                    if is_wsx and (not self.log_if_wsx_deliv_server_not_found):
+                        return
+                    msg = 'Could not find a delivery server in ODB for sub_key `%s` (wsx:%s)'
+                    logger.info(msg, sub_key, is_wsx)
             else:
 
                 # This is common config that we already know is valid but on top of it
