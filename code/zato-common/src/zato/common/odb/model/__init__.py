@@ -2354,14 +2354,14 @@ class PubSubEndpointEnqueuedMessage(Base):
 
     pub_msg_id = Column(String(200), ForeignKey('pubsub_message.pub_msg_id', ondelete='CASCADE'), nullable=False)
 
-    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True)
+    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
     endpoint = relationship(PubSubEndpoint,
         backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(PubSubTopic, backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    subscription_id = Column(Integer, ForeignKey('pubsub_sub.id', ondelete='CASCADE'), nullable=True)
+    subscription_id = Column(Integer, ForeignKey('pubsub_sub.id', ondelete='CASCADE'), nullable=False)
     subscription = relationship(PubSubSubscription,
         backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
