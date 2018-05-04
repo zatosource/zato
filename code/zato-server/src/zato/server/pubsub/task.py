@@ -433,7 +433,7 @@ class PubSubTool(object):
 
         self.sub_keys.add(sub_key)
         self.batch_size[sub_key] = 1
-        self.last_sql_run[sub_key] = utcnow_as_ms()
+        self.last_sql_run[sub_key] = None
 
         delivery_list = SortedList()
         delivery_lock = RLock()
