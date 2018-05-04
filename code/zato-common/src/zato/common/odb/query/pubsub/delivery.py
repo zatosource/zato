@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -31,27 +31,36 @@ _wsx = PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
 
 # ################################################################################################################################
 
-def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, _initialized=_initialized):
+sql_messages_columns = (
+    PubSubMessage.pub_msg_id,
+    PubSubMessage.pub_correl_id,
+    PubSubMessage.in_reply_to,
+    PubSubMessage.ext_client_id,
+    PubSubMessage.group_id,
+    PubSubMessage.position_in_group,
+    PubSubMessage.pub_time,
+    PubSubMessage.ext_pub_time,
+    PubSubMessage.data,
+    PubSubMessage.mime_type,
+    PubSubMessage.priority,
+    PubSubMessage.expiration,
+    PubSubMessage.expiration_time,
+    PubSubMessage.has_gd,
+    PubSubTopic.name.label('topic_name')
+)
+
+sql_msg_id_columns = (
+    PubSubMessage.pub_msg_id,
+)
+
+# ################################################################################################################################
+
+def _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, columns, needs_result=True,
+    _initialized=_initialized):
     """ Returns all SQL messages queued up for a given sub_key that are not being delivered
     or have not been delivered already.
     """
-    query = session.query(
-        PubSubMessage.pub_msg_id,
-        PubSubMessage.pub_correl_id,
-        PubSubMessage.in_reply_to,
-        PubSubMessage.ext_client_id,
-        PubSubMessage.group_id,
-        PubSubMessage.position_in_group,
-        PubSubMessage.pub_time,
-        PubSubMessage.ext_pub_time,
-        PubSubMessage.data,
-        PubSubMessage.mime_type,
-        PubSubMessage.priority,
-        PubSubMessage.expiration,
-        PubSubMessage.expiration_time,
-        PubSubMessage.has_gd,
-        PubSubTopic.name.label('topic_name'),
-    ).\
+    query = session.query(*columns).\
     filter(PubSubTopic.id==PubSubMessage.topic_id).\
     filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
     filter(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
@@ -78,9 +87,17 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now,
         order_by(PubSubMessage.ext_pub_time).\
         order_by(PubSubMessage.pub_time)
 
-    out = query.all()
+    return query.all() if needs_result else query
 
-    return out
+# ################################################################################################################################
+
+def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now):
+    return _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, sql_messages_columns)
+
+# ################################################################################################################################
+
+def get_sql_msg_ids_by_sub_key(session, cluster_id, sub_key, last_sql_run, now):
+    return _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, sql_msg_id_columns, False)
 
 # ################################################################################################################################
 
