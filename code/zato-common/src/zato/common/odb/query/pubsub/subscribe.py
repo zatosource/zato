@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,12 +9,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # SQLAlchemy
-from sqlalchemy import and_, exists, insert
+from sqlalchemy import and_, exists, insert, update
 from sqlalchemy.sql import expression as expr, func
 
 # Zato
 from zato.common import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, WebSocketSubscription
+from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
 
 # ################################################################################################################################
 
@@ -114,8 +115,10 @@ def add_subscription(session, cluster_id, ctx):
 
 # ################################################################################################################################
 
-def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_sub_id, now, _initialized=_initialized):
+def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_sub_id, sub_key, now, _initialized=_initialized):
     """ Move all unexpired messages from topic to a given subscriber's queue and returns the number of messages moved.
+    This method must be called with a global lock held for topic because it carries out its job through a couple
+    of non-atomic queries.
     """
     enqueued_id_subquery = session.query(
         PubSubEndpointEnqueuedMessage.pub_msg_id
@@ -140,6 +143,7 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_su
         filter(PubSubMessage.topic_id==topic_id).\
         filter(PubSubMessage.cluster_id==cluster_id).\
         filter(PubSubMessage.expiration_time > now).\
+        filter(~PubSubMessage.is_in_sub_queue).\
         filter(PubSubMessage.pub_msg_id.notin_(enqueued_id_subquery))
 
     # INSERT references to topic's messages in the subscriber's queue.
@@ -158,19 +162,30 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_su
             expr.column('cluster_id'),
             ), select_messages)
 
-    # Commit changes to subscriber's queue
+    # Move messages to subscriber's queue
     session.execute(insert_messages)
 
-    # Get the number of messages moved to let the subscriber know
-    # how many there are available initially.
-    available_q = session.query(PubSubEndpointEnqueuedMessage.id).\
-        filter(PubSubEndpointEnqueuedMessage.subscription_id==ps_sub_id).\
-        filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id)
+    # Indicate that all the messages are being delivered to the subscriber which means that no other
+    # subscriber will ever receive them. Note that we changing the status only for the messages pertaining
+    # to the current subscriber without ever touching messages reiceved by any other one.
 
-    total_available_q = available_q.statement.with_only_columns([func.count()]).order_by(None)
-    total_available = available_q.session.execute(total_available_q).scalar()
+    # get_sql_msg_ids_by_sub_key(session, cluster_id, sub_key, last_sql_run, now):
 
-    return total_available
+    msg_ids = get_sql_msg_ids_by_sub_key(session, cluster_id, sub_key, None, now)
+
+    print(msg_ids.all())
+
+    '''
+    session.execute(
+        update(MsgTable).\
+        values({
+            'is_in_sub_queue': True,
+            }).\
+        where(and_(
+            MsgTable.c.pub_msg_id.in_(msg_ids),
+            ~MsgTable.c.is_in_sub_queue
+        ))
+    )'''
 
 # ################################################################################################################################
 

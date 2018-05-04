@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -314,7 +314,7 @@ class SubscribeServiceImpl(_Subscribe):
     def _subscribe_impl(self, ctx):
         """ Invoked by subclasses to subscribe callers using input pub/sub config context.
         """
-        with self.lock('zato.pubsub.subscribe.%s.%s' % (ctx.topic_name, ctx.endpoint_id)):
+        with self.lock('zato.pubsub.subscribe.%s' % (ctx.topic_name)):
 
             with closing(self.odb.session()) as session:
 
@@ -357,8 +357,22 @@ class SubscribeServiceImpl(_Subscribe):
                 for name in sub_broker_attrs:
                     sub_config[name] = getattr(ps_sub, name, None)
 
-                # Move all available messages to that subscriber's queue
-                move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, ps_sub.id, now)
+                #
+                # Move all available messages to that subscriber's queue. Note that we are operating under a global
+                # lock for the topic, the same lock that publications work under, which means that at this point
+                # there may be several cases depending on whether there are already other subscriptions
+                # or messages in the topic.
+                #
+                # * If there are subscribers, then this method will not move any messages because the messages
+                #   will have been already moved to queues of other subscribers before we are called under this lock
+                #
+                # * If there are no subscribers but there are messages in the topic then this subscriber will become
+                #   the sole recipient of the messages (we don't have any intrinsic foreknowledge of when, if at all,
+                #   other subscribers can appear)
+                #
+                # * If there are no subscribers and no messages in the topic then this is a no-op
+                #
+                move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, ps_sub.id, ctx.sub_key, now)
 
                 # Subscription's ID is available only now, after the session was flushed
                 sub_config.id = ps_sub.id
