@@ -71,7 +71,6 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.out_http_method,
         PubSubSubscription.delivery_endpoint,
 
-        PubSubSubscription.ws_sub_id,
         PubSubSubscription.ws_channel_id,
         PubSubSubscription.cluster_id,
 
