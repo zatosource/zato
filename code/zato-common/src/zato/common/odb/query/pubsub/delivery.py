@@ -62,20 +62,6 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now,
 
     # If there is the last SQL run time given, it means that we have to fetch all messages
     # enqueued for that subscriber since that time ..
-
-    #print('a' * 50)
-
-    '''
-    if last_sql_run:
-        s = '%f' % last_sql_run
-        s = s.rstrip('0').rstrip('.')
-        logger.info('2 %s', s)
-    else:
-        logger.info('2 None')
-        '''
-
-    #print('a' * 50)
-
     if last_sql_run:
         query = query.\
             filter(PubSubEndpointEnqueuedMessage.creation_time > last_sql_run)
