@@ -93,7 +93,7 @@ class _CreateEdit(CreateEdit):
         return_data['current_depth_link'] = """
             <a href="{}?cluster={}">{}</a>
             /
-            <a href="{}?cluster={}">{}</a>
+            {}
             """.format(
 
             # GD messages
@@ -103,8 +103,7 @@ class _CreateEdit(CreateEdit):
             item.current_depth_gd,
 
             # Non-GD messages
-            django_url_reverse('pubsub-topic-in-ram-backlog',
-                kwargs={'topic_id':return_data['id'], 'name_slug':slugify(return_data['name'])}),
+            item.current_depth_gd,
             self.req.zato.cluster_id,
             item.current_depth_gd
         )
