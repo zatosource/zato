@@ -333,24 +333,21 @@ class SubscribeServiceImpl(_Subscribe):
                 ctx.creation_time = now = utcnow_as_ms()
                 ctx.sub_key = new_sub_key()
 
+                # Create a new subscription object and flush the session because the subscription's ID
+                # may be needed for the WSX subscription
+                ps_sub = add_subscription(session, ctx.cluster_id, ctx)
+                session.flush()
+
                 # If we subscribe a WSX client, we need to create its accompanying SQL models
                 if has_wsx:
 
                     # This object persists across multiple WSX connections
-                    ws_sub = add_wsx_subscription(
-                        session, ctx.cluster_id, ctx.is_internal, ctx.sub_key, ctx.ext_client_id, ctx.ws_channel_id)
+                    ws_sub = add_wsx_subscription(session, ctx.cluster_id, ctx.is_internal, ctx.sub_key,
+                        ctx.ext_client_id, ctx.ws_channel_id, ps_sub.id)
 
                     # This object will be transient - dropped each time a WSX client disconnects
                     self.pubsub.add_ws_client_pubsub_keys(session, ctx.sql_ws_client_id, ctx.sub_key, ctx.ws_channel_name,
                         ctx.ws_pub_client_id)
-
-                # If we had a WSX subscription, flush the session because the ws_sub.id is needed
-                # to create the higher-level subscription object
-                session.flush()
-
-                # Create a new subscription object
-                ctx.ws_sub = ws_sub
-                ps_sub = add_subscription(session, ctx.cluster_id, ctx)
 
                 # Common configuration for WSX and broker messages
                 sub_config = Bunch()
@@ -360,13 +357,8 @@ class SubscribeServiceImpl(_Subscribe):
                 for name in sub_broker_attrs:
                     sub_config[name] = getattr(ps_sub, name, None)
 
-                # Flush the session again because we need the subscription's ID below in INSERT from SELECT
-                # and in calls to self.pubsub
-                session.flush()
-
                 # Move all available messages to that subscriber's queue
                 move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, ps_sub.id, now)
-
 
                 # Subscription's ID is available only now, after the session was flushed
                 sub_config.id = ps_sub.id

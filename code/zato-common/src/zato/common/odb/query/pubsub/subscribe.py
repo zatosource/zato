@@ -34,7 +34,7 @@ def has_subscription(session, cluster_id, topic_id, endpoint_id):
 
 # ################################################################################################################################
 
-def add_wsx_subscription(session, cluster_id, is_internal, sub_key, ext_client_id, ws_channel_id):
+def add_wsx_subscription(session, cluster_id, is_internal, sub_key, ext_client_id, ws_channel_id, sub_id):
     """ Adds an object representing a subscription of a WebSockets client.
     """
     ws_sub = WebSocketSubscription()
@@ -43,6 +43,7 @@ def add_wsx_subscription(session, cluster_id, is_internal, sub_key, ext_client_i
     ws_sub.ext_client_id = ext_client_id
     ws_sub.channel_id = ws_channel_id
     ws_sub.cluster_id = cluster_id
+    ws_sub.subscription_id = sub_id
     session.add(ws_sub)
 
     return ws_sub
@@ -106,7 +107,6 @@ def add_subscription(session, cluster_id, ctx):
 
     # WebSockets
     ps_sub.ws_channel_id = ctx.ws_channel_id
-    ps_sub.ws_sub = ctx.ws_sub
 
     session.add(ps_sub)
 
