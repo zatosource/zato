@@ -13,8 +13,8 @@ from ftplib import FTP_PORT
 from json import dumps
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, LargeBinary, Sequence, \
-     SmallInteger, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, LargeBinary, Numeric, \
+     Sequence, SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.orm import backref, relationship
 
 # Zato
@@ -2069,7 +2069,7 @@ class PubSubTopic(Base):
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False, default=False)
-    last_pub_time = Column(BigInteger(), nullable=True)
+    last_pub_time = Column(Numeric(20, 7), nullable=True)
     max_depth_gd = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD)
     max_depth_non_gd = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD)
     depth_check_freq = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DEPTH_CHECK_FREQ)
@@ -2101,7 +2101,7 @@ class PubSubEndpointTopic(Base):
     id = Column(Integer, Sequence('pubsub_endpt_seq'), primary_key=True)
 
     pattern_matched = Column(Text, nullable=False)
-    last_pub_time = Column(BigInteger(), nullable=False)
+    last_pub_time = Column(Numeric(20, 7), nullable=False)
     pub_msg_id = Column(String(200), nullable=False)
     pub_correl_id = Column(String(200), nullable=True)
     in_reply_to = Column(String(200), nullable=True)
@@ -2159,10 +2159,10 @@ class PubSubMessage(Base):
     # What matching pattern allowed an endpoint to publish this message
     pattern_matched = Column(Text, nullable=False)
 
-    pub_time = Column(BigInteger(), nullable=False) # When the row was created
-    ext_pub_time = Column(BigInteger(), nullable=True) # When the message was created by publisher
-    expiration_time = Column(BigInteger(), nullable=True)
-    last_updated = Column(BigInteger(), nullable=True)
+    pub_time = Column(Numeric(20, 7), nullable=False) # When the row was created
+    ext_pub_time = Column(Numeric(20, 7), nullable=True) # When the message was created by publisher
+    expiration_time = Column(Numeric(20, 7), nullable=True)
+    last_updated = Column(Numeric(20, 7), nullable=True)
 
     data = Column(Text(), nullable=False)
     data_prefix = Column(Text(), nullable=False)
@@ -2207,7 +2207,7 @@ class PubSubSubscription(Base):
     id = Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False, default=False)
 
-    creation_time = Column(BigInteger(), nullable=False)
+    creation_time = Column(Numeric(20, 7), nullable=False)
     sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
     pattern_matched = Column(Text, nullable=False)
     deliver_by = Column(Text, nullable=True) # Delivery order, e.g. by priority, date etc.
@@ -2223,7 +2223,7 @@ class PubSubSubscription(Base):
     delivery_data_format = Column(String(200), nullable=False, default=DATA_FORMAT.JSON)
     delivery_endpoint = Column(Text, nullable=True)
 
-    last_interaction_time = Column(BigInteger(), nullable=True)
+    last_interaction_time = Column(Numeric(20, 7), nullable=True)
     last_interaction_type = Column(String(200), nullable=True)
     last_interaction_details = Column(Text, nullable=True)
 
@@ -2335,10 +2335,10 @@ class PubSubEndpointEnqueuedMessage(Base):
     {})
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
-    creation_time = Column(BigInteger(), nullable=False) # When was the message enqueued
+    creation_time = Column(Numeric(20, 7), nullable=False) # When was the message enqueued
 
     delivery_count = Column(Integer, nullable=False)
-    last_delivery_time = Column(BigInteger(), nullable=True)
+    last_delivery_time = Column(Numeric(20, 7), nullable=True)
 
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
     is_in_staging = Column(Boolean(), nullable=False, default=False)
@@ -2348,7 +2348,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     is_deliverable = Column(Boolean(), nullable=False, default=True)
 
     delivery_status = Column(Text, nullable=False, default=PUBSUB.DELIVERY_STATUS.INITIALIZED)
-    delivery_time = Column(BigInteger(), nullable=True)
+    delivery_time = Column(Numeric(20, 7), nullable=True)
 
     pub_msg_id = Column(String(200), ForeignKey('pubsub_message.pub_msg_id', ondelete='CASCADE'), nullable=False)
 
@@ -2380,7 +2380,7 @@ class PubSubEndpointQueueInteraction(Base):
     {})
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
-    entry_timestamp = Column(BigInteger(), nullable=False) # When the row was created
+    entry_timestamp = Column(Numeric(20, 7), nullable=False) # When the row was created
 
     inter_type = Column(String(200), nullable=False)
     inter_details = Column(Text, nullable=True)
