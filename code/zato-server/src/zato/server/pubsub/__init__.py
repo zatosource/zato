@@ -144,17 +144,32 @@ class Topic(object):
         self.max_depth_non_gd = config.max_depth_non_gd
         self.has_gd = config.has_gd
         self.depth_check_freq = config.depth_check_freq
-        self.depth_check_iter = 0
         self.before_publish_hook_service_invoker = config.get('before_publish_hook_service_invoker')
         self.before_delivery_hook_service_invoker = config.get('before_delivery_hook_service_invoker')
 
-    def incr_depth_check(self):
-        """ Increases counter indicating whether topic's depth should be checked for max_depth reached.
+        # How many messages have been published to this topic from current server,
+        # i.e. this is not a global counter.
+        self.msg_pub_iter = 0
+
+        # When were subscribers last notified about messages from current server,
+        # that is, this is again not a global counter.
+        self.last_notified = utcnow_as_ms()
+
+    def incr_msg_pub_iter(self):
+        """ Increases counter of messages published to this topic from current server.
         """
-        self.depth_check_iter += 1
+        self.msg_pub_iter += 1
+
+    def update_last_modified(self, _utcnow_as_ms=utcnow_as_ms):
+        """ Increases counter of messages published to this topic from current server.
+        """
+        self.last_notified = _utcnow_as_ms()
 
     def needs_depth_check(self):
-        return self.depth_check_iter % self.depth_check_freq == 0
+        return self.msg_pub_iter % self.depth_check_freq == 0
+
+    def needs_notify_subscribers(self, _utcnow_as_ms=utcnow_as_ms):
+        return (_utcnow_as_ms() - self.last_notified > 1) # or self.msg_pub_iter % 100 == 0
 
 # ################################################################################################################################
 

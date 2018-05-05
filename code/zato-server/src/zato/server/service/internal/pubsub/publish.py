@@ -284,7 +284,7 @@ class Publish(AdminService):
                 with closing(self.odb.session()) as session:
 
                     # Increase depth check counter..
-                    topic.incr_depth_check()
+                    topic.incr_msg_pub_iter()
 
                     # .. test first if we should check the depth in this iteration.
                     if topic.needs_depth_check():
@@ -323,12 +323,16 @@ class Publish(AdminService):
         # Also in background, notify pub/sub task runners that there are new messages for them ..
         if subscriptions_by_topic:
 
-            # Notify delivery tasks only if there are some messages available - it is possible
-            # there will not be any here because, for instance, we had a list of messages on input
-            # but a hook service filtered them out.
-            if non_gd_msg_list or has_gd_msg_list:
-                self._notify_pubsub_tasks(
-                    topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, has_gd_msg_list)
+            if topic.needs_notify_subscribers():
+
+                # Notify delivery tasks only if there are some messages available - it is possible
+                # there will not be any here because, for instance, we had a list of messages on input
+                # but a hook service filtered them out.
+                if non_gd_msg_list or has_gd_msg_list:
+                    self._notify_pubsub_tasks(
+                        topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, has_gd_msg_list)
+
+                topic.update_last_modified()
 
         # .. however, if there are no subscriptions at the moment while there are non-GD messages,
         # we need to re-run again and publish all such messages as GD ones. This is because if there
