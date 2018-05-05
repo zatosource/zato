@@ -39,7 +39,7 @@ from zato.common.exception import Reportable
 from zato.common.util import new_cid
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientInvokeRequest, ClientMessage, copy_forbidden, \
-     error_response, ErrorResponse, Forbidden, OKResponse
+     error_response, ErrorResponse, Forbidden, OKResponse, PubSubClientInvokeRequest
 from zato.server.pubsub.task import PubSubTool
 from zato.vault.client import VAULT
 
@@ -172,7 +172,7 @@ class WebSocket(_WebSocket):
         cid = new_cid()
         logger.info('Delivering %d pub/sub message{} to sub_key `%s`'.format('s' if len_msg > 1 else ''), len_msg, sub_key)
 
-        self.invoke_client(cid, data)
+        self.invoke_client(cid, data, _Class=PubSubClientInvokeRequest)
 
 # ################################################################################################################################
 
@@ -490,7 +490,7 @@ class WebSocket(_WebSocket):
     def _has_client_response(self, request_id):
         return self.responses_received.get(request_id)
 
-    def _wait_for_client_response(self, request_id, wait_time=1):
+    def _wait_for_client_response(self, request_id, wait_time=5):
         """ Wait until a response from client arrives and return it or return None if there is no response up to wait_time.
         """
         return self._wait_for_event(wait_time, self._has_client_response, request_id=request_id)
@@ -575,11 +575,11 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def invoke_client(self, cid, request, use_send=True):
+    def invoke_client(self, cid, request, use_send=True, _Class=ClientInvokeRequest):
         """ Invokes a remote WSX client with request given on input, returning its response,
         if any was produced in the expected time.
         """
-        msg = ClientInvokeRequest(cid, request)
+        msg = _Class(cid, request)
         (self.send if use_send else self.ping)(msg.serialize())
 
         response = self._wait_for_client_response(msg.id)
