@@ -25,7 +25,7 @@ from sortedcontainers import SortedList as _SortedList
 # Zato
 from zato.common import PUBSUB
 from zato.common.pubsub import PubSubMessage
-from zato.common.util import spawn_greenlet
+from zato.common.util import pretty_format_float, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub import PubSub
 
@@ -325,6 +325,7 @@ class GDMessage(Message):
     """
     def __init__(self, sub_key, msg):
         super(GDMessage, self).__init__()
+        self.endp_msg_queue_id = msg.endp_msg_queue_id
         self.sub_key = sub_key
         self.pub_msg_id = msg.pub_msg_id
         self.pub_correl_id = msg.pub_correl_id
@@ -497,7 +498,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list):
+    def _handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list, delta=60):
         """ A callback invoked when there is at least one new message to be handled for input sub_keys.
         If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
         it is a list of non-GD message for sub_keys.
@@ -519,8 +520,17 @@ class PubSubTool(object):
                 if has_gd:
 
                     self._fetch_gd_messages_by_sub_key(sub_key)
-                    now = utcnow_as_ms()
-                    self.last_sql_run[sub_key] = now
+
+                    # Note how we substract delta seconds from current time - this is because
+                    # it is possible that there will be new messages enqueued in between our last
+                    # run and current time's generation - the difference will be likely just a few
+                    # milliseconds but to play it safe we use by default a generous slice of 60 seconds.
+                    # This is fine because any SQL queries depending on this value will also
+                    # include other filters such as delivery_status.
+                    new_now = utcnow_as_ms() - delta
+                    self.last_sql_run[sub_key] = new_now
+
+                    logger.info('Storing last_run of `%s` for sub_key:%s (d:%s)',  pretty_format_float(new_now), sub_key, delta)
 
                 # Accept all input non-GD messages
                 if non_gd_msg_list:
@@ -539,12 +549,24 @@ class PubSubTool(object):
         must be called with a lock for input sub_key.
         """
         count = 0
+        msg_ids = []
 
-        for idx, msg in enumerate(self.pubsub.get_sql_messages_by_sub_key(sub_key, self.last_sql_run[sub_key], session)):
+        # When did we last run for this sub_key
+        last_run = self.last_sql_run[sub_key]
+
+        # These are messages that we have already queued up so if we happen to pick them up
+        # in the database, they should be ignored.
+        ignore_list = [msg.endp_msg_queue_id for msg in self.delivery_lists[sub_key]]
+
+        logger.info('Using last_run `%s` for sub_key:%s', pretty_format_float(last_run), sub_key)
+
+        for idx, msg in enumerate(self.pubsub.get_sql_messages_by_sub_key(session, sub_key, last_run, ignore_list)):
+            msg_ids.append(msg.pub_msg_id)
             self.delivery_lists[sub_key].add(GDMessage(sub_key, msg))
             count += 1
 
-        logger.info('Pushing %d GD message{}to sub_key task:%s'.format(' ' if count==1 else 's '), count, sub_key)
+        logger.info('Pushing %d GD message{}to for sub_key task:%s msg_ids:%s'.format(
+            ' ' if count==1 else 's '), count, sub_key, msg_ids)
 
 # ################################################################################################################################
 
