@@ -979,7 +979,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_sql_messages_by_sub_key(self, sub_key, last_sql_run, session=None):
+    def get_sql_messages_by_sub_key(self, session, sub_key, last_sql_run, ignore_list):
         """ Returns from SQL all messages queued up for a given sub_key.
         """
         if not session:
@@ -989,7 +989,8 @@ class PubSub(object):
             needs_close = False
 
         try:
-            return _get_sql_messages_by_sub_key(session, self.server.cluster_id, sub_key, last_sql_run, utcnow_as_ms())
+            return _get_sql_messages_by_sub_key(session, self.server.cluster_id, sub_key, last_sql_run, utcnow_as_ms(),
+                ignore_list)
         finally:
             if needs_close:
                 session.close()

@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
+from time import time
 import logging
 
 # Arrow
@@ -36,10 +37,11 @@ def datetime_to_ms(dt):
 
 # ################################################################################################################################
 
-def utcnow_as_ms(_datetime_to_ms=datetime_to_ms, _utcnow=datetime.utcnow):
-    """ Returns current UTC time in milliseconds since epoch.
+def utcnow_as_ms(_time=time):
+    """ Returns current UTC time in milliseconds since epoch. As of now, uses time.time but may eventually choose
+    to use alternative implementations on different systems.
     """
-    return _datetime_to_ms(_utcnow())
+    return _time()
 
 # ################################################################################################################################
 

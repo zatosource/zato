@@ -234,7 +234,7 @@ def publish_action(req):
 
     try:
 
-        for x in range(1):
+        for x in range(2000):
             msg_id = req.POST.get('msg_id') or new_msg_id()
             gd = req.POST['gd']
 

@@ -46,7 +46,8 @@ sql_messages_columns = (
     PubSubMessage.expiration,
     PubSubMessage.expiration_time,
     PubSubMessage.has_gd,
-    PubSubTopic.name.label('topic_name')
+    PubSubTopic.name.label('topic_name'),
+    PubSubEndpointEnqueuedMessage.id.label('endp_msg_queue_id'),
 )
 
 sql_msg_id_columns = (
@@ -55,7 +56,7 @@ sql_msg_id_columns = (
 
 # ################################################################################################################################
 
-def _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, columns, needs_result=True,
+def _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, columns, ignore_list=None, needs_result=True,
     _initialized=_initialized):
     """ Returns all SQL messages queued up for a given sub_key that are not being delivered
     or have not been delivered already.
@@ -82,6 +83,10 @@ def _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key, last_sql_run, now
         query = query.\
             filter(PubSubEndpointEnqueuedMessage.creation_time <= utcnow_as_ms())
 
+    if ignore_list:
+        query = query.\
+            filter(PubSubEndpointEnqueuedMessage.id.notin_(ignore_list))
+
     query = query.\
         order_by(PubSubMessage.priority.desc()).\
         order_by(PubSubMessage.ext_pub_time).\
@@ -91,13 +96,13 @@ def _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key, last_sql_run, now
 
 # ################################################################################################################################
 
-def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now):
-    return _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, sql_messages_columns)
+def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, ignore_list):
+    return _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, sql_messages_columns, ignore_list)
 
 # ################################################################################################################################
 
 def get_sql_msg_ids_by_sub_key(session, cluster_id, sub_key, last_sql_run, now):
-    return _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, sql_msg_id_columns, False)
+    return _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, sql_msg_id_columns, needs_result=False)
 
 # ################################################################################################################################
 
