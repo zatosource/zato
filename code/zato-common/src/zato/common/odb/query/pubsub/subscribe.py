@@ -19,6 +19,10 @@ from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
 
 # ################################################################################################################################
 
+MsgTable = PubSubMessage.__table__
+
+# ################################################################################################################################
+
 _initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
 
 # ################################################################################################################################
@@ -169,13 +173,8 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_su
     # subscriber will ever receive them. Note that we changing the status only for the messages pertaining
     # to the current subscriber without ever touching messages reiceved by any other one.
 
-    # get_sql_msg_ids_by_sub_key(session, cluster_id, sub_key, last_sql_run, now):
-
     msg_ids = get_sql_msg_ids_by_sub_key(session, cluster_id, sub_key, None, now)
 
-    print(msg_ids.all())
-
-    '''
     session.execute(
         update(MsgTable).\
         values({
@@ -185,7 +184,7 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_su
             MsgTable.c.pub_msg_id.in_(msg_ids),
             ~MsgTable.c.is_in_sub_queue
         ))
-    )'''
+    )
 
 # ################################################################################################################################
 
