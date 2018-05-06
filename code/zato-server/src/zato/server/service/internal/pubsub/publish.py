@@ -22,7 +22,8 @@ from gevent import spawn
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
-from zato.common.odb.query.pubsub.cleanup import delete_msg_delivered
+from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
+     delete_msg_expired
 from zato.common.odb.query.pubsub.publish import insert_queue_messages, insert_topic_messages, \
      update_publish_metadata
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
@@ -256,6 +257,14 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
+    def _cleanup_sql_data(self, session, cluster_id, topic_id, now):
+        delete_msg_delivered(session, cluster_id, topic_id)
+        delete_msg_expired(session, cluster_id, topic_id, now)
+        delete_enq_delivered(session, cluster_id, topic_id)
+        delete_enq_marked_deleted(session, cluster_id, topic_id)
+
+# ################################################################################################################################
+
     def _publish(self, pubsub, topic, endpoint_id, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,
         ext_client_id, is_re_run, now):
         """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
@@ -292,7 +301,7 @@ class Publish(AdminService):
 
                     # No matter if we can publish or not, we may possibly cleanup old messages first.
                     if topic.needs_msg_cleanup():
-                        delete_msg_delivered(session, cluster_id, topic.id)
+                        self._cleanup_sql_data(session, cluster_id, topic.id, now)
 
                     # .. test first if we should check the depth in this iteration.
                     if topic.needs_depth_check():

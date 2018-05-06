@@ -44,36 +44,38 @@ def delete_msg_delivered(session, cluster_id, topic_id):
 
 # ################################################################################################################################
 
-def delete_msg_expired(session, cluster_id, now):
+def delete_msg_expired(session, cluster_id, topic_id, now):
     """ Deletes all expired messages from all topics.
     """
     return session.query(PubSubMessage).\
+        filter(PubSubMessage.topic_id==topic_id).\
         filter(PubSubMessage.cluster_id==cluster_id).\
         filter(PubSubMessage.expiration_time<=now).\
         delete()
 
 # ################################################################################################################################
 
-def _delete_enq_msg_by_status(session, cluster_id, status):
+def _delete_enq_msg_by_status(session, cluster_id, topic_id, status):
     """ Deletes all messages already delivered or the ones that have been explicitly marked for deletion from delivery queues.
     """
     return session.query(PubSubEndpointEnqueuedMessage).\
         filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id).\
+        filter(PubSubEndpointEnqueuedMessage.topic_id==topic_id).\
         filter(PubSubEndpointEnqueuedMessage.delivery_status==status).\
         delete()
 
 # ################################################################################################################################
 
-def delete_enq_delivered(session, cluster_id, status=_delivered):
+def delete_enq_delivered(session, cluster_id, topic_id, status=_delivered):
     """ Deletes all messages already delivered or the ones that have been explicitly marked for deletion from delivery queues.
     """
-    return _delete_enq_msg_by_status(session, cluster_id, status)
+    return _delete_enq_msg_by_status(session, cluster_id, topic_id, status)
 
 # ################################################################################################################################
 
-def delete_enq_marked_deleted(session, cluster_id, status=_to_delete):
+def delete_enq_marked_deleted(session, cluster_id, topic_id, status=_to_delete):
     """ Deletes all messages that have been explicitly marked for deletion from delivery queues.
     """
-    return _delete_enq_msg_by_status(session, cluster_id, status)
+    return _delete_enq_msg_by_status(session, cluster_id, topic_id, status)
 
 # ################################################################################################################################
