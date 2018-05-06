@@ -73,8 +73,8 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_message(self, topic, input, now, pattern_matched, endpoint_id, _initialized=_initialized, _zato_none=ZATO_NONE,
-            _skip=PUBSUB.HOOK_ACTION.SKIP):
+    def _get_message(self, topic, input, now, pattern_matched, endpoint_id, has_subs, _initialized=_initialized,
+        _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP):
 
         priority = get_priority(self.cid, input)
         expiration = get_expiration(self.cid, input)
@@ -125,6 +125,7 @@ class Publish(AdminService):
         ps_msg.ext_pub_time = ext_pub_time
         ps_msg.group_id = input.get('group_id') or None
         ps_msg.position_in_group = input.get('position_in_group') or None
+        ps_msg.is_in_sub_queue = has_subs
 
         # Invoke hook service here because it may want to update data in which case
         # we need to take it into account below.
@@ -149,7 +150,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_messages_from_data(self, topic, data_list, input, now, pattern_matched, endpoint_id):
+    def _get_messages_from_data(self, topic, data_list, input, now, pattern_matched, endpoint_id, has_subs):
 
         # List of messages with GD enabled
         gd_msg_list = []
@@ -162,14 +163,14 @@ class Publish(AdminService):
 
         if data_list and isinstance(data_list, (list, tuple)):
             for elem in data_list:
-                msg = self._get_message(topic, elem, now, pattern_matched, endpoint_id)
+                msg = self._get_message(topic, elem, now, pattern_matched, endpoint_id, has_subs)
                 if msg:
                     msg_id_list.append(msg.pub_msg_id)
                     msg_as_dict = msg.to_dict()
                     target_list = gd_msg_list if msg.has_gd else non_gd_msg_list
                     target_list.append(msg_as_dict)
         else:
-            msg = self._get_message(topic, input, now, pattern_matched, endpoint_id)
+            msg = self._get_message(topic, input, now, pattern_matched, endpoint_id, has_subs)
             if msg:
                 msg_id_list.append(msg.pub_msg_id)
                 msg_as_dict = msg.to_dict()
@@ -246,17 +247,20 @@ class Publish(AdminService):
         # We always count time in milliseconds since UNIX epoch
         now = utcnow_as_ms()
 
+        # Get all subscribers for that topic from local worker store
+        subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic.name)
+
         # If input.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other input parameters describe it.
         data_list = input.data_list if input.data_list else None
 
         # Input messages may contain a mix of GD and non-GD messages, and we need to extract them separately.
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
-            topic, data_list, input, now, pattern_matched, endpoint_id)
+            topic, data_list, input, now, pattern_matched, endpoint_id, bool(subscriptions_by_topic))
 
         # We have all the input data, publish the message(s) now
-        self._publish(pubsub, topic, endpoint_id, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,
-            input.get('ext_client_id') or 'n/a', False, now)
+        self._publish(pubsub, topic, endpoint_id, subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list,
+            pattern_matched, input.get('ext_client_id') or 'n/a', False, now)
 
 # ################################################################################################################################
 
@@ -268,15 +272,12 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _publish(self, pubsub, topic, endpoint_id, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,
-        ext_client_id, is_re_run, now):
+    def _publish(self, pubsub, topic, endpoint_id, subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list,
+        pattern_matched, ext_client_id, is_re_run, now):
         """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
         """
         len_gd_msg_list = len(gd_msg_list)
         has_gd_msg_list = bool(len_gd_msg_list)
-
-        # Get all subscribers for that topic from local worker store
-        subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic.name)
 
         # Just so it is not overlooked, log information that no subscribers are found for this topic
         if not subscriptions_by_topic:
@@ -343,16 +344,17 @@ class Publish(AdminService):
         # Also in background, notify pub/sub task runners that there are new messages for them ..
         if subscriptions_by_topic:
 
-            if topic.needs_notify_subscribers():
+            # Notify delivery tasks only if there are some messages available - it is possible
+            # there will not be any here because, for instance, we had a list of messages on input
+            # but a hook service filtered them out.
 
-                # Notify delivery tasks only if there are some messages available - it is possible
-                # there will not be any here because, for instance, we had a list of messages on input
-                # but a hook service filtered them out.
-                if non_gd_msg_list or has_gd_msg_list:
-                    self._notify_pubsub_tasks(
-                        topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, has_gd_msg_list)
+            # Note that we notify subscribers explicitly only if there are non-GD messages because GD ones
+            # are handled in background periodically.
+            if non_gd_msg_list:
+                self._notify_pubsub_tasks(
+                    topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, has_gd_msg_list)
 
-                topic.update_last_modified()
+            topic.update_last_modified()
 
         # .. however, if there are no subscriptions at the moment while there are non-GD messages,
         # we need to re-run again and publish all such messages as GD ones. This is because if there

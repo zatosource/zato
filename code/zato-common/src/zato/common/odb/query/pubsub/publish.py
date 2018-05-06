@@ -77,19 +77,6 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
     # Move the message to endpoint queues
     session.execute(EnqueuedMsgInsert().values(queue_msgs))
 
-    # Set the flag indicating that this message is no longer available in the topic itself,
-    # i.e. it's been already moved to at least one subscriber queue.
-    session.execute(
-        update(MsgTable).\
-        values({
-            'is_in_sub_queue': True,
-            }).\
-        where(and_(
-            MsgTable.c.pub_msg_id.in_(msg_ids),
-            ~MsgTable.c.is_in_sub_queue
-        ))
-    )
-
 # ################################################################################################################################
 
 def update_publish_metadata(session, cluster_id, topic_id, endpoint_id, now, pattern_matched,
