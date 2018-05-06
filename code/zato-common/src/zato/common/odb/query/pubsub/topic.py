@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic, PubSubSubscription
+from zato.common.odb.model import PubSubMessage, PubSubTopic, PubSubSubscription
 from zato.common.odb.query import count
 
 # ################################################################################################################################

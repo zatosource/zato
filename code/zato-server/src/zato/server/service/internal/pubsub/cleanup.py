@@ -18,7 +18,8 @@ from traceback import format_exc
 from gevent import sleep
 
 # Zato
-from zato.common.odb.query.pubsub.cleanup import delete_expired, delete_delivered, delete_marked_deleted
+from zato.common.odb.query.pubsub.cleanup import delete_msg_delivered, delete_msg_expired, delete_enq_delivered, \
+     delete_enq_marked_deleted
 from zato.common.util.time_ import utcnow_as_ms
 from zato.server.service.internal import AdminService
 
@@ -52,17 +53,17 @@ class CleanupService(AdminService):
                 with closing(self.odb.session()) as session:
 
                     # Clean up what is needed
-                    number, kind = self._cleanup(session)
+                    total, kind = self._cleanup(session)
 
                     # Log what was done
-                    suffix = 's' if(number==0 or number > 1) else ''
-                    logger.info('GD. Deleted %s %s pub/sub message%s' % (number, kind, suffix))
+                    suffix = 's' if(total==0 or total > 1) else ''
+                    logger.info('GD. Deleted %s %s pub/sub message%s' % (total, kind, suffix))
 
                     # Actually commit on SQL level
                     session.commit()
 
-            except Exception, e:
-                logger.warn('Error in cleanup: `%s`', format_exc(e))
+            except Exception:
+                logger.warn('Error in cleanup: `%s`', format_exc())
                 sleep(sleep_time)
 
 # ################################################################################################################################
@@ -72,29 +73,38 @@ class CleanupService(AdminService):
 
 # ################################################################################################################################
 
-class DeleteExpired(CleanupService):
+class DeleteMsgDelivered(CleanupService):
+    """ Deletes messages from topics that have been already delivered from their queues.
+    """
+    def _cleanup(self, session):
+        total = delete_msg_delivered(session, self.server.cluster_id, utcnow_as_ms())
+        return total, 'delivered (from topic)'
+
+# ################################################################################################################################
+
+class DeleteMsgExpired(CleanupService):
     """ Deletes expired messages from all topics.
     """
     def _cleanup(self, session):
-        number = delete_expired(session, self.server.cluster_id, utcnow_as_ms())
-        return number, 'expired'
+        total = delete_msg_expired(session, self.server.cluster_id, utcnow_as_ms())
+        return total, 'expired'
 
 # ################################################################################################################################
 
-class DeleteDelivered(CleanupService):
+class DeleteEnqDelivered(CleanupService):
     """ Deletes delivered messages from all message queues.
     """
     def _cleanup(self, session):
-        number = delete_delivered(session, self.server.cluster_id)
-        return number, 'delivered'
+        total = delete_enq_delivered(session, self.server.cluster_id)
+        return total, 'delivered (from queue)'
 
 # ################################################################################################################################
 
-class DeleteMarkedDeleted(CleanupService):
+class DeleteEnqMarkedDeleted(CleanupService):
     """ Deletes from all message queues messages that have been explicitly marked for deletion (e.g. by hook services).
     """
     def _cleanup(self, session):
-        number = delete_marked_deleted(session, self.server.cluster_id)
-        return number, 'marked to be deleted'
+        total = delete_enq_marked_deleted(session, self.server.cluster_id)
+        return total, 'marked to be deleted'
 
 # ################################################################################################################################

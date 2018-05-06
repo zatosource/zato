@@ -68,7 +68,7 @@ common_sub_data = CommonSubData.common + CommonSubData.amqp + CommonSubData.file
 
 class AfterPublish(AdminService):
     class SimpleIO(AdminSIO):
-        input_required = ('cid', AsIs('topic_id'), 'topic_name')
+        input_required = ('cid', AsIs('topic_id'), 'topic_name', 'is_bg_call')
         input_optional = (Opaque('subscriptions'), Opaque('non_gd_msg_list'), 'has_gd_msg_list')
 
     def handle(self):
@@ -114,13 +114,14 @@ class AfterPublish(AdminService):
             topic_name = self.request.input.topic_name
             non_gd_msg_list = self.request.input.non_gd_msg_list
             has_gd_msg_list = self.request.input.has_gd_msg_list
+            is_bg_call = self.request.input.is_bg_call
 
             # We already know we can store them in RAM
             if not_found:
                 self._store_in_ram(cid, topic_id, topic_name, not_found, non_gd_msg_list, False)
 
             # Attempt to notify pub/sub tasks about non-GD messages ..
-            notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list, has_gd_msg_list)
+            notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list, has_gd_msg_list, is_bg_call)
 
             # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
             if notif_error_sub_keys:
@@ -138,7 +139,8 @@ class AfterPublish(AdminService):
 
 # ################################################################################################################################
 
-    def _notify_pub_sub(self, current_servers, non_gd_msg_list, has_gd_msg_list, endpoint_type_service=endpoint_type_service):
+    def _notify_pub_sub(self, current_servers, non_gd_msg_list, has_gd_msg_list, is_bg_call,
+        endpoint_type_service=endpoint_type_service):
         """ Notifies all relevant remote servers about new messages available for delivery.
         For GD messages     - a flag is sent to indicate that there is at least one message waiting in SQL DB.
         For non-GD messages - their actual contents is sent.
@@ -157,7 +159,8 @@ class AfterPublish(AdminService):
                         'endpoint_type': endpoint_type,
                         'has_gd': has_gd_msg_list,
                         'sub_key_list': sub_key_list,
-                        'non_gd_msg_list': non_gd_msg_list
+                        'non_gd_msg_list': non_gd_msg_list,
+                        'is_bg_call': is_bg_call,
                     },
                 }, pid=server_pid)
 

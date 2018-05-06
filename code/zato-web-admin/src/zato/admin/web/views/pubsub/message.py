@@ -234,7 +234,7 @@ def publish_action(req):
 
     try:
 
-        for x in range(1000):
+        for x in range(20000):
             msg_id = req.POST.get('msg_id') or new_msg_id()
             gd = req.POST['gd']
 
@@ -253,7 +253,7 @@ def publish_action(req):
             for name in('cluster_id', 'topic_name', 'data'):
                 service_input[name] = req.POST[name]
 
-            service_input['data'] = 'z' * 5000
+            service_input['data'] = str(x)
 
             for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group', 'expiration'):
                 service_input[name] = req.POST.get(name, None) or None # Always use None instead of ''

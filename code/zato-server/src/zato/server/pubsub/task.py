@@ -498,7 +498,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list, delta=60):
+    def _handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call, delta=60):
         """ A callback invoked when there is at least one new message to be handled for input sub_keys.
         If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
         it is a list of non-GD message for sub_keys.
@@ -510,8 +510,8 @@ class PubSubTool(object):
 
         # Iterate over all input sub keys and carry out all operations while holding a lock for each sub_key
 
-        logger.info('Handle new messages, cid:%s, gd:%s, sub_keys:%s, len_non_gd:%d',
-            cid, int(has_gd), sub_key_list, len(non_gd_msg_list))
+        logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
+            cid, int(has_gd), sub_key_list, len(non_gd_msg_list), is_bg_call)
 
         for sub_key in sub_key_list:
             with self.sub_key_locks[sub_key]:
@@ -538,9 +538,9 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list):
+    def handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call):
         self.msg_handler_counter += 1
-        spawn(self._handle_new_messages, cid, has_gd, sub_key_list, non_gd_msg_list)
+        spawn(self._handle_new_messages, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call)
 
 # ################################################################################################################################
 

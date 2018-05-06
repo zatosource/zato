@@ -327,9 +327,6 @@ class SubscribeServiceImpl(_Subscribe):
                 # Is it a WebSockets client?
                 has_wsx = bool(ctx.ws_channel_id)
 
-                # Will be non-None if it is a WSX client later on below
-                ws_sub = None
-
                 ctx.creation_time = now = utcnow_as_ms()
                 ctx.sub_key = new_sub_key()
 
@@ -342,7 +339,7 @@ class SubscribeServiceImpl(_Subscribe):
                 if has_wsx:
 
                     # This object persists across multiple WSX connections
-                    ws_sub = add_wsx_subscription(session, ctx.cluster_id, ctx.is_internal, ctx.sub_key,
+                    add_wsx_subscription(session, ctx.cluster_id, ctx.is_internal, ctx.sub_key,
                         ctx.ext_client_id, ctx.ws_channel_id, ps_sub.id)
 
                     # This object will be transient - dropped each time a WSX client disconnects

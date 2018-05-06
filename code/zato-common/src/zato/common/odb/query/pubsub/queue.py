@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # SQLAlchemy
-from sqlalchemy import func, update, true as sa_true
+from sqlalchemy import func, update
 
 # Zato
 from zato.common import PUBSUB

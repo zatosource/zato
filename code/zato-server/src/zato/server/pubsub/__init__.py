@@ -171,6 +171,11 @@ class Topic(object):
 
 # ################################################################################################################################
 
+    def needs_msg_cleanup(self):
+        return self.msg_pub_iter % 50 == 0
+
+# ################################################################################################################################
+
     def needs_depth_check(self):
         return self.msg_pub_iter % self.depth_check_freq == 0
 
@@ -459,7 +464,15 @@ class PubSub(object):
         # e.g. REST outgoing connections. Values are set by worker store.
         self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE)
 
+        # How many messages have been published through this server, regardless of which topic they were from
+        self.msg_pub_iter = 0
+
         spawn_greenlet(self.trigger_notify_pubsub_tasks)
+
+# ################################################################################################################################
+
+    def incr_msg_pub_iter(self):
+        self.msg_pub_iter += 1
 
 # ################################################################################################################################
 
@@ -1232,7 +1245,7 @@ class PubSub(object):
                                         'subscriptions': subs,
                                         'non_gd_msg_list': [],
                                         'has_gd_msg_list': True,
-                                        'bg_call': True,
+                                        'is_bg_call': True, # This is a background call, i.e. issued by this trigger
                                     })
 
                                 else:
