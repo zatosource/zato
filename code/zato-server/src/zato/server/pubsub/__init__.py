@@ -14,7 +14,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # gevent
-from gevent import sleep
+from gevent import sleep, spawn
 from gevent.lock import RLock
 
 # globre
@@ -27,8 +27,8 @@ from zato.common.exception import BadRequest
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_delivery_server_for_sub_key, get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
-from zato.common.odb.query.pubsub.queue import set_to_delete
-from zato.common.util import is_func_overridden, make_repr, spawn_greenlet
+from zato.common.odb.query.pubsub.queue import get_queue_depth_by_topic_id_list, set_to_delete
+from zato.common.util import is_func_overridden, make_repr, new_cid, spawn_greenlet
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
@@ -153,23 +153,31 @@ class Topic(object):
 
         # When were subscribers last notified about messages from current server,
         # that is, this is again not a global counter.
-        self.last_notified = utcnow_as_ms()
+        self.last_notified = None
+
+# ################################################################################################################################
 
     def incr_msg_pub_iter(self):
         """ Increases counter of messages published to this topic from current server.
         """
         self.msg_pub_iter += 1
 
+# ################################################################################################################################
+
     def update_last_modified(self, _utcnow_as_ms=utcnow_as_ms):
         """ Increases counter of messages published to this topic from current server.
         """
         self.last_notified = _utcnow_as_ms()
 
+# ################################################################################################################################
+
     def needs_depth_check(self):
         return self.msg_pub_iter % self.depth_check_freq == 0
 
+# ################################################################################################################################
+
     def needs_notify_subscribers(self, _utcnow_as_ms=utcnow_as_ms):
-        return (_utcnow_as_ms() - self.last_notified > 1) # or self.msg_pub_iter % 100 == 0
+        return self.msg_pub_iter % 100 == 0
 
 # ################################################################################################################################
 
@@ -424,6 +432,7 @@ class PubSub(object):
         self.server = server
         self.broker_client = broker_client
         self.lock = RLock()
+        self.keep_running = True
 
         self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
@@ -449,6 +458,8 @@ class PubSub(object):
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
         self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE)
+
+        spawn_greenlet(self.trigger_notify_pubsub_tasks)
 
 # ################################################################################################################################
 
@@ -650,7 +661,7 @@ class PubSub(object):
 
                         # Starts the delivery task and notifies other servers that we are the one
                         # to handle deliveries for this particular sub_key.
-                        self.server.invoke('zato.pubsub.delivery.create-delivery-task', config)
+                        self.invoke_service('zato.pubsub.delivery.create-delivery-task', config)
 
                     # We are not the first worker of this server and the first one must have already stored
                     # in RAM the mapping of sub_key -> server_pid, so we can safely read it here to add
@@ -678,7 +689,7 @@ class PubSub(object):
             """ A function to invoke pub/sub hook services.
             """
             ctx = HookCtx(hook_type, topic, msg)
-            return self.server.invoke(service_name, {'ctx':ctx}, serialize=False).getvalue(serialize=False)['response']
+            return self.invoke_service(service_name, {'ctx':ctx}, serialize=False).getvalue(serialize=False)['response']
 
         return _invoke_hook_service
 
@@ -1102,7 +1113,7 @@ class PubSub(object):
         including all current in-RAM messages. This method must be invoked in the same worker process that runs
         delivery task for sub_key.
         """
-        self.server.invoke('zato.pubsub.migrate.migrate-delivery-server', {
+        self.invoke_service('zato.pubsub.migrate.migrate-delivery-server', {
             'sub_key': msg.sub_key,
             'old_delivery_server_id': msg.old_delivery_server_id,
             'new_delivery_server_name': msg.new_delivery_server_name,
@@ -1141,7 +1152,7 @@ class PubSub(object):
     def deliver_pubsub_msg(self, sub_key, msg):
         """ A callback method invoked by pub/sub delivery tasks for one or more message that is to be delivered.
         """
-        self.server.invoke('zato.pubsub.delivery.deliver-message', {
+        return self.invoke_service('zato.pubsub.delivery.deliver-message', {
             'msg':msg,
             'subscription':self.get_subscription_by_sub_key(sub_key)
         })
@@ -1160,5 +1171,77 @@ class PubSub(object):
 
     def topic_lock(self, topic_name):
         return self.server.zato_lock_manager('zato.pubsub.publish.%s' % topic_name)
+
+# ################################################################################################################################
+
+    def invoke_service(self, name, msg, *args, **kwargs):
+        return self.server.invoke(name, msg, *args, **kwargs)
+
+# ################################################################################################################################
+
+    def trigger_notify_pubsub_tasks(self, sql_func=get_queue_depth_by_topic_id_list):
+        """ A background greenlet which periodically lets delivery tasks that there are perhaps
+        new GD messages for the topic this class represents.
+        """
+        # Loop forever or until stopped
+        while self.keep_running:
+
+            # Blocks other pub/sub processes for a moment
+            with self.lock:
+
+                # Will map a few temporary objects
+                topic_id_dict = {}
+
+                # Get all topics ..
+                for topic in self.topics.itervalues():
+
+                    # .. and subscriptions for each one ..
+                    subs = self.get_subscriptions_by_topic(topic.name)
+
+                    # .. if there are any subscriptions at all, we store that information for later use.
+                    if subs:
+                        topic_id_dict[topic.id] = (topic.name, subs)
+
+                # OK, if we had any subscriptions for at least one topic, we need to find current depth
+                # for each of the topics found.
+                if topic_id_dict:
+
+                    try:
+
+                        # Operate under a new SQL connection ..
+                        with closing(self.server.odb.session()) as session:
+
+                            # .. find depth for all topics found ..
+                            for topic_id, depth in sql_func(session, self.cluster_id, topic_id_dict.keys()):
+
+                                # .. get the temporary metadata stored earlier ..
+                                topic_name, subs = topic_id_dict[topic_id]
+
+                                # .. proceed only if depth is > 0, i.e. if there are some messages waiting for delivery tasks ..
+                                if depth:
+
+                                    cid = new_cid()
+                                    logger.info('Triggering GD for `%s` len_s:%d d:%d (cid:%s)' % (
+                                        topic_name, len(subs), depth, cid))
+
+                                    # .. and notify all the tasks in background.
+                                    spawn(self.invoke_service, 'zato.pubsub.after-publish', {
+                                        'cid': cid,
+                                        'topic_id':topic_id,
+                                        'topic_name':topic_name,
+                                        'subscriptions': subs,
+                                        'non_gd_msg_list': [],
+                                        'has_gd_msg_list': True,
+                                        'bg_call': True,
+                                    })
+
+                                else:
+                                    logger.info('Skipped GD trigger for `%s`' % topic_name)
+
+                    except Exception:
+                        logger.warn(format_exc())
+
+            # Sleep for a while before continuing
+            sleep(1)
 
 # ################################################################################################################################

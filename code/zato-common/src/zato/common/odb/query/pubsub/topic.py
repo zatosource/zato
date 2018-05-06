@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common.odb.model import PubSubMessage, PubSubTopic, PubSubSubscription
+from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic, PubSubSubscription
 from zato.common.odb.query import count
 
 # ################################################################################################################################
@@ -30,7 +30,7 @@ def get_topics_by_sub_keys(session, cluster_id, sub_keys):
 
 # ################################################################################################################################
 
-def get_topic_gd_depth(session, cluster_id, topic_id):
+def get_gd_depth_topic(session, cluster_id, topic_id):
     """ Returns current depth of input topic by its ID.
     """
     q = session.query(MsgTable.c.id).\

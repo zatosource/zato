@@ -24,7 +24,7 @@ from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
 from zato.common.odb.query.pubsub.publish import insert_queue_messages, insert_topic_messages, \
      update_publish_metadata
-from zato.common.odb.query.pubsub.topic import get_topic_gd_depth
+from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import PubSubMessage
 from zato.common.pubsub import new_msg_id
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
@@ -175,7 +175,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _notify_pubsub_tasks(self, topic_id, topic_name, subscriptions, non_gd_msg_list, has_gd_msg_list):
+    def _notify_pubsub_tasks(self, topic_id, topic_name, subscriptions, non_gd_msg_list, has_gd_msg_list, bg_call=False):
         try:
             self.invoke('zato.pubsub.after-publish', {
                 'cid': self.cid,
@@ -184,6 +184,7 @@ class Publish(AdminService):
                 'subscriptions': subscriptions,
                 'non_gd_msg_list': non_gd_msg_list,
                 'has_gd_msg_list': has_gd_msg_list,
+                'bg_call': bg_call,
             })
         except Exception:
             self.logger.warn('Could not notify pub/sub tasks, e:`%s`', format_exc())
@@ -290,7 +291,7 @@ class Publish(AdminService):
                     if topic.needs_depth_check():
 
                         # Get current depth of this topic ..
-                        current_depth = get_topic_gd_depth(session, cluster_id, topic.id)
+                        current_depth = get_gd_depth_topic(session, cluster_id, topic.id)
 
                         # .. and abort if max depth is already reached.
                         if current_depth + len_gd_msg_list > topic.max_depth_gd:
