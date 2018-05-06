@@ -19,6 +19,9 @@ from dateparser import parse as dt_parse
 # gevent
 from gevent import spawn
 
+# Redis
+from redis.lock import Lock as RedisLock
+
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
@@ -290,7 +293,7 @@ class Publish(AdminService):
         if has_gd_msg_list:
 
             # Operate under a global lock for that topic to rule out any interference from other publishers
-            with self.lock('zato.pubsub.publish.%s' % topic.name):
+            with RedisLock(self.kvdb.conn, 'zato.pubsub.publish.%s' % topic.name):
 
                 with closing(self.odb.session()) as session:
 
@@ -318,7 +321,7 @@ class Publish(AdminService):
                             current_depth = current_depth + len_gd_msg_list
 
                     # Publish messages - INSERT rows, each representing an individual message
-                    insert_topic_messages(session, self.cid, gd_msg_list, cluster_id, topic.id, now)
+                    insert_topic_messages(session, self.cid, gd_msg_list)
 
                     # Move messages to each subscriber's queue
                     if subscriptions_by_topic:
@@ -403,13 +406,23 @@ class Publish(AdminService):
             last_ext_client_id = msg_list[-1]['ext_client_id']
             last_in_reply_to = msg_list[-1]['in_reply_to']
 
-            with closing(self.odb.session()) as session:
+            topic_key = 'zato.ps.meta.last.topic.%s.%s' % (cluster_id, topic_id)
+            endpoint_key = 'zato.ps.meta.last.endpoint.%s.%s' % (cluster_id, endpoint_id)
 
-                # Update last pub time and related metadata for topic and current publisher
-                update_publish_metadata(session, cluster_id, topic_id, endpoint_id, now, pattern_matched,
-                    last_pub_msg_id, last_pub_correl_id, last_ext_client_id, last_in_reply_to)
+            # For endpoint_key, there is a superfluous key here, (already in the key itself), but it will not hurt that much
+            data = {
+                'pub_time': now,
+                'endpoint_id': endpoint_id,
+                'pub_msg_id': last_pub_msg_id,
+                'pub_correl_id': last_pub_correl_id,
+                'ext_client_id': last_ext_client_id,
+                'in_reply_to': last_in_reply_to,
+                'pattern_matched': pattern_matched
+            }
 
-                session.commit()
+            self.kvdb.conn.hmset(topic_key, data)
+            self.kvdb.conn.hmset(endpoint_key, data)
+
         except Exception:
             self.logger.warn('Error while updating pub metadata `%s`', format_exc())
 
