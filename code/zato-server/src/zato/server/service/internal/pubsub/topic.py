@@ -15,7 +15,7 @@ from contextlib import closing
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
-from zato.common.odb.query.pubsub.topic import get_topic_gd_depth, get_topics_by_sub_keys
+from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_topics_by_sub_keys
 from zato.common.util import ensure_pubsub_hook_is_valid
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Dict, Int, List
@@ -62,7 +62,7 @@ def response_hook(self, input, instance, attrs, service_type):
                 })['response']['current_depth_non_gd']
 
                 # Checks current GD depth in SQL
-                item.current_depth_gd = get_topic_gd_depth(session, input.cluster_id, item.id)
+                item.current_depth_gd = get_gd_depth_topic(session, input.cluster_id, item.id)
 
                 if item.last_pub_time:
                     item.last_pub_time = datetime_from_ms(item.last_pub_time)
@@ -104,7 +104,7 @@ class Get(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             topic = pubsub_topic(session, self.request.input.cluster_id, self.request.input.id)._asdict()
-            topic['current_depth_gd'] = get_topic_gd_depth(session, self.request.input.cluster_id, self.request.input.id)
+            topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, self.request.input.id)
 
         if topic['last_pub_time']:
             topic['last_pub_time'] = datetime_from_ms(topic['last_pub_time'])

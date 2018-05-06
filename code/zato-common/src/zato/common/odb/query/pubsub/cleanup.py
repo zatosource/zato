@@ -29,7 +29,7 @@ def delete_expired(session, cluster_id, now):
 
 # ################################################################################################################################
 
-def _delete_by_status(session, cluster_id, status):
+def _delete_enq_msg_by_status(session, cluster_id, status):
     """ Deletes all messages already delivered or the ones that have been explicitly marked for deletion from delivery queues.
     """
     return session.query(PubSubEndpointEnqueuedMessage).\
@@ -42,13 +42,13 @@ def _delete_by_status(session, cluster_id, status):
 def delete_delivered(session, cluster_id, status=_delivered):
     """ Deletes all messages already delivered or the ones that have been explicitly marked for deletion from delivery queues.
     """
-    return _delete_by_status(session, cluster_id, status)
+    return _delete_enq_msg_by_status(session, cluster_id, status)
 
 # ################################################################################################################################
 
 def delete_marked_deleted(session, cluster_id, status=_to_delete):
     """ Deletes all messages that have been explicitly marked for deletion from delivery queues.
     """
-    return _delete_by_status(session, cluster_id, status)
+    return _delete_enq_msg_by_status(session, cluster_id, status)
 
 # ################################################################################################################################
