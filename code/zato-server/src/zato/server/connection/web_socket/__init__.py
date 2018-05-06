@@ -583,9 +583,10 @@ class WebSocket(_WebSocket):
         msg = _Class(cid, request)
         (self.send if use_send else self.ping)(msg.serialize())
 
-        response = self._wait_for_client_response(msg.id)
-        if response:
-            return response if isinstance(response, bool) else response.data # It will be bool in pong responses
+        if _Class is not PubSubClientInvokeRequest:
+            response = self._wait_for_client_response(msg.id)
+            if response:
+                return response if isinstance(response, bool) else response.data # It will be bool in pong responses
 
 # ################################################################################################################################
 

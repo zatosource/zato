@@ -146,9 +146,9 @@ log_connection_info_sleep_time=5 # In seconds
 zato.helpers.input-logger=Sample payload for a startup service (first worker)
 zato.notif.init-notifiers=
 zato.kvdb.log-connection-info=
-zato.pubsub.cleanup.delete-expired=10
-zato.pubsub.cleanup.delete-delivered=10
-zato.pubsub.cleanup.delete-marked-deleted=120
+#zato.pubsub.cleanup.delete-expired=10
+#zato.pubsub.cleanup.delete-delivered=10
+#zato.pubsub.cleanup.delete-marked-deleted=120
 zato.sso.cleanup.cleanup=300
 zato.updates.check-updates=
 

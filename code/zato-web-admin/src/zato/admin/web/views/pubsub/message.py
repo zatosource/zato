@@ -234,7 +234,9 @@ def publish_action(req):
 
     try:
 
-        for x in range(20000):
+        from datetime import datetime
+
+        for x in range(200000):
             msg_id = req.POST.get('msg_id') or new_msg_id()
             gd = req.POST['gd']
 
@@ -260,7 +262,7 @@ def publish_action(req):
 
             req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
 
-            print('Invoking', x, msg_id)
+            print('Invoking', x, msg_id, datetime.utcnow())
             #import time
             #time.sleep(0.01)
 
