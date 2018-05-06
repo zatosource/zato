@@ -32,22 +32,12 @@ _initialized=PUBSUB.DELIVERY_STATUS.INITIALIZED
 
 # ################################################################################################################################
 
-def insert_topic_messages(session, cid, msg_list, cluster_id, topic_id, now):
+def insert_topic_messages(session, cid, msg_list):
     """ Publishes messages to a topic, i.e. runs an INSERT that inserts rows, one for each message.
     """
     try:
         # Insert all messages
         session.execute(MsgInsert().values(msg_list))
-
-        # Update metadata - set last publication time
-        session.execute(
-            update(TopicTable).\
-            values({
-                'last_pub_time': now
-                }).\
-            where(TopicTable.c.id==topic_id).\
-            where(TopicTable.c.cluster_id==cluster_id)
-        )
 
     except IntegrityError, e:
         if 'pubsb_msg_pubmsg_id_idx' in e.message:

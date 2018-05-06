@@ -2125,7 +2125,6 @@ class PubSubMessage(Base):
     """
     __tablename__ = 'pubsub_message'
     __table_args__ = (
-        Index('pubsb_msg_id_idx', 'cluster_id', 'id', unique=True),
 
         # This index is needed for FKs from other tables,
         # otherwise with MySQL we get error 1215 'Cannot add foreign key constraint'

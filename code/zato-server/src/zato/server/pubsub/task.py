@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from bisect import bisect_left
+from contextlib import closing
 from copy import deepcopy
 from logging import getLogger
 from socket import error as SocketError
@@ -197,7 +198,7 @@ class DeliveryTask(object):
                 # and our delivery list is currently empty.
                 return _run_deliv_status.OK
 
-    def run(self, no_msg_sleep_time=0.5, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
+    def run(self, no_msg_sleep_time=0.01, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         logger.info('Starting delivery task for sub_key:`%s`', self.sub_key)
         try:
             while self.keep_running:
@@ -513,28 +514,31 @@ class PubSubTool(object):
         logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
             cid, int(has_gd), sub_key_list, len(non_gd_msg_list), is_bg_call)
 
-        for sub_key in sub_key_list:
-            with self.sub_key_locks[sub_key]:
+        with closing(self.pubsub.server.odb.session()) as session:
 
-                # Fetch all GD messages, if there are any at all
-                if has_gd:
+            for sub_key in sub_key_list:
+                with self.sub_key_locks[sub_key]:
 
-                    self._fetch_gd_messages_by_sub_key(sub_key)
+                    # Fetch all GD messages, if there are any at all
+                    if has_gd:
 
-                    # Note how we substract delta seconds from current time - this is because
-                    # it is possible that there will be new messages enqueued in between our last
-                    # run and current time's generation - the difference will be likely just a few
-                    # milliseconds but to play it safe we use by default a generous slice of 60 seconds.
-                    # This is fine because any SQL queries depending on this value will also
-                    # include other filters such as delivery_status.
-                    new_now = utcnow_as_ms() - delta
-                    self.last_sql_run[sub_key] = new_now
+                        self._fetch_gd_messages_by_sub_key(sub_key, session)
 
-                    logger.info('Storing last_run of `%s` for sub_key:%s (d:%s)',  pretty_format_float(new_now), sub_key, delta)
+                        # Note how we substract delta seconds from current time - this is because
+                        # it is possible that there will be new messages enqueued in between our last
+                        # run and current time's generation - the difference will be likely just a few
+                        # milliseconds but to play it safe we use by default a generous slice of 60 seconds.
+                        # This is fine because any SQL queries depending on this value will also
+                        # include other filters such as delivery_status.
+                        new_now = utcnow_as_ms() - delta
+                        self.last_sql_run[sub_key] = new_now
 
-                # Accept all input non-GD messages
-                if non_gd_msg_list:
-                    self._add_non_gd_messages_by_sub_key(sub_key, non_gd_msg_list)
+                        logger.info('Storing last_run of `%s` for sub_key:%s (d:%s)',
+                            pretty_format_float(new_now), sub_key, delta)
+
+                    # Accept all input non-GD messages
+                    if non_gd_msg_list:
+                        self._add_non_gd_messages_by_sub_key(sub_key, non_gd_msg_list)
 
 # ################################################################################################################################
 
@@ -545,8 +549,7 @@ class PubSubTool(object):
 # ################################################################################################################################
 
     def _fetch_gd_messages_by_sub_key(self, sub_key, session=None):
-        """ Low-level implementation of fetch_gd_messages_by_sub_key,
-        must be called with a lock for input sub_key.
+        """ Low-level implementation of fetch_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
         count = 0
         msg_ids = []
