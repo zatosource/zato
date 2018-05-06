@@ -25,11 +25,11 @@ class NotifyPubSubMessage(AdminService):
     def handle(self):
         # The request that we have on input needs to be sent to a pubsub_tool for each sub_key,
         # even if it is possibly the same pubsub_tool for more than one input sub_key.
-        request = self.request.raw_request['request']
+        req = self.request.raw_request['request']
 
-        for sub_key in request['sub_key_list']:
+        for sub_key in req['sub_key_list']:
             pubsub_tool = self.pubsub.pubsub_tool_by_sub_key[sub_key]
-            pubsub_tool.handle_new_messages(self.cid, request['has_gd'], [sub_key], request['non_gd_msg_list'])
+            pubsub_tool.handle_new_messages(self.cid, req['has_gd'], [sub_key], req['non_gd_msg_list'], req['is_bg_call'])
 
 # ################################################################################################################################
 

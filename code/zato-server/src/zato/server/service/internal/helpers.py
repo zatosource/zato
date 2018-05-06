@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from cStringIO import StringIO
-from json import loads
 from logging import DEBUG
 from pprint import pprint
 

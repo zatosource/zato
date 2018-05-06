@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # SQLAlchemy
 from sqlalchemy import and_, exists, insert, update
-from sqlalchemy.sql import expression as expr, func
+from sqlalchemy.sql import expression as expr
 
 # Zato
 from zato.common import PUBSUB
