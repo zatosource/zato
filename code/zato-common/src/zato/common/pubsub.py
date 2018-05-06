@@ -41,7 +41,7 @@ class PubSubMessage(object):
     _attrs = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id', 'position_in_group',
         'pub_time', 'ext_pub_time', 'data', 'data_prefix', 'data_prefix_short', 'mime_type', 'priority', 'expiration',
         'expiration_time', 'has_gd', 'delivery_status', 'pattern_matched', 'size', 'published_by_id', 'topic_id',
-        'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso')
+        'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso')
 
     def __init__(self):
         self.topic = None
@@ -67,6 +67,7 @@ class PubSubMessage(object):
         self.size = None
         self.published_by_id = None
         self.topic_id = None
+        self.is_in_sub_queue = None
         self.topic_name = None
         self.cluster_id = None
 
