@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -322,11 +322,15 @@ class Publish(AdminService):
                         current_depth = current_depth + len_gd_msg_list
 
                 # Publish messages - INSERT rows, each representing an individual message
-                insert_topic_messages(session, self.cid, gd_msg_list)
+                if insert_topic_messages(session, self.cid, gd_msg_list):
 
-                # Move messages to each subscriber's queue
-                if subscriptions_by_topic:
-                    insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic.id, now)
+                    self.logger.warn('RETURN FROM INSERT %s', self.cid)
+
+                    # Move messages to each subscriber's queue
+                    if subscriptions_by_topic:
+                        insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic.id, now, self.cid)
+                else:
+                    self.logger.warn('INSERT FALSE %s', self.cid)
 
                 # Run an SQL commit for all queries above
                 session.commit()

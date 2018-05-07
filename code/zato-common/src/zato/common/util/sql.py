@@ -8,13 +8,31 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from logging import getLogger
+
+# gevent
+from gevent import sleep
+
+# SQLAlchemy
+from sqlalchemy.exc import InternalError as SAInternalError
+
 # Zato
 from zato.common import SEARCH
 
 # ################################################################################################################################
 
+logger_zato = getLogger('zato')
+logger_pubsub = getLogger('zato_pubsub')
+
+# ################################################################################################################################
+
 _default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
 _max_page_size = _default_page_size * 5
+
+# In MySQL, 1213 = 'Deadlock found when trying to get lock; try restarting transaction'
+# but the underlying PyMySQL library returns only a string rather than an integer code.
+_deadlock_code = 'Deadlock found when trying to get lock'
 
 # ################################################################################################################################
 
@@ -65,5 +83,41 @@ def search(search_func, config, filter_by, session=None, cluster_id=None, *args,
     result.page_size = page_size
 
     return result
+
+# ################################################################################################################################
+
+def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
+    cid = cid or None
+    is_ok = False
+    attempts = 0
+
+    while not is_ok:
+        attempts = 1
+
+        try:
+            # Call the SQL function that will possibly result in a deadlock
+            func(*args, **kwargs)
+
+            if attempts > 1:
+                logger_zato.warn('AFTER DEADLOCK %s', cid)
+
+            # This will return only if there is no exception in calling the SQL function
+            return True
+
+        # Catch deadlocks - it may happen because both this function and delivery tasks update the same tables
+        except SAInternalError as e:
+            if _deadlock_code not in e.message:
+                raise
+            else:
+                if attempts % 1 == 0:
+                    msg = 'Still in deadlock for `{}` after %d attempts cid:%s args:%s'.format(name)
+                    logger_zato.warn(msg, attempts, cid, args)
+                    logger_pubsub.warn(msg, attempts, cid, args)
+
+                # Sleep for a while until the next attempt
+                sleep(0.005)
+
+                # Push the counter
+                attempts += 1
 
 # ################################################################################################################################
