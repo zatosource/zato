@@ -13,8 +13,8 @@ from ftplib import FTP_PORT
 from json import dumps
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, LargeBinary, Numeric, \
-     Sequence, SmallInteger, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, Index, Integer, LargeBinary, \
+     Numeric, Sequence, SmallInteger, String, Text, true as sa_true, UniqueConstraint
 from sqlalchemy.orm import backref, relationship
 
 # Zato
@@ -2009,8 +2009,8 @@ class PubSubEndpoint(Base):
 
     id = Column(Integer, Sequence('pubsub_endp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
-    is_internal = Column(Boolean(), nullable=False, default=False)
-    is_active = Column(Boolean(), nullable=False, default=True) # Unusued for now
+    is_internal = Column(Boolean(), nullable=False, server_default=sa_false())
+    is_active = Column(Boolean(), nullable=False, server_default=sa_true()) # Unusued for now
     endpoint_type = Column(String(40), nullable=False) # WSX, REST, AMQP and other types
 
     last_seen = Column(BigInteger(), nullable=True)
@@ -2167,18 +2167,18 @@ class PubSubMessage(Base):
     data = Column(Text(), nullable=False)
     data_prefix = Column(Text(), nullable=False)
     data_prefix_short = Column(String(200), nullable=False)
-    data_format = Column(String(200), nullable=False, default=PUBSUB.DEFAULT.DATA_FORMAT)
-    mime_type = Column(String(200), nullable=False)
+    data_format = Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.DATA_FORMAT)
+    mime_type = Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.MIME_TYPE)
     size = Column(Integer, nullable=False)
-    priority = Column(Integer, nullable=False)
-    expiration = Column(Integer, nullable=False, default=0)
-    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
+    priority = Column(Integer, nullable=False, server_default=str(PUBSUB.PRIORITY.DEFAULT))
+    expiration = Column(Integer, nullable=False, server_default='0')
+    has_gd = Column(Boolean(), nullable=False, server_default=sa_true()) # Guaranteed delivery
 
     # Is the message in at least one delivery queue, meaning that there is at least one
     # subscriber to whom this message will be sent so the message is no longer considered
     # to be available in the topic for other subscribers to receive it,
     # i.e. it can be said that it has been already transported to all subsriber queues (possibly to one only).
-    is_in_sub_queue = Column(Boolean(), nullable=False, default=False)
+    is_in_sub_queue = Column(Boolean(), nullable=False, server_default=sa_false())
 
     published_by_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
     published_by = relationship(
@@ -2340,15 +2340,15 @@ class PubSubEndpointEnqueuedMessage(Base):
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
     creation_time = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When was the message enqueued
 
-    delivery_count = Column(Integer, nullable=False, default=0)
-    last_delivery_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
-    is_in_staging = Column(Boolean(), nullable=False, default=False)
+    delivery_count = Column(Integer, nullable=False, server_default='0')
+    last_delivery_time = Column(Numeric(20, 7, asdecimal=False), nullable=sa_true())
+    is_in_staging = Column(Boolean(), nullable=False, server_default=sa_false())
 
     # A flag indicating whether this message is deliverable at all - will be set to False
     # after delivery_count reaches max retries for subscription or if a hook services decides so.
-    is_deliverable = Column(Boolean(), nullable=False, default=True)
+    is_deliverable = Column(Boolean(), nullable=False, server_default=sa_true())
 
-    delivery_status = Column(Integer, nullable=False, default=PUBSUB.DELIVERY_STATUS.INITIALIZED)
+    delivery_status = Column(Integer, nullable=False, server_default=str(PUBSUB.DELIVERY_STATUS.INITIALIZED))
     delivery_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
 
     pub_msg_id = Column(String(200), ForeignKey('pubsub_message.pub_msg_id', ondelete='CASCADE'), nullable=False)
