@@ -88,6 +88,7 @@ class Publish(AdminService):
         pub_correl_id = input.get('correl_id')
         in_reply_to = input.get('in_reply_to')
         ext_client_id = input.get('ext_client_id')
+        mime_type = input.get('mime_type')
 
         ext_pub_time = input.get('ext_pub_time') or None
         if ext_pub_time:
@@ -97,6 +98,7 @@ class Publish(AdminService):
         pub_correl_id = pub_correl_id.encode('utf8') if pub_correl_id else None
         in_reply_to = in_reply_to.encode('utf8') if in_reply_to else None
         ext_client_id = ext_client_id.encode('utf8') if ext_client_id else None
+        mime_type = mime_type.encode('utf8') if mime_type else None
 
         ps_msg = PubSubMessage()
         ps_msg.topic = topic
@@ -107,7 +109,7 @@ class Publish(AdminService):
         ps_msg.delivery_status = _initialized
         ps_msg.pattern_matched = pattern_matched
         ps_msg.data = input['data'].encode('utf8')
-        ps_msg.mime_type = input.get('mime_type', 'text/plain')
+        ps_msg.mime_type = mime_type
         ps_msg.size = len(input['data'])
         ps_msg.priority = priority
         ps_msg.expiration = expiration
@@ -391,15 +393,13 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _update_pub_metadata(self, cluster_id, topic_id, endpoint_id, now, gd_msg_list, non_gd_msg_list, pattern_matched):
+    def _update_pub_metadata(self, cluster_id, topic_id, endpoint_id, now, gd_msg_list, non_gd_msg_list, pattern_matched,
+        _optional=('pub_correl_id', 'ext_client_id', 'in_reply_to')):
         """ Updates in background metadata about a topic and publisher after each publication.
         """
         try:
             msg_list = gd_msg_list if gd_msg_list else non_gd_msg_list
             last_pub_msg_id = msg_list[-1]['pub_msg_id']
-            last_pub_correl_id = msg_list[-1]['pub_correl_id']
-            last_ext_client_id = msg_list[-1]['ext_client_id']
-            last_in_reply_to = msg_list[-1]['in_reply_to']
 
             topic_key = 'zato.ps.meta.last.topic.%s.%s' % (cluster_id, topic_id)
             endpoint_key = 'zato.ps.meta.last.endpoint.%s.%s' % (cluster_id, endpoint_id)
@@ -409,11 +409,13 @@ class Publish(AdminService):
                 'pub_time': now,
                 'endpoint_id': endpoint_id,
                 'pub_msg_id': last_pub_msg_id,
-                'pub_correl_id': last_pub_correl_id,
-                'ext_client_id': last_ext_client_id,
-                'in_reply_to': last_in_reply_to,
                 'pattern_matched': pattern_matched
             }
+
+            for name in _optional:
+                value = msg_list[-1].get(name)
+                if value:
+                    data[name] = value
 
             self.kvdb.conn.hmset(topic_key, data)
             self.kvdb.conn.hmset(endpoint_key, data)

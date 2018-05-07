@@ -82,7 +82,9 @@ class PubSubMessage(object):
         out = {}
         for key in PubSubMessage._attrs:
             if key != 'topic' and key not in skip:
-                out[key] = getattr(self, key)
+                value = getattr(self, key)
+                if value is not None:
+                    out[key] = value
 
         out['size'] = len(self.data) if self.data else None
 

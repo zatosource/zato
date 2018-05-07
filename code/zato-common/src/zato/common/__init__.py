@@ -766,7 +766,8 @@ class PUBSUB:
                 return iter((self.PRIORITY, self.EXT_PUB_TIME, self.PUB_TIME))
 
     class DEFAULT:
-        DATA_FORMAT = 'text/plain'
+        DATA_FORMAT = 'text'
+        MIME_TYPE = 'text/plain'
         TOPIC_MAX_DEPTH_GD = 10000
         TOPIC_MAX_DEPTH_NON_GD = 1000
         DEPTH_CHECK_FREQ = 100
