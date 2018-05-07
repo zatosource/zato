@@ -19,9 +19,6 @@ from dateparser import parse as dt_parse
 # gevent
 from gevent import spawn
 
-# Redis
-from redis.lock import Lock as RedisLock
-
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
@@ -293,43 +290,40 @@ class Publish(AdminService):
         # We don't always have GD messages on input so there is no point in running an SQL transaction otherwise.
         if has_gd_msg_list:
 
-            # Operate under a global lock for that topic to rule out any interference from other publishers
-            with RedisLock(self.kvdb.conn, 'zato.pubsub.publish.%s' % topic.name):
+            with closing(self.odb.session()) as session:
 
-                with closing(self.odb.session()) as session:
+                # Increase depth check counter..
+                topic.incr_msg_pub_iter()
 
-                    # Increase depth check counter..
-                    topic.incr_msg_pub_iter()
+                # Increase message cleanup counter ..
 
-                    # Increase message cleanup counter ..
+                # No matter if we can publish or not, we may possibly cleanup old messages first.
+                if topic.needs_msg_cleanup():
+                    self._cleanup_sql_data(session, cluster_id, topic.id, now)
 
-                    # No matter if we can publish or not, we may possibly cleanup old messages first.
-                    if topic.needs_msg_cleanup():
-                        self._cleanup_sql_data(session, cluster_id, topic.id, now)
+                # .. test first if we should check the depth in this iteration.
+                if topic.needs_depth_check():
 
-                    # .. test first if we should check the depth in this iteration.
-                    if topic.needs_depth_check():
+                    # Get current depth of this topic ..
+                    current_depth = get_gd_depth_topic(session, cluster_id, topic.id)
 
-                        # Get current depth of this topic ..
-                        current_depth = get_gd_depth_topic(session, cluster_id, topic.id)
+                    # .. and abort if max depth is already reached.
+                    if current_depth + len_gd_msg_list > topic.max_depth_gd:
+                        self.reject_publication(topic.name, True)
+                    else:
 
-                        # .. and abort if max depth is already reached.
-                        if current_depth + len_gd_msg_list > topic.max_depth_gd:
-                            self.reject_publication(topic.name, True)
-                        else:
+                        # This only updates the local variable
+                        current_depth = current_depth + len_gd_msg_list
 
-                            # This only updates the local variable
-                            current_depth = current_depth + len_gd_msg_list
+                # Publish messages - INSERT rows, each representing an individual message
+                insert_topic_messages(session, self.cid, gd_msg_list)
 
-                    # Publish messages - INSERT rows, each representing an individual message
-                    insert_topic_messages(session, self.cid, gd_msg_list)
+                # Move messages to each subscriber's queue
+                if subscriptions_by_topic:
+                    insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic.id, now)
 
-                    # Move messages to each subscriber's queue
-                    if subscriptions_by_topic:
-                        insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic.id, now)
-
-                    # Run an SQL commit for all queries above
-                    session.commit()
+                # Run an SQL commit for all queries above
+                session.commit()
 
         # Either commit succeeded or there were no GD messages on input but in both cases we can now,
         # optionally, store data in pub/sub audit log.

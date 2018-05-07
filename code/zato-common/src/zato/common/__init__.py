@@ -815,10 +815,10 @@ class PUBSUB:
                 return iter((self.NOTIFY, self.PULL))
 
     class DELIVERY_STATUS:
-        DELIVERED = 'delivered'
-        INITIALIZED = 'initialized'
-        TO_DELETE = 'to-delete'
-        WAITING_FOR_CONFIRMATION = 'waiting-for-confirmation'
+        DELIVERED = 1
+        INITIALIZED = 2
+        TO_DELETE = 3
+        WAITING_FOR_CONFIRMATION = 4
 
     class PRIORITY:
         DEFAULT = 5

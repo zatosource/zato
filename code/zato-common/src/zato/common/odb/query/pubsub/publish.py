@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # SQLAlchemy
-from sqlalchemy import and_, select, update
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 # Zato
@@ -52,27 +52,18 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
     Also, updates each message's is_in_sub_queue flag to indicate that it is no longer available for other subscribers.
     """
     queue_msgs = []
-    msg_ids = set()
-
     for sub in subscriptions_by_topic:
         for msg in msg_list:
 
             # Enqueues the message for each subscriber
             queue_msgs.append({
                 'creation_time': now,
-                'delivery_count': 0,
                 'pub_msg_id': msg['pub_msg_id'],
                 'endpoint_id': sub.endpoint_id,
                 'topic_id': topic_id,
-                'subscription_id': sub.id,
+                'sub_key': sub.sub_key,
                 'cluster_id': cluster_id,
-                'has_gd': True,
-                'is_in_staging': False,
-                'delivery_status': _initialized,
             })
-
-            # Needed to update is_in_sub_queue
-            msg_ids.add(msg['pub_msg_id'])
 
     # Move the message to endpoint queues
     session.execute(EnqueuedMsgInsert().values(queue_msgs))

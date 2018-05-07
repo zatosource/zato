@@ -341,8 +341,7 @@ class GDMessage(Message):
         self.priority = msg.priority
         self.expiration = msg.expiration
         self.expiration_time = msg.expiration_time
-        self.has_gd = msg.has_gd
-        self.topic_name = msg.topic_name
+        self.topic_name = '/customer/new'#msg.topic_name
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
@@ -504,41 +503,46 @@ class PubSubTool(object):
         If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
         it is a list of non-GD message for sub_keys.
         """
-        if not has_gd:
-            if not non_gd_msg_list:
-                raise ValueError('No messages received ({}) for cid:`{}`, has_gd:`{}` and sub_key_list:`{}`'.format(
-                    non_gd_msg_list, cid, has_gd, sub_key_list))
+        try:
+            if not has_gd:
+                if not non_gd_msg_list:
+                    raise ValueError('No messages received ({}) for cid:`{}`, has_gd:`{}` and sub_key_list:`{}`'.format(
+                        non_gd_msg_list, cid, has_gd, sub_key_list))
 
-        # Iterate over all input sub keys and carry out all operations while holding a lock for each sub_key
+            # Iterate over all input sub keys and carry out all operations while holding a lock for each sub_key
 
-        logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
-            cid, int(has_gd), sub_key_list, len(non_gd_msg_list), is_bg_call)
+            logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
+                cid, int(has_gd), sub_key_list, len(non_gd_msg_list), is_bg_call)
 
-        with closing(self.pubsub.server.odb.session()) as session:
+            with closing(self.pubsub.server.odb.session()) as session:
 
-            for sub_key in sub_key_list:
-                with self.sub_key_locks[sub_key]:
+                for sub_key in sub_key_list:
+                    with self.sub_key_locks[sub_key]:
 
-                    # Fetch all GD messages, if there are any at all
-                    if has_gd:
+                        # Fetch all GD messages, if there are any at all
+                        if has_gd:
 
-                        self._fetch_gd_messages_by_sub_key(sub_key, session)
+                            self._fetch_gd_messages_by_sub_key(sub_key, session)
 
-                        # Note how we substract delta seconds from current time - this is because
-                        # it is possible that there will be new messages enqueued in between our last
-                        # run and current time's generation - the difference will be likely just a few
-                        # milliseconds but to play it safe we use by default a generous slice of 60 seconds.
-                        # This is fine because any SQL queries depending on this value will also
-                        # include other filters such as delivery_status.
-                        new_now = utcnow_as_ms() - delta
-                        self.last_sql_run[sub_key] = new_now
+                            # Note how we substract delta seconds from current time - this is because
+                            # it is possible that there will be new messages enqueued in between our last
+                            # run and current time's generation - the difference will be likely just a few
+                            # milliseconds but to play it safe we use by default a generous slice of 60 seconds.
+                            # This is fine because any SQL queries depending on this value will also
+                            # include other filters such as delivery_status.
+                            new_now = utcnow_as_ms() - delta
+                            self.last_sql_run[sub_key] = new_now
 
-                        logger.info('Storing last_run of `%s` for sub_key:%s (d:%s)',
-                            pretty_format_float(new_now), sub_key, delta)
+                            logger.info('Storing last_run of `%s` for sub_key:%s (d:%s)',
+                                pretty_format_float(new_now), sub_key, delta)
 
-                    # Accept all input non-GD messages
-                    if non_gd_msg_list:
-                        self._add_non_gd_messages_by_sub_key(sub_key, non_gd_msg_list)
+                        # Accept all input non-GD messages
+                        if non_gd_msg_list:
+                            self._add_non_gd_messages_by_sub_key(sub_key, non_gd_msg_list)
+        except Exception:
+            e = format_exc()
+            logger.warn(e)
+            logger_zato(e)
 
 # ################################################################################################################################
 

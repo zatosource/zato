@@ -119,7 +119,7 @@ def add_subscription(session, cluster_id, ctx):
 
 # ################################################################################################################################
 
-def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_sub_id, sub_key, now, _initialized=_initialized):
+def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_key, now, _initialized=_initialized):
     """ Move all unexpired messages from topic to a given subscriber's queue and returns the number of messages moved.
     This method must be called with a global lock held for topic because it carries out its job through a couple
     of non-atomic queries.
@@ -127,20 +127,16 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_su
     enqueued_id_subquery = session.query(
         PubSubEndpointEnqueuedMessage.pub_msg_id
         ).\
-        filter(PubSubEndpointEnqueuedMessage.subscription_id==ps_sub_id)
+        filter(PubSubEndpointEnqueuedMessage.sub_key==sub_key)
 
     # SELECT statement used by the INSERT below finds all messages for that topic
     # that haven't expired yet.
     select_messages = session.query(
         PubSubMessage.pub_msg_id,
         PubSubMessage.topic_id,
-        expr.bindparam('is_deliverable', True),
-        expr.bindparam('delivery_status', _initialized),
         expr.bindparam('creation_time', now),
-        expr.bindparam('delivery_count', 0),
         expr.bindparam('endpoint_id', endpoint_id),
-        expr.bindparam('subscription_id', ps_sub_id),
-        expr.bindparam('has_gd', False),
+        expr.bindparam('sub_key', sub_key),
         expr.bindparam('is_in_staging', False),
         expr.bindparam('cluster_id', cluster_id),
         ).\
@@ -155,13 +151,9 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, ps_su
         from_select((
             PubSubEndpointEnqueuedMessage.pub_msg_id,
             PubSubEndpointEnqueuedMessage.topic_id,
-            expr.column('is_deliverable'),
-            expr.column('delivery_status'),
             expr.column('creation_time'),
-            expr.column('delivery_count'),
             expr.column('endpoint_id'),
-            expr.column('subscription_id'),
-            expr.column('has_gd'),
+            expr.column('sub_key'),
             expr.column('is_in_staging'),
             expr.column('cluster_id'),
             ), select_messages)
