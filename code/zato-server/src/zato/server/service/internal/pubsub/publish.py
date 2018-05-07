@@ -24,8 +24,7 @@ from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
 from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
      delete_msg_expired
-from zato.common.odb.query.pubsub.publish import insert_queue_messages, insert_topic_messages, \
-     update_publish_metadata
+from zato.common.odb.query.pubsub.publish import insert_queue_messages, insert_topic_messages
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import PubSubMessage
 from zato.common.pubsub import new_msg_id
