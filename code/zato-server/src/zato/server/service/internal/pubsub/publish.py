@@ -70,9 +70,14 @@ class Publish(AdminService):
 # ################################################################################################################################
 
     def _get_message(self, topic, input, now, pattern_matched, endpoint_id, has_subs, _initialized=_initialized,
-        _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP):
+        _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT):
 
         priority = get_priority(self.cid, input)
+
+        # So as not to send it to SQL if it is a default value anyway = less overhead = better performance
+        if priority == _default_pri:
+            priority = None
+
         expiration = get_expiration(self.cid, input)
         expiration_time = now + (expiration * 1000)
 
