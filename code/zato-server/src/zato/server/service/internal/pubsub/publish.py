@@ -24,7 +24,7 @@ from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
 from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
      delete_msg_expired
-from zato.common.odb.query.pubsub.publish import insert_queue_messages, insert_topic_messages, sql_publish_with_retry
+from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import PubSubMessage
 from zato.common.pubsub import new_msg_id
@@ -45,6 +45,30 @@ _initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
 # ################################################################################################################################
 
 logger_audit = getLogger('zato_pubsub_audit')
+
+# ################################################################################################################################
+
+class PubCtx(object):
+    """ A container for information describing a single publication.
+    """
+    __slots__ = ('cluster_id', 'pubsub', 'topic', 'endpoint_id', 'subscriptions_by_topic', 'msg_id_list', 'gd_msg_list',
+        'non_gd_msg_list', 'pattern_matched', 'ext_client_id', 'is_re_run', 'now', 'current_depth')
+
+    def __init__(self, cluster_id, pubsub, topic, endpoint_id, subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list,
+            pattern_matched, ext_client_id, is_re_run, now):
+        self.cluster_id = cluster_id
+        self.pubsub = pubsub
+        self.topic = topic
+        self.endpoint_id = endpoint_id
+        self.subscriptions_by_topic = subscriptions_by_topic
+        self.msg_id_list = msg_id_list
+        self.gd_msg_list = gd_msg_list
+        self.non_gd_msg_list = non_gd_msg_list
+        self.pattern_matched = pattern_matched
+        self.ext_client_id = ext_client_id
+        self.is_re_run = is_re_run
+        self.now = now
+        self.current_depth = None
 
 # ################################################################################################################################
 
@@ -261,9 +285,12 @@ class Publish(AdminService):
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
             topic, data_list, input, now, pattern_matched, endpoint_id, bool(subscriptions_by_topic))
 
+        # Create a wrapper object for all the input data and metadata
+        ctx = PubCtx(self.server.cluster_id, pubsub, topic, endpoint_id, subscriptions_by_topic, msg_id_list, gd_msg_list,
+            non_gd_msg_list, pattern_matched, input.get('ext_client_id') or 'n/a', False, now)
+
         # We have all the input data, publish the message(s) now
-        self._publish(pubsub, topic, endpoint_id, subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list,
-            pattern_matched, input.get('ext_client_id') or 'n/a', False, now)
+        self._publish(ctx)
 
 # ################################################################################################################################
 
@@ -275,23 +302,21 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _publish(self, pubsub, topic, endpoint_id, subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list,
-        pattern_matched, ext_client_id, is_re_run, now):
+    # def _publish(self, pubsub, topic, endpoint_id, subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list,
+    #     pattern_matched, ext_client_id, is_re_run, now):
+
+    def _publish(self, ctx):
         """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
         """
-        len_gd_msg_list = len(gd_msg_list)
+        len_gd_msg_list = len(ctx.gd_msg_list)
         has_gd_msg_list = bool(len_gd_msg_list)
 
         # Just so it is not overlooked, log information that no subscribers are found for this topic
-        if not subscriptions_by_topic:
-            self.logger.warn('No subscribers found for topic `%s` (cid:%s, re-run:%s)', topic.name, self.cid, is_re_run)
+        if not ctx.subscriptions_by_topic:
+            self.logger.warn('No subscribers found for topic `%s` (cid:%s, re-run:%s)', ctx.topic.name, self.cid, ctx.is_re_run)
 
         # Local aliases
-        cluster_id = self.server.cluster_id
         has_pubsub_audit_log = self.server.has_pubsub_audit_log
-
-        # This is initially unknown and will be set only for GD messages
-        current_depth = 'n/a'
 
         # We don't always have GD messages on input so there is no point in running an SQL transaction otherwise.
         if has_gd_msg_list:
@@ -299,31 +324,31 @@ class Publish(AdminService):
             with closing(self.odb.session()) as session:
 
                 # Increase depth check counter..
-                topic.incr_msg_pub_iter()
+                ctx.topic.incr_msg_pub_iter()
 
                 # Increase message cleanup counter ..
 
                 # No matter if we can publish or not, we may possibly cleanup old messages first.
-                if topic.needs_msg_cleanup():
-                    self._cleanup_sql_data(session, cluster_id, topic.id, now)
+                if ctx.topic.needs_msg_cleanup():
+                    self._cleanup_sql_data(session, ctx.cluster_id, ctx.topic.id, ctx.now)
 
                 # .. test first if we should check the depth in this iteration.
-                if topic.needs_depth_check():
+                if ctx.topic.needs_depth_check():
 
                     # Get current depth of this topic ..
-                    current_depth = get_gd_depth_topic(session, cluster_id, topic.id)
+                    ctx.current_depth = get_gd_depth_topic(session, ctx.cluster_id, ctx.topic.id)
 
                     # .. and abort if max depth is already reached.
-                    if current_depth + len_gd_msg_list > topic.max_depth_gd:
-                        self.reject_publication(topic.name, True)
+                    if ctx.current_depth + len_gd_msg_list > ctx.topic.max_depth_gd:
+                        self.reject_publication(ctx.topic.name, True)
                     else:
 
-                        # This only updates the local variable
-                        current_depth = current_depth + len_gd_msg_list
+                        # This only updates the local ctx variable
+                        ctx.current_depth = ctx.current_depth + len_gd_msg_list
 
-                # This is the call that runs SQL INSERT statements
-                # with messages for topics and subscriber queues
-                sql_publish_with_retry(session, self.cid, cluster_id, topic.id, subscriptions_by_topic, gd_msg_list, now)
+                # This is the call that runs SQL INSERT statements with messages for topics and subscriber queues
+                sql_publish_with_retry(session, self.cid, ctx.cluster_id, ctx.topic.id, ctx.subscriptions_by_topic,
+                    ctx.gd_msg_list, ctx.now)
 
                 # Run an SQL commit for all queries above
                 session.commit()
@@ -335,55 +360,61 @@ class Publish(AdminService):
             msg = 'PUB. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' \
                   ', GD data:`%s`, non-GD data:`%s`'
 
-            logger_audit.info(msg, self.cid, topic.name, self.pubsub.endpoints[endpoint_id].name,
-                ext_client_id, pattern_matched, current_depth, gd_msg_list, non_gd_msg_list)
+            logger_audit.info(msg, self.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name,
+                ctx.ext_client_id, ctx.pattern_matched, ctx.current_depth, ctx.gd_msg_list, ctx.non_gd_msg_list)
 
-        # Also in background, notify pub/sub task runners that there are new messages for them ..
-        if subscriptions_by_topic:
+        # Update local metadata
+        ctx.topic.update_last_modified()
 
-            # Notify delivery tasks only if there are some messages available - it is possible
-            # there will not be any here because, for instance, we had a list of messages on input
-            # but a hook service filtered them out.
+        # If this is the very first time we are running during this invocation, try to deliver non-GD messages
+        if not ctx.is_re_run:
 
-            # Note that we notify subscribers explicitly only if there are non-GD messages because GD ones
-            # are handled in background periodically.
-            if non_gd_msg_list:
-                self._notify_pubsub_tasks(
-                    topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, has_gd_msg_list)
+            if ctx.subscriptions_by_topic:
 
-            topic.update_last_modified()
+                # Notify delivery tasks only if there are some messages available - it is possible
+                # there will not be any here because, for instance, we had a list of messages on input
+                # but a hook service filtered them out.
 
-        # .. however, if there are no subscriptions at the moment while there are non-GD messages,
-        # we need to re-run again and publish all such messages as GD ones. This is because if there
-        # are no subscriptions, we do not know to what delivery server they should go, so it's safest
-        # to store them in SQL.
-        else:
-            if not is_re_run:
-                if non_gd_msg_list:
+                # Note that we notify subscribers explicitly only if there are non-GD messages because GD ones
+                # are handled in background periodically.
+                if ctx.non_gd_msg_list:
+                    self._notify_pubsub_tasks(
+                        ctx.topic.id, ctx.topic.name, ctx.subscriptions_by_topic, ctx.non_gd_msg_list, ctx.has_gd_msg_list)
+
+            # .. however, if there are no subscriptions at the moment while there are non-GD messages,
+            # we need to re-run again and publish all such messages as GD ones. This is because if there
+            # are no subscriptions, we do not know to what delivery server they should go, so it's safest
+            # to store them in SQL.
+            else:
+                if ctx.non_gd_msg_list:
 
                     # Turn all non-GD messages into GD ones.
-                    for msg in non_gd_msg_list:
+                    for msg in ctx.non_gd_msg_list:
                         msg['has_gd'] = True
 
                         data_prefix, data_prefix_short = self._get_data_prefixes(msg['data'])
                         msg['data_prefix'] = data_prefix
                         msg['data_prefix_short'] = data_prefix_short
 
-                    # Note how now non-GD messages are sent as GD ones and the list of non-GD messages is empty.
-                    self._publish(pubsub, topic, endpoint_id, msg_id_list, non_gd_msg_list, [], pattern_matched,
-                        ext_client_id, True, now)
+                    # Note the reversed order - now non-GD messages are sent as GD ones and the list of non-GD messages is empty.
+                    ctx.gd_msg_list = ctx.non_gd_msg_list
+                    ctx.non_gd_msg_list[:] = []
+                    ctx.is_re_run = True
+
+                    # Re-run with GD and non-GD reversed now
+                    self._publish(ctx)
 
         # Update metadata in background
-        spawn(self._update_pub_metadata, cluster_id, topic.id, endpoint_id, now, gd_msg_list, non_gd_msg_list, pattern_matched)
+        spawn(self._update_pub_metadata, ctx)
 
         # Return either a single msg_id if there was only one message published or a list of message IDs,
         # one for each message published.
-        len_msg_list = len_gd_msg_list + len(non_gd_msg_list)
+        len_msg_list = len_gd_msg_list + len(ctx.non_gd_msg_list)
 
         if len_msg_list == 1:
-            self.response.payload.msg_id = msg_id_list[0]
+            self.response.payload.msg_id = ctx.msg_id_list[0]
         else:
-            self.response.payload.msg_id_list = msg_id_list
+            self.response.payload.msg_id_list = ctx.msg_id_list
 
 # ################################################################################################################################
 
@@ -395,23 +426,22 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _update_pub_metadata(self, cluster_id, topic_id, endpoint_id, now, gd_msg_list, non_gd_msg_list, pattern_matched,
-        _optional=('pub_correl_id', 'ext_client_id', 'in_reply_to')):
+    def _update_pub_metadata(self, ctx, _optional=('pub_correl_id', 'ext_client_id', 'in_reply_to')):
         """ Updates in background metadata about a topic and publisher after each publication.
         """
         try:
-            msg_list = gd_msg_list if gd_msg_list else non_gd_msg_list
+            msg_list = ctx.gd_msg_list if ctx.gd_msg_list else ctx.non_gd_msg_list
             last_pub_msg_id = msg_list[-1]['pub_msg_id']
 
-            topic_key = 'zato.ps.meta.last.topic.%s.%s' % (cluster_id, topic_id)
-            endpoint_key = 'zato.ps.meta.last.endpoint.%s.%s' % (cluster_id, endpoint_id)
+            topic_key = 'zato.ps.meta.last.topic.%s.%s' % (ctx.cluster_id, ctx.topic.id)
+            endpoint_key = 'zato.ps.meta.last.endpoint.%s.%s' % (ctx.cluster_id, ctx.endpoint_id)
 
             # For endpoint_key, there is a superfluous key here, (already in the key itself), but it will not hurt that much
             data = {
-                'pub_time': now,
-                'endpoint_id': endpoint_id,
+                'pub_time': ctx.now,
+                'endpoint_id': ctx.endpoint_id,
                 'pub_msg_id': last_pub_msg_id,
-                'pattern_matched': pattern_matched
+                'pattern_matched': ctx.pattern_matched
             }
 
             for name in _optional:
