@@ -2077,10 +2077,10 @@ class PubSubTopic(Base):
     is_api_sub_allowed = Column(Boolean(), nullable=False)
 
     # How many messages to buffer in RAM before they are actually saved in SQL / pushed to tasks
-    #pub_buffer_size_gd = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD))
+    pub_buffer_size_gd = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD))
 
-    # This is not used yet
-    #pub_buffer_size_non_gd = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_NON_GD))
+    # Same as above but for non-GD messages
+    pub_buffer_size_non_gd = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_NON_GD))
 
     # A hook service invoked during publications to this specific topic
     hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)

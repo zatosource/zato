@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -27,6 +27,10 @@ class CreateForm(forms.Form):
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD)
     depth_check_freq = forms.CharField(widget=forms.TextInput(
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.DEPTH_CHECK_FREQ)
+    pub_buffer_size_gd = forms.CharField(widget=forms.TextInput(
+        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD)
+    pub_buffer_size_non_gd = forms.CharField(widget=forms.TextInput(
+        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.PUB_BUFFER_SIZE_NON_GD)
     hook_service_id = forms.ChoiceField(widget=forms.Select())
 
     def __init__(self, req, *args, **kwargs):
