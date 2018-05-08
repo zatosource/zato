@@ -24,7 +24,7 @@ from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
 from zato.common.odb.query.pubsub.cleanup import delete_enq_delivered, delete_enq_marked_deleted, delete_msg_delivered, \
      delete_msg_expired
-from zato.common.odb.query.pubsub.publish import insert_queue_messages, insert_topic_messages
+from zato.common.odb.query.pubsub.publish import insert_queue_messages, insert_topic_messages, sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import PubSubMessage
 from zato.common.pubsub import new_msg_id
@@ -321,16 +321,9 @@ class Publish(AdminService):
                         # This only updates the local variable
                         current_depth = current_depth + len_gd_msg_list
 
-                # Publish messages - INSERT rows, each representing an individual message
-                if insert_topic_messages(session, self.cid, gd_msg_list):
-
-                    self.logger.warn('RETURN FROM INSERT %s', self.cid)
-
-                    # Move messages to each subscriber's queue
-                    if subscriptions_by_topic:
-                        insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic.id, now, self.cid)
-                else:
-                    self.logger.warn('INSERT FALSE %s', self.cid)
+                # This is the call that runs SQL INSERT statements
+                # with messages for topics and subscriber queues
+                sql_publish_with_retry(session, self.cid, cluster_id, topic.id, subscriptions_by_topic, gd_msg_list, now)
 
                 # Run an SQL commit for all queries above
                 session.commit()

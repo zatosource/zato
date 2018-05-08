@@ -98,9 +98,6 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
             # Call the SQL function that will possibly result in a deadlock
             func(*args, **kwargs)
 
-            if attempts > 1:
-                logger_zato.warn('AFTER DEADLOCK %s', cid)
-
             # This will return only if there is no exception in calling the SQL function
             return True
 
@@ -109,7 +106,7 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
             if _deadlock_code not in e.message:
                 raise
             else:
-                if attempts % 1 == 0:
+                if attempts % 50 == 0:
                     msg = 'Still in deadlock for `{}` after %d attempts cid:%s args:%s'.format(name)
                     logger_zato.warn(msg, attempts, cid, args)
                     logger_pubsub.warn(msg, attempts, cid, args)

@@ -36,6 +36,41 @@ _initialized=PUBSUB.DELIVERY_STATUS.INITIALIZED
 
 # ################################################################################################################################
 
+def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by_topic, gd_msg_list, now):
+    """ A low-level implementation of sql_publish_with_retry.
+    """
+    # Publish messages - INSERT rows, each representing an individual message
+    if insert_topic_messages(session, cid, gd_msg_list):
+
+        # Move messages to each subscriber's queue
+        if subscriptions_by_topic:
+            try:
+                insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic_id, now, cid)
+            except IntegrityError:
+
+                # If we have an integrity error here it means that our transaction, the whole of it,
+                # was rolled back - this will happen on MySQL in case in case of deadlocks which may
+                # occur because delivery tasks update the table that insert_queue_messages wants to insert to.
+                # We need to return False for our caller to understand that the whole transaction needs
+                # to be repeated.
+                return False
+            else:
+                return True
+
+# ################################################################################################################################
+
+def sql_publish_with_retry(*args):
+    """ Populates SQL structures with new messages for topics and their counterparts in subscriber queues.
+    In case of a deadlock will retry the whole transaction, per MySQL's requirements, which rolls back
+    the whole of it rather than a deadlocking statement only.
+    """
+    is_ok = False
+
+    while not is_ok:
+        is_ok = _sql_publish_with_retry(*args)
+
+# ################################################################################################################################
+
 def _insert_topic_messages(session, msg_list):
     """ A low-level implementation for insert_topic_messages.
     """
