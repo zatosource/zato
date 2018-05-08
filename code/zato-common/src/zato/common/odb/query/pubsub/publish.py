@@ -34,6 +34,8 @@ EndpointTopicTable = PubSubEndpointTopic.__table__
 
 _initialized=PUBSUB.DELIVERY_STATUS.INITIALIZED
 
+x = 0
+
 # ################################################################################################################################
 
 def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by_topic, gd_msg_list, now):
@@ -46,16 +48,21 @@ def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by
         if subscriptions_by_topic:
             try:
                 insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic_id, now, cid)
-            except IntegrityError:
 
+                # No integrity error / no deadlock = all good
+                return True
+
+            except IntegrityError:
                 # If we have an integrity error here it means that our transaction, the whole of it,
                 # was rolled back - this will happen on MySQL in case in case of deadlocks which may
                 # occur because delivery tasks update the table that insert_queue_messages wants to insert to.
                 # We need to return False for our caller to understand that the whole transaction needs
                 # to be repeated.
                 return False
-            else:
-                return True
+
+        else:
+            # No subscribers, also good
+            return True
 
 # ################################################################################################################################
 
@@ -74,6 +81,14 @@ def sql_publish_with_retry(*args):
 def _insert_topic_messages(session, msg_list):
     """ A low-level implementation for insert_topic_messages.
     """
+    global x
+    from logging import getLogger
+    logger = getLogger('zato')
+    logger.warn('INSERT TOPIC %r', msg_list)
+    x += 1
+
+    if x == 2:
+        zzz
     session.execute(MsgInsert().values(msg_list))
 
 # ################################################################################################################################
