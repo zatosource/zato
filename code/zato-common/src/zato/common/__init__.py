@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018 Dariusz Suchojad <dsuch at zato.io>
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -776,7 +776,7 @@ class PUBSUB:
         DELIVERY_MAX_RETRY = 123456789
         DELIVERY_MAX_SIZE = 500000 # 500 kB
         PUB_BUFFER_SIZE_GD = 0
-        PUB_BUFFER_SIZE_NON_GD = 0
+        PUB_BUFFER_SIZE_NON_GD = 20
         WAIT_TIME_SOCKET_ERROR = 10
         WAIT_TIME_NON_SOCKET_ERROR = 30
 

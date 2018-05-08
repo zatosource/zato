@@ -43,6 +43,8 @@
             'max_depth_non_gd',
             'depth_check_freq',
 
+            'pub_buffer_size_gd',
+            'pub_buffer_size_non_gd',
             'hook_service_id',
 
         ]
@@ -98,6 +100,8 @@
                         <th class='ignore'>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -140,13 +144,15 @@
                         <td class='ignore'>{{ item.max_depth_non_gd }}</td>
                         <td class='ignore'>{{ item.depth_check_freq }}</td>
 
+                        <td class='ignore'>{{ item.pub_buffer_size_gd }}</td>
+                        <td class='ignore'>{{ item.pub_buffer_size_non_gd }}</td>
                         <td class='ignore'>{{ item.hook_service_id }}</td>
 
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='21'>No results</td>
+                        <td colspan='23'>No results</td>
                     </tr>
                 {% endif %}
 
