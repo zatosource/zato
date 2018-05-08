@@ -34,8 +34,6 @@ EndpointTopicTable = PubSubEndpointTopic.__table__
 
 _initialized=PUBSUB.DELIVERY_STATUS.INITIALIZED
 
-x = 0
-
 # ################################################################################################################################
 
 def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by_topic, gd_msg_list, now):
@@ -81,14 +79,6 @@ def sql_publish_with_retry(*args):
 def _insert_topic_messages(session, msg_list):
     """ A low-level implementation for insert_topic_messages.
     """
-    global x
-    from logging import getLogger
-    logger = getLogger('zato')
-    logger.warn('INSERT TOPIC %r', msg_list)
-    x += 1
-
-    if x == 2:
-        zzz
     session.execute(MsgInsert().values(msg_list))
 
 # ################################################################################################################################
