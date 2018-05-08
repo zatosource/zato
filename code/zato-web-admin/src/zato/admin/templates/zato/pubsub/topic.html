@@ -47,6 +47,9 @@
             'pub_buffer_size_non_gd',
             'hook_service_id',
 
+            'deliv_task_sync_interv_gd',
+            'deliv_task_sync_interv_non_gd',
+
         ]
     }
     </script>
@@ -148,11 +151,14 @@
                         <td class='ignore'>{{ item.pub_buffer_size_non_gd }}</td>
                         <td class='ignore'>{{ item.hook_service_id }}</td>
 
+                        <td class='ignore'>{{ item.deliv_task_sync_interv_gd }}</td>
+                        <td class='ignore'>{{ item.deliv_task_sync_interv_non_gd }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='23'>No results</td>
+                        <td colspan='25'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -167,7 +173,7 @@
                 <form action="{% url "pubsub-topic-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Name</td>
+                            <td style="vertical-align:middle; width:13%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
@@ -192,18 +198,55 @@
 
                             </td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Max depth GD</td>
-                            <td>{{ create_form.max_depth_gd }} </td>
+                            <td style="vertical-align:middle">Max depth</td>
+                            <td>
+
+                            <label>
+                            GD {{ create_form.max_depth_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            RAM {{ create_form.max_depth_non_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Check freq. {{ create_form.depth_check_freq }}
+                            </label>
+
+                            </td>
+
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Max depth RAM</td>
-                            <td>{{ create_form.max_depth_non_gd }} </td>
+                            <td style="vertical-align:middle">Task sync</td>
+                            <td>
+
+                            <label>
+                            GD {{ create_form.deliv_task_sync_interv_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            RAM {{ create_form.deliv_task_sync_interv_non_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            GD buffer size {{ create_form.pub_buffer_size_gd }}
+                            </label>
+
+                            </td>
+
                         </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Depth check freq.</td>
-                            <td>{{ create_form.depth_check_freq }} </td>
-                        </tr>
+
                         <tr>
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ create_form.hook_service_id }} </td>
