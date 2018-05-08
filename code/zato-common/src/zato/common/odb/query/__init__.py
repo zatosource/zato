@@ -937,6 +937,8 @@ def _pubsub_topic(session, cluster_id):
         PubSubTopic.hook_service_id,
         PubSubTopic.pub_buffer_size_gd,
         PubSubTopic.pub_buffer_size_non_gd,
+        PubSubTopic.deliv_task_sync_interv_gd,
+        PubSubTopic.deliv_task_sync_interv_non_gd,
         Service.name.label('hook_service_name'),
         ).\
         outerjoin(Service, Service.id==PubSubTopic.hook_service_id).\

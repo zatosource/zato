@@ -144,6 +144,8 @@ class Topic(object):
         self.max_depth_non_gd = config.max_depth_non_gd
         self.has_gd = config.has_gd
         self.depth_check_freq = config.depth_check_freq
+        self.pub_buffer_size_gd = config.pub_buffer_size_gd
+        self.pub_buffer_size_non_gd = config.pub_buffer_size_non_gd
         self.before_publish_hook_service_invoker = config.get('before_publish_hook_service_invoker')
         self.before_delivery_hook_service_invoker = config.get('before_delivery_hook_service_invoker')
 
@@ -448,6 +450,8 @@ class PubSub(object):
         self.ws_channel_id_to_endpoint_id = {} # WS chan def ID -> Endpoint ID
         self.service_id_to_endpoint_id = {}    # Service ID     -> Endpoint ID
         self.topic_name_to_id = {}             # Topic name     -> Topic ID
+        self.pub_buffer_gd = {}                # Topic ID       -> GD message buffered for that topic
+        self.pub_buffer_non_gd = {}            # Topic ID       -> Non-GD message buffered for that topic
 
         self.pubsub_tool_by_sub_key = {}       # Sub key        -> PubSubTool object
         self.pubsub_tools = []                 # A list of PubSubTool objects, each containing delivery tasks
