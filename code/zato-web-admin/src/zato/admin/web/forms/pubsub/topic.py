@@ -34,7 +34,8 @@ class CreateForm(forms.Form):
     pub_buffer_size_gd = forms.CharField(widget=forms.TextInput(
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD)
 
-    pub_buffer_size_non_gd = forms.CharField(widget=forms.TextInput(
+    # This is not used for now
+    pub_buffer_size_non_gd = forms.CharField(widget=forms.HiddenInput(
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.PUB_BUFFER_SIZE_NON_GD)
 
     deliv_task_sync_interv_gd = forms.CharField(widget=forms.TextInput(
