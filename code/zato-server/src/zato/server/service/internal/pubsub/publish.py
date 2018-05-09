@@ -363,9 +363,6 @@ class Publish(AdminService):
             logger_audit.info(msg, self.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name,
                 ctx.ext_client_id, ctx.pattern_matched, ctx.current_depth, ctx.gd_msg_list, ctx.non_gd_msg_list)
 
-        # Update local metadata
-        ctx.topic.update_last_modified()
-
         # If this is the very first time we are running during this invocation, try to deliver non-GD messages
         if not ctx.is_re_run:
 
@@ -379,7 +376,7 @@ class Publish(AdminService):
                 # are handled in background periodically.
                 if ctx.non_gd_msg_list:
                     self._notify_pubsub_tasks(
-                        ctx.topic.id, ctx.topic.name, ctx.subscriptions_by_topic, ctx.non_gd_msg_list, ctx.has_gd_msg_list)
+                        ctx.topic.id, ctx.topic.name, ctx.subscriptions_by_topic, ctx.non_gd_msg_list, has_gd_msg_list)
 
             # .. however, if there are no subscriptions at the moment while there are non-GD messages,
             # we need to re-run again and publish all such messages as GD ones. This is because if there
