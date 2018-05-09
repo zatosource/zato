@@ -224,7 +224,13 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Task sync</td>
+                            <td style="vertical-align:middle">
+
+                            Task sync
+                            <br/>
+                            <span class="form_hint">(in ms)</span>
+
+                            </td>
                             <td>
 
                             <label>
@@ -253,6 +259,7 @@
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
+                                {{ create_form.pub_buffer_size_non_gd }}
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -268,7 +275,7 @@
                 <form action="{% url "pubsub-topic-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Name</td>
+                            <td style="vertical-align:middle; width:13%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
@@ -293,24 +300,69 @@
 
                             </td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Max depth GD</td>
-                            <td>{{ edit_form.max_depth_gd }} </td>
+                            <td style="vertical-align:middle">Max depth</td>
+                            <td>
+
+                            <label>
+                            GD {{ edit_form.max_depth_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            RAM {{ edit_form.max_depth_non_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Check freq. {{ edit_form.depth_check_freq }}
+                            </label>
+
+                            </td>
+
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Max depth RAM</td>
-                            <td>{{ edit_form.max_depth_non_gd }} </td>
+                            <td style="vertical-align:middle">
+
+                            Task sync
+                            <br/>
+                            <span class="form_hint">(in ms)</span>
+
+                            </td>
+                            <td>
+
+                            <label>
+                            GD {{ edit_form.deliv_task_sync_interv_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            RAM {{ edit_form.deliv_task_sync_interv_non_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            GD buffer size {{ edit_form.pub_buffer_size_gd }}
+                            </label>
+
+                            </td>
+
                         </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Depth check freq.</td>
-                            <td>{{ edit_form.depth_check_freq }} </td>
-                        </tr>
+
                         <tr>
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.hook_service_id }} </td>
                         </tr>
+
                         <tr>
                             <td colspan="2" style="text-align:right">
+                                {{ edit_form.pub_buffer_size_non_gd }}
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
