@@ -2079,13 +2079,8 @@ class PubSubTopic(Base):
     # How many messages to buffer in RAM before they are actually saved in SQL / pushed to tasks
     pub_buffer_size_gd = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD))
 
-    # Same as above but for non-GD messages - not used anywhere currently
-    pub_buffer_size_non_gd = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_NON_GD))
-
-    deliv_task_sync_interv_gd = Column(Integer(),
-        nullable=False, server_default=str(PUBSUB.DEFAULT.DELIV_TASK_SYNC_INTERVAL_GD))
-    deliv_task_sync_interv_non_gd = Column(Integer(),
-        nullable=False, server_default=str(PUBSUB.DEFAULT.DELIV_TASK_SYNC_INTERVAL_NON_GD))
+    task_sync_interval = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_SYNC_INTERVAL))
+    task_delivery_interval = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_DELIVERY_INTERVAL))
 
     # A hook service invoked during publications to this specific topic
     hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)

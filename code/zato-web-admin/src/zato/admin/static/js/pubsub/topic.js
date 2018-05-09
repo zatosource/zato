@@ -78,10 +78,8 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
 
     row += String.format("<td class='ignore'>{0}</td>", data.hook_service_id);
     row += String.format("<td class='ignore'>{0}</td>", data.pub_buffer_size_gd);
-    row += String.format("<td class='ignore'>{0}</td>", data.pub_buffer_size_non_gd);
-
-    row += String.format("<td class='ignore'>{0}</td>", data.deliv_task_sync_interv_gd);
-    row += String.format("<td class='ignore'>{0}</td>", data.deliv_task_sync_interv_non_gd);
+    row += String.format("<td class='ignore'>{0}</td>", data.task_sync_interval);
+    row += String.format("<td class='ignore'>{0}</td>", data.task_delivery_interval);
 
     if(include_tr) {
         row += '</tr>';

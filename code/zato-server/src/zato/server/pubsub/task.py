@@ -198,7 +198,7 @@ class DeliveryTask(object):
                 # and our delivery list is currently empty.
                 return _run_deliv_status.OK
 
-    def run(self, no_msg_sleep_time=0.01, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
+    def run(self, no_msg_sleep_time=0.1, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         logger.info('Starting delivery task for sub_key:`%s`', self.sub_key)
         try:
             while self.keep_running:
@@ -324,6 +324,8 @@ class Message(PubSubMessage):
 class GDMessage(Message):
     """ A guaranteed delivery message initialized from SQL data.
     """
+    has_gd = True
+
     def __init__(self, sub_key, msg):
         super(GDMessage, self).__init__()
         self.endp_msg_queue_id = msg.endp_msg_queue_id
@@ -351,20 +353,22 @@ class GDMessage(Message):
 class NonGDMessage(Message):
     """ A non-guaranteed delivery message initialized from a Python dict.
     """
-    def __init__(self, sub_key, msg):
+    has_gd = False
+
+    def __init__(self, sub_key, msg, _def_priority=PUBSUB.PRIORITY.DEFAULT, _def_mime_type=PUBSUB.DEFAULT.MIME_TYPE):
         super(NonGDMessage, self).__init__()
         self.sub_key = sub_key
         self.pub_msg_id = msg['pub_msg_id']
-        self.pub_correl_id = msg['pub_correl_id']
-        self.in_reply_to = msg['in_reply_to']
-        self.ext_client_id = msg['ext_client_id']
-        self.group_id = msg['group_id']
-        self.position_in_group = msg['position_in_group']
+        self.pub_correl_id = msg.get('pub_correl_id')
+        self.in_reply_to = msg.get('in_reply_to')
+        self.ext_client_id = msg.get('ext_client_id')
+        self.group_id = msg.get('group_id')
+        self.position_in_group = msg.get('position_in_group')
         self.pub_time = msg['pub_time']
-        self.ext_pub_time = msg['ext_pub_time']
+        self.ext_pub_time = msg.get('ext_pub_time')
         self.data = msg['data']
-        self.mime_type = msg['mime_type']
-        self.priority = msg['priority']
+        self.mime_type = msg.get('mime_type') or _def_mime_type
+        self.priority = msg.get('priority') or _def_priority
         self.expiration = msg['expiration']
         self.expiration_time = msg['expiration_time']
         self.has_gd = msg['has_gd']
@@ -482,8 +486,7 @@ class PubSubTool(object):
 # ################################################################################################################################
 
     def _add_non_gd_messages_by_sub_key(self, sub_key, messages):
-        """ Low-level implementation of add_non_gd_messages_by_sub_key,
-        must be called with a lock for input sub_key.
+        """ Low-level implementation of add_non_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
         for msg in messages:
             self.delivery_lists[sub_key].add(NonGDMessage(sub_key, msg))
@@ -503,8 +506,12 @@ class PubSubTool(object):
         If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
         it is a list of non-GD message for sub_keys.
         """
+        session = None
+
         try:
-            if not has_gd:
+            if has_gd:
+                session = self.pubsub.server.odb.session()
+            else:
                 if not non_gd_msg_list:
                     raise ValueError('No messages received ({}) for cid:`{}`, has_gd:`{}` and sub_key_list:`{}`'.format(
                         non_gd_msg_list, cid, has_gd, sub_key_list))
@@ -514,35 +521,39 @@ class PubSubTool(object):
             logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
                 cid, int(has_gd), sub_key_list, len(non_gd_msg_list), is_bg_call)
 
-            with closing(self.pubsub.server.odb.session()) as session:
+            for sub_key in sub_key_list:
+                with self.sub_key_locks[sub_key]:
 
-                for sub_key in sub_key_list:
-                    with self.sub_key_locks[sub_key]:
+                    # Fetch all GD messages, if there are any at all
+                    if has_gd:
 
-                        # Fetch all GD messages, if there are any at all
-                        if has_gd:
+                        self._fetch_gd_messages_by_sub_key(sub_key, session)
 
-                            self._fetch_gd_messages_by_sub_key(sub_key, session)
+                        # Note how we substract delta seconds from current time - this is because
+                        # it is possible that there will be new messages enqueued in between our last
+                        # run and current time's generation - the difference will be likely just a few
+                        # milliseconds but to play it safe we use by default a generous slice of 60 seconds.
+                        # This is fine because any SQL queries depending on this value will also
+                        # include other filters such as delivery_status.
+                        new_now = utcnow_as_ms() - delta
+                        self.last_sql_run[sub_key] = new_now
 
-                            # Note how we substract delta seconds from current time - this is because
-                            # it is possible that there will be new messages enqueued in between our last
-                            # run and current time's generation - the difference will be likely just a few
-                            # milliseconds but to play it safe we use by default a generous slice of 60 seconds.
-                            # This is fine because any SQL queries depending on this value will also
-                            # include other filters such as delivery_status.
-                            new_now = utcnow_as_ms() - delta
-                            self.last_sql_run[sub_key] = new_now
+                        logger.info('Storing last_run of `%s` for sub_key:%s (d:%s)',
+                            pretty_format_float(new_now), sub_key, delta)
 
-                            logger.info('Storing last_run of `%s` for sub_key:%s (d:%s)',
-                                pretty_format_float(new_now), sub_key, delta)
+                    # Accept all input non-GD messages
+                    if non_gd_msg_list:
+                        self._add_non_gd_messages_by_sub_key(sub_key, non_gd_msg_list)
 
-                        # Accept all input non-GD messages
-                        if non_gd_msg_list:
-                            self._add_non_gd_messages_by_sub_key(sub_key, non_gd_msg_list)
         except Exception:
             e = format_exc()
             logger.warn(e)
             logger_zato(e)
+
+        finally:
+            if session:
+                session.commit()
+                session.close()
 
 # ################################################################################################################################
 
@@ -563,7 +574,7 @@ class PubSubTool(object):
 
         # These are messages that we have already queued up so if we happen to pick them up
         # in the database, they should be ignored.
-        ignore_list = [msg.endp_msg_queue_id for msg in self.delivery_lists[sub_key]]
+        ignore_list = [msg.endp_msg_queue_id for msg in self.delivery_lists[sub_key] if msg.has_gd]
 
         logger.info('Using last_run `%s` for sub_key:%s', pretty_format_float(last_run), sub_key)
 

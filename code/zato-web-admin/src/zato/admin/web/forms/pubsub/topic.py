@@ -34,15 +34,11 @@ class CreateForm(forms.Form):
     pub_buffer_size_gd = forms.CharField(widget=forms.TextInput(
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD)
 
-    # This is not used for now
-    pub_buffer_size_non_gd = forms.CharField(widget=forms.HiddenInput(
-        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.PUB_BUFFER_SIZE_NON_GD)
+    task_sync_interval = forms.CharField(widget=forms.TextInput(
+        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.TASK_SYNC_INTERVAL)
 
-    deliv_task_sync_interv_gd = forms.CharField(widget=forms.TextInput(
-        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.DELIV_TASK_SYNC_INTERVAL_GD)
-
-    deliv_task_sync_interv_non_gd = forms.CharField(widget=forms.TextInput(
-        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.DELIV_TASK_SYNC_INTERVAL_NON_GD)
+    task_delivery_interval = forms.CharField(widget=forms.TextInput(
+        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.TASK_DELIVERY_INTERVAL)
 
     def __init__(self, req, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)

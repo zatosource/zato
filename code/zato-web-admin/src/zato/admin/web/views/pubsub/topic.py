@@ -40,7 +40,7 @@ class Index(_Index):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'is_api_sub_allowed', 'max_depth_gd',
             'max_depth_non_gd', 'current_depth_gd', 'current_depth_non_gd', 'depth_check_freq', 'hook_service_id',
-            'pub_buffer_size_gd', 'pub_buffer_size_non_gd', 'deliv_task_sync_interv_gd', 'deliv_task_sync_interv_non_gd')
+            'pub_buffer_size_gd', 'task_sync_interval', 'task_delivery_interval')
         output_optional = ('last_pub_time',)
         output_repeated = True
 
@@ -62,8 +62,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'is_internal', 'has_gd', 'is_api_sub_allowed', 'max_depth_gd',
-            'max_depth_non_gd', 'depth_check_freq', 'pub_buffer_size_gd', 'pub_buffer_size_non_gd',
-            'deliv_task_sync_interv_gd', 'deliv_task_sync_interv_non_gd')
+            'max_depth_non_gd', 'depth_check_freq', 'pub_buffer_size_gd', 'task_sync_interval', 'task_delivery_interval')
         input_optional = ('hook_service_id',)
         output_required = ('id', 'name', 'has_gd')
 

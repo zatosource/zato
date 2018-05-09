@@ -236,14 +236,23 @@ def publish_action(req):
 
         from datetime import datetime
 
-        for x in range(10000):
+        for x in range(1):
             msg_id = req.POST.get('msg_id') or new_msg_id()
             gd = req.POST['gd']
 
+            '''
             if gd == PUBSUB.GD_CHOICE.DEFAULT_PER_TOPIC.id:
                 has_gd = None
             else:
                 has_gd = asbool(gd)
+                '''
+
+            if x % 2 == 0:
+                has_gd = True
+            else:
+                has_gd = False
+
+            has_gd = True
 
             service_input = {
                 'msg_id': msg_id,

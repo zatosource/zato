@@ -145,17 +145,20 @@ class Topic(object):
         self.has_gd = config.has_gd
         self.depth_check_freq = config.depth_check_freq
         self.pub_buffer_size_gd = config.pub_buffer_size_gd
-        self.pub_buffer_size_non_gd = config.pub_buffer_size_non_gd
         self.before_publish_hook_service_invoker = config.get('before_publish_hook_service_invoker')
         self.before_delivery_hook_service_invoker = config.get('before_delivery_hook_service_invoker')
+
+        # For now, task sync interval is the same for GD and non-GD messages
+        # so we can arbitrarily pick the former to serve for both types of messages.
+        self.task_sync_interval = config.task_sync_interval / 1000.0
 
         # How many messages have been published to this topic from current server,
         # i.e. this is not a global counter.
         self.msg_pub_iter = 0
 
         # When were subscribers last notified about messages from current server,
-        # that is, this is again not a global counter.
-        self.last_notified = None
+        # again, this is not a global counter.
+        self.last_synced = utcnow_as_ms()
 
 # ################################################################################################################################
 
@@ -166,10 +169,15 @@ class Topic(object):
 
 # ################################################################################################################################
 
-    def update_last_modified(self, _utcnow_as_ms=utcnow_as_ms):
+    def update_task_sync_time(self, _utcnow_as_ms=utcnow_as_ms):
         """ Increases counter of messages published to this topic from current server.
         """
-        self.last_notified = _utcnow_as_ms()
+        self.last_synced = _utcnow_as_ms()
+
+# ################################################################################################################################
+
+    def needs_task_sync(self, _utcnow_as_ms=utcnow_as_ms):
+        return _utcnow_as_ms() - self.last_synced >= self.task_sync_interval
 
 # ################################################################################################################################
 
@@ -1198,16 +1206,26 @@ class PubSub(object):
         # Loop forever or until stopped
         while self.keep_running:
 
+            # Sleep for a while before continuing - the call to sleep is here because this while loop is quite long
+            sleep(0.01)
+
             # Blocks other pub/sub processes for a moment
             with self.lock:
 
-                # Will map a few temporary objects
+                # Will map a few temporary objects down below
                 topic_id_dict = {}
 
                 # Get all topics ..
-                for topic in self.topics.itervalues():
+                for topic in self.topics.itervalues(): # type: Topic
 
-                    # .. and subscriptions for each one ..
+                    # Does the topic require task synchronization now?
+                    if not topic.needs_task_sync():
+                        continue
+                    else:
+                        logger_zato.warn('QQQ %s', topic.name)
+                        topic.update_task_sync_time()
+
+                    # If it does, get subscriptions for it ..
                     subs = self.get_subscriptions_by_topic(topic.name)
 
                     # .. if there are any subscriptions at all, we store that information for later use.
@@ -1252,8 +1270,5 @@ class PubSub(object):
 
                     except Exception:
                         logger.warn(format_exc())
-
-            # Sleep for a while before continuing
-            sleep(3)
 
 # ################################################################################################################################
