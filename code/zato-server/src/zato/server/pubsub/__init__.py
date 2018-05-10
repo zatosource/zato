@@ -327,7 +327,12 @@ class InRAMSyncBacklog(object):
             self.topic_msg_id[topic_id].remove(msg_id)
 
             # .. now, find the message for each sub_key ..
+            logger_zato.warn('QQQ %s', sub_keys)
+
             for sub_key in sub_keys:
+
+                logger_zato.warn('WWW %s', sub_key)
+
                 sub_key_to_msg_id = self.sub_key_to_msg_id[sub_key]
 
                 # .. delete the message itself - but we need to catch ValueError because
@@ -367,9 +372,25 @@ class InRAMSyncBacklog(object):
 # ################################################################################################################################
 
     def unsubscribe(self, topic_id, sub_keys):
+        """ Unsubscribes all the sub_keys from the input topic.
         """
-        """
-        self._get_delete_messages_by_sub_keys(topic_id, sub_keys, False, True, True)
+        with self.lock:
+
+            # For each sub_key ..
+            for sub_key in sub_keys:
+
+                # .. get all messages waiting for this subscriber ..
+                msg_ids = self.sub_key_to_msg_id.pop(sub_key)
+
+                # .. for each message found we need to check if it is needed by any other subscriber,
+                # and if it's not, then we delete all the reference to this message. Otherwise, we leave it
+                # as is, because there is at least one other subscriber waiting for it.
+                for msg_id in msg_ids:
+
+                    zzz to make things easier to maintain, add a new self.msg_id_sub_key mapping of message ID -> sub_key
+
+
+            self._get_delete_messages_by_sub_keys(topic_id, sub_keys, False, True, True)
 
 # ################################################################################################################################
 
@@ -1342,7 +1363,7 @@ class PubSub(object):
                             sub_keys = [item.sub_key for item in subs]
                             non_gd_msg_list = self.sync_backlog._get_delete_messages_by_sub_keys_impl(topic_id, sub_keys, True)
 
-                            logger_zato.warn('SENDING NON-GD %s', [elem['data'] for elem in non_gd_msg_list])
+                            logger_zato.info('SENDING NON-GD %s', [elem['data'] for elem in non_gd_msg_list])
 
                             # .. and notify all the tasks in background.
                             spawn(self.invoke_service, 'zato.pubsub.after-publish', {
