@@ -160,6 +160,12 @@ class Topic(object):
         # again, this is not a global counter.
         self.last_synced = utcnow_as_ms()
 
+        # Flags to indicate if there has been a GD or non-GD message published for this topic
+        # since the last time self.last_synced has been updated. They are changed through PubSub
+        # with a lock for this topic held.
+        self.sync_has_gd_msg = False
+        self.sync_has_non_gd_msg = False
+
 # ################################################################################################################################
 
     def incr_msg_pub_iter(self):
@@ -231,7 +237,7 @@ class SubKeyServer(object):
 
 # ################################################################################################################################
 
-class InRAMDeliveryBacklog(object):
+class InRAMSyncBacklog(object):
     """ A backlog of messages kept in RAM for whom there are subscriptions - that is, they are known to have subscribers
     and will be ultimately delivered to them. Stores a list of sub_keys and all messages that a sub_key points to.
     It acts as a multi-key dict and keeps only a single copy of message for each sub_key.
@@ -247,13 +253,16 @@ class InRAMDeliveryBacklog(object):
 
 # ################################################################################################################################
 
-    def _get_delete_messages_by_sub_keys(self, topic_id, sub_keys, needs_out, delete_sub=False):
+    def _get_delete_messages_by_sub_keys(self, topic_id, sub_keys, needs_out, flatten=True, delete_sub=False):
         """ Deletes from RAM all messages matching input sub_keys and, optionally, returns them.
         If delete_sub is True, deletes subscription by sub_key from that topic altogether.
+        If flatten is True, messages are returned as a list, if it is False, they are returned as
+        a dictionary of sub keys with a dictionary of messages for each sub_key (which may mean duplicates
+        if multiple SKs are to receive the same messages).
         """
         # Optional output
         if needs_out:
-            out = {}
+            out = [] if flatten else {}
 
         # We always delete messages found, no matter if they are to be returned or not
         to_delete = []
@@ -267,8 +276,12 @@ class InRAMDeliveryBacklog(object):
                 for msg_id in msg_ids:
 
                     if needs_out:
-                        out_sub_key = out.setdefault(sub_key, {})
-                        out_sub_key[msg_id] = self.topic_msg_id_to_msg[topic_id][msg_id]
+                        msg = self.topic_msg_id_to_msg[topic_id][msg_id]
+                        if flatten:
+                            out.append(msg)
+                        else:
+                            out_sub_key = out.setdefault(sub_key, {})
+                            out_sub_key[msg_id] = msg
 
                     # Make note of what needs to be deleted
                     to_delete.append((topic_id, sub_key, msg_id))
@@ -312,7 +325,7 @@ class InRAMDeliveryBacklog(object):
 # ################################################################################################################################
 
     def unsubscribe(self, topic_id, sub_keys):
-        self._get_delete_messages_by_sub_keys(topic_id, sub_keys, False, True)
+        self._get_delete_messages_by_sub_keys(topic_id, sub_keys, False, delete_sub=True)
 
 # ################################################################################################################################
 
@@ -465,7 +478,7 @@ class PubSub(object):
         self.pubsub_tools = []                 # A list of PubSubTool objects, each containing delivery tasks
 
         # A backlog of messages that have at least one subscription, i.e. this is what delivery servers use.
-        self.delivery_backlog = InRAMDeliveryBacklog()
+        self.sync_backlog = InRAMSyncBacklog()
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
@@ -547,7 +560,7 @@ class PubSub(object):
         """ Returns of non-GD messages for a given topic by its name.
         """
         with self.lock:
-            return self.delivery_backlog.get_topic_depth(self._get_topic_id_by_name(topic_name))
+            return self.sync_backlog.get_topic_depth(self._get_topic_id_by_name(topic_name))
 
 # ################################################################################################################################
 
@@ -1052,14 +1065,20 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error):
+    def store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list):
         """ Stores in RAM up to input non-GD messages for each sub_key. A backlog queue for each sub_key
         cannot be longer than topic's max_depth_non_gd and overflowed messages are not kept in RAM.
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """
-        self.delivery_backlog.add_messages(cid, topic_id, topic_name, self.topics[topic_id].max_depth_non_gd,
-            sub_keys, non_gd_msg_list)
+        with self.lock:
+
+            # Store the non-GD messages in backlog ..
+            self.sync_backlog.add_messages(cid, topic_id, topic_name, self.topics[topic_id].max_depth_non_gd,
+                sub_keys, non_gd_msg_list)
+
+            # .. and set a flag to signal that there are some available.
+            self._set_sync_has_msg(topic_id, False, True)
 
 # ################################################################################################################################
 
@@ -1074,7 +1093,7 @@ class PubSub(object):
                 topic_id = self.topic_name_to_id[topic_name]
 
                 # Delete subscriptions, and any related messages, from RAM
-                self.delivery_backlog.unsubscribe(topic_id, sub_keys)
+                self.sync_backlog.unsubscribe(topic_id, sub_keys)
 
                 # Delete subscription metadata from local pubsub
                 subscriptions_by_topic = self.subscriptions_by_topic[topic_name]
@@ -1199,7 +1218,25 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def trigger_notify_pubsub_tasks(self, sql_func=get_queue_depth_by_topic_id_list):
+    def _set_sync_has_msg(self, topic_id, is_gd, value):
+        """ Updates a given topic's flags indicating that a message has been published since the last sync.
+        Must be called with self.lock held.
+        """
+        topic = self.topics[topic_id]
+        if is_gd:
+            topic.sync_has_gd_msg = value
+        else:
+            topic.sync_has_non_gd_msg = value
+
+# ################################################################################################################################
+
+    def set_sync_has_msg(self, topic_id, is_gd, value):
+        with self.lock:
+            self._set_sync_has_msg(topic_id, is_gd, value)
+
+# ################################################################################################################################
+
+    def trigger_notify_pubsub_tasks(self):
         """ A background greenlet which periodically lets delivery tasks that there are perhaps
         new GD messages for the topic this class represents.
         """
@@ -1222,8 +1259,13 @@ class PubSub(object):
                     if not topic.needs_task_sync():
                         continue
                     else:
-                        logger_zato.warn('QQQ %s', topic.name)
+                        logger_zato.warn('QQQ %s %s %s', topic.name, topic.sync_has_gd_msg, topic.sync_has_non_gd_msg)
                         topic.update_task_sync_time()
+
+                    # OK, the topic possibly needs a sync but still skip it if we know
+                    # that there have been no messages published to it since the last time.
+                    if not (topic.sync_has_gd_msg or topic.sync_has_non_gd_msg):
+                        continue
 
                     # If it does, get subscriptions for it ..
                     subs = self.get_subscriptions_by_topic(topic.name)
@@ -1232,41 +1274,36 @@ class PubSub(object):
                     if subs:
                         topic_id_dict[topic.id] = (topic.name, subs)
 
-                # OK, if we had any subscriptions for at least one topic, we need to find current depth
-                # for each of the topics found.
-                if topic_id_dict:
-
+                # OK, if we had any subscriptions for at least one topic and there are any messages waiting,
+                # we can continue.
+                else:
                     try:
+                        for topic_id in topic_id_dict:
 
-                        # Operate under a new SQL connection ..
-                        with closing(self.server.odb.session()) as session:
+                            # .. get the temporary metadata stored earlier ..
+                            topic_name, subs = topic_id_dict[topic_id]
 
-                            # .. find depth for all topics found ..
-                            for topic_id, depth in sql_func(session, self.cluster_id, topic_id_dict.keys()):
+                            cid = new_cid()
+                            logger.info('Triggering sync for `%s` len_s:%d gd:%d ngd:%d (cid:%s)' % (
+                                topic_name, len(subs), topic.sync_has_gd_msg, topic.sync_has_non_gd_msg, cid))
 
-                                # .. get the temporary metadata stored earlier ..
-                                topic_name, subs = topic_id_dict[topic_id]
+                            sub_keys = [item.sub_key for item in subs]
+                            non_gd_msg_list = self.sync_backlog.retrieve_messages_by_sub_keys(topic_id, sub_keys)
 
-                                # .. proceed only if depth is > 0, i.e. if there are some messages waiting for delivery tasks ..
-                                if depth:
+                            # .. and notify all the tasks in background.
+                            spawn(self.invoke_service, 'zato.pubsub.after-publish', {
+                                'cid': cid,
+                                'topic_id':topic_id,
+                                'topic_name':topic_name,
+                                'subscriptions': subs,
+                                'non_gd_msg_list': non_gd_msg_list,
+                                'has_gd_msg_list': topic.sync_has_gd_msg,
+                                'is_bg_call': True, # This is a background call, i.e. issued by this trigger
+                            })
 
-                                    cid = new_cid()
-                                    logger.info('Triggering GD for `%s` len_s:%d d:%d (cid:%s)' % (
-                                        topic_name, len(subs), depth, cid))
-
-                                    # .. and notify all the tasks in background.
-                                    spawn(self.invoke_service, 'zato.pubsub.after-publish', {
-                                        'cid': cid,
-                                        'topic_id':topic_id,
-                                        'topic_name':topic_name,
-                                        'subscriptions': subs,
-                                        'non_gd_msg_list': [],
-                                        'has_gd_msg_list': True,
-                                        'is_bg_call': True, # This is a background call, i.e. issued by this trigger
-                                    })
-
-                                else:
-                                    logger.info('Skipped GD trigger for `%s`' % topic_name)
+                            # OK, we can now reset message flags for the topic
+                            self._set_sync_has_msg(topic_id, True, False)
+                            self._set_sync_has_msg(topic_id, False, False)
 
                     except Exception:
                         logger.warn(format_exc())

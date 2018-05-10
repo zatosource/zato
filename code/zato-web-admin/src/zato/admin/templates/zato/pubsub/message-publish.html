@@ -120,7 +120,7 @@
             </tr>
             <tr>
                 <td colspan="6" style="text-align:right">
-                    <input type="submit" name="update-message-button" value="Publish message to topic" />
+                    <input type="submit" name="update-message-button" value="Publish to topic" />
                     {% csrf_token %}
                     <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
                     {{ form.select_changer_source }}
