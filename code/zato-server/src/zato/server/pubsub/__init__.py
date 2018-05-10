@@ -253,53 +253,68 @@ class InRAMSyncBacklog(object):
 
 # ################################################################################################################################
 
-    def _get_delete_messages_by_sub_keys(self, topic_id, sub_keys, needs_out, flatten=True, delete_sub=False):
-        """ Deletes from RAM all messages matching input sub_keys and, optionally, returns them.
-        If delete_sub is True, deletes subscription by sub_key from that topic altogether.
-        If flatten is True, messages are returned as a list, if it is False, they are returned as
-        a dictionary of sub keys with a dictionary of messages for each sub_key (which may mean duplicates
-        if multiple SKs are to receive the same messages).
+    def _get_delete_messages_by_sub_keys_impl(self, topic_id, sub_keys, needs_out, flatten=True, delete_msg=True,
+        delete_sub=False):
+        """ Low-level implementation of _get_delete_messages_by_sub_keys which must be called with self.lock held.
         """
         # Optional output
         if needs_out:
+            msg_seen = set() # We cannot have duplicates on output
             out = [] if flatten else {}
 
         # We always delete messages found, no matter if they are to be returned or not
         to_delete = []
 
-        with self.lock:
+        # First, collect data for all sub_keys ..
 
-            # First, collect data for all sub_keys ..
+        for sub_key in sub_keys:
+            msg_ids = self.topic_sub_key_to_msg_id.get(topic_id, {}).get(sub_key, [])
+            logger_zato.warn('IDS %s', msg_ids)
+            for msg_id in msg_ids:
 
-            for sub_key in sub_keys:
-                msg_ids = self.topic_sub_key_to_msg_id.get(topic_id, {}).get(sub_key, [])
-                for msg_id in msg_ids:
+                if needs_out:
+                    topic_dict = self.topic_msg_id_to_msg[topic_id]
+                    msg = topic_dict[msg_id]
+                    if flatten:
+                        if msg['pub_msg_id'] in msg_seen:
+                            continue
+                        out.append(msg)
+                        logger_zato.info('ADD %s', msg['data'])
+                        msg_seen.add(msg['pub_msg_id'])
+                    else:
+                        out_sub_key = out.setdefault(sub_key, {})
+                        out_sub_key[msg_id] = msg
 
-                    if needs_out:
-                        msg = self.topic_msg_id_to_msg[topic_id][msg_id]
-                        if flatten:
-                            out.append(msg)
-                        else:
-                            out_sub_key = out.setdefault(sub_key, {})
-                            out_sub_key[msg_id] = msg
+                # Make note of what needs to be deleted
+                to_delete.append((topic_id, sub_key, msg_id))
 
-                    # Make note of what needs to be deleted
-                    to_delete.append((topic_id, sub_key, msg_id))
+        logger_zato.info('------------ %s' % delete_msg)
 
-            # Now delete all messages, and possibly subscriptions, found above
-            for topic_id, sub_key, msg_id in to_delete:
+        # Now delete all messages, and possibly subscriptions, found above
+        for topic_id, sub_key, msg_id in to_delete:
 
-                # We can access and delete them safely because we run under self.lock
-                # and we have just collected them above so they must exist
-                self.topic_sub_key_to_msg_id[topic_id][sub_key].remove(msg_id)
+            logger_zato.info('QQQ %s %s %s %s', topic_id, sub_key, msg_id, delete_msg)
 
-                # Delete sub_keys if delete_sub is explicitly set (because we are unsubscring),
-                # or if there are no messages left for that topic
-                if delete_sub or (not self.topic_sub_key_to_msg_id[topic_id][sub_key]):
-                    del self.topic_sub_key_to_msg_id[topic_id][sub_key]
+            # We can access and delete them safely because we run under self.lock
+            # and we have just collected them above so they must exist
+            logger_zato.warn('DEL %s', msg_id)
+            self.topic_sub_key_to_msg_id[topic_id][sub_key].remove(msg_id)
+            logger_zato.warn('AFTER %s', self.topic_sub_key_to_msg_id[topic_id][sub_key])
+            logger_zato.info('-----')
 
-                # Also, check if there are any other subscribers for Msg IDs that we are returning.
-                # If there are none, delete the message from in-RAM topic dictionaries.
+            # Delete sub_keys if delete_sub is explicitly set (because we are unsubscring),
+            # or if there are no messages left for that topic
+            if delete_sub or (not self.topic_sub_key_to_msg_id[topic_id][sub_key]):
+                del self.topic_sub_key_to_msg_id[topic_id][sub_key]
+
+            # If told to explicitly, always delete the message no matter if there are any other subscribers for it ..
+            if delete_msg:
+                del self.topic_msg_id_to_msg[topic_id][msg_id]
+                del self.msg_id_to_expiration[msg_id]
+
+            # .. otherwise, check if there are any other subscribers for Msg IDs that we are returning.
+            # If there are none, delete the message from in-RAM topic dictionaries.
+            else:
                 for topic_sub_key in self.topic_sub_key_to_msg_id[topic_id]:
                     if msg_id in self.topic_sub_key_to_msg_id[topic_id][topic_sub_key]:
 
@@ -314,6 +329,18 @@ class InRAMSyncBacklog(object):
 
         if needs_out:
             return out
+
+# ################################################################################################################################
+
+    def _get_delete_messages_by_sub_keys(self, topic_id, sub_keys, needs_out, flatten=True, delete_msg=True, delete_sub=False):
+        """ Deletes from RAM all messages matching input sub_keys and, optionally, returns them.
+        If delete_sub is True, deletes subscription by sub_key from that topic altogether.
+        If flatten is True, messages are returned as a list, if it is False, they are returned as
+        a dictionary of sub keys with a dictionary of messages for each sub_key (which may mean duplicates
+        if multiple SKs are to receive the same messages).
+        """
+        with self.lock:
+            return self._get_delete_messages_by_sub_keys_impl(topic_id, sub_keys, needs_out, flatten, delete_msg, delete_sub)
 
 # ################################################################################################################################
 
@@ -398,6 +425,8 @@ class InRAMSyncBacklog(object):
 
     def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages):
         with self.lock:
+
+            logger_zato.warn('TTT %s %s', cid, [elem['data'] for elem in messages])
 
             # We need to keep data for each topic separately because they have their separate max depth values.
             topic_sub_key_dict = self.topic_sub_key_to_msg_id.setdefault(topic_id, {})
@@ -1259,7 +1288,6 @@ class PubSub(object):
                     if not topic.needs_task_sync():
                         continue
                     else:
-                        logger_zato.warn('QQQ %s %s %s', topic.name, topic.sync_has_gd_msg, topic.sync_has_non_gd_msg)
                         topic.update_task_sync_time()
 
                     # OK, the topic possibly needs a sync but still skip it if we know
@@ -1288,7 +1316,9 @@ class PubSub(object):
                                 topic_name, len(subs), topic.sync_has_gd_msg, topic.sync_has_non_gd_msg, cid))
 
                             sub_keys = [item.sub_key for item in subs]
-                            non_gd_msg_list = self.sync_backlog.retrieve_messages_by_sub_keys(topic_id, sub_keys)
+                            non_gd_msg_list = self.sync_backlog._get_delete_messages_by_sub_keys_impl(topic_id, sub_keys, True)
+
+                            logger_zato.warn('SENDING NON-GD %s', [elem['data'] for elem in non_gd_msg_list])
 
                             # .. and notify all the tasks in background.
                             spawn(self.invoke_service, 'zato.pubsub.after-publish', {
