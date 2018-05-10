@@ -244,121 +244,139 @@ class InRAMSyncBacklog(object):
     """
     def __init__(self):
         self.lock = RLock()
-        self.topic_sub_key_to_msg_id = {} # Topic ID -> Sub key -> Msg ID
-        self.topic_msg_id_to_msg = {}     # Topic ID -> Msg ID  -> Message data
-        self.msg_id_to_expiration = {}    # Msg ID   -> (Topic ID, sub_keys, expiration time in milliseconds)
+        self.sub_key_to_msg_id = {} # Sub key  -> Msg ID list
+        self.msg_id_to_msg = {}     # Msg ID   -> Message data
+        self.topic_msg_id = {}      # Topic ID -> Msg ID list
 
         # Start in background a cleanup task that deletes all expired and removed messages
         spawn_greenlet(self.run_cleanup_task)
 
 # ################################################################################################################################
 
-    def _get_delete_messages_by_sub_keys_impl(self, topic_id, sub_keys, needs_out, flatten=True, delete_msg=True,
-        delete_sub=False):
+    def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages):
+
+        with self.lock:
+
+            # Local aliases
+            msg_ids = [msg['pub_msg_id'] for msg in messages]
+            len_messages = len(messages)
+            topic_messages = self.topic_msg_id.setdefault(topic_id, [])
+
+            # Try to append the messages for each of their subscribers ..
+            for sub_key in sub_keys:
+
+                # .. but first, make sure that storing these messages would not overflow the topic's depth,
+                # if it could exceed the max depth, store the messages in log files only ..
+                if len(topic_messages) + len_messages > max_depth:
+                    self.log_messages_to_store(cid, topic_name, max_depth, sub_key, messages)
+
+                    # .. skip this sub_key in such a case ..
+                    continue
+
+                # .. otherwise, we make it known that the sub_key is interested in this message.
+                sub_key_msg = self.sub_key_to_msg_id.setdefault(sub_key, [])
+                sub_key_msg.extend(msg_ids)
+
+            # For each message given on input, store its actual contents ..
+            for msg in messages:
+                self.msg_id_to_msg[msg['pub_msg_id']] = msg
+
+            # .. and add a reference to it to the topic.
+            topic_messages.extend(msg_ids)
+
+# ################################################################################################################################
+
+    def _get_delete_messages_by_sub_keys_impl(self, topic_id, sub_keys, needs_out, delete_msg=True, delete_sub=False):
         """ Low-level implementation of _get_delete_messages_by_sub_keys which must be called with self.lock held.
         """
         # Optional output
         if needs_out:
             msg_seen = set() # We cannot have duplicates on output
-            out = [] if flatten else {}
+            out = []
 
-        # We always delete messages found, no matter if they are to be returned or not
-        to_delete = []
+        # A list of messages that will be optionally deleted before they are returned
+        to_delete_msg = set()
 
         # First, collect data for all sub_keys ..
-
         for sub_key in sub_keys:
-            msg_ids = self.topic_sub_key_to_msg_id.get(topic_id, {}).get(sub_key, [])
-            logger_zato.warn('IDS %s', msg_ids)
-            for msg_id in msg_ids:
+
+            for msg_id in self.sub_key_to_msg_id.get(sub_key, []):
+
+                # We already had this message marked for output
+                if msg_id in msg_seen:
+                    continue
+                else:
+                    msg_seen.add(msg_id)
 
                 if needs_out:
-                    topic_dict = self.topic_msg_id_to_msg[topic_id]
-                    msg = topic_dict[msg_id]
-                    if flatten:
-                        if msg['pub_msg_id'] in msg_seen:
-                            continue
-                        out.append(msg)
-                        logger_zato.info('ADD %s', msg['data'])
-                        msg_seen.add(msg['pub_msg_id'])
-                    else:
-                        out_sub_key = out.setdefault(sub_key, {})
-                        out_sub_key[msg_id] = msg
+                    out.append(self.msg_id_to_msg[msg_id])
 
-                # Make note of what needs to be deleted
-                to_delete.append((topic_id, sub_key, msg_id))
+                if delete_msg:
+                    to_delete_msg.add(msg_id)
 
-        logger_zato.info('------------ %s' % delete_msg)
+        # Explicitly delete a left-over name from the loop above
+        del sub_key
 
-        # Now delete all messages, and possibly subscriptions, found above
-        for topic_id, sub_key, msg_id in to_delete:
+        # Delete all messages marked to be deleted ..
+        for msg_id in to_delete_msg:
 
-            logger_zato.info('QQQ %s %s %s %s', topic_id, sub_key, msg_id, delete_msg)
+            # .. first, direct mappings ..
+            del self.msg_id_to_msg[msg_id]
 
-            # We can access and delete them safely because we run under self.lock
-            # and we have just collected them above so they must exist
-            logger_zato.warn('DEL %s', msg_id)
-            self.topic_sub_key_to_msg_id[topic_id][sub_key].remove(msg_id)
-            logger_zato.warn('AFTER %s', self.topic_sub_key_to_msg_id[topic_id][sub_key])
-            logger_zato.info('-----')
+            # .. now, remove the message from topic ..
+            self.topic_msg_id[topic_id].remove(msg_id)
 
-            # Delete sub_keys if delete_sub is explicitly set (because we are unsubscring),
-            # or if there are no messages left for that topic
-            if delete_sub or (not self.topic_sub_key_to_msg_id[topic_id][sub_key]):
-                del self.topic_sub_key_to_msg_id[topic_id][sub_key]
+            # .. now, find the message for each sub_key ..
+            for sub_key in sub_keys:
+                sub_key_to_msg_id = self.sub_key_to_msg_id[sub_key]
 
-            # If told to explicitly, always delete the message no matter if there are any other subscribers for it ..
-            if delete_msg:
-                del self.topic_msg_id_to_msg[topic_id][msg_id]
-                del self.msg_id_to_expiration[msg_id]
+                # .. delete the message itself - but we need to catch ValueError because
+                # to_delete_msg is a list of all messages to be deleted and we do not know
+                # if this particular message belonged to this particular sub_key or not.
+                try:
+                    sub_key_to_msg_id.remove(msg_id)
+                except ValueError:
+                    pass # OK, message was not found for this sub_key
 
-            # .. otherwise, check if there are any other subscribers for Msg IDs that we are returning.
-            # If there are none, delete the message from in-RAM topic dictionaries.
-            else:
-                for topic_sub_key in self.topic_sub_key_to_msg_id[topic_id]:
-                    if msg_id in self.topic_sub_key_to_msg_id[topic_id][topic_sub_key]:
-
-                        # Ok, there is at least one reference to that Msg ID
-                        break
-
-                # No break caught above = this Msg ID is not needed by any subscriber,
-                # again, we are doing it under self.lock so del is fine.
-                else:
-                    del self.topic_msg_id_to_msg[topic_id][msg_id]
-                    del self.msg_id_to_expiration[msg_id]
+                # .. now delete the sub_key either because we are explicitly told to (e.g. during unsubscribe)
+                # or because there are no more messages left for that sub_key - it's better to delete it here
+                # because in principle we never know if messages are ever going to be published for this sub_key
+                # again so let's just delete it to keep things clean and self.add_messages will add it if needed.
+                if delete_sub or (not sub_key_to_msg_id):
+                    del self.sub_key_to_msg_id[sub_key]
 
         if needs_out:
             return out
 
 # ################################################################################################################################
 
-    def _get_delete_messages_by_sub_keys(self, topic_id, sub_keys, needs_out, flatten=True, delete_msg=True, delete_sub=False):
+    def _get_delete_messages_by_sub_keys(self, topic_id, sub_keys, needs_out, delete_msg, delete_sub):
         """ Deletes from RAM all messages matching input sub_keys and, optionally, returns them.
         If delete_sub is True, deletes subscription by sub_key from that topic altogether.
-        If flatten is True, messages are returned as a list, if it is False, they are returned as
-        a dictionary of sub keys with a dictionary of messages for each sub_key (which may mean duplicates
-        if multiple SKs are to receive the same messages).
         """
         with self.lock:
-            return self._get_delete_messages_by_sub_keys_impl(topic_id, sub_keys, needs_out, flatten, delete_msg, delete_sub)
+            return self._get_delete_messages_by_sub_keys_impl(topic_id, sub_keys, needs_out, delete_msg, delete_sub)
 
 # ################################################################################################################################
 
     def retrieve_messages_by_sub_keys(self, topic_id, sub_keys):
         """ Retrieves and returns all messages matching input - messages are deleted from RAM.
         """
-        return self._get_delete_messages_by_sub_keys(topic_id, sub_keys, True)
+        return self._get_delete_messages_by_sub_keys(topic_id, sub_keys, True, True, False)
 
 # ################################################################################################################################
 
     def unsubscribe(self, topic_id, sub_keys):
-        self._get_delete_messages_by_sub_keys(topic_id, sub_keys, False, delete_sub=True)
+        """
+        """
+        self._get_delete_messages_by_sub_keys(topic_id, sub_keys, False, True, True)
 
 # ################################################################################################################################
 
     def run_cleanup_task(self, _utcnow=utcnow_as_ms, _sleep=sleep):
         """ A background task waking up periodically to remove all expired and retrieved messages from backlog.
         """
+        '''
         while True:
             try:
                 with self.lock:
@@ -405,11 +423,12 @@ class InRAMSyncBacklog(object):
             except Exception, e:
                 logger_zato.warn('Could not remove messages from in-RAM backlog, e:`%s`', format_exc(e))
                 _sleep(5)
+                '''
 
 # ################################################################################################################################
 
     def log_messages_to_store(self, cid, topic_name, max_depth, sub_key, messages):
-
+        '''
         # Used by both loggers
         msg = 'Reached max in-RAM delivery depth of %r for topic `%r` (cid:%r). Extra messages will be stored in logs.'
         args = (max_depth, topic_name, cid)
@@ -420,10 +439,11 @@ class InRAMSyncBacklog(object):
 
         # Store messages in logger - by default will go to disk
         logger_overflow.info('CID:%s, topic:`%s`, sub_key:%s, messages:%s', cid, topic_name, sub_key, messages)
+        '''
 
 # ################################################################################################################################
 
-    def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages):
+    '''def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages):
         with self.lock:
 
             logger_zato.warn('TTT %s %s', cid, [elem['data'] for elem in messages])
@@ -467,14 +487,18 @@ class InRAMSyncBacklog(object):
                 for sub_key in may_continue:
                     sub_key_messages = topic_sub_key_dict.setdefault(sub_key, [])
                     sub_key_messages.extend(msg_ids)
+                    '''
 
 # ################################################################################################################################
 
     def get_topic_depth(self, topic_id):
         """ Returns depth of a given in-RAM queue for the topic.
         """
+        return 0
+        '''
         with self.lock:
             return self.topic_msg_id_to_msg.get(topic_id) or 0
+            '''
 
 # ################################################################################################################################
 
@@ -1336,6 +1360,7 @@ class PubSub(object):
                             self._set_sync_has_msg(topic_id, False, False)
 
                     except Exception:
+                        logger_zato.warn(format_exc())
                         logger.warn(format_exc())
 
 # ################################################################################################################################
