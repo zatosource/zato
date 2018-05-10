@@ -236,7 +236,7 @@ def publish_action(req):
 
         from datetime import datetime
 
-        for x in range(20):
+        for x in range(2000):
             msg_id = req.POST.get('msg_id') or new_msg_id()
             gd = req.POST['gd']
 
