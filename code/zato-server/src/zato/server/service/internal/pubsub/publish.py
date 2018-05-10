@@ -52,7 +52,7 @@ class PubCtx(object):
     """ A container for information describing a single publication.
     """
     __slots__ = ('cluster_id', 'pubsub', 'topic', 'endpoint_id', 'subscriptions_by_topic', 'msg_id_list', 'gd_msg_list',
-        'non_gd_msg_list', 'pattern_matched', 'ext_client_id', 'is_re_run', 'now', 'current_depth')
+        'non_gd_msg_list', 'pattern_matched', 'ext_client_id', 'is_re_run', 'now', 'current_depth', 'last_msg')
 
     def __init__(self, cluster_id, pubsub, topic, endpoint_id, subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list,
             pattern_matched, ext_client_id, is_re_run, now):
@@ -69,6 +69,7 @@ class PubCtx(object):
         self.is_re_run = is_re_run
         self.now = now
         self.current_depth = None
+        self.last_msg = self.gd_msg_list[-1] if self.gd_msg_list else self.non_gd_msg_list[-1]
 
 # ################################################################################################################################
 
@@ -426,8 +427,7 @@ class Publish(AdminService):
         """ Updates in background metadata about a topic and publisher after each publication.
         """
         try:
-            msg_list = ctx.gd_msg_list if ctx.gd_msg_list else ctx.non_gd_msg_list
-            last_pub_msg_id = msg_list[-1]['pub_msg_id']
+            last_pub_msg_id = ctx.last_msg['pub_msg_id']
 
             topic_key = 'zato.ps.meta.last.topic.%s.%s' % (ctx.cluster_id, ctx.topic.id)
             endpoint_key = 'zato.ps.meta.last.endpoint.%s.%s' % (ctx.cluster_id, ctx.endpoint_id)
@@ -441,7 +441,7 @@ class Publish(AdminService):
             }
 
             for name in _optional:
-                value = msg_list[-1].get(name)
+                value = ctx.last_msg.get(name)
                 if value:
                     data[name] = value
 
