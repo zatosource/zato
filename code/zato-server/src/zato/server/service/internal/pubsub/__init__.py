@@ -116,26 +116,28 @@ class AfterPublish(AdminService):
             has_gd_msg_list = self.request.input.has_gd_msg_list
             is_bg_call = self.request.input.is_bg_call
 
-            # We already know we can store them in RAM
+            # We already know that we can store some of the messages in RAM ..
             if not_found:
-                self._store_in_ram(cid, topic_id, topic_name, not_found, non_gd_msg_list, False)
+                self._store_in_ram(cid, topic_id, topic_name, not_found, non_gd_msg_list)
 
-            # Attempt to notify pub/sub tasks about non-GD messages ..
-            notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list, has_gd_msg_list, is_bg_call)
+            # .. but if some servers are up, attempt to notify pub/sub tasks about the messages ..
+            if current_servers:
+                notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list, has_gd_msg_list, is_bg_call)
 
-            # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
-            if notif_error_sub_keys:
-                self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, True)
+                # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
+                # Note that only non-GD messages go to RAM because the GD ones are still in the SQL database.
+                if notif_error_sub_keys:
+                    self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list)
 
         except Exception:
             self.logger.warn('Error in after_publish callback, e:`%r`', format_exc())
 
 # ################################################################################################################################
 
-    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error):
+    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list):
         """ Stores in RAM all input messages for all sub_keys.
         """
-        self.pubsub.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error)
+        self.pubsub.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list)
 
 # ################################################################################################################################
 
@@ -175,7 +177,7 @@ class AfterPublish(AdminService):
 class AfterWSXReconnect(AdminService):
     """ Invoked by WSX clients after they reconnect with a list of their sub_keys on input. Collects all messages
     waiting on other servers for that WebSocket and lets the caller know how many of them are available. At the same time,
-    the collection process trigger's that WebSocket's delivery task (via pubsub_tool) to start deliveries.
+    the collection process triggers that WebSocket's delivery task (via pubsub_tool) to start deliveries.
     """
     class SimpleIO(AdminSIO):
         input_required = ('sql_ws_client_id', 'channel_name', AsIs('pub_client_id'), Opaque('web_socket'))

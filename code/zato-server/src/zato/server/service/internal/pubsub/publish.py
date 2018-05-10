@@ -306,6 +306,7 @@ class Publish(AdminService):
     #     pattern_matched, ext_client_id, is_re_run, now):
 
     def _publish(self, ctx):
+        # Type: PubCtx
         """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
         """
         len_gd_msg_list = len(ctx.gd_msg_list)
@@ -350,8 +351,11 @@ class Publish(AdminService):
                 sql_publish_with_retry(session, self.cid, ctx.cluster_id, ctx.topic.id, ctx.subscriptions_by_topic,
                     ctx.gd_msg_list, ctx.now)
 
-                # Run an SQL commit for all queries above
+                # Run an SQL commit for all queries above ..
                 session.commit()
+
+            # .. and set a flag to signal that there are some GD messages available
+            ctx.pubsub.set_sync_has_msg(ctx.topic.id, True, True)
 
         # Either commit succeeded or there were no GD messages on input but in both cases we can now,
         # optionally, store data in pub/sub audit log.
@@ -368,15 +372,10 @@ class Publish(AdminService):
 
             if ctx.subscriptions_by_topic:
 
-                # Notify delivery tasks only if there are some messages available - it is possible
-                # there will not be any here because, for instance, we had a list of messages on input
-                # but a hook service filtered them out.
-
-                # Note that we notify subscribers explicitly only if there are non-GD messages because GD ones
-                # are handled in background periodically.
+                # Place all the non-GD messages in the in-RAM sync backlog
                 if ctx.non_gd_msg_list:
-                    self._notify_pubsub_tasks(
-                        ctx.topic.id, ctx.topic.name, ctx.subscriptions_by_topic, ctx.non_gd_msg_list, has_gd_msg_list)
+                    ctx.pubsub.store_in_ram(self.cid, ctx.topic.id, ctx.topic.name,
+                        [item.sub_key for item in ctx.subscriptions_by_topic], ctx.non_gd_msg_list)
 
             # .. however, if there are no subscriptions at the moment while there are non-GD messages,
             # we need to re-run again and publish all such messages as GD ones. This is because if there
