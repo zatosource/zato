@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -27,7 +27,7 @@ from zato.common.exception import BadRequest
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_delivery_server_for_sub_key, get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
-from zato.common.odb.query.pubsub.queue import get_queue_depth_by_topic_id_list, set_to_delete
+from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.util import is_func_overridden, make_repr, new_cid, spawn_greenlet
 from zato.common.util.time_ import utcnow_as_ms
 
@@ -43,6 +43,10 @@ hook_type_to_method = {
     PUBSUB.HOOK_TYPE.PUB: 'before_publish',
     PUBSUB.HOOK_TYPE.SUB: 'before_delivery',
 }
+
+# ################################################################################################################################
+
+_default_expiration = 2147483647 * 1000 # (2 ** 31 - 1) * 1000 milliseconds
 
 # ################################################################################################################################
 
@@ -65,8 +69,9 @@ def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pr
 
 # ################################################################################################################################
 
-def get_expiration(cid, input, default_expiration=2147483647):
-    """ Get and validate message expiration. Returns 2 ** 31 - 1 (around 68 years) if not expiration is set explicitly.
+def get_expiration(cid, input, default_expiration=_default_expiration):
+    """ Get and validate message expiration.
+    Returns (2 ** 31 - 1) * 1000 milliseconds (around 68 years) if expiration is not set explicitly.
     """
     expiration = input.get('expiration')
     if expiration is not None and expiration < 0:
@@ -392,54 +397,68 @@ class InRAMSyncBacklog(object):
     def run_cleanup_task(self, _utcnow=utcnow_as_ms, _sleep=sleep):
         """ A background task waking up periodically to remove all expired and retrieved messages from backlog.
         """
-        '''
         while True:
             try:
                 with self.lock:
 
-                    # We keep them separate so as not to modify any dictionaries during iteration.
-                    to_process = []
+                    # Local alias
+                    publishers = {}
+
+                    # We keep them separate so as not to modify any objects during iteration.
+                    expired_msg = []
 
                     # Calling it once will suffice.
                     now = _utcnow()
 
-                    # Check expiration for all messages currently held.
-                    for msg_id, (topic_id, sub_keys, expiration) in self.msg_id_to_expiration.items():
-                        if expiration <= now:
-                            to_process.append((topic_id, sub_keys, msg_id))
+                    for msg_id, msg in self.msg_id_to_msg.iteritems():
 
-                    # If we found anything, remove them from per-topic backlogs and from the dict of expiration times.
-                    for topic_id, sub_keys, msg_id in to_process:
+                        if now >= msg['expiration_time']:
 
-                        # These are direct mappings.
-                        self.msg_id_to_expiration.pop(msg_id)
-                        self.topic_msg_id_to_msg.get(topic_id, {}).pop(msg_id)
+                            # It's possible that there will be many expired messages all sent by the same publisher
+                            # so there is no need to query self.pubsub for each message.
+                            if msg['published_by_id'] not in publishers:
+                                publishers[msg['published_by_id']] = self.pubsub.get_endpoint_by_id(msg['published_by_id'])
 
-                        # But here, we need to remove msg_id for each sub_key found in sub_keys.
-                        sub_keys_for_topic_id = self.topic_sub_key_to_msg_id.get(topic_id, {})
-                        if sub_keys_for_topic_id:
-                            for sub_key in sub_keys:
-                                msg_ids_for_sub_key = sub_keys_for_topic_id.get(sub_key, {})
-                                msg_ids_for_sub_key.pop(msg_id)
+                            # We can be sure that it is always found
+                            publisher = publishers[msg['published_by_id']]
 
-                                # Delete sub_key from its parent topic if that was the last message for this sub_key
-                                # so as not to keep references to unneeded sub_keys without a reason.
-                                if not msg_ids_for_sub_key:
-                                    del sub_keys_for_topic_id[sub_key]
+                            # Log the message to make sure the expiration event is always logged ..
+                            logger_zato.info('Found an expired msg:`%s`, topic:`%s`, publisher:`%s`, pub_time:`%s`, exp:`%s`',
+                                msg['pub_msg_id'], msg['topic_name'], publisher.name, msg['pub_time'], msg['expiration'])
 
-                    # Log what was done
-                    number = len(to_process)
-                    suffix = 's' if(number==0 or number > 1) else ''
-                    logger.info('In-RAM. Deleted %s pub/sub message%s' % (number, suffix))
+                            # .. and append it to the list of messages to be deleted.
+                            expired_msg.append((msg['pub_msg_id'], msg['topic_id']))
 
-                # Sleep for a moment before looping again, but do it outside the main loop
-                # so that other parts of code can acquire the lock for their purposes.
-                _sleep(5)
+                    # For logging what was done
+                    len_expired = len(expired_msg)
 
-            except Exception, e:
-                logger_zato.warn('Could not remove messages from in-RAM backlog, e:`%s`', format_exc(e))
-                _sleep(5)
-                '''
+                    # Iterate over all the expired messages found and delete them from in-RAM structures
+                    for msg_id, topic_id in expired_msg:
+
+                        # Get all sub_keys waiting for these messages and delete the message from each one,
+                        # but note that there may be possibly no subscribers at all if the message was published
+                        # to a topic without any subscribers.
+                        for sub_key in self.msg_id_to_sub_key.pop(msg_id):
+                            self.sub_key_to_msg_id[sub_key].remove(msg_id)
+
+                        # Remove all references to the message from topic
+                        self.topic_msg_id[topic_id].remove(msg_id)
+
+                        # And finally, remove the message's contents
+                        del self.msg_id_to_msg[msg_id]
+
+                suffix = 's' if (len_expired==0 or len_expired > 1) else ''
+                logger.info('In-RAM. Deleted %s pub/sub message%s %s' % (len_expired, suffix, self.msg_id_to_msg))
+
+                # Sleep for a moment before checking again but don't do it with self.lock held.
+                _sleep(0.1)
+
+            except Exception:
+                e = format_exc()
+                log_msg = 'Could not remove messages from in-RAM backlog, e:`%s`'
+                logger.warn(log_msg, e)
+                logger_zato.warn(log_msg, e)
+                _sleep(0.1)
 
 # ################################################################################################################################
 
@@ -457,14 +476,11 @@ class InRAMSyncBacklog(object):
 
 # ################################################################################################################################
 
-    def get_topic_depth(self, topic_id):
+    def get_topic_depth(self, topic_id, _default=set()):
         """ Returns depth of a given in-RAM queue for the topic.
         """
-        return 0
-        '''
         with self.lock:
-            return self.topic_msg_id_to_msg.get(topic_id) or 0
-            '''
+            return len(self.topic_msg_id.get(topic_id, _default))
 
 # ################################################################################################################################
 

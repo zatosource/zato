@@ -6,11 +6,7 @@ Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# gevent
-from gevent import sleep
-
 # SQLAlchemy
-from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 # Zato
