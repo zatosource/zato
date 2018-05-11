@@ -2177,7 +2177,7 @@ class PubSubMessage(Base):
     mime_type = Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.MIME_TYPE)
     size = Column(Integer, nullable=False)
     priority = Column(Integer, nullable=False, server_default=str(PUBSUB.PRIORITY.DEFAULT))
-    expiration = Column(Integer, nullable=False, server_default='0')
+    expiration = Column(BigInteger, nullable=False, server_default='0')
     has_gd = Column(Boolean(), nullable=False, server_default=sa_true()) # Guaranteed delivery
 
     # Is the message in at least one delivery queue, meaning that there is at least one

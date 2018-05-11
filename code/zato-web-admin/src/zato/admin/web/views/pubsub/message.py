@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -26,7 +26,6 @@ from zato.admin.web.views import method_allowed, slugify
 from zato.admin.web.views.pubsub import get_endpoint_html
 from zato.common import PUBSUB
 from zato.common.pubsub import new_msg_id
-from zato.common.util import asbool
 
 # ################################################################################################################################
 
@@ -236,7 +235,7 @@ def publish_action(req):
 
         from datetime import datetime
 
-        for x in range(10000):
+        for x in range(2):
             msg_id = req.POST.get('msg_id') or new_msg_id()
             gd = req.POST['gd']
 
@@ -252,13 +251,14 @@ def publish_action(req):
             else:
                 has_gd = False
 
-            #has_gd = False
+            has_gd = False
 
             service_input = {
                 'msg_id': msg_id,
                 'has_gd': has_gd,
                 'skip_pattern_matching': True,
                 'endpoint_id': req.POST['publisher_id'],
+                'expiration': 1000,
             }
 
             for name in('cluster_id', 'topic_name', 'data'):
@@ -266,9 +266,10 @@ def publish_action(req):
 
             service_input['data'] = str(x) + '-' + str(int(has_gd))
 
-            for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group', 'expiration'):
+            for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group'):#, 'expiration'):
                 service_input[name] = req.POST.get(name, None) or None # Always use None instead of ''
 
+            print(99, service_input)
             req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
 
             print('Invoking', x, msg_id, datetime.utcnow())

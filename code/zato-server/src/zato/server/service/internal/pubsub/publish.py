@@ -104,7 +104,7 @@ class Publish(AdminService):
             priority = None
 
         expiration = get_expiration(self.cid, input)
-        expiration_time = now + (expiration * 1000)
+        expiration_time = now + (expiration / 1000.0)
 
         pub_msg_id = input.get('msg_id', '').encode('utf8') or new_msg_id()
 
