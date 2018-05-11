@@ -242,11 +242,13 @@ class InRAMSyncBacklog(object):
     and will be ultimately delivered to them. Stores a list of sub_keys and all messages that a sub_key points to.
     It acts as a multi-key dict and keeps only a single copy of message for each sub_key.
     """
-    def __init__(self):
+    def __init__(self, pubsub):
+        self.pubsub = pubsub # type: PubSub
+        self.sub_key_to_msg_id = {} # Sub key  -> Msg ID set --- What messages are available for a given subcriber
+        self.msg_id_to_sub_key = {} # Msg ID   -> Sub key set  - What subscribers are interested in a given message
+        self.msg_id_to_msg = {}     # Msg ID   -> Message data - What is the actual contents of each message
+        self.topic_msg_id = {}      # Topic ID -> Msg ID set --- What messages are available for each topic (no matter sub_key)
         self.lock = RLock()
-        self.sub_key_to_msg_id = {} # Sub key  -> Msg ID list
-        self.msg_id_to_msg = {}     # Msg ID   -> Message data
-        self.topic_msg_id = {}      # Topic ID -> Msg ID list
 
         # Start in background a cleanup task that deletes all expired and removed messages
         spawn_greenlet(self.run_cleanup_task)
@@ -260,7 +262,7 @@ class InRAMSyncBacklog(object):
             # Local aliases
             msg_ids = [msg['pub_msg_id'] for msg in messages]
             len_messages = len(messages)
-            topic_messages = self.topic_msg_id.setdefault(topic_id, [])
+            topic_messages = self.topic_msg_id.setdefault(topic_id, set())
 
             # Try to append the messages for each of their subscribers ..
             for sub_key in sub_keys:
@@ -273,26 +275,28 @@ class InRAMSyncBacklog(object):
                     # .. skip this sub_key in such a case ..
                     continue
 
-                # .. otherwise, we make it known that the sub_key is interested in this message.
-                sub_key_msg = self.sub_key_to_msg_id.setdefault(sub_key, [])
-                sub_key_msg.extend(msg_ids)
+                # .. otherwise, we make it known that the sub_key is interested in this message ..
+                sub_key_msg = self.sub_key_to_msg_id.setdefault(sub_key, set())
+                sub_key_msg.update(msg_ids)
 
             # For each message given on input, store its actual contents ..
             for msg in messages:
                 self.msg_id_to_msg[msg['pub_msg_id']] = msg
 
+                # .. add a reverse mapping, from message ID to sub_key ..
+                msg_sub_key = self.msg_id_to_sub_key.setdefault(msg['pub_msg_id'], set())
+                msg_sub_key.update(sub_keys)
+
             # .. and add a reference to it to the topic.
-            topic_messages.extend(msg_ids)
+            topic_messages.update(msg_ids)
 
 # ################################################################################################################################
 
-    def _get_delete_messages_by_sub_keys_impl(self, topic_id, sub_keys, needs_out, delete_msg=True, delete_sub=False):
+    def _get_delete_messages_by_sub_keys(self, topic_id, sub_keys, delete_msg=True, delete_sub=False):
         """ Low-level implementation of _get_delete_messages_by_sub_keys which must be called with self.lock held.
         """
-        # Optional output
-        if needs_out:
-            msg_seen = set() # We cannot have duplicates on output
-            out = []
+        msg_seen = set() # We cannot have duplicates on output
+        out = []
 
         # A list of messages that will be optionally deleted before they are returned
         to_delete_msg = set()
@@ -308,8 +312,7 @@ class InRAMSyncBacklog(object):
                 else:
                     msg_seen.add(msg_id)
 
-                if needs_out:
-                    out.append(self.msg_id_to_msg[msg_id])
+                out.append(self.msg_id_to_msg[msg_id])
 
                 if delete_msg:
                     to_delete_msg.add(msg_id)
@@ -327,12 +330,7 @@ class InRAMSyncBacklog(object):
             self.topic_msg_id[topic_id].remove(msg_id)
 
             # .. now, find the message for each sub_key ..
-            logger_zato.warn('QQQ %s', sub_keys)
-
             for sub_key in sub_keys:
-
-                logger_zato.warn('WWW %s', sub_key)
-
                 sub_key_to_msg_id = self.sub_key_to_msg_id[sub_key]
 
                 # .. delete the message itself - but we need to catch ValueError because
@@ -344,36 +342,24 @@ class InRAMSyncBacklog(object):
                     pass # OK, message was not found for this sub_key
 
                 # .. now delete the sub_key either because we are explicitly told to (e.g. during unsubscribe)
-                # or because there are no more messages left for that sub_key - it's better to delete it here
-                # because in principle we never know if messages are ever going to be published for this sub_key
-                # again so let's just delete it to keep things clean and self.add_messages will add it if needed.
-                if delete_sub or (not sub_key_to_msg_id):
+                if delete_sub:# or (not sub_key_to_msg_id):
                     del self.sub_key_to_msg_id[sub_key]
 
-        if needs_out:
-            return out
-
-# ################################################################################################################################
-
-    def _get_delete_messages_by_sub_keys(self, topic_id, sub_keys, needs_out, delete_msg, delete_sub):
-        """ Deletes from RAM all messages matching input sub_keys and, optionally, returns them.
-        If delete_sub is True, deletes subscription by sub_key from that topic altogether.
-        """
-        with self.lock:
-            return self._get_delete_messages_by_sub_keys_impl(topic_id, sub_keys, needs_out, delete_msg, delete_sub)
+        return out
 
 # ################################################################################################################################
 
     def retrieve_messages_by_sub_keys(self, topic_id, sub_keys):
         """ Retrieves and returns all messages matching input - messages are deleted from RAM.
         """
-        return self._get_delete_messages_by_sub_keys(topic_id, sub_keys, True, True, False)
+        return self._get_delete_messages_by_sub_keys(topic_id, sub_keys)
 
 # ################################################################################################################################
 
-    def unsubscribe(self, topic_id, sub_keys):
+    def unsubscribe(self, topic_id, topic_name, sub_keys, pattern='Unsubscribed `%s` from topic `%s`'):
         """ Unsubscribes all the sub_keys from the input topic.
         """
+        # Always acquire a lock for this kind of operation
         with self.lock:
 
             # For each sub_key ..
@@ -387,10 +373,19 @@ class InRAMSyncBacklog(object):
                 # as is, because there is at least one other subscriber waiting for it.
                 for msg_id in msg_ids:
 
-                    zzz to make things easier to maintain, add a new self.msg_id_sub_key mapping of message ID -> sub_key
+                    # Get all subscribers interested in this message ..
+                    current_subs = self.msg_id_to_sub_key[msg_id]
+                    current_subs.remove(sub_key)
 
+                    # .. if the list is empty, it means that there no some subscribers left for that message,
+                    # in which case we may deleted references to this message from other look-up structures.
+                    if not current_subs:
+                        del self.msg_id_to_msg[msg_id]
+                        topic_msg = self.topic_msg_id[topic_id]
+                        topic_msg.remove(msg_id)
 
-            self._get_delete_messages_by_sub_keys(topic_id, sub_keys, False, True, True)
+        logger.info(pattern, sub_keys, topic_name)
+        logger_zato.info(pattern, sub_keys, topic_name)
 
 # ################################################################################################################################
 
@@ -449,7 +444,6 @@ class InRAMSyncBacklog(object):
 # ################################################################################################################################
 
     def log_messages_to_store(self, cid, topic_name, max_depth, sub_key, messages):
-        '''
         # Used by both loggers
         msg = 'Reached max in-RAM delivery depth of %r for topic `%r` (cid:%r). Extra messages will be stored in logs.'
         args = (max_depth, topic_name, cid)
@@ -460,55 +454,6 @@ class InRAMSyncBacklog(object):
 
         # Store messages in logger - by default will go to disk
         logger_overflow.info('CID:%s, topic:`%s`, sub_key:%s, messages:%s', cid, topic_name, sub_key, messages)
-        '''
-
-# ################################################################################################################################
-
-    '''def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages):
-        with self.lock:
-
-            logger_zato.warn('TTT %s %s', cid, [elem['data'] for elem in messages])
-
-            # We need to keep data for each topic separately because they have their separate max depth values.
-            topic_sub_key_dict = self.topic_sub_key_to_msg_id.setdefault(topic_id, {})
-            topic_msg_dict = self.topic_msg_id_to_msg.setdefault(topic_id, {})
-
-            # First, build a list of sub_keys in that topic that have not yet reached max_depth,
-            # and for those that have, log messages through logger.
-            may_continue = []
-
-            for sub_key in sub_keys:
-                sub_key_messages = topic_sub_key_dict.setdefault(sub_key, [])
-
-                if len(sub_key_messages) + len(messages) > max_depth:
-                    self.log_messages_to_store(cid, topic_name, max_depth, sub_key, messages)
-                else:
-                    may_continue.append(sub_key)
-
-            # Continue only if there is at least one sub_key that has not reached max_depth yet
-            if may_continue:
-
-                # Messages is a list and we now turn it into a dictionary keyed by msg ID.
-                msg_dict = {}
-
-                for item in messages:
-                    msg_id = item['pub_msg_id']
-                    msg_dict[msg_id] = item
-
-                    # For each message, make its expiration known to background cleanup task
-                    self.msg_id_to_expiration[msg_id] = (topic_id, may_continue, item['expiration_time'])
-
-                # Get this list once and refer to it multiple times below
-                msg_ids = msg_dict.keys()
-
-                # Add new messages to RAM
-                topic_msg_dict.update(msg_dict)
-
-                # Add references to the new messages for each sub_key
-                for sub_key in may_continue:
-                    sub_key_messages = topic_sub_key_dict.setdefault(sub_key, [])
-                    sub_key_messages.extend(msg_ids)
-                    '''
 
 # ################################################################################################################################
 
@@ -552,7 +497,7 @@ class PubSub(object):
         self.pubsub_tools = []                 # A list of PubSubTool objects, each containing delivery tasks
 
         # A backlog of messages that have at least one subscription, i.e. this is what delivery servers use.
-        self.sync_backlog = InRAMSyncBacklog()
+        self.sync_backlog = InRAMSyncBacklog(self)
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
@@ -980,8 +925,8 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _get_sub_key_server(self, sub_key):
-        return self.sub_key_servers[sub_key]
+    def _get_sub_key_server(self, sub_key, default=None):
+        return self.sub_key_servers.get(sub_key, default)
 
 # ################################################################################################################################
 
@@ -1167,7 +1112,7 @@ class PubSub(object):
                 topic_id = self.topic_name_to_id[topic_name]
 
                 # Delete subscriptions, and any related messages, from RAM
-                self.sync_backlog.unsubscribe(topic_id, sub_keys)
+                self.sync_backlog.unsubscribe(topic_id, topic_name, sub_keys)
 
                 # Delete subscription metadata from local pubsub
                 subscriptions_by_topic = self.subscriptions_by_topic[topic_name]
@@ -1360,21 +1305,32 @@ class PubSub(object):
                             logger.info('Triggering sync for `%s` len_s:%d gd:%d ngd:%d (cid:%s)' % (
                                 topic_name, len(subs), topic.sync_has_gd_msg, topic.sync_has_non_gd_msg, cid))
 
-                            sub_keys = [item.sub_key for item in subs]
-                            non_gd_msg_list = self.sync_backlog._get_delete_messages_by_sub_keys_impl(topic_id, sub_keys, True)
+                            # Build a list of sub_keys for whom we know what their delivery server is which will
+                            # allow us to send messages only to tasks that are known to be up.
+                            sub_keys = []
+                            for item in subs:
+                                if self.get_sub_key_server(item.sub_key):
+                                    sub_keys.append(item.sub_key)
 
-                            logger_zato.info('SENDING NON-GD %s', [elem['data'] for elem in non_gd_msg_list])
+                            # Continue only if there are actually any sub_keys left = any tasks up and running ..
+                            if sub_keys:
+                                non_gd_msg_list = self.sync_backlog._get_delete_messages_by_sub_keys(topic_id, sub_keys)
 
-                            # .. and notify all the tasks in background.
-                            spawn(self.invoke_service, 'zato.pubsub.after-publish', {
-                                'cid': cid,
-                                'topic_id':topic_id,
-                                'topic_name':topic_name,
-                                'subscriptions': subs,
-                                'non_gd_msg_list': non_gd_msg_list,
-                                'has_gd_msg_list': topic.sync_has_gd_msg,
-                                'is_bg_call': True, # This is a background call, i.e. issued by this trigger
-                            })
+                                # .. also, continue only if there are still messages for the ones that are up ..
+                                if non_gd_msg_list:
+
+                                    logger_zato.info('SENDING NON-GD %s', [elem['data'] for elem in non_gd_msg_list])
+
+                                    # .. and notify all the tasks in background.
+                                    spawn(self.invoke_service, 'zato.pubsub.after-publish', {
+                                        'cid': cid,
+                                        'topic_id':topic_id,
+                                        'topic_name':topic_name,
+                                        'subscriptions': subs,
+                                        'non_gd_msg_list': non_gd_msg_list,
+                                        'has_gd_msg_list': topic.sync_has_gd_msg,
+                                        'is_bg_call': True, # This is a background call, i.e. issued by this trigger
+                                    })
 
                             # OK, we can now reset message flags for the topic
                             self._set_sync_has_msg(topic_id, True, False)

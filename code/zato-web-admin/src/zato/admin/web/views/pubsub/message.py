@@ -236,7 +236,7 @@ def publish_action(req):
 
         from datetime import datetime
 
-        for x in range(1):
+        for x in range(10000):
             msg_id = req.POST.get('msg_id') or new_msg_id()
             gd = req.POST['gd']
 
@@ -252,7 +252,7 @@ def publish_action(req):
             else:
                 has_gd = False
 
-            has_gd = False
+            #has_gd = False
 
             service_input = {
                 'msg_id': msg_id,
