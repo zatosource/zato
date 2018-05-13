@@ -18,6 +18,7 @@ from traceback import format_exc
 # gevent
 from gevent import sleep, spawn
 from gevent.lock import RLock
+from gevent.threading import Lock
 
 # sortedcontainers
 from sortedcontainers import SortedList as _SortedList
@@ -78,8 +79,8 @@ class PubSubTask(object):
 class DeliveryTask(object):
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
-    def __init__(self, pubsub, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg_cb, confirm_pubsub_msg_delivered_cb,
-            sub_config):
+    def __init__(self, pubsub, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg_cb,
+            confirm_pubsub_msg_delivered_cb, sub_config):
         self.keep_running = True
         self.pubsub = pubsub
         self.sub_key = sub_key
@@ -88,8 +89,11 @@ class DeliveryTask(object):
         self.deliver_pubsub_msg_cb = deliver_pubsub_msg_cb
         self.confirm_pubsub_msg_delivered_cb = confirm_pubsub_msg_delivered_cb
         self.sub_config = sub_config
+        self.topic_name = sub_config.topic_name
         self.wait_sock_err = self.sub_config.wait_sock_err
         self.wait_non_sock_err = self.sub_config.wait_non_sock_err
+        self.last_run = utcnow_as_ms()
+        self.delivery_interval = self.sub_config.task_delivery_interval / 1000.0
 
         # If self.wrap_in_list is True, messages will be always wrapped in a list,
         # even if there is only one message to send. Note that self.wrap_in_list will be False
@@ -105,6 +109,8 @@ class DeliveryTask(object):
             self.wrap_in_list = True
 
         spawn_greenlet(self.run)
+
+# ################################################################################################################################
 
     def _run_delivery(self, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
@@ -191,21 +197,42 @@ class DeliveryTask(object):
                         self.delivery_list.remove_pubsub_msg(msg)
 
                 # Status of messages is updated in both SQL and RAM so we can now log success
-                logger.info('Successfully delivered message(s) %s', delivered_msg_id_list)
+                logger.info('Successfully delivered message(s) %s to %s', delivered_msg_id_list, self.sub_key)
 
                 # Indicates that we have successfully delivered all messages currently queued up
                 # and our delivery list is currently empty.
                 return _run_deliv_status.OK
 
-    def run(self, no_msg_sleep_time=0.1, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
+# ################################################################################################################################
+
+    def _should_wake(self, _now=utcnow_as_ms):
+        """ Returns True if the task should be woken up g. because its time has come already to process messages,
+        assumming there are any waiting for it.
+        """
+        now = _now()
+        diff = round(now - self.last_run, 2)
+
+        #logger_zato.warn('WAIT CHECK %s %s %s %s', now, self.last_run, diff, self.delivery_interval)
+
+        if diff >= self.delivery_interval:
+            if self.delivery_list:
+                logger.info('Waking task:%s now:%s last:%s diff:%s interval:%s len:%d',
+                    self.sub_key, now, self.last_run, diff, self.delivery_interval, len(self.delivery_list))
+                return True
+
+# ################################################################################################################################
+
+    def run(self, default_sleep_time=0.1, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         logger.info('Starting delivery task for sub_key:`%s`', self.sub_key)
+
         try:
             while self.keep_running:
-                if not self.delivery_list:
-                    sleep(no_msg_sleep_time) # No need to wake up too often if there is not much to do
-                else:
+                if self._should_wake():
 
-                    # Get the list of all messaged IDs for which delivery was successful,
+                    # Update last run time to be able to wake up in time for the next delivery
+                    self.last_run = utcnow_as_ms()
+
+                    # Get the list of all message IDs for which delivery was successful,
                     # indicating whether all currently lined up messages have been
                     # successfully delivered.
                     result = self._run_delivery()
@@ -214,7 +241,7 @@ class DeliveryTask(object):
                     if result == _run_deliv_status.OK:
                         continue
                     elif result == _run_deliv_status.NO_MSG:
-                        sleep(no_msg_sleep_time)
+                        sleep(sleep_time)
 
                     # Otherwise, sleep for a longer time because our endpoint must have returned an error.
                     # After this sleep, self._run_delivery will again attempt to deliver all messages
@@ -227,21 +254,34 @@ class DeliveryTask(object):
                         logger_zato.warn(msg)
                         sleep(sleep_time)
 
+                else:
+
+                    # Wait for our turn
+                    sleep(default_sleep_time)
+
+# ################################################################################################################################
+
         except Exception, e:
             error_msg = 'Exception in delivery task for sub_key:`%s`, e:`%s`'
             e_formatted = format_exc(e)
             logger.warn(error_msg, self.sub_key, e_formatted)
             logger_zato.warn(error_msg, self.sub_key, e_formatted)
 
+# ################################################################################################################################
+
     def stop(self):
         if self.keep_running:
             logger.info('Stopping delivery task for sub_key:`%s`', self.sub_key)
             self.keep_running = False
 
+# ################################################################################################################################
+
     def clear(self):
         gd, non_gd = self.get_queue_depth()
         logger.info('Removing in-RAM messages for sub_key:`%s` (GD:%d, non-GD:%d)', self.sub_key, gd, non_gd)
         self.delivery_list.clear()
+
+# ################################################################################################################################
 
     def get_queue_depth(self):
         """ Returns the number of GD and non-GD messages in delivery list.
@@ -259,6 +299,8 @@ class DeliveryTask(object):
 
     def get_gd_queue_depth(self):
         return self.get_queue_depth()[0]
+
+# ################################################################################################################################
 
     def get_non_gd_queue_depth(self):
         return self.get_queue_depth()[1]
@@ -325,7 +367,7 @@ class GDMessage(Message):
     """
     has_gd = True
 
-    def __init__(self, sub_key, msg):
+    def __init__(self, sub_key, topic_name, msg):
         super(GDMessage, self).__init__()
         self.endp_msg_queue_id = msg.endp_msg_queue_id
         self.sub_key = sub_key
@@ -342,7 +384,7 @@ class GDMessage(Message):
         self.priority = msg.priority
         self.expiration = msg.expiration
         self.expiration_time = msg.expiration_time
-        self.topic_name = '/customer/new'#msg.topic_name
+        self.topic_name = topic_name
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
@@ -443,9 +485,8 @@ class PubSubTool(object):
         delivery_lock = RLock()
 
         self.delivery_lists[sub_key] = delivery_list
-        self.delivery_tasks[sub_key] = DeliveryTask(
-            self.pubsub, sub_key, delivery_lock, delivery_list, self.deliver_pubsub_msg,
-            self.confirm_pubsub_msg_delivered, self.pubsub.get_subscription_by_sub_key(sub_key).config)
+        self.delivery_tasks[sub_key] = DeliveryTask(self.pubsub, sub_key, delivery_lock, delivery_list,
+            self.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered, self.pubsub.get_subscription_by_sub_key(sub_key).config)
 
         self.sub_key_locks[sub_key] = delivery_lock
 
@@ -506,7 +547,6 @@ class PubSubTool(object):
         it is a list of non-GD message for sub_keys.
         """
         session = None
-
         try:
             if has_gd:
                 session = self.pubsub.server.odb.session()
@@ -526,7 +566,7 @@ class PubSubTool(object):
                     # Fetch all GD messages, if there are any at all
                     if has_gd:
 
-                        self._fetch_gd_messages_by_sub_key(sub_key, session)
+                        self._fetch_gd_messages_by_sub_key(sub_key, self.pubsub.get_topic_name_by_sub_key(sub_key), session)
 
                         # Note how we substract delta seconds from current time - this is because
                         # it is possible that there will be new messages enqueued in between our last
@@ -558,11 +598,16 @@ class PubSubTool(object):
 
     def handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call):
         self.msg_handler_counter += 1
-        spawn(self._handle_new_messages, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call)
+        try:
+            spawn(self._handle_new_messages, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call)
+        except Exception:
+            e = format_exc()
+            logger.warn(e)
+            logger_zato.warn(e)
 
 # ################################################################################################################################
 
-    def _fetch_gd_messages_by_sub_key(self, sub_key, session=None):
+    def _fetch_gd_messages_by_sub_key(self, sub_key, topic_name, session=None):
         """ Low-level implementation of fetch_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
         count = 0
@@ -579,7 +624,7 @@ class PubSubTool(object):
 
         for idx, msg in enumerate(self.pubsub.get_sql_messages_by_sub_key(session, sub_key, last_run, ignore_list)):
             msg_ids.append(msg.pub_msg_id)
-            self.delivery_lists[sub_key].add(GDMessage(sub_key, msg))
+            self.delivery_lists[sub_key].add(GDMessage(sub_key, topic_name, msg))
             count += 1
 
         logger.info('Pushing %d GD message{}to for sub_key task:%s msg_ids:%s'.format(
@@ -591,7 +636,7 @@ class PubSubTool(object):
         """ Fetches GD messages from SQL for sub_key given on input and adds them to local queue of messages to deliver.
         """
         with self.sub_key_locks[sub_key]:
-            self._fetch_gd_messages_by_sub_key(sub_key, session)
+            self._fetch_gd_messages_by_sub_key(sub_key, self.pubsub.get_topic_by_sub_key(sub_key), session)
 
 # ################################################################################################################################
 
