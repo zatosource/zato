@@ -75,6 +75,7 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.cluster_id,
 
         PubSubTopic.name.label('topic_name'),
+        PubSubTopic.task_delivery_interval,
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubEndpoint.endpoint_type,
         PubSubEndpoint.service_id,

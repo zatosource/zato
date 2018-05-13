@@ -349,10 +349,12 @@ class SubscribeServiceImpl(_Subscribe):
                 # Common configuration for WSX and broker messages
                 sub_config = Bunch()
                 sub_config.topic_name = ctx.topic.name
+                sub_config.task_delivery_interval = ctx.topic.task_delivery_interval
                 sub_config.endpoint_type = self.endpoint_type
 
                 for name in sub_broker_attrs:
                     sub_config[name] = getattr(ps_sub, name, None)
+
 
                 #
                 # Move all available messages to that subscriber's queue. Note that we are operating under a global

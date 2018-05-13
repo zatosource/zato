@@ -59,7 +59,7 @@ def _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key, last_sql_run, now
     """ Returns all SQL messages queued up for a given sub_key that are not being delivered
     or have not been delivered already.
     """
-    logger.info('GET-MSG-SK %s', sub_key)
+    logger.info('Getting SQL messages for `%s`', sub_key)
 
     query = session.query(*columns).\
     filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\

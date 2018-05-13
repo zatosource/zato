@@ -150,6 +150,7 @@ class Topic(object):
         self.has_gd = config.has_gd
         self.depth_check_freq = config.depth_check_freq
         self.pub_buffer_size_gd = config.pub_buffer_size_gd
+        self.task_delivery_interval = config.task_delivery_interval
         self.before_publish_hook_service_invoker = config.get('before_publish_hook_service_invoker')
         self.before_delivery_hook_service_invoker = config.get('before_delivery_hook_service_invoker')
 
@@ -300,6 +301,7 @@ class InRAMSyncBacklog(object):
     def _get_delete_messages_by_sub_keys(self, topic_id, sub_keys, delete_msg=True, delete_sub=False):
         """ Low-level implementation of _get_delete_messages_by_sub_keys which must be called with self.lock held.
         """
+        now = utcnow_as_ms() # We cannot return expired messages
         msg_seen = set() # We cannot have duplicates on output
         out = []
 
@@ -315,9 +317,15 @@ class InRAMSyncBacklog(object):
                 if msg_id in msg_seen:
                     continue
                 else:
+                    # Mark as already seen
                     msg_seen.add(msg_id)
 
-                out.append(self.msg_id_to_msg[msg_id])
+                    # Filter out expired messages
+                    msg = self.msg_id_to_msg[msg_id]
+                    if now >= msg['expiration_time']:
+                        continue
+                    else:
+                        out.append(self.msg_id_to_msg[msg_id])
 
                 if delete_msg:
                     to_delete_msg.add(msg_id)
@@ -448,10 +456,10 @@ class InRAMSyncBacklog(object):
                         del self.msg_id_to_msg[msg_id]
 
                 suffix = 's' if (len_expired==0 or len_expired > 1) else ''
-                logger.info('In-RAM. Deleted %s pub/sub message%s %s' % (len_expired, suffix, self.msg_id_to_msg))
+                logger.info('In-RAM. Deleted %s pub/sub message%s. Left:%s' % (len_expired, suffix, len(self.msg_id_to_msg)))
 
                 # Sleep for a moment before checking again but don't do it with self.lock held.
-                _sleep(0.1)
+                _sleep(2)
 
             except Exception:
                 e = format_exc()
@@ -609,6 +617,12 @@ class PubSub(object):
     def get_topic_by_name(self, topic_name):
         with self.lock:
             return self._get_topic_by_name(topic_name)
+
+# ################################################################################################################################
+
+    def get_topic_name_by_sub_key(self, sub_key):
+        with self.lock:
+            return self._get_subscription_by_sub_key(sub_key).topic_name
 
 # ################################################################################################################################
 
@@ -1333,9 +1347,7 @@ class PubSub(object):
                                 non_gd_msg_list = self.sync_backlog._get_delete_messages_by_sub_keys(topic_id, sub_keys)
 
                                 # .. also, continue only if there are still messages for the ones that are up ..
-                                if non_gd_msg_list:
-
-                                    logger_zato.info('SENDING NON-GD %s', [elem['data'] for elem in non_gd_msg_list])
+                                if topic.sync_has_gd_msg or topic.sync_has_non_gd_msg:
 
                                     # .. and notify all the tasks in background.
                                     spawn(self.invoke_service, 'zato.pubsub.after-publish', {

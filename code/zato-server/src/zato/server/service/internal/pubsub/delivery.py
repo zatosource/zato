@@ -51,14 +51,15 @@ class CreateDeliveryTask(AdminService):
             'server_name': self.server.name,
             'server_pid': self.server.pid,
             'sub_key': config['sub_key'],
-            'endpoint_type': config['endpoint_type']
+            'endpoint_type': config['endpoint_type'],
+            'task_delivery_interval': config['task_delivery_interval'],
         }
 
         # Register this delivery task with current server's pubsub but only if we do not have it already.
         # It is possible that we do, for instance:
         #
         # 1) This server had this task when it was starting up
-        # 2) The task was migrated to another
+        # 2) The task was migrated to another server
         #
         self.pubsub.set_sub_key_server(msg)
 

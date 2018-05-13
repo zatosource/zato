@@ -235,7 +235,7 @@ def publish_action(req):
 
         from datetime import datetime
 
-        for x in range(2):
+        for x in range(5000):
             msg_id = req.POST.get('msg_id') or new_msg_id()
             gd = req.POST['gd']
 
@@ -251,14 +251,14 @@ def publish_action(req):
             else:
                 has_gd = False
 
-            has_gd = False
+            #has_gd = True
 
             service_input = {
                 'msg_id': msg_id,
                 'has_gd': has_gd,
                 'skip_pattern_matching': True,
                 'endpoint_id': req.POST['publisher_id'],
-                'expiration': 1000,
+                'expiration': 50000,
             }
 
             for name in('cluster_id', 'topic_name', 'data'):
@@ -269,7 +269,7 @@ def publish_action(req):
             for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group'):#, 'expiration'):
                 service_input[name] = req.POST.get(name, None) or None # Always use None instead of ''
 
-            print(99, service_input)
+            #print(99, service_input)
             req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
 
             print('Invoking', x, msg_id, datetime.utcnow())
