@@ -552,7 +552,7 @@ class WebSocket(_WebSocket):
         this WSX client is responsible for.
         """
         self.pubsub_tool.handle_new_messages(HandleNewMessageCtx(cid, request['has_gd'], request['sub_key_list'],
-            request['non_gd_msg_list'], request['is_bg_call']))
+            request['non_gd_msg_list'], request['is_bg_call'], request['pub_time_max']))
 
 # ################################################################################################################################
 

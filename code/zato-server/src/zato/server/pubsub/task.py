@@ -218,8 +218,8 @@ class DeliveryTask(object):
 
         if diff >= self.delivery_interval:
             if self.delivery_list:
-                logger_zato.info('Waking task:%s now:%s last:%s diff:%s interval:%s len:%d list:%s',
-                    self.sub_key, now, self.last_run, diff, self.delivery_interval, len(self.delivery_list), self.delivery_list)
+                logger_zato.info('Waking task:%s now:%s last:%s diff:%s interval:%s len-list:%d',
+                    self.sub_key, now, self.last_run, diff, self.delivery_interval, len(self.delivery_list))
                 return True
 
 # ################################################################################################################################
@@ -550,11 +550,6 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _cmp_non_gd_msg(self, elem):
-        return elem['pub_time']
-
-# ################################################################################################################################
-
     def _handle_new_messages(self, ctx, delta=60):
         """ A callback invoked when there is at least one new message to be handled for input sub_keys.
         If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
@@ -576,28 +571,18 @@ class PubSubTool(object):
 
             for sub_key in ctx.sub_key_list:
 
-                # This may be read in from the last element of the sorted non_gd_msg_list
-                # or from current timestamp so by default we don't know what it will be.
-                pub_time_max = None
 
                 with self.sub_key_locks[sub_key]:
 
                     # Accept all input non-GD messages
                     if ctx.non_gd_msg_list:
-                        ctx.non_gd_msg_list = sorted(ctx.non_gd_msg_list, key=self._cmp_non_gd_msg)
-                        '''logger_zato.warn('QQQ %s', non_gd_msg_list[-1])
-                        logger_zato.warn('EEE %s', non_gd_msg_list[-2])
-                        logger_zato.warn('RRR %s', non_gd_msg_list[-3])
-                        logger_zato.info('-' * 90)
-                        '''
-                        pub_time_max = ctx.non_gd_msg_list[-1]['pub_time']
                         self._add_non_gd_messages_by_sub_key(sub_key, ctx.non_gd_msg_list)
 
                     # Fetch all GD messages, if there are any at all
                     if ctx.has_gd:
 
                         self._fetch_gd_messages_by_sub_key(
-                            sub_key, self.pubsub.get_topic_name_by_sub_key(sub_key), pub_time_max, session)
+                            sub_key, self.pubsub.get_topic_name_by_sub_key(sub_key), ctx.pub_time_max, session)
 
                         # Note how we substract delta seconds from current time - this is because
                         # it is possible that there will be new messages enqueued in between our last

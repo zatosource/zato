@@ -68,7 +68,7 @@ common_sub_data = CommonSubData.common + CommonSubData.amqp + CommonSubData.file
 
 class AfterPublish(AdminService):
     class SimpleIO(AdminSIO):
-        input_required = ('cid', AsIs('topic_id'), 'topic_name', 'is_bg_call')
+        input_required = ('cid', AsIs('topic_id'), 'topic_name', 'is_bg_call', 'pub_time_max')
         input_optional = (Opaque('subscriptions'), Opaque('non_gd_msg_list'), 'has_gd_msg_list')
 
     def handle(self):
@@ -115,6 +115,7 @@ class AfterPublish(AdminService):
             non_gd_msg_list = self.request.input.non_gd_msg_list
             has_gd_msg_list = self.request.input.has_gd_msg_list
             is_bg_call = self.request.input.is_bg_call
+            pub_time_max = self.request.input.pub_time_max
 
             # We already know that we can store some of the messages in RAM ..
             if not_found:
@@ -122,7 +123,8 @@ class AfterPublish(AdminService):
 
             # .. but if some servers are up, attempt to notify pub/sub tasks about the messages ..
             if current_servers:
-                notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list, has_gd_msg_list, is_bg_call)
+                notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list,
+                    has_gd_msg_list, is_bg_call, pub_time_max)
 
                 # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
                 # Note that only non-GD messages go to RAM because the GD ones are still in the SQL database.
@@ -141,7 +143,7 @@ class AfterPublish(AdminService):
 
 # ################################################################################################################################
 
-    def _notify_pub_sub(self, current_servers, non_gd_msg_list, has_gd_msg_list, is_bg_call,
+    def _notify_pub_sub(self, current_servers, non_gd_msg_list, has_gd_msg_list, is_bg_call, pub_time_max,
         endpoint_type_service=endpoint_type_service):
         """ Notifies all relevant remote servers about new messages available for delivery.
         For GD messages     - a flag is sent to indicate that there is at least one message waiting in SQL DB.
@@ -163,6 +165,7 @@ class AfterPublish(AdminService):
                         'sub_key_list': sub_key_list,
                         'non_gd_msg_list': non_gd_msg_list,
                         'is_bg_call': is_bg_call,
+                        'pub_time_max': pub_time_max,
                     },
                 }, pid=server_pid)
 

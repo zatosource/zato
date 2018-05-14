@@ -31,7 +31,7 @@ class NotifyPubSubMessage(AdminService):
         for sub_key in req['sub_key_list']:
             pubsub_tool = self.pubsub.pubsub_tool_by_sub_key[sub_key]
             pubsub_tool.handle_new_messages(HandleNewMessageCtx(self.cid, req['has_gd'], [sub_key],
-                req['non_gd_msg_list'], req['is_bg_call']))
+                req['non_gd_msg_list'], req['is_bg_call'], req['pub_time_max']))
 
 # ################################################################################################################################
 
