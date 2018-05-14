@@ -106,3 +106,9 @@ class SkipDelivery(Exception):
     """ Raised to indicate to delivery tasks that a given message should be skipped - but not deleted altogether,
     the delivery will be attempted in the next iteration of the task.
     """
+
+# ################################################################################################################################
+
+class HandleMsgCtx(object):
+    """ Encapsulates information on new messages that a pubsub tool is about to process.
+    """

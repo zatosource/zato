@@ -235,7 +235,7 @@ def publish_action(req):
 
         from datetime import datetime
 
-        for x in range(1):
+        for x in range(2000000):
             msg_id = req.POST.get('msg_id') or new_msg_id()
             gd = req.POST['gd']
 
@@ -258,7 +258,7 @@ def publish_action(req):
                 'has_gd': has_gd,
                 'skip_pattern_matching': True,
                 'endpoint_id': req.POST['publisher_id'],
-                'expiration': 50000,
+                'expiration': 5000000,
             }
 
             for name in('cluster_id', 'topic_name', 'data'):
