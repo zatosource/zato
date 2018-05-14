@@ -395,7 +395,7 @@ class SubscribeServiceImpl(_Subscribe):
                     # Let the pub/sub task know it can fetch any messages possibly enqueued for that subscriber,
                     # note that since this is a new subscription, it is certain that only GD messages may be available,
                     # never non-GD ones.
-                    ctx.web_socket.pubsub_tool.fetch_gd_messages_by_sub_key(ctx.sub_key)
+                    ctx.web_socket.pubsub_tool.enqueue_gd_messages_by_sub_key(ctx.sub_key)
 
                     gd_depth, non_gd_depth = ctx.web_socket.pubsub_tool.get_queue_depth(ctx.sub_key)
                     self.response.payload.queue_depth = gd_depth + non_gd_depth

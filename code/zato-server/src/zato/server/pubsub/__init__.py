@@ -629,6 +629,16 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_sub_key_to_topic_name_dict(self, sub_key_list):
+        out = {}
+        with self.lock:
+            for sub_key in sub_key_list:
+                out[sub_key] = self._get_subscription_by_sub_key(sub_key).topic_name
+
+        return out
+
+# ################################################################################################################################
+
     def get_topic_by_sub_key(self, sub_key):
         with self.lock:
             return self._get_topic_by_name(self._get_subscription_by_sub_key(sub_key).topic_name)
@@ -1090,8 +1100,8 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_sql_messages_by_sub_key(self, session, sub_key, last_sql_run, pub_time_max, ignore_list):
-        """ Returns from SQL all messages queued up for a given sub_key.
+    def get_sql_messages_by_sub_key(self, session, sub_key_list, last_sql_run, pub_time_max, ignore_list):
+        """ Returns all SQL messages queued up for all keys from sub_key_list.
         """
         if not session:
             session = self.server.odb.session()
@@ -1100,7 +1110,8 @@ class PubSub(object):
             needs_close = False
 
         try:
-            return _get_sql_messages_by_sub_key(session, self.server.cluster_id, sub_key, last_sql_run, pub_time_max, ignore_list)
+            return _get_sql_messages_by_sub_key(session, self.server.cluster_id, sub_key_list,
+                last_sql_run, pub_time_max, ignore_list)
         finally:
             if needs_close:
                 session.close()
@@ -1301,7 +1312,7 @@ class PubSub(object):
         while self.keep_running:
 
             # Sleep for a while before continuing - the call to sleep is here because this while loop is quite long
-            sleep(0.001)
+            sleep(0.01)
 
             # Blocks other pub/sub processes for a moment
             with self.lock:
