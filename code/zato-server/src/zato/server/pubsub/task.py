@@ -555,26 +555,26 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call, delta=60):
+    def _handle_new_messages(self, ctx, delta=60):
         """ A callback invoked when there is at least one new message to be handled for input sub_keys.
         If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
         it is a list of non-GD message for sub_keys.
         """
         session = None
         try:
-            if has_gd:
+            if ctx.has_gd:
                 session = self.pubsub.server.odb.session()
             else:
-                if not non_gd_msg_list:
+                if not ctx.non_gd_msg_list:
                     raise ValueError('No messages received ({}) for cid:`{}`, has_gd:`{}` and sub_key_list:`{}`'.format(
-                        non_gd_msg_list, cid, has_gd, sub_key_list))
+                        ctx.non_gd_msg_list, ctx.cid, ctx.has_gd, ctx.sub_key_list))
 
             # Iterate over all input sub keys and carry out all operations while holding a lock for each sub_key
 
             logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
-                cid, int(has_gd), sub_key_list, len(non_gd_msg_list), is_bg_call)
+                ctx.cid, int(ctx.has_gd), ctx.sub_key_list, len(ctx.non_gd_msg_list), ctx.is_bg_call)
 
-            for sub_key in sub_key_list:
+            for sub_key in ctx.sub_key_list:
 
                 # This may be read in from the last element of the sorted non_gd_msg_list
                 # or from current timestamp so by default we don't know what it will be.
@@ -583,18 +583,18 @@ class PubSubTool(object):
                 with self.sub_key_locks[sub_key]:
 
                     # Accept all input non-GD messages
-                    if non_gd_msg_list:
-                        non_gd_msg_list = sorted(non_gd_msg_list, key=self._cmp_non_gd_msg)
+                    if ctx.non_gd_msg_list:
+                        ctx.non_gd_msg_list = sorted(ctx.non_gd_msg_list, key=self._cmp_non_gd_msg)
                         '''logger_zato.warn('QQQ %s', non_gd_msg_list[-1])
                         logger_zato.warn('EEE %s', non_gd_msg_list[-2])
                         logger_zato.warn('RRR %s', non_gd_msg_list[-3])
                         logger_zato.info('-' * 90)
                         '''
-                        pub_time_max = non_gd_msg_list[-1]['pub_time']
-                        self._add_non_gd_messages_by_sub_key(sub_key, non_gd_msg_list)
+                        pub_time_max = ctx.non_gd_msg_list[-1]['pub_time']
+                        self._add_non_gd_messages_by_sub_key(sub_key, ctx.non_gd_msg_list)
 
                     # Fetch all GD messages, if there are any at all
-                    if has_gd:
+                    if ctx.has_gd:
 
                         self._fetch_gd_messages_by_sub_key(
                             sub_key, self.pubsub.get_topic_name_by_sub_key(sub_key), pub_time_max, session)
@@ -623,10 +623,10 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call):
+    def handle_new_messages(self, ctx):
         self.msg_handler_counter += 1
         try:
-            spawn(self._handle_new_messages, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call)
+            spawn(self._handle_new_messages, ctx)
         except Exception:
             e = format_exc()
             logger.warn(e)
