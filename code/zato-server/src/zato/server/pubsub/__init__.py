@@ -1087,7 +1087,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_sql_messages_by_sub_key(self, session, sub_key, last_sql_run, ignore_list):
+    def get_sql_messages_by_sub_key(self, session, sub_key, last_sql_run, pub_time_max, ignore_list):
         """ Returns from SQL all messages queued up for a given sub_key.
         """
         if not session:
@@ -1097,8 +1097,7 @@ class PubSub(object):
             needs_close = False
 
         try:
-            return _get_sql_messages_by_sub_key(session, self.server.cluster_id, sub_key, last_sql_run, utcnow_as_ms(),
-                ignore_list)
+            return _get_sql_messages_by_sub_key(session, self.server.cluster_id, sub_key, last_sql_run, pub_time_max, ignore_list)
         finally:
             if needs_close:
                 session.close()
@@ -1293,7 +1292,7 @@ class PubSub(object):
         while self.keep_running:
 
             # Sleep for a while before continuing - the call to sleep is here because this while loop is quite long
-            sleep(0.01)
+            sleep(0.001)
 
             # Blocks other pub/sub processes for a moment
             with self.lock:
@@ -1332,7 +1331,7 @@ class PubSub(object):
                             topic_name, subs = topic_id_dict[topic_id]
 
                             cid = new_cid()
-                            logger.info('Triggering sync for `%s` len_s:%d gd:%d ngd:%d (cid:%s)' % (
+                            logger.info('Triggering sync for `%s` len_s:%d gd:%d ngd:%d cid:%s' % (
                                 topic_name, len(subs), topic.sync_has_gd_msg, topic.sync_has_non_gd_msg, cid))
 
                             # Build a list of sub_keys for whom we know what their delivery server is which will
@@ -1348,6 +1347,10 @@ class PubSub(object):
 
                                 # .. also, continue only if there are still messages for the ones that are up ..
                                 if topic.sync_has_gd_msg or topic.sync_has_non_gd_msg:
+
+                                    if non_gd_msg_list:
+                                        logger.info('Syncing non-GD for `%s` list:%s cid:%s' % (
+                                            topic_name, [elem for elem in non_gd_msg_list], cid))
 
                                     # .. and notify all the tasks in background.
                                     spawn(self.invoke_service, 'zato.pubsub.after-publish', {

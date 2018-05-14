@@ -94,6 +94,7 @@ class DeliveryTask(object):
         self.wait_non_sock_err = self.sub_config.wait_non_sock_err
         self.last_run = utcnow_as_ms()
         self.delivery_interval = self.sub_config.task_delivery_interval / 1000.0
+        self.delivery_counter = 1
 
         # If self.wrap_in_list is True, messages will be always wrapped in a list,
         # even if there is only one message to send. Note that self.wrap_in_list will be False
@@ -155,9 +156,8 @@ class DeliveryTask(object):
                     self.pubsub.set_to_delete(self.sub_key, to_delete)
 
                     # Delete from our in-RAM delivery list
-                    with self.delivery_lock:
-                        for msg in to_delete:
-                            self.delivery_list.remove_pubsub_msg(msg)
+                    for msg in to_delete:
+                        self.delivery_list.remove_pubsub_msg(msg)
 
             if to_skip:
                 logger.info('Skipping messages `%s`', to_skip)
@@ -197,7 +197,9 @@ class DeliveryTask(object):
                         self.delivery_list.remove_pubsub_msg(msg)
 
                 # Status of messages is updated in both SQL and RAM so we can now log success
-                logger.info('Successfully delivered message(s) %s to %s', delivered_msg_id_list, self.sub_key)
+                logger.info('Successfully delivered message(s) %s to %s (dlvc:%d)',
+                    delivered_msg_id_list, self.sub_key, self.delivery_counter)
+                self.delivery_counter += 1
 
                 # Indicates that we have successfully delivered all messages currently queued up
                 # and our delivery list is currently empty.
@@ -216,8 +218,8 @@ class DeliveryTask(object):
 
         if diff >= self.delivery_interval:
             if self.delivery_list:
-                logger.info('Waking task:%s now:%s last:%s diff:%s interval:%s len:%d',
-                    self.sub_key, now, self.last_run, diff, self.delivery_interval, len(self.delivery_list))
+                logger_zato.info('Waking task:%s now:%s last:%s diff:%s interval:%s len:%d list:%s',
+                    self.sub_key, now, self.last_run, diff, self.delivery_interval, len(self.delivery_list), self.delivery_list)
                 return True
 
 # ################################################################################################################################
@@ -229,30 +231,32 @@ class DeliveryTask(object):
             while self.keep_running:
                 if self._should_wake():
 
-                    # Update last run time to be able to wake up in time for the next delivery
-                    self.last_run = utcnow_as_ms()
+                    with self.delivery_lock:
 
-                    # Get the list of all message IDs for which delivery was successful,
-                    # indicating whether all currently lined up messages have been
-                    # successfully delivered.
-                    result = self._run_delivery()
+                        # Update last run time to be able to wake up in time for the next delivery
+                        self.last_run = utcnow_as_ms()
 
-                    # On success, sleep for a moment because we have just run out of all messages.
-                    if result == _run_deliv_status.OK:
-                        continue
-                    elif result == _run_deliv_status.NO_MSG:
-                        sleep(sleep_time)
+                        # Get the list of all message IDs for which delivery was successful,
+                        # indicating whether all currently lined up messages have been
+                        # successfully delivered.
+                        result = self._run_delivery()
 
-                    # Otherwise, sleep for a longer time because our endpoint must have returned an error.
-                    # After this sleep, self._run_delivery will again attempt to deliver all messages
-                    # we queued up. Note that we are the only delivery task for this sub_key  so when we sleep here
-                    # for a moment, we do not block other deliveries.
-                    else:
-                        sleep_time = self.wait_sock_err if result == _run_deliv_status.SOCKET_ERROR else self.wait_non_sock_err
-                        msg = 'Sleeping for {}s after `{}` in sub_key:`{}`'.format(sleep_time, result, self.sub_key)
-                        logger.warn(msg)
-                        logger_zato.warn(msg)
-                        sleep(sleep_time)
+                        # On success, sleep for a moment because we have just run out of all messages.
+                        if result == _run_deliv_status.OK:
+                            continue
+                        elif result == _run_deliv_status.NO_MSG:
+                            sleep(sleep_time)
+
+                        # Otherwise, sleep for a longer time because our endpoint must have returned an error.
+                        # After this sleep, self._run_delivery will again attempt to deliver all messages
+                        # we queued up. Note that we are the only delivery task for this sub_key  so when we sleep here
+                        # for a moment, we do not block other deliveries.
+                        else:
+                            sleep_time = self.wait_sock_err if result == _run_deliv_status.SOCKET_ERROR else self.wait_non_sock_err
+                            msg = 'Sleeping for {}s after `{}` in sub_key:`{}`'.format(sleep_time, result, self.sub_key)
+                            logger.warn(msg)
+                            logger_zato.warn(msg)
+                            sleep(sleep_time)
 
                 else:
 
@@ -344,8 +348,8 @@ class Message(PubSubMessage):
 # ################################################################################################################################
 
     def __repr__(self):
-        return '<Msg sk:{} id:{} ext:{} exp:{} gd:{}>'.format(
-            self.sub_key, self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time), self.has_gd)
+        return '<Msg d:{} pub:{!r} pri:{} id:{} extpub:{!r} gd:{}>'.format(
+            self.data, self.pub_time, self.priority, self.pub_msg_id, self.ext_pub_time, self.has_gd)
 
 # ################################################################################################################################
 
@@ -365,7 +369,7 @@ class Message(PubSubMessage):
 class GDMessage(Message):
     """ A guaranteed delivery message initialized from SQL data.
     """
-    has_gd = True
+    is_gd_message = True
 
     def __init__(self, sub_key, topic_name, msg):
         super(GDMessage, self).__init__()
@@ -384,7 +388,10 @@ class GDMessage(Message):
         self.priority = msg.priority
         self.expiration = msg.expiration
         self.expiration_time = msg.expiration_time
+        self.has_gd = True
         self.topic_name = topic_name
+
+        #logger_zato.warn('QQQ %s %r', self.data, self.pub_time)
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
@@ -394,7 +401,7 @@ class GDMessage(Message):
 class NonGDMessage(Message):
     """ A non-guaranteed delivery message initialized from a Python dict.
     """
-    has_gd = False
+    is_gd_message = False
 
     def __init__(self, sub_key, msg, _def_priority=PUBSUB.PRIORITY.DEFAULT, _def_mime_type=PUBSUB.DEFAULT.MIME_TYPE):
         super(NonGDMessage, self).__init__()
@@ -412,8 +419,10 @@ class NonGDMessage(Message):
         self.priority = msg.get('priority') or _def_priority
         self.expiration = msg['expiration']
         self.expiration_time = msg['expiration_time']
-        self.has_gd = msg['has_gd']
+        self.has_gd = False
         self.topic_name = msg['topic_name']
+
+        #logger_zato.warn('RRR %s %r', self.data, self.pub_time)
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
@@ -541,6 +550,11 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
+    def _cmp_non_gd_msg(self, elem):
+        return elem['pub_time']
+
+# ################################################################################################################################
+
     def _handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call, delta=60):
         """ A callback invoked when there is at least one new message to be handled for input sub_keys.
         If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
@@ -561,12 +575,29 @@ class PubSubTool(object):
                 cid, int(has_gd), sub_key_list, len(non_gd_msg_list), is_bg_call)
 
             for sub_key in sub_key_list:
+
+                # This may be read in from the last element of the sorted non_gd_msg_list
+                # or from current timestamp so by default we don't know what it will be.
+                pub_time_max = None
+
                 with self.sub_key_locks[sub_key]:
+
+                    # Accept all input non-GD messages
+                    if non_gd_msg_list:
+                        non_gd_msg_list = sorted(non_gd_msg_list, key=self._cmp_non_gd_msg)
+                        '''logger_zato.warn('QQQ %s', non_gd_msg_list[-1])
+                        logger_zato.warn('EEE %s', non_gd_msg_list[-2])
+                        logger_zato.warn('RRR %s', non_gd_msg_list[-3])
+                        logger_zato.info('-' * 90)
+                        '''
+                        pub_time_max = non_gd_msg_list[-1]['pub_time']
+                        self._add_non_gd_messages_by_sub_key(sub_key, non_gd_msg_list)
 
                     # Fetch all GD messages, if there are any at all
                     if has_gd:
 
-                        self._fetch_gd_messages_by_sub_key(sub_key, self.pubsub.get_topic_name_by_sub_key(sub_key), session)
+                        self._fetch_gd_messages_by_sub_key(
+                            sub_key, self.pubsub.get_topic_name_by_sub_key(sub_key), pub_time_max, session)
 
                         # Note how we substract delta seconds from current time - this is because
                         # it is possible that there will be new messages enqueued in between our last
@@ -579,10 +610,6 @@ class PubSubTool(object):
 
                         logger.info('Storing last_run of `%s` for sub_key:%s (d:%s)',
                             pretty_format_float(new_now), sub_key, delta)
-
-                    # Accept all input non-GD messages
-                    if non_gd_msg_list:
-                        self._add_non_gd_messages_by_sub_key(sub_key, non_gd_msg_list)
 
         except Exception:
             e = format_exc()
@@ -607,7 +634,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _fetch_gd_messages_by_sub_key(self, sub_key, topic_name, session=None):
+    def _fetch_gd_messages_by_sub_key(self, sub_key, topic_name, pub_time_max, session=None):
         """ Low-level implementation of fetch_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
         count = 0
@@ -622,7 +649,7 @@ class PubSubTool(object):
 
         logger.info('Using last_run `%s` for sub_key:%s', pretty_format_float(last_run), sub_key)
 
-        for idx, msg in enumerate(self.pubsub.get_sql_messages_by_sub_key(session, sub_key, last_run, ignore_list)):
+        for idx, msg in enumerate(self.pubsub.get_sql_messages_by_sub_key(session, sub_key, last_run, pub_time_max, ignore_list)):
             msg_ids.append(msg.pub_msg_id)
             self.delivery_lists[sub_key].add(GDMessage(sub_key, topic_name, msg))
             count += 1
@@ -636,7 +663,7 @@ class PubSubTool(object):
         """ Fetches GD messages from SQL for sub_key given on input and adds them to local queue of messages to deliver.
         """
         with self.sub_key_locks[sub_key]:
-            self._fetch_gd_messages_by_sub_key(sub_key, self.pubsub.get_topic_by_sub_key(sub_key), session)
+            self._fetch_gd_messages_by_sub_key(sub_key, self.pubsub.get_topic_by_sub_key(sub_key), utcnow_as_ms(), session)
 
 # ################################################################################################################################
 
