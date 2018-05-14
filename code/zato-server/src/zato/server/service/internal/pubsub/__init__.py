@@ -232,8 +232,8 @@ class AfterWSXReconnect(AdminService):
 
                     # .. add any GD messages waiting for this sub_key - note that we providing our
                     # own session on input so as to control when the SQL commit happens,
-                    # which we want to have after all sub_keys have been processed.
-                    pubsub_tool.fetch_gd_messages_by_sub_key(sub_key, session)
+                    # which we want to take place after all sub_keys have been processed.
+                    pubsub_tool.enqueue_gd_messages_by_sub_key(sub_key, session)
 
                     # Will hold depths of queues
                     response[sub_key] = {

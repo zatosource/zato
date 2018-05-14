@@ -18,7 +18,6 @@ from traceback import format_exc
 # gevent
 from gevent import sleep, spawn
 from gevent.lock import RLock
-from gevent.threading import Lock
 
 # sortedcontainers
 from sortedcontainers import SortedList as _SortedList
@@ -244,8 +243,9 @@ class DeliveryTask(object):
                         # On success, sleep for a moment because we have just run out of all messages.
                         if result == _run_deliv_status.OK:
                             continue
+
                         elif result == _run_deliv_status.NO_MSG:
-                            sleep(sleep_time)
+                            sleep(default_sleep_time)
 
                         # Otherwise, sleep for a longer time because our endpoint must have returned an error.
                         # After this sleep, self._run_delivery will again attempt to deliver all messages
@@ -459,9 +459,7 @@ class PubSubTool(object):
         # A pub/sub delivery task for each sub_key
         self.delivery_tasks = {}
 
-        # For each sub key, when was an SQL query last executed
-        # that SELECT-ed latest messages for that sub_key.
-        self.last_sql_run = {}
+        self.last_sql_run = None
 
         # Register with this server's pubsub
         self.register_pubsub_tool()
@@ -488,7 +486,7 @@ class PubSubTool(object):
 
         self.sub_keys.add(sub_key)
         self.batch_size[sub_key] = 1
-        self.last_sql_run[sub_key] = None
+        self.last_sql_run = None
 
         delivery_list = SortedList()
         delivery_lock = RLock()
@@ -515,7 +513,6 @@ class PubSubTool(object):
             try:
                 self.sub_keys.remove(sub_key)
                 del self.batch_size[sub_key]
-                del self.last_sql_run[sub_key]
                 del self.sub_key_locks[sub_key]
 
                 del self.delivery_lists[sub_key]
@@ -564,37 +561,43 @@ class PubSubTool(object):
                     raise ValueError('No messages received ({}) for cid:`{}`, has_gd:`{}` and sub_key_list:`{}`'.format(
                         ctx.non_gd_msg_list, ctx.cid, ctx.has_gd, ctx.sub_key_list))
 
-            # Iterate over all input sub keys and carry out all operations while holding a lock for each sub_key
-
             logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
                 ctx.cid, int(ctx.has_gd), ctx.sub_key_list, len(ctx.non_gd_msg_list), ctx.is_bg_call)
 
-            for sub_key in ctx.sub_key_list:
+            sub_key_to_topic = self.pubsub.get_sub_key_to_topic_name_dict(ctx.sub_key_list)
+            msg_list = {}.fromkeys(ctx.sub_key_list)
 
+            # We need to have the broad lock first to read in messages for all the sub keys
+            with self.lock:
 
-                with self.sub_key_locks[sub_key]:
+                sql_msg_list = self._fetch_gd_messages_by_sub_key_list(ctx.sub_key_list, ctx.pub_time_max, session)
 
-                    # Accept all input non-GD messages
-                    if ctx.non_gd_msg_list:
-                        self._add_non_gd_messages_by_sub_key(sub_key, ctx.non_gd_msg_list)
+                # Note how we substract delta seconds from current time - this is because
+                # it is possible that there will be new messages enqueued in between our last
+                # run and current time's generation - the difference will be likely just a few
+                # milliseconds but to play it safe we use by default a generous slice of 60 seconds.
+                # This is fine because any SQL queries depending on this value will also
+                # include other filters such as delivery_status.
+                new_now = utcnow_as_ms() - delta
+                self.last_sql_run = new_now
 
-                    # Fetch all GD messages, if there are any at all
-                    if ctx.has_gd:
+                # Iterate over all input sub keys and carry out all operations while holding a lock for each sub_key
+                for sub_key in ctx.sub_key_list:
 
-                        self._fetch_gd_messages_by_sub_key(
-                            sub_key, self.pubsub.get_topic_name_by_sub_key(sub_key), ctx.pub_time_max, session)
+                    with self.sub_key_locks[sub_key]:
 
-                        # Note how we substract delta seconds from current time - this is because
-                        # it is possible that there will be new messages enqueued in between our last
-                        # run and current time's generation - the difference will be likely just a few
-                        # milliseconds but to play it safe we use by default a generous slice of 60 seconds.
-                        # This is fine because any SQL queries depending on this value will also
-                        # include other filters such as delivery_status.
-                        new_now = utcnow_as_ms() - delta
-                        self.last_sql_run[sub_key] = new_now
+                        # Accept all input non-GD messages
+                        if ctx.non_gd_msg_list:
+                            self._add_non_gd_messages_by_sub_key(sub_key, ctx.non_gd_msg_list)
 
-                        logger.info('Storing last_run of `%s` for sub_key:%s (d:%s)',
-                            pretty_format_float(new_now), sub_key, delta)
+                        # Fetch all GD messages, if there are any at all
+                        if ctx.has_gd:
+
+                            topic_name = self.pubsub.get_topic_name_by_sub_key(sub_key)
+                            self._push_gd_messages_by_sub_key(sub_key, topic_name, msg_list)
+
+                            logger.info('Storing last_run of `%s` for sub_key:%s (d:%s)',
+                                pretty_format_float(new_now), sub_key, delta)
 
         except Exception:
             e = format_exc()
@@ -619,22 +622,37 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def _fetch_gd_messages_by_sub_key(self, sub_key, topic_name, pub_time_max, session=None):
-        """ Low-level implementation of fetch_gd_messages_by_sub_key, must be called with a lock for input sub_key.
+    def _fetch_gd_messages_by_sub_key_list(self, sub_key_list, pub_time_max, session=None):
+        """ Part of the low-level implementation of enqueue_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
-        count = 0
-        msg_ids = []
-
         # When did we last run for this sub_key
-        last_run = self.last_sql_run[sub_key]
+        last_run = self.last_sql_run
 
         # These are messages that we have already queued up so if we happen to pick them up
         # in the database, they should be ignored.
-        ignore_list = [msg.endp_msg_queue_id for msg in self.delivery_lists[sub_key] if msg.has_gd]
+        ignore_list = set()
+        for sub_key in sub_key_list:
+            ignore_list.update([msg.endp_msg_queue_id for msg in self.delivery_lists[sub_key] if msg.has_gd])
 
-        logger.info('Using last_run `%s` for sub_key:%s', pretty_format_float(last_run), sub_key)
+        logger.info('Using last_run `%s` for sub_key:%s', pretty_format_float(last_run), sub_key_list)
 
-        for idx, msg in enumerate(self.pubsub.get_sql_messages_by_sub_key(session, sub_key, last_run, pub_time_max, ignore_list)):
+        out = self.pubsub.get_sql_messages_by_sub_key(session, sub_key_list, last_run, pub_time_max, ignore_list)
+
+        #logger_zato.warn('QQQ %r', out)
+
+        return out
+
+# ################################################################################################################################
+
+    def _push_gd_messages_by_sub_key(self, sub_key, topic_name, msg_list):
+
+        count = 0
+        msg_ids = []
+
+        for idx, msg in enumerate(msg_list):
+
+            logger_zato.warn('EEE %r %r', idx, msg)
+
             msg_ids.append(msg.pub_msg_id)
             self.delivery_lists[sub_key].add(GDMessage(sub_key, topic_name, msg))
             count += 1
@@ -644,11 +662,13 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def fetch_gd_messages_by_sub_key(self, sub_key, session=None):
+    def enqueue_gd_messages_by_sub_key(self, sub_key, session=None):
         """ Fetches GD messages from SQL for sub_key given on input and adds them to local queue of messages to deliver.
         """
         with self.sub_key_locks[sub_key]:
-            self._fetch_gd_messages_by_sub_key(sub_key, self.pubsub.get_topic_by_sub_key(sub_key), utcnow_as_ms(), session)
+            topic_name = self.pubsub.get_topic_name_by_sub_key(sub_key)
+            msg_list = self._fetch_gd_messages_by_sub_key_list([sub_key], utcnow_as_ms(), session)
+            self._push_gd_messages_by_sub_key(sub_key, topic_name, msg_list)
 
 # ################################################################################################################################
 
