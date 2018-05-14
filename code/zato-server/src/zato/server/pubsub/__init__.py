@@ -172,6 +172,9 @@ class Topic(object):
         self.sync_has_gd_msg = False
         self.sync_has_non_gd_msg = False
 
+        # The last time a GD message was published to this topic
+        self.gd_pub_time_max = None
+
 # ################################################################################################################################
 
     def incr_msg_pub_iter(self):
@@ -1266,21 +1269,22 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _set_sync_has_msg(self, topic_id, is_gd, value):
+    def _set_sync_has_msg(self, topic_id, is_gd, value, gd_pub_time_max=None):
         """ Updates a given topic's flags indicating that a message has been published since the last sync.
         Must be called with self.lock held.
         """
-        topic = self.topics[topic_id]
+        topic = self.topics[topic_id] # type: Topic
         if is_gd:
             topic.sync_has_gd_msg = value
+            topic.gd_pub_time_max = gd_pub_time_max
         else:
             topic.sync_has_non_gd_msg = value
 
 # ################################################################################################################################
 
-    def set_sync_has_msg(self, topic_id, is_gd, value):
+    def set_sync_has_msg(self, topic_id, is_gd, value, gd_pub_time_max):
         with self.lock:
-            self._set_sync_has_msg(topic_id, is_gd, value)
+            self._set_sync_has_msg(topic_id, is_gd, value, gd_pub_time_max)
 
 # ################################################################################################################################
 
@@ -1288,6 +1292,11 @@ class PubSub(object):
         """ A background greenlet which periodically lets delivery tasks that there are perhaps
         new GD messages for the topic this class represents.
         """
+
+        # Let that be a local object
+        def _cmp_non_gd_msg(elem):
+            return elem['pub_time']
+
         # Loop forever or until stopped
         while self.keep_running:
 
@@ -1349,19 +1358,27 @@ class PubSub(object):
                                 if topic.sync_has_gd_msg or topic.sync_has_non_gd_msg:
 
                                     if non_gd_msg_list:
-                                        logger.info('Syncing non-GD for `%s` list:%s cid:%s' % (
-                                            topic_name, [elem for elem in non_gd_msg_list], cid))
+                                        non_gd_msg_list = sorted(non_gd_msg_list, key=_cmp_non_gd_msg)
+                                        pub_time_max = non_gd_msg_list[-1]['pub_time']
+                                    else:
+                                        pub_time_max = topic.gd_pub_time_max
 
-                                    # .. and notify all the tasks in background.
-                                    spawn(self.invoke_service, 'zato.pubsub.after-publish', {
+                                    logger.info('Syncing messages for `%s` ngd-list:%s cid:%s' % (
+                                        topic_name, [elem['pub_msg_id'] for elem in non_gd_msg_list], cid))
+
+                                    request = {
                                         'cid': cid,
                                         'topic_id':topic_id,
                                         'topic_name':topic_name,
                                         'subscriptions': subs,
                                         'non_gd_msg_list': non_gd_msg_list,
                                         'has_gd_msg_list': topic.sync_has_gd_msg,
-                                        'is_bg_call': True, # This is a background call, i.e. issued by this trigger
-                                    })
+                                        'is_bg_call': True, # This is a background call, i.e. issued by this trigger,
+                                        'pub_time_max': pub_time_max, # Last time either a non-GD or GD message was received
+                                    }
+
+                                    # .. and notify all the tasks in background.
+                                    spawn(self.invoke_service, 'zato.pubsub.after-publish', request)
 
                             # OK, we can now reset message flags for the topic
                             self._set_sync_has_msg(topic_id, True, False)
