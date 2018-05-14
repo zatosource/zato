@@ -109,6 +109,15 @@ class SkipDelivery(Exception):
 
 # ################################################################################################################################
 
-class HandleMsgCtx(object):
+class HandleNewMessageCtx(object):
     """ Encapsulates information on new messages that a pubsub tool is about to process.
     """
+    __slots__ = ('cid', 'has_gd', 'sub_key_list', 'non_gd_msg_list', 'is_bg_call', 'pub_time_max')
+
+    def __init__(self, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call, pub_time_max=None):
+        self.cid = cid
+        self.has_gd = has_gd
+        self.sub_key_list = sub_key_list
+        self.non_gd_msg_list = non_gd_msg_list
+        self.is_bg_call = is_bg_call
+        self.pub_time_max = pub_time_max

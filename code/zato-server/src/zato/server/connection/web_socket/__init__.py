@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -36,6 +36,7 @@ from ws4py.server.wsgiutils import WebSocketWSGIApplication
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.exception import Reportable
+from zato.common.pubsub import HandleNewMessageCtx
 from zato.common.util import new_cid
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientInvokeRequest, ClientMessage, copy_forbidden, \
@@ -547,11 +548,11 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def notify_pubsub_message(self, cid, request):
-        """ Invoked by internal services each a pub/sub message is available for at least one of sub_keys
+        """ Invoked by internal services each time a pub/sub message is available for at least one of sub_keys
         this WSX client is responsible for.
         """
-        self.pubsub_tool.handle_new_messages(cid, request['has_gd'], request['sub_key_list'],
-            request['non_gd_msg_list'], request['is_bg_call'])
+        self.pubsub_tool.handle_new_messages(HandleNewMessageCtx(cid, request['has_gd'], request['sub_key_list'],
+            request['non_gd_msg_list'], request['is_bg_call']))
 
 # ################################################################################################################################
 

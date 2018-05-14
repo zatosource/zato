@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.common import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
+from zato.common.pubsub import HandleNewMessageCtx
 from zato.server.pubsub.task import PubSubTool
 from zato.server.service import Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
@@ -29,7 +30,8 @@ class NotifyPubSubMessage(AdminService):
 
         for sub_key in req['sub_key_list']:
             pubsub_tool = self.pubsub.pubsub_tool_by_sub_key[sub_key]
-            pubsub_tool.handle_new_messages(self.cid, req['has_gd'], [sub_key], req['non_gd_msg_list'], req['is_bg_call'])
+            pubsub_tool.handle_new_messages(HandleNewMessageCtx(self.cid, req['has_gd'], [sub_key],
+                req['non_gd_msg_list'], req['is_bg_call']))
 
 # ################################################################################################################################
 
