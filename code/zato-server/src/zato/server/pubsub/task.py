@@ -187,6 +187,7 @@ class DeliveryTask(object):
 
                 with self.delivery_lock:
                     self.confirm_pubsub_msg_delivered_cb(self.sub_key, delivered_msg_id_list)
+
             except Exception, e:
                 logger.warn('Could not update delivery status for message(s):`%s`, e:`%s`', to_deliver, format_exc(e))
                 return _run_deliv_status.SOCKET_ERROR
@@ -198,6 +199,7 @@ class DeliveryTask(object):
                 # Status of messages is updated in both SQL and RAM so we can now log success
                 logger.info('Successfully delivered message(s) %s to %s (dlvc:%d)',
                     delivered_msg_id_list, self.sub_key, self.delivery_counter)
+
                 self.delivery_counter += 1
 
                 # Indicates that we have successfully delivered all messages currently queued up
