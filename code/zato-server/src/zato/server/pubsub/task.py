@@ -459,7 +459,7 @@ class PubSubTool(object):
         # A pub/sub delivery task for each sub_key
         self.delivery_tasks = {}
 
-        self.last_sql_run = None
+        self.last_gd_run = None
 
         # Register with this server's pubsub
         self.register_pubsub_tool()
@@ -486,7 +486,43 @@ class PubSubTool(object):
 
         self.sub_keys.add(sub_key)
         self.batch_size[sub_key] = 1
-        self.last_sql_run = None
+
+        #
+        # A dictionary that maps when GD messages were last time fetched from the SQL database for each sub_key.
+        # Since fetching means we are issuing a single query for multiple sub_keys at a time, we need to fetch only these
+        # messages that are younger than the oldest value for all of the sub_keys whose messages will be fetched.
+        #
+        # Let's say we have three sub_keys: a, b, c
+        #
+        # time 0001: pub to a, b, c
+        # time 0001: store last_gd_run = 0001 for each of a, b, c
+        # time 0002: pub to a, b
+        # time 0002: store last_gd_run = 0002 for a, b
+        # time 0003: pub to b, c
+        # time 0003: store last_gd_run = 0003 for b, c
+        # time 0004: pub to c
+        # time 0004: store last_gd_run = 0004 for c
+        #
+        # We now have: {a:0002, b:0003, c:0004}
+        #
+        # Let's say we now receive:
+        #
+        # time 0005: pub to a, b, c
+        #
+        # Because we want to have a single SQL query for all of a, b, c instead of querying the database for each of sub_key,
+        # we need to look up values stored in this dictionary for each of the sub_key and use the smallest one - in this case
+        # it would be 0002 for sub_key a. Granted, we know that there won't be any keys for b in the timespan of 0002-0003
+        # or for c in the duration of 0003-004, so in the case of these other keys reaching but so back in time is a bit too much
+        # but this is all fine anyway because the most important part is that we can still use a single SQL query.
+        #
+        # Similarly, had it been a pub to b, c in time 0005 then we would be using min of b and c which is 0003.
+        #
+        # The reason why this is fine is that when we query the database not only do we use this last_gd_run but we also give it
+        # a delivery status to return messages by (initialized only) and on top of it, we provide it a list of message IDs
+        # that are currently being delivered by tasks, so in other words, we never receive duplicates from the databases
+        # that have been already delivered or are about to be.
+        #
+        self.last_gd_run = {}
 
         delivery_list = SortedList()
         delivery_lock = RLock()
@@ -565,12 +601,15 @@ class PubSubTool(object):
                 ctx.cid, int(ctx.has_gd), ctx.sub_key_list, len(ctx.non_gd_msg_list), ctx.is_bg_call)
 
             sub_key_to_topic = self.pubsub.get_sub_key_to_topic_name_dict(ctx.sub_key_list)
-            msg_list = {}.fromkeys(ctx.sub_key_list)
+            gd_msg_list = {}
 
             # We need to have the broad lock first to read in messages for all the sub keys
             with self.lock:
 
-                sql_msg_list = self._fetch_gd_messages_by_sub_key_list(ctx.sub_key_list, ctx.pub_time_max, session)
+                # Get messages for all sub_keys on input and break them out by each sub_key separately
+                for msg in self._fetch_gd_messages_by_sub_key_list(ctx.sub_key_list, ctx.pub_time_max, session):
+                    _sk_msg_list = gd_msg_list.setdefault(msg.sub_key, [])
+                    _sk_msg_list.append(msg)
 
                 # Note how we substract delta seconds from current time - this is because
                 # it is possible that there will be new messages enqueued in between our last
@@ -579,9 +618,8 @@ class PubSubTool(object):
                 # This is fine because any SQL queries depending on this value will also
                 # include other filters such as delivery_status.
                 new_now = utcnow_as_ms() - delta
-                self.last_sql_run = new_now
 
-                # Iterate over all input sub keys and carry out all operations while holding a lock for each sub_key
+                # Go over all sub_keys given on input and carry out all operations while holding a lock for each sub_key
                 for sub_key in ctx.sub_key_list:
 
                     with self.sub_key_locks[sub_key]:
@@ -590,14 +628,15 @@ class PubSubTool(object):
                         if ctx.non_gd_msg_list:
                             self._add_non_gd_messages_by_sub_key(sub_key, ctx.non_gd_msg_list)
 
-                        # Fetch all GD messages, if there are any at all
-                        if ctx.has_gd:
+                        # Push all GD messages, if there are any at all for this sub_key
+                        if ctx.has_gd and sub_key in gd_msg_list:
 
                             topic_name = self.pubsub.get_topic_name_by_sub_key(sub_key)
-                            self._push_gd_messages_by_sub_key(sub_key, topic_name, msg_list)
+                            self._push_gd_messages_by_sub_key(sub_key, topic_name, gd_msg_list[sub_key])
 
-                            logger.info('Storing last_run of `%s` for sub_key:%s (d:%s)',
-                                pretty_format_float(new_now), sub_key, delta)
+                            self.last_gd_run[sub_key] = new_now
+
+                            logger.info('Storing last_run of `%r` for sub_key:%s (d:%s)', new_now, sub_key, delta)
 
         except Exception:
             e = format_exc()
@@ -625,33 +664,27 @@ class PubSubTool(object):
     def _fetch_gd_messages_by_sub_key_list(self, sub_key_list, pub_time_max, session=None):
         """ Part of the low-level implementation of enqueue_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
-        # When did we last run for this sub_key
-        last_run = self.last_sql_run
-
         # These are messages that we have already queued up so if we happen to pick them up
         # in the database, they should be ignored.
         ignore_list = set()
         for sub_key in sub_key_list:
             ignore_list.update([msg.endp_msg_queue_id for msg in self.delivery_lists[sub_key] if msg.has_gd])
 
-        logger.info('Using last_run `%s` for sub_key:%s', pretty_format_float(last_run), sub_key_list)
+        min_last_gd_run = min(self.last_gd_run.itervalues()) if self.last_gd_run else None
+        logger.info('Using min last_gd_run `%r`', min_last_gd_run)
 
-        out = self.pubsub.get_sql_messages_by_sub_key(session, sub_key_list, last_run, pub_time_max, ignore_list)
-
-        #logger_zato.warn('QQQ %r', out)
-
-        return out
+        for msg in self.pubsub.get_sql_messages_by_sub_key(session, sub_key_list, min_last_gd_run, pub_time_max, ignore_list):
+            yield msg
 
 # ################################################################################################################################
 
-    def _push_gd_messages_by_sub_key(self, sub_key, topic_name, msg_list):
-
+    def _push_gd_messages_by_sub_key(self, sub_key, topic_name, gd_msg_list):
+        """ Pushes all input GD messages to a delivery task for the sub_key.
+        """
         count = 0
         msg_ids = []
 
-        for idx, msg in enumerate(msg_list):
-
-            logger_zato.warn('EEE %r %r', idx, msg)
+        for idx, msg in enumerate(gd_msg_list):
 
             msg_ids.append(msg.pub_msg_id)
             self.delivery_lists[sub_key].add(GDMessage(sub_key, topic_name, msg))
@@ -667,8 +700,8 @@ class PubSubTool(object):
         """
         with self.sub_key_locks[sub_key]:
             topic_name = self.pubsub.get_topic_name_by_sub_key(sub_key)
-            msg_list = self._fetch_gd_messages_by_sub_key_list([sub_key], utcnow_as_ms(), session)
-            self._push_gd_messages_by_sub_key(sub_key, topic_name, msg_list)
+            gd_msg_list = self._fetch_gd_messages_by_sub_key_list([sub_key], utcnow_as_ms(), session)
+            self._push_gd_messages_by_sub_key(sub_key, topic_name, gd_msg_list)
 
 # ################################################################################################################################
 
