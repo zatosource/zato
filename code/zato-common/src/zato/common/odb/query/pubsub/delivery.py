@@ -21,7 +21,7 @@ from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubEndpointE
      WebSocketClient, WebSocketClientPubSubKeys
 from zato.common.util.time_ import utcnow_as_ms
 
-logger = getLogger('zato')
+logger = getLogger('zato_pubsub')
 
 # ################################################################################################################################
 
@@ -46,6 +46,7 @@ sql_messages_columns = (
     PubSubMessage.expiration,
     PubSubMessage.expiration_time,
     PubSubEndpointEnqueuedMessage.id.label('endp_msg_queue_id'),
+    PubSubEndpointEnqueuedMessage.sub_key,
 )
 
 sql_msg_id_columns = (
@@ -59,8 +60,8 @@ def _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key_list, last_sql_run
     """ Returns all SQL messages queued up for a given sub_key that are not being delivered
     or have not been delivered already.
     """
-    logger.warn('Getting GD messages for `%s` last_run:%s pub_time_max:%s res:%s col:%s', sub_key_list, last_sql_run,
-        pub_time_max, needs_result, columns)
+    logger.info('Getting GD messages for `%s` last_run:%r pub_time_max:%r res:%d', sub_key_list, last_sql_run,
+        pub_time_max, int(needs_result))
 
     query = session.query(*columns).\
         filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
