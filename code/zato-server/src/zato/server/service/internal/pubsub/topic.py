@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 
 # Zato
+from zato.common import PUBSUB as COMMON_PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
@@ -31,6 +32,7 @@ broker_message = BROKER_MSG_PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
 skip_input_params = ['current_depth_gd', 'last_pub_time', 'is_internal']
+input_optional_extra = ['needs_details']
 output_optional_extra = [Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time', 'is_internal',
     'hook_service_name']
 
@@ -51,21 +53,30 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
 # ################################################################################################################################
 
-def response_hook(self, input, instance, attrs, service_type):
+def response_hook(self, input, instance, attrs, service_type, _topic_key=COMMON_PUBSUB.REDIS.META_TOPIC_KEY):
     if service_type == 'get_list':
-        with closing(self.odb.session()) as session:
-            for item in self.response.payload:
 
-                # Checks current non-GD depth on all servers
-                item.current_depth_non_gd = self.invoke('zato.pubsub.topic.collect-non-gd-depth', {
-                    'topic_name': item.name,
-                })['response']['current_depth_non_gd']
+        # Details are needed when topics are in their own main screen but if only basic information
+        # is needed, like a list of topic IDs and names, we don't need to look up additional details.
+        # The latter is the case of the message publication screen which simply needs a list of topic IDs/names.
+        if input.get('needs_details', True):
 
-                # Checks current GD depth in SQL
-                item.current_depth_gd = get_gd_depth_topic(session, input.cluster_id, item.id)
+            with closing(self.odb.session()) as session:
+                for item in self.response.payload:
 
-                if item.last_pub_time:
-                    item.last_pub_time = datetime_from_ms(item.last_pub_time)
+                    # Checks current non-GD depth on all servers
+                    item.current_depth_non_gd = self.invoke('zato.pubsub.topic.collect-non-gd-depth', {
+                        'topic_name': item.name,
+                    })['response']['current_depth_non_gd']
+
+                    # Checks current GD depth in SQL
+                    item.current_depth_gd = get_gd_depth_topic(session, input.cluster_id, item.id)
+
+                    #if item.last_pub_time:
+                    key = _topic_key % (self.server.cluster_id, item.id)
+                    last_pub_time = self.kvdb.conn.hget(key, 'pub_time')
+                    if last_pub_time:
+                        item.last_pub_time = datetime_from_ms(float(last_pub_time) * 1000)
 
 # ################################################################################################################################
 

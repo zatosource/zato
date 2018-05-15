@@ -244,6 +244,10 @@ class _BaseView(object):
         self.cluster_id = None
         self.fetch_cluster_id()
 
+    def populate_initial_input_dict(self, initial_input_dict):
+        """ May be overridden by subclasses if needed.
+        """
+
     def get_sec_def_list(self, sec_type):
         return SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, sec_type)
 
@@ -253,6 +257,11 @@ class _BaseView(object):
             'cluster_id':self.cluster_id,
             'paginate': getattr(self, 'paginate', False),
         })
+
+        initial_input_dict = {}
+        self.populate_initial_input_dict(initial_input_dict)
+        self.input.update(initial_input_dict)
+
         for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional, default_attrs):
             if name != 'cluster_id':
                 value = \
@@ -403,10 +412,6 @@ class CreateEdit(_BaseView):
         super(CreateEdit, self).__init__()
         self.input = Bunch()
         self.input_dict = {}
-
-    def populate_initial_input_dict(self, initial_input_dict):
-        """ May be overridden by subclasses if needed.
-        """
 
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating

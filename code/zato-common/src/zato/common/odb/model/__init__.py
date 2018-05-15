@@ -2069,7 +2069,6 @@ class PubSubTopic(Base):
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False, default=False)
-    last_pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
     max_depth_gd = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD)
     max_depth_non_gd = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD)
     depth_check_freq = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DEPTH_CHECK_FREQ)
@@ -2089,6 +2088,7 @@ class PubSubTopic(Base):
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=name, cascade='all, delete, delete-orphan'))
 
     ext_client_id = None # Not used by DB
+    last_pub_time = None
 
 # ################################################################################################################################
 

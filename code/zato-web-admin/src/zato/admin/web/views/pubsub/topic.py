@@ -44,6 +44,9 @@ class Index(_Index):
         output_optional = ('last_pub_time',)
         output_repeated = True
 
+    def populate_initial_input_dict(self, initial_input_dict):
+        initial_input_dict['needs_details'] = True
+
     def on_before_append_item(self, item):
         if item.last_pub_time:
             item.last_pub_time = from_utc_to_user(item.last_pub_time+'+00:00', self.req.zato.user_profile)
