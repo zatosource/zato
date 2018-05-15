@@ -42,6 +42,9 @@ Topic = Topic
 _JSON = DATA_FORMAT.JSON
 _initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
 
+_meta_topic_key = PUBSUB.REDIS.META_TOPIC_KEY
+_meta_endpoint_key = PUBSUB.REDIS.META_ENDPOINT_KEY
+
 # ################################################################################################################################
 
 logger_audit = getLogger('zato_pubsub_audit')
@@ -362,7 +365,7 @@ class Publish(AdminService):
         # optionally, store data in pub/sub audit log.
         if has_pubsub_audit_log:
 
-            msg = 'PUB. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' \
+            msg = 'Message published. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' \
                   ', GD data:`%s`, non-GD data:`%s`'
 
             logger_audit.info(msg, self.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name,
@@ -423,14 +426,15 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _update_pub_metadata(self, ctx, _optional=('pub_correl_id', 'ext_client_id', 'in_reply_to')):
+    def _update_pub_metadata(self, ctx, _optional=('pub_correl_id', 'ext_client_id', 'in_reply_to'), _topic_key=_meta_topic_key,
+        _endpoint_key=_meta_endpoint_key):
         """ Updates in background metadata about a topic and publisher after each publication.
         """
         try:
             last_pub_msg_id = ctx.last_msg['pub_msg_id']
 
-            topic_key = 'zato.ps.meta.last.topic.%s.%s' % (ctx.cluster_id, ctx.topic.id)
-            endpoint_key = 'zato.ps.meta.last.endpoint.%s.%s' % (ctx.cluster_id, ctx.endpoint_id)
+            topic_key = _topic_key % (ctx.cluster_id, ctx.topic.id)
+            endpoint_key = _endpoint_key % (ctx.cluster_id, ctx.endpoint_id)
 
             # For endpoint_key, there is a superfluous key here, (already in the key itself), but it will not hurt that much
             data = {

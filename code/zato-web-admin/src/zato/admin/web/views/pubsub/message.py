@@ -197,7 +197,11 @@ def publish(req, cluster_id, topic_id):
     initial_hook_service_name = None
     select_changer_data = {}
 
-    topic_list_response = req.zato.client.invoke('zato.pubsub.topic.get-list', {'cluster_id':cluster_id}).data
+    topic_list_response = req.zato.client.invoke('zato.pubsub.topic.get-list', {
+        'cluster_id': cluster_id,
+        'needs_details': False,
+    }).data
+
     for item in topic_list_response:
 
         # Initial data for this topic

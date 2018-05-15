@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -124,6 +124,7 @@ def update_attrs(cls, name, attrs):
     attrs.broker_message_hook = getattr(mod, 'broker_message_hook', None)
     attrs.extra_delete_attrs = getattr(mod, 'extra_delete_attrs', [])
     attrs.input_required_extra = getattr(mod, 'input_required_extra', [])
+    attrs.input_optional_extra = getattr(mod, 'input_optional_extra', [])
     attrs.create_edit_input_required_extra = getattr(mod, 'create_edit_input_required_extra', [])
     attrs.create_edit_rewrite = getattr(mod, 'create_edit_rewrite', [])
     attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
@@ -164,18 +165,19 @@ class AdminServiceMeta(type):
     @staticmethod
     def get_sio(attrs, name, input_required=None, output_required=None, is_list=True):
 
+        _BaseClass = GetListAdminSIO if is_list else AdminSIO
+
         sio = {
             'input_required': input_required or ['cluster_id'],
-            'output_required': output_required if output_required is not None else ['id', 'name']
+            'input_optional': list(_BaseClass.input_optional) if hasattr(_BaseClass, 'input_optional') else [],
+            'output_required': output_required if output_required is not None else ['id', 'name'],
         }
-
-        _BaseClass = GetListAdminSIO if is_list else AdminSIO
 
         class SimpleIO(_BaseClass):
             request_elem = 'zato_{}_{}_request'.format(attrs.elem, req_resp[name])
             response_elem = 'zato_{}_{}_response'.format(attrs.elem, req_resp[name])
             input_required = sio['input_required'] + attrs['input_required_extra']
-            input_optional = list(_BaseClass.input_optional) if hasattr(_BaseClass, 'input_optional') else []
+            input_optional = sio['input_optional'] + attrs['input_optional_extra']
 
             for param in attrs['skip_input_params']:
                 if param in input_required:

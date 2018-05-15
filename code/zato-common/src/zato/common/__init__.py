@@ -861,6 +861,10 @@ class PUBSUB:
             def __iter__(self):
                 return iter((self.REST, self.SERVICE, self.SOAP, self.WEB_SOCKETS))
 
+    class REDIS:
+        META_TOPIC_KEY = 'zato.ps.meta.last.topic.%s.%s'
+        META_ENDPOINT_KEY = 'zato.ps.meta.last.endpoint.%s.%s'
+
 # Not to be made available externally yet.
 skip_endpoint_types = (
     PUBSUB.ENDPOINT_TYPE.AMQP.id,
