@@ -606,10 +606,12 @@ class PubSubTool(object):
             # We need to have the broad lock first to read in messages for all the sub keys
             with self.lock:
 
-                # Get messages for all sub_keys on input and break them out by each sub_key separately
-                for msg in self._fetch_gd_messages_by_sub_key_list(ctx.sub_key_list, ctx.pub_time_max, session):
-                    _sk_msg_list = gd_msg_list.setdefault(msg.sub_key, [])
-                    _sk_msg_list.append(msg)
+                # Get messages for all sub_keys on input and break them out by each sub_key separately,
+                # provided that we have a flag indicating that there should be some GD messages around in the database.
+                if ctx.has_gd:
+                    for msg in self._fetch_gd_messages_by_sub_key_list(ctx.sub_key_list, ctx.pub_time_max, session):
+                        _sk_msg_list = gd_msg_list.setdefault(msg.sub_key, [])
+                        _sk_msg_list.append(msg)
 
                 # Note how we substract delta seconds from current time - this is because
                 # it is possible that there will be new messages enqueued in between our last
@@ -636,7 +638,7 @@ class PubSubTool(object):
 
                             self.last_gd_run[sub_key] = new_now
 
-                            logger.info('Storing last_run of `%r` for sub_key:%s (d:%s)', new_now, sub_key, delta)
+                            logger.info('Storing last_gd_run of `%r` for sub_key:%s (d:%s)', new_now, sub_key, delta)
 
         except Exception:
             e = format_exc()
@@ -670,7 +672,14 @@ class PubSubTool(object):
         for sub_key in sub_key_list:
             ignore_list.update([msg.endp_msg_queue_id for msg in self.delivery_lists[sub_key] if msg.has_gd])
 
-        min_last_gd_run = min(self.last_gd_run.itervalues()) if self.last_gd_run else None
+        if self.last_gd_run:
+            if len(sub_key_list) == 1:
+                min_last_gd_run = self.last_gd_run[sub_key_list[0]]
+            else:
+                min_last_gd_run = min(value for key, value in self.last_gd_run.iteritems() if key in sub_key_list)
+        else:
+            min_last_gd_run = None
+
         logger.info('Using min last_gd_run `%r`', min_last_gd_run)
 
         for msg in self.pubsub.get_sql_messages_by_sub_key(session, sub_key_list, min_last_gd_run, pub_time_max, ignore_list):
