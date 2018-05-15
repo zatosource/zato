@@ -1263,10 +1263,11 @@ class PubSub(object):
     def set_to_delete(self, sub_key, msg_list):
         """ Marks all input messages as ready to be deleted.
         """
-        logger.info('Deleting messages `%s`', msg_list)
+        msg_id_list = [msg.pub_msg_id for msg in msg_list]
+        logger.info('Deleting messages set to be deleted `%s`', msg_id_list)
 
         with closing(self.server.odb.session()) as session:
-            set_to_delete(session, self.cluster_id, sub_key, [msg.pub_msg_id for msg in msg_list], utcnow_as_ms())
+            set_to_delete(session, self.cluster_id, sub_key, msg_id_list, utcnow_as_ms())
 
 # ################################################################################################################################
 
