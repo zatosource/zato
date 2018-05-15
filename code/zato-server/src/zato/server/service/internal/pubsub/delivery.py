@@ -130,12 +130,23 @@ class GetServerPIDForSubKey(AdminService):
         input_required = ('sub_key',)
         output_optional = (Int('server_pid'),)
 
+# ################################################################################################################################
+
+    def _raise_bad_request(self, sub_key):
+        raise BadRequest(self.cid, 'No such sub_key found `{}`'.format(sub_key))
+
+# ################################################################################################################################
+
     def handle(self):
+        sub_key = self.request.input.sub_key
         try:
-            server = self.pubsub.get_sub_key_server(self.request.input.sub_key, False)
+            server = self.pubsub.get_sub_key_server(sub_key, False)
         except KeyError:
-            raise BadRequest(self.cid, 'No such sub_key found `{}`'.format(self.request.input.sub_key))
+            self._raise_bad_request(sub_key)
         else:
-            self.response.payload.server_pid = server.server_pid
+            if server:
+                self.response.payload.server_pid = server.server_pid
+            else:
+                self._raise_bad_request(sub_key)
 
 # ################################################################################################################################
