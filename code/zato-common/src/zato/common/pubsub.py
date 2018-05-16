@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,7 +14,7 @@ from zato.common.util import new_cid
 # ################################################################################################################################
 
 _skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pattern_matched', 'published_by_id', 'data_prefix',
-    'data_prefix_short', 'pub_time', 'expiration_time', 'ext_pub_time', 'pub_correl_id', 'pub_msg_id')
+    'data_prefix_short', 'pub_time', 'expiration_time', 'pub_correl_id', 'pub_msg_id')
 
 # ################################################################################################################################
 
@@ -80,7 +80,7 @@ class PubSubMessage(object):
         """
         skip = skip or []
         out = {}
-        for key in PubSubMessage._attrs:
+        for key in sorted(PubSubMessage._attrs):
             if key != 'topic' and key not in skip:
                 value = getattr(self, key)
                 if value is not None:

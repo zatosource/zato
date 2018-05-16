@@ -53,7 +53,7 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
 # ################################################################################################################################
 
-def get_last_pub_data(conn, cluster_id, topic_id, _topic_key=COMMON_PUBSUB.REDIS.META_TOPIC_KEY):
+def get_last_pub_data(conn, cluster_id, topic_id, _topic_key=COMMON_PUBSUB.REDIS.META_TOPIC_LAST_KEY):
     last_data = conn.hgetall(_topic_key % (cluster_id, topic_id))
     if last_data:
         last_data['pub_time'] = datetime_from_ms(float(last_data['pub_time']) * 1000)

@@ -217,11 +217,17 @@ log_if_wsx_deliv_server_not_found=False
 enabled=True
 store_frequency=1
 
-[pubsub_meta_endpoint]
+[pubsub_meta_endpoint_pub]
 enabled=True
 store_frequency=1
 history=100
-data_prefix_len=64
+data_len=0
+
+[pubsub_meta_endpoint_sub]
+enabled=True
+store_frequency=1
+history=100
+data_len=0
 
 [live_msg_browser]
 include_internal=False
