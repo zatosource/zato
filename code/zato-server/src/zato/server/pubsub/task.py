@@ -392,8 +392,7 @@ class GDMessage(Message):
         self.expiration_time = msg.expiration_time
         self.has_gd = True
         self.topic_name = topic_name
-
-        #logger_zato.warn('QQQ %s %r', self.data, self.pub_time)
+        self.size = msg.size
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
@@ -423,6 +422,7 @@ class NonGDMessage(Message):
         self.expiration_time = msg['expiration_time']
         self.has_gd = False
         self.topic_name = msg['topic_name']
+        self.size = msg['size']
 
         #logger_zato.warn('RRR %s %r', self.data, self.pub_time)
 

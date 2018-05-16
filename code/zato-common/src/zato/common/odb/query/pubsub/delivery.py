@@ -45,6 +45,7 @@ sql_messages_columns = (
     PubSubMessage.priority,
     PubSubMessage.expiration,
     PubSubMessage.expiration_time,
+    PubSubMessage.size,
     PubSubEndpointEnqueuedMessage.id.label('endp_msg_queue_id'),
     PubSubEndpointEnqueuedMessage.sub_key,
 )

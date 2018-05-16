@@ -90,8 +90,8 @@ class Publish(AdminService):
 # ################################################################################################################################
 
     def _get_data_prefixes(self, data):
-        data_prefix = data[:2048].encode('utf8')
-        data_prefix_short = data[:64].encode('utf8')
+        data_prefix = data[:2048]
+        data_prefix_short = data[:64]
 
         return data_prefix, data_prefix_short
 
@@ -141,9 +141,8 @@ class Publish(AdminService):
         ps_msg.pub_time = now
         ps_msg.delivery_status = _initialized
         ps_msg.pattern_matched = pattern_matched
-        ps_msg.data = input['data'].encode('utf8')
+        ps_msg.data = input['data']
         ps_msg.mime_type = mime_type
-        ps_msg.size = len(input['data'])
         ps_msg.priority = priority
         ps_msg.expiration = expiration
         ps_msg.expiration_time = expiration_time
@@ -158,6 +157,11 @@ class Publish(AdminService):
         ps_msg.position_in_group = input.get('position_in_group') or None
         ps_msg.is_in_sub_queue = has_subs
 
+        if ps_msg.data:
+            ps_msg.size = len(ps_msg.data.encode('utf8')) # We need to store the size in bytes rather than Unicode codepoints
+        else:
+            ps_msg.size = 0
+
         # Invoke hook service here because it may want to update data in which case
         # we need to take it into account below.
         if topic.before_publish_hook_service_invoker:
@@ -168,8 +172,6 @@ class Publish(AdminService):
                 logger_audit.info('Skipping message pub_msg_id:`%s`, pub_correl_id:`%s`, ext_client_id:`%s`',
                     ps_msg.pub_msg_id, ps_msg.pub_correl_id, ps_msg.ext_client_id)
                 return
-            else:
-                ps_msg.size = len(ps_msg.data)
 
         # These are needed only for GD messages that are stored in SQL
         if has_gd:

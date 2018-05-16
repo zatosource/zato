@@ -75,7 +75,7 @@ class PubSubMessage(object):
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None
 
-    def to_dict(self, skip=None):
+    def to_dict(self, skip=None, needs_utf8_encode=True, _data_keys=('data', 'data_prefix', 'data_prefix_short')):
         """ Returns a dict representation of self.
         """
         skip = skip or []
@@ -84,17 +84,18 @@ class PubSubMessage(object):
             if key != 'topic' and key not in skip:
                 value = getattr(self, key)
                 if value is not None:
+                    if needs_utf8_encode:
+                        if key in _data_keys:
+                            value = value.encode('utf8')
                     out[key] = value
-
-        out['size'] = len(self.data) if self.data else None
 
         return out
 
-    def to_external_dict(self, _skip=_skip_to_external):
+    def to_external_dict(self, skip=_skip_to_external, needs_utf8_encode=False):
         """ Returns a dict representation of self ready to be delivered to external systems,
         i.e. without internal attributes on output.
         """
-        out = self.to_dict(_skip)
+        out = self.to_dict(skip, needs_utf8_encode)
         out['msg_id'] = self.pub_msg_id
         out['correl_id'] = self.pub_correl_id
 
