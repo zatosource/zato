@@ -68,8 +68,8 @@
                 <td class='inline_header' style="width:80px">Msg ID</td>
                 <td style="width:120px">{{ form.msg_id }}</td>
 
-                <td class='inline_header' style="width:90px">Pub ext. client ID</td>
-                <td style="width:140px">{{ form.ext_client_id }}</td>
+                <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in ms)</span></td>
+                <td style="width:140px">{{ form.expiration }}</td>
 
                 <td style="width:90px"></td>
                 <td style="width:140px">
@@ -77,13 +77,13 @@
 
             </tr>
             <tr>
-                <td class='inline_header' style="width:80px">Correl ID</td>
+                <td class='inline_header' style="width:80px">Correlation ID</td>
                 <td style="width:120px">
                     {{ form.correl_id }}
                 </td>
 
-                <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in s)</span></td>
-                <td style="width:170px">{{ form.expiration }}</td>
+                <td class='inline_header' style="width:90px">External client ID</td>
+                <td style="width:170px">{{ form.ext_client_id }}</td>
 
                 <td style="width:90px"></td>
                 <td style="width:140px"></td>
@@ -112,7 +112,7 @@
             <tr>
             <tr>
                 <td class='inline_header' colspan="6">
-                    Payload to send
+                    Data to send
                 </td>
             </tr>
             <tr>
