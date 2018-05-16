@@ -213,6 +213,16 @@ wsx_gateway_service_allowed=zato.pubsub.subscription.create-wsx-subscription, pu
 log_if_deliv_server_not_found=True
 log_if_wsx_deliv_server_not_found=False
 
+[pubsub_meta_topic]
+enabled=True
+store_frequency=1
+
+[pubsub_meta_endpoint]
+enabled=True
+store_frequency=1
+history=100
+data_prefix_len=64
+
 [live_msg_browser]
 include_internal=False
 service=True

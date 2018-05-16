@@ -327,15 +327,13 @@ class Publish(AdminService):
         # Local aliases
         has_pubsub_audit_log = self.server.has_pubsub_audit_log
 
+        # Increase message counter
+        ctx.topic.incr_msg_counter(has_gd_msg_list, bool(ctx.non_gd_msg_list))
+
         # We don't always have GD messages on input so there is no point in running an SQL transaction otherwise.
         if has_gd_msg_list:
 
             with closing(self.odb.session()) as session:
-
-                # Increase depth check counter..
-                ctx.topic.incr_msg_pub_iter()
-
-                # Increase message cleanup counter ..
 
                 # No matter if we can publish or not, we may possibly cleanup old messages first.
                 if ctx.topic.needs_msg_cleanup():
@@ -408,8 +406,10 @@ class Publish(AdminService):
                     # Re-run with GD and non-GD reversed now
                     self._publish(ctx)
 
-        # Update metadata in background
-        spawn(self._update_pub_metadata, ctx)
+        # Update metadata in background if configured to
+        if ctx.pubsub.has_meta_topic:
+            if ctx.topic.needs_meta_update():
+                spawn(self._update_pub_metadata, ctx)
 
         # Return either a single msg_id if there was only one message published or a list of message IDs,
         # one for each message published.
