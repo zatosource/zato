@@ -191,16 +191,16 @@ class _GetEndpointQueue(AdminService):
 
         total_q = session.query(PubSubEndpointEnqueuedMessage.id).\
             filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-            filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id)
+            filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key)
 
         current_q = session.query(PubSubEndpointEnqueuedMessage.id).\
             filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-            filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id).\
+            filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key).\
             filter(PubSubEndpointEnqueuedMessage.is_in_staging != True)
 
         staging_q = session.query(PubSubEndpointEnqueuedMessage.id).\
             filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-            filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id).\
+            filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key).\
             filter(PubSubEndpointEnqueuedMessage.is_in_staging == True)
 
         total_depth = count(session, total_q)

@@ -54,15 +54,16 @@ logger_audit = getLogger('zato_pubsub_audit')
 class PubCtx(object):
     """ A container for information describing a single publication.
     """
-    __slots__ = ('cluster_id', 'pubsub', 'topic', 'endpoint_id', 'subscriptions_by_topic', 'msg_id_list', 'gd_msg_list',
-        'non_gd_msg_list', 'pattern_matched', 'ext_client_id', 'is_re_run', 'now', 'current_depth', 'last_msg')
+    __slots__ = ('cluster_id', 'pubsub', 'topic', 'endpoint_id', 'endpoint_name', 'subscriptions_by_topic', 'msg_id_list',
+        'gd_msg_list', 'non_gd_msg_list', 'pattern_matched', 'ext_client_id', 'is_re_run', 'now', 'current_depth', 'last_msg')
 
-    def __init__(self, cluster_id, pubsub, topic, endpoint_id, subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list,
-            pattern_matched, ext_client_id, is_re_run, now):
+    def __init__(self, cluster_id, pubsub, topic, endpoint_id, endpoint_name, subscriptions_by_topic, msg_id_list, gd_msg_list,
+            non_gd_msg_list, pattern_matched, ext_client_id, is_re_run, now):
         self.cluster_id = cluster_id
         self.pubsub = pubsub
         self.topic = topic
         self.endpoint_id = endpoint_id
+        self.endpoint_name = endpoint_name
         self.subscriptions_by_topic = subscriptions_by_topic
         self.msg_id_list = msg_id_list
         self.gd_msg_list = gd_msg_list
@@ -292,8 +293,9 @@ class Publish(AdminService):
             topic, data_list, input, now, pattern_matched, endpoint_id, bool(subscriptions_by_topic))
 
         # Create a wrapper object for all the input data and metadata
-        ctx = PubCtx(self.server.cluster_id, pubsub, topic, endpoint_id, subscriptions_by_topic, msg_id_list, gd_msg_list,
-            non_gd_msg_list, pattern_matched, input.get('ext_client_id') or 'n/a', False, now)
+        ctx = PubCtx(self.server.cluster_id, pubsub, topic, endpoint_id, pubsub.get_endpoint_by_id(endpoint_id).name,
+            subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,
+            input.get('ext_client_id'), False, now)
 
         # We have all the input data, publish the message(s) now
         self._publish(ctx)
@@ -442,6 +444,7 @@ class Publish(AdminService):
             data = {
                 'pub_time': ctx.now,
                 'endpoint_id': ctx.endpoint_id,
+                'endpoint_name': ctx.endpoint_name,
                 'pub_msg_id': last_pub_msg_id,
                 'pattern_matched': ctx.pattern_matched
             }

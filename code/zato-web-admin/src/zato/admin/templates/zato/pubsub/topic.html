@@ -82,7 +82,7 @@
                         <th><a href="#">GD</a></th>
                         <th><a href="#">Max depth GD / RAM</a></th>
                         <th><a href="#">Current depth GD / RAM</a></th>
-                        <th><a href="#">Last pub. time (UTC)</a></th>
+                        <th><a href="#">Last pub data</a></th>
 
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -122,7 +122,18 @@
                             {{ item.current_depth_non_gd }}
                         </td>
 
-                        <td>{{ item.last_pub_time|default:"<span class='form_hint'>---</span>" }}</td>
+                        <td>
+                            {% if item.last_pub_time %}
+                                {{ item.last_pub_time }}
+                                <span style="font-size:smaller">(UTC)</span>
+                                <br/>
+                                {{ item.last_pub_msg_id }}
+                                <br/>
+                                <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ item.last_endpoint_id }}">{{ item.last_endpoint_name }}</a>
+                            {% else %}
+                                <span class='form_hint'>---</span>
+                            {% endif %}
+                        </td>
                         <td><a href="{% url "pubsub-message-publish" cluster_id item.id %}">Publish</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.clear('{{ item.id }}')">Clear</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.edit('{{ item.id }}')">Edit</a></td>

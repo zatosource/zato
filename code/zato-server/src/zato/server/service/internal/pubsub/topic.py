@@ -31,10 +31,10 @@ label = 'a pub/sub topic'
 broker_message = BROKER_MSG_PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
-skip_input_params = ['current_depth_gd', 'last_pub_time', 'is_internal']
+skip_input_params = ['is_internal', 'current_depth_gd', 'last_pub_time', 'last_pub_msg_id', 'last_endpoint_id', 'last_endpoint_name']
 input_optional_extra = ['needs_details']
-output_optional_extra = [Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time', 'is_internal',
-    'hook_service_name']
+output_optional_extra = ['is_internal', Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time',
+    'hook_service_name', 'last_pub_time', AsIs('last_pub_msg_id'), 'last_endpoint_id', 'last_endpoint_name']
 
 # ################################################################################################################################
 
@@ -53,11 +53,11 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
 # ################################################################################################################################
 
-def get_last_pub_time(conn, cluster_id, topic_id, _topic_key=COMMON_PUBSUB.REDIS.META_TOPIC_KEY):
-    key = _topic_key % (cluster_id, topic_id)
-    last_pub_time = conn.hget(key, 'pub_time')
-    if last_pub_time:
-        return datetime_from_ms(float(last_pub_time) * 1000)
+def get_last_pub_data(conn, cluster_id, topic_id, _topic_key=COMMON_PUBSUB.REDIS.META_TOPIC_KEY):
+    last_data = conn.hgetall(_topic_key % (cluster_id, topic_id))
+    if last_data:
+        last_data['pub_time'] = datetime_from_ms(float(last_data['pub_time']) * 1000)
+        return last_data
 
 # ################################################################################################################################
 
@@ -79,7 +79,13 @@ def response_hook(self, input, instance, attrs, service_type):
 
                     # Checks current GD depth in SQL
                     item.current_depth_gd = get_gd_depth_topic(session, input.cluster_id, item.id)
-                    item.last_pub_time = get_last_pub_time(self.kvdb.conn, self.server.cluster_id, item.id)
+
+                    last_data = get_last_pub_data(self.kvdb.conn, self.server.cluster_id, item.id)
+                    if last_data:
+                        item.last_pub_time = last_data['pub_time']
+                        item.last_pub_msg_id = last_data['pub_msg_id']
+                        item.last_endpoint_id = last_data['endpoint_id']
+                        item.last_endpoint_name = last_data['endpoint_name']
 
 # ################################################################################################################################
 
@@ -120,7 +126,8 @@ class Get(AdminService):
             topic = pubsub_topic(session, self.request.input.cluster_id, self.request.input.id)._asdict()
             topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, self.request.input.id)
 
-        topic['last_pub_time'] = get_last_pub_time(self.kvdb.conn, self.server.cluster_id, self.request.input.id)
+        last_data = get_last_pub_data(self.kvdb.conn, self.server.cluster_id, self.request.input.id)
+        topic['last_pub_time'] = last_data['pub_time']
 
         self.response.payload = topic
 
