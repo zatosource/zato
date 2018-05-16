@@ -153,6 +153,7 @@ class Topic(object):
         self.task_delivery_interval = config.task_delivery_interval
         self.before_publish_hook_service_invoker = config.get('before_publish_hook_service_invoker')
         self.before_delivery_hook_service_invoker = config.get('before_delivery_hook_service_invoker')
+        self.meta_store_frequency = config.meta_store_frequency
 
         # For now, task sync interval is the same for GD and non-GD messages
         # so we can arbitrarily pick the former to serve for both types of messages.
@@ -160,7 +161,9 @@ class Topic(object):
 
         # How many messages have been published to this topic from current server,
         # i.e. this is not a global counter.
-        self.msg_pub_iter = 0
+        self.msg_pub_counter = 0
+        self.msg_pub_counter_gd = 0
+        self.msg_pub_counter_non_gd = 0
 
         # When were subscribers last notified about messages from current server,
         # again, this is not a global counter.
@@ -177,10 +180,16 @@ class Topic(object):
 
 # ################################################################################################################################
 
-    def incr_msg_pub_iter(self):
+    def incr_msg_counter(self, has_gd, has_non_gd):
         """ Increases counter of messages published to this topic from current server.
         """
-        self.msg_pub_iter += 1
+        self.msg_pub_counter += 1
+
+        if has_gd:
+            self.msg_pub_counter_gd += 1
+
+        if has_non_gd:
+            self.msg_pub_counter_non_gd += 1
 
 # ################################################################################################################################
 
@@ -197,12 +206,17 @@ class Topic(object):
 # ################################################################################################################################
 
     def needs_msg_cleanup(self):
-        return self.msg_pub_iter % 10000 == 0
+        return self.msg_pub_counter_gd % 10000 == 0
 
 # ################################################################################################################################
 
     def needs_depth_check(self):
-        return self.msg_pub_iter % self.depth_check_freq == 0
+        return self.msg_pub_counter_gd % self.depth_check_freq == 0
+
+# ################################################################################################################################
+
+    def needs_meta_update(self):
+        return self.msg_pub_counter % self.meta_store_frequency == 0
 
 # ################################################################################################################################
 
@@ -533,6 +547,10 @@ class PubSub(object):
         # How many messages have been published through this server, regardless of which topic they were from
         self.msg_pub_iter = 0
 
+        # How often to update metadata about topics and endpoints, if at all
+        self.has_meta_topic = server.fs_server_config.pubsub_meta_topic.enabled
+        self.topic_meta_store_frequency = server.fs_server_config.pubsub_meta_topic.store_frequency
+
         spawn_greenlet(self.trigger_notify_pubsub_tasks)
 
 # ################################################################################################################################
@@ -798,6 +816,8 @@ class PubSub(object):
                 config.hook_service_name, PUBSUB.HOOK_TYPE.SUB)
         else:
             config.hook_service_invoker = None
+
+        config.meta_store_frequency = self.topic_meta_store_frequency
 
         self.topics[config.id] = Topic(config)
         self.topic_name_to_id[config.name] = config.id
