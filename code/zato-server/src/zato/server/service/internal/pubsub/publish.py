@@ -33,6 +33,12 @@ from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService
 
+# ################################################################################################################################
+
+logger_audit = getLogger('zato_pubsub_audit')
+
+# ################################################################################################################################
+
 # For pyflakes
 PubSub = PubSub
 Topic = Topic
@@ -42,12 +48,9 @@ Topic = Topic
 _JSON = DATA_FORMAT.JSON
 _initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
 
-_meta_topic_key = PUBSUB.REDIS.META_TOPIC_KEY
-_meta_endpoint_key = PUBSUB.REDIS.META_ENDPOINT_KEY
-
-# ################################################################################################################################
-
-logger_audit = getLogger('zato_pubsub_audit')
+_meta_topic_key = PUBSUB.REDIS.META_TOPIC_LAST_KEY
+_meta_endpoint_key = PUBSUB.REDIS.META_ENDPOINT_PUB_KEY
+_meta_topic_optional = ('pub_correl_id', 'ext_client_id', 'in_reply_to')
 
 # ################################################################################################################################
 
@@ -310,9 +313,6 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    # def _publish(self, pubsub, topic, endpoint_id, subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list,
-    #     pattern_matched, ext_client_id, is_re_run, now):
-
     def _publish(self, ctx):
         # Type: PubCtx
         """ Publishes GD and non-GD messages to topics and, if subscribers exist, moves them to their queues / notifies them.
@@ -327,8 +327,11 @@ class Publish(AdminService):
         # Local aliases
         has_pubsub_audit_log = self.server.has_pubsub_audit_log
 
-        # Increase message counter
-        ctx.topic.incr_msg_counter(has_gd_msg_list, bool(ctx.non_gd_msg_list))
+        # Increase message counters for this pub/sub server and endpoint
+        ctx.pubsub.incr_pubsub_msg_counter(ctx.endpoint_id)
+
+        # Increase message counter for this topic
+        ctx.topic.incr_topic_msg_counter(has_gd_msg_list, bool(ctx.non_gd_msg_list))
 
         # We don't always have GD messages on input so there is no point in running an SQL transaction otherwise.
         if has_gd_msg_list:
@@ -406,10 +409,25 @@ class Publish(AdminService):
                     # Re-run with GD and non-GD reversed now
                     self._publish(ctx)
 
-        # Update metadata in background if configured to
-        if ctx.pubsub.has_meta_topic:
-            if ctx.topic.needs_meta_update():
-                spawn(self._update_pub_metadata, ctx)
+        # Update topic and endpoint metadata in background if configured to - we have a series of if's to confirm
+        # if it's needed because it is not a given that each publication will required the update and we also
+        # want to ensure that if there are two thigns to be updated at a time, it is only one greenlet spawned
+        # which will in turn use a single Redis pipeline to cut down on the number of Redis calls needed.
+        if ctx.pubsub.has_meta_topic or ctx.pubsub.has_meta_endpoint:
+
+            if ctx.pubsub.has_meta_topic and ctx.topic.needs_meta_update():
+                has_topic = True
+            else:
+                has_topic = False
+
+            if ctx.pubsub.has_meta_endpoint and ctx.pubsub.needs_endpoint_meta_update:
+                has_endpoint = True
+            else:
+                has_endpoint = False
+
+            if has_topic or has_endpoint:
+                spawn(self._update_pub_metadata, ctx, has_topic, has_endpoint,
+                    ctx.pubsub.endpoint_meta_data_len, ctx.pubsub.endpoint_meta_max_history)
 
         # Return either a single msg_id if there was only one message published or a list of message IDs,
         # one for each message published.
@@ -430,32 +448,66 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _update_pub_metadata(self, ctx, _optional=('pub_correl_id', 'ext_client_id', 'in_reply_to'), _topic_key=_meta_topic_key,
-        _endpoint_key=_meta_endpoint_key):
-        """ Updates in background metadata about a topic and publisher after each publication.
+    def _update_pub_metadata(self, ctx, has_topic, has_endpoint, endpoint_data_len, endpoint_max_history,
+        _topic_optional=_meta_topic_optional, _topic_key=_meta_topic_key, _endpoint_key=_meta_endpoint_key):
+        """ Updates in background metadata about a topic and/or publisher.
         """
         try:
-            last_pub_msg_id = ctx.last_msg['pub_msg_id']
 
-            topic_key = _topic_key % (ctx.cluster_id, ctx.topic.id)
-            endpoint_key = _endpoint_key % (ctx.cluster_id, ctx.endpoint_id)
+            # If we have two updates to issue then we want to use a Redis pipeline,
+            # otherwise, the regular connection will do.
+            if has_topic and has_endpoint:
+                use_pipeline = True
+                conn = self.kvdb.conn.pipeline()
+            else:
+                conn = self.kvdb.conn
 
-            # For endpoint_key, there is a superfluous key here, (already in the key itself), but it will not hurt that much
-            data = {
-                'pub_time': ctx.now,
-                'endpoint_id': ctx.endpoint_id,
-                'endpoint_name': ctx.endpoint_name,
-                'pub_msg_id': last_pub_msg_id,
-                'pattern_matched': ctx.pattern_matched
-            }
+            try:
 
-            for name in _optional:
-                value = ctx.last_msg.get(name)
-                if value:
-                    data[name] = value
+                # Prepare a request to update the topic's metadata with
+                if has_topic:
+                    topic_key = _topic_key % (ctx.cluster_id, ctx.topic.id)
+                    topic_data = {
+                        'pub_time': ctx.now,
+                        'endpoint_id': ctx.endpoint_id,
+                        'endpoint_name': ctx.endpoint_name,
+                        'pub_msg_id': ctx.last_msg['pub_msg_id'],
+                        'pattern_matched': ctx.pattern_matched
+                    }
 
-            self.kvdb.conn.hmset(topic_key, data)
-            self.kvdb.conn.hmset(endpoint_key, data)
+                    for name in _topic_optional:
+                        value = ctx.last_msg.get(name)
+                        if value:
+                            topic_data[name] = value
+
+                    # Send to Redis, either immediately or under the pipeline
+                    conn.hmset(topic_key, topic_data)
+
+                # Prepare a request to udpate the endpoint's metadata with
+                if has_endpoint:
+                    endpoint_key = _endpoint_key % (ctx.cluster_id, ctx.endpoint_id)
+
+                    endpoint_data = {
+                        'pub_time': ctx.now,
+                        'pub_msg_id': ctx.last_msg['pub_msg_id'],
+                        'pub_correl_id': ctx.last_msg['pub_correl_id'],
+                        'in_reply_to': ctx.last_msg.get('in_reply_to'),
+                        'ext_client_id': ctx.last_msg.get('ext_client_id'),
+                        'ext_pub_time': ctx.last_msg.get('ext_pub_time'),
+                        'pattern_matched': ctx.pattern_matched
+                    }
+
+                    # Storing actual data along with other information is optional
+                    data = ctx.last_msg['data'][:endpoint_data_len] if endpoint_data_len else None
+                    endpoint_data['data'] = data
+
+                    # Same as for topics, send to Redis immediately or under the pipeline
+                    conn.lpush(endpoint_key, endpoint_data)
+                    conn.ltrim(endpoint_key, 0, endpoint_max_history - 1) # Redis counts from 0 so we need to substract 1
+
+            finally:
+                if use_pipeline:
+                    conn.execute()
 
         except Exception:
             self.logger.warn('Error while updating pub metadata `%s`', format_exc())

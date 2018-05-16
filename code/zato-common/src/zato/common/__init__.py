@@ -862,8 +862,9 @@ class PUBSUB:
                 return iter((self.REST, self.SERVICE, self.SOAP, self.WEB_SOCKETS))
 
     class REDIS:
-        META_TOPIC_KEY = 'zato.ps.meta.last.topic.%s.%s'
-        META_ENDPOINT_KEY = 'zato.ps.meta.last.endpoint.%s.%s'
+        META_TOPIC_LAST_KEY = 'zato.ps.meta.topic.last.%s.%s'
+        META_ENDPOINT_PUB_KEY = 'zato.ps.meta.endpoint.pub.%s.%s'
+        META_ENDPOINT_SUB_KEY = 'zato.ps.meta.endpoint.sub.%s.%s'
 
 # Not to be made available externally yet.
 skip_endpoint_types = (

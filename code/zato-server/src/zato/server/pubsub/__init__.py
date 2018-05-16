@@ -180,7 +180,7 @@ class Topic(object):
 
 # ################################################################################################################################
 
-    def incr_msg_counter(self, has_gd, has_non_gd):
+    def incr_topic_msg_counter(self, has_gd, has_non_gd):
         """ Increases counter of messages published to this topic from current server.
         """
         self.msg_pub_counter += 1
@@ -544,19 +544,42 @@ class PubSub(object):
         # e.g. REST outgoing connections. Values are set by worker store.
         self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE)
 
-        # How many messages have been published through this server, regardless of which topic they were from
-        self.msg_pub_iter = 0
+        # How many messages have been published through this server, regardless of which topic they were for
+        self.msg_pub_counter = 0
+
+        # How many messages a given endpoint published
+        self.endpoint_msg_counter = {}
 
         # How often to update metadata about topics and endpoints, if at all
         self.has_meta_topic = server.fs_server_config.pubsub_meta_topic.enabled
         self.topic_meta_store_frequency = server.fs_server_config.pubsub_meta_topic.store_frequency
 
+        self.has_meta_endpoint = server.fs_server_config.pubsub_meta_endpoint_pub.enabled
+        self.endpoint_meta_store_frequency = server.fs_server_config.pubsub_meta_endpoint_pub.store_frequency
+        self.endpoint_meta_data_len = server.fs_server_config.pubsub_meta_endpoint_pub.data_len
+        self.endpoint_meta_max_history = server.fs_server_config.pubsub_meta_endpoint_pub.max_history
+
         spawn_greenlet(self.trigger_notify_pubsub_tasks)
 
 # ################################################################################################################################
 
-    def incr_msg_pub_iter(self):
-        self.msg_pub_iter += 1
+    def incr_pubsub_msg_counter(self, endpoint_id):
+        with self.lock:
+
+            # Update the overall counter
+            self.msg_pub_counter += 1
+
+            # Update the per-endpoint counter too
+            if endpoint_id in self.endpoint_msg_counter:
+                self.endpoint_msg_counter[endpoint_id] += 1
+            else:
+                self.endpoint_msg_counter[endpoint_id] = 0
+
+# ################################################################################################################################
+
+    def needs_endpoint_meta_update(self, endpoint_id):
+        with self.lock:
+            return self.endpoint_msg_counter[endpoint_id] % self.endpoint_meta_store_frequency == 0
 
 # ################################################################################################################################
 
