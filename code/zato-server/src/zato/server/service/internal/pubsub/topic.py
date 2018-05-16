@@ -53,7 +53,15 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
 # ################################################################################################################################
 
-def response_hook(self, input, instance, attrs, service_type, _topic_key=COMMON_PUBSUB.REDIS.META_TOPIC_KEY):
+def get_last_pub_time(conn, cluster_id, topic_id, _topic_key=COMMON_PUBSUB.REDIS.META_TOPIC_KEY):
+    key = _topic_key % (cluster_id, topic_id)
+    last_pub_time = conn.hget(key, 'pub_time')
+    if last_pub_time:
+        return datetime_from_ms(float(last_pub_time) * 1000)
+
+# ################################################################################################################################
+
+def response_hook(self, input, instance, attrs, service_type):
     if service_type == 'get_list':
 
         # Details are needed when topics are in their own main screen but if only basic information
@@ -71,12 +79,7 @@ def response_hook(self, input, instance, attrs, service_type, _topic_key=COMMON_
 
                     # Checks current GD depth in SQL
                     item.current_depth_gd = get_gd_depth_topic(session, input.cluster_id, item.id)
-
-                    #if item.last_pub_time:
-                    key = _topic_key % (self.server.cluster_id, item.id)
-                    last_pub_time = self.kvdb.conn.hget(key, 'pub_time')
-                    if last_pub_time:
-                        item.last_pub_time = datetime_from_ms(float(last_pub_time) * 1000)
+                    item.last_pub_time = get_last_pub_time(self.kvdb.conn, self.server.cluster_id, item.id)
 
 # ################################################################################################################################
 
@@ -117,8 +120,7 @@ class Get(AdminService):
             topic = pubsub_topic(session, self.request.input.cluster_id, self.request.input.id)._asdict()
             topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, self.request.input.id)
 
-        if topic['last_pub_time']:
-            topic['last_pub_time'] = datetime_from_ms(topic['last_pub_time'])
+        topic['last_pub_time'] = get_last_pub_time(self.kvdb.conn, self.server.cluster_id, self.request.input.id)
 
         self.response.payload = topic
 
