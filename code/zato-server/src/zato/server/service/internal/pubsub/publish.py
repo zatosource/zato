@@ -10,7 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from json import dumps, loads
 from logging import getLogger
+from operator import itemgetter
 from traceback import format_exc
 
 # datetutil
@@ -449,7 +451,8 @@ class Publish(AdminService):
 # ################################################################################################################################
 
     def _update_pub_metadata(self, ctx, has_topic, has_endpoint, endpoint_data_len, endpoint_max_history,
-        _topic_optional=_meta_topic_optional, _topic_key=_meta_topic_key, _endpoint_key=_meta_endpoint_key):
+        _topic_optional=_meta_topic_optional, _topic_key=_meta_topic_key, _endpoint_key=_meta_endpoint_key,
+        _sort_key=itemgetter('pub_time', 'ext_pub_time')):
         """ Updates in background metadata about a topic and/or publisher.
         """
         try:
@@ -487,23 +490,51 @@ class Publish(AdminService):
                 if has_endpoint:
                     endpoint_key = _endpoint_key % (ctx.cluster_id, ctx.endpoint_id)
 
+                    idx_found = None
+                    endpoint_topic_list = conn.get(endpoint_key)
+
+                    if use_pipeline:
+                        endpoint_topic_list = endpoint_topic_list.execute()[-1] # Elem [0] will be the result of .hmset
+
+                    endpoint_topic_list = loads(endpoint_topic_list) if endpoint_topic_list else []
+
+                    # If we already have something stored in Redis, find information about this topic and remove it
+                    # to make room for the newest entry.
+                    if endpoint_topic_list:
+                        for idx, elem in enumerate(endpoint_topic_list):
+                            if elem['topic_id'] == ctx.topic.id:
+                                idx_found = idx
+                                break
+                        if idx_found is not None:
+                            endpoint_topic_list.pop(idx_found)
+
+                    # Newest information about this endpoint's publication to this topic
                     endpoint_data = {
                         'pub_time': ctx.now,
                         'pub_msg_id': ctx.last_msg['pub_msg_id'],
-                        'pub_correl_id': ctx.last_msg['pub_correl_id'],
+                        'pub_correl_id': ctx.last_msg.get('pub_correl_id'),
                         'in_reply_to': ctx.last_msg.get('in_reply_to'),
                         'ext_client_id': ctx.last_msg.get('ext_client_id'),
                         'ext_pub_time': ctx.last_msg.get('ext_pub_time'),
-                        'pattern_matched': ctx.pattern_matched
+                        'pattern_matched': ctx.pattern_matched,
+                        'topic_id': ctx.topic.id,
+                        'topic_name': ctx.topic.name,
+                        'has_gd': ctx.last_msg['has_gd'],
                     }
 
                     # Storing actual data along with other information is optional
                     data = ctx.last_msg['data'][:endpoint_data_len] if endpoint_data_len else None
                     endpoint_data['data'] = data
 
-                    # Same as for topics, send to Redis immediately or under the pipeline
-                    conn.lpush(endpoint_key, endpoint_data)
-                    conn.ltrim(endpoint_key, 0, endpoint_max_history - 1) # Redis counts from 0 so we need to substract 1
+                    # Append the newest entry and sort all results by publication time
+                    endpoint_topic_list.append(endpoint_data)
+                    endpoint_topic_list.sort(key=_sort_key, reverse=True)
+
+                    # Store only as many entries as configured to
+                    endpoint_topic_list = endpoint_topic_list[:endpoint_max_history]
+
+                    # Same as for topics, sends to Redis immediately or under the pipeline
+                    conn.set(endpoint_key, dumps(endpoint_topic_list))
 
             finally:
                 if use_pipeline:

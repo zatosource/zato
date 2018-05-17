@@ -2087,8 +2087,10 @@ class PubSubTopic(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=name, cascade='all, delete, delete-orphan'))
 
-    ext_client_id = None # Not used by DB
+    # Not used by DB
+    ext_client_id = None
     last_pub_time = None
+    pub_time = None
 
 # ################################################################################################################################
 
