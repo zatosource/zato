@@ -20,7 +20,8 @@ from zato.common import PUBSUB
 class MsgForm(forms.Form):
     correl_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     in_reply_to = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    expiration = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
+    expiration = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:40%'}))
+    exp_from_now = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     priority = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%'}), initial=5)
     mime_type = forms.CharField(widget=forms.HiddenInput())
 

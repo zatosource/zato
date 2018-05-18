@@ -20,7 +20,7 @@ from zato.common import DATA_FORMAT
 from zato.common.exception import NotFound
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage
 from zato.common.odb.query import pubsub_message, pubsub_queue_message
-from zato.common.util.time_ import datetime_from_ms
+from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority
 from zato.server.service import AsIs, Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO
@@ -117,7 +117,8 @@ class Update(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'), 'mime_type')
-        input_optional = ('data', Int('expiration'), AsIs('correl_id'), AsIs('in_reply_to'), Int('priority'))
+        input_optional = ('data', Int('expiration'), AsIs('correl_id'), AsIs('in_reply_to'), Int('priority'),
+            Bool('exp_from_now'))
         output_required = (Bool('found'),)
         output_optional = ('expiration_time', Int('size'))
 
@@ -146,7 +147,11 @@ class Update(AdminService):
             item.mime_type = input.mime_type
 
             if item.expiration:
-                item.expiration_time = item.pub_time + (item.expiration * 1000)
+                if self.request.input.exp_from_now:
+                    from_ = utcnow_as_ms()
+                else:
+                    from_ = item.pub_time
+                item.expiration_time = from_ + (item.expiration / 1000.0)
             else:
                 item.expiration_time = None
 

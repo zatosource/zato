@@ -136,6 +136,8 @@ def get(req, cluster_id, object_type, object_id, msg_id):
 def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
 
     expiration = req.POST.get('expiration')
+    exp_from_now = asbool(req.POST.get('exp_from_now'))
+
     correl_id = req.POST.get('correl_id')
     in_reply_to = req.POST.get('in_reply_to')
 
@@ -151,6 +153,7 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
             'cluster_id': cluster_id,
             'data': data,
             'expiration': expiration,
+            'exp_from_now': exp_from_now,
             'correl_id': correl_id,
             'in_reply_to': in_reply_to,
             'priority': priority,
@@ -159,6 +162,8 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
 
         if msg_id:
             input['msg_id'] = msg_id
+
+        print(111, input)
 
         response = req.zato.client.invoke('zato.pubsub.message.{}'.format(action), input).data.response
 
