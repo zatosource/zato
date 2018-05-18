@@ -137,7 +137,7 @@
                 <td class='inline_header' style="width:80px">Msg ID</td>
                 <td style="width:120px">{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ msg_id }}{% endifequal %}</td>
 
-                <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in s)</span></td>
+                <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in ms)</span></td>
                 <td style="width:170px">
                     {% ifequal object_type "topic" %}
                         {{ form.expiration }}
@@ -223,9 +223,9 @@
             <tr>
                 <td class='inline_header' colspan="6">
                     {% ifequal object_type "queue" %}
-                        Payload from topic
+                        Data in queue
                     {% else %}
-                        Payload in topic
+                        Data in topic
                     {% endifequal %}
                 </td>
             </tr>

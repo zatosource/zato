@@ -56,9 +56,9 @@ class GetFromTopic(AdminService):
                 first()
 
             if item:
-                item.pub_time = datetime_from_ms(item.pub_time)
-                item.ext_pub_time = datetime_from_ms(item.ext_pub_time) if item.ext_pub_time else ''
-                item.expiration_time = datetime_from_ms(item.expiration_time) if item.expiration_time else ''
+                item.pub_time = datetime_from_ms(item.pub_time * 1000)
+                item.ext_pub_time = datetime_from_ms(item.ext_pub_time * 1000) if item.ext_pub_time else ''
+                item.expiration_time = datetime_from_ms(item.expiration_time * 1000) if item.expiration_time else ''
                 self.response.payload = item
             else:
                 raise NotFound(self.cid, 'No such message `{}`'.format(self.request.input.msg_id))
