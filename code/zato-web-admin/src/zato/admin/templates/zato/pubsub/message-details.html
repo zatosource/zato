@@ -141,6 +141,7 @@
                 <td style="width:170px">
                     {% ifequal object_type "topic" %}
                         {{ form.expiration }}
+                        {{ form.exp_from_now }} <label for="id_exp_from_now">From now</label>
                     {% else %}
                         {{ expiration }}
                     {% endifequal %}

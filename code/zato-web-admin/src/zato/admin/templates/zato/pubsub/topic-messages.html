@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Messages for topic{% endblock %}
+{% block html_title %}{% if has_gd %}GD{% else %}RAM{% endif %} messages for topic{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">

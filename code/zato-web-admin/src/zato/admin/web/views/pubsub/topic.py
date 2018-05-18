@@ -66,7 +66,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'is_internal', 'has_gd', 'is_api_sub_allowed', 'max_depth_gd',
             'max_depth_non_gd', 'depth_check_freq', 'pub_buffer_size_gd', 'task_sync_interval', 'task_delivery_interval')
-        input_optional = ('hook_service_id',)
+        input_optional = ('hook_service_id', 'exp_from_now')
         output_required = ('id', 'name', 'has_gd')
 
     def post_process_return_data(self, return_data):
