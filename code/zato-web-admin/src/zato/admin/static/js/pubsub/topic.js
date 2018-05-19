@@ -137,6 +137,6 @@ $.fn.zato.pubsub.topic.delete_message = function(topic_id, msg_id) {
     }
 
     var q = String.format(
-        'Are you sure you want to delete message `{0}`?<br/><center>Msg prefix {1}</center>', instance.id, instance.msg_prefix);
+        'Are you sure you want to delete message `{0}`?<br/><center>Msg prefix `{1}`</center>', instance.id, instance.msg_prefix);
     jConfirm(q, 'Please confirm', jq_callback);
 }
