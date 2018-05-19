@@ -212,6 +212,8 @@ sso=False
 wsx_gateway_service_allowed=zato.pubsub.subscription.create-wsx-subscription, pubsub.subscription.get-list, pubsub.subscription.unsubscribe
 log_if_deliv_server_not_found=True
 log_if_wsx_deliv_server_not_found=False
+data_prefix_len=2048
+data_prefix_short_len=64
 
 [pubsub_meta_topic]
 enabled=True

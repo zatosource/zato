@@ -21,6 +21,7 @@ from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, slugify
 from zato.admin.web.views.pubsub import get_client_html, get_endpoint_html
 from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubTopic
+from zato.common.util import asbool
 
 # ################################################################################################################################
 
@@ -206,15 +207,15 @@ class TopicMessages(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-topic-messages'
     template = 'zato/pubsub/topic-messages.html'
-    service_name = 'zato.pubsub.topic.get-message-list'
+    service_name = 'pubsub.topic.get-message-list'
     output_class = PubSubMessage
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'topic_id')
+        input_required = ('cluster_id', 'topic_id', 'has_gd')
         output_required = ('msg_id', 'pub_time', 'data_prefix_short', 'pattern_matched')
         output_optional = ('correl_id', 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
-            'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name')
+            'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_name', 'server_pid')
         output_repeated = True
 
     def on_before_append_item(self, item):
@@ -222,26 +223,22 @@ class TopicMessages(_Index):
         item.endpoint_html = get_endpoint_html(item, self.req.zato.cluster_id)
         return item
 
+    def set_input(self, *args, **kwargs):
+        self.req.has_gd = asbool(self.req.GET['has_gd'])
+        super(TopicMessages, self).set_input(*args, **kwargs)
+
     def handle(self):
+
+        print(333, self.req.has_gd)
 
         return {
             'topic_id': self.input.topic_id,
-            'has_gd': int(self.req.GET.get('has_gd')),
+            'has_gd': self.req.has_gd,
             'topic_name': self.req.zato.client.invoke(
                 'zato.pubsub.topic.get', {
                     'cluster_id':self.req.zato.cluster_id,
                     'id':self.input.topic_id,
                 }).data.response.name
         }
-
-# ################################################################################################################################
-
-class InRAMBacklog(_Index):
-    method_allowed = 'GET'
-    url_name = 'pubsub-topic-in-ram-backlog'
-    template = 'zato/pubsub/topic-in-ram-backlog.html'
-    service_name = 'zato.pubsub.topic.get-in-ram-backlog'
-    output_class = PubSubMessage
-    paginate = True
 
 # ################################################################################################################################

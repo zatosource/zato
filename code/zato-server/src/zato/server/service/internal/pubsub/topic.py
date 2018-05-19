@@ -198,22 +198,37 @@ class GetMessageList(AdminService):
 
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'topic_id')
+        input_optional = GetListAdminSIO.input_optional + ('has_gd',)
         output_required = (AsIs('msg_id'), 'pub_time', 'data_prefix_short', 'pattern_matched')
-        output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id', 'service_name',
-            'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name')
+        output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
+            'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name')
         output_repeated = True
 
-    def get_data(self, session):
+# ################################################################################################################################
+
+    def get_gd_data(self, session):
         return self._search(
             pubsub_messages_for_topic, session, self.request.input.cluster_id, self.request.input.topic_id, False)
 
-    def handle(self):
+# ################################################################################################################################
+
+    def _handle_gd(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            self.response.payload[:] = self.get_gd_data(session)
 
         for item in self.response.payload.zato_output:
-            item.pub_time = datetime_from_ms(item.pub_time)
-            item.ext_pub_time = datetime_from_ms(item.ext_pub_time) if item.ext_pub_time else ''
+            item.pub_time = datetime_from_ms(item.pub_time * 1000.0)
+            item.ext_pub_time = datetime_from_ms(item.ext_pub_time * 1000.0) if item.ext_pub_time else ''
+
+# ################################################################################################################################
+
+    def _handle_non_gd(self):
+        zzz
+
+# ################################################################################################################################
+
+    def handle(self):
+        (self._handle_gd if self.request.input.has_gd else self._handle_non_gd)()
 
 # ################################################################################################################################
 
