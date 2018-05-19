@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}{% if has_gd %}GD{% else %}RAM{% endif %} messages for topic{% endblock %}
+{% block html_title %}{% if has_gd %}GD{% else %}In-RAM{% endif %} messages for topic{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -21,6 +21,7 @@
             '_numbering',
             '_selection',
 
+            '_server',
             '_pub_time',
             '_msg_id',
 
@@ -37,7 +38,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">{% if has_gd %}GD{% else %}RAM{% endif %} messages for topic : <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}</a></h2>
+<h2 class="zato">{% if has_gd %}GD{% else %}In-RAM{% endif %} messages for topic : <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -56,7 +57,9 @@
                     <tr class='ignore'>
                         <th style="width:10px">&nbsp;</th>
                         <th>&nbsp;</th>
-
+                        {% if not has_gd %}
+                            <th><a href="#">Server</a></th>
+                        {% endif %}
                         <th style="width:16%"><a href="#">Pub time</a></th>
                         <th style="width:22%"><a href="#">Msg ID</a></th>
 
@@ -75,6 +78,9 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
+                        {% if not has_gd %}
+                            <td>{{ item.server_name }}:{{ item.server_pid }}</td>
+                        {% endif %}
                         <td>{{ item.pub_time }}</td>
                         <td><a href="{% url "pubsub-message" cluster_id "topic" topic_id item.msg_id %}">{{ item.msg_id }}</a></td>
 

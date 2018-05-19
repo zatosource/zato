@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -45,6 +45,7 @@ from zato.server.message import MessageFacade
 from zato.server.pattern.fanout import FanOut
 from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.pattern.parallel import ParallelExec
+from zato.server.pubsub import PubSub
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request, Response, WebSphereMQRequestData
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
@@ -73,6 +74,9 @@ NOT_GIVEN = 'ZATO_NOT_GIVEN'
 # Back compat
 Bool = Boolean
 Int = Integer
+
+# For code completion
+PubSub = PubSub
 
 # ################################################################################################################################
 
@@ -174,7 +178,7 @@ class Service(object):
     cloud = Cloud()
     odb = None
     kvdb = None
-    pubsub = None
+    pubsub = None # type: PubSub
     cassandra_conn = None
     cassandra_query = None
     email = None

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -1220,8 +1220,6 @@ urlpatterns += [
         login_required(pubsub_topic.TopicSubscribers()), name=pubsub_topic.TopicSubscribers.url_name),
     url(r'^zato/pubsub/topic/messages/(?P<topic_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_topic.TopicMessages()), name=pubsub_topic.TopicMessages.url_name),
-    url(r'^zato/pubsub/topic/in-ram-backlog/(?P<topic_id>.*)/(?P<name_slug>.*)$',
-        login_required(pubsub_topic.InRAMBacklog()), name=pubsub_topic.InRAMBacklog.url_name),
 
     # Pub/sub - subscriptions
 

@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from contextlib import closing
+from operator import itemgetter
 from traceback import format_exc
 
 # gevent
@@ -21,7 +22,7 @@ from gevent.lock import RLock
 from globre import compile as globre_compile
 
 # Zato
-from zato.common import DATA_FORMAT, PUBSUB
+from zato.common import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import WebSocketClientPubSubKeys
@@ -52,6 +53,7 @@ _default_expiration = 2147483647 * 1000 # (2 ** 31 - 1) * 1000 milliseconds
 
 _PRIORITY=PUBSUB.PRIORITY
 _JSON=DATA_FORMAT.JSON
+_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
 
 # ################################################################################################################################
 
@@ -382,7 +384,50 @@ class InRAMSyncBacklog(object):
     def retrieve_messages_by_sub_keys(self, topic_id, sub_keys):
         """ Retrieves and returns all messages matching input - messages are deleted from RAM.
         """
-        return self._get_delete_messages_by_sub_keys(topic_id, sub_keys)
+        with self.lock:
+            return self._get_delete_messages_by_sub_keys(topic_id, sub_keys)
+
+# ################################################################################################################################
+
+    def get_messages_by_topic_id(self, topic_id, shorten_data, query=None):
+        """ Returns messages for topic by its ID, optionally with pagination and filtering by input query.
+        """
+        with self.lock:
+            msg_id_list = self.topic_msg_id.get(topic_id, [])
+            if not msg_id_list:
+                return []
+
+            # A list of messages to be returned - we actually need to build a whole list instead of using
+            # generators because the underlying container is an unsorted set and we need a sorted result on output.
+            msg_list = []
+
+            for msg_id in msg_id_list:
+                msg = self.msg_id_to_msg[msg_id]
+                if query:
+                    if query not in msg['data'][:self.pubsub.data_prefix_len]:
+                        continue
+
+                # Rename the attribute for public consumption
+                msg['msg_id'] = msg.pop('pub_msg_id')
+
+                # This is optional
+                correl_id = msg.pop('pub_correl_id', None)
+                if correl_id:
+                    msg['correl_id'] = correl_id
+
+                # Shorten the data if told to
+                if shorten_data:
+                    msg['data'] = msg['data'][:self.pubsub.data_prefix_len]
+
+                # This short prefix needs to be always produced
+                msg['data_prefix_short'] = msg['data'][:self.pubsub.data_prefix_short_len]
+
+                msg['server_name'] = self.pubsub.server.name
+                msg['server_pid'] = self.pubsub.server.pid
+
+                msg_list.append(msg)
+
+            return msg_list
 
 # ################################################################################################################################
 
@@ -558,6 +603,10 @@ class PubSub(object):
         self.endpoint_meta_store_frequency = server.fs_server_config.pubsub_meta_endpoint_pub.store_frequency
         self.endpoint_meta_data_len = server.fs_server_config.pubsub_meta_endpoint_pub.data_len
         self.endpoint_meta_max_history = server.fs_server_config.pubsub_meta_endpoint_pub.max_history
+
+        # How many bytes to use for look up purposes when conducting message searches
+        self.data_prefix_len = server.fs_server_config.pubsub.data_prefix_len
+        self.data_prefix_short_len = server.fs_server_config.pubsub.data_prefix_short_len
 
         spawn_greenlet(self.trigger_notify_pubsub_tasks)
 
@@ -1444,3 +1493,130 @@ class PubSub(object):
                         logger.warn(format_exc())
 
 # ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+from json import loads
+from operator import itemgetter
+
+# Zato
+from zato.common import PUBSUB, SEARCH
+from zato.common.util.time_ import datetime_from_ms
+from zato.server.service import AsIs, Bool, Int, List, Opaque
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
+# ################################################################################################################################
+
+_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
+
+# ################################################################################################################################
+
+class GetMessageListSIO(GetListAdminSIO):
+    input_required = ('topic_id',)
+    input_optional = GetListAdminSIO.input_optional + (Bool('has_gd'),)
+    output_required = (AsIs('msg_id'), 'pub_time', 'data_prefix_short', 'pattern_matched')
+    output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
+        'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_name', 'server_pid',
+        'server_total')
+    output_repeated = True
+
+# ################################################################################################################################
+
+class GetServerMessageList(AdminService):
+    """ Returns a list of in-RAM messages matching input criteria from current server process.
+    """
+    name = 'pubsub.topic.get-server-message-list'
+
+    class SimpleIO(AdminSIO):
+        input_required = ('topic_id',)
+        input_optional = ('cur_page', 'query', 'paginate')
+        output_optional = (Opaque('data'),)
+
+# ################################################################################################################################
+
+    def handle(self):
+        self.response.payload.data = self.pubsub.sync_backlog.get_messages_by_topic_id(
+            self.request.input.topic_id, True, self.request.input.query)
+
+# ################################################################################################################################
+
+class MyService(AdminService):
+    """ Returns a list of in-RAM messages for all servers.
+    """
+    name = 'pubsub.topic.get-message-list'
+
+    class SimpleIO(GetMessageListSIO):
+        GetMessageListSIO.input_required + ('cluster_id',)
+
+# ################################################################################################################################
+
+    def _handle_non_gd(self, _sort_key=itemgetter('pub_time')):
+
+        # Local aliases
+        topic_id = self.request.input.topic_id
+        paginate = self.request.input.paginate
+        cur_page = self.request.input.cur_page
+        cur_page = cur_page - 1 if cur_page else 0 # We index lists from 0
+
+        # Response to produce
+        msg_list = []
+
+        # Collects responses from all server processes
+        is_all_ok, all_data = self.servers.invoke_all('pubsub.topic.get-server-message-list', {
+            'topic_id': topic_id,
+            'query': self.request.input.query,
+        }, timeout=30)
+
+        # Check if everything is OK on each level - overall, per server and then per process
+        if is_all_ok:
+            for server_name, server_data in all_data.iteritems():
+                if server_data['is_ok']:
+                    for server_pid, server_pid_data in server_data['server_data'].iteritems():
+                        if server_pid_data['is_ok']:
+                            pid_data = server_pid_data['pid_data']['response']['data']
+                            msg_list.extend(pid_data)
+                        else:
+                            self.logger.warn('Caught an error (server_pid_data) %s', server_pid_data['error_info'])
+                else:
+                    self.logger.warn('Caught an error (server_data) %s', server_data['error_info'])
+
+        else:
+            self.logger.warn('Caught an error (all_data) %s', all_data)
+
+        # If we get here, we must have collected some data at all
+        if msg_list:
+
+            # Sort the output before it is returned - messages last published (youngest) come first
+            msg_list.sort(key=_sort_key, reverse=True)
+
+            # If pagination is requsted, return only the desired page
+            if paginate:
+                start = cur_page * _page_size
+                msg_list = msg_list[start:_page_size]
+
+        # Convert float timestamps in all the remaining messages to ISO-8601
+        for msg in msg_list:
+            msg['pub_time'] = datetime_from_ms(msg['pub_time'])
+            if msg.get('expiration_time'):
+                msg['expiration_time'] = datetime_from_ms(msg['expiration_time'])
+
+        self.response.payload[:] = msg_list
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        self._handle_non_gd()
+
+# ################################################################################################################################
+'''

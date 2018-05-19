@@ -96,8 +96,8 @@ class Publish(AdminService):
 # ################################################################################################################################
 
     def _get_data_prefixes(self, data):
-        data_prefix = data[:2048]
-        data_prefix_short = data[:64]
+        data_prefix = data[:self.pubsub.data_prefix_len]
+        data_prefix_short = data[:self.pubsub.data_prefix_short_len]
 
         return data_prefix, data_prefix_short
 
