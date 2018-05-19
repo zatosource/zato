@@ -163,8 +163,6 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
         if msg_id:
             input['msg_id'] = msg_id
 
-        print(111, input)
-
         response = req.zato.client.invoke('zato.pubsub.message.{}'.format(action), input).data.response
 
     except Exception, e:
@@ -176,7 +174,16 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
         message = 'Message {}'.format('updated' if action=='update' else 'created')
         size = response.size
         if response.expiration_time:
-            expiration_time = from_utc_to_user(response.expiration_time+'+00:00', req.zato.user_profile)
+
+            expiration_time = """
+            <a
+                id="a_expiration_time"
+                href="javascript:$.fn.zato.pubsub.message.details.toggle_time('expiration_time', '{expiration_time_user}', '{expiration_time_utc}')">{expiration_time_user}
+            </a>
+            """.format(**{
+                   'expiration_time_utc': response.expiration_time,
+                   'expiration_time_user': from_utc_to_user(response.expiration_time+'+00:00', req.zato.user_profile),
+            })
 
     return HttpResponse(dumps({
         'is_ok': is_ok,

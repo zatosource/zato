@@ -160,7 +160,8 @@ class Update(AdminService):
 
             self.response.payload.found = True
             self.response.payload.size = item.size
-            self.response.payload.expiration_time = datetime_from_ms(item.expiration_time) if item.expiration_time else None
+            self.response.payload.expiration_time = datetime_from_ms(
+                item.expiration_time * 1000.0) if item.expiration_time else None
 
 # ################################################################################################################################
 
