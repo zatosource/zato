@@ -290,13 +290,24 @@ def publish_action(req):
 @method_allowed('POST')
 def delete(req, cluster_id, msg_id):
 
+    input_dict = {
+        'cluster_id': cluster_id,
+        'msg_id': msg_id,
+    }
+
+    if req.POST['has_gd']:
+        service_name = 'zato.pubsub.message.delete-gd'
+    else:
+        service_name = 'pubsub.message.delete-non-gd'
+
+        # This is an in-RAM message so it needs additional information
+        input_dict['server_name'] = req.POST['server_name']
+        input_dict['server_pid'] = req.POST['server_pid']
+
     try:
-        req.zato.client.invoke('zato.pubsub.message.delete', {
-            'cluster_id': cluster_id,
-            'msg_id': msg_id,
-        })
-    except Exception, e:
-        return HttpResponseServerError(format_exc(e))
+        req.zato.client.invoke(service_name, input_dict)
+    except Exception:
+        return HttpResponseServerError(format_exc())
     else:
         return HttpResponse('Deleted message `{}`'.format(msg_id))
 

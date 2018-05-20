@@ -225,6 +225,9 @@ class _BaseView(object):
         output_optional = []
         output_repeated = False
 
+    def get_service_name(self):
+        raise NotImplementedError('May be implemented by subclasses')
+
     def fetch_cluster_id(self):
         # Doesn't look overtly smart right now but more code will follow to sanction
         # the existence of this function
@@ -365,7 +368,6 @@ class Index(_BaseView):
             if self.can_invoke_admin_service():
                 self.before_invoke_admin_service()
                 response = self.invoke_admin_service()
-                print(333, response.inner_service_response)
                 if response.ok:
                     return_data['response_inner'] = response.inner_service_response
                     if output_repeated:
@@ -506,7 +508,7 @@ class BaseCallView(_BaseView):
             super(BaseCallView, self).__call__(req, *args, **kwargs)
             input_dict = self.get_input_dict()
             input_dict.update(initial_input_dict)
-            req.zato.client.invoke(self.service_name, input_dict)
+            req.zato.client.invoke(self.service_name or self.get_service_name(), input_dict)
             return HttpResponse()
         except Exception, e:
             msg = '{}, e:`{}`'.format(self.error_message, format_exc(e))
