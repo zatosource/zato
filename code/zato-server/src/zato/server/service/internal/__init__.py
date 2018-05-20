@@ -46,10 +46,7 @@ class SearchTool(object):
         return self.output_meta['search'].get('num_pages')
 
     def set_output_meta(self, result):
-        meta = self.output_meta['search']
-
-        for name in self._search_attrs:
-            meta[name] = getattr(result, name, None)
+        self.output_meta['search'].update(result.to_dict())
 
 # ################################################################################################################################
 
