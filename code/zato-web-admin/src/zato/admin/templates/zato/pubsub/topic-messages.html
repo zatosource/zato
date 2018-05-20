@@ -21,7 +21,9 @@
             '_numbering',
             '_selection',
 
+            {% if not has_gd %}
             '_server',
+            {% endif %}
             '_pub_time',
             '_msg_id',
 

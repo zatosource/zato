@@ -21,7 +21,7 @@ from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_topics_by
 from zato.common.util import ensure_pubsub_hook_is_valid
 from zato.common.util.time_ import datetime_from_ms
 from zato.common.util.search import SearchResults
-from zato.server.service import AsIs, Bool, Dict, Int, List
+from zato.server.service import AsIs, Bool, Dict, Int, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -251,7 +251,7 @@ class GetNonGDMessageList(AdminService):
         msg_list = []
 
         # Collects responses from all server processes
-        is_all_ok, all_data = self.servers.invoke_all('pubsub.topic.get-server-message-list', {
+        is_all_ok, all_data = self.servers.invoke_all('zato.pubsub.topic.get-server-message-list', {
             'topic_id': topic_id,
             'query': self.request.input.query,
         }, timeout=30)
@@ -307,6 +307,22 @@ class GetNonGDMessageList(AdminService):
 
         # Search metadata
         self.response.payload._meta = search_results.to_dict()
+
+# ################################################################################################################################
+
+class GetServerMessageList(AdminService):
+    """ Returns a list of in-RAM messages matching input criteria from current server process.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('topic_id',)
+        input_optional = ('cur_page', 'query', 'paginate')
+        output_optional = (Opaque('data'),)
+
+# ################################################################################################################################
+
+    def handle(self):
+        self.response.payload.data = self.pubsub.sync_backlog.get_messages_by_topic_id(
+            self.request.input.topic_id, True, self.request.input.query)
 
 # ################################################################################################################################
 
