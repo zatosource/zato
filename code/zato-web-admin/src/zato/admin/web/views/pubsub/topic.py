@@ -207,7 +207,7 @@ class TopicMessages(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-topic-messages'
     template = 'zato/pubsub/topic-messages.html'
-    service_name = 'zato.pubsub.topic.get-message-list'
+    service_name = None
     output_class = PubSubMessage
     paginate = True
 
@@ -218,10 +218,13 @@ class TopicMessages(_Index):
             'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_name', 'server_pid')
         output_repeated = True
 
+    def get_service_name(self):
+        print(333, self.req.has_gd)
+        return 'zato.pubsub.topic.get-message-list'
+
     def on_before_append_item(self, item):
-        print(333, item.data)
-        #item.pub_time = from_utc_to_user(item.pub_time+'+00:00', self.req.zato.user_profile)
-        #item.endpoint_html = get_endpoint_html(item, self.req.zato.cluster_id)
+        item.pub_time = from_utc_to_user(item.pub_time+'+00:00', self.req.zato.user_profile)
+        item.endpoint_html = get_endpoint_html(item, self.req.zato.cluster_id)
         return item
 
     def set_input(self, *args, **kwargs):

@@ -297,7 +297,7 @@ class Index(_BaseView):
         """
         input_elems = self.req.GET.keys() + self.req.zato.args.keys()
 
-        if not(self.service_name and self.cluster_id):
+        if not self.cluster_id:
             return False
 
         for elem in self.SimpleIO.input_required:
@@ -315,10 +315,14 @@ class Index(_BaseView):
     def before_invoke_admin_service(self):
         pass
 
+    def get_service_name(self, req):
+        raise NotImplementedError('May be implemented in subclasses')
+
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
-            return func(self.service_name, self.input)
+            service_name = self.service_name if self.service_name else self.get_service_name()
+            return func(service_name, self.input)
 
     def _handle_item_list(self, item_list):
         """ Creates a new instance of the model class for each of the element received

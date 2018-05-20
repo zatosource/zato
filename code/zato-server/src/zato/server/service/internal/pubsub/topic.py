@@ -196,8 +196,8 @@ class GetPublisherList(AdminService):
 
 # ################################################################################################################################
 
-class GetMessageList(AdminService):
-    """ Returns all messages currently in a topic that have not been moved to subscriber queues yet.
+class GetGDMessageList(AdminService):
+    """ Returns all GD messages currently in a topic that have not been moved to subscriber queues yet.
     """
     _filter_by = PubSubMessage.data_prefix,
 
@@ -206,7 +206,7 @@ class GetMessageList(AdminService):
         input_optional = GetListAdminSIO.input_optional + ('has_gd',)
         output_required = (AsIs('msg_id'), 'pub_time', 'data_prefix_short', 'pattern_matched')
         output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
-            'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name')
+            'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_pid', 'server_name')
         output_repeated = True
 
 # ################################################################################################################################
@@ -217,7 +217,7 @@ class GetMessageList(AdminService):
 
 # ################################################################################################################################
 
-    def _handle_gd(self):
+    def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_gd_data(session)
 
@@ -227,7 +227,13 @@ class GetMessageList(AdminService):
 
 # ################################################################################################################################
 
-    def _handle_non_gd(self, _sort_key=itemgetter('pub_time')):
+class GetNonGDMessageList(AdminService):
+    """ Returns all non-GD messages currently in a topic that have not been moved to subscriber queues yet.
+    """
+
+# ################################################################################################################################
+
+    def handle(self, _sort_key=itemgetter('pub_time')):
         # Local aliases
         topic_id = self.request.input.topic_id
         paginate = self.request.input.paginate
@@ -280,25 +286,20 @@ class GetMessageList(AdminService):
             msg['endpoint_id'] = msg.pop('published_by_id')
             msg['endpoint_name'] = self.pubsub.get_endpoint_by_id(msg['endpoint_id']).name
 
-        self.response.payload[:] = msg_list
+        print(9090, msg_list)
 
-        '''
+        self.response.payload.response = msg_list
+
         self.response.payload._meta = {
-            'total': 6,
-            'num_pages': 1,
-            'cur_page': 1,
-            'prev_page': None,
-            'next_page': None,
-            'has_prev_page': False,
-            'has_next_page': False,
-            'page_size': 50,
+            u'cur_page': 1,
+            u'has_next_page': False,
+            u'has_prev_page': False,
+            u'next_page': None,
+            u'num_pages': 1,
+            u'page_size': 50,
+            u'prev_page': None,
+            u'total': 6
         }
-        '''
-
-# ################################################################################################################################
-
-    def handle(self):
-        (self._handle_gd if self.request.input.has_gd else self._handle_non_gd)()
 
 # ################################################################################################################################
 
