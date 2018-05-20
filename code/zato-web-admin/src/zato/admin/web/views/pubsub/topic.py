@@ -234,6 +234,7 @@ class TopicMessages(_Index):
 
         return {
             'topic_id': self.input.topic_id,
+            'has_pubsub': True,
             'has_gd': self.req.has_gd,
             'topic_name': self.req.zato.client.invoke(
                 'zato.pubsub.topic.get', {
