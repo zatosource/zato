@@ -308,6 +308,10 @@ class InRAMSyncBacklog(object):
             for msg in messages:
                 self.msg_id_to_msg[msg['pub_msg_id']] = msg
 
+                # .. attach server metadata ..
+                msg['server_name'] = self.pubsub.server.name
+                msg['server_pid'] = self.pubsub.server.pid
+
                 # .. add a reverse mapping, from message ID to sub_key ..
                 msg_sub_key = self.msg_id_to_sub_key.setdefault(msg['pub_msg_id'], set())
                 msg_sub_key.update(sub_keys)
@@ -389,7 +393,7 @@ class InRAMSyncBacklog(object):
 
 # ################################################################################################################################
 
-    def get_messages_by_topic_id(self, topic_id, shorten_data, query=None):
+    def get_messages_by_topic_id(self, topic_id, needs_short_copy, query=None):
         """ Returns messages for topic by its ID, optionally with pagination and filtering by input query.
         """
         with self.lock:
@@ -407,25 +411,30 @@ class InRAMSyncBacklog(object):
                     if query not in msg['data'][:self.pubsub.data_prefix_len]:
                         continue
 
-                # Rename the attribute for public consumption
-                msg['msg_id'] = msg.pop('pub_msg_id')
+                if needs_short_copy:
+                    out_msg = {}
+                    out_msg['msg_id'] = msg['pub_msg_id']
+                    out_msg['correl_id'] = msg.get('pub_correl_id')
+                    out_msg['in_reply_to'] = msg.get('in_reply_to')
+                    out_msg['data'] = msg['data'][:self.pubsub.data_prefix_len]
+                    out_msg['data_prefix_short'] = out_msg['data'][:self.pubsub.data_prefix_short_len]
+                    out_msg['size'] = msg['size']
+                    out_msg['pattern_matched'] = msg['pattern_matched']
+                    out_msg['pub_time'] = msg['pub_time']
+                    out_msg['expiration'] = msg['expiration']
+                    out_msg['expiration_time'] = msg['expiration_time']
+                    out_msg['topic_id'] = msg['topic_id']
+                    out_msg['topic_name'] = msg['topic_name']
+                    out_msg['cluster_id'] = msg['cluster_id']
+                    out_msg['published_by_id'] = msg['published_by_id']
+                    out_msg['delivery_status'] = msg['delivery_status']
+                    out_msg['server_name'] = msg['server_name']
+                    out_msg['server_pid'] = msg['server_pid']
+                    out_msg['has_gd'] = msg['has_gd']
+                else:
+                    out_msg = msg
 
-                # This is optional
-                correl_id = msg.pop('pub_correl_id', None)
-                if correl_id:
-                    msg['correl_id'] = correl_id
-
-                # Shorten the data if told to
-                if shorten_data:
-                    msg['data'] = msg['data'][:self.pubsub.data_prefix_len]
-
-                # This short prefix needs to be always produced
-                msg['data_prefix_short'] = msg['data'][:self.pubsub.data_prefix_short_len]
-
-                msg['server_name'] = self.pubsub.server.name
-                msg['server_pid'] = self.pubsub.server.pid
-
-                msg_list.append(msg)
+                msg_list.append(out_msg)
 
             return msg_list
 
@@ -1493,130 +1502,3 @@ class PubSub(object):
                         logger.warn(format_exc())
 
 # ################################################################################################################################
-
-'''
-# -*- coding: utf-8 -*-
-
-"""
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
-
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
-"""
-
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-# stdlib
-from json import loads
-from operator import itemgetter
-
-# Zato
-from zato.common import PUBSUB, SEARCH
-from zato.common.util.time_ import datetime_from_ms
-from zato.server.service import AsIs, Bool, Int, List, Opaque
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
-
-# ################################################################################################################################
-
-_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
-
-# ################################################################################################################################
-
-class GetMessageListSIO(GetListAdminSIO):
-    input_required = ('topic_id',)
-    input_optional = GetListAdminSIO.input_optional + (Bool('has_gd'),)
-    output_required = (AsIs('msg_id'), 'pub_time', 'data_prefix_short', 'pattern_matched')
-    output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
-        'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_name', 'server_pid',
-        'server_total')
-    output_repeated = True
-
-# ################################################################################################################################
-
-class GetServerMessageList(AdminService):
-    """ Returns a list of in-RAM messages matching input criteria from current server process.
-    """
-    name = 'pubsub.topic.get-server-message-list'
-
-    class SimpleIO(AdminSIO):
-        input_required = ('topic_id',)
-        input_optional = ('cur_page', 'query', 'paginate')
-        output_optional = (Opaque('data'),)
-
-# ################################################################################################################################
-
-    def handle(self):
-        self.response.payload.data = self.pubsub.sync_backlog.get_messages_by_topic_id(
-            self.request.input.topic_id, True, self.request.input.query)
-
-# ################################################################################################################################
-
-class MyService(AdminService):
-    """ Returns a list of in-RAM messages for all servers.
-    """
-    name = 'pubsub.topic.get-message-list'
-
-    class SimpleIO(GetMessageListSIO):
-        GetMessageListSIO.input_required + ('cluster_id',)
-
-# ################################################################################################################################
-
-    def _handle_non_gd(self, _sort_key=itemgetter('pub_time')):
-
-        # Local aliases
-        topic_id = self.request.input.topic_id
-        paginate = self.request.input.paginate
-        cur_page = self.request.input.cur_page
-        cur_page = cur_page - 1 if cur_page else 0 # We index lists from 0
-
-        # Response to produce
-        msg_list = []
-
-        # Collects responses from all server processes
-        is_all_ok, all_data = self.servers.invoke_all('pubsub.topic.get-server-message-list', {
-            'topic_id': topic_id,
-            'query': self.request.input.query,
-        }, timeout=30)
-
-        # Check if everything is OK on each level - overall, per server and then per process
-        if is_all_ok:
-            for server_name, server_data in all_data.iteritems():
-                if server_data['is_ok']:
-                    for server_pid, server_pid_data in server_data['server_data'].iteritems():
-                        if server_pid_data['is_ok']:
-                            pid_data = server_pid_data['pid_data']['response']['data']
-                            msg_list.extend(pid_data)
-                        else:
-                            self.logger.warn('Caught an error (server_pid_data) %s', server_pid_data['error_info'])
-                else:
-                    self.logger.warn('Caught an error (server_data) %s', server_data['error_info'])
-
-        else:
-            self.logger.warn('Caught an error (all_data) %s', all_data)
-
-        # If we get here, we must have collected some data at all
-        if msg_list:
-
-            # Sort the output before it is returned - messages last published (youngest) come first
-            msg_list.sort(key=_sort_key, reverse=True)
-
-            # If pagination is requsted, return only the desired page
-            if paginate:
-                start = cur_page * _page_size
-                msg_list = msg_list[start:_page_size]
-
-        # Convert float timestamps in all the remaining messages to ISO-8601
-        for msg in msg_list:
-            msg['pub_time'] = datetime_from_ms(msg['pub_time'])
-            if msg.get('expiration_time'):
-                msg['expiration_time'] = datetime_from_ms(msg['expiration_time'])
-
-        self.response.payload[:] = msg_list
-
-# ################################################################################################################################
-
-    def handle(self):
-
-        self._handle_non_gd()
-
-# ################################################################################################################################
-'''
