@@ -121,6 +121,12 @@ class Delete(AdminService):
 
 # ################################################################################################################################
 
+class DeleteNonGD(AdminService):
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'server_name', 'server_pid', AsIs('msg_id'))
+
+# ################################################################################################################################
+
 class Get(AdminService):
     class SimpleIO:
         input_required = ('cluster_id', AsIs('id'))

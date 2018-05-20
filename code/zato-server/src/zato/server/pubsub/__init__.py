@@ -321,6 +321,50 @@ class InRAMSyncBacklog(object):
 
 # ################################################################################################################################
 
+    def delete_msg_by_id(self, msg_id):
+        """ Deletes a message by its ID.
+        """
+        with self.lock:
+            found_to_sub_key = self.msg_id_to_sub_key.pop(msg_id, None)
+            found_to_msg = self.msg_id_to_msg.pop(msg_id, None)
+
+            _has_topic_msg = False # Was the ID found for at least one topic
+            _has_sk_msg = False     # Ditto but for sub_keys
+
+            for _topic_msg_set in self.topic_msg_id.itervalues():
+                try:
+                    _topic_msg_set.remove(msg_id)
+                except KeyError:
+                    pass # This is fine, msg_id did not belong to this topic
+                else:
+                    _has_topic_msg = True
+
+            for _sk_msg_set in self.sub_key_to_msg_id.itervalues():
+                try:
+                    _sk_msg_set.remove(msg_id)
+                except KeyError:
+                    pass # This is fine, msg_id did not belong to this topic
+                else:
+                    _has_sk_msg = True
+
+            if not found_to_sub_key:
+                logger.warn('Message not found (msg_id_to_sub_key) %s', msg_id)
+                logger_zato.warn('Message not found (msg_id_to_sub_key) %s', msg_id)
+
+            if not found_to_msg:
+                logger.warn('Message not found (msg_id_to_msg) %s', msg_id)
+                logger_zato.warn('Message not found (msg_id_to_msg) %s', msg_id)
+
+            if not _has_topic_msg:
+                logger.warn('Message not found (_has_topic_msg) %s', msg_id)
+                logger_zato.warn('Message not found (_has_topic_msg) %s', msg_id)
+
+            if not _has_sk_msg:
+                logger.warn('Message not found (_has_sk_msg) %s', msg_id)
+                logger_zato.warn('Message not found (_has_sk_msg) %s', msg_id)
+
+# ################################################################################################################################
+
     def _get_delete_messages_by_sub_keys(self, topic_id, sub_keys, delete_msg=True, delete_sub=False):
         """ Low-level implementation of _get_delete_messages_by_sub_keys which must be called with self.lock held.
         """

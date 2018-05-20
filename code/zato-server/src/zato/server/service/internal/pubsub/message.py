@@ -84,7 +84,7 @@ class Has(AdminService):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes a message by its ID. Cascades to all related SQL objects, e.g. subscriber queues.
+    """ Deletes a GD message by its ID. Cascades to all related SQL objects, e.g. subscriber queues.
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'))
@@ -109,6 +109,39 @@ class Delete(AdminService):
             with self.lock('zato.pubsub.publish.%s' % ps_topic.name):
                 session.delete(ps_msg)
                 session.commit()
+
+# Add an alias for consistency
+DeleteGD = Delete
+
+# ################################################################################################################################
+
+class DeleteNonGDMessage(AdminService):
+    """ Deletes a non-GD message by its ID from current server.
+    """
+    name = 'pubsub.message.delete-non-gd-message'
+
+    class SimpleIO(AdminSIO):
+        input_required = (AsIs('msg_id'),)
+
+    def handle(self):
+        self.pubsub.sync_backlog.delete_msg_by_id(self.request.input.msg_id)
+
+# ################################################################################################################################
+
+class DeleteNonGD(AdminService):
+    name = 'pubsub.message.delete-non-gd'
+
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'server_name', 'server_pid', AsIs('msg_id'))
+
+    def handle(self):
+        server = self.servers[self.request.input.server_name]
+        server.invoke('pubsub.message.delete-non-gd-message', {
+            'msg_id': self.request.input.msg_id,
+        }, pid=self.request.input.server_pid)
+
+        self.logger.info('Deleted non-GD message `%s` from `%s:%s`',
+            self.request.input.msg_id, self.request.input.server_name, self.request.input.server_pid)
 
 # ################################################################################################################################
 

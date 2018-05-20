@@ -116,7 +116,15 @@ $.fn.zato.pubsub.topic.clear = function(id) {
     jConfirm(q, 'Please confirm', jq_callback);
 }
 
-$.fn.zato.pubsub.topic.delete_message = function(topic_id, msg_id) {
+$.fn.zato.pubsub.topic.delete_message = function(topic_id, msg_id, has_gd, server_name, server_pid) {
+
+    if(server_name == null) {
+        server_name = '';
+    }
+
+    if(server_pid == null) {
+        server_pid = '';
+    }
 
     var instance = $.fn.zato.data_table.data[msg_id];
 
@@ -128,11 +136,12 @@ $.fn.zato.pubsub.topic.delete_message = function(topic_id, msg_id) {
         $.fn.zato.user_message(success, data.responseText);
     }
 
+
     var jq_callback = function(ok) {
         if(ok) {
             var url = String.format('/zato/pubsub/message/delete/cluster/{0}/msg/{1}',
                 $(document).getUrlParam('cluster'), instance.id);
-            $.fn.zato.post(url, http_callback, '', 'text');
+            $.fn.zato.post(url, http_callback, {'has_gd':has_gd ,'server_name':server_name, 'server_pid':server_pid}, 'text');
         }
     }
 
