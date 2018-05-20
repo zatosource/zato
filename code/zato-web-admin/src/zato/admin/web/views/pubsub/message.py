@@ -298,7 +298,7 @@ def delete(req, cluster_id, msg_id):
     if req.POST['has_gd']:
         service_name = 'zato.pubsub.message.delete-gd'
     else:
-        service_name = 'pubsub.message.delete-non-gd'
+        service_name = 'zato.pubsub.message.delete-non-gd'
 
         # This is an in-RAM message so it needs additional information
         input_dict['server_name'] = req.POST['server_name']

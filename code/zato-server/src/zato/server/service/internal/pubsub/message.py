@@ -110,16 +110,17 @@ class Delete(AdminService):
                 session.delete(ps_msg)
                 session.commit()
 
+        self.logger.info('Deleted GD message `%s`', self.request.input.msg_id)
+
 # Add an alias for consistency
-DeleteGD = Delete
+class DeleteGD(Delete):
+    pass
 
 # ################################################################################################################################
 
 class DeleteNonGDMessage(AdminService):
     """ Deletes a non-GD message by its ID from current server.
     """
-    name = 'pubsub.message.delete-non-gd-message'
-
     class SimpleIO(AdminSIO):
         input_required = (AsIs('msg_id'),)
 
@@ -129,14 +130,14 @@ class DeleteNonGDMessage(AdminService):
 # ################################################################################################################################
 
 class DeleteNonGD(AdminService):
-    name = 'pubsub.message.delete-non-gd'
-
+    """ Deletes a non-GD message by its ID from a named server.
+    """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'server_name', 'server_pid', AsIs('msg_id'))
 
     def handle(self):
         server = self.servers[self.request.input.server_name]
-        server.invoke('pubsub.message.delete-non-gd-message', {
+        server.invoke(DeleteNonGDMessage.get_name(), {
             'msg_id': self.request.input.msg_id,
         }, pid=self.request.input.server_pid)
 
