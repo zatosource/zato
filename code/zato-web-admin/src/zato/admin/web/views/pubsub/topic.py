@@ -219,8 +219,7 @@ class TopicMessages(_Index):
         output_repeated = True
 
     def get_service_name(self):
-        print(333, self.req.has_gd)
-        return 'zato.pubsub.topic.get-message-list'
+        return 'zato.pubsub.topic.get-gd-message-list' if self.req.has_gd else 'zato.pubsub.topic.get-non-gd-message-list'
 
     def on_before_append_item(self, item):
         item.pub_time = from_utc_to_user(item.pub_time+'+00:00', self.req.zato.user_profile)
