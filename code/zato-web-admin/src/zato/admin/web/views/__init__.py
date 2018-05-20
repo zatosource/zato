@@ -361,6 +361,7 @@ class Index(_BaseView):
             if self.can_invoke_admin_service():
                 self.before_invoke_admin_service()
                 response = self.invoke_admin_service()
+                print(333, response.inner_service_response)
                 if response.ok:
                     return_data['response_inner'] = response.inner_service_response
                     if output_repeated:

@@ -10,9 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from operator import itemgetter
 
 # Zato
-from zato.common import PUBSUB as COMMON_PUBSUB
+from zato.common import PUBSUB as COMMON_PUBSUB, SEARCH
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
@@ -36,6 +37,10 @@ skip_input_params = ['is_internal', 'current_depth_gd', 'last_pub_time', 'last_p
 input_optional_extra = ['needs_details']
 output_optional_extra = ['is_internal', Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time',
     'hook_service_name', 'last_pub_time', AsIs('last_pub_msg_id'), 'last_endpoint_id', 'last_endpoint_name']
+
+# ################################################################################################################################
+
+_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
 
 # ################################################################################################################################
 
@@ -222,8 +227,73 @@ class GetMessageList(AdminService):
 
 # ################################################################################################################################
 
-    def _handle_non_gd(self):
-        zzz
+    def _handle_non_gd(self, _sort_key=itemgetter('pub_time')):
+        # Local aliases
+        topic_id = self.request.input.topic_id
+        paginate = self.request.input.paginate
+        cur_page = self.request.input.cur_page
+        cur_page = cur_page - 1 if cur_page else 0 # We index lists from 0
+
+        # Response to produce
+        msg_list = []
+
+        # Collects responses from all server processes
+        is_all_ok, all_data = self.servers.invoke_all('pubsub.topic.get-server-message-list', {
+            'topic_id': topic_id,
+            'query': self.request.input.query,
+        }, timeout=30)
+
+        # Check if everything is OK on each level - overall, per server and then per process
+        if is_all_ok:
+            for server_name, server_data in all_data.iteritems():
+                if server_data['is_ok']:
+                    for server_pid, server_pid_data in server_data['server_data'].iteritems():
+                        if server_pid_data['is_ok']:
+                            pid_data = server_pid_data['pid_data']['response']['data']
+                            msg_list.extend(pid_data)
+                        else:
+                            self.logger.warn('Caught an error (server_pid_data) %s', server_pid_data['error_info'])
+                else:
+                    self.logger.warn('Caught an error (server_data) %s', server_data['error_info'])
+
+        else:
+            self.logger.warn('Caught an error (all_data) %s', all_data)
+
+        # If we get here, we must have collected some data at all
+        if msg_list:
+
+            # Sort the output before it is returned - messages last published (youngest) come first
+            msg_list.sort(key=_sort_key, reverse=True)
+
+            # If pagination is requsted, return only the desired page
+            if paginate:
+                start = cur_page * _page_size
+                msg_list = msg_list[start:_page_size]
+
+        for msg in msg_list:
+            # Convert float timestamps in all the remaining messages to ISO-8601
+            msg['pub_time'] = datetime_from_ms(msg['pub_time'] * 1000.0)
+            if msg.get('expiration_time'):
+                msg['expiration_time'] = datetime_from_ms(msg['expiration_time'] * 1000.0)
+
+            # Return endpoint information in the same format GD messages are returned in
+            msg['endpoint_id'] = msg.pop('published_by_id')
+            msg['endpoint_name'] = self.pubsub.get_endpoint_by_id(msg['endpoint_id']).name
+
+        self.response.payload[:] = msg_list
+
+        '''
+        self.response.payload._meta = {
+            'total': 6,
+            'num_pages': 1,
+            'cur_page': 1,
+            'prev_page': None,
+            'next_page': None,
+            'has_prev_page': False,
+            'has_next_page': False,
+            'page_size': 50,
+        }
+        '''
 
 # ################################################################################################################################
 
