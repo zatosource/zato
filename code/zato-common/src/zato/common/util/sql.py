@@ -68,19 +68,9 @@ def search(search_func, config, filter_by, session=None, cluster_id=None, *args,
             kwargs['query'] = query
 
     result = search_func(session, cluster_id, *args, **kwargs)
-    num_pages, rest = divmod(result.total, page_size)
 
-    # Apparently there are some results in rest that did not fit a full page
-    if rest:
-        num_pages += 1
-
-    result.num_pages = num_pages
-    result.cur_page = cur_page + 1 # Adding 1 because, again, the external API is 1-indexed
-    result.prev_page = result.cur_page - 1 if result.cur_page > 1 else None
-    result.next_page = result.cur_page + 1 if result.cur_page < result.num_pages else None
-    result.has_prev_page = result.prev_page >= 1
-    result.has_next_page = bool(result.next_page and result.next_page <= result.num_pages) or False
-    result.page_size = page_size
+    # Fills out all the search-related information
+    result.set_data(cur_page, page_size)
 
     return result
 

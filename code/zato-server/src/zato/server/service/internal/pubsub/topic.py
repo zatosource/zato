@@ -20,7 +20,8 @@ from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_f
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_topics_by_sub_keys
 from zato.common.util import ensure_pubsub_hook_is_valid
 from zato.common.util.time_ import datetime_from_ms
-from zato.server.service import AsIs, Dict, Int, List
+from zato.common.util.search import SearchResults
+from zato.server.service import AsIs, Bool, Dict, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -232,7 +233,7 @@ class GetNonGDMessageList(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'topic_id')
-        input_optional = ('paginate', 'cur_page', 'query')
+        input_optional = (Bool('paginate'), Int('cur_page'), 'query')
         output_required = (AsIs('_meta'),)
         output_optional = (AsIs('response'),)
         response_elem = None
@@ -271,6 +272,9 @@ class GetNonGDMessageList(AdminService):
         else:
             self.logger.warn('Caught an error (all_data) %s', all_data)
 
+        # Set it here because later on it may be shortened to the page_size of elements
+        total = len(msg_list)
+
         # If we get here, we must have collected some data at all
         if msg_list:
 
@@ -279,8 +283,11 @@ class GetNonGDMessageList(AdminService):
 
             # If pagination is requsted, return only the desired page
             if paginate:
+
                 start = cur_page * _page_size
-                msg_list = msg_list[start:_page_size]
+                end = start + _page_size
+
+                msg_list = msg_list[start:end]
 
         for msg in msg_list:
             # Convert float timestamps in all the remaining messages to ISO-8601
@@ -292,18 +299,14 @@ class GetNonGDMessageList(AdminService):
             msg['endpoint_id'] = msg.pop('published_by_id')
             msg['endpoint_name'] = self.pubsub.get_endpoint_by_id(msg['endpoint_id']).name
 
+        search_results = SearchResults(None, None, None, total)
+        search_results.set_data(cur_page, _page_size)
+
+        # Actual data
         self.response.payload.response = msg_list
 
-        self.response.payload._meta = {
-            u'cur_page': 1,
-            u'has_next_page': False,
-            u'has_prev_page': False,
-            u'next_page': None,
-            u'num_pages': 1,
-            u'page_size': 50,
-            u'prev_page': None,
-            u'total': 6
-        }
+        # Search metadata
+        self.response.payload._meta = search_results.to_dict()
 
 # ################################################################################################################################
 
