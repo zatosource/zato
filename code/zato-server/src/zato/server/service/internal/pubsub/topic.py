@@ -21,7 +21,7 @@ from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_topics_by
 from zato.common.util import ensure_pubsub_hook_is_valid
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Dict, Int, List
-from zato.server.service.internal import AdminService, GetListAdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
@@ -230,6 +230,12 @@ class GetGDMessageList(AdminService):
 class GetNonGDMessageList(AdminService):
     """ Returns all non-GD messages currently in a topic that have not been moved to subscriber queues yet.
     """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'topic_id')
+        input_optional = ('paginate', 'cur_page', 'query')
+        output_required = (AsIs('_meta'),)
+        output_optional = (AsIs('response'),)
+        response_elem = None
 
 # ################################################################################################################################
 
@@ -285,8 +291,6 @@ class GetNonGDMessageList(AdminService):
             # Return endpoint information in the same format GD messages are returned in
             msg['endpoint_id'] = msg.pop('published_by_id')
             msg['endpoint_name'] = self.pubsub.get_endpoint_by_id(msg['endpoint_id']).name
-
-        print(9090, msg_list)
 
         self.response.payload.response = msg_list
 
