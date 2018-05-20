@@ -17,6 +17,10 @@
         Needed for pub/sub topic messages that uses GET query parameters
         {% endcomment %}
 
+        {% if has_pubsub %}
+            <input type="hidden" name="has_gd" value="{{ has_gd }}" />
+        {% endif %}
+
         <input type="submit"  style="vertical-align:top" value="{{ page_prompt }}" />
     </form>
     </div>
