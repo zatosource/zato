@@ -121,12 +121,6 @@ class Delete(AdminService):
 
 # ################################################################################################################################
 
-class DeleteNonGD(AdminService):
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'server_name', 'server_pid', AsIs('msg_id'))
-
-# ################################################################################################################################
-
 class Get(AdminService):
     class SimpleIO:
         input_required = ('cluster_id', AsIs('id'))
@@ -146,33 +140,59 @@ class Get(AdminService):
 
 # ################################################################################################################################
 
-class Clear(AdminService):
+class ClearTopicNonGD(AdminService):
+    """ Clears a topic from all non-GD messages on current server.
+    """
     class SimpleIO:
-        input_required = ('cluster_id', AsIs('id'))
+        input_required = ('topic_id',)
 
     def handle(self):
+        self.pubsub.sync_backlog.clear_topic(self.request.input.topic_id)
+
+# ################################################################################################################################
+
+class Clear(AdminService):
+    """ Clears a topic from GD and non-GD messages.
+    """
+    class SimpleIO:
+        input_required = ('cluster_id', 'id')
+
+    def handle(self):
+
+        # Local aliases
+        cluster_id = self.request.input.cluster_id
+        topic_id = self.request.input.id
+
         with closing(self.odb.session()) as session:
 
+            self.logger.info('Clearing topic `%s` (id:%s)', self.pubsub.get_topic_by_id(topic_id).name, topic_id)
+
             topic = session.query(PubSubTopic).\
-                filter(PubSubTopic.cluster_id==self.request.input.cluster_id).\
-                filter(PubSubTopic.id==self.request.input.id).\
+                filter(PubSubTopic.cluster_id==cluster_id).\
+                filter(PubSubTopic.id==topic_id).\
                 one()
 
             with self.lock('zato.pubsub.publish.%s' % topic.name):
 
-                # Remove all messages
+                # Remove all GD messages
                 session.query(PubSubMessage).\
-                    filter(PubSubMessage.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubMessage.topic_id==self.request.input.id).\
+                    filter(PubSubMessage.cluster_id==cluster_id).\
+                    filter(PubSubMessage.topic_id==topic_id).\
                     delete()
 
                 # Remove all references to topic messages from target queues
                 session.query(PubSubEndpointEnqueuedMessage).\
-                    filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubEndpointEnqueuedMessage.topic_id==self.request.input.id).\
+                    filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id).\
+                    filter(PubSubEndpointEnqueuedMessage.topic_id==topic_id).\
                     delete()
 
+                # Whatever happens with non-GD messsages we can at least delete the GD ones
                 session.commit()
+
+                # Delete non-GD messages for that topic on all servers
+                self.servers.invoke_all(ClearTopicNonGD.get_name(), {
+                    'topic_id': topic_id,
+                }, timeout=90)
 
 # ################################################################################################################################
 
