@@ -281,7 +281,8 @@ class InRAMSyncBacklog(object):
 # ################################################################################################################################
 
     def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages):
-
+        """ Adds all input messages to sub_keys for the topic.
+        """
         with self.lock:
 
             # Local aliases
@@ -324,7 +325,17 @@ class InRAMSyncBacklog(object):
     def delete_msg_by_id(self, msg_id):
         """ Deletes a message by its ID.
         """
-        with self.lock:
+        return self.delete_messages([msg_id])
+
+# ################################################################################################################################
+
+    def _delete_messages(self, msg_list):
+        """ Low-level implementation of self.delete_messages - must be called with self.lock held.
+        """
+        logger.info('Deleting non-GD messages `%s`', msg_list)
+
+        for msg_id in list(msg_list):
+
             found_to_sub_key = self.msg_id_to_sub_key.pop(msg_id, None)
             found_to_msg = self.msg_id_to_msg.pop(msg_id, None)
 
@@ -362,6 +373,26 @@ class InRAMSyncBacklog(object):
             if not _has_sk_msg:
                 logger.warn('Message not found (_has_sk_msg) %s', msg_id)
                 logger_zato.warn('Message not found (_has_sk_msg) %s', msg_id)
+
+# ################################################################################################################################
+
+    def delete_messages(self, msg_list):
+        """ Deletes all messages from input msg_list.
+        """
+        with self.lock:
+            self._delete_messages(msg_list)
+
+# ################################################################################################################################
+
+    def clear_topic(self, topic_id):
+        logger.info('Clearing topic `%s` (id:%s)', self.pubsub.get_topic_by_id(topic_id).name, topic_id)
+
+        with self.lock:
+            # Not all servers will have messages for the topic, hence .get
+            messages = self.topic_msg_id.get(topic_id) or []
+            if messages:
+                messages = list(messages) # We need a copy so as not to change the input set during iteration later on
+            self._delete_messages(messages)
 
 # ################################################################################################################################
 
@@ -763,6 +794,12 @@ class PubSub(object):
     def get_topic_by_name(self, topic_name):
         with self.lock:
             return self._get_topic_by_name(topic_name)
+
+# ################################################################################################################################
+
+    def get_topic_by_id(self, topic_id):
+        with self.lock:
+            return self.topics[topic_id]
 
 # ################################################################################################################################
 
