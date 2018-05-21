@@ -25,7 +25,7 @@ from sortedcontainers import SortedList as _SortedList
 # Zato
 from zato.common import PUBSUB
 from zato.common.pubsub import PubSubMessage
-from zato.common.util import pretty_format_float, spawn_greenlet
+from zato.common.util import spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub import PubSub
 
@@ -602,7 +602,6 @@ class PubSubTool(object):
             logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
                 ctx.cid, int(ctx.has_gd), ctx.sub_key_list, len(ctx.non_gd_msg_list), ctx.is_bg_call)
 
-            sub_key_to_topic = self.pubsub.get_sub_key_to_topic_name_dict(ctx.sub_key_list)
             gd_msg_list = {}
 
             # We need to have the broad lock first to read in messages for all the sub keys
