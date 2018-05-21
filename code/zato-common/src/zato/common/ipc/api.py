@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -81,7 +81,8 @@ class IPCAPI(object):
             is_success = status == IPC.STATUS.SUCCESS
 
             if is_success:
-                response = loads(response) if response else ''
+                #print(333, response)
+                response = {'response':{'is_ok':False}} if response else ''
 
             buff.close()
 
@@ -120,6 +121,7 @@ class IPCAPI(object):
 
                 while now < until:
                     sleep(0.05)
+                    print(9090, fifo, fifo_response_buffer_size)
                     response = self._get_response(fifo, fifo_response_buffer_size)
                     if response:
                         break

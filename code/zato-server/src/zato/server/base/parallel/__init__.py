@@ -130,7 +130,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.ipc_api = IPCAPI(False)
         self.ipc_forwarder = IPCAPI(True)
         self.wmq_ipc_tcp_port = None
-        self.fifo_response_buffer_size = 0.1 # In megabytes
+        self.fifo_response_buffer_size = None # Will be in megabytes
         self.live_msg_browser = None
         self.is_first_worker = None
         self.shmem_size = -1.0
