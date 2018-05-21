@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from contextlib import closing
-from operator import itemgetter
 from traceback import format_exc
 
 # gevent

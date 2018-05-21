@@ -19,7 +19,6 @@ from sqlalchemy.sql import expression as expr
 from zato.common import PUBSUB
 from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, PubSubSubscription, Server, \
      WebSocketClient, WebSocketClientPubSubKeys
-from zato.common.util.time_ import utcnow_as_ms
 
 logger = getLogger('zato_pubsub')
 
