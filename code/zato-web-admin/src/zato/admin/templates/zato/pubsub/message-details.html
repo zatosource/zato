@@ -183,6 +183,8 @@
                 <td class='inline_header' style="width:90px">
                     {% ifequal object_type "queue" %}
                         Sub service
+                    {% else %}
+                        Server
                     {% endifequal %}
                 </td>
                 <td style="width:140px">
@@ -192,6 +194,8 @@
                         {% else %}
                             <span class='form_hint'>---</span>
                         {% endif %}
+                    {% else %}
+                        {{ server_name }}:{{ server_pid }}
                     {% endifequal %}
                 </td>
 

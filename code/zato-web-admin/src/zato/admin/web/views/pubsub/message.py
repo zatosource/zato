@@ -37,6 +37,19 @@ def get(req, cluster_id, object_type, object_id, msg_id):
         'action': 'update',
     })
 
+    _has_gd = asbool(req.GET['has_gd'])
+    _server_name = req.GET.get('server_name')
+    _server_pid = req.GET.get('server_pid')
+
+    input_dict = {
+        'cluster_id': cluster_id,
+        'msg_id': msg_id,
+    }
+
+    if not _has_gd:
+        input_dict['server_name'] = _server_name
+        input_dict['server_pid'] = _server_pid
+
     return_data.cluster_id = cluster_id
     return_data.object_type = object_type
     return_data['{}_id'.format(object_type)] = object_id
@@ -44,7 +57,8 @@ def get(req, cluster_id, object_type, object_id, msg_id):
 
     if object_type=='topic':
         object_service_name = 'zato.pubsub.topic.get'
-        msg_service_name = 'zato.pubsub.message.get-from-topic'
+        suffix = '-gd' if _has_gd else '-non-gd'
+        msg_service_name = 'zato.pubsub.message.get-from-topic' + suffix
     else:
         object_service_name = 'zato.pubsub.endpoint.get-endpoint-queue'
         msg_service_name = 'zato.pubsub.message.get-from-queue'
@@ -63,15 +77,9 @@ def get(req, cluster_id, object_type, object_id, msg_id):
     return_data.object_name_slug = slugify(return_data.object_name)
 
     try:
-        msg_service_response = req.zato.client.invoke(
-            msg_service_name, {
-            'cluster_id': cluster_id,
-            'msg_id': msg_id,
-        }).data.response
-
+        msg_service_response = req.zato.client.invoke(msg_service_name, input_dict).data.response
     except Exception:
         return_data.has_msg = False
-
     else:
         return_data.has_msg = True
         return_data.update(msg_service_response)

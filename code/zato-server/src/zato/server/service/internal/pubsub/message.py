@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,13 +10,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from copy import deepcopy
 from datetime import datetime
 
 # SQLAlchemy
 from sqlalchemy import and_, exists
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common import DATA_FORMAT, PUBSUB as COMMON_PUBSUB
 from zato.common.exception import NotFound
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage
 from zato.common.odb.query import pubsub_message, pubsub_queue_message
@@ -39,15 +40,20 @@ EndpointTopic = PubSubEndpointTopic.__table__
 
 # ################################################################################################################################
 
-class GetFromTopic(AdminService):
-    """ Returns a pub/sub topic message by its ID.
+class _GetSIO(AdminSIO):
+    input_required = (AsIs('msg_id'),)
+    output_optional = ('topic_id', 'topic_name', AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'pub_time', \
+        'ext_pub_time', 'pattern_matched', 'priority', 'data_format', 'mime_type', 'size', 'data',
+        'expiration', 'expiration_time', 'endpoint_id', 'endpoint_name', Bool('has_gd'),
+        'pub_hook_service_id', 'pub_hook_service_name', AsIs('ext_client_id'), 'server_name', 'server_pid')
+
+# ################################################################################################################################
+
+class GetFromTopicGD(AdminService):
+    """ Returns a GD pub/sub topic message by its ID.
     """
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', AsIs('msg_id'))
-        output_optional = ('topic_id', 'topic_name', AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'pub_time', \
-            'ext_pub_time', 'pattern_matched', 'priority', 'data_format', 'mime_type', 'size', 'data',
-            'expiration', 'expiration_time', 'endpoint_id', 'endpoint_name', Bool('has_gd'),
-            'pub_hook_service_id', 'pub_hook_service_name', AsIs('ext_client_id'))
+    class SimpleIO(_GetSIO):
+        input_required = _GetSIO.input_required + ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -62,6 +68,49 @@ class GetFromTopic(AdminService):
                 self.response.payload = item
             else:
                 raise NotFound(self.cid, 'No such message `{}`'.format(self.request.input.msg_id))
+
+# ################################################################################################################################
+
+class GetFromServerTopicNonGD(AdminService):
+    """ Returns a non-GD message from current server.
+    """
+    class SimpleIO(_GetSIO):
+        pass
+
+    def handle(self):
+        msg = self.pubsub.sync_backlog.get_message_by_id(self.request.input.msg_id)
+
+        # We need to re-arrange attributes but we don't want to update the original message in place
+        msg = deepcopy(msg)
+
+        msg['msg_id'] = msg.pop('pub_msg_id')
+        msg['correl_id'] = msg.pop('pub_correl_id', None)
+        msg['pub_time'] = datetime_from_ms(msg['pub_time'] * 1000.0)
+
+        expiration_time = msg.pop('expiration_time', None)
+        if expiration_time:
+            msg['expiration_time'] = datetime_from_ms(expiration_time * 1000.0)
+
+        msg['endpoint_id'] = msg.pop('published_by_id')
+        msg['endpoint_name'] = self.pubsub.get_endpoint_by_id(msg['endpoint_id']).name
+
+        self.response.payload = msg
+
+# ################################################################################################################################
+
+class GetFromTopicNonGD(AdminService):
+    """ Returns a non-GD pub/sub topic message by its ID.
+    """
+    class SimpleIO(_GetSIO):
+        input_required = _GetSIO.input_required + ('server_name', 'server_pid')
+
+    def handle(self):
+        server = self.servers[self.request.input.server_name]
+        response = server.invoke(GetFromServerTopicNonGD.get_name(), {
+            'msg_id': self.request.input.msg_id,
+        }, pid=self.request.input.server_pid)
+
+        self.response.payload = response['response']
 
 # ################################################################################################################################
 
