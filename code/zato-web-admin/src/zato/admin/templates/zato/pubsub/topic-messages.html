@@ -83,7 +83,7 @@
                             <td>{{ item.server_name }}:{{ item.server_pid }}</td>
                         {% endif %}
                         <td>{{ item.pub_time }}</td>
-                        <td><a href="{% url "pubsub-message" cluster_id "topic" topic_id item.msg_id %}">{{ item.msg_id }}</a></td>
+                        <td><a href="{% url "pubsub-message" cluster_id "topic" topic_id item.msg_id %}?has_gd={{ has_gd }}{% if not has_gd %}&amp;server_name={{ item.server_name }}&amp;server_pid={{ item.server_pid }}{% endif %}">{{ item.msg_id }}</a></td>
 
                         <td>{{ item.endpoint_html|safe }}</td>
                         <td>{{ item.pattern_matched }}</td>

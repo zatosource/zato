@@ -279,7 +279,7 @@ class InRAMSyncBacklog(object):
 
 # ################################################################################################################################
 
-    def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages):
+    def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages, _default_pri=PUBSUB.PRIORITY.DEFAULT):
         """ Adds all input messages to sub_keys for the topic.
         """
         with self.lock:
@@ -311,6 +311,10 @@ class InRAMSyncBacklog(object):
                 # .. attach server metadata ..
                 msg['server_name'] = self.pubsub.server.name
                 msg['server_pid'] = self.pubsub.server.pid
+
+                # .. set default priority if none was given ..
+                if 'priority' not in msg:
+                    msg['priority'] = _default_pri
 
                 # .. add a reverse mapping, from message ID to sub_key ..
                 msg_sub_key = self.msg_id_to_sub_key.setdefault(msg['pub_msg_id'], set())
@@ -511,6 +515,12 @@ class InRAMSyncBacklog(object):
                 msg_list.append(out_msg)
 
             return msg_list
+
+# ################################################################################################################################
+
+    def get_message_by_id(self, msg_id):
+        with self.lock:
+            return self.msg_id_to_msg[msg_id]
 
 # ################################################################################################################################
 
