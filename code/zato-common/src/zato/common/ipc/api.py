@@ -16,6 +16,7 @@ import stat
 import tempfile
 from cStringIO import StringIO
 from datetime import datetime, timedelta
+from fcntl import fcntl
 from traceback import format_exc
 from uuid import uuid4
 
@@ -40,6 +41,9 @@ logger = logging.getLogger(__name__)
 
 fifo_create_mode = stat.S_IRUSR | stat.S_IWUSR
 fifo_ignore_err = errno.EAGAIN, errno.EWOULDBLOCK
+
+# On Linux, this is F_LINUX_SPECIFIC_BASE (1024) + 7
+_F_SETPIPE_SZ = 1031
 
 # ################################################################################################################################
 
@@ -81,8 +85,7 @@ class IPCAPI(object):
             is_success = status == IPC.STATUS.SUCCESS
 
             if is_success:
-                #print(333, response)
-                response = {'response':{'is_ok':False}} if response else ''
+                response = loads(response) if response else ''
 
             buff.close()
 
@@ -112,27 +115,26 @@ class IPCAPI(object):
             try:
 
                 # Open the pipe for reading ..
-                fifo = os.open(fifo_path, os.O_RDONLY|os.O_NONBLOCK)
+                fifo_fd = os.open(fifo_path, os.O_RDONLY|os.O_NONBLOCK)
+                fcntl(fifo_fd, _F_SETPIPE_SZ, 1000000)
 
                 # .. and wait for response ..
-
                 now = datetime.utcnow()
                 until = now + timedelta(seconds=timeout)
 
                 while now < until:
                     sleep(0.05)
-                    print(9090, fifo, fifo_response_buffer_size)
-                    response = self._get_response(fifo, fifo_response_buffer_size)
+                    response = self._get_response(fifo_fd, fifo_response_buffer_size)
                     if response:
                         break
                     else:
                         now = datetime.utcnow()
 
-            except Exception, e:
-                logger.warn('Exception in IPC FIFO, e:`%s`', format_exc(e))
+            except Exception:
+                logger.warn('Exception in IPC FIFO, e:`%s`', format_exc())
 
             finally:
-                os.close(fifo)
+                os.close(fifo_fd)
 
             return response
 
