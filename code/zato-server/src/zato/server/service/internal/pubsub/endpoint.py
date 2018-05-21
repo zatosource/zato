@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,15 +10,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-
-# SQLAlchemy
+from json import loads
 
 # Zato
 from zato.common import PUBSUB as COMMON_PUBSUB
 from zato.common.broker_message import PUBSUB
 from zato.common.exception import BadRequest, Conflict
-from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
-     PubSubSubscription, PubSubTopic
+from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic
 from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, pubsub_endpoint_queue, \
      pubsub_endpoint_queue_list_by_sub_keys, pubsub_messages_for_queue, server_by_id
 from zato.common.odb.query.pubsub.endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
@@ -39,6 +37,10 @@ broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
 skip_input_params = ['sub_key', 'is_sub_allowed']
 output_optional_extra = ['ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key']
+
+# ################################################################################################################################
+
+_meta_endpoint_key = COMMON_PUBSUB.REDIS.META_ENDPOINT_PUB_KEY
 
 # ################################################################################################################################
 
@@ -147,42 +149,25 @@ class Get(AdminService):
 class GetTopicList(AdminService):
     """ Returns all topics to which a given endpoint published at least once.
     """
-    class SimpleIO:
+
+    class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'endpoint_id')
-        output_required = ('topic_id', 'name', 'is_active', 'is_internal', 'max_depth_gd', 'max_depth_non_gd')
-        output_optional = ('last_pub_time', AsIs('last_msg_id'), AsIs('last_correl_id'), 'last_in_reply_to',
-            AsIs('ext_client_id'))
+        output_required = ('topic_id', 'topic_name', 'pub_time', AsIs('pub_msg_id'), 'pattern_matched', 'has_gd', 'data')
+        output_optional = (AsIs('pub_correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time')
         output_repeated = True
 
+# ################################################################################################################################
+
     def handle(self):
-        input = self.request.input
-        response = []
+        out = self.kvdb.conn.get(_meta_endpoint_key % (self.request.input.cluster_id, self.request.input.endpoint_id))
+        out = loads(out) if out else []
 
-        with closing(self.odb.session()) as session:
+        for elem in out:
+            elem['pub_time'] = datetime_from_ms(elem['pub_time'] * 1000.0)
+            if elem['ext_pub_time']:
+                elem['ext_pub_time'] = datetime_from_ms(elem['ext_pub_time'] * 1000.0)
 
-            # Get last pub time for that specific endpoint to this very topic
-            last_data = session.query(
-                PubSubTopic.id.label('topic_id'),
-                PubSubTopic.name, PubSubTopic.is_active,
-                PubSubTopic.is_internal, PubSubTopic.name,
-                PubSubTopic.max_depth_gd,
-                PubSubTopic.max_depth_non_gd,
-                PubSubEndpointTopic.last_pub_time,
-                PubSubEndpointTopic.pub_msg_id.label('last_msg_id'),
-                PubSubEndpointTopic.pub_correl_id.label('last_correl_id'),
-                PubSubEndpointTopic.in_reply_to.label('last_in_reply_to'),
-                PubSubEndpointTopic.ext_client_id,
-                ).\
-                filter(PubSubEndpointTopic.topic_id==PubSubTopic.id).\
-                filter(PubSubEndpointTopic.endpoint_id==input.endpoint_id).\
-                filter(PubSubEndpointTopic.cluster_id==self.request.input.cluster_id).\
-                all()
-
-            for item in last_data:
-                item.last_pub_time = datetime_from_ms(item.last_pub_time)
-                response.append(item)
-
-        self.response.payload[:] = response
+        self.response.payload[:] = out
 
 # ################################################################################################################################
 
@@ -191,16 +176,16 @@ class _GetEndpointQueue(AdminService):
 
         total_q = session.query(PubSubEndpointEnqueuedMessage.id).\
             filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-            filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id)
+            filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key)
 
         current_q = session.query(PubSubEndpointEnqueuedMessage.id).\
             filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-            filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id).\
+            filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key).\
             filter(PubSubEndpointEnqueuedMessage.is_in_staging != True)
 
         staging_q = session.query(PubSubEndpointEnqueuedMessage.id).\
             filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-            filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id).\
+            filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key).\
             filter(PubSubEndpointEnqueuedMessage.is_in_staging == True)
 
         total_depth = count(session, total_q)
@@ -421,7 +406,7 @@ class GetEndpointQueueMessages(AdminService):
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'sub_id')
         output_required = (AsIs('msg_id'), 'recv_time', 'data_prefix_short')
-        output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'has_gd', 'queue_name', 'endpoint_id')
+        output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name', 'endpoint_id')
         output_repeated = True
 
     def get_data(self, session):

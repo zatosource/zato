@@ -41,13 +41,23 @@ error_response = {
 # ################################################################################################################################
 
 class MSG_PREFIX:
-    _COMMON = 'zato.ws.srv.{}'
+    _COMMON = 'zwsx.{}'
 
     REQ_TO_CLIENT = _COMMON.format('rq-client')
     RESP_AUTH = _COMMON.format('rsp-auth')
     RESP_OK = _COMMON.format('rsp-ok')
-    MSG_ERR = _COMMON.format('msg-err') # A message from server indicating an error, no response from client is expected
-    RESP_ERROR = _COMMON.format('rsp-err') # As above but in response to a previous request from client
+
+    # A message from server indicating an error, no response from client is expected
+    MSG_ERR = _COMMON.format('msg-err')
+
+    # As above but in response to a previous request from client
+    RESP_ERROR = _COMMON.format('rsp-err')
+
+    # A publish/subscribe message from server to client
+    PUBSUB_REQ = _COMMON.format('ps-rq')
+
+    # A client response to a previous pub/sub request
+    PUBSUB_RESP = _COMMON.format('ps-rsp')
 
 # ################################################################################################################################
 
@@ -80,10 +90,10 @@ class ServerMessage(object):
     """
     is_response = True
 
-    def __init__(self, id_prefix, cid, in_reply_to=None, status=OK, error_message='', _now=datetime.utcnow):
-        self.id = '{}.{}'.format(id_prefix, cid)
+    def __init__(self, msg_type, cid, in_reply_to=None, status=OK, error_message='', _now=datetime.utcnow):
+        self.id = cid
         self.in_reply_to = in_reply_to
-        self.meta = Bunch(id=self.id, timestamp=_now().isoformat())
+        self.meta = Bunch(id=self.id, timestamp=_now().isoformat(), msg_type=msg_type)
         self.data = Bunch()
 
         if self.is_response:
@@ -129,9 +139,13 @@ class ErrorResponse(ServerMessage):
 class ClientInvokeRequest(ServerMessage):
     is_response = False
 
-    def __init__(self, cid, data):
-        super(ClientInvokeRequest, self).__init__(MSG_PREFIX.REQ_TO_CLIENT, cid)
+    def __init__(self, cid, data, _msg_type=MSG_PREFIX.REQ_TO_CLIENT):
+        super(ClientInvokeRequest, self).__init__(_msg_type, cid)
         self.data = data
+
+class PubSubClientInvokeRequest(ClientInvokeRequest):
+    def __init__(self, cid, data, _msg_type=MSG_PREFIX.PUBSUB_REQ):
+        super(PubSubClientInvokeRequest, self).__init__(cid, data, _msg_type)
 
 # ################################################################################################################################
 

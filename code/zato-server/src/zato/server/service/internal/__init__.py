@@ -18,7 +18,7 @@ from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.util import get_response_value, replace_private_key
 from zato.common.util.sql import search as sql_search
-from zato.server.service import Int, Service
+from zato.server.service import Bool, Int, Service
 
 # ################################################################################################################################
 
@@ -46,10 +46,7 @@ class SearchTool(object):
         return self.output_meta['search'].get('num_pages')
 
     def set_output_meta(self, result):
-        meta = self.output_meta['search']
-
-        for name in self._search_attrs:
-            meta[name] = getattr(result, name, None)
+        self.output_meta['search'].update(result.to_dict())
 
 # ################################################################################################################################
 
@@ -133,7 +130,7 @@ class AdminSIO(object):
 
 class GetListAdminSIO(object):
     namespace = zato_namespace
-    input_optional = ('cur_page', 'paginate', 'query')
+    input_optional = (Int('cur_page'), Bool('paginate'), 'query')
 
 # ################################################################################################################################
 

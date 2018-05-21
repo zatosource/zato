@@ -331,9 +331,14 @@ class ConfigLoader(object):
         # In preparation for a SIO rewrite, we loaded SIO config from a file
         # but actual code paths require the pre-3.0 format so let's prepare it here.
         self.config.simple_io = ConfigDict('simple_io', Bunch())
-        self.config.simple_io['int_parameters'] = self.sio_config.int.exact
-        self.config.simple_io['int_parameter_suffixes'] = self.sio_config.int.suffix
-        self.config.simple_io['bool_parameter_prefixes'] = self.sio_config.bool.prefix
+
+        int_exact = self.sio_config.int.exact
+        int_suffix = self.sio_config.int.suffix
+        bool_prefix = self.sio_config.bool.prefix
+
+        self.config.simple_io['int_parameters'] = int_exact if isinstance(int_exact, list) else [int_exact]
+        self.config.simple_io['int_parameter_suffixes'] = int_suffix if isinstance(int_suffix, list) else [int_suffix]
+        self.config.simple_io['bool_parameter_prefixes'] = bool_prefix if isinstance(bool_prefix, list) else [bool_prefix]
 
         # Pub/sub
         self.config.pubsub = Bunch()

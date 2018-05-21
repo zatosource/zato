@@ -350,6 +350,7 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
     from_sio_to_external=False, special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC), _is_bool=is_bool, _is_int=is_int,
     _is_secret=is_secret):
     try:
+
         if _is_bool(param, param_name, bool_parameter_prefixes):
             if value == '' and force_empty_keys:
                 value = None
@@ -361,7 +362,7 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
                 value = param.convert(value, param_name, data_format, from_sio_to_external)
             else:
                 # Empty string sent in lieu of integers are equivalent to None,
-                # as though they were never sent - this is need for internal metaclasses
+                # as though they were never sent - this is needed for internal metaclasses
                 if value == '' and _is_int(param_name, int_parameters, int_parameter_suffixes):
                     value = None
 

@@ -71,11 +71,11 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.out_http_method,
         PubSubSubscription.delivery_endpoint,
 
-        PubSubSubscription.ws_sub_id,
         PubSubSubscription.ws_channel_id,
         PubSubSubscription.cluster_id,
 
         PubSubTopic.name.label('topic_name'),
+        PubSubTopic.task_delivery_interval,
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubEndpoint.endpoint_type,
         PubSubEndpoint.service_id,

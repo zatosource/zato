@@ -20,7 +20,7 @@ from zato.common import DATA_FORMAT
 from zato.common.exception import NotFound
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage
 from zato.common.odb.query import pubsub_message, pubsub_queue_message
-from zato.common.util.time_ import datetime_from_ms
+from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority
 from zato.server.service import AsIs, Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO
@@ -56,9 +56,9 @@ class GetFromTopic(AdminService):
                 first()
 
             if item:
-                item.pub_time = datetime_from_ms(item.pub_time)
-                item.ext_pub_time = datetime_from_ms(item.ext_pub_time) if item.ext_pub_time else ''
-                item.expiration_time = datetime_from_ms(item.expiration_time) if item.expiration_time else ''
+                item.pub_time = datetime_from_ms(item.pub_time * 1000)
+                item.ext_pub_time = datetime_from_ms(item.ext_pub_time * 1000) if item.ext_pub_time else ''
+                item.expiration_time = datetime_from_ms(item.expiration_time * 1000) if item.expiration_time else ''
                 self.response.payload = item
             else:
                 raise NotFound(self.cid, 'No such message `{}`'.format(self.request.input.msg_id))
@@ -84,7 +84,7 @@ class Has(AdminService):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes a message by its ID. Cascades to all related SQL objects, e.g. subscriber queues.
+    """ Deletes a GD message by its ID. Cascades to all related SQL objects, e.g. subscriber queues.
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'))
@@ -104,13 +104,45 @@ class Delete(AdminService):
                 filter(PubSubTopic.id==ps_msg.topic_id).\
                 one()
 
-            # Delete the message and decrement its topic's current depth ..
-            session.delete(ps_msg)
-            ps_topic.current_depth_gd = ps_topic.current_depth_gd - 1
-
-            # .. but do it under a global lock because other transactions may want to update the topic in parallel.
+            # Delete the message  but do it under a global lock because other transactions
+            # may want to update the topic in parallel.
             with self.lock('zato.pubsub.publish.%s' % ps_topic.name):
+                session.delete(ps_msg)
                 session.commit()
+
+        self.logger.info('Deleted GD message `%s`', self.request.input.msg_id)
+
+# Add an alias for consistency
+class DeleteGD(Delete):
+    pass
+
+# ################################################################################################################################
+
+class DeleteNonGDMessage(AdminService):
+    """ Deletes a non-GD message by its ID from current server.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = (AsIs('msg_id'),)
+
+    def handle(self):
+        self.pubsub.sync_backlog.delete_msg_by_id(self.request.input.msg_id)
+
+# ################################################################################################################################
+
+class DeleteNonGD(AdminService):
+    """ Deletes a non-GD message by its ID from a named server.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'server_name', 'server_pid', AsIs('msg_id'))
+
+    def handle(self):
+        server = self.servers[self.request.input.server_name]
+        server.invoke(DeleteNonGDMessage.get_name(), {
+            'msg_id': self.request.input.msg_id,
+        }, pid=self.request.input.server_pid)
+
+        self.logger.info('Deleted non-GD message `%s` from `%s:%s`',
+            self.request.input.msg_id, self.request.input.server_name, self.request.input.server_pid)
 
 # ################################################################################################################################
 
@@ -119,7 +151,8 @@ class Update(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'), 'mime_type')
-        input_optional = ('data', Int('expiration'), AsIs('correl_id'), AsIs('in_reply_to'), Int('priority'))
+        input_optional = ('data', Int('expiration'), AsIs('correl_id'), AsIs('in_reply_to'), Int('priority'),
+            Bool('exp_from_now'))
         output_required = (Bool('found'),)
         output_optional = ('expiration_time', Int('size'))
 
@@ -137,8 +170,8 @@ class Update(AdminService):
                 return
 
             item.data = input.data.encode('utf8')
-            item.data_prefix = input.data[:2048].encode('utf8')
-            item.data_prefix_short = input.data[:64].encode('utf8')
+            item.data_prefix = input.data[:self.pubsub.data_prefix_len].encode('utf8')
+            item.data_prefix_short = input.data[:self.pubsub.data_prefix_short_len].encode('utf8')
             item.size = len(input.data)
             item.expiration = get_expiration(self.cid, input)
             item.priority = get_priority(self.cid, input)
@@ -148,7 +181,11 @@ class Update(AdminService):
             item.mime_type = input.mime_type
 
             if item.expiration:
-                item.expiration_time = item.pub_time + (item.expiration * 1000)
+                if self.request.input.exp_from_now:
+                    from_ = utcnow_as_ms()
+                else:
+                    from_ = item.pub_time
+                item.expiration_time = from_ + (item.expiration / 1000.0)
             else:
                 item.expiration_time = None
 
@@ -157,7 +194,8 @@ class Update(AdminService):
 
             self.response.payload.found = True
             self.response.payload.size = item.size
-            self.response.payload.expiration_time = datetime_from_ms(item.expiration_time) if item.expiration_time else None
+            self.response.payload.expiration_time = datetime_from_ms(
+                item.expiration_time * 1000.0) if item.expiration_time else None
 
 # ################################################################################################################################
 
@@ -186,5 +224,9 @@ class GetFromQueue(AdminService):
                 self.response.payload = item
             else:
                 raise NotFound(self.cid, 'No such message `{}`'.format(self.request.input.msg_id))
+
+# ################################################################################################################################
+
+
 
 # ################################################################################################################################

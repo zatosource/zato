@@ -1672,7 +1672,7 @@ def is_class_pubsub_hook(class_):
 def ensure_pubsub_hook_is_valid(self, input, instance, attrs):
     """ An instance hook that validates if an optional pub/sub hook given on input actually subclasses PubSubHook.
     """
-    if input.hook_service_id:
+    if input.get('hook_service_id'):
         impl_name = self.server.service_store.id_to_impl_name[input.hook_service_id]
         details = self.server.service_store.services[impl_name]
         if not is_class_pubsub_hook(details['service_class']):
@@ -1708,5 +1708,10 @@ def get_sql_engine_display_name(engine, fs_sql_config):
             engine, fs_sql_config))
     else:
         return display_name
+
+# ################################################################################################################################
+
+def pretty_format_float(value):
+    return ('%f' % value).rstrip('0').rstrip('.') if value else value
 
 # ################################################################################################################################

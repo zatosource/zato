@@ -68,7 +68,7 @@ common_sub_data = CommonSubData.common + CommonSubData.amqp + CommonSubData.file
 
 class AfterPublish(AdminService):
     class SimpleIO(AdminSIO):
-        input_required = ('cid', AsIs('topic_id'), 'topic_name')
+        input_required = ('cid', AsIs('topic_id'), 'topic_name', 'is_bg_call', Opaque('pub_time_max'))
         input_optional = (Opaque('subscriptions'), Opaque('non_gd_msg_list'), 'has_gd_msg_list')
 
     def handle(self):
@@ -114,31 +114,37 @@ class AfterPublish(AdminService):
             topic_name = self.request.input.topic_name
             non_gd_msg_list = self.request.input.non_gd_msg_list
             has_gd_msg_list = self.request.input.has_gd_msg_list
+            is_bg_call = self.request.input.is_bg_call
+            pub_time_max = self.request.input.pub_time_max
 
-            # We already know we can store them in RAM
+            # We already know that we can store some of the messages in RAM ..
             if not_found:
-                self._store_in_ram(cid, topic_id, topic_name, not_found, non_gd_msg_list, False)
+                self._store_in_ram(cid, topic_id, topic_name, not_found, non_gd_msg_list)
 
-            # Attempt to notify pub/sub tasks about non-GD messages ..
-            notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list, has_gd_msg_list)
+            # .. but if some servers are up, attempt to notify pub/sub tasks about the messages ..
+            if current_servers:
+                notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list,
+                    has_gd_msg_list, is_bg_call, pub_time_max)
 
-            # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
-            if notif_error_sub_keys:
-                self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, True)
+                # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
+                # Note that only non-GD messages go to RAM because the GD ones are still in the SQL database.
+                if notif_error_sub_keys:
+                    self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list)
 
         except Exception:
             self.logger.warn('Error in after_publish callback, e:`%r`', format_exc())
 
 # ################################################################################################################################
 
-    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error):
+    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list):
         """ Stores in RAM all input messages for all sub_keys.
         """
-        self.pubsub.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error)
+        self.pubsub.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list)
 
 # ################################################################################################################################
 
-    def _notify_pub_sub(self, current_servers, non_gd_msg_list, has_gd_msg_list, endpoint_type_service=endpoint_type_service):
+    def _notify_pub_sub(self, current_servers, non_gd_msg_list, has_gd_msg_list, is_bg_call, pub_time_max,
+        endpoint_type_service=endpoint_type_service):
         """ Notifies all relevant remote servers about new messages available for delivery.
         For GD messages     - a flag is sent to indicate that there is at least one message waiting in SQL DB.
         For non-GD messages - their actual contents is sent.
@@ -157,7 +163,9 @@ class AfterPublish(AdminService):
                         'endpoint_type': endpoint_type,
                         'has_gd': has_gd_msg_list,
                         'sub_key_list': sub_key_list,
-                        'non_gd_msg_list': non_gd_msg_list
+                        'non_gd_msg_list': non_gd_msg_list,
+                        'is_bg_call': is_bg_call,
+                        'pub_time_max': pub_time_max,
                     },
                 }, pid=server_pid)
 
@@ -172,7 +180,7 @@ class AfterPublish(AdminService):
 class AfterWSXReconnect(AdminService):
     """ Invoked by WSX clients after they reconnect with a list of their sub_keys on input. Collects all messages
     waiting on other servers for that WebSocket and lets the caller know how many of them are available. At the same time,
-    the collection process trigger's that WebSocket's delivery task (via pubsub_tool) to start deliveries.
+    the collection process triggers that WebSocket's delivery task (via pubsub_tool) to start deliveries.
     """
     class SimpleIO(AdminSIO):
         input_required = ('sql_ws_client_id', 'channel_name', AsIs('pub_client_id'), Opaque('web_socket'))
@@ -224,8 +232,8 @@ class AfterWSXReconnect(AdminService):
 
                     # .. add any GD messages waiting for this sub_key - note that we providing our
                     # own session on input so as to control when the SQL commit happens,
-                    # which we want to have after all sub_keys have been processed.
-                    pubsub_tool.fetch_gd_messages_by_sub_key(sub_key, session)
+                    # which we want to take place after all sub_keys have been processed.
+                    pubsub_tool.enqueue_gd_messages_by_sub_key(sub_key, session)
 
                     # Will hold depths of queues
                     response[sub_key] = {

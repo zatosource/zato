@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,6 +21,7 @@ from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, slugify
 from zato.admin.web.views.pubsub import get_client_html, get_endpoint_html
 from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubTopic
+from zato.common.util import asbool
 
 # ################################################################################################################################
 
@@ -39,9 +40,13 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'is_api_sub_allowed', 'max_depth_gd',
-            'max_depth_non_gd', 'current_depth_gd', 'current_depth_non_gd', 'depth_check_freq', 'hook_service_id')
-        output_optional = ('last_pub_time',)
+            'max_depth_non_gd', 'current_depth_gd', 'current_depth_non_gd', 'depth_check_freq', 'hook_service_id',
+            'pub_buffer_size_gd', 'task_sync_interval', 'task_delivery_interval')
+        output_optional = ('last_pub_time', 'last_pub_msg_id', 'last_endpoint_id', 'last_endpoint_name')
         output_repeated = True
+
+    def populate_initial_input_dict(self, initial_input_dict):
+        initial_input_dict['needs_details'] = True
 
     def on_before_append_item(self, item):
         if item.last_pub_time:
@@ -61,8 +66,8 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'is_internal', 'has_gd', 'is_api_sub_allowed', 'max_depth_gd',
-            'max_depth_non_gd', 'depth_check_freq')
-        input_optional = ('hook_service_id',)
+            'max_depth_non_gd', 'depth_check_freq', 'pub_buffer_size_gd', 'task_sync_interval', 'task_delivery_interval')
+        input_optional = ('hook_service_id', 'exp_from_now')
         output_required = ('id', 'name', 'has_gd')
 
     def post_process_return_data(self, return_data):
@@ -93,7 +98,7 @@ class _CreateEdit(CreateEdit):
         return_data['current_depth_link'] = """
             <a href="{}?cluster={}">{}</a>
             /
-            <a href="{}?cluster={}">{}</a>
+            {}
             """.format(
 
             # GD messages
@@ -103,8 +108,7 @@ class _CreateEdit(CreateEdit):
             item.current_depth_gd,
 
             # Non-GD messages
-            django_url_reverse('pubsub-topic-in-ram-backlog',
-                kwargs={'topic_id':return_data['id'], 'name_slug':slugify(return_data['name'])}),
+            item.current_depth_gd,
             self.req.zato.cluster_id,
             item.current_depth_gd
         )
@@ -203,41 +207,40 @@ class TopicMessages(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-topic-messages'
     template = 'zato/pubsub/topic-messages.html'
-    service_name = 'zato.pubsub.topic.get-message-list'
+    service_name = None
     output_class = PubSubMessage
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'topic_id')
+        input_required = ('cluster_id', 'topic_id', 'has_gd')
         output_required = ('msg_id', 'pub_time', 'data_prefix_short', 'pattern_matched')
         output_optional = ('correl_id', 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
-            'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name')
+            'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_name', 'server_pid')
         output_repeated = True
+
+    def get_service_name(self):
+        return 'zato.pubsub.topic.get-gd-message-list' if self.req.has_gd else 'zato.pubsub.topic.get-non-gd-message-list'
 
     def on_before_append_item(self, item):
         item.pub_time = from_utc_to_user(item.pub_time+'+00:00', self.req.zato.user_profile)
         item.endpoint_html = get_endpoint_html(item, self.req.zato.cluster_id)
         return item
 
+    def set_input(self, *args, **kwargs):
+        self.req.has_gd = asbool(self.req.GET['has_gd'])
+        super(TopicMessages, self).set_input(*args, **kwargs)
+
     def handle(self):
 
         return {
             'topic_id': self.input.topic_id,
+            'has_pubsub': True,
+            'has_gd': self.req.has_gd,
             'topic_name': self.req.zato.client.invoke(
                 'zato.pubsub.topic.get', {
                     'cluster_id':self.req.zato.cluster_id,
                     'id':self.input.topic_id,
                 }).data.response.name
         }
-
-# ################################################################################################################################
-
-class InRAMBacklog(_Index):
-    method_allowed = 'GET'
-    url_name = 'pubsub-topic-in-ram-backlog'
-    template = 'zato/pubsub/topic-in-ram-backlog.html'
-    service_name = 'zato.pubsub.topic.get-in-ram-backlog'
-    output_class = PubSubMessage
-    paginate = True
 
 # ################################################################################################################################

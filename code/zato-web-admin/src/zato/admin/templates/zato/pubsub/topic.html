@@ -43,8 +43,10 @@
             'max_depth_non_gd',
             'depth_check_freq',
 
+            'pub_buffer_size_gd',
             'hook_service_id',
-
+            'task_sync_interval',
+            'task_delivery_interval',
         ]
     }
     </script>
@@ -80,7 +82,7 @@
                         <th><a href="#">GD</a></th>
                         <th><a href="#">Max depth GD / RAM</a></th>
                         <th><a href="#">Current depth GD / RAM</a></th>
-                        <th><a href="#">Last pub. time</a></th>
+                        <th><a href="#">Last pub data</a></th>
 
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -97,6 +99,8 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -110,15 +114,23 @@
                         <td>{{ item.has_gd|yesno:"Yes,No" }}</td>
                         <td>{{ item.max_depth_gd }} / {{ item.max_depth_non_gd }}</td>
                         <td id="current_depth_{{ item.id }}">
-                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;gd=1">{{ item.current_depth_gd }}</a>
+                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;has_gd=1">{{ item.current_depth_gd }}</a>
                             /
-                            <!--
-                                <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;gd=0">{{ item.current_depth_non_gd }}</a>
-                            -->
-                            {{ item.current_depth_non_gd }}
+                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;has_gd=0">{{ item.current_depth_non_gd }}</a>
                         </td>
 
-                        <td>{{ item.last_pub_time|default:"<span class='form_hint'>---</span>" }}</td>
+                        <td>
+                            {% if item.last_pub_time %}
+                                {{ item.last_pub_time }}
+                                (UTC)
+                                <br/>
+                                {{ item.last_pub_msg_id }}
+                                <br/>
+                                <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ item.last_endpoint_id }}">{{ item.last_endpoint_name }}</a>
+                            {% else %}
+                                <span class='form_hint'>---</span>
+                            {% endif %}
+                        </td>
                         <td><a href="{% url "pubsub-message-publish" cluster_id item.id %}">Publish</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.clear('{{ item.id }}')">Clear</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.edit('{{ item.id }}')">Edit</a></td>
@@ -140,13 +152,16 @@
                         <td class='ignore'>{{ item.max_depth_non_gd }}</td>
                         <td class='ignore'>{{ item.depth_check_freq }}</td>
 
+                        <td class='ignore'>{{ item.pub_buffer_size_gd }}</td>
                         <td class='ignore'>{{ item.hook_service_id }}</td>
+                        <td class='ignore'>{{ item.task_sync_interval }}</td>
+                        <td class='ignore'>{{ item.task_delivery_interval }}</td>
 
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='21'>No results</td>
+                        <td colspan='25'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -161,7 +176,7 @@
                 <form action="{% url "pubsub-topic-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Name</td>
+                            <td style="vertical-align:middle; width:13%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
@@ -186,17 +201,60 @@
 
                             </td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Max depth GD</td>
-                            <td>{{ create_form.max_depth_gd }} </td>
+                            <td style="vertical-align:middle">Max depth</td>
+                            <td>
+
+                            <label>
+                            GD {{ create_form.max_depth_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            RAM {{ create_form.max_depth_non_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Check freq. {{ create_form.depth_check_freq }}
+                            </label>
+
+                            </td>
+
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            Intervals
+                            <br/>
+                            <span class="form_hint">(in ms)</span>
+                            </td>
+
+                            <td>
+
+                            <label>
+                            Sync
+                            {{ create_form.task_sync_interval }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Delivery {{ create_form.task_delivery_interval }}
+                            </label>
+
+                            </td>
+
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Max depth RAM</td>
-                            <td>{{ create_form.max_depth_non_gd }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Depth check freq.</td>
-                            <td>{{ create_form.depth_check_freq }} </td>
+                            <td style="vertical-align:middle">GD buffer</td>
+                            <td>
+                                {{ create_form.pub_buffer_size_gd }}
+                                <span class="form_hint">(in messages)</span>
+                            </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Service</td>
@@ -204,6 +262,7 @@
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
+                                {{ create_form.pub_buffer_size_non_gd }}
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -219,7 +278,7 @@
                 <form action="{% url "pubsub-topic-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:14%">Name</td>
+                            <td style="vertical-align:middle; width:13%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
@@ -244,24 +303,68 @@
 
                             </td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Max depth GD</td>
-                            <td>{{ edit_form.max_depth_gd }} </td>
+                            <td style="vertical-align:middle">Max depth</td>
+                            <td>
+
+                            <label>
+                            GD {{ edit_form.max_depth_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            RAM {{ edit_form.max_depth_non_gd }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Check freq. {{ edit_form.depth_check_freq }}
+                            </label>
+
+                            </td>
+
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Max depth RAM</td>
-                            <td>{{ edit_form.max_depth_non_gd }} </td>
+                            <td style="vertical-align:middle">
+                            Intervals
+                            <br/>
+                            <span class="form_hint">(in ms)</span>
+                            </td>
+
+                            <td>
+
+                            <label>
+                            Sync
+                            {{ edit_form.task_sync_interval }}
+                            </label>
+
+                            |
+
+                            <label>
+                            Delivery {{ edit_form.task_delivery_interval }}
+                            </label>
+
+                            </td>
+
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Depth check freq.</td>
-                            <td>{{ edit_form.depth_check_freq }} </td>
+                            <td style="vertical-align:middle">GD buffer</td>
+                            <td>
+                                {{ edit_form.pub_buffer_size_gd }}
+                                <span class="form_hint">(in messages)</span>
+                            </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.hook_service_id }} </td>
                         </tr>
+
                         <tr>
                             <td colspan="2" style="text-align:right">
+                                {{ edit_form.pub_buffer_size_non_gd }}
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
