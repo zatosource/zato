@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018 Dariusz Suchojad <dsuch at zato.io>
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -766,14 +766,18 @@ class PUBSUB:
                 return iter((self.PRIORITY, self.EXT_PUB_TIME, self.PUB_TIME))
 
     class DEFAULT:
-        DATA_FORMAT = 'text/plain'
+        DATA_FORMAT = 'text'
+        MIME_TYPE = 'text/plain'
         TOPIC_MAX_DEPTH_GD = 10000
         TOPIC_MAX_DEPTH_NON_GD = 1000
         DEPTH_CHECK_FREQ = 100
         GET_BATCH_SIZE = 50
-        DELIVERY_BATCH_SIZE = 1
+        DELIVERY_BATCH_SIZE = 15000
         DELIVERY_MAX_RETRY = 123456789
         DELIVERY_MAX_SIZE = 500000 # 500 kB
+        PUB_BUFFER_SIZE_GD = 0
+        TASK_SYNC_INTERVAL = 500
+        TASK_DELIVERY_INTERVAL = 2000
         WAIT_TIME_SOCKET_ERROR = 10
         WAIT_TIME_NON_SOCKET_ERROR = 30
 
@@ -815,10 +819,10 @@ class PUBSUB:
                 return iter((self.NOTIFY, self.PULL))
 
     class DELIVERY_STATUS:
-        DELIVERED = 'delivered'
-        INITIALIZED = 'initialized'
-        TO_DELETE = 'to-delete'
-        WAITING_FOR_CONFIRMATION = 'waiting-for-confirmation'
+        DELIVERED = 1
+        INITIALIZED = 2
+        TO_DELETE = 3
+        WAITING_FOR_CONFIRMATION = 4
 
     class PRIORITY:
         DEFAULT = 5
@@ -838,6 +842,7 @@ class PUBSUB:
         NO_MSG = 'no-messages'
         SOCKET_ERROR = 'socket-error'
         OTHER_ERROR = 'other-error'
+        OK = 'ok'
 
     class ENDPOINT_TYPE:
         AMQP = NameId('AMQP', 'amqp')
@@ -855,6 +860,11 @@ class PUBSUB:
         class __metaclass__(type):
             def __iter__(self):
                 return iter((self.REST, self.SERVICE, self.SOAP, self.WEB_SOCKETS))
+
+    class REDIS:
+        META_TOPIC_LAST_KEY = 'zato.ps.meta.topic.last.%s.%s'
+        META_ENDPOINT_PUB_KEY = 'zato.ps.meta.endpoint.pub.%s.%s'
+        META_ENDPOINT_SUB_KEY = 'zato.ps.meta.endpoint.sub.%s.%s'
 
 # Not to be made available externally yet.
 skip_endpoint_types = (

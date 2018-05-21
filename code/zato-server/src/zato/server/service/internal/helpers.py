@@ -19,6 +19,7 @@ from django.conf import settings
 from django.template import Context, Template
 
 # Zato
+from zato.common.exception import Forbidden
 from zato.server.service import AsIs, Service
 
 # Configure Django settings when the module is picked up
@@ -121,5 +122,27 @@ class WebSocketsGateway(Service):
     def handle(self):
         self.response.payload = self.invoke(self.request.input.service, self.request.input.request,
             wsgi_environ=self.wsgi_environ)
+
+# ################################################################################################################################
+
+class WebSocketsPubSubGateway(Service):
+    """ Dispatches incoming requests to target services.
+    """
+    name = 'helpers.web-sockets-pub-sub-gateway'
+
+    class SimpleIO:
+        input_required = ('service',)
+        input_optional = (AsIs('request'),)
+
+    def handle(self):
+
+        # Make sure this is one of allowed services that we are to invoke
+        if self.request.input.service not in self.server.fs_server_config.pubsub.wsx_gateway_service_allowed:
+            raise Forbidden(self.cid)
+
+        # All good, we can invoke this service
+        else:
+            self.response.payload = self.invoke(self.request.input.service, self.request.input.request,
+                wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################

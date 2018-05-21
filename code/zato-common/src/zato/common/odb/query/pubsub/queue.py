@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,12 +9,17 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # SQLAlchemy
-from sqlalchemy import update
+from sqlalchemy import func, update
 
 # Zato
 from zato.common import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription
 from zato.common.odb.query import count, _pubsub_queue_message
+from zato.common.util.time_ import utcnow_as_ms
+
+# ################################################################################################################################
+
+PubSubEnqMsg = PubSubEndpointEnqueuedMessage
 
 # ################################################################################################################################
 
@@ -31,7 +36,7 @@ def get_messages(session, cluster_id, sub_key, batch_size, now, _initialized=_in
     # First, get all messages but note it is SELECT FOR UPDATE
     messages = _pubsub_queue_message(session, cluster_id).\
         filter(PubSubSubscription.sub_key==sub_key).\
-        filter(PubSubEndpointEnqueuedMessage.delivery_status==_initialized).\
+        filter(PubSubEnqMsg.delivery_status==_initialized).\
         filter(PubSubMessage.expiration_time>=now).\
         with_for_update().\
         order_by(PubSubMessage.ext_pub_time.desc()).\
@@ -43,14 +48,14 @@ def get_messages(session, cluster_id, sub_key, batch_size, now, _initialized=_in
 
     if msg_id_list:
         session.execute(
-            update(PubSubEndpointEnqueuedMessage).\
+            update(PubSubEnqMsg).\
             values({
                 'delivery_status': _waiting,
                 'delivery_time': now,
-                'delivery_count': PubSubEndpointEnqueuedMessage.__table__.c.delivery_count + 1,
+                'delivery_count': PubSubEnqMsg.__table__.c.delivery_count + 1,
                 }).\
-            where(PubSubEndpointEnqueuedMessage.cluster_id).\
-            where(PubSubEndpointEnqueuedMessage.pub_msg_id.in_(msg_id_list))
+            where(PubSubEnqMsg.cluster_id).\
+            where(PubSubEnqMsg.pub_msg_id.in_(msg_id_list))
         )
 
     # Return all messages fetched - our caller will commit the transaction thus releasing the FOR UPDATE lock
@@ -60,15 +65,15 @@ def get_messages(session, cluster_id, sub_key, batch_size, now, _initialized=_in
 
 def _set_delivery_status(session, cluster_id, sub_key, msg_id_list, now, status):
     session.execute(
-        update(PubSubEndpointEnqueuedMessage).\
+        update(PubSubEnqMsg).\
         values({
             'delivery_status': status,
             'delivery_time': now,
             }).\
         where(PubSubSubscription.sub_key==sub_key).\
-        where(PubSubEndpointEnqueuedMessage.cluster_id).\
-        where(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
-        where(PubSubEndpointEnqueuedMessage.pub_msg_id.in_(msg_id_list))
+        where(PubSubEnqMsg.cluster_id).\
+        where(PubSubEnqMsg.subscription_id==PubSubSubscription.id).\
+        where(PubSubEnqMsg.pub_msg_id.in_(msg_id_list))
     )
 
 # ################################################################################################################################
@@ -90,14 +95,28 @@ def acknowledge_delivery(session, cluster_id, sub_key, msg_id_list, now, status=
 def get_queue_depth_by_sub_key(session, cluster_id, sub_key, now):
     """ Returns queue depth for a given sub_key - does not include messages expired, in staging, or already delivered.
     """
-    current_q = session.query(PubSubEndpointEnqueuedMessage.id).\
-        filter(PubSubSubscription.id==PubSubEndpointEnqueuedMessage.subscription_id).\
-        filter(PubSubEndpointEnqueuedMessage.is_in_staging != True).\
-        filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
+    current_q = session.query(PubSubEnqMsg.id).\
+        filter(PubSubSubscription.id==PubSubEnqMsg.subscription_id).\
+        filter(PubSubEnqMsg.is_in_staging != True).\
+        filter(PubSubEnqMsg.pub_msg_id==PubSubMessage.pub_msg_id).\
         filter(PubSubMessage.expiration_time>=now).\
         filter(PubSubSubscription.sub_key==sub_key).\
-        filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id)
+        filter(PubSubEnqMsg.cluster_id==cluster_id)
 
     return count(session, current_q)
+
+# ################################################################################################################################
+
+def get_queue_depth_by_topic_id_list(session, cluster_id, topic_id_list):
+    """ Returns queue depth for a given sub_key - does not include messages expired, in staging, or already delivered.
+    """
+    return session.query(PubSubEnqMsg.topic_id, func.count(PubSubEnqMsg.topic_id)).\
+        filter(PubSubEnqMsg.topic_id.in_(topic_id_list)).\
+        filter(PubSubEnqMsg.cluster_id==cluster_id).\
+        filter(PubSubEnqMsg.delivery_status==_initialized).\
+        filter(PubSubEnqMsg.pub_msg_id==PubSubMessage.pub_msg_id).\
+        filter(PubSubMessage.expiration_time>=utcnow_as_ms()).\
+        group_by(PubSubMessage.topic_id).\
+        all()
 
 # ################################################################################################################################

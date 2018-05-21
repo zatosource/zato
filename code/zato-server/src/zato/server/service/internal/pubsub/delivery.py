@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.common import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
+from zato.common.pubsub import HandleNewMessageCtx
 from zato.server.pubsub.task import PubSubTool
 from zato.server.service import Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
@@ -25,11 +26,12 @@ class NotifyPubSubMessage(AdminService):
     def handle(self):
         # The request that we have on input needs to be sent to a pubsub_tool for each sub_key,
         # even if it is possibly the same pubsub_tool for more than one input sub_key.
-        request = self.request.raw_request['request']
+        req = self.request.raw_request['request']
 
-        for sub_key in request['sub_key_list']:
+        for sub_key in req['sub_key_list']:
             pubsub_tool = self.pubsub.pubsub_tool_by_sub_key[sub_key]
-            pubsub_tool.handle_new_messages(self.cid, request['has_gd'], [sub_key], request['non_gd_msg_list'])
+            pubsub_tool.handle_new_messages(HandleNewMessageCtx(self.cid, req['has_gd'], [sub_key],
+                req['non_gd_msg_list'], req['is_bg_call'], req['pub_time_max']))
 
 # ################################################################################################################################
 
@@ -51,14 +53,15 @@ class CreateDeliveryTask(AdminService):
             'server_name': self.server.name,
             'server_pid': self.server.pid,
             'sub_key': config['sub_key'],
-            'endpoint_type': config['endpoint_type']
+            'endpoint_type': config['endpoint_type'],
+            'task_delivery_interval': config['task_delivery_interval'],
         }
 
         # Register this delivery task with current server's pubsub but only if we do not have it already.
         # It is possible that we do, for instance:
         #
         # 1) This server had this task when it was starting up
-        # 2) The task was migrated to another
+        # 2) The task was migrated to another server
         #
         self.pubsub.set_sub_key_server(msg)
 
@@ -127,12 +130,23 @@ class GetServerPIDForSubKey(AdminService):
         input_required = ('sub_key',)
         output_optional = (Int('server_pid'),)
 
+# ################################################################################################################################
+
+    def _raise_bad_request(self, sub_key):
+        raise BadRequest(self.cid, 'No such sub_key found `{}`'.format(sub_key))
+
+# ################################################################################################################################
+
     def handle(self):
+        sub_key = self.request.input.sub_key
         try:
-            server = self.pubsub.get_sub_key_server(self.request.input.sub_key, False)
+            server = self.pubsub.get_sub_key_server(sub_key, False)
         except KeyError:
-            raise BadRequest(self.cid, 'No such sub_key found `{}`'.format(self.request.input.sub_key))
+            self._raise_bad_request(sub_key)
         else:
-            self.response.payload.server_pid = server.server_pid
+            if server:
+                self.response.payload.server_pid = server.server_pid
+            else:
+                self._raise_bad_request(sub_key)
 
 # ################################################################################################################################

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,16 +10,19 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from operator import itemgetter
 
 # Zato
+from zato.common import PUBSUB as COMMON_PUBSUB, SEARCH
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
-from zato.common.odb.query.pubsub.topic import get_topics_by_sub_keys
+from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_topics_by_sub_keys
 from zato.common.util import ensure_pubsub_hook_is_valid
 from zato.common.util.time_ import datetime_from_ms
-from zato.server.service import AsIs, Dict, Int, List
-from zato.server.service.internal import AdminService, GetListAdminSIO
+from zato.common.util.search import SearchResults
+from zato.server.service import AsIs, Bool, Dict, Int, List, Opaque
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
@@ -30,9 +33,15 @@ label = 'a pub/sub topic'
 broker_message = BROKER_MSG_PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
-skip_input_params = ['current_depth_gd', 'last_pub_time', 'is_internal']
-output_optional_extra = [Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time', 'is_internal',
-    'hook_service_name']
+skip_input_params = ['is_internal', 'current_depth_gd', 'last_pub_time', 'last_pub_msg_id', 'last_endpoint_id',
+    'last_endpoint_name']
+input_optional_extra = ['needs_details']
+output_optional_extra = ['is_internal', Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time',
+    'hook_service_name', 'last_pub_time', AsIs('last_pub_msg_id'), 'last_endpoint_id', 'last_endpoint_name']
+
+# ################################################################################################################################
+
+_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
 
 # ################################################################################################################################
 
@@ -51,17 +60,39 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
 # ################################################################################################################################
 
+def get_last_pub_data(conn, cluster_id, topic_id, _topic_key=COMMON_PUBSUB.REDIS.META_TOPIC_LAST_KEY):
+    last_data = conn.hgetall(_topic_key % (cluster_id, topic_id))
+    if last_data:
+        last_data['pub_time'] = datetime_from_ms(float(last_data['pub_time']) * 1000)
+        return last_data
+
+# ################################################################################################################################
+
 def response_hook(self, input, instance, attrs, service_type):
     if service_type == 'get_list':
-        for item in self.response.payload:
 
-            # Checks current non-GD depth on all servers
-            item.current_depth_non_gd = self.invoke('zato.pubsub.topic.collect-non-gd-depth', {
-                'topic_name': item.name,
-            })['response']['current_depth_non_gd']
+        # Details are needed when topics are in their own main screen but if only basic information
+        # is needed, like a list of topic IDs and names, we don't need to look up additional details.
+        # The latter is the case of the message publication screen which simply needs a list of topic IDs/names.
+        if input.get('needs_details', True):
 
-            if item.last_pub_time:
-                item.last_pub_time = datetime_from_ms(item.last_pub_time)
+            with closing(self.odb.session()) as session:
+                for item in self.response.payload:
+
+                    # Checks current non-GD depth on all servers
+                    item.current_depth_non_gd = self.invoke('zato.pubsub.topic.collect-non-gd-depth', {
+                        'topic_name': item.name,
+                    })['response']['current_depth_non_gd']
+
+                    # Checks current GD depth in SQL
+                    item.current_depth_gd = get_gd_depth_topic(session, input.cluster_id, item.id)
+
+                    last_data = get_last_pub_data(self.kvdb.conn, self.server.cluster_id, item.id)
+                    if last_data:
+                        item.last_pub_time = last_data['pub_time']
+                        item.last_pub_msg_id = last_data['pub_msg_id']
+                        item.last_endpoint_id = last_data['endpoint_id']
+                        item.last_endpoint_name = last_data['endpoint_name']
 
 # ################################################################################################################################
 
@@ -99,45 +130,69 @@ class Get(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            topic = pubsub_topic(session, self.request.input.cluster_id, self.request.input.id)
+            topic = pubsub_topic(session, self.request.input.cluster_id, self.request.input.id)._asdict()
+            topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, self.request.input.id)
 
-        if topic.last_pub_time:
-            topic.last_pub_time = datetime_from_ms(topic.last_pub_time)
+        last_data = get_last_pub_data(self.kvdb.conn, self.server.cluster_id, self.request.input.id)
+        topic['last_pub_time'] = last_data['pub_time']
 
         self.response.payload = topic
 
 # ################################################################################################################################
 
-class Clear(AdminService):
+class ClearTopicNonGD(AdminService):
+    """ Clears a topic from all non-GD messages on current server.
+    """
     class SimpleIO:
-        input_required = ('cluster_id', AsIs('id'))
+        input_required = ('topic_id',)
 
     def handle(self):
+        self.pubsub.sync_backlog.clear_topic(self.request.input.topic_id)
+
+# ################################################################################################################################
+
+class Clear(AdminService):
+    """ Clears a topic from GD and non-GD messages.
+    """
+    class SimpleIO:
+        input_required = ('cluster_id', 'id')
+
+    def handle(self):
+
+        # Local aliases
+        cluster_id = self.request.input.cluster_id
+        topic_id = self.request.input.id
+
         with closing(self.odb.session()) as session:
 
+            self.logger.info('Clearing topic `%s` (id:%s)', self.pubsub.get_topic_by_id(topic_id).name, topic_id)
+
             topic = session.query(PubSubTopic).\
-                filter(PubSubTopic.cluster_id==self.request.input.cluster_id).\
-                filter(PubSubTopic.id==self.request.input.id).\
+                filter(PubSubTopic.cluster_id==cluster_id).\
+                filter(PubSubTopic.id==topic_id).\
                 one()
 
             with self.lock('zato.pubsub.publish.%s' % topic.name):
 
-                # Set metadata for topic
-                topic.current_depth_gd = 0
-
-                # Remove all messages
+                # Remove all GD messages
                 session.query(PubSubMessage).\
-                    filter(PubSubMessage.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubMessage.topic_id==self.request.input.id).\
+                    filter(PubSubMessage.cluster_id==cluster_id).\
+                    filter(PubSubMessage.topic_id==topic_id).\
                     delete()
 
                 # Remove all references to topic messages from target queues
                 session.query(PubSubEndpointEnqueuedMessage).\
-                    filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubEndpointEnqueuedMessage.topic_id==self.request.input.id).\
+                    filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id).\
+                    filter(PubSubEndpointEnqueuedMessage.topic_id==topic_id).\
                     delete()
 
+                # Whatever happens with non-GD messsages we can at least delete the GD ones
                 session.commit()
+
+                # Delete non-GD messages for that topic on all servers
+                self.servers.invoke_all(ClearTopicNonGD.get_name(), {
+                    'topic_id': topic_id,
+                }, timeout=90)
 
 # ################################################################################################################################
 
@@ -168,29 +223,132 @@ class GetPublisherList(AdminService):
 
 # ################################################################################################################################
 
-class GetMessageList(AdminService):
-    """ Returns all messages currently in a topic that have not been moved to subscriber queues yet.
+class GetGDMessageList(AdminService):
+    """ Returns all GD messages currently in a topic that have not been moved to subscriber queues yet.
     """
     _filter_by = PubSubMessage.data_prefix,
 
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'topic_id')
+        input_optional = GetListAdminSIO.input_optional + ('has_gd',)
         output_required = (AsIs('msg_id'), 'pub_time', 'data_prefix_short', 'pattern_matched')
-        output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id', 'service_name',
-            'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name')
+        output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
+            'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_pid', 'server_name')
         output_repeated = True
 
-    def get_data(self, session):
+# ################################################################################################################################
+
+    def get_gd_data(self, session):
         return self._search(
             pubsub_messages_for_topic, session, self.request.input.cluster_id, self.request.input.topic_id, False)
 
+# ################################################################################################################################
+
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            self.response.payload[:] = self.get_gd_data(session)
 
         for item in self.response.payload.zato_output:
-            item.pub_time = datetime_from_ms(item.pub_time)
-            item.ext_pub_time = datetime_from_ms(item.ext_pub_time) if item.ext_pub_time else ''
+            item.pub_time = datetime_from_ms(item.pub_time * 1000.0)
+            item.ext_pub_time = datetime_from_ms(item.ext_pub_time * 1000.0) if item.ext_pub_time else ''
+
+# ################################################################################################################################
+
+class GetNonGDMessageList(AdminService):
+    """ Returns all non-GD messages currently in a topic that have not been moved to subscriber queues yet.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'topic_id')
+        input_optional = (Bool('paginate'), Int('cur_page'), 'query')
+        output_required = (AsIs('_meta'),)
+        output_optional = (AsIs('response'),)
+        response_elem = None
+
+# ################################################################################################################################
+
+    def handle(self, _sort_key=itemgetter('pub_time')):
+        # Local aliases
+        topic_id = self.request.input.topic_id
+        paginate = self.request.input.paginate
+        cur_page = self.request.input.cur_page
+        cur_page = cur_page - 1 if cur_page else 0 # We index lists from 0
+
+        # Response to produce
+        msg_list = []
+
+        # Collects responses from all server processes
+        is_all_ok, all_data = self.servers.invoke_all('zato.pubsub.topic.get-server-message-list', {
+            'topic_id': topic_id,
+            'query': self.request.input.query,
+        }, timeout=30)
+
+        # Check if everything is OK on each level - overall, per server and then per process
+        if is_all_ok:
+            for server_name, server_data in all_data.iteritems():
+                if server_data['is_ok']:
+                    for server_pid, server_pid_data in server_data['server_data'].iteritems():
+                        if server_pid_data['is_ok']:
+                            pid_data = server_pid_data['pid_data']['response']['data']
+                            msg_list.extend(pid_data)
+                        else:
+                            self.logger.warn('Caught an error (server_pid_data) %s', server_pid_data['error_info'])
+                else:
+                    self.logger.warn('Caught an error (server_data) %s', server_data['error_info'])
+
+        else:
+            self.logger.warn('Caught an error (all_data) %s', all_data)
+
+        # Set it here because later on it may be shortened to the page_size of elements
+        total = len(msg_list)
+
+        # If we get here, we must have collected some data at all
+        if msg_list:
+
+            # Sort the output before it is returned - messages last published (youngest) come first
+            msg_list.sort(key=_sort_key, reverse=True)
+
+            # If pagination is requsted, return only the desired page
+            if paginate:
+
+                start = cur_page * _page_size
+                end = start + _page_size
+
+                msg_list = msg_list[start:end]
+
+        for msg in msg_list:
+            # Convert float timestamps in all the remaining messages to ISO-8601
+            msg['pub_time'] = datetime_from_ms(msg['pub_time'] * 1000.0)
+            if msg.get('expiration_time'):
+                msg['expiration_time'] = datetime_from_ms(msg['expiration_time'] * 1000.0)
+
+            # Return endpoint information in the same format GD messages are returned in
+            msg['endpoint_id'] = msg.pop('published_by_id')
+            msg['endpoint_name'] = self.pubsub.get_endpoint_by_id(msg['endpoint_id']).name
+
+        search_results = SearchResults(None, None, None, total)
+        search_results.set_data(cur_page, _page_size)
+
+        # Actual data
+        self.response.payload.response = msg_list
+
+        # Search metadata
+        self.response.payload._meta = search_results.to_dict()
+
+# ################################################################################################################################
+
+class GetServerMessageList(AdminService):
+    """ Returns a list of in-RAM messages matching input criteria from current server process.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('topic_id',)
+        input_optional = ('cur_page', 'query', 'paginate')
+        output_optional = (Opaque('data'),)
+
+# ################################################################################################################################
+
+    def handle(self):
+        self.response.payload.data = self.pubsub.sync_backlog.get_messages_by_topic_id(
+            self.request.input.topic_id, True, self.request.input.query)
 
 # ################################################################################################################################
 
@@ -214,7 +372,7 @@ class GetInRAMMessageList(AdminService):
         for topic_id, sub_keys in topic_sub_keys.items():
 
             # This is a dictionary of sub_key -> msg_id -> message data ..
-            data = self.pubsub.delivery_backlog.retrieve_messages_by_sub_keys(topic_id, sub_keys)
+            data = self.pubsub.sync_backlog.retrieve_messages_by_sub_keys(topic_id, sub_keys)
 
             # .. which is why we can extend out directly - sub_keys are always unique
             out.update(data)

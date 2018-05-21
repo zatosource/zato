@@ -225,6 +225,9 @@ class _BaseView(object):
         output_optional = []
         output_repeated = False
 
+    def get_service_name(self):
+        raise NotImplementedError('May be implemented by subclasses')
+
     def fetch_cluster_id(self):
         # Doesn't look overtly smart right now but more code will follow to sanction
         # the existence of this function
@@ -244,6 +247,10 @@ class _BaseView(object):
         self.cluster_id = None
         self.fetch_cluster_id()
 
+    def populate_initial_input_dict(self, initial_input_dict):
+        """ May be overridden by subclasses if needed.
+        """
+
     def get_sec_def_list(self, sec_type):
         return SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, sec_type)
 
@@ -253,6 +260,11 @@ class _BaseView(object):
             'cluster_id':self.cluster_id,
             'paginate': getattr(self, 'paginate', False),
         })
+
+        initial_input_dict = {}
+        self.populate_initial_input_dict(initial_input_dict)
+        self.input.update(initial_input_dict)
+
         for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional, default_attrs):
             if name != 'cluster_id':
                 value = \
@@ -288,7 +300,7 @@ class Index(_BaseView):
         """
         input_elems = self.req.GET.keys() + self.req.zato.args.keys()
 
-        if not(self.service_name and self.cluster_id):
+        if not self.cluster_id:
             return False
 
         for elem in self.SimpleIO.input_required:
@@ -306,10 +318,14 @@ class Index(_BaseView):
     def before_invoke_admin_service(self):
         pass
 
+    def get_service_name(self, req):
+        raise NotImplementedError('May be implemented in subclasses')
+
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
-            return func(self.service_name, self.input)
+            service_name = self.service_name if self.service_name else self.get_service_name()
+            return func(service_name, self.input)
 
     def _handle_item_list(self, item_list):
         """ Creates a new instance of the model class for each of the element received
@@ -404,10 +420,6 @@ class CreateEdit(_BaseView):
         self.input = Bunch()
         self.input_dict = {}
 
-    def populate_initial_input_dict(self, initial_input_dict):
-        """ May be overridden by subclasses if needed.
-        """
-
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating
         control to the subclass for fetching this view-specific data.
@@ -496,7 +508,7 @@ class BaseCallView(_BaseView):
             super(BaseCallView, self).__call__(req, *args, **kwargs)
             input_dict = self.get_input_dict()
             input_dict.update(initial_input_dict)
-            req.zato.client.invoke(self.service_name, input_dict)
+            req.zato.client.invoke(self.service_name or self.get_service_name(), input_dict)
             return HttpResponse()
         except Exception, e:
             msg = '{}, e:`{}`'.format(self.error_message, format_exc(e))

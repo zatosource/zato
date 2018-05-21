@@ -20,7 +20,8 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.topic.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.topic.before_submit_hook;
-    $.fn.zato.data_table.setup_forms(['name', 'max_depth_gd', 'max_depth_non_gd', 'depth_check_freq']);
+    $.fn.zato.data_table.setup_forms(['name', 'max_depth_gd', 'max_depth_non_gd', 'depth_check_freq',
+        'pub_buffer_size_gd', 'pub_buffer_size_non_gd', 'deliv_task_sync_interv_gd', 'deliv_task_sync_interv_non_gd']);
 })
 
 
@@ -75,6 +76,11 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", data.max_depth_non_gd);
     row += String.format("<td class='ignore'>{0}</td>", data.depth_check_freq);
 
+    row += String.format("<td class='ignore'>{0}</td>", data.hook_service_id);
+    row += String.format("<td class='ignore'>{0}</td>", data.pub_buffer_size_gd);
+    row += String.format("<td class='ignore'>{0}</td>", data.task_sync_interval);
+    row += String.format("<td class='ignore'>{0}</td>", data.task_delivery_interval);
+
     if(include_tr) {
         row += '</tr>';
     }
@@ -110,7 +116,15 @@ $.fn.zato.pubsub.topic.clear = function(id) {
     jConfirm(q, 'Please confirm', jq_callback);
 }
 
-$.fn.zato.pubsub.topic.delete_message = function(topic_id, msg_id) {
+$.fn.zato.pubsub.topic.delete_message = function(topic_id, msg_id, has_gd, server_name, server_pid) {
+
+    if(server_name == null) {
+        server_name = '';
+    }
+
+    if(server_pid == null) {
+        server_pid = '';
+    }
 
     var instance = $.fn.zato.data_table.data[msg_id];
 
@@ -122,15 +136,16 @@ $.fn.zato.pubsub.topic.delete_message = function(topic_id, msg_id) {
         $.fn.zato.user_message(success, data.responseText);
     }
 
+
     var jq_callback = function(ok) {
         if(ok) {
             var url = String.format('/zato/pubsub/message/delete/cluster/{0}/msg/{1}',
                 $(document).getUrlParam('cluster'), instance.id);
-            $.fn.zato.post(url, http_callback, '', 'text');
+            $.fn.zato.post(url, http_callback, {'has_gd':has_gd ,'server_name':server_name, 'server_pid':server_pid}, 'text');
         }
     }
 
     var q = String.format(
-        'Are you sure you want to delete message `{0}`?<br/><center>Msg prefix {1}</center>', instance.id, instance.msg_prefix);
+        'Are you sure you want to delete message `{0}`?<br/><center>Msg prefix `{1}`</center>', instance.id, instance.msg_prefix);
     jConfirm(q, 'Please confirm', jq_callback);
 }

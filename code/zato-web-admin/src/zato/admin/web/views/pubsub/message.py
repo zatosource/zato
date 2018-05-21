@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -136,6 +136,8 @@ def get(req, cluster_id, object_type, object_id, msg_id):
 def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
 
     expiration = req.POST.get('expiration')
+    exp_from_now = asbool(req.POST.get('exp_from_now'))
+
     correl_id = req.POST.get('correl_id')
     in_reply_to = req.POST.get('in_reply_to')
 
@@ -151,6 +153,7 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
             'cluster_id': cluster_id,
             'data': data,
             'expiration': expiration,
+            'exp_from_now': exp_from_now,
             'correl_id': correl_id,
             'in_reply_to': in_reply_to,
             'priority': priority,
@@ -171,7 +174,16 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
         message = 'Message {}'.format('updated' if action=='update' else 'created')
         size = response.size
         if response.expiration_time:
-            expiration_time = from_utc_to_user(response.expiration_time+'+00:00', req.zato.user_profile)
+
+            expiration_time = """
+            <a
+                id="a_expiration_time"
+                href="javascript:$.fn.zato.pubsub.message.details.toggle_time('expiration_time', '{expiration_time_user}', '{expiration_time_utc}')">{expiration_time_user}
+            </a>
+            """.format(**{
+                   'expiration_time_utc': response.expiration_time,
+                   'expiration_time_user': from_utc_to_user(response.expiration_time+'+00:00', req.zato.user_profile),
+            })
 
     return HttpResponse(dumps({
         'is_ok': is_ok,
@@ -198,7 +210,11 @@ def publish(req, cluster_id, topic_id):
     initial_hook_service_name = None
     select_changer_data = {}
 
-    topic_list_response = req.zato.client.invoke('zato.pubsub.topic.get-list', {'cluster_id':cluster_id}).data
+    topic_list_response = req.zato.client.invoke('zato.pubsub.topic.get-list', {
+        'cluster_id': cluster_id,
+        'needs_details': False,
+    }).data
+
     for item in topic_list_response:
 
         # Initial data for this topic
@@ -252,7 +268,7 @@ def publish_action(req):
         for name in('cluster_id', 'topic_name', 'data'):
             service_input[name] = req.POST[name]
 
-        for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group', 'expiration'):
+        for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group', 'expiration', 'in_reply_to'):
             service_input[name] = req.POST.get(name, None) or None # Always use None instead of ''
 
         req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
@@ -274,13 +290,24 @@ def publish_action(req):
 @method_allowed('POST')
 def delete(req, cluster_id, msg_id):
 
+    input_dict = {
+        'cluster_id': cluster_id,
+        'msg_id': msg_id,
+    }
+
+    if req.POST['has_gd']:
+        service_name = 'zato.pubsub.message.delete-gd'
+    else:
+        service_name = 'zato.pubsub.message.delete-non-gd'
+
+        # This is an in-RAM message so it needs additional information
+        input_dict['server_name'] = req.POST['server_name']
+        input_dict['server_pid'] = req.POST['server_pid']
+
     try:
-        req.zato.client.invoke('zato.pubsub.message.delete', {
-            'cluster_id': cluster_id,
-            'msg_id': msg_id,
-        })
-    except Exception, e:
-        return HttpResponseServerError(format_exc(e))
+        req.zato.client.invoke(service_name, input_dict)
+    except Exception:
+        return HttpResponseServerError(format_exc())
     else:
         return HttpResponse('Deleted message `{}`'.format(msg_id))
 

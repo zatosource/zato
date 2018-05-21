@@ -1,25 +1,26 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from logging import getLogger
+
 # SQLAlchemy
 from sqlalchemy import update
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import expression as expr
-
-# Bunch
-from bunch import Bunch
 
 # Zato
 from zato.common import PUBSUB
-from zato.common.odb.model import ChannelWebSocket, PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, \
-     PubSubSubscription, Server, WebSocketClient, WebSocketClientPubSubKeys
+from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, PubSubSubscription, Server, \
+     WebSocketClient, WebSocketClientPubSubKeys
+
+logger = getLogger('zato_pubsub')
 
 # ################################################################################################################################
 
@@ -29,43 +30,77 @@ _wsx = PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
 
 # ################################################################################################################################
 
-def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, _initialized=_initialized):
+sql_messages_columns = (
+    PubSubMessage.pub_msg_id,
+    PubSubMessage.pub_correl_id,
+    PubSubMessage.in_reply_to,
+    PubSubMessage.ext_client_id,
+    PubSubMessage.group_id,
+    PubSubMessage.position_in_group,
+    PubSubMessage.pub_time,
+    PubSubMessage.ext_pub_time,
+    PubSubMessage.data,
+    PubSubMessage.mime_type,
+    PubSubMessage.priority,
+    PubSubMessage.expiration,
+    PubSubMessage.expiration_time,
+    PubSubMessage.size,
+    PubSubEndpointEnqueuedMessage.id.label('endp_msg_queue_id'),
+    PubSubEndpointEnqueuedMessage.sub_key,
+)
+
+sql_msg_id_columns = (
+    PubSubMessage.pub_msg_id,
+)
+
+# ################################################################################################################################
+
+def _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key_list, last_sql_run, pub_time_max, columns, ignore_list=None,
+    needs_result=True, _initialized=_initialized):
     """ Returns all SQL messages queued up for a given sub_key that are not being delivered
     or have not been delivered already.
     """
-    query = session.query(
-        PubSubMessage.pub_msg_id,
-        PubSubMessage.pub_correl_id,
-        PubSubMessage.in_reply_to,
-        PubSubMessage.ext_client_id,
-        PubSubMessage.group_id,
-        PubSubMessage.position_in_group,
-        PubSubMessage.pub_time,
-        PubSubMessage.ext_pub_time,
-        PubSubMessage.data,
-        PubSubMessage.mime_type,
-        PubSubMessage.priority,
-        PubSubMessage.expiration,
-        PubSubMessage.expiration_time,
-        PubSubMessage.has_gd,
-    ).\
-    filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
-    filter(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
-    filter(PubSubEndpointEnqueuedMessage.delivery_status==_initialized).\
-    filter(PubSubSubscription.sub_key==sub_key).\
-    filter(PubSubMessage.expiration_time > now).\
-    filter(PubSubMessage.cluster_id==cluster_id)
+    logger.info('Getting GD messages for `%s` last_run:%r pub_time_max:%r res:%d', sub_key_list, last_sql_run,
+        pub_time_max, int(needs_result))
 
+    query = session.query(*columns).\
+        filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
+        filter(PubSubEndpointEnqueuedMessage.sub_key.in_(sub_key_list)).\
+        filter(PubSubEndpointEnqueuedMessage.delivery_status==_initialized).\
+        filter(PubSubMessage.expiration_time > pub_time_max).\
+        filter(PubSubMessage.cluster_id==cluster_id)
+
+    # If there is the last SQL run time given, it means that we have to fetch all messages
+    # enqueued for that subscriber since that time ..
     if last_sql_run:
         query = query.\
-            filter(PubSubMessage.pub_time > last_sql_run)
+            filter(PubSubEndpointEnqueuedMessage.creation_time > last_sql_run)
+
+    query = query.\
+        filter(PubSubEndpointEnqueuedMessage.creation_time <= pub_time_max)
+
+    if ignore_list:
+        query = query.\
+            filter(PubSubEndpointEnqueuedMessage.id.notin_(ignore_list))
 
     query = query.\
         order_by(PubSubMessage.priority.desc()).\
         order_by(PubSubMessage.ext_pub_time).\
         order_by(PubSubMessage.pub_time)
 
-    return query.all()
+    return query.all() if needs_result else query
+
+# ################################################################################################################################
+
+def get_sql_messages_by_sub_key(session, cluster_id, sub_key_list, last_sql_run, pub_time_max, ignore_list):
+    return _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key_list, last_sql_run, pub_time_max,
+        sql_messages_columns, ignore_list)
+
+# ################################################################################################################################
+
+def get_sql_msg_ids_by_sub_key(session, cluster_id, sub_key, last_sql_run, pub_time_max):
+    return _get_sql_msg_data_by_sub_key(session, cluster_id, [sub_key], last_sql_run, pub_time_max, sql_msg_id_columns,
+        needs_result=False)
 
 # ################################################################################################################################
 
@@ -79,8 +114,7 @@ def confirm_pubsub_msg_delivered(session, cluster_id, sub_key, delivered_pub_msg
             'delivery_time': now
             }).\
         where(PubSubEndpointEnqueuedMessage.pub_msg_id.in_(delivered_pub_msg_id_list)).\
-        where(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
-        where(PubSubSubscription.sub_key==sub_key)
+        where(PubSubEndpointEnqueuedMessage.sub_key==sub_key)
     )
 
 # ################################################################################################################################

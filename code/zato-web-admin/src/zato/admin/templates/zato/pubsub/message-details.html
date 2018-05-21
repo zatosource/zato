@@ -137,16 +137,17 @@
                 <td class='inline_header' style="width:80px">Msg ID</td>
                 <td style="width:120px">{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ msg_id }}{% endifequal %}</td>
 
-                <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in s)</span></td>
+                <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in ms)</span></td>
                 <td style="width:170px">
                     {% ifequal object_type "topic" %}
                         {{ form.expiration }}
+                        {{ form.exp_from_now }} <label for="id_exp_from_now">From now</label>
                     {% else %}
                         {{ expiration }}
                     {% endifequal %}
                 </td>
 
-                <td class='inline_header' style="width:90px">Pub service</td>
+                <td class='inline_header' style="width:90px">Service</td>
                 <td style="width:140px">
                     {% if hook_pub_service_name %}
                         <a href="{% url "service-overview" hook_pub_service_name %}?cluster={{ cluster_id }}">{{ hook_pub_service_name }}</a>
@@ -223,9 +224,9 @@
             <tr>
                 <td class='inline_header' colspan="6">
                     {% ifequal object_type "queue" %}
-                        Payload from topic
+                        Data in queue
                     {% else %}
-                        Payload in topic
+                        Data in topic
                     {% endifequal %}
                 </td>
             </tr>

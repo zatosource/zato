@@ -928,14 +928,15 @@ def _pubsub_topic(session, cluster_id):
         PubSubTopic.name,
         PubSubTopic.is_active,
         PubSubTopic.is_internal,
-        PubSubTopic.last_pub_time,
         PubSubTopic.max_depth_gd,
         PubSubTopic.max_depth_non_gd,
-        PubSubTopic.current_depth_gd,
         PubSubTopic.has_gd,
         PubSubTopic.is_api_sub_allowed,
         PubSubTopic.depth_check_freq,
         PubSubTopic.hook_service_id,
+        PubSubTopic.pub_buffer_size_gd,
+        PubSubTopic.task_sync_interval,
+        PubSubTopic.task_delivery_interval,
         Service.name.label('hook_service_name'),
         ).\
         outerjoin(Service, Service.id==PubSubTopic.hook_service_id).\
@@ -1006,7 +1007,8 @@ def _pubsub_topic_message(session, cluster_id):
         ).\
         filter(PubSubMessage.published_by_id==PubSubEndpoint.id).\
         filter(PubSubMessage.cluster_id==cluster_id).\
-        filter(PubSubMessage.topic_id==PubSubTopic.id)
+        filter(PubSubMessage.topic_id==PubSubTopic.id).\
+        filter(~PubSubMessage.is_in_sub_queue)
 
 # ################################################################################################################################
 
@@ -1098,7 +1100,6 @@ def _pubsub_queue_message(session, cluster_id):
         PubSubEndpointEnqueuedMessage.delivery_count,
         PubSubEndpointEnqueuedMessage.last_delivery_time,
         PubSubEndpointEnqueuedMessage.is_in_staging,
-        PubSubEndpointEnqueuedMessage.has_gd,
         PubSubEndpointEnqueuedMessage.endpoint_id,
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubSubscription.pattern_matched.label('sub_pattern_matched'),

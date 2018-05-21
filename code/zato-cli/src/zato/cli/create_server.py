@@ -146,9 +146,9 @@ log_connection_info_sleep_time=5 # In seconds
 zato.helpers.input-logger=Sample payload for a startup service (first worker)
 zato.notif.init-notifiers=
 zato.kvdb.log-connection-info=
-zato.pubsub.cleanup.delete-expired=10
-zato.pubsub.cleanup.delete-delivered=10
-zato.pubsub.cleanup.delete-marked-deleted=120
+#zato.pubsub.cleanup.delete-expired=10
+#zato.pubsub.cleanup.delete-delivered=10
+#zato.pubsub.cleanup.delete-marked-deleted=120
 zato.sso.cleanup.cleanup=300
 zato.updates.check-updates=
 
@@ -207,6 +207,29 @@ target_matcher=False
 invoke_matcher=False
 sms=True
 sso=False
+
+[pubsub]
+wsx_gateway_service_allowed=zato.pubsub.subscription.create-wsx-subscription, pubsub.subscription.get-list, pubsub.subscription.unsubscribe
+log_if_deliv_server_not_found=True
+log_if_wsx_deliv_server_not_found=False
+data_prefix_len=2048
+data_prefix_short_len=64
+
+[pubsub_meta_topic]
+enabled=True
+store_frequency=1
+
+[pubsub_meta_endpoint_pub]
+enabled=True
+store_frequency=1
+history=100
+data_len=0
+
+[pubsub_meta_endpoint_sub]
+enabled=True
+store_frequency=1
+history=100
+data_len=0
 
 [live_msg_browser]
 include_internal=False

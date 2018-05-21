@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,7 +14,7 @@ from zato.common.util import new_cid
 # ################################################################################################################################
 
 _skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pattern_matched', 'published_by_id', 'data_prefix',
-    'data_prefix_short', 'pub_time', 'expiration_time', 'ext_pub_time', 'pub_correl_id', 'pub_msg_id')
+    'data_prefix_short', 'pub_time', 'expiration_time', 'pub_correl_id', 'pub_msg_id')
 
 # ################################################################################################################################
 
@@ -37,11 +37,11 @@ class PubSubMessage(object):
     """ Base container class for pub/sub message wrappers.
     """
     # We are not using __slots__ because they can't be inherited by subclasses
-    # and this class as well as subclasses will be rewritten in Cython anyway.
+    # and this class, as well as its subclasses, will be rewritten in Cython anyway.
     _attrs = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id', 'position_in_group',
         'pub_time', 'ext_pub_time', 'data', 'data_prefix', 'data_prefix_short', 'mime_type', 'priority', 'expiration',
         'expiration_time', 'has_gd', 'delivery_status', 'pattern_matched', 'size', 'published_by_id', 'topic_id',
-        'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso')
+        'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso')
 
     def __init__(self):
         self.topic = None
@@ -67,30 +67,35 @@ class PubSubMessage(object):
         self.size = None
         self.published_by_id = None
         self.topic_id = None
+        self.is_in_sub_queue = None
+        self.topic_name = None
         self.cluster_id = None
 
         self.pub_time_iso = None
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None
 
-    def to_dict(self, skip=None):
+    def to_dict(self, skip=None, needs_utf8_encode=True, _data_keys=('data', 'data_prefix', 'data_prefix_short')):
         """ Returns a dict representation of self.
         """
         skip = skip or []
         out = {}
-        for key in PubSubMessage._attrs:
+        for key in sorted(PubSubMessage._attrs):
             if key != 'topic' and key not in skip:
-                out[key] = getattr(self, key)
-
-        out['size'] = len(self.data) if self.data else None
+                value = getattr(self, key)
+                if value is not None:
+                    if needs_utf8_encode:
+                        if key in _data_keys:
+                            value = value.encode('utf8')
+                    out[key] = value
 
         return out
 
-    def to_external_dict(self, _skip=_skip_to_external):
+    def to_external_dict(self, skip=_skip_to_external, needs_utf8_encode=False):
         """ Returns a dict representation of self ready to be delivered to external systems,
         i.e. without internal attributes on output.
         """
-        out = self.to_dict(_skip)
+        out = self.to_dict(skip, needs_utf8_encode)
         out['msg_id'] = self.pub_msg_id
         out['correl_id'] = self.pub_correl_id
 
@@ -102,3 +107,18 @@ class SkipDelivery(Exception):
     """ Raised to indicate to delivery tasks that a given message should be skipped - but not deleted altogether,
     the delivery will be attempted in the next iteration of the task.
     """
+
+# ################################################################################################################################
+
+class HandleNewMessageCtx(object):
+    """ Encapsulates information on new messages that a pubsub tool is about to process.
+    """
+    __slots__ = ('cid', 'has_gd', 'sub_key_list', 'non_gd_msg_list', 'is_bg_call', 'pub_time_max')
+
+    def __init__(self, cid, has_gd, sub_key_list, non_gd_msg_list, is_bg_call, pub_time_max=None):
+        self.cid = cid
+        self.has_gd = has_gd
+        self.sub_key_list = sub_key_list
+        self.non_gd_msg_list = non_gd_msg_list
+        self.is_bg_call = is_bg_call
+        self.pub_time_max = pub_time_max

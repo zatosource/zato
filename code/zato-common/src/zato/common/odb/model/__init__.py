@@ -13,8 +13,8 @@ from ftplib import FTP_PORT
 from json import dumps
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, LargeBinary, Sequence, \
-     SmallInteger, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, Index, Integer, LargeBinary, \
+     Numeric, Sequence, SmallInteger, String, Text, true as sa_true, UniqueConstraint
 from sqlalchemy.orm import backref, relationship
 
 # Zato
@@ -1987,6 +1987,8 @@ class WebSocketSubscription(Base):
     channel = relationship(
         ChannelWebSocket, backref=backref('web_socket_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
+    subscription_id = Column(Integer, ForeignKey('pubsub_sub.id', ondelete='CASCADE'), nullable=False)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('web_socket_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
@@ -2007,8 +2009,8 @@ class PubSubEndpoint(Base):
 
     id = Column(Integer, Sequence('pubsub_endp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
-    is_internal = Column(Boolean(), nullable=False, default=False)
-    is_active = Column(Boolean(), nullable=False, default=True) # Unusued for now
+    is_internal = Column(Boolean(), nullable=False, server_default=sa_false())
+    is_active = Column(Boolean(), nullable=False, server_default=sa_true()) # Unusued for now
     endpoint_type = Column(String(40), nullable=False) # WSX, REST, AMQP and other types
 
     last_seen = Column(BigInteger(), nullable=True)
@@ -2067,13 +2069,17 @@ class PubSubTopic(Base):
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False, default=False)
-    last_pub_time = Column(BigInteger(), nullable=True)
     max_depth_gd = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD)
     max_depth_non_gd = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD)
-    current_depth_gd = Column(Integer(), nullable=False, default=0)
     depth_check_freq = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DEPTH_CHECK_FREQ)
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
     is_api_sub_allowed = Column(Boolean(), nullable=False)
+
+    # How many messages to buffer in RAM before they are actually saved in SQL / pushed to tasks
+    pub_buffer_size_gd = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.PUB_BUFFER_SIZE_GD))
+
+    task_sync_interval = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_SYNC_INTERVAL))
+    task_delivery_interval = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_DELIVERY_INTERVAL))
 
     # A hook service invoked during publications to this specific topic
     hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
@@ -2081,7 +2087,10 @@ class PubSubTopic(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=name, cascade='all, delete, delete-orphan'))
 
-    ext_client_id = None # Not used by DB
+    # Not used by DB
+    ext_client_id = None
+    last_pub_time = None
+    pub_time = None
 
 # ################################################################################################################################
 
@@ -2100,7 +2109,7 @@ class PubSubEndpointTopic(Base):
     id = Column(Integer, Sequence('pubsub_endpt_seq'), primary_key=True)
 
     pattern_matched = Column(Text, nullable=False)
-    last_pub_time = Column(BigInteger(), nullable=False)
+    last_pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=False)
     pub_msg_id = Column(String(200), nullable=False)
     pub_correl_id = Column(String(200), nullable=True)
     in_reply_to = Column(String(200), nullable=True)
@@ -2115,7 +2124,8 @@ class PubSubEndpointTopic(Base):
         PubSubTopic, backref=backref('pubsub_endpoint_topics', order_by=topic_id, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('pubsub_endpoint_topics', order_by=cluster_id, cascade='all, delete, delete-orphan'))
+    cluster = relationship(Cluster, backref=backref('pubsub_endpoint_topics', order_by=cluster_id,
+        cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -2124,7 +2134,6 @@ class PubSubMessage(Base):
     """
     __tablename__ = 'pubsub_message'
     __table_args__ = (
-        Index('pubsb_msg_id_idx', 'cluster_id', 'id', unique=True),
 
         # This index is needed for FKs from other tables,
         # otherwise with MySQL we get error 1215 'Cannot add foreign key constraint'
@@ -2158,20 +2167,26 @@ class PubSubMessage(Base):
     # What matching pattern allowed an endpoint to publish this message
     pattern_matched = Column(Text, nullable=False)
 
-    pub_time = Column(BigInteger(), nullable=False) # When the row was created
-    ext_pub_time = Column(BigInteger(), nullable=True) # When the message was created by publisher
-    expiration_time = Column(BigInteger(), nullable=True)
-    last_updated = Column(BigInteger(), nullable=True)
+    pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When the row was created
+    ext_pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=True) # When the message was created by publisher
+    expiration_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
+    last_updated = Column(Numeric(20, 7, asdecimal=False), nullable=True)
 
     data = Column(Text(), nullable=False)
     data_prefix = Column(Text(), nullable=False)
     data_prefix_short = Column(String(200), nullable=False)
-    data_format = Column(String(200), nullable=False, default=PUBSUB.DEFAULT.DATA_FORMAT)
-    mime_type = Column(String(200), nullable=False)
+    data_format = Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.DATA_FORMAT)
+    mime_type = Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.MIME_TYPE)
     size = Column(Integer, nullable=False)
-    priority = Column(Integer, nullable=False)
-    expiration = Column(Integer, nullable=False, default=0)
-    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
+    priority = Column(Integer, nullable=False, server_default=str(PUBSUB.PRIORITY.DEFAULT))
+    expiration = Column(BigInteger, nullable=False, server_default='0')
+    has_gd = Column(Boolean(), nullable=False, server_default=sa_true()) # Guaranteed delivery
+
+    # Is the message in at least one delivery queue, meaning that there is at least one
+    # subscriber to whom this message will be sent so the message is no longer considered
+    # to be available in the topic for other subscribers to receive it,
+    # i.e. it can be said that it has been already transported to all subsriber queues (possibly to one only).
+    is_in_sub_queue = Column(Boolean(), nullable=False, server_default=sa_false())
 
     published_by_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
     published_by = relationship(
@@ -2194,13 +2209,13 @@ class PubSubSubscription(Base):
         Index('pubsb_sub_clust_idx', 'cluster_id', unique=False),
         Index('pubsb_sub_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_sub_clust_endpt_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
-        Index('pubsb_sub_clust_subk', 'cluster_id', 'sub_key', unique=True),
+        Index('pubsb_sub_clust_subk', 'sub_key', unique=True),
     {})
 
     id = Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False, default=False)
 
-    creation_time = Column(BigInteger(), nullable=False)
+    creation_time = Column(Numeric(20, 7, asdecimal=False), nullable=False)
     sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
     pattern_matched = Column(Text, nullable=False)
     deliver_by = Column(Text, nullable=True) # Delivery order, e.g. by priority, date etc.
@@ -2216,7 +2231,7 @@ class PubSubSubscription(Base):
     delivery_data_format = Column(String(200), nullable=False, default=DATA_FORMAT.JSON)
     delivery_endpoint = Column(Text, nullable=True)
 
-    last_interaction_time = Column(BigInteger(), nullable=True)
+    last_interaction_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
     last_interaction_type = Column(String(200), nullable=True)
     last_interaction_details = Column(Text, nullable=True)
 
@@ -2294,10 +2309,6 @@ class PubSubSubscription(Base):
     out_amqp = relationship(
         OutgoingAMQP, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    ws_sub_id = Column(Integer, ForeignKey('web_socket_sub.id', ondelete='CASCADE'), nullable=True)
-    ws_sub = relationship(
-        WebSocketSubscription, backref=backref('pubsub_ws_subs', order_by=id, cascade='all, delete, delete-orphan'))
-
     ws_channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
     ws_channel = relationship(
         ChannelWebSocket, backref=backref('pubsub_ws_subs', order_by=id, cascade='all, delete, delete-orphan'))
@@ -2323,42 +2334,41 @@ class PubSubEndpointEnqueuedMessage(Base):
     """ A queue of messages for an individual endpoint subscribed to a topic.
     """
     __tablename__ = 'pubsub_endp_msg_queue'
+
+    '''
     __table_args__ = (
-        Index('pubsb_enms_q_pubmid_idx', 'cluster_id', 'pub_msg_id', unique=True),
+        Index('pubsb_enms_q_pubmid_idx', 'cluster_id', 'pub_msg_id', unique=False),
         Index('pubsb_enms_q_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_enms_q_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
-        Index('pubsb_enms_q_subs_idx', 'cluster_id', 'subscription_id', unique=False),
+        Index('pubsb_enms_q_subs_idx', 'cluster_id', 'sub_key', unique=False),
         Index('pubsb_enms_q_endptp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
     {})
+    '''
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
-    creation_time = Column(BigInteger(), nullable=False) # When was the message enqueued
+    creation_time = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When was the message enqueued
 
-    delivery_count = Column(Integer, nullable=False)
-    last_delivery_time = Column(BigInteger(), nullable=True)
-
-    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
-    is_in_staging = Column(Boolean(), nullable=False, default=False)
+    delivery_count = Column(Integer, nullable=False, server_default='0')
+    last_delivery_time = Column(Numeric(20, 7, asdecimal=False), nullable=sa_true())
+    is_in_staging = Column(Boolean(), nullable=False, server_default=sa_false())
 
     # A flag indicating whether this message is deliverable at all - will be set to False
     # after delivery_count reaches max retries for subscription or if a hook services decides so.
-    is_deliverable = Column(Boolean(), nullable=False, default=True)
+    is_deliverable = Column(Boolean(), nullable=False, server_default=sa_true())
 
-    delivery_status = Column(Text, nullable=False, default=PUBSUB.DELIVERY_STATUS.INITIALIZED)
-    delivery_time = Column(BigInteger(), nullable=True)
+    delivery_status = Column(Integer, nullable=False, server_default=str(PUBSUB.DELIVERY_STATUS.INITIALIZED))
+    delivery_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
 
     pub_msg_id = Column(String(200), ForeignKey('pubsub_message.pub_msg_id', ondelete='CASCADE'), nullable=False)
 
-    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True)
+    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
     endpoint = relationship(PubSubEndpoint,
         backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(PubSubTopic, backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    subscription_id = Column(Integer, ForeignKey('pubsub_sub.id', ondelete='CASCADE'), nullable=True)
-    subscription = relationship(PubSubSubscription,
-        backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
+    sub_key = Column(String(200), ForeignKey('pubsub_sub.sub_key', ondelete='CASCADE'), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_endpoint_queues', order_by=id, cascade='all, delete, delete-orphan'))
@@ -2377,7 +2387,7 @@ class PubSubEndpointQueueInteraction(Base):
     {})
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
-    entry_timestamp = Column(BigInteger(), nullable=False) # When the row was created
+    entry_timestamp = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When the row was created
 
     inter_type = Column(String(200), nullable=False)
     inter_details = Column(Text, nullable=True)
