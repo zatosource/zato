@@ -247,8 +247,10 @@
                     {{ form.mime_type }}
                 {% endifequal %}
 
-                <input type="hidden" name="has_gd" id="has_gd" value="{{ has_gd }}" />
                 <input type="hidden" name="msg_id" id="msg_id" value="{{ msg_id }}" />
+                <input type="hidden" name="has_gd" id="has_gd" value="{{ has_gd }}" />
+                <input type="hidden" name="server_name" id="server_name" value="{{ server_name }}" />
+                <input type="hidden" name="server_pid" id="server_pid" value="{{ server_pid }}" />
                 <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
             </tr>
             {% endifequal %}
