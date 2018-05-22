@@ -52,6 +52,15 @@ class _GetSIO(AdminSIO):
 
 # ################################################################################################################################
 
+class _UpdateSIO(AdminSIO):
+    input_required = (AsIs('msg_id'), 'mime_type')
+    input_optional = ('cluster_id', 'data', Int('expiration'), AsIs('correl_id'), AsIs('in_reply_to'), Int('priority'),
+        Bool('exp_from_now'), 'server_name', 'server_pid', Int('size'), AsIs('pub_correl_id'), AsIs('expiration_time'))
+    output_required = (Bool('found'), AsIs('msg_id'))
+    output_optional = ('expiration_time', Int('size'))
+
+# ################################################################################################################################
+
 class GetFromTopicGD(AdminService):
     """ Returns a GD pub/sub topic message by its ID.
     """
@@ -113,7 +122,8 @@ class GetFromTopicNonGD(AdminService):
             'msg_id': self.request.input.msg_id,
         }, pid=self.request.input.server_pid)
 
-        self.response.payload = response['response']
+        if response:
+            self.response.payload = response['response']
 
 # ################################################################################################################################
 
@@ -198,15 +208,24 @@ class DeleteNonGD(AdminService):
 
 # ################################################################################################################################
 
+class UpdateServerNonGD(AdminService):
+    """ Updates a non-GD message on current server.
+    """
+    SimpleIO = _UpdateSIO
+
+    def handle(self):
+        print()
+        print(999, self.request.input)
+        print()
+        self.response.payload.msg_id = self.request.input.msg_id
+        self.response.payload.found = self.pubsub.sync_backlog.update_msg(self.request.input)
+
+# ################################################################################################################################
+
 class _Update(AdminService):
     """ Base class for services updating GD or non-GD messages.
     """
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', AsIs('msg_id'), 'mime_type')
-        input_optional = ('data', Int('expiration'), AsIs('correl_id'), AsIs('in_reply_to'), Int('priority'),
-            Bool('exp_from_now'))
-        output_required = (Bool('found'), AsIs('msg_id'))
-        output_optional = ('expiration_time', Int('size'))
+    SimpleIO = _UpdateSIO
 
     def _get_item(self):
         raise NotImplementedError('Must be overridden by subclasses')
@@ -217,13 +236,13 @@ class _Update(AdminService):
     def handle(self):
         input = self.request.input
         self.response.payload.msg_id = input.msg_id
-        session = self.odb.session() if self._message_update_has_gd else session
+        session = self.odb.session() if self._message_update_has_gd else None
 
         try:
             # Get that from its storage, no matter what it is
-            item = self._get_item(input)
+            item = self._get_item(input, session)
 
-            if not item:
+            if session and (not item):
                 self.response.payload.found = False
                 return
 
@@ -234,6 +253,7 @@ class _Update(AdminService):
             item.expiration = get_expiration(self.cid, input)
             item.priority = get_priority(self.cid, input)
 
+            item.msg_id = input.msg_id
             item.pub_correl_id = input.correl_id
             item.in_reply_to = input.in_reply_to
             item.mime_type = input.mime_type
@@ -245,12 +265,12 @@ class _Update(AdminService):
                     from_ = item.pub_time
                 item.expiration_time = from_ + (item.expiration / 1000.0)
             else:
-                item.expiration_time = None
+                item.expiration_time = 'zzz'
 
             # Save data to its storage, SQL for GD and RAM for non-GD messages
-            self._save_item(item, session)
+            found = self._save_item(item, input, session)
 
-            self.response.payload.found = True
+            self.response.payload.found = found
             self.response.payload.size = item.size
             self.response.payload.expiration_time = datetime_from_ms(
                 item.expiration_time * 1000.0) if item.expiration_time else None
@@ -266,14 +286,15 @@ class UpdateGD(_Update):
     _message_update_has_gd = True
 
     def _get_item(self, input, session):
-        item = session.query(PubSubMessage).\
+        return session.query(PubSubMessage).\
             filter(PubSubMessage.cluster_id==input.cluster_id).\
             filter(PubSubMessage.pub_msg_id==input.msg_id).\
             first()
 
-    def _save_item(self, item, session):
+    def _save_item(self, item, _ignored, session):
         session.add(item)
         session.commit()
+        return True
 
 # ################################################################################################################################
 
@@ -283,10 +304,13 @@ class UpdateNonGD(_Update):
     _message_update_has_gd = False
 
     def _get_item(self, input, _ignored):
-        zzz
+        return Bunch()
 
-    def _save_item(self, item, _ignored):
-        qqq
+    def _save_item(self, item, input, _ignored):
+        server = self.servers[self.request.input.server_name]
+        response = server.invoke(UpdateServerNonGD.get_name(), item, pid=self.request.input.server_pid)
+        self.response.payload = response['response']
+        return True
 
 # ################################################################################################################################
 
@@ -315,9 +339,5 @@ class GetFromQueue(AdminService):
                 self.response.payload = item
             else:
                 raise NotFound(self.cid, 'No such message `{}`'.format(self.request.input.msg_id))
-
-# ################################################################################################################################
-
-
 
 # ################################################################################################################################

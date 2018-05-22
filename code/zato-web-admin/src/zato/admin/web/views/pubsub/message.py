@@ -54,6 +54,8 @@ def get(req, cluster_id, object_type, object_id, msg_id):
     return_data.object_type = object_type
     return_data['{}_id'.format(object_type)] = object_id
     return_data.msg_id = msg_id
+    return_data.server_name = _server_name
+    return_data.server_pid = _server_pid
 
     if object_type=='topic':
         object_service_name = 'zato.pubsub.topic.get'
@@ -154,6 +156,9 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
     mime_type = req.POST['mime_type']
     data = req.POST['data']
 
+    server_name = req.POST['server_name']
+    server_pid = req.POST['server_pid']
+
     try:
         expiration_time = None
         size = None
@@ -167,6 +172,8 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
             'in_reply_to': in_reply_to,
             'priority': priority,
             'mime_type': mime_type,
+            'server_name': server_name,
+            'server_pid': server_pid,
         }
 
         if msg_id:
@@ -189,7 +196,7 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
             message = 'Could not find message `{}`'.format(response.msg_id)
         else:
             is_ok = True
-            message = 'Message {}'.format('updated' if action=='update' else 'created')
+            message = 'Message {}'.format('updated' if action.startswith('update') else 'created')
             size = response.size
             if response.expiration_time:
 

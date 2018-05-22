@@ -46,6 +46,11 @@ hook_type_to_method = {
 
 # ################################################################################################################################
 
+_update_attrs = ('data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_reply_to', 'mime_type',
+    'expiration', 'expiration_time')
+
+# ################################################################################################################################
+
 _default_expiration = 2147483647 * 1000 # (2 ** 31 - 1) * 1000 milliseconds
 
 # ################################################################################################################################
@@ -316,12 +321,30 @@ class InRAMSyncBacklog(object):
                 if 'priority' not in msg:
                     msg['priority'] = _default_pri
 
+                print(333, 'storing', msg)
+
                 # .. add a reverse mapping, from message ID to sub_key ..
                 msg_sub_key = self.msg_id_to_sub_key.setdefault(msg['pub_msg_id'], set())
                 msg_sub_key.update(sub_keys)
 
             # .. and add a reference to it to the topic.
             topic_messages.update(msg_ids)
+
+# ################################################################################################################################
+
+    def update_msg(self, msg, _update_attrs=_update_attrs, _warn='No such message in sync backlog `%s`'):
+        with self.lock:
+            _msg = self.msg_id_to_msg.get(msg['msg_id'])
+            if not _msg:
+                logger.warn(_warn, msg['msg_id'])
+                logger_zato.warn(_warn, msg['msg_id'])
+                return False # No such message
+            else:
+                for attr in _update_attrs:
+                    _msg[attr] = msg[attr]
+
+                # Ok, found and updated
+                return True
 
 # ################################################################################################################################
 
@@ -492,7 +515,6 @@ class InRAMSyncBacklog(object):
                 if needs_short_copy:
                     out_msg = {}
                     out_msg['msg_id'] = msg['pub_msg_id']
-                    out_msg['correl_id'] = msg.get('pub_correl_id')
                     out_msg['in_reply_to'] = msg.get('in_reply_to')
                     out_msg['data'] = msg['data'][:self.pubsub.data_prefix_len]
                     out_msg['data_prefix_short'] = out_msg['data'][:self.pubsub.data_prefix_short_len]
@@ -513,6 +535,8 @@ class InRAMSyncBacklog(object):
                     out_msg = msg
 
                 msg_list.append(out_msg)
+
+            print('Returning messages', msg_list)
 
             return msg_list
 
