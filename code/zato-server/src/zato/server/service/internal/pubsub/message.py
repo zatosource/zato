@@ -214,9 +214,6 @@ class UpdateServerNonGD(AdminService):
     SimpleIO = _UpdateSIO
 
     def handle(self):
-        print()
-        print(999, self.request.input)
-        print()
         self.response.payload.msg_id = self.request.input.msg_id
         self.response.payload.found = self.pubsub.sync_backlog.update_msg(self.request.input)
 
