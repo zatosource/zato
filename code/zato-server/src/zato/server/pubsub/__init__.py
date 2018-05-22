@@ -536,8 +536,6 @@ class InRAMSyncBacklog(object):
 
                 msg_list.append(out_msg)
 
-            print('Returning messages', msg_list)
-
             return msg_list
 
 # ################################################################################################################################
