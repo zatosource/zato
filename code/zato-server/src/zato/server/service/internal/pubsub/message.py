@@ -202,11 +202,12 @@ class Update(AdminService):
         input_required = ('cluster_id', AsIs('msg_id'), 'mime_type')
         input_optional = ('data', Int('expiration'), AsIs('correl_id'), AsIs('in_reply_to'), Int('priority'),
             Bool('exp_from_now'))
-        output_required = (Bool('found'),)
+        output_required = (Bool('found'), AsIs('msg_id'))
         output_optional = ('expiration_time', Int('size'))
 
     def handle(self, _utcnow=datetime.utcnow):
         input = self.request.input
+        self.response.payload.msg_id = input.msg_id
 
         with closing(self.odb.session()) as session:
             item = session.query(PubSubMessage).\
