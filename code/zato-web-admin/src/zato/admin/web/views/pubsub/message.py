@@ -143,6 +143,7 @@ def get(req, cluster_id, object_type, object_id, msg_id):
 
 def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
 
+    has_gd = asbool(req.POST['has_gd'])
     expiration = req.POST.get('expiration')
     exp_from_now = asbool(req.POST.get('exp_from_now'))
 
@@ -170,6 +171,10 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
 
         if msg_id:
             input['msg_id'] = msg_id
+
+        if action == 'update':
+            suffix = '-gd' if has_gd else '-non-gd'
+            action += suffix
 
         response = req.zato.client.invoke('zato.pubsub.message.{}'.format(action), input).data.response
 

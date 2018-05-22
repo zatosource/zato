@@ -13,6 +13,9 @@ from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
 
+# Bunch
+from bunch import Bunch
+
 # SQLAlchemy
 from sqlalchemy import and_, exists
 
@@ -195,8 +198,8 @@ class DeleteNonGD(AdminService):
 
 # ################################################################################################################################
 
-class Update(AdminService):
-    """ Updates details of an individual message.
+class _Update(AdminService):
+    """ Base class for services updating GD or non-GD messages.
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'), 'mime_type')
@@ -205,15 +208,20 @@ class Update(AdminService):
         output_required = (Bool('found'), AsIs('msg_id'))
         output_optional = ('expiration_time', Int('size'))
 
-    def handle(self, _utcnow=datetime.utcnow):
+    def _get_item(self):
+        raise NotImplementedError('Must be overridden by subclasses')
+
+    def _save_item(self):
+        raise NotImplementedError('Must be overridden by subclasses')
+
+    def handle(self):
         input = self.request.input
         self.response.payload.msg_id = input.msg_id
+        session = self.odb.session() if self._message_update_has_gd else session
 
-        with closing(self.odb.session()) as session:
-            item = session.query(PubSubMessage).\
-                filter(PubSubMessage.cluster_id==input.cluster_id).\
-                filter(PubSubMessage.pub_msg_id==input.msg_id).\
-                first()
+        try:
+            # Get that from its storage, no matter what it is
+            item = self._get_item(input)
 
             if not item:
                 self.response.payload.found = False
@@ -239,13 +247,46 @@ class Update(AdminService):
             else:
                 item.expiration_time = None
 
-            session.add(item)
-            session.commit()
+            # Save data to its storage, SQL for GD and RAM for non-GD messages
+            self._save_item(item, session)
 
             self.response.payload.found = True
             self.response.payload.size = item.size
             self.response.payload.expiration_time = datetime_from_ms(
                 item.expiration_time * 1000.0) if item.expiration_time else None
+        finally:
+            if session:
+                session.close()
+
+# ################################################################################################################################
+
+class UpdateGD(_Update):
+    """ Updates details of an individual GD message.
+    """
+    _message_update_has_gd = True
+
+    def _get_item(self, input, session):
+        item = session.query(PubSubMessage).\
+            filter(PubSubMessage.cluster_id==input.cluster_id).\
+            filter(PubSubMessage.pub_msg_id==input.msg_id).\
+            first()
+
+    def _save_item(self, item, session):
+        session.add(item)
+        session.commit()
+
+# ################################################################################################################################
+
+class UpdateNonGD(_Update):
+    """ Updates details of an individual non-GD message.
+    """
+    _message_update_has_gd = False
+
+    def _get_item(self, input, _ignored):
+        zzz
+
+    def _save_item(self, item, _ignored):
+        qqq
 
 # ################################################################################################################################
 
