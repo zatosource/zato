@@ -27,7 +27,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_rever
 from zato.admin.web.views.pubsub import get_client_html
 from zato.common import PUBSUB, ZATO_NONE
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubSubscription, PubSubTopic
-from zato.common.util import get_sa_model_columns
+from zato.common.util import asbool, get_sa_model_columns
 
 # ################################################################################################################################
 
@@ -35,8 +35,8 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-sub_attrs = get_sa_model_columns(PubSubSubscription) + ['total_depth', 'current_depth', 'staging_depth', 'sub_id', 'topic_name',
-    'out_rest_http_soap_id', 'out_soap_http_soap_id']
+sub_attrs = get_sa_model_columns(PubSubSubscription) + ['current_depth_gd', 'current_depth_non_gd',
+    'sub_id', 'topic_name', 'out_rest_http_soap_id', 'out_soap_http_soap_id']
 
 # ################################################################################################################################
 
@@ -246,8 +246,7 @@ class EndpointQueues(_EndpointObjects):
     def on_before_append_item(self, item):
         item.creation_time = from_utc_to_user(item.creation_time+'+00:00', self.req.zato.user_profile)
         item.name_slug = slugify(item.name)
-        if item.last_interaction_time:
-            item.last_interaction_time = from_utc_to_user(item.last_interaction_time+'+00:00', self.req.zato.user_profile)
+
         return item
 
     def handle(self):
@@ -266,15 +265,36 @@ class EndpointQueueBrowser(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-endpoint-queue-browser'
     template = 'zato/pubsub/endpoint-queue-browser.html'
-    service_name = 'zato.pubsub.endpoint.get-endpoint-queue-messages'
+    service_name = None
     output_class = PubSubEndpointEnqueuedMessage
     paginate = True
 
+# ################################################################################################################################
+
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'sub_id', 'queue_type')
+        input_required = ('cluster_id', 'sub_id', 'has_gd')
         output_required = ('msg_id', 'recv_time', 'data_prefix_short', 'has_gd', 'is_in_staging', 'delivery_count',
             'last_delivery_time', 'name', 'endpoint_id')
         output_repeated = True
+
+# ################################################################################################################################
+
+    def on_after_set_input(self):
+        self.input.has_gd = asbool(self.input.has_gd)
+
+# ################################################################################################################################
+
+    def get_service_name(self):
+        suffix = '-gd' if self.input.has_gd else '-non-gd'
+        return 'zato.pubsub.endpoint.get-endpoint-queue-messages' + suffix
+
+# ################################################################################################################################
+
+    def on_before_append_item(self, item):
+        item.recv_time = from_utc_to_user(item.recv_time+'+00:00', self.req.zato.user_profile)
+        return item
+
+# ################################################################################################################################
 
     def handle(self):
 
@@ -286,15 +306,14 @@ class EndpointQueueBrowser(_Index):
 
         return {
             'sub_id': self.input.sub_id,
+            'has_gd': self.input.has_gd,
             'name': service_response.name,
             'name_slug': slugify(service_response.name),
             'endpoint_id': service_response.endpoint_id,
+            'endpoint_name': service_response.endpoint_name,
+            'ext_client_id': service_response.ext_client_id,
             'ws_ext_client_id': service_response.ws_ext_client_id
         }
-
-    def on_before_append_item(self, item):
-        item.recv_time = from_utc_to_user(item.recv_time+'+00:00', self.req.zato.user_profile)
-        return item
 
 # ################################################################################################################################
 

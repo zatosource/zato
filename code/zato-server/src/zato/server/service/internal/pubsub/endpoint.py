@@ -174,27 +174,12 @@ class GetTopicList(AdminService):
 class _GetEndpointQueue(AdminService):
     def _add_queue_depths(self, session, item):
 
-        total_q = session.query(PubSubEndpointEnqueuedMessage.id).\
-            filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-            filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key)
-
-        current_q = session.query(PubSubEndpointEnqueuedMessage.id).\
+        current_depth_gd_q = session.query(PubSubEndpointEnqueuedMessage.id).\
             filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
             filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key).\
             filter(PubSubEndpointEnqueuedMessage.is_in_staging != True)
 
-        staging_q = session.query(PubSubEndpointEnqueuedMessage.id).\
-            filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-            filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key).\
-            filter(PubSubEndpointEnqueuedMessage.is_in_staging == True)
-
-        total_depth = count(session, total_q)
-        current_depth = count(session, current_q)
-        staging_depth = count(session, staging_q)
-
-        item.total_depth = total_depth
-        item.current_depth = current_depth
-        item.staging_depth = staging_depth
+        item.current_depth_gd = count(session, current_depth_gd_q)
 
 # ################################################################################################################################
 
@@ -240,10 +225,7 @@ class GetEndpointQueueList(_GetEndpointQueue):
             for item in self.get_data(session):
 
                 self._add_queue_depths(session, item)
-                item.creation_time = datetime_from_ms(item.creation_time)
-
-                if item.last_interaction_time:
-                    item.last_interaction_time = datetime_from_ms(item.last_interaction_time)
+                item.creation_time = datetime_from_ms(item.creation_time * 1000.0)
                 response.append(item)
 
         self.response.payload[:] = response
@@ -400,26 +382,34 @@ class DeleteEndpointQueue(AdminService):
 
 # ################################################################################################################################
 
-class GetEndpointQueueMessages(AdminService):
+class GetEndpointQueueMessagesGD(AdminService):
+    """ Returns a list of GD messages queued up for input subscription.
+    """
     _filter_by = PubSubMessage.data_prefix,
 
     class SimpleIO(GetListAdminSIO):
-        input_required = ('cluster_id', 'sub_id')
+        input_required = ('cluster_id', 'sub_id', 'has_gd')
         output_required = (AsIs('msg_id'), 'recv_time', 'data_prefix_short')
         output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name', 'endpoint_id')
         output_repeated = True
 
     def get_data(self, session):
+        sub = self.pubsub.get_subscription_by_id(self.request.input.sub_id)
         return self._search(
-            pubsub_messages_for_queue, session, self.request.input.cluster_id, self.request.input.sub_id, False)
+            pubsub_messages_for_queue, session, self.request.input.cluster_id, sub.sub_key, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
         for item in self.response.payload.zato_output:
-            item.recv_time = datetime_from_ms(item.recv_time)
-            item.last_delivery_time = datetime_from_ms(item.last_delivery_time) if item.last_delivery_time else ''
+            item.recv_time = datetime_from_ms(item.recv_time * 1000.0)
+
+# ################################################################################################################################
+
+class GetEndpointQueueMessagesNonGD(AdminService):
+    """ Returns a list of non-GD messages queued up for input subscription.
+    """
 
 # ################################################################################################################################
 

@@ -28,7 +28,6 @@
 
             '_creation_time',
             '_sub_key',
-            '_last_interaction_time',
 
             '_clear',
             '_edit',
@@ -126,11 +125,10 @@
                         <th><a href="#">Sub queue for topic</a></th>
                         <th><a href="#">State</a></th>
 
-                        <th><a href="#">Total</a></th>
+                        <th><a href="#">Current depth GD / RAM</a></th>
 
                         <th><a href="#">Creation time</a></th>
                         <th style="min-width:200px"><a href="#">Sub key</a></th>
-                        <th><a href="#">Last interaction</a></th>
 
                         <th style="width:5%">&nbsp;</th>
                         <th style="width:5%">&nbsp;</th>
@@ -212,18 +210,15 @@
                         </td>
                         <td>{{ item.active_status }}</td>
 
-                        <td id="total_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "total" item.sub_id item.topic_name|slugify %}?cluster={{ cluster_id }}">{{ item.total_depth }}</a></td>
+                        <td id="total_depth_{{ item.sub_id}}">
+                            <a href="{% url "pubsub-endpoint-queue-browser" "true" item.sub_id item.topic_name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth_gd }}</a>
+                            /
+                            <a href="{% url "pubsub-endpoint-queue-browser" "false" item.sub_id item.topic_name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth_non_gd }}</a>
+                        </td>
 
                         <td>{{ item.creation_time }}</td>
                         <td>
                             <a id="sub_key_{{ item.sub_id }}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key('{{ item.sub_id }}')">Show</a>
-                        </td>
-                        <td>
-                            {% if item.last_interaction_time %}
-                                <a href="#">{{ item.last_interaction_time }}</a>
-                            {% else %}
-                                <span class="form_hint">---</span>
-                            {% endif %}
                         </td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.clear('{{ item.sub_id }}', '{{ cluster_id }}')">Clear</a></td>

@@ -25,7 +25,6 @@
             '_msg_id',
             'prefix_short',
 
-            '_has_gd',
             'delivery_count',
             '_last_delivery',
 
@@ -42,9 +41,19 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Messages for queue :
-    <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id name_slug %}?highlight={{ sub_id }}">{{ name }}</a>
-    <span class="form_hint">{{ ws_ext_client_id|default:'' }}</span>
+<h2 class="zato">{% if has_gd %}GD{% else %}Non-GD{% endif %} messages for endpoint
+    <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint_id }}">{{ endpoint_name }}</a>,
+    queue
+    <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id name_slug %}">{{ name }}</a>
+
+    {% if ws_ext_client_id %}
+        <span class="form_hint">wsx: {{ ws_ext_client_id|default:'' }}</span>
+    {% endif %}
+
+    {% if ext_client_id %}
+        <span class="form_hint">ext: {{ ext_client_id|default:'' }}</span>
+    {% endif %}
+
 </h2>
 
 {% if not zato_clusters %}
@@ -66,9 +75,8 @@
 
                         <th style="width:16%"><a href="#">Recv time</a></th>
                         <th style="width:22%"><a href="#">Msg ID</a></th>
-                        <th style="width:22%"><a href="#">Recv msg prefix</a></th>
+                        <th style="width:22%"><a href="#">Msg prefix</a></th>
 
-                        <th><a href="#">GD</a></th>
                         <th><a href="#">DLV</a></th>
                         <th><a href="#">Last DLV</a></th>
 
@@ -87,13 +95,6 @@
                         <td><a href="{% url "pubsub-message" cluster_id "queue" sub_id item.msg_id %}">{{ item.msg_id }}</a></td>
                         <td>{{ item.data_prefix_short }}</td>
 
-                        <td>
-                            {% if item.has_gd %}
-                                <a href="#">Yes</a>
-                            {% else %}
-                                No
-                            {% endif %}
-                        </td>
                         <td>{{ item.delivery_count }}</td>
                         <td>{{ item.last_delivery_time|default:'<span class="form_hint">---</span>' }}</td>
 
