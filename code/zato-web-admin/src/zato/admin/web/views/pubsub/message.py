@@ -320,14 +320,21 @@ def delete(req, cluster_id, msg_id):
         'msg_id': msg_id,
     }
 
+    object_type = req.POST['object_type']
+
+    if object_type == 'queue':
+        input_dict['sub_key'] = req.POST['sub_key']
+
     if req.POST['has_gd']:
-        service_name = 'zato.pubsub.message.delete-gd'
+        service_name = 'zato.pubsub.message.{}-delete-gd'.format(object_type)
     else:
-        service_name = 'zato.pubsub.message.delete-non-gd'
+        service_name = 'zato.pubsub.message.{}-delete-non-gd'.format(object_type)
 
         # This is an in-RAM message so it needs additional information
         input_dict['server_name'] = req.POST['server_name']
         input_dict['server_pid'] = req.POST['server_pid']
+
+    print(333, input_dict)
 
     try:
         req.zato.client.invoke(service_name, input_dict)

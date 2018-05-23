@@ -145,8 +145,8 @@ class Has(AdminService):
 
 # ################################################################################################################################
 
-class Delete(AdminService):
-    """ Deletes a GD message by its ID. Cascades to all related SQL objects, e.g. subscriber queues.
+class TopicDeleteGD(AdminService):
+    """ Deletes a GD topic message by its ID. Cascades to all related SQL objects, e.g. subscriber queues.
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'))
@@ -161,22 +161,10 @@ class Delete(AdminService):
             if not ps_msg:
                 raise NotFound(self.cid, 'Message not found `{}`'.format(self.request.input.msg_id))
 
-            ps_topic = session.query(PubSubTopic).\
-                filter(PubSubTopic.cluster_id==self.request.input.cluster_id).\
-                filter(PubSubTopic.id==ps_msg.topic_id).\
-                one()
+            session.delete(ps_msg)
+            session.commit()
 
-            # Delete the message  but do it under a global lock because other transactions
-            # may want to update the topic in parallel.
-            with self.lock('zato.pubsub.publish.%s' % ps_topic.name):
-                session.delete(ps_msg)
-                session.commit()
-
-        self.logger.info('Deleted GD message `%s`', self.request.input.msg_id)
-
-# Add an alias for consistency
-class DeleteGD(Delete):
-    pass
+        self.logger.info('GD topic message deleted `%s` (%s)', self.request.input.msg_id)
 
 # ################################################################################################################################
 
@@ -191,7 +179,7 @@ class DeleteNonGDMessage(AdminService):
 
 # ################################################################################################################################
 
-class DeleteNonGD(AdminService):
+class TopicDeleteNonGD(AdminService):
     """ Deletes a non-GD message by its ID from a named server.
     """
     class SimpleIO(AdminSIO):
@@ -205,6 +193,31 @@ class DeleteNonGD(AdminService):
 
         self.logger.info('Deleted non-GD message `%s` from `%s:%s`',
             self.request.input.msg_id, self.request.input.server_name, self.request.input.server_pid)
+
+# ################################################################################################################################
+
+class QueueDeleteGD(AdminService):
+    """ Deletes a GD message by its ID from the input subscription queue.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', AsIs('msg_id'), 'sub_key')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            ps_msg = session.query(PubSubEndpointEnqueuedMessage).\
+                filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
+                filter(PubSubEndpointEnqueuedMessage.pub_msg_id==self.request.input.msg_id).\
+                filter(PubSubEndpointEnqueuedMessage.sub_key==self.request.input.sub_key).\
+                first()
+
+            if not ps_msg:
+                raise NotFound(self.cid, 'Message not found `{}` for sub_key `{}`'.format(
+                    self.request.input.msg_id, self.request.input.sub_key))
+
+            session.delete(ps_msg)
+            session.commit()
+
+        self.logger.info('GD queue message deleted `%s` (%s)', self.request.input.msg_id, self.request.input.sub_key)
 
 # ################################################################################################################################
 
