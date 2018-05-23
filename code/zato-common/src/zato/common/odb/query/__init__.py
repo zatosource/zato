@@ -1040,7 +1040,7 @@ def _pubsub_endpoint_queue(session, cluster_id):
         PubSubEndpoint.id.label('endpoint_id'),
         WebSocketSubscription.ext_client_id.label('ws_ext_client_id'),
         ).\
-        outerjoin(WebSocketSubscription, WebSocketSubscription.id==PubSubSubscription.ws_sub_id).\
+        outerjoin(WebSocketSubscription, WebSocketSubscription.sub_key==PubSubSubscription.sub_key).\
         filter(PubSubSubscription.topic_id==PubSubTopic.id).\
         filter(PubSubSubscription.cluster_id==cluster_id).\
         filter(PubSubSubscription.endpoint_id==PubSubEndpoint.id)
@@ -1107,7 +1107,7 @@ def _pubsub_queue_message(session, cluster_id):
         filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
         filter(PubSubEndpointEnqueuedMessage.topic_id==PubSubTopic.id).\
         filter(PubSubEndpointEnqueuedMessage.endpoint_id==PubSubEndpoint.id).\
-        filter(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
+        filter(PubSubEndpointEnqueuedMessage.sub_key==PubSubSubscription.sub_key).\
         filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id)
 
 # ################################################################################################################################
@@ -1119,9 +1119,9 @@ def pubsub_queue_message(session, cluster_id, msg_id):
 # ################################################################################################################################
 
 @query_wrapper
-def pubsub_messages_for_queue(session, cluster_id, sub_id, needs_columns=False):
+def pubsub_messages_for_queue(session, cluster_id, sub_key, needs_columns=False):
     return _pubsub_queue_message(session, cluster_id).\
-        filter(PubSubEndpointEnqueuedMessage.subscription_id==sub_id).\
+        filter(PubSubEndpointEnqueuedMessage.sub_key==sub_key).\
         order_by(PubSubEndpointEnqueuedMessage.creation_time.desc())
 
 # ################################################################################################################################

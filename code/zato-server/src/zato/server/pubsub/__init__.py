@@ -766,6 +766,14 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_subscription_by_id(self, sub_id):
+        with self.lock:
+            for sub in self.subscriptions_by_sub_key.itervalues():
+                if sub.id == sub_id:
+                    return sub
+
+# ################################################################################################################################
+
     def has_sub_key(self, sub_key):
         with self.lock:
             return sub_key in self.subscriptions_by_sub_key
