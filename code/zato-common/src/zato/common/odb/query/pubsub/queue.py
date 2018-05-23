@@ -72,7 +72,7 @@ def _set_delivery_status(session, cluster_id, sub_key, msg_id_list, now, status)
             }).\
         where(PubSubSubscription.sub_key==sub_key).\
         where(PubSubEnqMsg.cluster_id).\
-        where(PubSubEnqMsg.subscription_id==PubSubSubscription.id).\
+        where(PubSubEnqMsg.sub_key==PubSubSubscription.sub_key).\
         where(PubSubEnqMsg.pub_msg_id.in_(msg_id_list))
     )
 

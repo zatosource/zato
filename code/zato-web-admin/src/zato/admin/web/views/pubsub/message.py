@@ -334,8 +334,6 @@ def delete(req, cluster_id, msg_id):
         input_dict['server_name'] = req.POST['server_name']
         input_dict['server_pid'] = req.POST['server_pid']
 
-    print(333, input_dict)
-
     try:
         req.zato.client.invoke(service_name, input_dict)
     except Exception:

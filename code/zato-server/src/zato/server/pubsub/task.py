@@ -95,6 +95,13 @@ class DeliveryTask(object):
         self.delivery_interval = self.sub_config.task_delivery_interval / 1000.0
         self.delivery_counter = 1
 
+        # A list of messages that were requested to be deleted while a delivery was in progress,
+        # checked before each delivery.
+        self.delete_requested = []
+
+        # This is a lock used for micro-operations such as changing or consulting the contents of self.delete_requested.
+        self.interrupt_lock = RLock()
+
         # If self.wrap_in_list is True, messages will be always wrapped in a list,
         # even if there is only one message to send. Note that self.wrap_in_list will be False
         # only if both batch_size is 1 and wrap_one_msg_in_list is True.
@@ -109,6 +116,26 @@ class DeliveryTask(object):
             self.wrap_in_list = True
 
         spawn_greenlet(self.run)
+
+# ################################################################################################################################
+
+    def delete_messages(self, msg_list):
+        """ Requests that all messages from input list be deleted before the next delivery.
+        """
+        logger.info('Marking message(s) to be deleted `%s` from `%s` (%s)', msg_list, self.sub_key, self.topic_name)
+
+        with self.interrupt_lock:
+            # Build a list of actual messages to be deleted - we cannot use a msg_id list only
+            # because the SortedList always expects actual message objects for comparison purposes.
+            # This will not be called too often so it is fine to iterate over self.delivery_list
+            # instead of employing look up dicts just in case a message would have to be deleted.
+            to_delete = []
+            for msg in self.delivery_list:
+                if msg.pub_msg_id in msg_list:
+                    msg_list.remove(msg.pub_msg_id) # We can trim it since we know it won't appear again
+                    to_delete.append(msg)
+
+            self.delete_requested.extend(to_delete)
 
 # ################################################################################################################################
 
@@ -127,7 +154,12 @@ class DeliveryTask(object):
             # whether the message should be delivered, skipped in this iteration or perhaps deleted altogether
             # without even trying to deliver it. If there is no hook, none of messages will be skipped or deleted.
 
-            to_delete = []
+            # There may be requests to delete some of messages while we are running and we obtain the list of
+            # such messages here.
+            with self.interrupt_lock:
+                to_delete = self.delete_requested[:]
+                self.delete_requested[:] = []
+
             to_deliver = []
             to_skip = []
 
@@ -148,20 +180,22 @@ class DeliveryTask(object):
                 # There is a hook so we can invoke it - it will update the 'messages' dict in place
                 self.pubsub.invoke_before_delivery_hook(hook, self.sub_config.topic_id, self.sub_key, batch, messages)
 
-                # Delete these messages, per response from hook (which must have existed)
-                if to_delete:
+            # Delete these messages first, before starting any delivery, either because the hooks told us to
+            # or because self.delete_requested was not empty before this iteration.
+            if to_delete:
 
-                    # Mark as deleted in SQL
-                    self.pubsub.set_to_delete(self.sub_key, to_delete)
+                # Mark as deleted in SQL
+                self.pubsub.set_to_delete(self.sub_key, [msg.pub_msg_id for msg in to_delete])
 
-                    # Delete from our in-RAM delivery list
-                    for msg in to_delete:
-                        self.delivery_list.remove_pubsub_msg(msg)
+                # Delete from our in-RAM delivery list
+                for msg in to_delete:
+                    self.delivery_list.remove_pubsub_msg(msg)
 
             if to_skip:
                 logger.info('Skipping messages `%s`', to_skip)
 
             # This is the call that actually delivers messages
+            #zz
             self.deliver_pubsub_msg_cb(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
 
         except Exception as e:
@@ -192,9 +226,10 @@ class DeliveryTask(object):
                 logger.warn('Could not update delivery status for message(s):`%s`, e:`%s`', to_deliver, format_exc(e))
                 return _run_deliv_status.SOCKET_ERROR
             else:
-                with self.delivery_lock:
-                    for msg in to_deliver:
-                        self.delivery_list.remove_pubsub_msg(msg)
+                #with self.delivery_lock:
+                #    for msg in to_deliver:
+                #        self.delivery_list.remove_pubsub_msg(msg)
+                pass
 
                 # Status of messages is updated in both SQL and RAM so we can now log success
                 logger.info('Successfully delivered message(s) %s to %s (dlvc:%d)',
@@ -737,5 +772,13 @@ class PubSubTool(object):
     def get_delivery_task(self, sub_key):
         with self.lock:
             return self.delivery_tasks[sub_key]
+
+# ################################################################################################################################
+
+    def delete_messages(self, sub_key, msg_list):
+        """ Marks one or more to be deleted from the delivery task by the latter's sub_key.
+        """
+        with self.lock:
+            self.delivery_tasks[sub_key].delete_messages(msg_list)
 
 # ################################################################################################################################
