@@ -136,7 +136,6 @@ $.fn.zato.pubsub.topic.delete_message = function(topic_id, msg_id, has_gd, serve
         $.fn.zato.user_message(success, data.responseText);
     }
 
-
     var jq_callback = function(ok) {
         if(ok) {
             var url = String.format('/zato/pubsub/message/delete/cluster/{0}/msg/{1}',

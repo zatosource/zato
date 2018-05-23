@@ -390,7 +390,7 @@ class GetEndpointQueueMessagesGD(AdminService):
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'sub_id', 'has_gd')
         output_required = (AsIs('msg_id'), 'recv_time', 'data_prefix_short')
-        output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name', 'endpoint_id')
+        output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name', 'endpoint_id', 'sub_key')
         output_repeated = True
 
     def get_data(self, session):

@@ -13,7 +13,8 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/pubsub/queue-message.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/queue-message-browser.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/common.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -21,16 +22,12 @@
             '_numbering',
             '_selection',
 
-            '_pub_time',
+            '_recv_time',
             '_msg_id',
-            'prefix_short',
+            'msg_prefix',
 
             'delivery_count',
             '_last_delivery',
-
-            '_endpoint',
-            '_pattern',
-            'msg_prefix',
 
             '_delete',
             'id',
@@ -77,7 +74,7 @@
                         <th style="width:22%"><a href="#">Msg ID</a></th>
                         <th style="width:22%"><a href="#">Msg prefix</a></th>
 
-                        <th><a href="#">DLV</a></th>
+                        <th><a href="#">DLVC</a></th>
                         <th><a href="#">Last DLV</a></th>
 
                         <th style="width:5%">&nbsp;</th>
@@ -98,7 +95,7 @@
                         <td>{{ item.delivery_count }}</td>
                         <td>{{ item.last_delivery_time|default:'<span class="form_hint">---</span>' }}</td>
 
-                        <td><a href="javascript:$.fn.zato.pubsub.message.queue.delete_('{{ sub_id }}', '{{ item.msg_id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.delete_message('queue', '', '{{ item.msg_id }}', '{{ item.sub_key|default:"" }}', '{% if has_gd %}1{% endif %}', '{% if not has_gd %}{{ item.server_name }}{% endif %}', '{% if not has_gd %}{{ item.server_pid }}{% endif %}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.msg_id }}'>{{ item.msg_id }}</td>
                     </tr>
                 {% endfor %}

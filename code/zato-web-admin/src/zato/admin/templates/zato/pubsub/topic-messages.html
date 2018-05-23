@@ -13,6 +13,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/common.js"></script>
     <script type="text/javascript" src="/static/js/pubsub/topic.js"></script>
 
     <script>
@@ -89,7 +90,7 @@
                         <td>{{ item.pattern_matched }}</td>
                         <td>{{ item.data_prefix_short }}</td>
 
-                        <td><a href="javascript:$.fn.zato.pubsub.topic.delete_message('{{ topic_id }}', '{{ item.msg_id }}', '{% if has_gd %}1{% endif %}', '{% if not has_gd %}{{ item.server_name }}{% endif %}', '{% if not has_gd %}{{ item.server_pid }}{% endif %}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.delete_message('topic', '{{ topic_id }}', '{{ item.msg_id }}', '', '{% if has_gd %}1{% endif %}', '{% if not has_gd %}{{ item.server_name }}{% endif %}', '{% if not has_gd %}{{ item.server_pid }}{% endif %}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.msg_id }}'>{{ item.msg_id }}</td>
                     </tr>
                 {% endfor %}
