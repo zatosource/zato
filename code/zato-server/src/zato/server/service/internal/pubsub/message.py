@@ -217,7 +217,31 @@ class QueueDeleteGD(AdminService):
             session.delete(ps_msg)
             session.commit()
 
-        self.logger.info('GD queue message deleted `%s` (%s)', self.request.input.msg_id, self.request.input.sub_key)
+            # Find the server that has the delivery task for this sub_key
+            sub_key_server = self.pubsub.get_sub_key_server(self.request.input.sub_key)
+
+            # It's possible that there is no such server in case of WSX clients that connected,
+            # had their subscription created but then they disconnected and there is no delivery server for them.
+            if sub_key_server:
+                server = self.servers[sub_key_server.server_name]
+                response = server.invoke(DeleteDeliveryTaskMessage.get_name(), {
+                    'msg_id': self.request.input.msg_id,
+                    'sub_key': self.request.input.sub_key,
+                }, pid=sub_key_server.server_pid)
+
+        self.logger.info('Deleting GD queue message `%s` (%s)', self.request.input.msg_id, self.request.input.sub_key)
+
+# ################################################################################################################################
+
+class DeleteDeliveryTaskMessage(AdminService):
+    """ Deletes a message from a delivery task which must exist on current server
+    """
+    class SimpleIO(AdminSIO):
+        input_required = (AsIs('msg_id'), 'sub_key')
+
+    def handle(self):
+        pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
+        pubsub_tool.delete_messages(self.request.input.sub_key, [self.request.input.msg_id])
 
 # ################################################################################################################################
 

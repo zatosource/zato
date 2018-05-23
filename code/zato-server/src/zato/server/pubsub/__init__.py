@@ -555,8 +555,8 @@ class InRAMSyncBacklog(object):
             # For each sub_key ..
             for sub_key in sub_keys:
 
-                # .. get all messages waiting for this subscriber ..
-                msg_ids = self.sub_key_to_msg_id.pop(sub_key)
+                # .. get all messages waiting for this subscriber, assuming there are any at all ..
+                msg_ids = self.sub_key_to_msg_id.pop(sub_key, [])
 
                 # .. for each message found we need to check if it is needed by any other subscriber,
                 # and if it's not, then we delete all the reference to this message. Otherwise, we leave it
@@ -1136,6 +1136,12 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_pubsub_tool_by_sub_key(self, sub_key):
+        with self.lock:
+            return self.pubsub_tool_by_sub_key[sub_key]
+
+# ################################################################################################################################
+
     def add_ws_client_pubsub_keys(self, session, sql_ws_client_id, sub_key, channel_name, pub_client_id):
         """ Adds to SQL information that a given WSX client handles messages for sub_key.
         This information is transient - it will be dropped each time a WSX client disconnects
@@ -1484,11 +1490,10 @@ class PubSub(object):
     def set_to_delete(self, sub_key, msg_list):
         """ Marks all input messages as ready to be deleted.
         """
-        msg_id_list = [msg.pub_msg_id for msg in msg_list]
-        logger.info('Deleting messages set to be deleted `%s`', msg_id_list)
+        logger.info('Deleting messages set to be deleted `%s`', msg_list)
 
         with closing(self.server.odb.session()) as session:
-            set_to_delete(session, self.cluster_id, sub_key, msg_id_list, utcnow_as_ms())
+            set_to_delete(session, self.cluster_id, sub_key, msg_list, utcnow_as_ms())
 
 # ################################################################################################################################
 
