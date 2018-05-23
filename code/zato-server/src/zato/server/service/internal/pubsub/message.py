@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from copy import deepcopy
-from datetime import datetime
 
 # Bunch
 from bunch import Bunch
@@ -20,7 +19,7 @@ from bunch import Bunch
 from sqlalchemy import and_, exists
 
 # Zato
-from zato.common import DATA_FORMAT, PUBSUB as COMMON_PUBSUB
+from zato.common import DATA_FORMAT
 from zato.common.exception import NotFound
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage
 from zato.common.odb.query import pubsub_message, pubsub_queue_message
@@ -224,7 +223,7 @@ class QueueDeleteGD(AdminService):
             # had their subscription created but then they disconnected and there is no delivery server for them.
             if sub_key_server:
                 server = self.servers[sub_key_server.server_name]
-                response = server.invoke(DeleteDeliveryTaskMessage.get_name(), {
+                server.invoke(DeleteDeliveryTaskMessage.get_name(), {
                     'msg_id': self.request.input.msg_id,
                     'sub_key': self.request.input.sub_key,
                 }, pid=sub_key_server.server_pid)
