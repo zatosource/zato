@@ -220,6 +220,7 @@ class DeliveryTask(object):
                 delivered_msg_id_list = [msg.pub_msg_id for msg in to_deliver]
 
                 with self.delivery_lock:
+                    z
                     self.confirm_pubsub_msg_delivered_cb(self.sub_key, delivered_msg_id_list)
 
             except Exception, e:
@@ -289,7 +290,7 @@ class DeliveryTask(object):
                         # we queued up. Note that we are the only delivery task for this sub_key  so when we sleep here
                         # for a moment, we do not block other deliveries.
                         else:
-                            sleep_time = self.wait_sock_err if result == _run_deliv_status.SOCKET_ERROR else self.wait_non_sock_err
+                            sleep_time = 1#self.wait_sock_err if result == _run_deliv_status.SOCKET_ERROR else self.wait_non_sock_err
                             msg = 'Sleeping for {}s after `{}` in sub_key:`{}`'.format(sleep_time, result, self.sub_key)
                             logger.warn(msg)
                             logger_zato.warn(msg)

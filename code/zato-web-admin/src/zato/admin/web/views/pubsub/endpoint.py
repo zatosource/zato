@@ -371,18 +371,18 @@ def endpoint_queue_interactions(req):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def endpoint_queue_clear(req, cluster_id, sub_id):
+def endpoint_queue_clear(req, cluster_id, sub_key):
 
     try:
         req.zato.client.invoke('zato.pubsub.endpoint.clear-endpoint-queue', {
-            'id': sub_id,
+            'sub_key': sub_key,
             'cluster_id': cluster_id,
         })
-    except Exception, e:
-        return HttpResponseServerError(format_exc(e))
+    except Exception:
+        return HttpResponseServerError(format_exc())
     else:
         queue_name = req.POST['queue_name']
-        return HttpResponse('Cleared sub queue `{}`'.format(queue_name))
+        return HttpResponse('Cleared sub queue `{}` for sub_key `{}`'.format(queue_name, sub_key))
 
 # ################################################################################################################################
 
