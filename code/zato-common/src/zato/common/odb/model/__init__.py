@@ -2325,8 +2325,8 @@ class PubSubSubscription(Base):
     name = None # Not used by DB
     topic_name = None # Not used by DB
     total_depth = None # Not used by DB
-    current_depth = None # Not used by DB
-    staging_depth = None # Not used by DB
+    current_depth_gd = None # Not used by DB
+    current_depth_non_gd = None # Not used by DB
 
 # ################################################################################################################################
 

@@ -91,6 +91,8 @@
             'out_soap_http_soap_id',
             'delivery_err_should_block',
             'is_staging_enabled',
+            'current_depth_gd',
+            'current_depth_non_gd',
         ]
     }
     </script>
@@ -192,6 +194,8 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -283,6 +287,8 @@
                         <td class='ignore'>{{ item.out_soap_http_soap_id|default:'' }}</td>
                         <td class='ignore'>{{ item.delivery_err_should_block }}</td>
                         <td class='ignore'>{{ item.is_staging_enabled }}</td>
+                        <td class='ignore'>{{ item.current_depth_gd }}</td>
+                        <td class='ignore'>{{ item.current_depth_non_gd }}</td>
 
                 {% endfor %}
                 {% else %}

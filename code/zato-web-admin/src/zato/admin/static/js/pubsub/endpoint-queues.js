@@ -38,8 +38,7 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     var topic_link = String.format(
         '<a href="/zato/pubsub/topic/?cluster={0}&highlight={1}">{2}</a>', data.cluster_id, data.id, data.topic_name);
 
-    var depth_func = $.fn.zato.pubsub.endpoint_queue.get_depth_link;
-    var total_link = 'zzz';//depth_func('total', data.cluster_id, data.id, data.name_slug, data.total_depth);
+    var total_link = $.fn.zato.pubsub.endpoint_queue.get_current_depth_link(data, data.cluster_id);
 
     var sub_key_link = String.format(
         '<a id="sub_key_{0}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key(\'{0}\')">Show</a>', data.id);
