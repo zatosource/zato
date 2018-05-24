@@ -497,6 +497,29 @@ def payload_from_request(cid, request, data_format, transport):
 
 # ################################################################################################################################
 
+BZ2_EXTENSIONS = ('.tar.bz2', '.tbz')
+XZ_EXTENSIONS = ('.tar.xz', '.txz', '.tlz', '.tar.lz', '.tar.lzma')
+ZIP_EXTENSIONS = ('.zip', '.whl')
+TAR_EXTENSIONS = ('.tar.gz', '.tgz', '.tar')
+ARCHIVE_EXTENSIONS = (ZIP_EXTENSIONS + BZ2_EXTENSIONS + TAR_EXTENSIONS + XZ_EXTENSIONS)
+
+def splitext(path):
+    """Like os.path.splitext, but take off .tar too"""
+    base, ext = os.path.splitext(path)
+    if base.lower().endswith('.tar'):
+        ext = base[-4:] + ext
+        base = base[:-4]
+    return base, ext
+
+def is_archive_file(name):
+    """Return True if `name` is a considered as an archive file."""
+    ext = splitext(name)[1].lower()
+    if ext in ARCHIVE_EXTENSIONS:
+        return True
+    return False
+
+# ################################################################################################################################
+
 def is_python_file(name):
     """ Is it a Python file we can import Zato services from?
     """
