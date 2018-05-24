@@ -387,6 +387,7 @@ class SimpleIOPayload(SIOConverter):
             is_sa_namedtuple = isinstance(output[0], KeyedTuple)
 
             for item in output:
+
                 if self.zato_is_xml:
                     out_item = Element('item')
                 else:

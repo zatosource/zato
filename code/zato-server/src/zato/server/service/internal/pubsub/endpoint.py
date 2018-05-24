@@ -191,13 +191,9 @@ class GetEndpointQueue(_GetEndpointQueue):
     def handle(self):
         with closing(self.odb.session()) as session:
             item = pubsub_endpoint_queue(session, self.request.input.cluster_id, self.request.input.id)
-
-            self._add_queue_depths(session, item)
-            item.creation_time = datetime_from_ms(item.creation_time)
-            if item.last_interaction_time:
-                item.last_interaction_time = datetime_from_ms(item.last_interaction_time)
-
+            item.creation_time = datetime_from_ms(item.creation_time * 1000.0)
             self.response.payload = item
+            self._add_queue_depths(session, self.response.payload)
 
 # ################################################################################################################################
 
@@ -219,11 +215,8 @@ class GetEndpointQueueList(_GetEndpointQueue):
 
     def handle(self):
         response = []
-
         with closing(self.odb.session()) as session:
-
             for item in self.get_data(session):
-
                 self._add_queue_depths(session, item)
                 item.creation_time = datetime_from_ms(item.creation_time * 1000.0)
                 response.append(item)
