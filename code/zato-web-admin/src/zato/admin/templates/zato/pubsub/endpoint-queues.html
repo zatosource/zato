@@ -287,7 +287,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='55'>No results</td>
+                        <td colspan='51'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -493,6 +493,7 @@
 
                     </table>
                     {{ edit_form.sub_key }}
+                    <input type="hidden" id="id_edit-endpoint_type" name="endpoint_type" value="{{ endpoint.endpoint_type }}" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="cluster_id" name="_name_unused_cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />

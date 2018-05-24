@@ -251,6 +251,9 @@ class UpdateEndpointQueue(AdminService):
         if out_rest_http_soap_id and out_soap_http_soap_id:
             raise BadRequest(self.cid, 'Cannot provide both out_rest_http_soap_id and out_soap_http_soap_id on input')
 
+        # WebSockets clients dynamic attach to delivery servers hence the servers cannot be updated by users
+        can_update_delivery_server = self.request.input.endpoint_type != COMMON_PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+
         # We know we don't have both out_rest_http_soap_id and out_soap_http_soap_id on input
         # but we still need to find out if we have any at all.
         if out_rest_http_soap_id:
@@ -266,13 +269,15 @@ class UpdateEndpointQueue(AdminService):
                 filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
                 one()
 
-            old_delivery_server_id = item.server_id
-            new_delivery_server_id = self.request.input.server_id
-            new_delivery_server_name = server_by_id(session, self.server.cluster_id, new_delivery_server_id).name
+            if can_update_delivery_server:
+                old_delivery_server_id = item.server_id
+                new_delivery_server_id = self.request.input.server_id
+                new_delivery_server_name = server_by_id(session, self.server.cluster_id, new_delivery_server_id).name
 
             for key, value in sorted(self.request.input.items()):
                 if key not in _sub_skip_update:
-                    setattr(item, key, value)
+                    if value is not None:
+                        setattr(item, key, value)
 
             # This one we set manually based on logic at the top of the method
             item.out_http_soap_id = out_http_soap_id
@@ -285,14 +290,15 @@ class UpdateEndpointQueue(AdminService):
 
             # We change the delivery server in background - note how we send name, not ID, on input.
             # This is because our invocation target will want to use self.servers[server_name].invoke(...)
-            if old_delivery_server_id != new_delivery_server_id:
-                self.broker_client.publish({
-                    'sub_key': self.request.input.sub_key,
-                    'endpoint_type': item.endpoint.endpoint_type,
-                    'old_delivery_server_id': old_delivery_server_id,
-                    'new_delivery_server_name': new_delivery_server_name,
-                    'action': PUBSUB.DELIVERY_SERVER_CHANGE.value,
-                })
+            if can_update_delivery_server:
+                if old_delivery_server_id != new_delivery_server_id:
+                    self.broker_client.publish({
+                        'sub_key': self.request.input.sub_key,
+                        'endpoint_type': item.endpoint.endpoint_type,
+                        'old_delivery_server_id': old_delivery_server_id,
+                        'new_delivery_server_name': new_delivery_server_name,
+                        'action': PUBSUB.DELIVERY_SERVER_CHANGE.value,
+                    })
 
 # ################################################################################################################################
 

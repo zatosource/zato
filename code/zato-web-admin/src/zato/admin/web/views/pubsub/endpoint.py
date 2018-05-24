@@ -322,11 +322,13 @@ def endpoint_queue_edit(req):
 
     sub_id = req.POST['id']
     cluster_id = req.POST['cluster_id']
+    endpoint_type = req.POST['endpoint_type']
 
     # Always available
     request = {
         'id': sub_id,
-        'cluster_id': cluster_id
+        'cluster_id': cluster_id,
+        'endpoint_type': endpoint_type
     }
 
     # Need form prefix

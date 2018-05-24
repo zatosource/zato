@@ -45,15 +45,6 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
         '<a id="sub_key_{0}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key(\'{0}\')">Show</a>', data.id);
     var last_interaction_link = '';
 
-    if(data.last_interaction) {
-        last_interaction_link = String.format(
-            '<a href="/zato/pubsub/endpoint/queue/last-interaction/cluster/{0}/queue/{1}/{2}">{3}</a>',
-            data.cluster_id, data.id, data.name_slug, data.staging_depth);
-    }
-    else {
-        last_interaction = $.fn.zato.empty_value;
-    }
-
     var clear_link = String.format('<td>{0}</td>',
         String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.clear('{0}')\">Clear</a>", data.id));
     var edit_link = String.format('<td>{0}</td>',
@@ -71,7 +62,6 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
 
     row += String.format('<td>{0}</td>', data.creation_time);
     row += String.format('<td>{0}</td>', sub_key_link);
-    row += String.format('<td>{0}</td>', last_interaction);
 
     row += clear_link;
     row += edit_link;
