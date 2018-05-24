@@ -42,7 +42,7 @@ from springpython.context import InitializingObject
 # Zato
 from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceInfo, TRACE1
 from zato.common.match import Matcher
-from zato.common.util import decompress, deployment_info, fs_safe_now, import_module_from_path, is_func_overridden, \
+from zato.common.util import deployment_info, fs_safe_now, import_module_from_path, is_func_overridden, \
      is_python_file, visit_py_source
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, Service
 from zato.server.service.internal import AdminService
@@ -206,25 +206,6 @@ class ServiceStore(InitializingObject):
         """ Returns all the service-related data.
         """
         return self.services[impl_name]
-
-# ################################################################################################################################
-
-    def decompress(self, archive, work_dir):
-        """ Decompresses an archive into a randomly named directory.
-        """
-        # 6 characters will do, we won't deploy millions of services
-        # in the very same (micro-)second after all
-        rand = uuid4().hex[:6]
-
-        dir_name = os.path.join(work_dir, '{}-{}'.format(fs_safe_now(), rand), os.path.split(archive)[1])
-        os.makedirs(dir_name)
-
-        # .. unpack the archive into it ..
-        decompress(archive, dir_name)
-
-        # .. and return the name of the newly created directory so that the
-        # rest of the machinery can pick the services up
-        return dir_name
 
 # ################################################################################################################################
 

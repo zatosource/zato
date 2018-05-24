@@ -77,9 +77,6 @@ from numpy.random import bytes as random_bytes, seed as numpy_seed
 # OpenSSL
 from OpenSSL import crypto
 
-# pip
-from pip.download import unpack_file_url
-
 # portalocker
 import portalocker
 
@@ -528,13 +525,6 @@ class _DummyLink(object):
     """
     def __init__(self, url):
         self.url = url
-
-# ################################################################################################################################
-
-def decompress(archive, dir_name):
-    """ Decompresses an archive into a directory, the directory must already exist.
-    """
-    unpack_file_url(_DummyLink('file:' + archive), dir_name)
 
 # ################################################################################################################################
 
