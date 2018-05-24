@@ -300,7 +300,7 @@ class ClearEndpointQueue(AdminService):
     """ Clears messages from the queue given on input.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'id')
+        input_required = ('cluster_id', 'sub_key')
         input_optional = ('queue_type',)
 
     def handle(self, _queue_type=COMMON_PUBSUB.QUEUE_TYPE):
@@ -323,7 +323,7 @@ class ClearEndpointQueue(AdminService):
         with closing(self.odb.session()) as session:
             q = session.query(PubSubEndpointEnqueuedMessage).\
                 filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-                filter(PubSubEndpointEnqueuedMessage.subscription_id==self.request.input.id)
+                filter(PubSubEndpointEnqueuedMessage.sub_key==self.request.input.sub_key)
 
             if is_in_staging is not None:
                 q = q.filter(PubSubEndpointEnqueuedMessage.is_in_staging.is_(is_in_staging))
