@@ -29,6 +29,9 @@
             '_creation_time',
             '_sub_key',
 
+            '_extcli',
+            '_wsx',
+
             '_clear',
             '_edit',
             '_delete',
@@ -132,6 +135,9 @@
                         <th><a href="#">Creation time</a></th>
                         <th style="min-width:200px"><a href="#">Sub key</a></th>
 
+                        <th><a href="#">EXTCLI</a></th>
+                        <th><a href="#">WSX</a></th>
+
                         <th style="width:5%">&nbsp;</th>
                         <th style="width:5%">&nbsp;</th>
                         <th style="width:5%">&nbsp;</th>
@@ -224,6 +230,9 @@
                         <td>
                             <a id="sub_key_{{ item.sub_id }}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key('{{ item.sub_id }}')">Show</a>
                         </td>
+
+                        <td>{{ item.ext_client_id|default:"<span class='form_hint'>---</span>" }}</td>
+                        <td>{{ item.wsx_client_id|default:"<span class='form_hint'>---</span>" }}</td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.clear('{{ item.sub_id }}', '{{ cluster_id }}')">Clear</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.edit('{{ item.sub_id }}')">Edit</a></td>
