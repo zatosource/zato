@@ -1077,7 +1077,7 @@ def pubsub_endpoint_queue(session, cluster_id, sub_id):
 
 @query_wrapper
 def pubsub_messages_for_topic(session, cluster_id, topic_id, needs_columns=False):
-    return _pubsub_topic_message(session, cluster_id).\
+    return _pubsub_topic_message(session, cluster_id, True).\
         filter(PubSubMessage.topic_id==topic_id).\
         order_by(PubSubMessage.pub_time.desc())
 
