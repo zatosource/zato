@@ -1093,6 +1093,7 @@ def _pubsub_queue_message(session, cluster_id):
         PubSubMessage.expiration,
         PubSubMessage.expiration_time,
         PubSubMessage.ext_client_id,
+        PubSubMessage.published_by_id,
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
         PubSubTopic.name.label('queue_name'), # Currently, queue name = name of its underlying topic
