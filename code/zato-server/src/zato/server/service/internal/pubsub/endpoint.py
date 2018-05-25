@@ -50,6 +50,15 @@ _sub_skip_update = ('id', 'sub_id', 'sub_key', 'cluster_id', 'creation_time', 'c
 
 # ################################################################################################################################
 
+class _GetEndpointQueueMessagesSIO(GetListAdminSIO):
+    input_required = ('cluster_id', 'sub_id')
+    output_required = (AsIs('msg_id'), 'recv_time', 'data_prefix_short')
+    output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name', 'endpoint_id', 'sub_key',
+        'published_by_id', 'published_by_name', 'server_name', 'server_pid')
+    output_repeated = True
+
+# ################################################################################################################################
+
 def instance_hook(self, input, instance, attrs):
 
     if attrs.is_delete:
@@ -417,13 +426,7 @@ class GetEndpointQueueMessagesGD(AdminService):
     """ Returns a list of GD messages queued up for input subscription.
     """
     _filter_by = PubSubMessage.data_prefix,
-
-    class SimpleIO(GetListAdminSIO):
-        input_required = ('cluster_id', 'sub_id', 'has_gd')
-        output_required = (AsIs('msg_id'), 'recv_time', 'data_prefix_short')
-        output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name', 'endpoint_id', 'sub_key',
-            'published_by_id', 'published_by_name', 'server_name', 'server_pid')
-        output_repeated = True
+    SimpleIO = _GetEndpointQueueMessagesSIO
 
     def get_data(self, session):
         sub = self.pubsub.get_subscription_by_id(self.request.input.sub_id)
