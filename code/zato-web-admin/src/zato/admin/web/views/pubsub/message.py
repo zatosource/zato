@@ -41,6 +41,8 @@ def get(req, cluster_id, object_type, object_id, msg_id):
     _server_name = req.GET.get('server_name')
     _server_pid = req.GET.get('server_pid')
 
+    suffix = '-gd' if _has_gd else '-non-gd'
+
     input_dict = {
         'cluster_id': cluster_id,
         'msg_id': msg_id,
@@ -59,11 +61,10 @@ def get(req, cluster_id, object_type, object_id, msg_id):
 
     if object_type=='topic':
         object_service_name = 'zato.pubsub.topic.get'
-        suffix = '-gd' if _has_gd else '-non-gd'
         msg_service_name = 'zato.pubsub.message.get-from-topic' + suffix
     else:
         object_service_name = 'zato.pubsub.endpoint.get-endpoint-queue'
-        msg_service_name = 'zato.pubsub.message.get-from-queue'
+        msg_service_name = 'zato.pubsub.message.get-from-queue' + suffix
 
     object_service_response = req.zato.client.invoke(
         object_service_name, {
@@ -95,9 +96,10 @@ def get(req, cluster_id, object_type, object_id, msg_id):
 
             # If it's a queue, we still need to get metadata about the message's underlying publisher
             topic_msg_service_response = req.zato.client.invoke(
-                'zato.pubsub.message.get-from-topic', {
+                'zato.pubsub.message.get-from-topic' + suffix, {
                 'cluster_id': cluster_id,
                 'msg_id': msg_id,
+                'needs_sub_queue_check': False,
             }).data.response
 
             return_data.topic_id = topic_msg_service_response.topic_id

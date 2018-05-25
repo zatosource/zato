@@ -985,8 +985,8 @@ def pubsub_publishers_for_topic(session, cluster_id, topic_id):
 
 # ################################################################################################################################
 
-def _pubsub_topic_message(session, cluster_id):
-    return session.query(
+def _pubsub_topic_message(session, cluster_id, needs_sub_queue_check):
+    q = session.query(
         PubSubMessage.pub_msg_id.label('msg_id'),
         PubSubMessage.pub_correl_id.label('correl_id'),
         PubSubMessage.in_reply_to,
@@ -1007,13 +1007,18 @@ def _pubsub_topic_message(session, cluster_id):
         ).\
         filter(PubSubMessage.published_by_id==PubSubEndpoint.id).\
         filter(PubSubMessage.cluster_id==cluster_id).\
-        filter(PubSubMessage.topic_id==PubSubTopic.id).\
-        filter(~PubSubMessage.is_in_sub_queue)
+        filter(PubSubMessage.topic_id==PubSubTopic.id)
+
+    if needs_sub_queue_check:
+        q = q.\
+            filter(~PubSubMessage.is_in_sub_queue)
+
+    return q
 
 # ################################################################################################################################
 
-def pubsub_message(session, cluster_id, pub_msg_id):
-    return _pubsub_topic_message(session, cluster_id).\
+def pubsub_message(session, cluster_id, pub_msg_id, needs_sub_queue_check=True):
+    return _pubsub_topic_message(session, cluster_id, needs_sub_queue_check).\
         filter(PubSubMessage.pub_msg_id==pub_msg_id)
 
 # ################################################################################################################################

@@ -274,7 +274,8 @@ class EndpointQueueBrowser(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'sub_id', 'has_gd')
         output_required = ('msg_id', 'recv_time', 'data_prefix_short', 'has_gd', 'is_in_staging', 'delivery_count',
-            'last_delivery_time', 'name', 'endpoint_id', 'sub_key', 'published_by_id', 'published_by_name')
+            'last_delivery_time', 'name', 'endpoint_id', 'sub_key', 'published_by_id', 'published_by_name',
+            'server_name', 'server_pid')
         output_repeated = True
 
 # ################################################################################################################################

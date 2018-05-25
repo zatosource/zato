@@ -321,8 +321,6 @@ class InRAMSyncBacklog(object):
                 if 'priority' not in msg:
                     msg['priority'] = _default_pri
 
-                print(333, 'storing', msg)
-
                 # .. add a reverse mapping, from message ID to sub_key ..
                 msg_sub_key = self.msg_id_to_sub_key.setdefault(msg['pub_msg_id'], set())
                 msg_sub_key.update(sub_keys)
@@ -1200,7 +1198,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_sub_key_server(self, sub_key, needs_lock=True):
+    def get_delivery_server_by_sub_key(self, sub_key, needs_lock=True):
         if needs_lock:
             with self.lock:
                 return self._get_sub_key_server(sub_key)
@@ -1585,7 +1583,7 @@ class PubSub(object):
                             # allow us to send messages only to tasks that are known to be up.
                             sub_keys = []
                             for item in subs:
-                                if self.get_sub_key_server(item.sub_key):
+                                if self.get_delivery_server_by_sub_key(item.sub_key):
                                     sub_keys.append(item.sub_key)
 
                             # Continue only if there are actually any sub_keys left = any tasks up and running ..
