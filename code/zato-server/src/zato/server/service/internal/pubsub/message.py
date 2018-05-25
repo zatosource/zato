@@ -65,11 +65,13 @@ class GetFromTopicGD(AdminService):
     """
     class SimpleIO(_GetSIO):
         input_required = _GetSIO.input_required + ('cluster_id',)
+        input_optional = ('needs_sub_queue_check',)
 
-    def handle(self):
+    def handle(self, _not_given=object()):
         with closing(self.odb.session()) as session:
-
-            item = pubsub_message(session, self.request.input.cluster_id, self.request.input.msg_id).\
+            needs_sub_queue_check = self.request.input.get('needs_sub_queue_check', _not_given)
+            needs_sub_queue_check = needs_sub_queue_check if needs_sub_queue_check is not _not_given else True
+            item = pubsub_message(session, self.request.input.cluster_id, self.request.input.msg_id, needs_sub_queue_check).\
                 first()
 
             if item:
@@ -217,7 +219,7 @@ class QueueDeleteGD(AdminService):
             session.commit()
 
             # Find the server that has the delivery task for this sub_key
-            sub_key_server = self.pubsub.get_sub_key_server(self.request.input.sub_key)
+            sub_key_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
 
             # It's possible that there is no such server in case of WSX clients that connected,
             # had their subscription created but then they disconnected and there is no delivery server for them.
@@ -347,7 +349,7 @@ class UpdateNonGD(_Update):
 
 # ################################################################################################################################
 
-class GetFromQueue(AdminService):
+class GetFromQueueGD(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'))
         output_optional = (AsIs('msg_id'), 'recv_time', 'data', Int('delivery_count'), 'last_delivery_time',
@@ -356,19 +358,15 @@ class GetFromQueue(AdminService):
             AsIs('sub_hook_service_id'), 'sub_hook_service_name', AsIs('ext_client_id'))
 
     def handle(self):
-
         with closing(self.odb.session()) as session:
-
             item = pubsub_queue_message(session, self.request.input.cluster_id, self.request.input.msg_id).\
                 first()
-
             if item:
                 item.expiration = item.expiration or None
                 for name in('expiration_time', 'recv_time', 'ext_pub_time', 'last_delivery_time'):
                     value = getattr(item, name, None)
                     if value:
-                        setattr(item, name, datetime_from_ms(value))
-
+                        setattr(item, name, datetime_from_ms(value * 1000.0))
                 self.response.payload = item
             else:
                 raise NotFound(self.cid, 'No such message `{}`'.format(self.request.input.msg_id))

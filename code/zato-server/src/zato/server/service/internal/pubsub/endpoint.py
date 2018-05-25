@@ -171,6 +171,20 @@ class GetTopicList(AdminService):
 
 # ################################################################################################################################
 
+class GetEndpointQueueNonGDDepth(AdminService):
+    """ Returns current depth of non-GD messages for input sub_key which must have a delivery task on current server.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('sub_key',)
+        output_optional = (Int('current_depth_non_gd'),)
+
+    def handle(self):
+        pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
+        _, non_gd_depth = pubsub_tool.get_queue_depth(self.request.input.sub_key)
+        self.response.payload.current_depth_non_gd = non_gd_depth
+
+# ################################################################################################################################
+
 class _GetEndpointQueue(AdminService):
     def _add_queue_depths(self, session, item):
 
@@ -179,7 +193,25 @@ class _GetEndpointQueue(AdminService):
             filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key).\
             filter(PubSubEndpointEnqueuedMessage.is_in_staging != True)
 
+        # This could be read from the SQL database ..
         item.current_depth_gd = count(session, current_depth_gd_q)
+
+        # .. but non-GD depth needs to be collected from all the servers around. Note that the server may not be known
+        # in case the subscriber is a WSX client. In this case, by definition, there will be no non-GD messages for that client.
+        sub_key_server = self.pubsub.get_delivery_server_by_sub_key(item.sub_key)
+
+        if sub_key_server:
+            response = self.servers[sub_key_server.server_name].invoke(GetEndpointQueueNonGDDepth.get_name(), {
+                'sub_key': item.sub_key,
+            }, pid=sub_key_server.server_pid)
+
+            current_depth_non_gd = response['response']['current_depth_non_gd']
+
+        # No delivery server = there cannot be any non-GD messages waiting for that subscriber
+        else:
+            current_depth_non_gd = 0
+
+        item.current_depth_non_gd = current_depth_non_gd
 
 # ################################################################################################################################
 
@@ -390,7 +422,7 @@ class GetEndpointQueueMessagesGD(AdminService):
         input_required = ('cluster_id', 'sub_id', 'has_gd')
         output_required = (AsIs('msg_id'), 'recv_time', 'data_prefix_short')
         output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name', 'endpoint_id', 'sub_key',
-            'published_by_id', 'published_by_name')
+            'published_by_id', 'published_by_name', 'server_name', 'server_pid')
         output_repeated = True
 
     def get_data(self, session):
