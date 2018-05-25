@@ -24,10 +24,9 @@
 
             '_recv_time',
             '_msg_id',
-            'msg_prefix',
 
-            'delivery_count',
-            '_last_delivery',
+            'published_by',
+            'msg_prefix',
 
             '_delete',
             'id',
@@ -70,12 +69,11 @@
                         <th style="width:10px">&nbsp;</th>
                         <th>&nbsp;</th>
 
-                        <th style="width:16%"><a href="#">Recv time</a></th>
-                        <th style="width:22%"><a href="#">Msg ID</a></th>
-                        <th style="width:22%"><a href="#">Msg prefix</a></th>
+                        <th><a href="#">Recv time</a></th>
+                        <th><a href="#">Msg ID</a></th>
 
-                        <th><a href="#">DLVC</a></th>
-                        <th><a href="#">Last DLV</a></th>
+                        <th><a href="#">Published by</a></th>
+                        <th style="width:22%"><a href="#">Msg prefix</a></th>
 
                         <th style="width:5%">&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -90,10 +88,9 @@
 
                         <td>{{ item.recv_time }}</td>
                         <td><a href="{% url "pubsub-message" cluster_id "queue" sub_id item.msg_id %}">{{ item.msg_id }}</a></td>
-                        <td>{{ item.data_prefix_short }}</td>
 
-                        <td>{{ item.delivery_count }}</td>
-                        <td>{{ item.last_delivery_time|default:'<span class="form_hint">---</span>' }}</td>
+                        <td><a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ item.published_by_id }}">{{ item.published_by_name }}</a></td>
+                        <td>{{ item.data_prefix_short }}</td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.delete_message('queue', '', '{{ item.msg_id }}', '{{ item.sub_key|default:"" }}', '{% if has_gd %}1{% endif %}', '{% if not has_gd %}{{ item.server_name }}{% endif %}', '{% if not has_gd %}{{ item.server_pid }}{% endif %}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.msg_id }}'>{{ item.msg_id }}</td>

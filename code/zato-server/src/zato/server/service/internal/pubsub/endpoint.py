@@ -389,7 +389,8 @@ class GetEndpointQueueMessagesGD(AdminService):
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'sub_id', 'has_gd')
         output_required = (AsIs('msg_id'), 'recv_time', 'data_prefix_short')
-        output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name', 'endpoint_id', 'sub_key')
+        output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name', 'endpoint_id', 'sub_key',
+            'published_by_id', 'published_by_name')
         output_repeated = True
 
     def get_data(self, session):
@@ -403,6 +404,7 @@ class GetEndpointQueueMessagesGD(AdminService):
 
         for item in self.response.payload.zato_output:
             item.recv_time = datetime_from_ms(item.recv_time * 1000.0)
+            item.published_by_name = self.pubsub.get_endpoint_by_id(item.published_by_id).name
 
 # ################################################################################################################################
 
