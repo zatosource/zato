@@ -69,11 +69,11 @@
                         <th style="width:10px">&nbsp;</th>
                         <th>&nbsp;</th>
 
-                        <th><a href="#">Recv time</a></th>
+                        <th><a href="#">Recv time (UTC)</a></th>
                         <th><a href="#">Msg ID</a></th>
 
                         <th><a href="#">Published by</a></th>
-                        <th style="width:22%"><a href="#">Msg prefix</a></th>
+                        <th style="width:32%"><a href="#">Msg prefix</a></th>
 
                         <th style="width:5%">&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -86,7 +86,7 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
-                        <td>{{ item.recv_time }}</td>
+                        <td>{{ item.recv_time_utc }}</td>
                         <td><a href="{% url "pubsub-message" cluster_id "queue" sub_id item.msg_id %}">{{ item.msg_id }}</a></td>
 
                         <td><a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ item.published_by_id }}">{{ item.published_by_name }}</a></td>
