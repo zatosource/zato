@@ -291,7 +291,8 @@ class EndpointQueueBrowser(_Index):
 # ################################################################################################################################
 
     def on_before_append_item(self, item):
-        item.recv_time = from_utc_to_user(item.recv_time+'+00:00', self.req.zato.user_profile)
+        item.recv_time_utc = item.recv_time
+        item.recv_time = from_utc_to_user(item.recv_time_utc+'+00:00', self.req.zato.user_profile)
         return item
 
 # ################################################################################################################################
