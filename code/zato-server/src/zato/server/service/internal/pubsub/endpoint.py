@@ -51,7 +51,8 @@ _sub_skip_update = ('id', 'sub_id', 'sub_key', 'cluster_id', 'creation_time', 'c
 # ################################################################################################################################
 
 class _GetEndpointQueueMessagesSIO(GetListAdminSIO):
-    input_required = ('cluster_id', 'sub_id')
+    input_required = ('cluster_id',)
+    input_optional = ('sub_id', 'sub_key')
     output_required = (AsIs('msg_id'), 'recv_time', 'data_prefix_short')
     output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name', 'endpoint_id', 'sub_key',
         'published_by_id', 'published_by_name', 'server_name', 'server_pid')
@@ -207,12 +208,12 @@ class _GetEndpointQueue(AdminService):
 
         # .. but non-GD depth needs to be collected from all the servers around. Note that the server may not be known
         # in case the subscriber is a WSX client. In this case, by definition, there will be no non-GD messages for that client.
-        sub_key_server = self.pubsub.get_delivery_server_by_sub_key(item.sub_key)
+        sk_server = self.pubsub.get_delivery_server_by_sub_key(item.sub_key)
 
-        if sub_key_server:
-            response = self.servers[sub_key_server.server_name].invoke(GetEndpointQueueNonGDDepth.get_name(), {
+        if sk_server:
+            response = self.servers[sk_server.server_name].invoke(GetEndpointQueueNonGDDepth.get_name(), {
                 'sub_key': item.sub_key,
-            }, pid=sub_key_server.server_pid)
+            }, pid=sk_server.server_pid)
 
             current_depth_non_gd = response['response']['current_depth_non_gd']
 
@@ -546,3 +547,62 @@ class GetTopicSubList(AdminService):
         self.response.payload.topic_sub_list = out
 
 # ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+
+# Zato
+from zato.server.service import AsIs
+from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal.pubsub.endpoint import _GetEndpointQueueMessagesSIO
+from zato.server.service.internal.pubsub.search import NonGDSearchService
+
+# ################################################################################################################################
+
+class GetServerEndpointQueueMessagesNonGD(AdminService):
+    """ Returns a list of non-GD messages for an input queue by its sub_key which must exist on current server,
+    i.e. current server must be the delivery server for this sub_key.
+    """
+    SimpleIO = _GetEndpointQueueMessagesSIO
+
+    def handle(self):
+        ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
+        self.response.payload = [elem.to_external_dict() for elem in ps_tool.get_messages(self.request.input.sub_key)]
+
+        print()
+        print(111, self.response.payload)
+        print()
+
+# ################################################################################################################################
+
+class GetEndpointQueueMessagesNonGD(NonGDSearchService):
+    """ Returns a list of non-GD messages for an input queue by its sub_key.
+    """
+    name = 'pubsub.endpoint.get-endpoint-queue-messages-non-gd'
+    SimpleIO = _GetEndpointQueueMessagesSIO
+
+    def handle(self):
+        sub = self.pubsub.get_subscription_by_id(self.request.input.sub_id)
+        sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
+
+        if sk_server:
+            response = self.servers[sk_server.server_name].invoke(GetServerEndpointQueueMessagesNonGD.get_name(), {
+                'cluster_id': self.request.input.cluster_id,
+                'sub_key': sub.sub_key,
+            }, pid=sk_server.server_pid)
+
+            print()
+            print(333, response)
+            print()
+
+# ################################################################################################################################
+'''
