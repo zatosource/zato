@@ -139,6 +139,14 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
+    def get_messages(self):
+        """ Returns all messages enqueued in the delivery list.
+        """
+        logger.info('Returning %d message(s) for sub_key `%s`', len(self.delivery_list), self.sub_key)
+        return [msg for msg in self.delivery_list]
+
+# ################################################################################################################################
+
     def _run_delivery(self, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
@@ -781,5 +789,13 @@ class PubSubTool(object):
         """
         with self.lock:
             self.delivery_tasks[sub_key].delete_messages(msg_list)
+
+# ################################################################################################################################
+
+    def get_messages(self, sub_key):
+        """ Returns all messages enqueued for sub_key.
+        """
+        with self.lock:
+            return self.delivery_tasks[sub_key].get_messages()
 
 # ################################################################################################################################
