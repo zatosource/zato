@@ -448,9 +448,12 @@ class NonGDMessage(Message):
     """
     is_gd_message = False
 
-    def __init__(self, sub_key, msg, _def_priority=PUBSUB.PRIORITY.DEFAULT, _def_mime_type=PUBSUB.DEFAULT.MIME_TYPE):
+    def __init__(self, sub_key, server_name, server_pid, msg, _def_priority=PUBSUB.PRIORITY.DEFAULT,
+            _def_mime_type=PUBSUB.DEFAULT.MIME_TYPE):
         super(NonGDMessage, self).__init__()
         self.sub_key = sub_key
+        self.server_name = server_name
+        self.server_pid = server_pid
         self.pub_msg_id = msg['pub_msg_id']
         self.pub_correl_id = msg.get('pub_correl_id')
         self.in_reply_to = msg.get('in_reply_to')
@@ -482,6 +485,9 @@ class PubSubTool(object):
         self.pubsub = pubsub # type: PubSub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
         self.endpoint_type = endpoint_type
+
+        self.server_name = self.pubsub.server.name
+        self.server_pid = self.pubsub.server.pid
 
         # WSX connections will have their own callback but other connections use the default one
         self.deliver_pubsub_msg = deliver_pubsub_msg or self.pubsub.deliver_pubsub_msg
@@ -617,7 +623,7 @@ class PubSubTool(object):
         """ Low-level implementation of add_non_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
         for msg in messages:
-            self.delivery_lists[sub_key].add(NonGDMessage(sub_key, msg))
+            self.delivery_lists[sub_key].add(NonGDMessage(sub_key, self.server_name, self.server_pid, msg))
 
 # ################################################################################################################################
 

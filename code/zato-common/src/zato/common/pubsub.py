@@ -45,10 +45,12 @@ class PubSubMessage(object):
         'pub_time', 'ext_pub_time', 'data', 'data_prefix', 'data_prefix_short', 'mime_type', 'priority', 'expiration',
         'expiration_time', 'has_gd', 'delivery_status', 'pattern_matched', 'size', 'published_by_id', 'topic_id',
         'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso',
-        'recv_time', 'data_prefix_short')
+        'recv_time', 'data_prefix_short', 'server_name', 'server_pid')
 
     def __init__(self):
         self.recv_time = utcnow_as_ms()
+        self.server_name = None
+        self.server_pid = None
         self.topic = None
         self.sub_key = None
         self.pub_msg_id = None

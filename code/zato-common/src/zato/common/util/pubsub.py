@@ -32,7 +32,8 @@ def make_short_msg_copy_from_dict(msg, data_prefix_len, data_prefix_short_len):
     out_msg['server_name'] = msg['server_name']
     out_msg['server_pid'] = msg['server_pid']
     out_msg['has_gd'] = msg['has_gd']
-    return out
+    out_msg['recv_time'] = msg['recv_time']
+    return out_msg
 
 # ################################################################################################################################
 
@@ -40,8 +41,8 @@ def make_short_msg_copy_from_msg(msg, data_prefix_len, data_prefix_short_len):
     out_msg = {}
     out_msg['msg_id'] = msg.pub_msg_id
     out_msg['in_reply_to'] = msg.in_reply_to
-    out_msg['data'] = msg.data[data_prefix_len]
-    out_msg['data_prefix_short'] = out_msg['data'][data_prefix_short_len]
+    out_msg['data'] = msg.data[:data_prefix_len]
+    out_msg['data_prefix_short'] = out_msg['data'][:data_prefix_short_len]
     out_msg['size'] = msg.size
     out_msg['pattern_matched'] = msg.pattern_matched
     out_msg['pub_time'] = msg.pub_time
@@ -55,6 +56,7 @@ def make_short_msg_copy_from_msg(msg, data_prefix_len, data_prefix_short_len):
     out_msg['server_name'] = msg.server_name
     out_msg['server_pid'] = msg.server_pid
     out_msg['has_gd'] = msg.has_gd
-    return out
+    out_msg['recv_time'] = msg.recv_time
+    return out_msg
 
 # ################################################################################################################################
