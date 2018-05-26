@@ -29,6 +29,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_delivery_server_for_sub_key, get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.util import is_func_overridden, make_repr, new_cid, spawn_greenlet
+from zato.common.util.pubsub import make_short_msg_copy_from_dict
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
@@ -511,24 +512,7 @@ class InRAMSyncBacklog(object):
                         continue
 
                 if needs_short_copy:
-                    out_msg = {}
-                    out_msg['msg_id'] = msg['pub_msg_id']
-                    out_msg['in_reply_to'] = msg.get('in_reply_to')
-                    out_msg['data'] = msg['data'][:self.pubsub.data_prefix_len]
-                    out_msg['data_prefix_short'] = out_msg['data'][:self.pubsub.data_prefix_short_len]
-                    out_msg['size'] = msg['size']
-                    out_msg['pattern_matched'] = msg['pattern_matched']
-                    out_msg['pub_time'] = msg['pub_time']
-                    out_msg['expiration'] = msg['expiration']
-                    out_msg['expiration_time'] = msg['expiration_time']
-                    out_msg['topic_id'] = msg['topic_id']
-                    out_msg['topic_name'] = msg['topic_name']
-                    out_msg['cluster_id'] = msg['cluster_id']
-                    out_msg['published_by_id'] = msg['published_by_id']
-                    out_msg['delivery_status'] = msg['delivery_status']
-                    out_msg['server_name'] = msg['server_name']
-                    out_msg['server_pid'] = msg['server_pid']
-                    out_msg['has_gd'] = msg['has_gd']
+                    out_msg = make_short_msg_copy_from_dict(msg, self.pubsub.data_prefix_len, self.pubsub.data_prefix_short_len)
                 else:
                     out_msg = msg
 

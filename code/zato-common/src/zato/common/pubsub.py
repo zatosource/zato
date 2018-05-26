@@ -10,11 +10,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.common.util import new_cid
+from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 
 _skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pattern_matched', 'published_by_id', 'data_prefix',
     'data_prefix_short', 'pub_time', 'expiration_time', 'pub_correl_id', 'pub_msg_id')
+
+_data_keys=('data', 'data_prefix', 'data_prefix_short')
 
 # ################################################################################################################################
 
@@ -41,9 +44,11 @@ class PubSubMessage(object):
     _attrs = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id', 'position_in_group',
         'pub_time', 'ext_pub_time', 'data', 'data_prefix', 'data_prefix_short', 'mime_type', 'priority', 'expiration',
         'expiration_time', 'has_gd', 'delivery_status', 'pattern_matched', 'size', 'published_by_id', 'topic_id',
-        'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso')
+        'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso',
+        'recv_time', 'data_prefix_short')
 
     def __init__(self):
+        self.recv_time = utcnow_as_ms()
         self.topic = None
         self.sub_key = None
         self.pub_msg_id = None
@@ -54,9 +59,9 @@ class PubSubMessage(object):
         self.position_in_group = None
         self.pub_time = None
         self.ext_pub_time = None
-        self.data = None
-        self.data_prefix = None
-        self.data_prefix_short = None
+        self.data = ''
+        self.data_prefix = ''
+        self.data_prefix_short = ''
         self.mime_type = None
         self.priority = None
         self.expiration = None
@@ -75,7 +80,7 @@ class PubSubMessage(object):
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None
 
-    def to_dict(self, skip=None, needs_utf8_encode=True, _data_keys=('data', 'data_prefix', 'data_prefix_short')):
+    def to_dict(self, skip=None, needs_utf8_encode=True, leave_id_prefix=True, _data_keys=_data_keys):
         """ Returns a dict representation of self.
         """
         skip = skip or []
@@ -89,17 +94,17 @@ class PubSubMessage(object):
                             value = value.encode('utf8')
                     out[key] = value
 
+        if not leave_id_prefix:
+            out['msg_id'] = self.pub_msg_id
+            out['correl_id'] = self.pub_correl_id
+
         return out
 
     def to_external_dict(self, skip=_skip_to_external, needs_utf8_encode=False):
         """ Returns a dict representation of self ready to be delivered to external systems,
         i.e. without internal attributes on output.
         """
-        out = self.to_dict(skip, needs_utf8_encode)
-        out['msg_id'] = self.pub_msg_id
-        out['correl_id'] = self.pub_correl_id
-
-        return out
+        return self.to_dict(skip, needs_utf8_encode)
 
 # ################################################################################################################################
 
