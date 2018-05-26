@@ -53,9 +53,9 @@ _sub_skip_update = ('id', 'sub_id', 'sub_key', 'cluster_id', 'creation_time', 'c
 class _GetEndpointQueueMessagesSIO(GetListAdminSIO):
     input_required = ('cluster_id',)
     input_optional = ('sub_id', 'sub_key')
-    output_required = (AsIs('msg_id'), 'recv_time', 'data_prefix_short')
-    output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name', 'endpoint_id', 'sub_key',
-        'published_by_id', 'published_by_name', 'server_name', 'server_pid')
+    output_required = (AsIs('msg_id'), 'recv_time')
+    output_optional = ('data_prefix_short', Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name',
+        'endpoint_id', 'sub_key', 'published_by_id', 'published_by_name', 'server_name', 'server_pid')
     output_repeated = True
 
 # ################################################################################################################################
@@ -561,6 +561,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 
 # Zato
+from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pubsub.endpoint import _GetEndpointQueueMessagesSIO
@@ -576,11 +577,11 @@ class GetServerEndpointQueueMessagesNonGD(AdminService):
 
     def handle(self):
         ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        self.response.payload = [elem.to_external_dict() for elem in ps_tool.get_messages(self.request.input.sub_key)]
+        messages = ps_tool.get_messages(self.request.input.sub_key)
+        self.response.payload[:] = [elem.to_dict(leave_id_prefix=False) for elem in messages]
 
-        print()
-        print(111, self.response.payload)
-        print()
+        for elem in self.response.payload:
+            elem['recv_time'] = datetime_from_ms(elem['recv_time'] * 1000.0)
 
 # ################################################################################################################################
 
@@ -600,9 +601,8 @@ class GetEndpointQueueMessagesNonGD(NonGDSearchService):
                 'sub_key': sub.sub_key,
             }, pid=sk_server.server_pid)
 
-            print()
-            print(333, response)
-            print()
+            if response:
+                self.response.payload[:] = response['response']
 
 # ################################################################################################################################
 '''
