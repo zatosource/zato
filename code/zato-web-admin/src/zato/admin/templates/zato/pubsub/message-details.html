@@ -175,10 +175,10 @@
 
 
                 <td class='inline_header' style="width:90px">
-                    {% if not has_gd %}Server{% endif %}
+                    GD
                 </td>
                 <td style="width:140px">
-                    {% if not has_gd %}{{ server_name }}:{{ server_pid }}{% endif %}
+                    {{ has_gd|yesno:"Yes,No" }}
                 </td>
 
             </tr>
@@ -196,14 +196,10 @@
                 <td style="width:170px" id="size">{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ size }}{% endifequal %}</td>
 
                 <td class='inline_header' style="width:90px">
-                    {% ifequal object_type "queue" %}
-                        {% comment %}Delivery history{% endcomment %}
-                    {% endifequal %}
+                    {% if not has_gd %}Server{% endif %}
                 </td>
                 <td style="width:140px">
-                    {% ifequal object_type "queue" %}
-                        {% comment %}<a href="#">Show</a>{% endcomment %}
-                    {% endifequal %}
+                    {% if not has_gd %}{{ server_name }}:{{ server_pid }}{% endif %}
                 </td>
             </tr>
             <tr>
