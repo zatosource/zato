@@ -21,10 +21,12 @@ from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, 
      pubsub_endpoint_queue_list_by_sub_keys, pubsub_messages_for_queue, server_by_id
 from zato.common.odb.query.pubsub.endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id
+from zato.common.util.pubsub import make_short_msg_copy_from_msg
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
+from zato.server.service.internal.pubsub.search import NonGDSearchService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
@@ -444,9 +446,45 @@ class GetEndpointQueueMessagesGD(AdminService):
 
 # ################################################################################################################################
 
-class GetEndpointQueueMessagesNonGD(AdminService):
-    """ Returns a list of non-GD messages queued up for input subscription.
+class GetServerEndpointQueueMessagesNonGD(AdminService):
+    """ Returns a list of non-GD messages for an input queue by its sub_key which must exist on current server,
+    i.e. current server must be the delivery server for this sub_key.
     """
+    SimpleIO = _GetEndpointQueueMessagesSIO
+
+    def handle(self):
+        ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
+        messages = ps_tool.get_messages(self.request.input.sub_key)
+
+        data_prefix_len = self.pubsub.data_prefix_len
+        data_prefix_short_len = self.pubsub.data_prefix_short_len
+
+        self.response.payload[:] = [
+            make_short_msg_copy_from_msg(elem, data_prefix_len, data_prefix_short_len) for elem in messages]
+
+        for elem in self.response.payload:
+            elem['recv_time'] = datetime_from_ms(elem['recv_time'] * 1000.0)
+            elem['published_by_name'] = self.pubsub.get_endpoint_by_id(elem['published_by_id']).name
+
+# ################################################################################################################################
+
+class GetEndpointQueueMessagesNonGD(NonGDSearchService):
+    """ Returns a list of non-GD messages for an input queue by its sub_key.
+    """
+    SimpleIO = _GetEndpointQueueMessagesSIO
+
+    def handle(self):
+        sub = self.pubsub.get_subscription_by_id(self.request.input.sub_id)
+        sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
+
+        if sk_server:
+            response = self.servers[sk_server.server_name].invoke(GetServerEndpointQueueMessagesNonGD.get_name(), {
+                'cluster_id': self.request.input.cluster_id,
+                'sub_key': sub.sub_key,
+            }, pid=sk_server.server_pid)
+
+            if response:
+                self.response.payload[:] = response['response']
 
 # ################################################################################################################################
 
@@ -547,62 +585,3 @@ class GetTopicSubList(AdminService):
         self.response.payload.topic_sub_list = out
 
 # ################################################################################################################################
-
-'''
-# -*- coding: utf-8 -*-
-
-"""
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
-
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
-"""
-
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-
-# Zato
-from zato.common.util.time_ import datetime_from_ms
-from zato.server.service import AsIs
-from zato.server.service.internal import AdminService, AdminSIO
-from zato.server.service.internal.pubsub.endpoint import _GetEndpointQueueMessagesSIO
-from zato.server.service.internal.pubsub.search import NonGDSearchService
-
-# ################################################################################################################################
-
-class GetServerEndpointQueueMessagesNonGD(AdminService):
-    """ Returns a list of non-GD messages for an input queue by its sub_key which must exist on current server,
-    i.e. current server must be the delivery server for this sub_key.
-    """
-    SimpleIO = _GetEndpointQueueMessagesSIO
-
-    def handle(self):
-        ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        messages = ps_tool.get_messages(self.request.input.sub_key)
-        self.response.payload[:] = [elem.to_dict(leave_id_prefix=False) for elem in messages]
-
-        for elem in self.response.payload:
-            elem['recv_time'] = datetime_from_ms(elem['recv_time'] * 1000.0)
-
-# ################################################################################################################################
-
-class GetEndpointQueueMessagesNonGD(NonGDSearchService):
-    """ Returns a list of non-GD messages for an input queue by its sub_key.
-    """
-    name = 'pubsub.endpoint.get-endpoint-queue-messages-non-gd'
-    SimpleIO = _GetEndpointQueueMessagesSIO
-
-    def handle(self):
-        sub = self.pubsub.get_subscription_by_id(self.request.input.sub_id)
-        sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
-
-        if sk_server:
-            response = self.servers[sk_server.server_name].invoke(GetServerEndpointQueueMessagesNonGD.get_name(), {
-                'cluster_id': self.request.input.cluster_id,
-                'sub_key': sub.sub_key,
-            }, pid=sk_server.server_pid)
-
-            if response:
-                self.response.payload[:] = response['response']
-
-# ################################################################################################################################
-'''
