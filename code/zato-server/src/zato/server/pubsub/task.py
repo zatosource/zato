@@ -66,15 +66,6 @@ class SortedList(_SortedList):
 
 # ################################################################################################################################
 
-class PubSubTask(object):
-    """ A background task responsible for delivery of pub/sub messages each pub/sub endpoint may possibly subscribe to.
-    """
-    def __init__(self, sql_conn_func):
-        self.sql_conn_func = sql_conn_func
-        self.lock = RLock()
-
-# ################################################################################################################################
-
 class DeliveryTask(object):
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """

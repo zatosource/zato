@@ -169,7 +169,7 @@ class TopicDeleteGD(AdminService):
 
 # ################################################################################################################################
 
-class DeleteNonGDMessage(AdminService):
+class DeleteTopicNonGDMessage(AdminService):
     """ Deletes a non-GD message by its ID from current server.
     """
     class SimpleIO(AdminSIO):
@@ -188,12 +188,45 @@ class TopicDeleteNonGD(AdminService):
 
     def handle(self):
         server = self.servers[self.request.input.server_name]
-        server.invoke(DeleteNonGDMessage.get_name(), {
+        server.invoke(DeleteTopicNonGDMessage.get_name(), {
             'msg_id': self.request.input.msg_id,
         }, pid=self.request.input.server_pid)
 
         self.logger.info('Deleted non-GD message `%s` from `%s:%s`',
             self.request.input.msg_id, self.request.input.server_name, self.request.input.server_pid)
+
+# ################################################################################################################################
+
+class QueueDeleteServerNonGD(AdminService):
+    """ Deletes a non-GD messages from a selected queue which must exist on current server.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('sub_key', AsIs('msg_id'))
+
+    def handle(self):
+        pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
+        pubsub_tool.delete_messages(self.request.input.sub_key, [self.request.input.msg_id])
+
+# ################################################################################################################################
+
+class QueueDeleteNonGD(AdminService):
+    """ Deletes a non-GD messages from a selected queue.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('sub_key', AsIs('msg_id'), 'server_name', 'server_pid')
+
+    def handle(self):
+        sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
+
+        if sk_server:
+            response = self.servers[sk_server.server_name].invoke(
+                QueueDeleteServerNonGD.get_name(), {
+                    'sub_key': sk_server.sub_key,
+                    'msg_id': self.request.input.msg_id
+                }, pid=sk_server.server_pid)
+
+            if response:
+                self.response.payload[:] = response['response']
 
 # ################################################################################################################################
 

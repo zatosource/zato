@@ -33,6 +33,7 @@ def make_short_msg_copy_from_dict(msg, data_prefix_len, data_prefix_short_len):
     out_msg['server_pid'] = msg['server_pid']
     out_msg['has_gd'] = msg['has_gd']
     out_msg['recv_time'] = msg['recv_time']
+    out_msg['sub_key'] = msg['sub_key']
     return out_msg
 
 # ################################################################################################################################
@@ -57,6 +58,7 @@ def make_short_msg_copy_from_msg(msg, data_prefix_len, data_prefix_short_len):
     out_msg['server_pid'] = msg.server_pid
     out_msg['has_gd'] = msg.has_gd
     out_msg['recv_time'] = msg.recv_time
+    out_msg['sub_key'] = msg.sub_key
     return out_msg
 
 # ################################################################################################################################
