@@ -87,7 +87,7 @@
                         <td class="impexp"><input type="checkbox" /></td>
 
                         <td>{{ item.recv_time_utc }}</td>
-                        <td><a href="{% url "pubsub-message" cluster_id "queue" sub_id item.msg_id %}?has_gd={{ has_gd }}&amp;server_name={{ item.server_name }}&amp;server_pid={{ item.server_pid }}">{{ item.msg_id }}</a></td>
+                        <td><a href="{% url "pubsub-message" cluster_id "queue" sub_id item.msg_id %}?has_gd={{ has_gd }}&amp;server_name={{ item.server_name }}&amp;server_pid={{ item.server_pid }}&amp;sub_key={{ item.sub_key }}">{{ item.msg_id }}</a></td>
 
                         <td><a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ item.published_by_id }}">{{ item.published_by_name }}</a></td>
                         <td>{{ item.data_prefix_short }}</td>

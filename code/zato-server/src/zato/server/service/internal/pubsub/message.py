@@ -46,8 +46,9 @@ class _GetSIO(AdminSIO):
     input_required = (AsIs('msg_id'),)
     output_optional = ('topic_id', 'topic_name', AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'pub_time', \
         'ext_pub_time', 'pattern_matched', 'priority', 'data_format', 'mime_type', 'size', 'data',
-        'expiration', 'expiration_time', 'endpoint_id', 'endpoint_name', Bool('has_gd'),
-        'pub_hook_service_id', 'pub_hook_service_name', AsIs('ext_client_id'), 'server_name', 'server_pid')
+        'expiration', 'expiration_time', 'endpoint_id', 'endpoint_name', 'recv_time',
+        'pub_hook_service_id', 'pub_hook_service_name', AsIs('ext_client_id'), 'server_name', 'server_pid',
+        'published_by_id', 'published_by_name', 'subscriber_id', 'subscriber_name')
 
 # ################################################################################################################################
 
@@ -87,8 +88,7 @@ class GetFromTopicGD(AdminService):
 class GetFromServerTopicNonGD(AdminService):
     """ Returns a non-GD message from current server.
     """
-    class SimpleIO(_GetSIO):
-        pass
+    SimpleIO = _GetSIO
 
     def handle(self):
         msg = self.pubsub.sync_backlog.get_message_by_id(self.request.input.msg_id)
@@ -386,9 +386,10 @@ class GetFromQueueGD(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'))
         output_optional = (AsIs('msg_id'), 'recv_time', 'data', Int('delivery_count'), 'last_delivery_time',
-            'is_in_staging', 'has_gd', 'queue_name', 'endpoint_id', 'endpoint_name', 'size', 'priority', 'mime_type',
+            'is_in_staging', 'queue_name', 'subscriber_id', 'subscriber_name', 'size', 'priority', 'mime_type',
             'sub_pattern_matched', AsIs('correl_id'), 'in_reply_to', 'expiration', 'expiration_time',
-            AsIs('sub_hook_service_id'), 'sub_hook_service_name', AsIs('ext_client_id'))
+            AsIs('sub_hook_service_id'), 'sub_hook_service_name', AsIs('ext_client_id'), 'published_by_id',
+            'published_by_name')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -400,8 +401,63 @@ class GetFromQueueGD(AdminService):
                     value = getattr(item, name, None)
                     if value:
                         setattr(item, name, datetime_from_ms(value * 1000.0))
-                self.response.payload = item
+                self.response.payload = item._asdict()
+                self.response.payload['published_by_name'] = self.pubsub.get_endpoint_by_id(item.published_by_id).name
             else:
                 raise NotFound(self.cid, 'No such message `{}`'.format(self.request.input.msg_id))
 
 # ################################################################################################################################
+
+class GetFromQueueServerNonGD(AdminService):
+    """ Returns details of a selected non-GD message from its queue which must exist on current server.
+    """
+    class SimpleIO(_GetSIO):
+        input_required = _GetSIO.input_required + ('sub_key',)
+
+    def handle(self):
+        pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
+        msg = pubsub_tool.get_message(self.request.input.sub_key, self.request.input.msg_id)
+        if msg:
+            msg = msg.to_dict()
+
+            msg['msg_id'] = msg.pop('pub_msg_id')
+            msg['correl_id'] = msg.pop('pub_correl_id', None)
+
+            for name in ('pub_time', 'ext_pub_time', 'expiration_time', 'recv_time'):
+                value = msg.pop(name, None)
+                if value:
+                    msg[name] = datetime_from_ms(value * 1000.0)
+
+            msg['published_by_name'] = self.pubsub.get_endpoint_by_id(msg['published_by_id']).name
+
+            subscriber_id = self.pubsub.get_subscription_by_sub_key(self.request.input.sub_key).endpoint_id
+            subscriber_name = self.pubsub.get_endpoint_by_id(subscriber_id).name
+
+            msg['subscriber_id'] = subscriber_id
+            msg['subscriber_name'] = subscriber_name
+
+            self.response.payload = msg
+
+# ################################################################################################################################
+
+class GetFromQueueNonGD(AdminService):
+    """ Returns details of a selected non-GD message from its queue.
+    """
+    class SimpleIO(_GetSIO):
+        input_required = _GetSIO.input_required + ('sub_key', 'server_name', 'server_pid')
+
+    def handle(self):
+        sk_server = self.pubsub.get_delivery_server_by_sub_key(self.request.input.sub_key)
+
+        if sk_server:
+            response = self.servers[sk_server.server_name].invoke(
+                GetFromQueueServerNonGD.get_name(), {
+                    'sub_key': sk_server.sub_key,
+                    'msg_id': self.request.input.msg_id
+                }, pid=sk_server.server_pid)
+
+            if response:
+                self.response.payload = response['response']
+
+# ################################################################################################################################
+

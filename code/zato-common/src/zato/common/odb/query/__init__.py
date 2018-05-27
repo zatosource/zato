@@ -1106,9 +1106,9 @@ def _pubsub_queue_message(session, cluster_id):
         PubSubEndpointEnqueuedMessage.delivery_count,
         PubSubEndpointEnqueuedMessage.last_delivery_time,
         PubSubEndpointEnqueuedMessage.is_in_staging,
-        PubSubEndpointEnqueuedMessage.endpoint_id,
+        PubSubEndpointEnqueuedMessage.endpoint_id.label('subscriber_id'),
         PubSubEndpointEnqueuedMessage.sub_key,
-        PubSubEndpoint.name.label('endpoint_name'),
+        PubSubEndpoint.name.label('subscriber_name'),
         PubSubSubscription.pattern_matched.label('sub_pattern_matched'),
         ).\
         filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\

@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from json import dumps
+from logging import getLogger
 from traceback import format_exc
 
 # Bunch
@@ -30,6 +31,11 @@ from zato.common.util import asbool
 
 # ################################################################################################################################
 
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+
+
 @method_allowed('GET')
 def get(req, cluster_id, object_type, object_id, msg_id):
 
@@ -41,6 +47,7 @@ def get(req, cluster_id, object_type, object_id, msg_id):
     _server_name = req.GET.get('server_name')
     _server_pid = req.GET.get('server_pid')
 
+    _is_topic = object_type=='topic'
     suffix = '-gd' if _has_gd else '-non-gd'
 
     input_dict = {
@@ -58,13 +65,15 @@ def get(req, cluster_id, object_type, object_id, msg_id):
     return_data.msg_id = msg_id
     return_data.server_name = _server_name
     return_data.server_pid = _server_pid
+    return_data.has_gd = _has_gd
 
-    if object_type=='topic':
+    if _is_topic:
         object_service_name = 'zato.pubsub.topic.get'
         msg_service_name = 'zato.pubsub.message.get-from-topic' + suffix
     else:
         object_service_name = 'zato.pubsub.endpoint.get-endpoint-queue'
         msg_service_name = 'zato.pubsub.message.get-from-queue' + suffix
+        input_dict['sub_key'] = req.GET['sub_key']
 
     object_service_response = req.zato.client.invoke(
         object_service_name, {
@@ -82,56 +91,63 @@ def get(req, cluster_id, object_type, object_id, msg_id):
     try:
         msg_service_response = req.zato.client.invoke(msg_service_name, input_dict).data.response
     except Exception:
+        logger.warn(format_exc())
         return_data.has_msg = False
     else:
         return_data.has_msg = True
         return_data.update(msg_service_response)
 
-        if object_type=='topic':
+        return_data.pub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'published_by_id', 'published_by_name')
+        return_data.sub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'subscriber_id', 'subscriber_name')
+
+        '''
+        if _is_topic:
             hook_pub_endpoint_id = return_data.endpoint_id
             hook_sub_endpoint_id = None
             return_data.object_id = return_data.pop('topic_id')
             return_data.pub_endpoint_html = get_endpoint_html(return_data, cluster_id)
         else:
 
-            # If it's a queue, we still need to get metadata about the message's underlying publisher
-            topic_msg_service_response = req.zato.client.invoke(
-                'zato.pubsub.message.get-from-topic' + suffix, {
-                'cluster_id': cluster_id,
-                'msg_id': msg_id,
-                'needs_sub_queue_check': False,
-            }).data.response
+            # If it's a GD queue, we still need to get metadata about the message's underlying publisher
+            if _has_gd:
+                topic_msg_service_response = req.zato.client.invoke(
+                    'zato.pubsub.message.get-from-topic' + suffix, {
+                    'cluster_id': cluster_id,
+                    'msg_id': msg_id,
+                    'needs_sub_queue_check': False,
+                }).data.response
 
-            return_data.topic_id = topic_msg_service_response.topic_id
-            return_data.topic_name = topic_msg_service_response.topic_name
-            return_data.pub_endpoint_id = topic_msg_service_response.endpoint_id
-            return_data.pub_endpoint_name = topic_msg_service_response.endpoint_name
-            return_data.pub_pattern_matched = topic_msg_service_response.pattern_matched
-            return_data.pub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'pub_endpoint_id', 'pub_endpoint_name')
-            return_data.sub_endpoint_html = get_endpoint_html(return_data, cluster_id)
-            return_data.object_id = return_data.pop('queue_id')
+                return_data.topic_id = topic_msg_service_response.topic_id
+                return_data.topic_name = topic_msg_service_response.topic_name
+                return_data.pub_endpoint_id = topic_msg_service_response.endpoint_id
+                return_data.pub_endpoint_name = topic_msg_service_response.endpoint_name
+                return_data.pub_pattern_matched = topic_msg_service_response.pattern_matched
+                return_data.pub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'pub_endpoint_id', 'pub_endpoint_name')
+                return_data.sub_endpoint_html = get_endpoint_html(return_data, cluster_id)
+                return_data.object_id = return_data.pop('queue_id')
 
-            hook_pub_endpoint_id = return_data.pub_endpoint_id
-            hook_sub_endpoint_id = return_data.endpoint_id
+                hook_pub_endpoint_id = return_data.pub_endpoint_id
+                hook_sub_endpoint_id = return_data.endpoint_id
 
-        hook_pub_service_response = req.zato.client.invoke(
-            'zato.pubsub.hook.get-hook-service', {
-            'cluster_id': cluster_id,
-            'endpoint_id': hook_pub_endpoint_id,
-            'hook_type': PUBSUB.HOOK_TYPE.PUB,
-        }).data.response
-        return_data.hook_pub_service_id = hook_pub_service_response.id
-        return_data.hook_pub_service_name = hook_pub_service_response.name
+                hook_pub_service_response = req.zato.client.invoke(
+                    'zato.pubsub.hook.get-hook-service', {
+                    'cluster_id': cluster_id,
+                    'endpoint_id': hook_pub_endpoint_id,
+                    'hook_type': PUBSUB.HOOK_TYPE.PUB,
+                }).data.response
+                return_data.hook_pub_service_id = hook_pub_service_response.id
+                return_data.hook_pub_service_name = hook_pub_service_response.name
 
-        if hook_sub_endpoint_id:
-            hook_sub_service_response = req.zato.client.invoke(
-                'zato.pubsub.hook.get-hook-service', {
-                'cluster_id': cluster_id,
-                'endpoint_id': hook_sub_endpoint_id,
-                'hook_type': PUBSUB.HOOK_TYPE.SUB,
-            }).data.response
-            return_data.hook_sub_service_id = hook_sub_service_response.id
-            return_data.hook_sub_service_name = hook_sub_service_response.name
+                if hook_sub_endpoint_id:
+                    hook_sub_service_response = req.zato.client.invoke(
+                        'zato.pubsub.hook.get-hook-service', {
+                        'cluster_id': cluster_id,
+                        'endpoint_id': hook_sub_endpoint_id,
+                        'hook_type': PUBSUB.HOOK_TYPE.SUB,
+                    }).data.response
+                    return_data.hook_sub_service_id = hook_sub_service_response.id
+                    return_data.hook_sub_service_name = hook_sub_service_response.name
+                    '''
 
         return_data.form = MsgForm(return_data)
 
