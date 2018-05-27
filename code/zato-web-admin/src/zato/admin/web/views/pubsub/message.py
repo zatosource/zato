@@ -332,6 +332,8 @@ def delete(req, cluster_id, msg_id):
     else:
         service_name = 'zato.pubsub.message.{}-delete-non-gd'.format(object_type)
 
+    if service_name == 'zato.pubsub.message.queue-delete-non-gd':
+
         # This is an in-RAM message so it needs additional information
         input_dict['server_name'] = req.POST['server_name']
         input_dict['server_pid'] = req.POST['server_pid']
