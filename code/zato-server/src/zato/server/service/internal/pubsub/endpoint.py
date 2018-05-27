@@ -454,7 +454,7 @@ class GetServerEndpointQueueMessagesNonGD(AdminService):
 
     def handle(self):
         ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
-        messages = ps_tool.get_messages(self.request.input.sub_key)
+        messages = ps_tool.get_messages(self.request.input.sub_key, False)
 
         data_prefix_len = self.pubsub.data_prefix_len
         data_prefix_short_len = self.pubsub.data_prefix_short_len
@@ -463,6 +463,9 @@ class GetServerEndpointQueueMessagesNonGD(AdminService):
             make_short_msg_copy_from_msg(elem, data_prefix_len, data_prefix_short_len) for elem in messages]
 
         for elem in self.response.payload:
+            print()
+            print(333, elem)
+            print()
             elem['recv_time'] = datetime_from_ms(elem['recv_time'] * 1000.0)
             elem['published_by_name'] = self.pubsub.get_endpoint_by_id(elem['published_by_id']).name
 
@@ -484,7 +487,7 @@ class GetEndpointQueueMessagesNonGD(NonGDSearchService):
             }, pid=sk_server.server_pid)
 
             if response:
-                self.response.payload[:] = response['response']
+                self.response.payload[:] = reversed(response['response'])
 
 # ################################################################################################################################
 

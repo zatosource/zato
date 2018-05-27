@@ -130,11 +130,31 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def get_messages(self):
+    def get_messages(self, has_gd):
         """ Returns all messages enqueued in the delivery list.
         """
-        logger.info('Returning %d message(s) for sub_key `%s`', len(self.delivery_list), self.sub_key)
-        return [msg for msg in self.delivery_list]
+        if has_gd is None:
+            out = [msg for msg in self.delivery_list]
+            len_out = len(out)
+        else:
+            out = []
+            for msg in self.delivery_list:
+                if msg.has_gd is has_gd:
+                    out.append(msg)
+            len_out = len(out)
+
+        logger.info('Returning %d message(s) for sub_key `%s` (gd:%s)', len_out, self.sub_key, has_gd)
+
+        return out
+
+# ################################################################################################################################
+
+    def get_message(self, msg_id):
+        """ Returns a particular message enqueued by this delivery task.
+        """
+        for msg in self.delivery_list:
+            if msg.pub_msg_id == msg_id:
+                return msg
 
 # ################################################################################################################################
 
@@ -784,10 +804,18 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def get_messages(self, sub_key):
+    def get_messages(self, sub_key, has_gd=None):
         """ Returns all messages enqueued for sub_key.
         """
         with self.lock:
-            return self.delivery_tasks[sub_key].get_messages()
+            return self.delivery_tasks[sub_key].get_messages(has_gd)
+
+# ################################################################################################################################
+
+    def get_message(self, sub_key, msg_id):
+        """ Returns a particular message enqueued for sub_key.
+        """
+        with self.lock:
+            return self.delivery_tasks[sub_key].get_message(msg_id)
 
 # ################################################################################################################################

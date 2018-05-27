@@ -53,19 +53,13 @@
                 </td>
 
                 <td class='inline_header' style="width:90px">
-                    {% ifequal object_type "topic" %}
-                        Publisher
-                    {% else %}
-                        Publisher
-                    {% endifequal %}
+                    Publisher
                 </td>
                 <td style="width:170px">
+                    {{ pub_endpoint_html|safe }}
                     {% ifequal object_type "topic" %}
-                        {{ pub_endpoint_html|safe }}
                         {{ pattern_matched }}
-
                     {% else %}
-                        {{ pub_endpoint_html|safe }}
                         {{ pub_pattern_matched }}
                     {% endifequal %}
                 </td>
@@ -181,22 +175,10 @@
 
 
                 <td class='inline_header' style="width:90px">
-                    {% ifequal object_type "queue" %}
-                        Sub service
-                    {% else %}
-                        Server
-                    {% endifequal %}
+                    {% if not has_gd %}Server{% endif %}
                 </td>
                 <td style="width:140px">
-                    {% ifequal object_type "queue" %}
-                        {% if hook_sub_service_name %}
-                            <a href="{% url "service-overview" hook_sub_service_name %}?cluster={{ cluster_id }}">{{ hook_sub_service_name }}</a>
-                        {% else %}
-                            <span class='form_hint'>---</span>
-                        {% endif %}
-                    {% else %}
-                        {{ server_name }}:{{ server_pid }}
-                    {% endifequal %}
+                    {% if not has_gd %}{{ server_name }}:{{ server_pid }}{% endif %}
                 </td>
 
             </tr>

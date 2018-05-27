@@ -8,9 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from binascii import unhexlify
-
 # ################################################################################################################################
 
 def make_short_msg_copy_from_dict(msg, data_prefix_len, data_prefix_short_len):
