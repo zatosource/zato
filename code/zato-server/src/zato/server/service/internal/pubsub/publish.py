@@ -163,6 +163,7 @@ class Publish(AdminService):
         ps_msg.position_in_group = input.get('position_in_group') or None
         ps_msg.is_in_sub_queue = has_subs
 
+
         if ps_msg.data:
             ps_msg.size = len(ps_msg.data.encode('utf8')) # We need to store the size in bytes rather than Unicode codepoints
         else:

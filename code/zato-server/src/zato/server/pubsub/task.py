@@ -156,7 +156,7 @@ class DeliveryTask(object):
         try:
 
             # Deliver up to that many messages in one batch
-            batch = self.delivery_list[:self.sub_config.delivery_batch_size]
+            current_batch = self.delivery_list[:self.sub_config.delivery_batch_size]
 
             # For each message from batch we invoke a hook, if there is any, which will decide
             # whether the message should be delivered, skipped in this iteration or perhaps deleted altogether
@@ -183,10 +183,11 @@ class DeliveryTask(object):
 
             # Without a hook we will always try to deliver all messages that we have in a given batch
             if not hook:
-                to_deliver[:] = batch[:]
+                to_deliver[:] = current_batch[:]
             else:
                 # There is a hook so we can invoke it - it will update the 'messages' dict in place
-                self.pubsub.invoke_before_delivery_hook(hook, self.sub_config.topic_id, self.sub_key, batch, messages)
+                self.pubsub.invoke_before_delivery_hook(
+                    hook, self.sub_config.topic_id, self.sub_key, current_batch, messages)
 
             # Delete these messages first, before starting any delivery, either because the hooks told us to
             # or because self.delete_requested was not empty before this iteration.
@@ -203,21 +204,16 @@ class DeliveryTask(object):
                 logger.info('Skipping messages `%s`', to_skip)
 
             # This is the call that actually delivers messages
-            #zz
             self.deliver_pubsub_msg_cb(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
 
         except Exception as e:
-            # Do not attempt to deliver any other message, only increment delivery_count for each message
-            # from that batch and return. Our parent will sleep for a small amount of time and then re-run us,
-            # thanks to which the next time we run we will again iterate over all the messages
+            # Do not attempt to deliver any other message in case of an error. Our parent will sleep for a small amount of
+            # time and then re-run us, thanks to which the next time we run we will again iterate over all the messages
             # currently queued up, including the ones that we were not able to deliver in current iteration.
 
             exc = format_exc()
             logger.warn('Could not deliver pub/sub messages, e:`%s`', exc)
             logger_zato.warn('Could not deliver pub/sub messages, e:`%s`', exc)
-
-            # ZZZ:
-            #increment delivery_count for each message from to_deliver here
 
             return _run_deliv_status.SOCKET_ERROR if isinstance(e, SocketError) else _run_deliv_status.OTHER_ERROR
 
@@ -233,7 +229,7 @@ class DeliveryTask(object):
 
             except Exception, e:
                 logger.warn('Could not update delivery status for message(s):`%s`, e:`%s`', to_deliver, format_exc(e))
-                return _run_deliv_status.SOCKET_ERROR
+                return _run_deliv_status.OTHER_ERROR
             else:
                 #with self.delivery_lock:
                 #    for msg in to_deliver:
@@ -470,8 +466,7 @@ class NonGDMessage(Message):
         self.has_gd = False
         self.topic_name = msg['topic_name']
         self.size = msg['size']
-
-        #logger_zato.warn('RRR %s %r', self.data, self.pub_time)
+        self.published_by_id = msg['published_by_id']
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
