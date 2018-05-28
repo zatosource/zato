@@ -732,12 +732,12 @@ class PUBSUB:
     SKIPPED_PATTERN_MATCHING = '<skipped>'
 
     class DATA_FORMAT:
-        CSV         = NameId('CSV', DATA_FORMAT.CSV)
-        DICT        = NameId('Dict', DATA_FORMAT.DICT)
-        JSON        = NameId('JSON', DATA_FORMAT.JSON)
-        POST        = NameId('POST', DATA_FORMAT.POST)
-        SOAP        = NameId('SOAP', DATA_FORMAT.SOAP)
-        XML         = NameId('XML', DATA_FORMAT.XML)
+        CSV  = NameId('CSV', DATA_FORMAT.CSV)
+        DICT = NameId('Dict', DATA_FORMAT.DICT)
+        JSON = NameId('JSON', DATA_FORMAT.JSON)
+        POST = NameId('POST', DATA_FORMAT.POST)
+        SOAP = NameId('SOAP', DATA_FORMAT.SOAP)
+        XML  = NameId('XML', DATA_FORMAT.XML)
 
         class __metaclass__(type):
             def __iter__(self):
