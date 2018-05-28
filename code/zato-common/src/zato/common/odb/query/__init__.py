@@ -19,7 +19,7 @@ from sqlalchemy.sql.expression import case
 
 # Zato
 from zato.common import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
-     URL_PARAMS_PRIORITY
+     PUBSUB, URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
      CassandraQuery, ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
      CronStyleJob, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \
@@ -1122,10 +1122,14 @@ def pubsub_queue_message(session, cluster_id, msg_id):
 # ################################################################################################################################
 
 @query_wrapper
-def pubsub_messages_for_queue(session, cluster_id, sub_key, needs_columns=False):
-    return _pubsub_queue_message(session, cluster_id).\
-        filter(PubSubEndpointEnqueuedMessage.sub_key==sub_key).\
-        order_by(PubSubEndpointEnqueuedMessage.creation_time.desc())
+def pubsub_messages_for_queue(session, cluster_id, sub_key, skip_delivered=False, needs_columns=False):
+    q = _pubsub_queue_message(session, cluster_id).\
+        filter(PubSubEndpointEnqueuedMessage.sub_key==sub_key)
+
+    if skip_delivered:
+        q = q.filter(PubSubEndpointEnqueuedMessage.delivery_status != PUBSUB.DELIVERY_STATUS.DELIVERED)
+
+    return q.order_by(PubSubEndpointEnqueuedMessage.creation_time.desc())
 
 # ################################################################################################################################
 
