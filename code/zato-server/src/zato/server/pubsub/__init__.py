@@ -234,6 +234,7 @@ class Subscription(object):
         self.sub_key = config.sub_key
         self.endpoint_id = config.endpoint_id
         self.topic_name = config.topic_name
+        self.sub_pattern_matched = config.sub_pattern_matched
 
     def __repr__(self):
         return make_repr(self)

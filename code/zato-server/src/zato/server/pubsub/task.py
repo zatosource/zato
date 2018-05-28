@@ -444,6 +444,7 @@ class GDMessage(Message):
         self.has_gd = True
         self.topic_name = topic_name
         self.size = msg.size
+        self.sub_pattern_matched = msg.sub_pattern_matched
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
@@ -478,6 +479,12 @@ class NonGDMessage(Message):
         self.topic_name = msg['topic_name']
         self.size = msg['size']
         self.published_by_id = msg['published_by_id']
+        self.pub_pattern_matched = msg['pub_pattern_matched']
+
+        # msg.sub_pattern_matched is a shared dictionary of patterns for each subscriber - we .pop from it
+        # so as not to keep this dictionary's contents for no particular reason. Since there can be only
+        # one delivery task for each sub_key, we can .pop rightaway.
+        self.sub_pattern_matched = msg['sub_pattern_matched'].pop(self.sub_key)
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
@@ -636,8 +643,13 @@ class PubSubTool(object):
     def add_non_gd_messages_by_sub_key(self, sub_key, messages):
         """ Adds to local delivery queue all non-GD messages from input.
         """
-        with self.sub_key_locks[sub_key]:
-            self._add_non_gd_messages_by_sub_key(sub_key, messages)
+        try:
+            with self.sub_key_locks[sub_key]:
+                self._add_non_gd_messages_by_sub_key(sub_key, messages)
+        except Exception:
+            e = format_exc()
+            logger.warn(e)
+            logger_zato.warn(e)
 
 # ################################################################################################################################
 

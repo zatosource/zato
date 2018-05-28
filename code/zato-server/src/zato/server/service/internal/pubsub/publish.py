@@ -103,7 +103,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, has_subs, _initialized=_initialized,
+    def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, _initialized=_initialized,
         _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT):
 
         priority = get_priority(self.cid, input)
@@ -161,8 +161,12 @@ class Publish(AdminService):
         ps_msg.ext_pub_time = ext_pub_time
         ps_msg.group_id = input.get('group_id') or None
         ps_msg.position_in_group = input.get('position_in_group') or None
-        ps_msg.is_in_sub_queue = has_subs
+        ps_msg.is_in_sub_queue = bool(subscriptions_by_topic)
 
+        # If there are any subscriptions for the topic this message was published to, we want to establish
+        # based on what subscription pattern each subscriber will receive the message.
+        for sub in subscriptions_by_topic:
+            ps_msg.sub_pattern_matched[sub.sub_key] = sub.sub_pattern_matched
 
         if ps_msg.data:
             ps_msg.size = len(ps_msg.data.encode('utf8')) # We need to store the size in bytes rather than Unicode codepoints
@@ -190,7 +194,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_messages_from_data(self, topic, data_list, input, now, pub_pattern_matched, endpoint_id, has_subs):
+    def _get_messages_from_data(self, topic, data_list, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic):
 
         # List of messages with GD enabled
         gd_msg_list = []
@@ -203,14 +207,14 @@ class Publish(AdminService):
 
         if data_list and isinstance(data_list, (list, tuple)):
             for elem in data_list:
-                msg = self._get_message(topic, elem, now, pub_pattern_matched, endpoint_id, has_subs)
+                msg = self._get_message(topic, elem, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic)
                 if msg:
                     msg_id_list.append(msg.pub_msg_id)
                     msg_as_dict = msg.to_dict()
                     target_list = gd_msg_list if msg.has_gd else non_gd_msg_list
                     target_list.append(msg_as_dict)
         else:
-            msg = self._get_message(topic, input, now, pub_pattern_matched, endpoint_id, has_subs)
+            msg = self._get_message(topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic)
             if msg:
                 msg_id_list.append(msg.pub_msg_id)
                 msg_as_dict = msg.to_dict()
@@ -296,7 +300,7 @@ class Publish(AdminService):
 
         # Input messages may contain a mix of GD and non-GD messages, and we need to extract them separately.
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
-            topic, data_list, input, now, pub_pattern_matched, endpoint_id, bool(subscriptions_by_topic))
+            topic, data_list, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic)
 
         # Create a wrapper object for all the input data and metadata
         ctx = PubCtx(self.server.cluster_id, pubsub, topic, endpoint_id, pubsub.get_endpoint_by_id(endpoint_id).name,
