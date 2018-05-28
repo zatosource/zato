@@ -14,8 +14,8 @@ def make_short_msg_copy_from_dict(msg, data_prefix_len, data_prefix_short_len):
     out_msg = {}
     out_msg['msg_id'] = msg['pub_msg_id']
     out_msg['in_reply_to'] = msg.get('in_reply_to')
-    out_msg['data'] = msg['data'][data_prefix_len]
-    out_msg['data_prefix_short'] = out_msg['data'][data_prefix_short_len]
+    out_msg['data'] = msg['data'][:data_prefix_len]
+    out_msg['data_prefix_short'] = out_msg['data'][:data_prefix_short_len]
     out_msg['size'] = msg['size']
     out_msg['pub_pattern_matched'] = msg['pub_pattern_matched']
     out_msg['sub_pattern_matched'] = msg['sub_pattern_matched']
