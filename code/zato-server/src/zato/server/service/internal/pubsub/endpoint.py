@@ -164,7 +164,7 @@ class GetTopicList(AdminService):
 
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'endpoint_id')
-        output_required = ('topic_id', 'topic_name', 'pub_time', AsIs('pub_msg_id'), 'pattern_matched', 'has_gd', 'data')
+        output_required = ('topic_id', 'topic_name', 'pub_time', AsIs('pub_msg_id'), 'pub_pattern_matched', 'has_gd', 'data')
         output_optional = (AsIs('pub_correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time')
         output_repeated = True
 

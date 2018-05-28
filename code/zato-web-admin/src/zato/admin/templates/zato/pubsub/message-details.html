@@ -57,11 +57,7 @@
                 </td>
                 <td style="width:170px">
                     {{ pub_endpoint_html|safe }}
-                    {% ifequal object_type "topic" %}
-                        {{ pattern_matched }}
-                    {% else %}
-                        {{ pub_pattern_matched }}
-                    {% endifequal %}
+                    {{ pub_pattern_matched }}
                 </td>
 
                 <td class='inline_header' style="width:90px">Priority <span class="form_hint">(1-9, 1=min)</span></td>

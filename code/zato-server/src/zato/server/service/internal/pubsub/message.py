@@ -45,10 +45,10 @@ EndpointTopic = PubSubEndpointTopic.__table__
 class _GetSIO(AdminSIO):
     input_required = (AsIs('msg_id'),)
     output_optional = ('topic_id', 'topic_name', AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'pub_time', \
-        'ext_pub_time', 'pattern_matched', 'priority', 'data_format', 'mime_type', 'size', 'data',
-        'expiration', 'expiration_time', 'endpoint_id', 'endpoint_name', 'recv_time',
-        'pub_hook_service_id', 'pub_hook_service_name', AsIs('ext_client_id'), 'server_name', 'server_pid',
-        'published_by_id', 'published_by_name', 'subscriber_id', 'subscriber_name')
+        'ext_pub_time', 'pub_pattern_matched', 'sub_pattern_matched', 'priority', 'data_format', 'mime_type', 'size', 'data',
+        'expiration', 'expiration_time', 'endpoint_id', 'endpoint_name', 'recv_time', 'pub_hook_service_id',
+        'pub_hook_service_name', AsIs('ext_client_id'), 'server_name', 'server_pid', 'published_by_id', 'published_by_name',
+        'subscriber_id', 'subscriber_name')
 
 # ################################################################################################################################
 
@@ -389,7 +389,7 @@ class GetFromQueueGD(AdminService):
             'is_in_staging', 'queue_name', 'subscriber_id', 'subscriber_name', 'size', 'priority', 'mime_type',
             'sub_pattern_matched', AsIs('correl_id'), 'in_reply_to', 'expiration', 'expiration_time',
             AsIs('sub_hook_service_id'), 'sub_hook_service_name', AsIs('ext_client_id'), 'published_by_id',
-            'published_by_name')
+            'published_by_name', 'pub_pattern_matched')
 
     def handle(self):
         with closing(self.odb.session()) as session:

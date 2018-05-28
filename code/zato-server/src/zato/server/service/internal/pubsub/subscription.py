@@ -53,7 +53,7 @@ class SubCtx(object):
         self.cluster_id = cluster_id
         self.server_id = None
         self.has_gd = None
-        self.pattern_matched = None
+        self.sub_pattern_matched = None
         self.topic = None # type: Topic
         self.is_internal = None
         self.active_status = None
@@ -224,7 +224,7 @@ ctx_class = {
 class _Subscribe(AdminService):
     """ Base class for services implementing pub/sub subscriptions.
     """
-    def _get_pattern_matched(self, topic_name, ws_channel_id, sql_ws_client_id, security_id, endpoint_id):
+    def _get_sub_pattern_matched(self, topic_name, ws_channel_id, sql_ws_client_id, security_id, endpoint_id):
         pubsub = self.server.worker_store.pubsub
 
         if ws_channel_id and (not sql_ws_client_id):
@@ -232,21 +232,21 @@ class _Subscribe(AdminService):
 
         # Confirm if this client may subscribe at all to the topic it chose
         if endpoint_id:
-            pattern_matched = pubsub.is_allowed_sub_topic_by_endpoint_id(topic_name, endpoint_id)
+            sub_pattern_matched = pubsub.is_allowed_sub_topic_by_endpoint_id(topic_name, endpoint_id)
         else:
             kwargs = {'security_id':security_id} if security_id else {'ws_channel_id':ws_channel_id}
-            pattern_matched = pubsub.is_allowed_sub_topic(topic_name, **kwargs)
+            sub_pattern_matched = pubsub.is_allowed_sub_topic(topic_name, **kwargs)
 
         # Not allowed - raise an exception then
-        if not pattern_matched:
+        if not sub_pattern_matched:
             raise Forbidden(self.cid)
 
         # Alright, we can proceed
         else:
-            return pattern_matched
+            return sub_pattern_matched
 
     # Check if subscription is allowed and getting a pattern that would have matched is the same thing.
-    _is_subscription_allowed = _get_pattern_matched
+    _is_subscription_allowed = _get_sub_pattern_matched
 
 # ################################################################################################################################
 
@@ -293,7 +293,7 @@ class SubscribeServiceImpl(_Subscribe):
 
         # Confirm correctness of input data, including whether the caller can subscribe
         # to this topic and if the topic exists at all.
-        ctx.pattern_matched = self._get_pattern_matched(
+        ctx.sub_pattern_matched = self._get_sub_pattern_matched(
             ctx.topic_name, ctx.ws_channel_id, ctx.sql_ws_client_id, ctx.security_id, ctx.endpoint_id)
 
         try:

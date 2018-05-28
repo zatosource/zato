@@ -60,10 +60,10 @@ class PubCtx(object):
     """ A container for information describing a single publication.
     """
     __slots__ = ('cluster_id', 'pubsub', 'topic', 'endpoint_id', 'endpoint_name', 'subscriptions_by_topic', 'msg_id_list',
-        'gd_msg_list', 'non_gd_msg_list', 'pattern_matched', 'ext_client_id', 'is_re_run', 'now', 'current_depth', 'last_msg')
+        'gd_msg_list', 'non_gd_msg_list', 'pub_pattern_matched', 'ext_client_id', 'is_re_run', 'now', 'current_depth', 'last_msg')
 
     def __init__(self, cluster_id, pubsub, topic, endpoint_id, endpoint_name, subscriptions_by_topic, msg_id_list, gd_msg_list,
-            non_gd_msg_list, pattern_matched, ext_client_id, is_re_run, now):
+            non_gd_msg_list, pub_pattern_matched, ext_client_id, is_re_run, now):
         self.cluster_id = cluster_id
         self.pubsub = pubsub
         self.topic = topic
@@ -73,7 +73,7 @@ class PubCtx(object):
         self.msg_id_list = msg_id_list
         self.gd_msg_list = gd_msg_list
         self.non_gd_msg_list = non_gd_msg_list
-        self.pattern_matched = pattern_matched
+        self.pub_pattern_matched = pub_pattern_matched
         self.ext_client_id = ext_client_id
         self.is_re_run = is_re_run
         self.now = now
@@ -88,7 +88,7 @@ class Publish(AdminService):
     class SimpleIO:
         input_required = ('topic_name',)
         input_optional = ('data', List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'), 'mime_type',
-            AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time', 'pattern_matched', 'security_id',
+            AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time', 'pub_pattern_matched', 'security_id',
             'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
             Int('position_in_group'), 'endpoint_id')
         output_optional = (AsIs('msg_id'), List('msg_id_list'))
@@ -103,7 +103,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_message(self, topic, input, now, pattern_matched, endpoint_id, has_subs, _initialized=_initialized,
+    def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, has_subs, _initialized=_initialized,
         _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT):
 
         priority = get_priority(self.cid, input)
@@ -146,7 +146,7 @@ class Publish(AdminService):
         ps_msg.in_reply_to = in_reply_to
         ps_msg.pub_time = now
         ps_msg.delivery_status = _initialized
-        ps_msg.pattern_matched = pattern_matched
+        ps_msg.pub_pattern_matched = pub_pattern_matched
         ps_msg.data = input['data']
         ps_msg.mime_type = mime_type
         ps_msg.priority = priority
@@ -190,7 +190,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_messages_from_data(self, topic, data_list, input, now, pattern_matched, endpoint_id, has_subs):
+    def _get_messages_from_data(self, topic, data_list, input, now, pub_pattern_matched, endpoint_id, has_subs):
 
         # List of messages with GD enabled
         gd_msg_list = []
@@ -203,14 +203,14 @@ class Publish(AdminService):
 
         if data_list and isinstance(data_list, (list, tuple)):
             for elem in data_list:
-                msg = self._get_message(topic, elem, now, pattern_matched, endpoint_id, has_subs)
+                msg = self._get_message(topic, elem, now, pub_pattern_matched, endpoint_id, has_subs)
                 if msg:
                     msg_id_list.append(msg.pub_msg_id)
                     msg_as_dict = msg.to_dict()
                     target_list = gd_msg_list if msg.has_gd else non_gd_msg_list
                     target_list.append(msg_as_dict)
         else:
-            msg = self._get_message(topic, input, now, pattern_matched, endpoint_id, has_subs)
+            msg = self._get_message(topic, input, now, pub_pattern_matched, endpoint_id, has_subs)
             if msg:
                 msg_id_list.append(msg.pub_msg_id)
                 msg_as_dict = msg.to_dict()
@@ -237,7 +237,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def get_pattern_matched(self, endpoint_id, input):
+    def get_pub_pattern_matched(self, endpoint_id, input):
         """ Returns a publication pattern matched that allows the endpoint to publish messages
         or raises an exception if no pattern was matched. Takes into account various IDs possibly given on input,
         depending on what our caller wanted to provide.
@@ -256,17 +256,17 @@ class Publish(AdminService):
                 raise NotImplementedError('To be implemented')
 
             kwargs = {'security_id':security_id} if security_id else {'ws_channel_id':ws_channel_id}
-            pattern_matched = pubsub.is_allowed_pub_topic(input.topic_name, **kwargs)
+            pub_pattern_matched = pubsub.is_allowed_pub_topic(input.topic_name, **kwargs)
 
         else:
-            pattern_matched = pubsub.is_allowed_pub_topic_by_endpoint_id(input.topic_name, endpoint_id)
+            pub_pattern_matched = pubsub.is_allowed_pub_topic_by_endpoint_id(input.topic_name, endpoint_id)
 
         # Not allowed, raise an exception in that case
-        if not pattern_matched:
+        if not pub_pattern_matched:
             raise Forbidden(self.cid)
 
         # Alright, we are in
-        return endpoint_id, pattern_matched
+        return endpoint_id, pub_pattern_matched
 
 # ################################################################################################################################
 
@@ -277,7 +277,7 @@ class Publish(AdminService):
         endpoint_id = input.endpoint_id
 
         # Will return publication pattern matched or raise an exception that we don't catch
-        endpoint_id, pattern_matched = self.get_pattern_matched(endpoint_id, input)
+        endpoint_id, pub_pattern_matched = self.get_pub_pattern_matched(endpoint_id, input)
 
         try:
             topic = pubsub.get_topic_by_name(input.topic_name) # type: Topic
@@ -296,11 +296,11 @@ class Publish(AdminService):
 
         # Input messages may contain a mix of GD and non-GD messages, and we need to extract them separately.
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
-            topic, data_list, input, now, pattern_matched, endpoint_id, bool(subscriptions_by_topic))
+            topic, data_list, input, now, pub_pattern_matched, endpoint_id, bool(subscriptions_by_topic))
 
         # Create a wrapper object for all the input data and metadata
         ctx = PubCtx(self.server.cluster_id, pubsub, topic, endpoint_id, pubsub.get_endpoint_by_id(endpoint_id).name,
-            subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list, pattern_matched,
+            subscriptions_by_topic, msg_id_list, gd_msg_list, non_gd_msg_list, pub_pattern_matched,
             input.get('ext_client_id'), False, now)
 
         # We have all the input data, publish the message(s) now
@@ -377,7 +377,7 @@ class Publish(AdminService):
                   ', GD data:`%s`, non-GD data:`%s`'
 
             logger_audit.info(msg, self.cid, ctx.topic.name, self.pubsub.endpoints[ctx.endpoint_id].name,
-                ctx.ext_client_id, ctx.pattern_matched, ctx.current_depth, ctx.gd_msg_list, ctx.non_gd_msg_list)
+                ctx.ext_client_id, ctx.pub_pattern_matched, ctx.current_depth, ctx.gd_msg_list, ctx.non_gd_msg_list)
 
         # If this is the very first time we are running during this invocation, try to deliver non-GD messages
         if not ctx.is_re_run:
@@ -476,7 +476,7 @@ class Publish(AdminService):
                         'endpoint_id': ctx.endpoint_id,
                         'endpoint_name': ctx.endpoint_name,
                         'pub_msg_id': ctx.last_msg['pub_msg_id'],
-                        'pattern_matched': ctx.pattern_matched
+                        'pub_pattern_matched': ctx.pub_pattern_matched
                     }
 
                     for name in _topic_optional:
@@ -517,7 +517,7 @@ class Publish(AdminService):
                         'in_reply_to': ctx.last_msg.get('in_reply_to'),
                         'ext_client_id': ctx.last_msg.get('ext_client_id'),
                         'ext_pub_time': ctx.last_msg.get('ext_pub_time'),
-                        'pattern_matched': ctx.pattern_matched,
+                        'pub_pattern_matched': ctx.pub_pattern_matched,
                         'topic_id': ctx.topic.id,
                         'topic_name': ctx.topic.name,
                         'has_gd': ctx.last_msg['has_gd'],
