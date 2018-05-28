@@ -47,6 +47,11 @@ hook_type_to_method = {
 
 # ################################################################################################################################
 
+_pub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.PUBLISHER.id)
+_sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
+
+# ################################################################################################################################
+
 _update_attrs = ('data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_reply_to', 'mime_type',
     'expiration', 'expiration_time')
 
@@ -1037,7 +1042,8 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _is_allowed(self, target, name, security_id, ws_channel_id, endpoint_id=None):
+    def _is_allowed(self, target, name, is_pub, security_id, ws_channel_id, endpoint_id=None,
+        _pub_role=_pub_role, _sub_role=_sub_role):
 
         if not endpoint_id:
 
@@ -1053,8 +1059,18 @@ class PubSub(object):
 
             endpoint_id = source[id]
 
+        # One way or another, we have an endpoint object now ..
         endpoint = self.endpoints[endpoint_id]
 
+        # .. make sure this endpoint may publish or subscribe, depending on what is needed.
+        if is_pub:
+            if not endpoint.role in _pub_role:
+                return
+        else:
+            if not endpoint.role in _sub_role:
+                return
+
+        # Alright, this endpoint has the correct role, but are there are any matching patterns for this topic?
         for orig, matcher in getattr(endpoint, target):
             if matcher.match(name):
                 return orig
@@ -1062,22 +1078,22 @@ class PubSub(object):
 # ################################################################################################################################
 
     def is_allowed_pub_topic(self, name, security_id=None, ws_channel_id=None):
-        return self._is_allowed('pub_topic_patterns', name, security_id, ws_channel_id)
+        return self._is_allowed('pub_topic_patterns', name, True, security_id, ws_channel_id)
 
 # ################################################################################################################################
 
     def is_allowed_pub_topic_by_endpoint_id(self, name, endpoint_id):
-        return self._is_allowed('pub_topic_patterns', name, None, None, endpoint_id)
+        return self._is_allowed('pub_topic_patterns', name, True, None, None, endpoint_id)
 
 # ################################################################################################################################
 
     def is_allowed_sub_topic(self, name, security_id=None, ws_channel_id=None):
-        return self._is_allowed('sub_topic_patterns', name, security_id, ws_channel_id)
+        return self._is_allowed('sub_topic_patterns', name, False, security_id, ws_channel_id)
 
 # ################################################################################################################################
 
     def is_allowed_sub_topic_by_endpoint_id(self, name, endpoint_id):
-        return self._is_allowed('sub_topic_patterns', name, None, None, endpoint_id)
+        return self._is_allowed('sub_topic_patterns', name, False, None, None, endpoint_id)
 
 # ################################################################################################################################
 
