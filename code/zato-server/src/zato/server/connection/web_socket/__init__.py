@@ -309,7 +309,11 @@ class WebSocket(_WebSocket):
 
                 # Ok, still connected
                 if self.stream:
-                    response = self.invoke_client(new_cid(), None, False)
+                    try:
+                        response = self.invoke_client(new_cid(), None, False)
+                    except RuntimeError:
+                        logger.warn('Closing connection due to `%s`', format_exc())
+                        self.on_socket_terminated()
 
                     with self.update_lock:
                         if response:
@@ -600,12 +604,14 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def closed(self, code, reason=None):
+    def closed(self, _ignored_code=None, _ignored_reason=None):
         logger.info('Closing connection from %s (%s) to %s (%s %s %s)',
             self._peer_address, self._peer_fqdn, self._local_address, self.ext_client_id, self.config.name, self.pub_client_id)
 
         self.unregister_auth_client()
         del self.container.clients[self.pub_client_id]
+
+    on_socket_terminated = closed
 
 # ################################################################################################################################
 
