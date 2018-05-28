@@ -61,6 +61,7 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
 
     row += String.format('<td>{0}</td>', data.creation_time);
     row += String.format('<td>{0}</td>', sub_key_link);
+    row += String.format('<td>{0}</td>', data.ext_client_id || $.fn.zato.empty_value);
 
     row += clear_link;
     row += edit_link;

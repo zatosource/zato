@@ -1034,6 +1034,7 @@ def _pubsub_endpoint_queue(session, cluster_id):
         PubSubSubscription.delivery_data_format,
         PubSubSubscription.delivery_endpoint,
         PubSubSubscription.is_staging_enabled,
+        PubSubSubscription.ext_client_id,
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
         PubSubTopic.name.label('name'), # Currently queue names are the same as their originating topics

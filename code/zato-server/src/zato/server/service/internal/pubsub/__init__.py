@@ -48,7 +48,7 @@ class CommonSubData:
         Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id', 'out_http_method',
         'out_http_method', 'creation_time', 'last_interaction_time', Int('total_depth'), Int('current_depth_gd'),
         Int('current_depth_non_gd'), 'sub_key', 'has_gd', 'is_staging_enabled', 'sub_id', 'name', AsIs('ws_ext_client_id'),
-        'topic_id')
+        AsIs('ext_client_id'), 'topic_id')
     amqp = ('amqp_exchange', 'amqp_routing_key')
     files = ('files_directory_list',)
     ftp = ('ftp_directory_list',)
@@ -58,7 +58,7 @@ class CommonSubData:
     sms_twilio = ('sms_twilio_from', 'sms_twilio_to_list')
     smtp = (Bool('smtp_is_html'), 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body')
     soap = ('out_soap_http_soap_id', 'soap_delivery_endpoint')
-    websockets = ('ws_channel_id', 'ws_channel_name', AsIs('ws_pub_client_id'), 'sql_ws_client_id', AsIs('ext_client_id'),
+    websockets = ('ws_channel_id', 'ws_channel_name', AsIs('ws_pub_client_id'), 'sql_ws_client_id',
         Opaque('web_socket'))
 
 common_sub_data = CommonSubData.common + CommonSubData.amqp + CommonSubData.files + \
