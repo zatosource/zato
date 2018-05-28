@@ -312,15 +312,24 @@ class Publish(AdminService):
         # Get all subscribers for that topic from local worker store
         subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic.name)
 
-        # Is there at least one WSX subscriber to this topic that is currently not connected?
-        # If so, we will need to turn all the messages into GD ones.
+        # This is only for logging purposes
+        _subs_found = []
+
+        # Assume that there are no missing servers for WSX clients by default
+        has_wsx_no_server = False
+
         for sub in subscriptions_by_topic:
+
+            # Prepare data for logging
+            _subs_found.append({sub.sub_key: sub.sub_pattern_matched})
+
+            # Is there at least one WSX subscriber to this topic that is currently not connected?
+            # If so, later on we will need to turn all the messages into GD ones.
             sk_server = self.pubsub.get_sub_key_server(sub.sub_key)
             if not sk_server:
                 has_wsx_no_server = True # We have found at least one WSX subscriber that has no server = is not connected
-                break
-        else:
-            has_wsx_no_server = False # Either no WSX clients or all of them are connected
+
+        logger_pubsub.info('Subscriptions for topic `%s` `%s`', topic.name, _subs_found)
 
         # If input.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other input parameters describe it.

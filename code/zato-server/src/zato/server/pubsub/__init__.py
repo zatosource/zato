@@ -668,7 +668,7 @@ class PubSub(object):
         self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
 
-        self.subscriptions_by_topic = {}       # Topic name     -> Subscription object
+        self.subscriptions_by_topic = {}       # Topic name     -> List of Subscription objects
         self.subscriptions_by_sub_key = {}     # Sub key        -> Subscription object
         self.sub_key_servers = {}              # Sub key        -> Server/PID handling it
 
@@ -1392,7 +1392,7 @@ class PubSub(object):
                 # Delete subscription metadata from local pubsub
                 subscriptions_by_topic = self.subscriptions_by_topic[topic_name]
 
-                for sub in subscriptions_by_topic:
+                for sub in subscriptions_by_topic[:]:
                     if sub.sub_key in sub_keys:
                         subscriptions_by_topic.remove(sub)
 
