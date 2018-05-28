@@ -160,6 +160,8 @@ $.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id) {
         var success = status == 'success';
 
         if(success) {
+            instance.current_depth_gd = 0;
+            instance.current_depth_non_gd = 0;
             $('#total_depth_' + instance.id).html($.fn.zato.pubsub.endpoint_queue.get_current_depth_link(
                 instance, cluster_id));
         }
