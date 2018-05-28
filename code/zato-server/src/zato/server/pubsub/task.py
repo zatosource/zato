@@ -84,7 +84,10 @@ class DeliveryTask(object):
         self.wait_non_sock_err = self.sub_config.wait_non_sock_err
         self.last_run = utcnow_as_ms()
         self.delivery_interval = self.sub_config.task_delivery_interval / 1000.0
-        self.delivery_counter = 1
+        self.delivery_max_retry = self.sub_config.delivery_max_retry
+
+        # This is a total of messages processed so far
+        self.delivery_counter = 0
 
         # A list of messages that were requested to be deleted while a delivery was in progress,
         # checked before each delivery.
@@ -179,6 +182,17 @@ class DeliveryTask(object):
                 to_delete = self.delete_requested[:]
                 self.delete_requested[:] = []
 
+            # An optional pub/sub hook - note that we are checking it here rather than once upfront
+            # because users may change it any time for a topic.
+            hook = self.pubsub.get_before_delivery_hook(self.sub_key)
+
+            # Go through each message and check if any has reached our delivery_max_retry.
+            # Any such message should be deleted so we add it to to_delete. Note that we do it here
+            # because we want for a sub hook to have access to them.
+            for msg in current_batch:
+                if msg.delivery_count >= self.delivery_max_retry:
+                    to_delete.append(msg)
+
             to_deliver = []
             to_skip = []
 
@@ -187,10 +201,6 @@ class DeliveryTask(object):
                 _hook_action.DELIVER: to_deliver,
                 _hook_action.SKIP: to_skip,
             }
-
-            # An optional pub/sub hook - note that we are checking it here rather than once upfront
-            # because users may change it any time for a topic.
-            hook = self.pubsub.get_before_delivery_hook(self.sub_key)
 
             # Without a hook we will always try to deliver all messages that we have in a given batch
             if not hook:
@@ -233,12 +243,13 @@ class DeliveryTask(object):
             try:
                 # All message IDs that we have delivered
                 delivered_msg_id_list = [msg.pub_msg_id for msg in to_deliver]
-
                 with self.delivery_lock:
                     self.confirm_pubsub_msg_delivered_cb(self.sub_key, delivered_msg_id_list)
 
-            except Exception, e:
-                logger.warn('Could not update delivery status for message(s):`%s`, e:`%s`', to_deliver, format_exc(e))
+            except Exception:
+                e = format_exc()
+                logger_zato.warn('Could not update delivery status for message(s):`%s`, e:`%s`', to_deliver, e)
+                logger.warn('Could not update delivery status for message(s):`%s`, e:`%s`', to_deliver, e)
                 return _run_deliv_status.OTHER_ERROR
             else:
                 with self.delivery_lock:
@@ -264,17 +275,15 @@ class DeliveryTask(object):
         now = _now()
         diff = round(now - self.last_run, 2)
 
-        #logger_zato.warn('WAIT CHECK %s %s %s %s', now, self.last_run, diff, self.delivery_interval)
-
         if diff >= self.delivery_interval:
             if self.delivery_list:
-                logger_zato.info('Waking task:%s now:%s last:%s diff:%s interval:%s len-list:%d',
+                logger.info('Waking task:%s now:%s last:%s diff:%s interval:%s len-list:%d',
                     self.sub_key, now, self.last_run, diff, self.delivery_interval, len(self.delivery_list))
                 return True
 
 # ################################################################################################################################
 
-    def run(self, default_sleep_time=0.1, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
+    def run(self, default_sleep_time=0.1, _status=PUBSUB.RUN_DELIVERY_STATUS):
         logger.info('Starting delivery task for sub_key:`%s`', self.sub_key)
 
         try:
@@ -292,10 +301,10 @@ class DeliveryTask(object):
                         result = self._run_delivery()
 
                         # On success, sleep for a moment because we have just run out of all messages.
-                        if result == _run_deliv_status.OK:
+                        if result == _status.OK:
                             continue
 
-                        elif result == _run_deliv_status.NO_MSG:
+                        elif result == _status.NO_MSG:
                             sleep(default_sleep_time)
 
                         # Otherwise, sleep for a longer time because our endpoint must have returned an error.
@@ -303,7 +312,7 @@ class DeliveryTask(object):
                         # we queued up. Note that we are the only delivery task for this sub_key  so when we sleep here
                         # for a moment, we do not block other deliveries.
                         else:
-                            sleep_time = 1#self.wait_sock_err if result == _run_deliv_status.SOCKET_ERROR else self.wait_non_sock_err
+                            sleep_time = self.wait_sock_err if result == _status.SOCKET_ERROR else self.wait_non_sock_err
                             msg = 'Sleeping for {}s after `{}` in sub_key:`{}`'.format(sleep_time, result, self.sub_key)
                             logger.warn(msg)
                             logger_zato.warn(msg)
