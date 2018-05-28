@@ -302,6 +302,10 @@ class Publish(AdminService):
         except KeyError:
             raise NotFound(self.cid, 'No such topic `{}`'.format(input.topic_name))
 
+        # Reject the message is topic is not active
+        if not topic.is_active:
+            raise ServiceUnavailable(self.cid, 'Topic is inactive `{}`'.format(input.topic_name))
+
         # We always count time in milliseconds since UNIX epoch
         now = utcnow_as_ms()
 
