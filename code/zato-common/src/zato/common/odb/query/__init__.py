@@ -965,7 +965,6 @@ def pubsub_publishers_for_topic(session, cluster_id, topic_id):
         PubSubEndpoint.ws_channel_id, PubSubEndpoint.name,
         PubSubEndpoint.is_active, PubSubEndpoint.is_internal,
         PubSubEndpoint.last_seen, PubSubEndpoint.last_pub_time,
-        PubSubEndpointTopic.pub_pattern_matched,
         PubSubEndpointTopic.last_pub_time,
         PubSubEndpointTopic.pub_msg_id.label('last_msg_id'),
         PubSubEndpointTopic.pub_correl_id.label('last_correl_id'),

@@ -129,7 +129,8 @@ class Get(AdminService):
             topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, self.request.input.id)
 
         last_data = get_last_pub_data(self.kvdb.conn, self.server.cluster_id, self.request.input.id)
-        topic['last_pub_time'] = last_data['pub_time']
+        if last_data:
+            topic['last_pub_time'] = last_data['pub_time']
 
         self.response.payload = topic
 

@@ -49,7 +49,7 @@
                     <tr class='ignore'>
                         <th style="width:5%">&nbsp;</th>
                         <th><a href="#">Topic</a></th>
-                        <th><a href="#">Pub time (UTC)</a></th>
+                        <th><a href="#">Pub time</a></th>
                         <th><a href="#">Msg ID</a></th>
                         <th><a href="#">Ext. client ID</a></th>
                         <th><a href="#">Data</a></th>
@@ -63,12 +63,23 @@
                         <td>
                             <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.topic_name }}</a>
                         </td>
-                        <td>
-                            {{ item.pub_time }}
+                        <td style="width:20%">
+
+                            <a
+                                id="a_pub_time_{{ item.msg_id }}"
+                                href="javascript:$.fn.zato.toggle_time('pub_time_{{ item.msg_id }}', '{{ item.pub_time }}', '{{ item.pub_time_utc }}')">{{ item.pub_time }}
+                            </a>
+
                             {% if item.ext_pub_time %}
                                 <br/>
-                                {{ item.ext_pub_time }}
+                                <a
+                                    id="a_ext_pub_time_{{ item.msg_id }}"
+                                    href="javascript:$.fn.zato.toggle_time('ext_pub_time_{{ item.msg_id }}', '{{ item.ext_pub_time }}', '{{ item.ext_pub_time_utc }}')">{{ item.ext_pub_time }}
+                                </a>
+
                             {% endif %}
+
+
                         </td>
                         <td>
                             {% if item.pub_correl_id or item.in_reply_to %}

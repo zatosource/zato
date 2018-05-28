@@ -84,12 +84,12 @@
                         {% ifequal object_type "topic" %}
                             <a
                                 id="a_pub_time"
-                                href="javascript:$.fn.zato.pubsub.message.details.toggle_time('pub_time', '{{ pub_time }}', '{{ pub_time_utc }}')">{{ pub_time }}
+                                href="javascript:$.fn.zato.toggle_time('pub_time', '{{ pub_time }}', '{{ pub_time_utc }}')">{{ pub_time }}
                             </a>
                         {% else %}
                             <a
                                 id="a_recv_time"
-                                href="javascript:$.fn.zato.pubsub.message.details.toggle_time('recv_time', '{{ recv_time }}', '{{ recv_time_utc }}')">{{ recv_time }}
+                                href="javascript:$.fn.zato.toggle_time('recv_time', '{{ recv_time }}', '{{ recv_time_utc }}')">{{ recv_time }}
                             </a>
                         {% endifequal %}
                     {% endifequal %}
@@ -108,7 +108,7 @@
                         {% if ext_pub_time %}
                         <a
                             id="a_ext_pub_time"
-                            href="javascript:$.fn.zato.pubsub.message.details.toggle_time('ext_pub_time', '{{ ext_pub_time }}', '{{ ext_pub_time_utc }}')">{{ ext_pub_time }}
+                            href="javascript:$.fn.zato.toggle_time('ext_pub_time', '{{ ext_pub_time }}', '{{ ext_pub_time_utc }}')">{{ ext_pub_time }}
                         </a>
                         {% else %}
                             <span class='form_hint'>---</span>
@@ -162,7 +162,7 @@
                     {% if expiration_time %}
                         <a
                             id="a_expiration_time"
-                            href="javascript:$.fn.zato.pubsub.message.details.toggle_time('expiration_time', '{{ expiration_time }}', '{{ expiration_time_utc }}')">{{ expiration_time }}
+                            href="javascript:$.fn.zato.toggle_time('expiration_time', '{{ expiration_time }}', '{{ expiration_time_utc }}')">{{ expiration_time }}
                         </a>
                     {% else %}
                         <span class='form_hint'>---</span>

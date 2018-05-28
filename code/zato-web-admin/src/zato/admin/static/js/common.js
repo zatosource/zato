@@ -897,6 +897,16 @@ $.fn.zato.get_url_param = function(name, url) {
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
 
+$.fn.zato.toggle_time = function(link_name, current_value, new_value) {
+    var elem = $('#a_' + link_name);
+    var href_format = "javascript:$.fn.zato.toggle_time('{0}', '{1}', '{2}')"
+    var href_value = String.format(href_format, link_name, new_value, current_value);
+
+    elem.attr('href', href_value);
+    elem.html(new_value);
+
+}
+
 $.fn.zato.empty_value = '<span class="form_hint">---</span>';
 
 // For Brython

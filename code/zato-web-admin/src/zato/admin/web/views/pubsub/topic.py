@@ -50,6 +50,7 @@ class Index(_Index):
 
     def on_before_append_item(self, item):
         if item.last_pub_time:
+            item.last_pub_time_utc = item.last_pub_time
             item.last_pub_time = from_utc_to_user(item.last_pub_time+'+00:00', self.req.zato.user_profile)
         return item
 
@@ -213,7 +214,7 @@ class TopicMessages(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'topic_id', 'has_gd')
-        output_required = ('msg_id', 'pub_time', 'data_prefix_short', 'pattern_matched')
+        output_required = ('msg_id', 'pub_time', 'pub_time_utc', 'data_prefix_short', 'pub_pattern_matched')
         output_optional = ('correl_id', 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
             'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_name', 'server_pid')
         output_repeated = True
@@ -222,6 +223,7 @@ class TopicMessages(_Index):
         return 'zato.pubsub.topic.get-gd-message-list' if self.req.has_gd else 'zato.pubsub.topic.get-non-gd-message-list'
 
     def on_before_append_item(self, item):
+        item.pub_time_utc = item.pub_time
         item.pub_time = from_utc_to_user(item.pub_time+'+00:00', self.req.zato.user_profile)
         item.endpoint_html = get_endpoint_html(item, self.req.zato.cluster_id)
         return item
