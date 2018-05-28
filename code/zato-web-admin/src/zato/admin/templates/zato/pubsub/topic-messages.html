@@ -29,7 +29,7 @@
             '_msg_id',
 
             '_endpoint',
-            '_pattern',
+            '_pub_pattern_matched',
             'msg_prefix',
 
             '_delete',
@@ -83,11 +83,18 @@
                         {% if not has_gd %}
                             <td>{{ item.server_name }}:{{ item.server_pid }}</td>
                         {% endif %}
-                        <td>{{ item.pub_time }}</td>
+                        <td>
+
+                            <a
+                                id="a_pub_time_{{ item.msg_id }}"
+                                href="javascript:$.fn.zato.toggle_time('pub_time_{{ item.msg_id }}', '{{ item.pub_time }}', '{{ item.pub_time_utc }}')">{{ item.pub_time }}
+                            </a>
+
+                        </td>
                         <td><a href="{% url "pubsub-message" cluster_id "topic" topic_id item.msg_id %}?has_gd={{ has_gd }}{% if not has_gd %}&amp;server_name={{ item.server_name }}&amp;server_pid={{ item.server_pid }}{% endif %}">{{ item.msg_id }}</a></td>
 
                         <td>{{ item.endpoint_html|safe }}</td>
-                        <td>{{ item.pattern_matched }}</td>
+                        <td>{{ item.pub_pattern_matched }}</td>
                         <td>{{ item.data_prefix_short }}</td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.delete_message('topic', '{{ topic_id }}', '{{ item.msg_id }}', '', '{% if has_gd %}1{% endif %}', '{% if not has_gd %}{{ item.server_name }}{% endif %}', '{% if not has_gd %}{{ item.server_pid }}{% endif %}')">Delete</a></td>

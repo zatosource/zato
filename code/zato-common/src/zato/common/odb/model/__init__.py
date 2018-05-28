@@ -2091,6 +2091,7 @@ class PubSubTopic(Base):
     ext_client_id = None
     last_pub_time = None
     pub_time = None
+    ext_pub_time = None
 
 # ################################################################################################################################
 
@@ -2198,6 +2199,8 @@ class PubSubMessage(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_messages', order_by=id, cascade='all, delete, delete-orphan'))
+
+    pub_time_utc = None # Not used by DB
 
 # ################################################################################################################################
 

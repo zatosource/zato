@@ -232,6 +232,16 @@ class EndpointTopics(_EndpointObjects):
         output_required = ('topic_id', 'topic_name', 'pub_time', 'pub_msg_id', 'pattern_matched')
         output_optional = ('pub_correl_id', 'in_reply_to', 'ext_client_id', 'ext_pub_time', 'data')
 
+    def on_before_append_item(self, item):
+        item.pub_time_utc = item.pub_time
+        item.pub_time = from_utc_to_user(item.pub_time+'+00:00', self.req.zato.user_profile)
+
+        if item.ext_pub_time:
+            item.ext_pub_time_utc = item.ext_pub_time
+            item.ext_pub_time = from_utc_to_user(item.ext_pub_time+'+00:00', self.req.zato.user_profile)
+
+        return item
+
 # ################################################################################################################################
 
 class EndpointQueues(_EndpointObjects):
@@ -244,6 +254,7 @@ class EndpointQueues(_EndpointObjects):
         output_optional = sub_attrs
 
     def on_before_append_item(self, item):
+        item.creation_time_utc = item.creation_time
         item.creation_time = from_utc_to_user(item.creation_time+'+00:00', self.req.zato.user_profile)
         item.name_slug = slugify(item.name)
 

@@ -121,12 +121,15 @@
 
                         <td>
                             {% if item.last_pub_time %}
-                                {{ item.last_pub_time }}
-                                (UTC)
-                                <br/>
-                                {{ item.last_pub_msg_id }}
+
+                                <a
+                                    id="a_last_pub_time_{{ item.id }}"
+                                    href="javascript:$.fn.zato.toggle_time('last_pub_time_{{ item.id }}', '{{ item.last_pub_time }}', '{{ item.last_pub_time_utc }}')">{{ item.last_pub_time }}
+                                </a>
                                 <br/>
                                 <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ item.last_endpoint_id }}">{{ item.last_endpoint_name }}</a>
+                                <br/>
+                                {{ item.last_pub_msg_id }}
                             {% else %}
                                 <span class='form_hint'>---</span>
                             {% endif %}
