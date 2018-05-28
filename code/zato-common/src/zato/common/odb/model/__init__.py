@@ -2108,7 +2108,7 @@ class PubSubEndpointTopic(Base):
 
     id = Column(Integer, Sequence('pubsub_endpt_seq'), primary_key=True)
 
-    pattern_matched = Column(Text, nullable=False)
+    pub_pattern_matched = Column(Text, nullable=False)
     last_pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=False)
     pub_msg_id = Column(String(200), nullable=False)
     pub_correl_id = Column(String(200), nullable=True)
@@ -2165,7 +2165,7 @@ class PubSubMessage(Base):
     position_in_group = Column(Integer, nullable=True)
 
     # What matching pattern allowed an endpoint to publish this message
-    pattern_matched = Column(Text, nullable=False)
+    pub_pattern_matched = Column(Text, nullable=False)
 
     pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When the row was created
     ext_pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=True) # When the message was created by publisher
@@ -2217,7 +2217,7 @@ class PubSubSubscription(Base):
 
     creation_time = Column(Numeric(20, 7, asdecimal=False), nullable=False)
     sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
-    pattern_matched = Column(Text, nullable=False)
+    sub_pattern_matched = Column(Text, nullable=False)
     deliver_by = Column(Text, nullable=True) # Delivery order, e.g. by priority, date etc.
     ext_client_id = Column(Text, nullable=True) # Subscriber's ID as it is stored by that external system
 

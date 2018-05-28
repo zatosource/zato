@@ -14,8 +14,8 @@ from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 
-_skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pattern_matched', 'published_by_id', 'data_prefix',
-    'data_prefix_short', 'pub_time', 'expiration_time', 'pub_correl_id', 'pub_msg_id')
+_skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pub_pattern_matched', 'sub_pattern_matched',
+    'published_by_id', 'data_prefix', 'data_prefix_short', 'pub_time', 'expiration_time', 'pub_correl_id', 'pub_msg_id')
 
 _data_keys=('data', 'data_prefix', 'data_prefix_short')
 
@@ -43,9 +43,9 @@ class PubSubMessage(object):
     # and this class, as well as its subclasses, will be rewritten in Cython anyway.
     _attrs = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id', 'position_in_group',
         'pub_time', 'ext_pub_time', 'data', 'data_prefix', 'data_prefix_short', 'mime_type', 'priority', 'expiration',
-        'expiration_time', 'has_gd', 'delivery_status', 'pattern_matched', 'size', 'published_by_id', 'topic_id',
+        'expiration_time', 'has_gd', 'delivery_status', 'size', 'published_by_id', 'topic_id',
         'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso',
-        'recv_time', 'data_prefix_short', 'server_name', 'server_pid')
+        'recv_time', 'data_prefix_short', 'server_name', 'server_pid', 'pub_pattern_matched', 'sub_pattern_matched')
 
     def __init__(self):
         self.recv_time = utcnow_as_ms()
@@ -70,14 +70,14 @@ class PubSubMessage(object):
         self.expiration_time = None
         self.has_gd = None
         self.delivery_status = None
-        self.pattern_matched = None
+        self.pub_pattern_matched = None
+        self.sub_pattern_matched = None
         self.size = None
         self.published_by_id = None
         self.topic_id = None
         self.is_in_sub_queue = None
         self.topic_name = None
         self.cluster_id = None
-
         self.pub_time_iso = None
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None

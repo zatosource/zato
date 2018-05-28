@@ -17,7 +17,8 @@ def make_short_msg_copy_from_dict(msg, data_prefix_len, data_prefix_short_len):
     out_msg['data'] = msg['data'][data_prefix_len]
     out_msg['data_prefix_short'] = out_msg['data'][data_prefix_short_len]
     out_msg['size'] = msg['size']
-    out_msg['pattern_matched'] = msg['pattern_matched']
+    out_msg['pub_pattern_matched'] = msg['pub_pattern_matched']
+    out_msg['sub_pattern_matched'] = msg['sub_pattern_matched']
     out_msg['pub_time'] = msg['pub_time']
     out_msg['expiration'] = msg['expiration']
     out_msg['expiration_time'] = msg['expiration_time']
@@ -42,7 +43,8 @@ def make_short_msg_copy_from_msg(msg, data_prefix_len, data_prefix_short_len):
     out_msg['data'] = msg.data[:data_prefix_len]
     out_msg['data_prefix_short'] = out_msg['data'][:data_prefix_short_len]
     out_msg['size'] = msg.size
-    out_msg['pattern_matched'] = msg.pattern_matched
+    out_msg['pub_pattern_matched'] = msg.pub_pattern_matched
+    out_msg['sub_pattern_matched'] = msg.sub_pattern_matched
     out_msg['pub_time'] = msg.pub_time
     out_msg['expiration'] = msg.expiration
     out_msg['expiration_time'] = msg.expiration_time

@@ -196,7 +196,7 @@ class GetPublisherList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'topic_id')
-        output_required = ('name', 'is_active', 'is_internal', 'pattern_matched')
+        output_required = ('name', 'is_active', 'is_internal', 'pub_pattern_matched')
         output_optional = ('service_id', 'security_id', 'ws_channel_id', 'last_seen', 'last_pub_time', AsIs('last_msg_id'),
             AsIs('last_correl_id'), 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name', AsIs('ext_client_id'))
         output_repeated = True
@@ -226,7 +226,7 @@ class GetGDMessageList(AdminService):
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'topic_id')
         input_optional = GetListAdminSIO.input_optional + ('has_gd',)
-        output_required = (AsIs('msg_id'), 'pub_time', 'data_prefix_short', 'pattern_matched')
+        output_required = (AsIs('msg_id'), 'pub_time', 'data_prefix_short', 'pub_pattern_matched')
         output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
             'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_pid', 'server_name')
         output_repeated = True

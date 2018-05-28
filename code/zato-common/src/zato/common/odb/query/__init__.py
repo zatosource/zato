@@ -965,7 +965,7 @@ def pubsub_publishers_for_topic(session, cluster_id, topic_id):
         PubSubEndpoint.ws_channel_id, PubSubEndpoint.name,
         PubSubEndpoint.is_active, PubSubEndpoint.is_internal,
         PubSubEndpoint.last_seen, PubSubEndpoint.last_pub_time,
-        PubSubEndpointTopic.pattern_matched,
+        PubSubEndpointTopic.pub_pattern_matched,
         PubSubEndpointTopic.last_pub_time,
         PubSubEndpointTopic.pub_msg_id.label('last_msg_id'),
         PubSubEndpointTopic.pub_correl_id.label('last_correl_id'),
@@ -991,7 +991,7 @@ def _pubsub_topic_message(session, cluster_id, needs_sub_queue_check):
         PubSubMessage.pub_correl_id.label('correl_id'),
         PubSubMessage.in_reply_to,
         PubSubMessage.pub_time, PubSubMessage.data_prefix_short,
-        PubSubMessage.pattern_matched, PubSubMessage.priority,
+        PubSubMessage.pub_pattern_matched, PubSubMessage.priority,
         PubSubMessage.ext_pub_time, PubSubMessage.size,
         PubSubMessage.data_format, PubSubMessage.mime_type,
         PubSubMessage.data, PubSubMessage.expiration,
@@ -1099,6 +1099,7 @@ def _pubsub_queue_message(session, cluster_id):
         PubSubMessage.expiration_time,
         PubSubMessage.ext_client_id,
         PubSubMessage.published_by_id,
+        PubSubMessage.pub_pattern_matched,
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
         PubSubTopic.name.label('queue_name'), # Currently, queue name = name of its underlying topic
@@ -1109,7 +1110,7 @@ def _pubsub_queue_message(session, cluster_id):
         PubSubEndpointEnqueuedMessage.endpoint_id.label('subscriber_id'),
         PubSubEndpointEnqueuedMessage.sub_key,
         PubSubEndpoint.name.label('subscriber_name'),
-        PubSubSubscription.pattern_matched.label('sub_pattern_matched'),
+        PubSubSubscription.sub_pattern_matched,
         ).\
         filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
         filter(PubSubEndpointEnqueuedMessage.topic_id==PubSubTopic.id).\

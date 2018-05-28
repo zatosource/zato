@@ -69,7 +69,7 @@ def add_subscription(session, cluster_id, ctx):
     ps_sub.is_staging_enabled = ctx.is_staging_enabled
     ps_sub.creation_time = ctx.creation_time
     ps_sub.sub_key = ctx.sub_key
-    ps_sub.pattern_matched = ctx.pattern_matched
+    ps_sub.sub_pattern_matched = ctx.sub_pattern_matched
     ps_sub.has_gd = ctx.has_gd
     ps_sub.active_status = ctx.active_status
     ps_sub.endpoint_type = ctx.endpoint_type
