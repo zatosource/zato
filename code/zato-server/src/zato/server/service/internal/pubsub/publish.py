@@ -37,6 +37,7 @@ from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
+logger_pubsub = getLogger('zato_pubsub')
 logger_audit = getLogger('zato_pubsub_audit')
 
 # ################################################################################################################################
@@ -404,12 +405,15 @@ class Publish(AdminService):
                     for msg in ctx.non_gd_msg_list:
                         msg['has_gd'] = True
 
+                        _log_msg = 'Turning message `%s` into a GD one (no subscribers)'
+                        logger_pubsub.info(_log_msg, msg['pub_msg_id'])
+
                         data_prefix, data_prefix_short = self._get_data_prefixes(msg['data'])
                         msg['data_prefix'] = data_prefix
                         msg['data_prefix_short'] = data_prefix_short
 
                     # Note the reversed order - now non-GD messages are sent as GD ones and the list of non-GD messages is empty.
-                    ctx.gd_msg_list = ctx.non_gd_msg_list
+                    ctx.gd_msg_list = ctx.non_gd_msg_list[:]
                     ctx.non_gd_msg_list[:] = []
                     ctx.is_re_run = True
 
