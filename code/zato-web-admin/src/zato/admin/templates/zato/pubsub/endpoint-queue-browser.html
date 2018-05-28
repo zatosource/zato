@@ -88,8 +88,8 @@
 
                         <td style="width:16%">
                             <a
-                                id="a_recv_time_{{ item.id }}"
-                                href="javascript:$.fn.zato.toggle_time('recv_time_{{ item.id }}', '{{ item.recv_time }}', '{{ item.recv_time_utc }}')">{{ item.recv_time }}
+                                id="a_recv_time_{{ item.msg_id }}"
+                                href="javascript:$.fn.zato.toggle_time('recv_time_{{ item.msg_id }}', '{{ item.recv_time }}', '{{ item.recv_time_utc }}')">{{ item.recv_time }}
                             </a>
                         </td>
                         <td><a href="{% url "pubsub-message" cluster_id "queue" sub_id item.msg_id %}?has_gd={{ has_gd }}&amp;server_name={{ item.server_name }}&amp;server_pid={{ item.server_pid }}&amp;sub_key={{ item.sub_key }}">{{ item.msg_id }}</a></td>

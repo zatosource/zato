@@ -54,7 +54,7 @@ _sub_skip_update = ('id', 'sub_id', 'sub_key', 'cluster_id', 'creation_time', 'c
 
 class _GetEndpointQueueMessagesSIO(GetListAdminSIO):
     input_required = ('cluster_id',)
-    input_optional = ('sub_id', 'sub_key')
+    input_optional = GetListAdminSIO.input_optional + ('sub_id', 'sub_key')
     output_required = (AsIs('msg_id'), 'recv_time')
     output_optional = ('data_prefix_short', Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'queue_name',
         'endpoint_id', 'sub_key', 'published_by_id', 'published_by_name', 'server_name', 'server_pid')
