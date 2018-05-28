@@ -55,6 +55,8 @@ _meta_topic_key = PUBSUB.REDIS.META_TOPIC_LAST_KEY
 _meta_endpoint_key = PUBSUB.REDIS.META_ENDPOINT_PUB_KEY
 _meta_topic_optional = ('pub_correl_id', 'ext_client_id', 'in_reply_to')
 
+_log_turning_gd_msg = 'Turning message `%s` into a GD one ({})'
+
 # ################################################################################################################################
 
 class PubCtx(object):
@@ -104,8 +106,8 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, _initialized=_initialized,
-        _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT):
+    def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, has_wsx_no_server,
+        _initialized=_initialized, _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT):
 
         priority = get_priority(self.cid, input)
 
@@ -118,12 +120,20 @@ class Publish(AdminService):
 
         pub_msg_id = input.get('msg_id', '').encode('utf8') or new_msg_id()
 
-        has_gd = input.get('has_gd', _zato_none)
-        if has_gd != _zato_none:
-            if not isinstance(has_gd, bool):
-                raise ValueError('Input has_gd is not a bool (found:`{}`)'.format(repr(has_gd)))
+        # If there is at least one WSX subscriber to this topic which is not connected at the moment,
+        # which means it has no delivery server, we uncoditionally turn this message into a GD one ..
+        if has_wsx_no_server:
+            has_gd = True
+            logger_pubsub.info(_log_turning_gd_msg.format('wsx'), pub_msg_id)
+
+        # .. otherwise, use input GD value or the default per topic.
         else:
-            has_gd = topic.has_gd
+            has_gd = input.get('has_gd', _zato_none)
+            if has_gd != _zato_none:
+                if not isinstance(has_gd, bool):
+                    raise ValueError('Input has_gd is not a bool (found:`{}`)'.format(repr(has_gd)))
+            else:
+                has_gd = topic.has_gd
 
         pub_correl_id = input.get('correl_id')
         in_reply_to = input.get('in_reply_to')
@@ -195,7 +205,8 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_messages_from_data(self, topic, data_list, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic):
+    def _get_messages_from_data(self, topic, data_list, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
+        has_wsx_no_server):
 
         # List of messages with GD enabled
         gd_msg_list = []
@@ -208,14 +219,16 @@ class Publish(AdminService):
 
         if data_list and isinstance(data_list, (list, tuple)):
             for elem in data_list:
-                msg = self._get_message(topic, elem, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic)
+                msg = self._get_message(topic, elem, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
+                    has_wsx_no_server)
                 if msg:
                     msg_id_list.append(msg.pub_msg_id)
                     msg_as_dict = msg.to_dict()
                     target_list = gd_msg_list if msg.has_gd else non_gd_msg_list
                     target_list.append(msg_as_dict)
         else:
-            msg = self._get_message(topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic)
+            msg = self._get_message(topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
+                has_wsx_no_server)
             if msg:
                 msg_id_list.append(msg.pub_msg_id)
                 msg_as_dict = msg.to_dict()
@@ -295,13 +308,24 @@ class Publish(AdminService):
         # Get all subscribers for that topic from local worker store
         subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic.name)
 
+        # Is there at least one WSX subscriber to this topic that is currently not connected?
+        # If so, we will need to turn all the messages into GD ones.
+        for sub in subscriptions_by_topic:
+            sk_server = self.pubsub.get_sub_key_server(sub.sub_key)
+            if not sk_server:
+                has_wsx_no_server = True # We have found at least one WSX subscriber that has no server = is not connected
+                break
+        else:
+            has_wsx_no_server = False # Either no WSX clients or all of them are connected
+
         # If input.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other input parameters describe it.
         data_list = input.data_list if input.data_list else None
 
         # Input messages may contain a mix of GD and non-GD messages, and we need to extract them separately.
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
-            topic, data_list, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic)
+            topic, data_list, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
+            has_wsx_no_server)
 
         # Create a wrapper object for all the input data and metadata
         ctx = PubCtx(self.server.cluster_id, pubsub, topic, endpoint_id, pubsub.get_endpoint_by_id(endpoint_id).name,
@@ -405,8 +429,7 @@ class Publish(AdminService):
                     for msg in ctx.non_gd_msg_list:
                         msg['has_gd'] = True
 
-                        _log_msg = 'Turning message `%s` into a GD one (no subscribers)'
-                        logger_pubsub.info(_log_msg, msg['pub_msg_id'])
+                        logger_pubsub.info(_log_turning_gd_msg.format('no subscribers'), msg['pub_msg_id'])
 
                         data_prefix, data_prefix_short = self._get_data_prefixes(msg['data'])
                         msg['data_prefix'] = data_prefix

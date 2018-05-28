@@ -235,7 +235,6 @@ class DeliveryTask(object):
                 delivered_msg_id_list = [msg.pub_msg_id for msg in to_deliver]
 
                 with self.delivery_lock:
-                    z
                     self.confirm_pubsub_msg_delivered_cb(self.sub_key, delivered_msg_id_list)
 
             except Exception, e:

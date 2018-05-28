@@ -1183,6 +1183,12 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_sub_key_server(self, sub_key, default=None):
+        with self.lock:
+            return self._get_sub_key_server(sub_key, default)
+
+# ################################################################################################################################
+
     def get_delivery_server_by_sub_key(self, sub_key, needs_lock=True):
         if needs_lock:
             with self.lock:
