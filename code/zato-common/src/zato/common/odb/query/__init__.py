@@ -1034,9 +1034,6 @@ def _pubsub_endpoint_queue(session, cluster_id):
         PubSubSubscription.delivery_method,
         PubSubSubscription.delivery_data_format,
         PubSubSubscription.delivery_endpoint,
-        PubSubSubscription.last_interaction_time,
-        PubSubSubscription.last_interaction_type,
-        PubSubSubscription.last_interaction_details,
         PubSubSubscription.is_staging_enabled,
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
@@ -1056,7 +1053,6 @@ def _pubsub_endpoint_queue(session, cluster_id):
 def pubsub_endpoint_queue_list(session, cluster_id, endpoint_id, needs_columns=False):
     return _pubsub_endpoint_queue(session, cluster_id).\
         filter(PubSubSubscription.endpoint_id==endpoint_id).\
-        order_by(PubSubSubscription.last_interaction_time.desc()).\
         order_by(PubSubSubscription.creation_time.desc())
 
 # ################################################################################################################################

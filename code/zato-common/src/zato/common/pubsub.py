@@ -71,7 +71,7 @@ class PubSubMessage(object):
         self.has_gd = None
         self.delivery_status = None
         self.pub_pattern_matched = None
-        self.sub_pattern_matched = None
+        self.sub_pattern_matched = {}
         self.size = None
         self.published_by_id = None
         self.topic_id = None

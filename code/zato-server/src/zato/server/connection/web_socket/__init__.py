@@ -159,7 +159,8 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def deliver_pubsub_msg(self, sub_key, msg):
-
+        """ Delivers one or more pub/sub messages to the connected WSX client.
+        """
         # A list of messages is given on input so we need to serialize each of them individually
         if isinstance(msg, list):
             len_msg = len(msg)
