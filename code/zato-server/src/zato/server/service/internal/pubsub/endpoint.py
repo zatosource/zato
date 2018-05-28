@@ -203,7 +203,8 @@ class _GetEndpointQueue(AdminService):
         current_depth_gd_q = session.query(PubSubEndpointEnqueuedMessage.id).\
             filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
             filter(PubSubEndpointEnqueuedMessage.sub_key==item.sub_key).\
-            filter(PubSubEndpointEnqueuedMessage.is_in_staging != True)
+            filter(PubSubEndpointEnqueuedMessage.is_in_staging != True).\
+            filter(PubSubEndpointEnqueuedMessage.delivery_status != COMMON_PUBSUB.DELIVERY_STATUS.DELIVERED)
 
         # This could be read from the SQL database ..
         item.current_depth_gd = count(session, current_depth_gd_q)
@@ -434,7 +435,7 @@ class GetEndpointQueueMessagesGD(AdminService):
     def get_data(self, session):
         sub = self.pubsub.get_subscription_by_id(self.request.input.sub_id)
         return self._search(
-            pubsub_messages_for_queue, session, self.request.input.cluster_id, sub.sub_key, False)
+            pubsub_messages_for_queue, session, self.request.input.cluster_id, sub.sub_key, True, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
