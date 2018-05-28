@@ -241,10 +241,9 @@ class DeliveryTask(object):
                 logger.warn('Could not update delivery status for message(s):`%s`, e:`%s`', to_deliver, format_exc(e))
                 return _run_deliv_status.OTHER_ERROR
             else:
-                #with self.delivery_lock:
-                #    for msg in to_deliver:
-                #        self.delivery_list.remove_pubsub_msg(msg)
-                pass
+                with self.delivery_lock:
+                    for msg in to_deliver:
+                        self.delivery_list.remove_pubsub_msg(msg)
 
                 # Status of messages is updated in both SQL and RAM so we can now log success
                 logger.info('Successfully delivered message(s) %s to %s (dlvc:%d)',

@@ -2337,8 +2337,6 @@ class PubSubEndpointEnqueuedMessage(Base):
     """ A queue of messages for an individual endpoint subscribed to a topic.
     """
     __tablename__ = 'pubsub_endp_msg_queue'
-
-    '''
     __table_args__ = (
         Index('pubsb_enms_q_pubmid_idx', 'cluster_id', 'pub_msg_id', unique=False),
         Index('pubsb_enms_q_id_idx', 'cluster_id', 'id', unique=True),
@@ -2346,7 +2344,6 @@ class PubSubEndpointEnqueuedMessage(Base):
         Index('pubsb_enms_q_subs_idx', 'cluster_id', 'sub_key', unique=False),
         Index('pubsb_enms_q_endptp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
     {})
-    '''
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
     creation_time = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When was the message enqueued
@@ -2354,6 +2351,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     delivery_count = Column(Integer, nullable=False, server_default='0')
     last_delivery_time = Column(Numeric(20, 7, asdecimal=False), nullable=sa_true())
     is_in_staging = Column(Boolean(), nullable=False, server_default=sa_false())
+    sub_pattern_matched = Column(Text, nullable=False)
 
     # A flag indicating whether this message is deliverable at all - will be set to False
     # after delivery_count reaches max retries for subscription or if a hook services decides so.
