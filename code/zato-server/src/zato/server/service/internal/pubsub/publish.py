@@ -388,6 +388,10 @@ class Publish(AdminService):
                         # This only updates the local ctx variable
                         ctx.current_depth = ctx.current_depth + len_gd_msg_list
 
+                logger_pubsub.info('Inserting GD messages for topic `%s` `%s` published by `%s` (ext:%s) (cid:%s)',
+                    ctx.topic.name, [elem['pub_msg_id'] for elem in ctx.gd_msg_list], ctx.endpoint_name,
+                    ctx.ext_client_id, self.cid)
+
                 # This is the call that runs SQL INSERT statements with messages for topics and subscriber queues
                 sql_publish_with_retry(session, self.cid, ctx.cluster_id, ctx.topic.id, ctx.subscriptions_by_topic,
                     ctx.gd_msg_list, ctx.now)

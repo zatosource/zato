@@ -1537,82 +1537,83 @@ class PubSub(object):
                 topic_id_dict = {}
 
                 # Get all topics ..
-                for topic in self.topics.itervalues(): # type: Topic
+                for _topic in self.topics.itervalues(): # type: Topic
 
                     # Does the topic require task synchronization now?
-                    if not topic.needs_task_sync():
+                    if not _topic.needs_task_sync():
                         continue
                     else:
-                        topic.update_task_sync_time()
+                        _topic.update_task_sync_time()
 
-                    # OK, the topic possibly needs a sync but still skip it if we know
-                    # that there have been no messages published to it since the last time.
-                    if not (topic.sync_has_gd_msg or topic.sync_has_non_gd_msg):
+                    # OK, the time has come for this topic to sync its state with subscribers
+                    # but still skip it if we know that there have been no messages published to it since the last time.
+                    if not (_topic.sync_has_gd_msg or _topic.sync_has_non_gd_msg):
                         continue
 
                     # If it does, get subscriptions for it ..
-                    subs = self.get_subscriptions_by_topic(topic.name)
+                    subs = self.get_subscriptions_by_topic(_topic.name)
 
                     # .. if there are any subscriptions at all, we store that information for later use.
                     if subs:
-                        topic_id_dict[topic.id] = (topic.name, subs)
+                        topic_id_dict[_topic.id] = (_topic.name, subs)
 
                 # OK, if we had any subscriptions for at least one topic and there are any messages waiting,
                 # we can continue.
-                else:
-                    try:
-                        for topic_id in topic_id_dict:
+                try:
+                    for topic_id in topic_id_dict:
 
-                            # .. get the temporary metadata stored earlier ..
-                            topic_name, subs = topic_id_dict[topic_id]
+                        topic = self.topics[topic_id]
 
-                            cid = new_cid()
-                            logger.info('Triggering sync for `%s` len_s:%d gd:%d ngd:%d cid:%s' % (
-                                topic_name, len(subs), topic.sync_has_gd_msg, topic.sync_has_non_gd_msg, cid))
+                        # .. get the temporary metadata stored earlier ..
+                        topic_name, subs = topic_id_dict[topic_id]
 
-                            # Build a list of sub_keys for whom we know what their delivery server is which will
-                            # allow us to send messages only to tasks that are known to be up.
-                            sub_keys = []
-                            for item in subs:
-                                if self.get_delivery_server_by_sub_key(item.sub_key):
-                                    sub_keys.append(item.sub_key)
+                        cid = new_cid()
+                        logger.info('Triggering sync for `%s` len_s:%d gd:%d ngd:%d cid:%s' % (
+                            topic_name, len(subs), topic.sync_has_gd_msg, topic.sync_has_non_gd_msg, cid))
 
-                            # Continue only if there are actually any sub_keys left = any tasks up and running ..
-                            if sub_keys:
-                                non_gd_msg_list = self.sync_backlog._get_delete_messages_by_sub_keys(topic_id, sub_keys)
+                        # Build a list of sub_keys for whom we know what their delivery server is which will
+                        # allow us to send messages only to tasks that are known to be up.
+                        sub_keys = []
+                        for item in subs:
+                            if self.get_delivery_server_by_sub_key(item.sub_key):
+                                sub_keys.append(item.sub_key)
 
-                                # .. also, continue only if there are still messages for the ones that are up ..
-                                if topic.sync_has_gd_msg or topic.sync_has_non_gd_msg:
+                        # Continue only if there are actually any sub_keys left = any tasks up and running ..
+                        if sub_keys:
+                            non_gd_msg_list = self.sync_backlog._get_delete_messages_by_sub_keys(topic_id, sub_keys)
 
-                                    if non_gd_msg_list:
-                                        non_gd_msg_list = sorted(non_gd_msg_list, key=_cmp_non_gd_msg)
-                                        pub_time_max = non_gd_msg_list[-1]['pub_time']
-                                    else:
-                                        pub_time_max = topic.gd_pub_time_max
+                            # .. also, continue only if there are still messages for the ones that are up ..
+                            if topic.sync_has_gd_msg or topic.sync_has_non_gd_msg:
 
-                                    logger.info('Syncing messages for `%s` ngd-list:%s cid:%s' % (
-                                        topic_name, [elem['pub_msg_id'] for elem in non_gd_msg_list], cid))
+                                if non_gd_msg_list:
+                                    non_gd_msg_list = sorted(non_gd_msg_list, key=_cmp_non_gd_msg)
+                                    pub_time_max = non_gd_msg_list[-1]['pub_time']
+                                else:
+                                    pub_time_max = topic.gd_pub_time_max
 
-                                    request = {
-                                        'cid': cid,
-                                        'topic_id':topic_id,
-                                        'topic_name':topic_name,
-                                        'subscriptions': subs,
-                                        'non_gd_msg_list': non_gd_msg_list,
-                                        'has_gd_msg_list': topic.sync_has_gd_msg,
-                                        'is_bg_call': True, # This is a background call, i.e. issued by this trigger,
-                                        'pub_time_max': pub_time_max, # Last time either a non-GD or GD message was received
-                                    }
+                                logger.info('Syncing messages for `%s` ngd-list:%s cid:%s' % (
+                                    topic_name, [elem['pub_msg_id'] for elem in non_gd_msg_list], cid))
 
-                                    # .. and notify all the tasks in background.
-                                    spawn(self.invoke_service, 'zato.pubsub.after-publish', request)
+                                request = {
+                                    'cid': cid,
+                                    'topic_id':topic_id,
+                                    'topic_name':topic_name,
+                                    'subscriptions': subs,
+                                    'non_gd_msg_list': non_gd_msg_list,
+                                    'has_gd_msg_list': topic.sync_has_gd_msg,
+                                    'is_bg_call': True, # This is a background call, i.e. issued by this trigger,
+                                    'pub_time_max': pub_time_max, # Last time either a non-GD or GD message was received
+                                }
 
-                            # OK, we can now reset message flags for the topic
-                            self._set_sync_has_msg(topic_id, True, False)
-                            self._set_sync_has_msg(topic_id, False, False)
+                                # .. and notify all the tasks in background.
+                                spawn(self.invoke_service, 'zato.pubsub.after-publish', request)
 
-                    except Exception:
-                        logger_zato.warn(format_exc())
-                        logger.warn(format_exc())
+                        # OK, we can now reset message flags for the topic
+                        self._set_sync_has_msg(topic_id, True, False)
+                        self._set_sync_has_msg(topic_id, False, False)
+
+                except Exception:
+                    logger_zato.warn(format_exc())
+                    logger.warn(format_exc())
 
 # ################################################################################################################################

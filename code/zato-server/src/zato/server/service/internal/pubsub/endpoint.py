@@ -463,9 +463,6 @@ class GetServerEndpointQueueMessagesNonGD(AdminService):
             make_short_msg_copy_from_msg(elem, data_prefix_len, data_prefix_short_len) for elem in messages]
 
         for elem in self.response.payload:
-            print()
-            print(333, elem)
-            print()
             elem['recv_time'] = datetime_from_ms(elem['recv_time'] * 1000.0)
             elem['published_by_name'] = self.pubsub.get_endpoint_by_id(elem['published_by_id']).name
 
