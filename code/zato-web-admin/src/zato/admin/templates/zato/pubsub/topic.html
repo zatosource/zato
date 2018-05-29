@@ -133,7 +133,7 @@
                                 <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ item.last_endpoint_id }}">{{ item.last_endpoint_name }}</a>
                                 <br/>
 
-                                <a href="#">{{ item.last_pub_msg_id }}</a>
+                                <a href="{% url "pubsub-message" cluster_id "topic" item.id item.last_pub_msg_id %}?has_gd={{ item.last_pub_has_gd }}{% if not item.last_pub_has_gd %}&amp;server_name={{ item.item.last_pub_server_name }}&amp;server_pid={{ item.item.last_pub_server_pid }}{% endif %}">{{ item.last_pub_msg_id }}</a>
 
                             {% else %}
                                 <span class='form_hint'>---</span>

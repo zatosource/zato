@@ -36,7 +36,8 @@ skip_input_params = ['is_internal', 'current_depth_gd', 'last_pub_time', 'last_p
     'last_endpoint_name']
 input_optional_extra = ['needs_details']
 output_optional_extra = ['is_internal', Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time',
-    'hook_service_name', 'last_pub_time', AsIs('last_pub_msg_id'), 'last_endpoint_id', 'last_endpoint_name']
+    'hook_service_name', 'last_pub_time', AsIs('last_pub_msg_id'), 'last_endpoint_id', 'last_endpoint_name',
+    'last_pub_has_gd', 'last_pub_server_pid', 'last_pub_server_name']
 
 # ################################################################################################################################
 
@@ -85,9 +86,12 @@ def response_hook(self, input, instance, attrs, service_type):
                     last_data = get_last_pub_data(self.kvdb.conn, self.server.cluster_id, item.id)
                     if last_data:
                         item.last_pub_time = last_data['pub_time']
+                        item.last_pub_has_gd = last_data['has_gd']
                         item.last_pub_msg_id = last_data['pub_msg_id']
                         item.last_endpoint_id = last_data['endpoint_id']
                         item.last_endpoint_name = last_data['endpoint_name']
+                        item.last_pub_server_pid = last_data.get('server_pid')
+                        item.last_pub_server_name = last_data.get('server_name')
 
 # ################################################################################################################################
 

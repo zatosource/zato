@@ -524,7 +524,10 @@ class Publish(AdminService):
                         'endpoint_id': ctx.endpoint_id,
                         'endpoint_name': ctx.endpoint_name,
                         'pub_msg_id': ctx.last_msg['pub_msg_id'],
-                        'pub_pattern_matched': ctx.pub_pattern_matched
+                        'pub_pattern_matched': ctx.pub_pattern_matched,
+                        'has_gd': ctx.last_msg['has_gd'],
+                        'server_name': self.server.name,
+                        'server_pid': self.server.pid,
                     }
 
                     for name in _topic_optional:
