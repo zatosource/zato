@@ -143,9 +143,13 @@ class Create(ZatoCommand):
         secret_key = args.get('secret_key') or SchedulerCryptoManager.generate_key()
         cm = SchedulerCryptoManager.from_secret_key(secret_key)
 
+        odb_engine=args.odb_type
+        if odb_engine.startswith('postgresql'):
+            odb_engine = 'postgresql+pg8000'
+
         config = {
             'odb_db_name': args.odb_db_name or args.sqlite_path,
-            'odb_engine': args.odb_type,
+            'odb_engine': odb_engine,
             'odb_host': args.odb_host or '',
             'odb_port': args.odb_port or '',
             'odb_password': cm.encrypt(args.odb_password) if args.odb_password else '',
