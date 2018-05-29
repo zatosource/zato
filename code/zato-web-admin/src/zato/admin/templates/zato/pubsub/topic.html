@@ -84,7 +84,7 @@
                         <th><a href="#">Max depth GD / RAM</a></th>
                         <th><a href="#">Depth GD / RAM</a></th>
                         <th><a href="#">Last pub</a></th>
-                        <th><a href="#">Subscriptions</a></th>
+                        <th>&nbsp;</th>
 
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -141,7 +141,7 @@
                         </td>
 
                         <td id="sub_{{ item.id }}">
-                            <a href="{% url "pubsub-subscription" %}?cluster={{ cluster_id }}&amp;topic_id={{ item.id }}">Show</a>
+                            <a href="{% url "pubsub-subscription" %}?cluster={{ cluster_id }}&amp;topic_id={{ item.id }}">Subscriptions</a>
                         </td>
 
                         <td><a href="{% url "pubsub-message-publish" cluster_id item.id %}">Publish</a></td>
