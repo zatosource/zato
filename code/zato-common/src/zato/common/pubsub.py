@@ -15,7 +15,8 @@ from zato.common.util.time_ import utcnow_as_ms
 # ################################################################################################################################
 
 _skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pub_pattern_matched', 'sub_pattern_matched',
-    'published_by_id', 'data_prefix', 'data_prefix_short', 'pub_time', 'expiration_time', 'pub_correl_id', 'pub_msg_id')
+    'published_by_id', 'data_prefix', 'data_prefix_short', 'pub_time', 'expiration_time', 'recv_time',
+    'pub_msg_id', 'pub_correl_id')
 
 _data_keys=('data', 'data_prefix', 'data_prefix_short')
 
@@ -84,7 +85,7 @@ class PubSubMessage(object):
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None
 
-    def to_dict(self, skip=None, needs_utf8_encode=True, leave_id_prefix=True, _data_keys=_data_keys):
+    def to_dict(self, skip=None, needs_utf8_encode=True, add_id_attrs=False, _data_keys=_data_keys):
         """ Returns a dict representation of self.
         """
         skip = skip or []
@@ -98,9 +99,10 @@ class PubSubMessage(object):
                             value = value.encode('utf8')
                     out[key] = value
 
-        if not leave_id_prefix:
+        if add_id_attrs:
             out['msg_id'] = self.pub_msg_id
-            out['correl_id'] = self.pub_correl_id
+            if self.pub_correl_id:
+                out['correl_id'] = self.pub_correl_id
 
         return out
 
@@ -108,7 +110,7 @@ class PubSubMessage(object):
         """ Returns a dict representation of self ready to be delivered to external systems,
         i.e. without internal attributes on output.
         """
-        return self.to_dict(skip, needs_utf8_encode)
+        return self.to_dict(skip, needs_utf8_encode, True)
 
 # ################################################################################################################################
 
