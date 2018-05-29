@@ -100,7 +100,6 @@ def get(req, cluster_id, object_type, object_id, msg_id):
         return_data.pub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'published_by_id', 'published_by_name')
         return_data.sub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'subscriber_id', 'subscriber_name')
 
-        '''
         if _is_topic:
             hook_pub_endpoint_id = return_data.endpoint_id
             hook_sub_endpoint_id = None
@@ -121,13 +120,13 @@ def get(req, cluster_id, object_type, object_id, msg_id):
                 return_data.topic_name = topic_msg_service_response.topic_name
                 return_data.pub_endpoint_id = topic_msg_service_response.endpoint_id
                 return_data.pub_endpoint_name = topic_msg_service_response.endpoint_name
-                return_data.pub_pattern_matched = topic_msg_service_response.pattern_matched
+                return_data.pub_pattern_matched = topic_msg_service_response.pub_pattern_matched
                 return_data.pub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'pub_endpoint_id', 'pub_endpoint_name')
-                return_data.sub_endpoint_html = get_endpoint_html(return_data, cluster_id)
+                return_data.sub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'subscriber_id', 'subscriber_name')
                 return_data.object_id = return_data.pop('queue_id')
 
                 hook_pub_endpoint_id = return_data.pub_endpoint_id
-                hook_sub_endpoint_id = return_data.endpoint_id
+                hook_sub_endpoint_id = return_data.subscriber_id
 
                 hook_pub_service_response = req.zato.client.invoke(
                     'zato.pubsub.hook.get-hook-service', {
@@ -147,7 +146,6 @@ def get(req, cluster_id, object_type, object_id, msg_id):
                     }).data.response
                     return_data.hook_sub_service_id = hook_sub_service_response.id
                     return_data.hook_sub_service_name = hook_sub_service_response.name
-                    '''
 
         return_data.form = MsgForm(return_data)
 
