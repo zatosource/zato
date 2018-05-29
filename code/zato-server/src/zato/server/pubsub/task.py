@@ -342,7 +342,8 @@ class DeliveryTask(object):
 
     def clear(self):
         gd, non_gd = self.get_queue_depth()
-        logger.info('Removing in-RAM messages for sub_key:`%s` (GD:%d, non-GD:%d)', self.sub_key, gd, non_gd)
+        logger.info('Removing messages from delivery list for sub_key:`%s, gd:%d, ngd:%d `%s`', self.sub_key, gd, non_gd,
+            [elem.pub_msg_id for elem in self.delivery_list])
         self.delivery_list.clear()
 
 # ################################################################################################################################

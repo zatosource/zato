@@ -240,6 +240,7 @@ class Subscription(object):
         self.endpoint_id = config.endpoint_id
         self.topic_name = config.topic_name
         self.sub_pattern_matched = config.sub_pattern_matched
+        self.task_delivery_interval = config.task_delivery_interval
 
     def __repr__(self):
         return make_repr(self)
@@ -1216,13 +1217,17 @@ class PubSub(object):
 
     def delete_sub_key_server(self, sub_key):
         with self.lock:
-            sub_key_server = self.sub_key_servers[sub_key]
-            msg = 'Deleting info about delivery server for sub_key `%s`, was `%s:%s`'
+            sub_key_server = self.sub_key_servers.get(sub_key)
+            if sub_key_server:
+                msg = 'Deleting info about delivery server for sub_key `%s`, was `%s:%s`'
 
-            logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
-            logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
+                logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
+                logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
 
-            del self.sub_key_servers[sub_key]
+                del self.sub_key_servers[sub_key]
+            else:
+                logger.info('Could not find sub_key `%s` while deleting sub_key server, current `%s` `%s`',
+                    sub_key, self.server.name, self.server.pid)
 
 # ################################################################################################################################
 
