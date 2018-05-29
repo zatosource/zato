@@ -494,6 +494,7 @@ class _GetEndpointSummaryBase(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        input_optional = ('topic_id',)
         output_required = ('id', 'endpoint_name', 'endpoint_type', 'subscription_count', 'is_active', 'is_internal')
         output_optional = ('security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
             'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role')
@@ -532,7 +533,9 @@ class GetEndpointSummaryList(_GetEndpointSummaryBase):
         response_elem = 'zato_pubsub_endpoint_get_endpoint_summary_list_response'
 
     def get_data(self, session):
-        result = self._search(pubsub_endpoint_summary_list, session, self.request.input.cluster_id, False)
+        result = self._search(pubsub_endpoint_summary_list, session, self.request.input.cluster_id,
+            self.request.input.topic_id, False)
+
         for item in result:
 
             if item.last_seen:

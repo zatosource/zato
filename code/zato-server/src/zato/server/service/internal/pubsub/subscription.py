@@ -355,15 +355,12 @@ class SubscribeServiceImpl(_Subscribe):
                 for name in sub_broker_attrs:
                     sub_config[name] = getattr(ps_sub, name, None)
 
-
                 #
-                # Move all available messages to that subscriber's queue. Note that we are operating under a global
-                # lock for the topic, the same lock that publications work under, which means that at this point
-                # there may be several cases depending on whether there are already other subscriptions
+                # At this point there may be several cases depending on whether there are already other subscriptions
                 # or messages in the topic.
                 #
                 # * If there are subscribers, then this method will not move any messages because the messages
-                #   will have been already moved to queues of other subscribers before we are called under this lock
+                #   will have been already moved to queues of other subscribers before we are called
                 #
                 # * If there are no subscribers but there are messages in the topic then this subscriber will become
                 #   the sole recipient of the messages (we don't have any intrinsic foreknowledge of when, if at all,
@@ -543,7 +540,7 @@ class CreateWSXSubscription(AdminService):
         try:
             self.pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
         except KeyError:
-            self.logger.warn('There is no endpoint for WSX chan ID `%s`', ws_channel_id)
+            self.logger.warn('There is no endpoint for WSX channel ID `%s`', ws_channel_id)
             raise Forbidden(self.cid)
 
         # Either an exact topic name or a list thereof is needed ..
