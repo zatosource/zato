@@ -42,7 +42,8 @@ class Index(_Index):
         output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'is_api_sub_allowed', 'max_depth_gd',
             'max_depth_non_gd', 'current_depth_gd', 'current_depth_non_gd', 'depth_check_freq', 'hook_service_id',
             'pub_buffer_size_gd', 'task_sync_interval', 'task_delivery_interval')
-        output_optional = ('last_pub_time', 'last_pub_msg_id', 'last_endpoint_id', 'last_endpoint_name')
+        output_optional = ('last_pub_time', 'last_pub_msg_id', 'last_endpoint_id', 'last_endpoint_name', 'last_pub_has_gd',
+            'last_pub_server_pid', 'last_pub_server_name')
         output_repeated = True
 
     def populate_initial_input_dict(self, initial_input_dict):
