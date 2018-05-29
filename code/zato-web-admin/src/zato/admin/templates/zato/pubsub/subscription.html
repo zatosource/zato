@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Pub/sub subscriptions{% endblock %}
+{% block html_title %}Pub/sub subscriptions {% if topic_id %}for topic {{ topic_name }}{% endif %}{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -75,7 +75,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Pub/sub subscriptions</h2>
+<h2 class="zato">Pub/sub subscriptions{% if topic_id %} for topic <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}{% endif %}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -87,9 +87,11 @@
 
     {% if cluster_id %}
 
+        {% if not topic_id %}
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.pubsub.subscription.create()">Create new pub/sub subscriptions</a>
         </div>
+        {% endif %}
 
         <div id="markup">
             <table id="data-table">
@@ -134,10 +136,12 @@
                         <td>{{ item.last_deliv_time|default:"<span class='form_hint'>---</span>" }}</td>
 
                         <td>
-                            {% if item.is_internal %}
-                                <span class="form_hint">Delete all subscriptions</span>
-                            {% else %}
-                                <a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete all subscriptions</a>
+                            {% if not topic_id %}
+                                {% if item.is_internal %}
+                                    <span class="form_hint">Delete all subscriptions</span>
+                                {% else %}
+                                    <a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete all subscriptions</a>
+                                {% endif %}
                             {% endif %}
                         </td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

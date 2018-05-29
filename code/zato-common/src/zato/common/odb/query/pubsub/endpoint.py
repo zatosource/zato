@@ -22,8 +22,8 @@ _subscriber_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.
 
 # ################################################################################################################################
 
-def _pubsub_endpoint_summary(session, cluster_id):
-    return session.query(
+def _pubsub_endpoint_summary(session, cluster_id, topic_id):
+    q = session.query(
         PubSubEndpoint.id,
         PubSubEndpoint.is_active,
         PubSubEndpoint.is_internal,
@@ -40,13 +40,19 @@ def _pubsub_endpoint_summary(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         filter(PubSubEndpoint.role.in_(_subscriber_role))
 
+    if topic_id:
+        q = q.\
+            filter(PubSubSubscription.topic_id==topic_id)
+
+    return q
+
 @query_wrapper
-def pubsub_endpoint_summary_list(session, cluster_id, needs_columns=False):
-    return _pubsub_endpoint_summary(session, cluster_id).\
+def pubsub_endpoint_summary_list(session, cluster_id, topic_id=None, needs_columns=False):
+    return _pubsub_endpoint_summary(session, cluster_id, topic_id).\
         order_by(PubSubEndpoint.id)
 
-def pubsub_endpoint_summary(session, cluster_id, endpoint_id):
-    return _pubsub_endpoint_summary(session, cluster_id).\
+def pubsub_endpoint_summary(session, cluster_id, endpoint_id, topic_id=None):
+    return _pubsub_endpoint_summary(session, cluster_id, topic_id).\
         filter(PubSubEndpoint.id==endpoint_id).\
         one()
 
