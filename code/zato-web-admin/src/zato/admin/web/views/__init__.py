@@ -450,7 +450,7 @@ class CreateEdit(_BaseView):
                 'Request input dict `%r` out of `%r`, `%r`, `%r`, `%r`, `%r`', self.input_dict,
                 self.SimpleIO.input_required, self.SimpleIO.input_optional, self.input, self.req.GET, self.req.POST)
 
-            logger.info('Sending `%s` to `%s`', self.input_dict, self.service_name)
+            logger.debug('Sending `%s` to `%s`', self.input_dict, self.service_name)
 
             response = self.req.zato.client.invoke(self.service_name, self.input_dict)
             if response.ok:
