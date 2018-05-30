@@ -222,13 +222,13 @@ store_frequency=1
 [pubsub_meta_endpoint_pub]
 enabled=True
 store_frequency=1
-history=100
+max_history=100
 data_len=0
 
 [pubsub_meta_endpoint_sub]
 enabled=True
 store_frequency=1
-history=100
+max_history=100
 data_len=0
 
 [live_msg_browser]
