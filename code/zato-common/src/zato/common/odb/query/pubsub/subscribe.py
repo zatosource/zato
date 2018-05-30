@@ -69,7 +69,7 @@ def add_subscription(session, cluster_id, ctx):
     ps_sub.is_staging_enabled = ctx.is_staging_enabled
     ps_sub.creation_time = ctx.creation_time
     ps_sub.sub_key = ctx.sub_key
-    ps_sub.pattern_matched = ctx.pattern_matched
+    ps_sub.sub_pattern_matched = ctx.sub_pattern_matched
     ps_sub.has_gd = ctx.has_gd
     ps_sub.active_status = ctx.active_status
     ps_sub.endpoint_type = ctx.endpoint_type
@@ -149,37 +149,43 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_k
         filter(~PubSubMessage.is_in_sub_queue).\
         filter(PubSubMessage.pub_msg_id.notin_(enqueued_id_subquery))
 
-    # INSERT references to topic's messages in the subscriber's queue.
-    insert_messages = insert(PubSubEndpointEnqueuedMessage).\
-        from_select((
-            PubSubEndpointEnqueuedMessage.pub_msg_id,
-            PubSubEndpointEnqueuedMessage.topic_id,
-            expr.column('creation_time'),
-            expr.column('endpoint_id'),
-            expr.column('sub_key'),
-            expr.column('is_in_staging'),
-            expr.column('cluster_id'),
-            ), select_messages)
+    # All message IDs that are available in topic for that subscriber, if there are any at all.
+    # In theory, it is not required to pull all the messages to build the list in Python, but this is a relatively
+    # efficient operation because there won't be that many data returned yet it allows us to make sure
+    # the INSERT and UPDATE below are issued only if truly needed.
+    msg_ids = [elem.pub_msg_id for elem in select_messages.all()]
 
-    # Move messages to subscriber's queue
-    session.execute(insert_messages)
+    if msg_ids:
 
-    # Indicate that all the messages are being delivered to the subscriber which means that no other
-    # subscriber will ever receive them. Note that we changing the status only for the messages pertaining
-    # to the current subscriber without ever touching messages reiceved by any other one.
+        # INSERT references to topic's messages in the subscriber's queue.
+        insert_messages = insert(PubSubEndpointEnqueuedMessage).\
+            from_select((
+                PubSubEndpointEnqueuedMessage.pub_msg_id,
+                PubSubEndpointEnqueuedMessage.topic_id,
+                expr.column('creation_time'),
+                expr.column('endpoint_id'),
+                expr.column('sub_key'),
+                expr.column('is_in_staging'),
+                expr.column('cluster_id'),
+                ), select_messages)
 
-    msg_ids = get_sql_msg_ids_by_sub_key(session, cluster_id, sub_key, None, pub_time_max)
+        # Move messages to subscriber's queue
+        session.execute(insert_messages)
 
-    session.execute(
-        update(MsgTable).\
-        values({
-            'is_in_sub_queue': True,
-            }).\
-        where(and_(
-            MsgTable.c.pub_msg_id.in_(msg_ids),
-            ~MsgTable.c.is_in_sub_queue
-        ))
-    )
+        # Indicate that all the messages are being delivered to the subscriber which means that no other
+        # subscriber will ever receive them. Note that we are changing the status only for the messages pertaining
+        # to the current subscriber without ever touching messages reiceved by any other one.
+
+        session.execute(
+            update(MsgTable).\
+            values({
+                'is_in_sub_queue': True,
+                }).\
+            where(and_(
+                MsgTable.c.pub_msg_id.in_(msg_ids),
+                ~MsgTable.c.is_in_sub_queue
+            ))
+        )
 
 # ################################################################################################################################
 

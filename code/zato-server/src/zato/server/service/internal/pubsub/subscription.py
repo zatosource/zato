@@ -53,7 +53,7 @@ class SubCtx(object):
         self.cluster_id = cluster_id
         self.server_id = None
         self.has_gd = None
-        self.pattern_matched = None
+        self.sub_pattern_matched = None
         self.topic = None # type: Topic
         self.is_internal = None
         self.active_status = None
@@ -224,7 +224,7 @@ ctx_class = {
 class _Subscribe(AdminService):
     """ Base class for services implementing pub/sub subscriptions.
     """
-    def _get_pattern_matched(self, topic_name, ws_channel_id, sql_ws_client_id, security_id, endpoint_id):
+    def _get_sub_pattern_matched(self, topic_name, ws_channel_id, sql_ws_client_id, security_id, endpoint_id):
         pubsub = self.server.worker_store.pubsub
 
         if ws_channel_id and (not sql_ws_client_id):
@@ -232,21 +232,21 @@ class _Subscribe(AdminService):
 
         # Confirm if this client may subscribe at all to the topic it chose
         if endpoint_id:
-            pattern_matched = pubsub.is_allowed_sub_topic_by_endpoint_id(topic_name, endpoint_id)
+            sub_pattern_matched = pubsub.is_allowed_sub_topic_by_endpoint_id(topic_name, endpoint_id)
         else:
             kwargs = {'security_id':security_id} if security_id else {'ws_channel_id':ws_channel_id}
-            pattern_matched = pubsub.is_allowed_sub_topic(topic_name, **kwargs)
+            sub_pattern_matched = pubsub.is_allowed_sub_topic(topic_name, **kwargs)
 
         # Not allowed - raise an exception then
-        if not pattern_matched:
+        if not sub_pattern_matched:
             raise Forbidden(self.cid)
 
         # Alright, we can proceed
         else:
-            return pattern_matched
+            return sub_pattern_matched
 
     # Check if subscription is allowed and getting a pattern that would have matched is the same thing.
-    _is_subscription_allowed = _get_pattern_matched
+    _is_subscription_allowed = _get_sub_pattern_matched
 
 # ################################################################################################################################
 
@@ -293,7 +293,7 @@ class SubscribeServiceImpl(_Subscribe):
 
         # Confirm correctness of input data, including whether the caller can subscribe
         # to this topic and if the topic exists at all.
-        ctx.pattern_matched = self._get_pattern_matched(
+        ctx.sub_pattern_matched = self._get_sub_pattern_matched(
             ctx.topic_name, ctx.ws_channel_id, ctx.sql_ws_client_id, ctx.security_id, ctx.endpoint_id)
 
         try:
@@ -355,15 +355,12 @@ class SubscribeServiceImpl(_Subscribe):
                 for name in sub_broker_attrs:
                     sub_config[name] = getattr(ps_sub, name, None)
 
-
                 #
-                # Move all available messages to that subscriber's queue. Note that we are operating under a global
-                # lock for the topic, the same lock that publications work under, which means that at this point
-                # there may be several cases depending on whether there are already other subscriptions
+                # At this point there may be several cases depending on whether there are already other subscriptions
                 # or messages in the topic.
                 #
                 # * If there are subscribers, then this method will not move any messages because the messages
-                #   will have been already moved to queues of other subscribers before we are called under this lock
+                #   will have been already moved to queues of other subscribers before we are called
                 #
                 # * If there are no subscribers but there are messages in the topic then this subscriber will become
                 #   the sole recipient of the messages (we don't have any intrinsic foreknowledge of when, if at all,
@@ -543,7 +540,7 @@ class CreateWSXSubscription(AdminService):
         try:
             self.pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
         except KeyError:
-            self.logger.warn('There is no endpoint for WSX chan ID `%s`', ws_channel_id)
+            self.logger.warn('There is no endpoint for WSX channel ID `%s`', ws_channel_id)
             raise Forbidden(self.cid)
 
         # Either an exact topic name or a list thereof is needed ..

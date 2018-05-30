@@ -961,7 +961,7 @@ class Create(ZatoCommand):
         sub.endpoint = endpoint
         sub.sub_key = new_sub_key()
         sub.has_gd = False
-        sub.pattern_matched = 'sub=/zato/demo/*'
+        sub.sub_pattern_matched = 'sub=/zato/demo/*'
         sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
         sub.cluster = cluster
         sub.wrap_one_msg_in_list = False

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -67,14 +67,15 @@ class MigrateDeliveryServer(AdminService):
         self.servers[new_delivery_server_name].invoke('zato.pubsub.delivery.create-delivery-task', {
             'sub_key': sub_key,
             'endpoint_type': endpoint_type,
+            'task_delivery_interval': self.pubsub.get_subscription_by_sub_key(sub_key).task_delivery_interval
         })
 
 # ################################################################################################################################
 
 class NotifyDeliveryTaskStopping(AdminService):
     """ Invoked when a delivery task is about to stop - deletes from pubsub information about input sub_key's delivery task.
-    Thanks to this, when a message is published and there is no new delivery task running, this message will be queued up
-    instead of being delivered to a task that is to stop. The new task will pick it up when it is starting up instead.
+    Thanks to this, when a message is published and there is no new delivery task running yet, this message will be queued up
+    instead of being delivered to a task that is about to stop. The new task will pick it up when it has started up.
     """
     class SimpleIO:
         input_required = ('sub_key', 'endpoint_type')

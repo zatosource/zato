@@ -29,6 +29,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_delivery_server_for_sub_key, get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.util import is_func_overridden, make_repr, new_cid, spawn_greenlet
+from zato.common.util.pubsub import make_short_msg_copy_from_dict
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
@@ -43,6 +44,16 @@ hook_type_to_method = {
     PUBSUB.HOOK_TYPE.PUB: 'before_publish',
     PUBSUB.HOOK_TYPE.SUB: 'before_delivery',
 }
+
+# ################################################################################################################################
+
+_pub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.PUBLISHER.id)
+_sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
+
+# ################################################################################################################################
+
+_update_attrs = ('data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_reply_to', 'mime_type',
+    'expiration', 'expiration_time')
 
 # ################################################################################################################################
 
@@ -228,6 +239,8 @@ class Subscription(object):
         self.sub_key = config.sub_key
         self.endpoint_id = config.endpoint_id
         self.topic_name = config.topic_name
+        self.sub_pattern_matched = config.sub_pattern_matched
+        self.task_delivery_interval = config.task_delivery_interval
 
     def __repr__(self):
         return make_repr(self)
@@ -279,7 +292,7 @@ class InRAMSyncBacklog(object):
 
 # ################################################################################################################################
 
-    def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages):
+    def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages, _default_pri=PUBSUB.PRIORITY.DEFAULT):
         """ Adds all input messages to sub_keys for the topic.
         """
         with self.lock:
@@ -312,12 +325,32 @@ class InRAMSyncBacklog(object):
                 msg['server_name'] = self.pubsub.server.name
                 msg['server_pid'] = self.pubsub.server.pid
 
+                # .. set default priority if none was given ..
+                if 'priority' not in msg:
+                    msg['priority'] = _default_pri
+
                 # .. add a reverse mapping, from message ID to sub_key ..
                 msg_sub_key = self.msg_id_to_sub_key.setdefault(msg['pub_msg_id'], set())
                 msg_sub_key.update(sub_keys)
 
             # .. and add a reference to it to the topic.
             topic_messages.update(msg_ids)
+
+# ################################################################################################################################
+
+    def update_msg(self, msg, _update_attrs=_update_attrs, _warn='No such message in sync backlog `%s`'):
+        with self.lock:
+            _msg = self.msg_id_to_msg.get(msg['msg_id'])
+            if not _msg:
+                logger.warn(_warn, msg['msg_id'])
+                logger_zato.warn(_warn, msg['msg_id'])
+                return False # No such message
+            else:
+                for attr in _update_attrs:
+                    _msg[attr] = msg[attr]
+
+                # Ok, found and updated
+                return True
 
 # ################################################################################################################################
 
@@ -486,31 +519,19 @@ class InRAMSyncBacklog(object):
                         continue
 
                 if needs_short_copy:
-                    out_msg = {}
-                    out_msg['msg_id'] = msg['pub_msg_id']
-                    out_msg['correl_id'] = msg.get('pub_correl_id')
-                    out_msg['in_reply_to'] = msg.get('in_reply_to')
-                    out_msg['data'] = msg['data'][:self.pubsub.data_prefix_len]
-                    out_msg['data_prefix_short'] = out_msg['data'][:self.pubsub.data_prefix_short_len]
-                    out_msg['size'] = msg['size']
-                    out_msg['pattern_matched'] = msg['pattern_matched']
-                    out_msg['pub_time'] = msg['pub_time']
-                    out_msg['expiration'] = msg['expiration']
-                    out_msg['expiration_time'] = msg['expiration_time']
-                    out_msg['topic_id'] = msg['topic_id']
-                    out_msg['topic_name'] = msg['topic_name']
-                    out_msg['cluster_id'] = msg['cluster_id']
-                    out_msg['published_by_id'] = msg['published_by_id']
-                    out_msg['delivery_status'] = msg['delivery_status']
-                    out_msg['server_name'] = msg['server_name']
-                    out_msg['server_pid'] = msg['server_pid']
-                    out_msg['has_gd'] = msg['has_gd']
+                    out_msg = make_short_msg_copy_from_dict(msg, self.pubsub.data_prefix_len, self.pubsub.data_prefix_short_len)
                 else:
                     out_msg = msg
 
                 msg_list.append(out_msg)
 
             return msg_list
+
+# ################################################################################################################################
+
+    def get_message_by_id(self, msg_id):
+        with self.lock:
+            return self.msg_id_to_msg[msg_id]
 
 # ################################################################################################################################
 
@@ -523,8 +544,8 @@ class InRAMSyncBacklog(object):
             # For each sub_key ..
             for sub_key in sub_keys:
 
-                # .. get all messages waiting for this subscriber ..
-                msg_ids = self.sub_key_to_msg_id.pop(sub_key)
+                # .. get all messages waiting for this subscriber, assuming there are any at all ..
+                msg_ids = self.sub_key_to_msg_id.pop(sub_key, [])
 
                 # .. for each message found we need to check if it is needed by any other subscriber,
                 # and if it's not, then we delete all the reference to this message. Otherwise, we leave it
@@ -648,7 +669,7 @@ class PubSub(object):
         self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
 
-        self.subscriptions_by_topic = {}       # Topic name     -> Subscription object
+        self.subscriptions_by_topic = {}       # Topic name     -> List of Subscription objects
         self.subscriptions_by_sub_key = {}     # Sub key        -> Subscription object
         self.sub_key_servers = {}              # Sub key        -> Server/PID handling it
 
@@ -731,6 +752,14 @@ class PubSub(object):
     def get_subscription_by_sub_key(self, sub_key):
         with self.lock:
             return self._get_subscription_by_sub_key(sub_key)
+
+# ################################################################################################################################
+
+    def get_subscription_by_id(self, sub_id):
+        with self.lock:
+            for sub in self.subscriptions_by_sub_key.itervalues():
+                if sub.id == sub_id:
+                    return sub
 
 # ################################################################################################################################
 
@@ -1014,7 +1043,8 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _is_allowed(self, target, name, security_id, ws_channel_id, endpoint_id=None):
+    def _is_allowed(self, target, name, is_pub, security_id, ws_channel_id, endpoint_id=None,
+        _pub_role=_pub_role, _sub_role=_sub_role):
 
         if not endpoint_id:
 
@@ -1030,8 +1060,18 @@ class PubSub(object):
 
             endpoint_id = source[id]
 
+        # One way or another, we have an endpoint object now ..
         endpoint = self.endpoints[endpoint_id]
 
+        # .. make sure this endpoint may publish or subscribe, depending on what is needed.
+        if is_pub:
+            if not endpoint.role in _pub_role:
+                return
+        else:
+            if not endpoint.role in _sub_role:
+                return
+
+        # Alright, this endpoint has the correct role, but are there are any matching patterns for this topic?
         for orig, matcher in getattr(endpoint, target):
             if matcher.match(name):
                 return orig
@@ -1039,22 +1079,22 @@ class PubSub(object):
 # ################################################################################################################################
 
     def is_allowed_pub_topic(self, name, security_id=None, ws_channel_id=None):
-        return self._is_allowed('pub_topic_patterns', name, security_id, ws_channel_id)
+        return self._is_allowed('pub_topic_patterns', name, True, security_id, ws_channel_id)
 
 # ################################################################################################################################
 
     def is_allowed_pub_topic_by_endpoint_id(self, name, endpoint_id):
-        return self._is_allowed('pub_topic_patterns', name, None, None, endpoint_id)
+        return self._is_allowed('pub_topic_patterns', name, True, None, None, endpoint_id)
 
 # ################################################################################################################################
 
     def is_allowed_sub_topic(self, name, security_id=None, ws_channel_id=None):
-        return self._is_allowed('sub_topic_patterns', name, security_id, ws_channel_id)
+        return self._is_allowed('sub_topic_patterns', name, False, security_id, ws_channel_id)
 
 # ################################################################################################################################
 
     def is_allowed_sub_topic_by_endpoint_id(self, name, endpoint_id):
-        return self._is_allowed('sub_topic_patterns', name, None, None, endpoint_id)
+        return self._is_allowed('sub_topic_patterns', name, False, None, None, endpoint_id)
 
 # ################################################################################################################################
 
@@ -1093,6 +1133,12 @@ class PubSub(object):
         """
         with self.lock:
             return self._is_subscribed_to(endpoint_id, topic_name)
+
+# ################################################################################################################################
+
+    def get_pubsub_tool_by_sub_key(self, sub_key):
+        with self.lock:
+            return self.pubsub_tool_by_sub_key[sub_key]
 
 # ################################################################################################################################
 
@@ -1154,7 +1200,13 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_sub_key_server(self, sub_key, needs_lock=True):
+    def get_sub_key_server(self, sub_key, default=None):
+        with self.lock:
+            return self._get_sub_key_server(sub_key, default)
+
+# ################################################################################################################################
+
+    def get_delivery_server_by_sub_key(self, sub_key, needs_lock=True):
         if needs_lock:
             with self.lock:
                 return self._get_sub_key_server(sub_key)
@@ -1165,13 +1217,17 @@ class PubSub(object):
 
     def delete_sub_key_server(self, sub_key):
         with self.lock:
-            sub_key_server = self.sub_key_servers[sub_key]
-            msg = 'Deleting info about delivery server for sub_key `%s`, was `%s:%s`'
+            sub_key_server = self.sub_key_servers.get(sub_key)
+            if sub_key_server:
+                msg = 'Deleting info about delivery server for sub_key `%s`, was `%s:%s`'
 
-            logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
-            logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
+                logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
+                logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
 
-            del self.sub_key_servers[sub_key]
+                del self.sub_key_servers[sub_key]
+            else:
+                logger.info('Could not find sub_key `%s` while deleting sub_key server, current `%s` `%s`',
+                    sub_key, self.server.name, self.server.pid)
 
 # ################################################################################################################################
 
@@ -1341,7 +1397,7 @@ class PubSub(object):
                 # Delete subscription metadata from local pubsub
                 subscriptions_by_topic = self.subscriptions_by_topic[topic_name]
 
-                for sub in subscriptions_by_topic:
+                for sub in subscriptions_by_topic[:]:
                     if sub.sub_key in sub_keys:
                         subscriptions_by_topic.remove(sub)
 
@@ -1444,11 +1500,10 @@ class PubSub(object):
     def set_to_delete(self, sub_key, msg_list):
         """ Marks all input messages as ready to be deleted.
         """
-        msg_id_list = [msg.pub_msg_id for msg in msg_list]
-        logger.info('Deleting messages set to be deleted `%s`', msg_id_list)
+        logger.info('Deleting messages set to be deleted `%s`', msg_list)
 
         with closing(self.server.odb.session()) as session:
-            set_to_delete(session, self.cluster_id, sub_key, msg_id_list, utcnow_as_ms())
+            set_to_delete(session, self.cluster_id, sub_key, msg_list, utcnow_as_ms())
 
 # ################################################################################################################################
 
@@ -1503,82 +1558,83 @@ class PubSub(object):
                 topic_id_dict = {}
 
                 # Get all topics ..
-                for topic in self.topics.itervalues(): # type: Topic
+                for _topic in self.topics.itervalues(): # type: Topic
 
                     # Does the topic require task synchronization now?
-                    if not topic.needs_task_sync():
+                    if not _topic.needs_task_sync():
                         continue
                     else:
-                        topic.update_task_sync_time()
+                        _topic.update_task_sync_time()
 
-                    # OK, the topic possibly needs a sync but still skip it if we know
-                    # that there have been no messages published to it since the last time.
-                    if not (topic.sync_has_gd_msg or topic.sync_has_non_gd_msg):
+                    # OK, the time has come for this topic to sync its state with subscribers
+                    # but still skip it if we know that there have been no messages published to it since the last time.
+                    if not (_topic.sync_has_gd_msg or _topic.sync_has_non_gd_msg):
                         continue
 
                     # If it does, get subscriptions for it ..
-                    subs = self.get_subscriptions_by_topic(topic.name)
+                    subs = self.get_subscriptions_by_topic(_topic.name)
 
                     # .. if there are any subscriptions at all, we store that information for later use.
                     if subs:
-                        topic_id_dict[topic.id] = (topic.name, subs)
+                        topic_id_dict[_topic.id] = (_topic.name, subs)
 
                 # OK, if we had any subscriptions for at least one topic and there are any messages waiting,
                 # we can continue.
-                else:
-                    try:
-                        for topic_id in topic_id_dict:
+                try:
+                    for topic_id in topic_id_dict:
 
-                            # .. get the temporary metadata stored earlier ..
-                            topic_name, subs = topic_id_dict[topic_id]
+                        topic = self.topics[topic_id]
 
-                            cid = new_cid()
-                            logger.info('Triggering sync for `%s` len_s:%d gd:%d ngd:%d cid:%s' % (
-                                topic_name, len(subs), topic.sync_has_gd_msg, topic.sync_has_non_gd_msg, cid))
+                        # .. get the temporary metadata stored earlier ..
+                        topic_name, subs = topic_id_dict[topic_id]
 
-                            # Build a list of sub_keys for whom we know what their delivery server is which will
-                            # allow us to send messages only to tasks that are known to be up.
-                            sub_keys = []
-                            for item in subs:
-                                if self.get_sub_key_server(item.sub_key):
-                                    sub_keys.append(item.sub_key)
+                        cid = new_cid()
+                        logger.info('Triggering sync for `%s` len_s:%d gd:%d ngd:%d cid:%s' % (
+                            topic_name, len(subs), topic.sync_has_gd_msg, topic.sync_has_non_gd_msg, cid))
 
-                            # Continue only if there are actually any sub_keys left = any tasks up and running ..
-                            if sub_keys:
-                                non_gd_msg_list = self.sync_backlog._get_delete_messages_by_sub_keys(topic_id, sub_keys)
+                        # Build a list of sub_keys for whom we know what their delivery server is which will
+                        # allow us to send messages only to tasks that are known to be up.
+                        sub_keys = []
+                        for item in subs:
+                            if self.get_delivery_server_by_sub_key(item.sub_key):
+                                sub_keys.append(item.sub_key)
 
-                                # .. also, continue only if there are still messages for the ones that are up ..
-                                if topic.sync_has_gd_msg or topic.sync_has_non_gd_msg:
+                        # Continue only if there are actually any sub_keys left = any tasks up and running ..
+                        if sub_keys:
+                            non_gd_msg_list = self.sync_backlog._get_delete_messages_by_sub_keys(topic_id, sub_keys)
 
-                                    if non_gd_msg_list:
-                                        non_gd_msg_list = sorted(non_gd_msg_list, key=_cmp_non_gd_msg)
-                                        pub_time_max = non_gd_msg_list[-1]['pub_time']
-                                    else:
-                                        pub_time_max = topic.gd_pub_time_max
+                            # .. also, continue only if there are still messages for the ones that are up ..
+                            if topic.sync_has_gd_msg or topic.sync_has_non_gd_msg:
 
-                                    logger.info('Syncing messages for `%s` ngd-list:%s cid:%s' % (
-                                        topic_name, [elem['pub_msg_id'] for elem in non_gd_msg_list], cid))
+                                if non_gd_msg_list:
+                                    non_gd_msg_list = sorted(non_gd_msg_list, key=_cmp_non_gd_msg)
+                                    pub_time_max = non_gd_msg_list[-1]['pub_time']
+                                else:
+                                    pub_time_max = topic.gd_pub_time_max
 
-                                    request = {
-                                        'cid': cid,
-                                        'topic_id':topic_id,
-                                        'topic_name':topic_name,
-                                        'subscriptions': subs,
-                                        'non_gd_msg_list': non_gd_msg_list,
-                                        'has_gd_msg_list': topic.sync_has_gd_msg,
-                                        'is_bg_call': True, # This is a background call, i.e. issued by this trigger,
-                                        'pub_time_max': pub_time_max, # Last time either a non-GD or GD message was received
-                                    }
+                                logger.info('Syncing messages for `%s` ngd-list:%s cid:%s' % (
+                                    topic_name, [elem['pub_msg_id'] for elem in non_gd_msg_list], cid))
 
-                                    # .. and notify all the tasks in background.
-                                    spawn(self.invoke_service, 'zato.pubsub.after-publish', request)
+                                request = {
+                                    'cid': cid,
+                                    'topic_id':topic_id,
+                                    'topic_name':topic_name,
+                                    'subscriptions': subs,
+                                    'non_gd_msg_list': non_gd_msg_list,
+                                    'has_gd_msg_list': topic.sync_has_gd_msg,
+                                    'is_bg_call': True, # This is a background call, i.e. issued by this trigger,
+                                    'pub_time_max': pub_time_max, # Last time either a non-GD or GD message was received
+                                }
 
-                            # OK, we can now reset message flags for the topic
-                            self._set_sync_has_msg(topic_id, True, False)
-                            self._set_sync_has_msg(topic_id, False, False)
+                                # .. and notify all the tasks in background.
+                                spawn(self.invoke_service, 'zato.pubsub.after-publish', request)
 
-                    except Exception:
-                        logger_zato.warn(format_exc())
-                        logger.warn(format_exc())
+                        # OK, we can now reset message flags for the topic
+                        self._set_sync_has_msg(topic_id, True, False)
+                        self._set_sync_has_msg(topic_id, False, False)
+
+                except Exception:
+                    logger_zato.warn(format_exc())
+                    logger.warn(format_exc())
 
 # ################################################################################################################################

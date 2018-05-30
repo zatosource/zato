@@ -32,7 +32,6 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.is_internal,
         PubSubSubscription.is_staging_enabled,
         PubSubSubscription.creation_time,
-        PubSubSubscription.last_interaction_time,
         PubSubSubscription.sub_key,
         PubSubSubscription.is_durable,
         PubSubSubscription.has_gd,
@@ -47,6 +46,7 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.delivery_err_should_block,
         PubSubSubscription.wait_sock_err,
         PubSubSubscription.wait_non_sock_err,
+        PubSubSubscription.sub_pattern_matched,
 
         PubSubSubscription.out_amqp_id,
         PubSubSubscription.amqp_exchange,

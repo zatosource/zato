@@ -42,7 +42,8 @@ class Index(_Index):
         output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'is_api_sub_allowed', 'max_depth_gd',
             'max_depth_non_gd', 'current_depth_gd', 'current_depth_non_gd', 'depth_check_freq', 'hook_service_id',
             'pub_buffer_size_gd', 'task_sync_interval', 'task_delivery_interval')
-        output_optional = ('last_pub_time', 'last_pub_msg_id', 'last_endpoint_id', 'last_endpoint_name')
+        output_optional = ('last_pub_time', 'last_pub_msg_id', 'last_endpoint_id', 'last_endpoint_name', 'last_pub_has_gd',
+            'last_pub_server_pid', 'last_pub_server_name')
         output_repeated = True
 
     def populate_initial_input_dict(self, initial_input_dict):
@@ -50,6 +51,7 @@ class Index(_Index):
 
     def on_before_append_item(self, item):
         if item.last_pub_time:
+            item.last_pub_time_utc = item.last_pub_time
             item.last_pub_time = from_utc_to_user(item.last_pub_time+'+00:00', self.req.zato.user_profile)
         return item
 
@@ -213,7 +215,7 @@ class TopicMessages(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'topic_id', 'has_gd')
-        output_required = ('msg_id', 'pub_time', 'data_prefix_short', 'pattern_matched')
+        output_required = ('msg_id', 'pub_time', 'pub_time_utc', 'data_prefix_short', 'pub_pattern_matched')
         output_optional = ('correl_id', 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
             'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name', 'server_name', 'server_pid')
         output_repeated = True
@@ -222,6 +224,7 @@ class TopicMessages(_Index):
         return 'zato.pubsub.topic.get-gd-message-list' if self.req.has_gd else 'zato.pubsub.topic.get-non-gd-message-list'
 
     def on_before_append_item(self, item):
+        item.pub_time_utc = item.pub_time
         item.pub_time = from_utc_to_user(item.pub_time+'+00:00', self.req.zato.user_profile)
         item.endpoint_html = get_endpoint_html(item, self.req.zato.cluster_id)
         return item

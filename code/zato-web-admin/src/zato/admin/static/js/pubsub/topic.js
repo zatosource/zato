@@ -55,6 +55,10 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', last_pub_time);
 
     row += String.format('<td>{0}</td>',
+        String.format("<a href=\"/zato/pubsub/subscription/?cluster={0}&topic_id={1}\">Subscriptions</a>",
+        item.cluster_id, data.id));
+
+    row += String.format('<td>{0}</td>',
         String.format("<a href=\"/zato/pubsub/message/publish/cluster/{0}/topic/{1}\">Publish</a>", item.cluster_id, data.id));
 
     row += String.format('<td>{0}</td>',
@@ -135,7 +139,6 @@ $.fn.zato.pubsub.topic.delete_message = function(topic_id, msg_id, has_gd, serve
         }
         $.fn.zato.user_message(success, data.responseText);
     }
-
 
     var jq_callback = function(ok) {
         if(ok) {

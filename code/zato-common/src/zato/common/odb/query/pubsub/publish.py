@@ -117,6 +117,7 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
                 'topic_id': topic_id,
                 'sub_key': sub.sub_key,
                 'cluster_id': cluster_id,
+                'sub_pattern_matched': msg['sub_pattern_matched'][sub.sub_key],
             })
 
     # Move the message to endpoint queues

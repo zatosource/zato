@@ -26,7 +26,8 @@
             '_has_gd',
             '_max_depth',
             '_current_depth',
-            '_last_pub_time',
+            '_last_pub',
+            '_sub',
 
             '_publish',
             '_clear',
@@ -81,8 +82,9 @@
 
                         <th><a href="#">GD</a></th>
                         <th><a href="#">Max depth GD / RAM</a></th>
-                        <th><a href="#">Current depth GD / RAM</a></th>
-                        <th><a href="#">Last pub data</a></th>
+                        <th><a href="#">Depth GD / RAM</a></th>
+                        <th><a href="#">Last pub</a></th>
+                        <th>&nbsp;</th>
 
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -114,23 +116,34 @@
                         <td>{{ item.has_gd|yesno:"Yes,No" }}</td>
                         <td>{{ item.max_depth_gd }} / {{ item.max_depth_non_gd }}</td>
                         <td id="current_depth_{{ item.id }}">
-                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;has_gd=1">{{ item.current_depth_gd }}</a>
+                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;has_gd=True">{{ item.current_depth_gd }}</a>
                             /
-                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;has_gd=0">{{ item.current_depth_non_gd }}</a>
+                            <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}&amp;has_gd=False">{{ item.current_depth_non_gd }}</a>
                         </td>
 
                         <td>
                             {% if item.last_pub_time %}
-                                {{ item.last_pub_time }}
-                                (UTC)
-                                <br/>
-                                {{ item.last_pub_msg_id }}
+
+                                <a
+                                    id="a_last_pub_time_{{ item.id }}"
+                                    href="javascript:$.fn.zato.toggle_time('last_pub_time_{{ item.id }}', '{{ item.last_pub_time }}', '{{ item.last_pub_time_utc }}')">{{ item.last_pub_time }}
+                                </a>
+
                                 <br/>
                                 <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ item.last_endpoint_id }}">{{ item.last_endpoint_name }}</a>
+                                <br/>
+
+                                <a href="{% url "pubsub-message" cluster_id "topic" item.id item.last_pub_msg_id %}?has_gd={{ item.last_pub_has_gd }}{% if not item.last_pub_has_gd %}&amp;server_name={{ item.item.last_pub_server_name }}&amp;server_pid={{ item.item.last_pub_server_pid }}{% endif %}">{{ item.last_pub_msg_id }}</a>
+
                             {% else %}
                                 <span class='form_hint'>---</span>
                             {% endif %}
                         </td>
+
+                        <td id="sub_{{ item.id }}">
+                            <a href="{% url "pubsub-subscription" %}?cluster={{ cluster_id }}&amp;topic_id={{ item.id }}">Subscriptions</a>
+                        </td>
+
                         <td><a href="{% url "pubsub-message-publish" cluster_id item.id %}">Publish</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.clear('{{ item.id }}')">Clear</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.edit('{{ item.id }}')">Edit</a></td>
@@ -249,6 +262,7 @@
                             </td>
 
                         </tr>
+                        <!--
                         <tr>
                             <td style="vertical-align:middle">GD buffer</td>
                             <td>
@@ -256,6 +270,7 @@
                                 <span class="form_hint">(in messages)</span>
                             </td>
                         </tr>
+                        -->
                         <tr>
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ create_form.hook_service_id }} </td>
@@ -350,6 +365,7 @@
                             </td>
 
                         </tr>
+                        <!--
                         <tr>
                             <td style="vertical-align:middle">GD buffer</td>
                             <td>
@@ -357,6 +373,7 @@
                                 <span class="form_hint">(in messages)</span>
                             </td>
                         </tr>
+                        -->
                         <tr>
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.hook_service_id }} </td>

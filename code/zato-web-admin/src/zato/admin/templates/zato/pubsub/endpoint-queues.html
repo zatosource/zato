@@ -28,7 +28,8 @@
 
             '_creation_time',
             '_sub_key',
-            '_last_interaction_time',
+
+            '_extcli',
 
             '_clear',
             '_edit',
@@ -92,6 +93,8 @@
             'out_soap_http_soap_id',
             'delivery_err_should_block',
             'is_staging_enabled',
+            'current_depth_gd',
+            'current_depth_non_gd',
         ]
     }
     </script>
@@ -126,11 +129,11 @@
                         <th><a href="#">Sub queue for topic</a></th>
                         <th><a href="#">State</a></th>
 
-                        <th><a href="#">Total</a></th>
+                        <th><a href="#">Current depth GD / RAM</a></th>
 
                         <th><a href="#">Creation time</a></th>
                         <th style="min-width:200px"><a href="#">Sub key</a></th>
-                        <th><a href="#">Last interaction</a></th>
+                        <th><a href="#">EXTCLI</a></th>
 
                         <th style="width:5%">&nbsp;</th>
                         <th style="width:5%">&nbsp;</th>
@@ -194,6 +197,8 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -204,27 +209,28 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
-                        <td><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.topic_name }}</a>
-                            {% if item.ws_ext_client_id %}
-                                <br/>
-                                <span class="form_hint">{{ item.ws_ext_client_id }}</span>
-                            {% endif %}
+                        <td>
+                            <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.topic_name }}</a>
                         </td>
                         <td>{{ item.active_status }}</td>
 
-                        <td id="total_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "total" item.sub_id item.topic_name|slugify %}?cluster={{ cluster_id }}">{{ item.total_depth }}</a></td>
+                        <td id="total_depth_{{ item.sub_id}}">
+                            <a href="{% url "pubsub-endpoint-queue-browser" "true" item.sub_id item.topic_name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth_gd }}</a>
+                            /
+                            <a href="{% url "pubsub-endpoint-queue-browser" "false" item.sub_id item.topic_name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth_non_gd }}</a>
+                        </td>
 
-                        <td>{{ item.creation_time }}</td>
+                        <td style="width:20%">
+                            <a
+                                id="a_creation_time_{{ item.sub_id }}"
+                                href="javascript:$.fn.zato.toggle_time('creation_time_{{ item.sub_id }}', '{{ item.creation_time }}', '{{ item.creation_time_utc }}')">{{ item.creation_time }}
+                            </a>
+                        </td>
+
                         <td>
                             <a id="sub_key_{{ item.sub_id }}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key('{{ item.sub_id }}')">Show</a>
                         </td>
-                        <td>
-                            {% if item.last_interaction_time %}
-                                <a href="#">{{ item.last_interaction_time }}</a>
-                            {% else %}
-                                <span class="form_hint">---</span>
-                            {% endif %}
-                        </td>
+                        <td>{{ item.ext_client_id|default:"<span class='form_hint'>---</span>" }}</td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.clear('{{ item.sub_id }}', '{{ cluster_id }}')">Clear</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.edit('{{ item.sub_id }}')">Edit</a></td>
@@ -288,11 +294,13 @@
                         <td class='ignore'>{{ item.out_soap_http_soap_id|default:'' }}</td>
                         <td class='ignore'>{{ item.delivery_err_should_block }}</td>
                         <td class='ignore'>{{ item.is_staging_enabled }}</td>
+                        <td class='ignore'>{{ item.current_depth_gd }}</td>
+                        <td class='ignore'>{{ item.current_depth_non_gd }}</td>
 
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='55'>No results</td>
+                        <td colspan='51'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -498,6 +506,7 @@
 
                     </table>
                     {{ edit_form.sub_key }}
+                    <input type="hidden" id="id_edit-endpoint_type" name="endpoint_type" value="{{ endpoint.endpoint_type }}" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="cluster_id" name="_name_unused_cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
