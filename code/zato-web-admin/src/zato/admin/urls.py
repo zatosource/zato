@@ -1189,7 +1189,7 @@ urlpatterns += [
     url(r'^zato/pubsub/endpoint/topic-sub-list/(?P<endpoint_id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(pubsub_endpoint.endpoint_topic_sub_list), name='pubsub-endpoint-topic-sub-list'),
 
-    url(r'^zato/pubsub/endpoint/queue/clear/cluster/(?P<cluster_id>.*)/queue/(?P<sub_id>.*)/$',
+    url(r'^zato/pubsub/endpoint/queue/clear/cluster/(?P<cluster_id>.*)/queue/(?P<sub_key>.*)/$',
         login_required(pubsub_endpoint.endpoint_queue_clear), name='pubsub-endpoint-queue-clear'),
 
     url(r'^zato/pubsub/endpoint/queue/edit/$',
@@ -1198,7 +1198,7 @@ urlpatterns += [
     url(r'^zato/pubsub/endpoint/queue/interactions/cluster/(?P<cluster_id>.*)/queue/(?P<sub_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_endpoint.endpoint_queue_interactions), name='pubsub-endpoint-queue-interactions'),
 
-    url(r'^zato/pubsub/endpoint/queue/browser/(?P<queue_type>.*)/queue/(?P<sub_id>.*)/(?P<name_slug>.*)$',
+    url(r'^zato/pubsub/endpoint/queue/browser/gd/(?P<has_gd>.*)/queue/(?P<sub_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_endpoint.EndpointQueueBrowser()), name=pubsub_endpoint.EndpointQueueBrowser.url_name),
 
 

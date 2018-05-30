@@ -37,6 +37,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
+        input_optional = ('topic_id',)
         output_required = ('id', 'endpoint_name', 'endpoint_type', 'subscription_count', 'is_active', 'is_internal')
         output_optional = ('security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
             'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role')
@@ -57,8 +58,8 @@ class Index(_Index):
         data_list = Bunch()
         data_list.security_list = []
         data_list.service_list = []
-
         select_data_target = Bunch()
+        topic_name = None
 
         for endpoint_type in PUBSUB.ENDPOINT_TYPE:
             select_data_target[endpoint_type.id] = []
@@ -73,13 +74,23 @@ class Index(_Index):
             data_list.security_list = self.get_sec_def_list('basic_auth').def_items
 
             # Services
-            data_list.service_list = self.req.zato.client.invoke(
-                'zato.service.get-list', {'cluster_id': self.req.zato.cluster_id}).data
+            data_list.service_list = self.req.zato.client.invoke('zato.service.get-list', {
+                'cluster_id': self.req.zato.cluster_id
+            }).data
+
+            # Topic
+            if self.input.topic_id:
+                topic_name = self.req.zato.client.invoke('zato.pubsub.topic.get', {
+                    'cluster_id': self.req.zato.cluster_id,
+                    'id': self.input.topic_id
+                }).data.response.name
 
         return {
             'create_form': CreateForm(self.req, data_list),
             'edit_form': EditForm(self.req, data_list, prefix='edit'),
             'select_data_target': select_data_target,
+            'topic_name': topic_name,
+            'topic_id': self.input.topic_id,
         }
 
 # ################################################################################################################################

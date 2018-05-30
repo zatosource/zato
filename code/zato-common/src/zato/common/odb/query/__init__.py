@@ -19,7 +19,7 @@ from sqlalchemy.sql.expression import case
 
 # Zato
 from zato.common import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
-     URL_PARAMS_PRIORITY
+     PUBSUB, URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
      CassandraQuery, ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
      CronStyleJob, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \
@@ -965,7 +965,6 @@ def pubsub_publishers_for_topic(session, cluster_id, topic_id):
         PubSubEndpoint.ws_channel_id, PubSubEndpoint.name,
         PubSubEndpoint.is_active, PubSubEndpoint.is_internal,
         PubSubEndpoint.last_seen, PubSubEndpoint.last_pub_time,
-        PubSubEndpointTopic.pattern_matched,
         PubSubEndpointTopic.last_pub_time,
         PubSubEndpointTopic.pub_msg_id.label('last_msg_id'),
         PubSubEndpointTopic.pub_correl_id.label('last_correl_id'),
@@ -985,13 +984,13 @@ def pubsub_publishers_for_topic(session, cluster_id, topic_id):
 
 # ################################################################################################################################
 
-def _pubsub_topic_message(session, cluster_id):
-    return session.query(
+def _pubsub_topic_message(session, cluster_id, needs_sub_queue_check):
+    q = session.query(
         PubSubMessage.pub_msg_id.label('msg_id'),
         PubSubMessage.pub_correl_id.label('correl_id'),
         PubSubMessage.in_reply_to,
         PubSubMessage.pub_time, PubSubMessage.data_prefix_short,
-        PubSubMessage.pattern_matched, PubSubMessage.priority,
+        PubSubMessage.pub_pattern_matched, PubSubMessage.priority,
         PubSubMessage.ext_pub_time, PubSubMessage.size,
         PubSubMessage.data_format, PubSubMessage.mime_type,
         PubSubMessage.data, PubSubMessage.expiration,
@@ -1007,13 +1006,18 @@ def _pubsub_topic_message(session, cluster_id):
         ).\
         filter(PubSubMessage.published_by_id==PubSubEndpoint.id).\
         filter(PubSubMessage.cluster_id==cluster_id).\
-        filter(PubSubMessage.topic_id==PubSubTopic.id).\
-        filter(~PubSubMessage.is_in_sub_queue)
+        filter(PubSubMessage.topic_id==PubSubTopic.id)
+
+    if needs_sub_queue_check:
+        q = q.\
+            filter(~PubSubMessage.is_in_sub_queue)
+
+    return q
 
 # ################################################################################################################################
 
-def pubsub_message(session, cluster_id, pub_msg_id):
-    return _pubsub_topic_message(session, cluster_id).\
+def pubsub_message(session, cluster_id, pub_msg_id, needs_sub_queue_check=True):
+    return _pubsub_topic_message(session, cluster_id, needs_sub_queue_check).\
         filter(PubSubMessage.pub_msg_id==pub_msg_id)
 
 # ################################################################################################################################
@@ -1029,10 +1033,8 @@ def _pubsub_endpoint_queue(session, cluster_id):
         PubSubSubscription.delivery_method,
         PubSubSubscription.delivery_data_format,
         PubSubSubscription.delivery_endpoint,
-        PubSubSubscription.last_interaction_time,
-        PubSubSubscription.last_interaction_type,
-        PubSubSubscription.last_interaction_details,
         PubSubSubscription.is_staging_enabled,
+        PubSubSubscription.ext_client_id,
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
         PubSubTopic.name.label('name'), # Currently queue names are the same as their originating topics
@@ -1040,7 +1042,7 @@ def _pubsub_endpoint_queue(session, cluster_id):
         PubSubEndpoint.id.label('endpoint_id'),
         WebSocketSubscription.ext_client_id.label('ws_ext_client_id'),
         ).\
-        outerjoin(WebSocketSubscription, WebSocketSubscription.id==PubSubSubscription.ws_sub_id).\
+        outerjoin(WebSocketSubscription, WebSocketSubscription.sub_key==PubSubSubscription.sub_key).\
         filter(PubSubSubscription.topic_id==PubSubTopic.id).\
         filter(PubSubSubscription.cluster_id==cluster_id).\
         filter(PubSubSubscription.endpoint_id==PubSubEndpoint.id)
@@ -1051,7 +1053,6 @@ def _pubsub_endpoint_queue(session, cluster_id):
 def pubsub_endpoint_queue_list(session, cluster_id, endpoint_id, needs_columns=False):
     return _pubsub_endpoint_queue(session, cluster_id).\
         filter(PubSubSubscription.endpoint_id==endpoint_id).\
-        order_by(PubSubSubscription.last_interaction_time.desc()).\
         order_by(PubSubSubscription.creation_time.desc())
 
 # ################################################################################################################################
@@ -1072,7 +1073,7 @@ def pubsub_endpoint_queue(session, cluster_id, sub_id):
 
 @query_wrapper
 def pubsub_messages_for_topic(session, cluster_id, topic_id, needs_columns=False):
-    return _pubsub_topic_message(session, cluster_id).\
+    return _pubsub_topic_message(session, cluster_id, True).\
         filter(PubSubMessage.topic_id==topic_id).\
         order_by(PubSubMessage.pub_time.desc())
 
@@ -1093,6 +1094,8 @@ def _pubsub_queue_message(session, cluster_id):
         PubSubMessage.expiration,
         PubSubMessage.expiration_time,
         PubSubMessage.ext_client_id,
+        PubSubMessage.published_by_id,
+        PubSubMessage.pub_pattern_matched,
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
         PubSubTopic.name.label('queue_name'), # Currently, queue name = name of its underlying topic
@@ -1100,14 +1103,15 @@ def _pubsub_queue_message(session, cluster_id):
         PubSubEndpointEnqueuedMessage.delivery_count,
         PubSubEndpointEnqueuedMessage.last_delivery_time,
         PubSubEndpointEnqueuedMessage.is_in_staging,
-        PubSubEndpointEnqueuedMessage.endpoint_id,
-        PubSubEndpoint.name.label('endpoint_name'),
-        PubSubSubscription.pattern_matched.label('sub_pattern_matched'),
+        PubSubEndpointEnqueuedMessage.endpoint_id.label('subscriber_id'),
+        PubSubEndpointEnqueuedMessage.sub_key,
+        PubSubEndpoint.name.label('subscriber_name'),
+        PubSubSubscription.sub_pattern_matched,
         ).\
         filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
         filter(PubSubEndpointEnqueuedMessage.topic_id==PubSubTopic.id).\
         filter(PubSubEndpointEnqueuedMessage.endpoint_id==PubSubEndpoint.id).\
-        filter(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
+        filter(PubSubEndpointEnqueuedMessage.sub_key==PubSubSubscription.sub_key).\
         filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id)
 
 # ################################################################################################################################
@@ -1119,10 +1123,14 @@ def pubsub_queue_message(session, cluster_id, msg_id):
 # ################################################################################################################################
 
 @query_wrapper
-def pubsub_messages_for_queue(session, cluster_id, sub_id, needs_columns=False):
-    return _pubsub_queue_message(session, cluster_id).\
-        filter(PubSubEndpointEnqueuedMessage.subscription_id==sub_id).\
-        order_by(PubSubEndpointEnqueuedMessage.creation_time.desc())
+def pubsub_messages_for_queue(session, cluster_id, sub_key, skip_delivered=False, needs_columns=False):
+    q = _pubsub_queue_message(session, cluster_id).\
+        filter(PubSubEndpointEnqueuedMessage.sub_key==sub_key)
+
+    if skip_delivered:
+        q = q.filter(PubSubEndpointEnqueuedMessage.delivery_status != PUBSUB.DELIVERY_STATUS.DELIVERED)
+
+    return q.order_by(PubSubEndpointEnqueuedMessage.creation_time.desc())
 
 # ################################################################################################################################
 

@@ -2091,6 +2091,7 @@ class PubSubTopic(Base):
     ext_client_id = None
     last_pub_time = None
     pub_time = None
+    ext_pub_time = None
 
 # ################################################################################################################################
 
@@ -2108,7 +2109,7 @@ class PubSubEndpointTopic(Base):
 
     id = Column(Integer, Sequence('pubsub_endpt_seq'), primary_key=True)
 
-    pattern_matched = Column(Text, nullable=False)
+    pub_pattern_matched = Column(Text, nullable=False)
     last_pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=False)
     pub_msg_id = Column(String(200), nullable=False)
     pub_correl_id = Column(String(200), nullable=True)
@@ -2165,7 +2166,7 @@ class PubSubMessage(Base):
     position_in_group = Column(Integer, nullable=True)
 
     # What matching pattern allowed an endpoint to publish this message
-    pattern_matched = Column(Text, nullable=False)
+    pub_pattern_matched = Column(Text, nullable=False)
 
     pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When the row was created
     ext_pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=True) # When the message was created by publisher
@@ -2199,6 +2200,8 @@ class PubSubMessage(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_messages', order_by=id, cascade='all, delete, delete-orphan'))
 
+    pub_time_utc = None # Not used by DB
+
 # ################################################################################################################################
 
 class PubSubSubscription(Base):
@@ -2217,7 +2220,7 @@ class PubSubSubscription(Base):
 
     creation_time = Column(Numeric(20, 7, asdecimal=False), nullable=False)
     sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
-    pattern_matched = Column(Text, nullable=False)
+    sub_pattern_matched = Column(Text, nullable=False)
     deliver_by = Column(Text, nullable=True) # Delivery order, e.g. by priority, date etc.
     ext_client_id = Column(Text, nullable=True) # Subscriber's ID as it is stored by that external system
 
@@ -2325,8 +2328,8 @@ class PubSubSubscription(Base):
     name = None # Not used by DB
     topic_name = None # Not used by DB
     total_depth = None # Not used by DB
-    current_depth = None # Not used by DB
-    staging_depth = None # Not used by DB
+    current_depth_gd = None # Not used by DB
+    current_depth_non_gd = None # Not used by DB
 
 # ################################################################################################################################
 
@@ -2334,8 +2337,6 @@ class PubSubEndpointEnqueuedMessage(Base):
     """ A queue of messages for an individual endpoint subscribed to a topic.
     """
     __tablename__ = 'pubsub_endp_msg_queue'
-
-    '''
     __table_args__ = (
         Index('pubsb_enms_q_pubmid_idx', 'cluster_id', 'pub_msg_id', unique=False),
         Index('pubsb_enms_q_id_idx', 'cluster_id', 'id', unique=True),
@@ -2343,7 +2344,6 @@ class PubSubEndpointEnqueuedMessage(Base):
         Index('pubsb_enms_q_subs_idx', 'cluster_id', 'sub_key', unique=False),
         Index('pubsb_enms_q_endptp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
     {})
-    '''
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
     creation_time = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When was the message enqueued
@@ -2351,6 +2351,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     delivery_count = Column(Integer, nullable=False, server_default='0')
     last_delivery_time = Column(Numeric(20, 7, asdecimal=False), nullable=sa_true())
     is_in_staging = Column(Boolean(), nullable=False, server_default=sa_false())
+    sub_pattern_matched = Column(Text, nullable=False)
 
     # A flag indicating whether this message is deliverable at all - will be set to False
     # after delivery_count reaches max retries for subscription or if a hook services decides so.
