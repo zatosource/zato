@@ -2134,6 +2134,8 @@ class PubSubMessage(Base):
     """ An individual message published to a topic.
     """
     __tablename__ = 'pubsub_message'
+
+
     __table_args__ = (
 
         # This index is needed for FKs from other tables,
@@ -2142,6 +2144,7 @@ class PubSubMessage(Base):
 
         Index('pubsb_msg_pubmsg_clu_id_idx', 'cluster_id', 'pub_msg_id', unique=True),
         Index('pubsb_msg_inreplyto_id_idx', 'cluster_id', 'in_reply_to', unique=False),
+        Index('pubsb_msg_correl_id_idx', 'cluster_id', 'pub_correl_id', unique=False),
     {})
 
     # For SQL joins
@@ -2159,6 +2162,7 @@ class PubSubMessage(Base):
     # ID of an external client on whose behalf the endpoint published the message
     ext_client_id = Column(Text(), nullable=True)
 
+
     # Will group messages belonging logically to the same group, useful if multiple
     # messages are published with the same timestamp by the same client but they still
     # need to be correctly ordered.
@@ -2172,6 +2176,7 @@ class PubSubMessage(Base):
     ext_pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=True) # When the message was created by publisher
     expiration_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
     last_updated = Column(Numeric(20, 7, asdecimal=False), nullable=True)
+
 
     data = Column(Text(), nullable=False)
     data_prefix = Column(Text(), nullable=False)
@@ -2201,6 +2206,7 @@ class PubSubMessage(Base):
     cluster = relationship(Cluster, backref=backref('pubsub_messages', order_by=id, cascade='all, delete, delete-orphan'))
 
     pub_time_utc = None # Not used by DB
+
 
 # ################################################################################################################################
 
@@ -2349,7 +2355,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     creation_time = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When was the message enqueued
 
     delivery_count = Column(Integer, nullable=False, server_default='0')
-    last_delivery_time = Column(Numeric(20, 7, asdecimal=False), nullable=sa_true())
+    last_delivery_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
     is_in_staging = Column(Boolean(), nullable=False, server_default=sa_false())
     sub_pattern_matched = Column(Text, nullable=False)
 
