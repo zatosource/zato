@@ -103,7 +103,7 @@ grace_time_multiplier=3
 context_class=zato.server.spring_context.ZatoContext
 
 [misc]
-return_internal_objects=True
+return_internal_objects=False
 internal_services_may_be_deleted=False
 initial_cluster_name={{initial_cluster_name}}
 initial_server_name={{initial_server_name}}
