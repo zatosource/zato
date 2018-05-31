@@ -77,9 +77,6 @@ from numpy.random import bytes as random_bytes, seed as numpy_seed
 # OpenSSL
 from OpenSSL import crypto
 
-# pip
-from pip.download import unpack_file_url
-
 # portalocker
 import portalocker
 
@@ -500,6 +497,29 @@ def payload_from_request(cid, request, data_format, transport):
 
 # ################################################################################################################################
 
+BZ2_EXTENSIONS = ('.tar.bz2', '.tbz')
+XZ_EXTENSIONS = ('.tar.xz', '.txz', '.tlz', '.tar.lz', '.tar.lzma')
+ZIP_EXTENSIONS = ('.zip', '.whl')
+TAR_EXTENSIONS = ('.tar.gz', '.tgz', '.tar')
+ARCHIVE_EXTENSIONS = (ZIP_EXTENSIONS + BZ2_EXTENSIONS + TAR_EXTENSIONS + XZ_EXTENSIONS)
+
+def splitext(path):
+    """Like os.path.splitext, but take off .tar too"""
+    base, ext = os.path.splitext(path)
+    if base.lower().endswith('.tar'):
+        ext = base[-4:] + ext
+        base = base[:-4]
+    return base, ext
+
+def is_archive_file(name):
+    """Return True if `name` is a considered as an archive file."""
+    ext = splitext(name)[1].lower()
+    if ext in ARCHIVE_EXTENSIONS:
+        return True
+    return False
+
+# ################################################################################################################################
+
 def is_python_file(name):
     """ Is it a Python file we can import Zato services from?
     """
@@ -528,13 +548,6 @@ class _DummyLink(object):
     """
     def __init__(self, url):
         self.url = url
-
-# ################################################################################################################################
-
-def decompress(archive, dir_name):
-    """ Decompresses an archive into a directory, the directory must already exist.
-    """
-    unpack_file_url(_DummyLink('file:' + archive), dir_name)
 
 # ################################################################################################################################
 
@@ -1198,7 +1211,7 @@ def ping_solr(config):
 def ping_odoo(conn):
     user_model = conn.get_model('res.users')
     ids = user_model.search([('login', '=', conn.login)])
-    user_model.read(ids[0], ['login'])['login']
+    user_model.read(ids, ['login'])[0]['login']
 
 # ################################################################################################################################
 
