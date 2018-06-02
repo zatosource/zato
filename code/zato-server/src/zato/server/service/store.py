@@ -17,7 +17,6 @@ from hashlib import sha256
 from importlib import import_module
 from json import dumps
 from traceback import format_exc
-from uuid import uuid4
 
 # Bunch
 from bunch import bunchify
@@ -42,8 +41,7 @@ from springpython.context import InitializingObject
 # Zato
 from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceInfo, TRACE1
 from zato.common.match import Matcher
-from zato.common.util import deployment_info, fs_safe_now, import_module_from_path, is_func_overridden, \
-     is_python_file, visit_py_source
+from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, Service
 from zato.server.service.internal import AdminService
 
