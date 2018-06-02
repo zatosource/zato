@@ -60,6 +60,7 @@ from zato.server.connection.http_soap.channel import RequestDispatcher, RequestH
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
+from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
@@ -230,6 +231,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Odoo
         self.init_odoo()
+
+        # SAP RFC
+        self.init_sap()
 
         # RBAC
         self.init_rbac()
@@ -706,6 +710,17 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             config = item['config']
             config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
             item.conn = OdooWrapper(config, self.server)
+            item.conn.build_queue()
+
+# ################################################################################################################################
+
+    def init_sap(self):
+        names = self.worker_config.out_sap.keys()
+        for name in names:
+            item = config = self.worker_config.out_sap[name]
+            config = item['config']
+            config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
+            item.conn = SAPWrapper(config, self.server)
             item.conn.build_queue()
 
 # ################################################################################################################################
@@ -1730,6 +1745,20 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ Closes and deletes an Odoo connection.
         """
         self._delete_config_close_wrapper(msg['name'], self.worker_config.out_odoo, 'Odoo', logger.debug)
+
+# ################################################################################################################################
+
+    def on_broker_msg_OUTGOING_SAP_CREATE(self, msg, *args):
+        """ Creates or updates an SAP RFC connection.
+        """
+        self._on_broker_msg_cloud_create_edit(msg, 'SAP', self.worker_config.out_sap, SAPWrapper)
+
+    on_broker_msg_OUTGOING_SAP_CHANGE_PASSWORD = on_broker_msg_OUTGOING_SAP_EDIT = on_broker_msg_OUTGOING_SAP_CREATE
+
+    def on_broker_msg_OUTGOING_SAP_DELETE(self, msg, *args):
+        """ Closes and deletes an SAP RFC connection.
+        """
+        self._delete_config_close_wrapper(msg['name'], self.worker_config.out_sap, 'SAP', logger.debug)
 
 # ################################################################################################################################
 
