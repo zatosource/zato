@@ -500,6 +500,7 @@ class HTTPSOAP(Base):
     host = Column(String(200), nullable=True)
     url_path = Column(String(200), nullable=False)
     method = Column(String(200), nullable=True)
+    content_encoding = Column(String(200), nullable=True)
 
     soap_action = Column(String(200), nullable=False)
     soap_version = Column(String(20), nullable=True)
@@ -546,7 +547,7 @@ class HTTPSOAP(Base):
             pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None,
             timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None,
             cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None, content_type=None,
-            cache_id=None, cache_type=None, cache_expiry=None, cache_name=None, **kwargs):
+            cache_id=None, cache_type=None, cache_expiry=None, cache_name=None, content_encoding=None, **kwargs):
         super(HTTPSOAP, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -582,6 +583,7 @@ class HTTPSOAP(Base):
         self.cache_type = cache_type
         self.cache_expiry = cache_expiry
         self.cache_name = cache_name # Not used by the DB
+        self.content_encoding = content_encoding
 
 # ################################################################################################################################
 
