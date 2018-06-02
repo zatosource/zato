@@ -44,13 +44,14 @@ from repoze.profile import ProfileMiddleware
 import yaml
 
 # Zato
-from zato.common import TRACE1
+from zato.common import SERVER_STARTUP, TRACE1
 from zato.common.crypto import ServerCryptoManager
 from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.repo import RepoManager
 from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_kvdb_config_for_log, \
      parse_cmd_line_options, register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
+from zato.server.startup_callable import StartupCallableTool
 from zato.sso.api import SSOAPI
 from zato.sso.util import new_user_id, normalize_sso_config
 
@@ -174,6 +175,17 @@ def run(base_dir, start_gunicorn_app=True, options=None):
         logger.warn(msg)
         raise Exception(msg)
 
+    # Create the startup callable tool as soon as practical
+    startup_callable_tool = StartupCallableTool(server_config)
+
+    # Run the hook before there is any server object created
+    startup_callable_tool.invoke(SERVER_STARTUP.PHASE.FS_CONFIG_ONLY, kwargs={
+        'server_config': server_config,
+        'pickup_config': pickup_config,
+        'sio_config': sio_config,
+        'sso_config': sso_config,
+    })
+
     # New in 2.0 - Start monitoring as soon as possible
     if server_config.get('newrelic', {}).get('config'):
         import newrelic.agent
@@ -230,6 +242,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
     server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
+    server.startup_callable_tool = startup_callable_tool
     server.is_sso_enabled = server.fs_server_config.component_enabled.sso
     if server.is_sso_enabled:
         server.sso_api = SSOAPI(server, sso_config, None, crypto_manager.encrypt, crypto_manager.decrypt,
@@ -288,6 +301,11 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     os_environ = server_config.get('os_environ', {})
     for key, value in os_environ.items():
         os.environ[key] = value
+
+    # Run the hook right before the Gunicorn-level server actually starts
+    startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IMPL_BEFORE_RUN, kwargs={
+        'zato_gunicorn_app': zato_gunicorn_app,
+    })
 
     # Run the app at last
     if start_gunicorn_app:

@@ -30,6 +30,7 @@ class _Format(object):
 
 DATE_FORMATS = {
     'dd/mm/yyyy': 'd/m/Y',
+    'dd/mm/yy': 'd/m/y',
     'dd-mm-yyyy': 'd-m-Y',
     'dd.mm.yyyy': 'd.m.Y',
     'dd.mm.yy': 'd.m.y',
@@ -41,7 +42,8 @@ DATE_FORMATS = {
 }
 
 MONTH_YEAR_FORMATS = {
-    'dd/mm/yyyy': 'm/Y',
+    'dd/mm/yyyy': 'm/y',
+    'dd/mm/yy': 'm/Y',
     'dd-mm-yyyy': 'm-Y',
     'dd.mm.yyyy': 'm.Y',
     'dd.mm.yy': 'm.y',
