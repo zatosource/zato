@@ -1103,6 +1103,20 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_out_sap(self, cluster_id, out_id):
+        """ Returns an outgoing SAP RFC connection's details.
+        """
+        with closing(self.session()) as session:
+            return query.out_sap(session, cluster_id, out_id)
+
+    def get_out_sap_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of outgoing SAP RFC connections.
+        """
+        with closing(self.session()) as session:
+            return query.out_sap_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
     def get_out_ftp(self, cluster_id, out_id):
         """ Returns an outgoing FTP connection's details.
         """

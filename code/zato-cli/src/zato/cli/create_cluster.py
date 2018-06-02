@@ -79,7 +79,14 @@ zato_services = {
     'zato.channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
     'zato.channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
 
-    # Checks
+    # Outgoing connections - SAP
+    'zato.outgoing.sap.change-password':'zato.server.service.internal.outgoing.sap.ChangePassword',
+    'zato.outgoing.sap.create':'zato.server.service.internal.outgoing.sap.Create',
+    'zato.outgoing.sap.delete':'zato.server.service.internal.outgoing.sap.Delete',
+    'zato.outgoing.sap.edit':'zato.server.service.internal.outgoing.sap.Edit',
+    'zato.outgoing.sap.get-list':'zato.server.service.internal.outgoing.sap.GetList',
+
+     # Checks
     'zato.checks.sio.as-is-service': 'zato.server.service.internal.checks.sio.AsIsService',
     'zato.checks.sio.boolean-service': 'zato.server.service.internal.checks.sio.BooleanService',
     'zato.checks.sio.csv-service': 'zato.server.service.internal.checks.sio.CSVService',
