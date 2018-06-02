@@ -120,6 +120,7 @@ jwt_secret=zato+secret://zato.server_conf.misc.jwt_secret
 enforce_service_invokes=False
 return_tracebacks=True
 default_error_message="An error has occurred"
+startup_callable=
 
 [ibm_mq]
 ipc_tcp_start_port=34567
