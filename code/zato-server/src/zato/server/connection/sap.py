@@ -15,9 +15,6 @@ from traceback import format_exc
 # gevent
 from gevent.lock import RLock
 
-# openerp-client-lib
-import pyrfc
-
 # Zato
 from zato.common.util import ping_sap
 from zato.server.connection.queue import ConnectionQueue
@@ -32,6 +29,10 @@ class SAPWrapper(object):
     """ Wraps a queue of connections to SAP RFC.
     """
     def __init__(self, config, server):
+
+        # Imported here because not everyone will be using SAP
+        import pyrfc
+        self.pyrfc = pyrfc
         self.config = config
         self.server = server
         self.url = 'rfc://{user}@{host}:{sysnr}/{client}'.format(**self.config)
@@ -46,7 +47,8 @@ class SAPWrapper(object):
             self.client.build_queue()
 
     def add_client(self):
-        conn = pyrfc.Connection(user=self.config.user, passwd=self.config.password, ashost=self.config.host, sysnr=self.config.sysnr, client=self.config.client)
+        conn = self.pyrfc.Connection(user=self.config.user, passwd=self.config.password,
+            ashost=self.config.host, sysnr=self.config.sysnr, client=self.config.client)
 
         try:
             ping_sap(conn)
