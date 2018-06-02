@@ -28,7 +28,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, Cac
      PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic, RBACClientRole, \
      RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, \
      TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, \
-     WSSDefinition, VaultConnection, XPath, XPathSecurity
+     WSSDefinition, VaultConnection, XPath, XPathSecurity, OutgoingSAP
 from zato.common.util.search import SearchResults as _SearchResults
 
 # ################################################################################################################################
@@ -1522,6 +1522,27 @@ def out_odoo_list(session, cluster_id, needs_columns=False):
     """ A list of Odoo connections.
     """
     return _out_odoo(session, cluster_id)
+
+# ################################################################################################################################
+
+def _out_sap(session, cluster_id):
+    return session.query(OutgoingSAP).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==OutgoingSAP.cluster_id).\
+        order_by(OutgoingSAP.name)
+
+def out_sap(session, cluster_id, id):
+    """ An individual SAP RFC connection.
+    """
+    return _out_sap(session, cluster_id).\
+        filter(OutgoingSAP.id==id).\
+        one()
+
+@query_wrapper
+def out_sap_list(session, cluster_id, needs_columns=False):
+    """ A list of SAP RFC connections.
+    """
+    return _out_sap(session, cluster_id)
 
 # ################################################################################################################################
 
