@@ -37,7 +37,7 @@ from springpython.context import DisposableObject
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common import DATA_FORMAT, KVDB, SECRETS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common import DATA_FORMAT, KVDB, SECRETS, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
@@ -139,6 +139,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.sso_api = None
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
+        self.startup_callable_tool = None
         self._hash_secret_method = None
         self._hash_secret_rounds = None
         self._hash_secret_salt_size = None
@@ -470,6 +471,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         if is_first:
 
+            self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
+                'parallel_server': self,
+            })
+
             # Startup services
             self.invoke_startup_services(is_first)
             spawn_greenlet(self.set_up_pickup)
@@ -490,11 +495,20 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
                     self.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
                     self.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
 
+        else:
+            self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
+                'parallel_server': self,
+            })
+
         # IPC
         self.ipc_api.name = self.name
         self.ipc_api.pid = self.pid
         self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
         spawn_greenlet(self.ipc_api.run)
+
+        self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.AFTER_STARTED, kwargs={
+            'parallel_server': self,
+        })
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
 
@@ -724,6 +738,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
         """
+
+        worker.app.zato_wsgi_app.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
+            'arbiter': arbiter,
+            'worker': worker,
+        })
+
         worker.app.zato_wsgi_app.worker_pid = worker.pid
         ParallelServer.start_server(worker.app.zato_wsgi_app, arbiter.zato_deployment_key)
 

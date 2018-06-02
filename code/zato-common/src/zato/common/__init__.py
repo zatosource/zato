@@ -1038,6 +1038,17 @@ class AMQP:
             def __iter__(self):
                 return iter((self.ACK, self.REJECT))
 
+class SERVER_STARTUP:
+    class PHASE:
+        FS_CONFIG_ONLY = 'fs-config-only'
+        IMPL_BEFORE_RUN = 'impl-before-run'
+        ON_STARTING = 'on-starting'
+        BEFORE_POST_FORK = 'before-post-fork'
+        AFTER_POST_FORK = 'after-post-fork'
+        IN_PROCESS_FIRST = 'in-process-first'
+        IN_PROCESS_OTHER = 'in-process-other'
+        AFTER_STARTED = 'after-started'
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
