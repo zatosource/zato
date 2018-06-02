@@ -946,6 +946,11 @@ class ODOO:
             def __iter__(self):
                 return iter((self.XML_RPC, self.XML_RPCS, self.JSON_RPC, self.JSON_RPCS))
 
+class SAP:
+    class DEFAULT:
+        INSTANCE = '00'
+        POOL_SIZE = 1
+
 class STOMP:
 
     class PROTOCOL:

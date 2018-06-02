@@ -43,6 +43,7 @@ from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import odoo as out_odoo
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import stomp as out_stomp
+from zato.admin.web.views.outgoing import sap as out_sap
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
 from zato.admin.web.views.pubsub import message as pubsub_message
@@ -746,6 +747,26 @@ urlpatterns += [
         login_required(out_stomp.change_password), name='out-stomp-change-password'),
     url(r'^zato/outgoing/stomp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_stomp.ping), name='out-stomp-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. SAP RFC
+
+    url(r'^zato/outgoing/sap/$',
+        login_required(out_sap.Index()), name=out_sap.Index.url_name),
+    url(r'^zato/outgoing/sap/create/$',
+        login_required(out_sap.Create()), name=out_sap.Create.url_name),
+    url(r'^zato/outgoing/sap/edit/$',
+        login_required(out_sap.Edit()), name=out_sap.Edit.url_name),
+    url(r'^zato/outgoing/sap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_sap.Delete()), name=out_sap.Delete.url_name),
+    url(r'^zato/outgoing/sap/change-password/$',
+        login_required(out_sap.change_password), name='out-sap-change-password'),
+    url(r'^zato/outgoing/sap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_sap.ping), name='out-sap-ping'),
     ]
 
 # ################################################################################################################################
