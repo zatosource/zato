@@ -152,7 +152,7 @@ class Request(SIOConverter):
         self._wsgi_environ = wsgi_environ
 
         optional_list = getattr(sio, 'input_optional', [])
-        optional_list = [optional_list] if isinstance(required_list, basestring) else required_list
+        optional_list = [optional_list] if isinstance(optional_list, basestring) else optional_list
 
         path_prefix = getattr(sio, 'request_elem', 'request')
         default_value = getattr(sio, 'default_value', NO_DEFAULT_VALUE)
