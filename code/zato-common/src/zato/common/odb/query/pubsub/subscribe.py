@@ -15,7 +15,6 @@ from sqlalchemy.sql import expression as expr
 # Zato
 from zato.common import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, WebSocketSubscription
-from zato.common.odb.query.pubsub.delivery import get_sql_msg_ids_by_sub_key
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
