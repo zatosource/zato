@@ -164,7 +164,11 @@ class ConfigLoader(object):
         query = self.odb.get_out_odoo_list(server.cluster.id, True)
         self.config.out_odoo = ConfigDict.from_query('out_odoo', query, decrypt_func=self.decrypt)
 
-        # Plain HTTP
+        # SAP RFC
+        query = self.odb.get_out_sap_list(server.cluster.id, True)
+        self.config.out_sap = ConfigDict.from_query('out_sap', query)
+
+         # Plain HTTP
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'plain_http', True)
         self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query, decrypt_func=self.decrypt)
 

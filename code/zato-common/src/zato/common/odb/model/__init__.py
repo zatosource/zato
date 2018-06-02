@@ -19,7 +19,7 @@ from sqlalchemy.orm import backref, relationship
 
 # Zato
 from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, \
-     MSG_PATTERN_TYPE, ODOO, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
+     MSG_PATTERN_TYPE, ODOO, SAP, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base
 from zato.common.odb.model.sso import _SSOAttr, _SSOSession, _SSOUser
@@ -500,6 +500,7 @@ class HTTPSOAP(Base):
     host = Column(String(200), nullable=True)
     url_path = Column(String(200), nullable=False)
     method = Column(String(200), nullable=True)
+    content_encoding = Column(String(200), nullable=True)
 
     soap_action = Column(String(200), nullable=False)
     soap_version = Column(String(20), nullable=True)
@@ -546,7 +547,7 @@ class HTTPSOAP(Base):
             pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None,
             timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None,
             cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None, content_type=None,
-            cache_id=None, cache_type=None, cache_expiry=None, cache_name=None, **kwargs):
+            cache_id=None, cache_type=None, cache_expiry=None, cache_name=None, content_encoding=None, **kwargs):
         super(HTTPSOAP, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -582,6 +583,7 @@ class HTTPSOAP(Base):
         self.cache_type = cache_type
         self.cache_expiry = cache_expiry
         self.cache_name = cache_name # Not used by the DB
+        self.content_encoding = content_encoding
 
 # ################################################################################################################################
 
@@ -1060,6 +1062,33 @@ class OutgoingOdoo(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_odoo', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self):
+        self.protocol_name = None # Not used by the DB
+
+# ################################################################################################################################
+
+class OutgoingSAP(Base):
+    """ An outgoing SAP RFC connection.
+    """
+    __tablename__ = 'out_sap'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('out_sap_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    host = Column(String(200), nullable=False)
+    sysnr = Column(String(3), nullable=True, server_default=str(SAP.DEFAULT.INSTANCE))
+    user = Column(String(200), nullable=False)
+    client = Column(String(4), nullable=False)
+    sysid = Column(String(4), nullable=False)
+    password = Column(String(400), nullable=False)
+    pool_size = Column(Integer(), nullable=False, server_default=str(SAP.DEFAULT.POOL_SIZE))
+    router = Column(String(400), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('out_conns_sap', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self):
         self.protocol_name = None # Not used by the DB
