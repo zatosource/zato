@@ -65,6 +65,6 @@ $.fn.zato.outgoing.sap.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.outgoing.sap.delete_ = function(id) {
    $.fn.zato.data_table.delete_(id, 'td.item_id_',
        'SAP RFC connection [{0}] deleted',
-       'Are you sure you want to delete the outgoing SAP RFC connection [{0}]?',
+       'Are you sure you want to delete the outgoing SAP RFC connection `{0}`?',
        true);
 }
