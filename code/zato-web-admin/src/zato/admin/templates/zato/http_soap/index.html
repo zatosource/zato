@@ -341,7 +341,7 @@
                 <form action="{% url "http-soap-create" %}?connection={{ connection }}&amp;transport={{ transport }}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td style="vertical-align:middle;width:18%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
@@ -365,13 +365,15 @@
                         {% ifequal connection 'channel' %}
 
                         <tr>
-                            <td style="vertical-align:middle">Merge URL params to req</td>
-                            <td>{{ create_form.merge_url_params_req }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">URL params priority</td>
-                            <td>{{ create_form.url_params_pri }}</td>
+                            <td style="vertical-align:middle">URL params</td>
+                            <td>
+                                {{ create_form.url_params_pri }}
+                                |
+                                <label>
+                                Merge to request
+                                {{ create_form.merge_url_params_req }}
+                                </label>
+                            </td>
                         </tr>
 
                         <tr>
@@ -458,15 +460,11 @@
                         {% ifequal connection 'channel' %}
                         <tr>
                             <td style="vertical-align:middle">Cache</td>
-                            <td>{{ create_form.cache_id }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">
-                                Cache expiry
-                            </td>
-                            <td>
-                                {{ create_form.cache_expiry }}
-                                <span class="form_hint">(in minutes, 0=unlimited)</span>
+                            <td>{{ create_form.cache_id }}
+                            |
+                            Expiry
+                            {{ create_form.cache_expiry }}
+                            <span class="form_hint">(in minutes, 0=unlimited)</span>
                             </td>
                         </tr>
                         <tr>
@@ -527,13 +525,15 @@
                         {% ifequal connection 'channel' %}
 
                         <tr>
-                            <td style="vertical-align:middle">Merge URL params to req</td>
-                            <td>{{ edit_form.merge_url_params_req }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">URL params priority</td>
-                            <td>{{ edit_form.url_params_pri }}</td>
+                            <td style="vertical-align:middle">URL params</td>
+                            <td>
+                                {{ edit_form.url_params_pri }}
+                                |
+                                <label>
+                                Merge to request
+                                {{ edit_form.merge_url_params_req }}
+                                </label>
+                            </td>
                         </tr>
 
                         <tr>
@@ -619,14 +619,14 @@
                         {% ifequal connection 'channel' %}
                         <tr>
                             <td style="vertical-align:middle">Cache</td>
-                            <td>{{ edit_form.cache_id }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Cache expiry
-                            <br/>
-                            <span class="form_hint">(in minutes,<br/>0=unlimited)</span>
+                            <td>{{ edit_form.cache_id }}
+                            |
+                            <label>
+                            Expiry
+                            {{ edit_form.cache_expiry }}
+                            </label>
+                            <span class="form_hint">(in minutes, 0=unlimited)</span>
                             </td>
-                            <td>{{ edit_form.cache_expiry }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">RBAC enabled</td>
