@@ -2121,6 +2121,13 @@ class PubSubTopic(Base):
     last_pub_time = None
     pub_time = None
     ext_pub_time = None
+    last_pub_time = None
+    last_pub_msg_id = None
+    last_endpoint_id = None
+    last_endpoint_name = None
+    last_pub_has_gd = None
+    last_pub_server_pid = None
+    last_pub_server_name = None
 
 # ################################################################################################################################
 
