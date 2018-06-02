@@ -4,6 +4,11 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <style type="text/css">
+        .ui-dialog-titlebar {
+            padding-bottom:10px !important;
+        }
+    </style>
 {% endblock %}
 
 {% block "extra_js" %}
@@ -31,7 +36,7 @@
             '_delete',
             '_manage_lb',
             '_servers',
-            
+
             'id',
             'name',
             'description',
@@ -64,11 +69,11 @@
                     <th>&nbsp;</th>
                     <th>&nbsp;</th>
                     <th>&nbsp;</th>
-                    
+
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
-                    
+
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
@@ -76,13 +81,13 @@
             </thead>
 
             <tbody>
-            
+
             {% if items %}
             {% for item in items %}
-                <tr 
+                <tr
                     class="{% if not item.lb_config or item.some_down or item.some_maint or item.all_down %}attention{% else %} {% cycle 'odd' 'even' %}{% endif %}"
                         id='tr_{{ item.id }}'>
-                    
+
                     <td class='numbering'>&nbsp;</td>
                     <td class="impexp"><input type="checkbox" /></td>
                     <td>{{ item.name }}
@@ -91,11 +96,11 @@
                         <br/>
                         <pre>{{ item.description }}</pre>
                     {% endif %}
-                    
+
                     {% if not item.lb_config %}
                     <br/> Could not fetch the load balancer's configuration
                     {% endif %}
-                    
+
 
                     {% if item.lb_config %}
                         {% include "zato/cluster/servers_state.html" %}
@@ -103,7 +108,7 @@
 
                     </td>
                     <td>
-                    
+
                     {% if item.lb_config %}
                         {% include "zato/cluster/addresses.html" %}
                     {% endif %}
@@ -124,9 +129,9 @@
                         {% if item.lb_config %}
                             <a href="{% url "cluster-servers" %}?cluster={{ item.id }}">Servers</a>
                         {% endif %}
-                        
+
                     </td>
-                    
+
                     <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                     <td class='ignore'>{{ item.name }}</td>
                     <td class='ignore'>{{ item.description|default_if_none:'' }}</td>
