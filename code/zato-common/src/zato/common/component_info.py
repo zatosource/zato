@@ -15,6 +15,7 @@ from cStringIO import StringIO
 from datetime import datetime
 from itertools import groupby
 from operator import attrgetter
+from time import time
 
 # psutil
 from psutil import Process
@@ -70,7 +71,7 @@ def get_worker_pids(component_path):
     master_proc_pid = int(open(os.path.join(component_path, MISC.PIDFILE)).read())
     return sorted(elem.pid for elem in Process(master_proc_pid).children())
 
-def get_info(component_path, format):
+def get_info(component_path, format, _now=datetime.utcnow):
     component_details = open(os.path.join(component_path, ZATO_INFO_FILE)).read()
 
     out = {
@@ -102,10 +103,17 @@ def get_info(component_path, format):
         master_proc = Process(master_proc_pid)
         workers_pids = sorted(elem.pid for elem in master_proc.children())
 
+        now = datetime.fromtimestamp(time(), UTC)
+        mater_proc_create_time = master_proc.create_time()
+        mater_proc_create_time_utc = datetime.fromtimestamp(mater_proc_create_time, UTC)
+
+        out['mater_proc_uptime'] = now - mater_proc_create_time_utc
+        out['mater_proc_uptime_seconds'] = int(out['mater_proc_uptime'].total_seconds())
+
         out['master_proc_connections'] = format_connections(master_proc.connections(), format)
         out['master_proc_pid'] = master_proc.pid
-        out['master_proc_create_time'] = datetime.fromtimestamp(master_proc.create_time()).isoformat()
-        out['master_proc_create_time_utc'] = datetime.fromtimestamp(master_proc.create_time(), UTC).isoformat()
+        out['master_proc_create_time'] = datetime.fromtimestamp(mater_proc_create_time).isoformat()
+        out['master_proc_create_time_utc'] = mater_proc_create_time_utc.isoformat()
         out['master_proc_username'] = master_proc.username()
         out['master_proc_name'] = master_proc.name()
         out['master_proc_workers_no'] = len(workers_pids)
@@ -113,8 +121,15 @@ def get_info(component_path, format):
 
         for pid in workers_pids:
             worker = Process(pid)
-            out['worker_{}_create_time'.format(pid)] = datetime.fromtimestamp(worker.create_time()).isoformat()
-            out['worker_{}_create_time_utc'.format(pid)] = datetime.fromtimestamp(worker.create_time(), UTC).isoformat()
+
+            worker_create_time = worker.create_time()
+            worker_create_time_utc = datetime.fromtimestamp(worker_create_time, UTC)
+
+            out['worker_{}_uptime'.format(pid)] = now - worker_create_time_utc
+            out['worker_{}_uptime_seconds'.format(pid)] = int(out['worker_{}_uptime'.format(pid)].total_seconds())
+
+            out['worker_{}_create_time'.format(pid)] = datetime.fromtimestamp(worker_create_time).isoformat()
+            out['worker_{}_create_time_utc'.format(pid)] = worker_create_time_utc.isoformat()
             out['worker_{}_connections'.format(pid)] = format_connections(worker.connections(), format)
 
     return out
