@@ -157,16 +157,17 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += soap_version_tr;
     }
 
-    /* 12,13 */
+    /* 12,13,13a */
     if(is_channel) {
         row += method_tr;
         row += String.format("<td class='ignore'>{0}</td>", item.service);
+        row += String.format("<td class='ignore'>{0}</td>", item.content_encoding);
     }
 
     /* 14,15,16 */
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
-    row += String.format("<td class='ignore'>{0}</td>", ''); // item.security
+    row += String.format("<td class='ignore'>{0}</td>", item.security_id);
 
     /* 17,18,19 */
     row += String.format("<td class='ignore'>{0}</td>", item.cache_id);

@@ -10,6 +10,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from cStringIO import StringIO
+from gzip import GzipFile
 from hashlib import sha256
 from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
 from traceback import format_exc
@@ -189,7 +191,7 @@ class RequestDispatcher(object):
 
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
-        _http_soap_action='HTTP_SOAPACTION'):
+        _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile):
         """ Base method for dispatching incoming HTTP/SOAP messages. If the security
         configuration is one of the technical account or HTTP basic auth,
         the security validation is being performed. Otherwise, that step
@@ -273,6 +275,16 @@ class RequestDispatcher(object):
                 wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
                 wsgi_environ['zato.http.response.headers'].update(response.headers)
                 wsgi_environ['zato.http.response.status'] = _status_response[response.status_code]
+
+                if channel_item['content_encoding'] == 'gzip':
+
+                    s = _stringio()
+                    with _gzipfile(fileobj=s, mode='w') as f:
+                        f.write(response.payload)
+                    response.payload = s.getvalue()
+                    s.close()
+
+                    wsgi_environ['zato.http.response.headers']['Content-Encoding'] = 'gzip'
 
                 # Finally return payload to the client
                 return response.payload

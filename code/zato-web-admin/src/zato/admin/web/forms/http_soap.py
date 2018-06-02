@@ -51,6 +51,7 @@ class CreateForm(DataFormatForm):
     transport = forms.CharField(widget=forms.HiddenInput())
     cache_id = forms.ChoiceField(widget=forms.Select())
     cache_expiry = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=0)
+    content_encoding = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     data_formats_allowed = SIMPLE_IO.HTTP_SOAP_FORMAT
 
     def __init__(self, security_list=[], sec_tls_ca_cert_list={}, cache_list=[], soap_versions=SOAP_VERSIONS,

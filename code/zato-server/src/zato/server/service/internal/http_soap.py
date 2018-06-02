@@ -90,7 +90,8 @@ class _BaseGet(AdminService):
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
-            'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type')
+            'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type',
+            'content_encoding')
 
 # ################################################################################################################################
 
@@ -152,7 +153,7 @@ class Create(_CreateEdit):
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
-            'cache_id', Integer('cache_expiry'))
+            'cache_id', Integer('cache_expiry'), 'content_encoding')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -161,6 +162,9 @@ class Create(_CreateEdit):
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
         input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+
+        if input.content_encoding and input.content_encoding != 'gzip':
+            raise Exception('Content encoding must be empty or equal to `gzip`')
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(HTTPSOAP.id).\
@@ -218,6 +222,7 @@ class Create(_CreateEdit):
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.cache_id
                 item.cache_expiry = input.cache_expiry
+                item.content_encoding = input.content_encoding
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
@@ -272,7 +277,7 @@ class Edit(_CreateEdit):
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
-            'cache_id', Integer('cache_expiry'))
+            'cache_id', Integer('cache_expiry'), 'content_encoding')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -280,6 +285,9 @@ class Edit(_CreateEdit):
         input.sec_use_rbac = input.security_id == ZATO_SEC_USE_RBAC
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
+
+        if input.content_encoding and input.content_encoding != 'gzip':
+            raise Exception('Content encoding must be empty or equal to `gzip`')
 
         with closing(self.odb.session()) as session:
 
@@ -342,6 +350,7 @@ class Edit(_CreateEdit):
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.cache_id
                 item.cache_expiry = input.cache_expiry
+                item.content_encoding = input.content_encoding
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
