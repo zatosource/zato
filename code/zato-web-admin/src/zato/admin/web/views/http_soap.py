@@ -92,6 +92,7 @@ def _get_edit_create_message(params, prefix=''):
         'content_type': params.get(prefix + 'content_type'),
         'cache_id': params.get(prefix + 'cache_id'),
         'cache_expiry': params.get(prefix + 'cache_expiry'),
+        'content_encoding': params.get(prefix + 'content_encoding'),
     }
 
 def _edit_create_response(req, id, verb, transport, connection, name):
@@ -215,7 +216,8 @@ def index(req):
                     item.serialization_type, item.timeout, item.sec_tls_ca_cert_id, service_id=item.service_id,
                     service_name=item.service_name, security_id=security_id, has_rbac=item.has_rbac,
                     security_name=security_name, content_type=item.content_type,
-                    cache_id=item.cache_id, cache_name=cache_name, cache_type=item.cache_type, cache_expiry=item.cache_expiry)
+                    cache_id=item.cache_id, cache_name=cache_name, cache_type=item.cache_type, cache_expiry=item.cache_expiry,
+                    content_encoding=item.content_encoding)
             items.append(item)
 
     return_data = {'zato_clusters':req.zato.clusters,
