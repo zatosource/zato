@@ -352,6 +352,7 @@ class SubscribeServiceImpl(_Subscribe):
                 sub_config.task_delivery_interval = ctx.topic.task_delivery_interval
                 sub_config.endpoint_type = self.endpoint_type
 
+
                 for name in sub_broker_attrs:
                     sub_config[name] = getattr(ps_sub, name, None)
 
@@ -406,7 +407,12 @@ class SubscribeServiceImpl(_Subscribe):
 
                 # Notify workers of a new subscription
                 sub_config.action = BROKER_MSG_PUBSUB.SUBSCRIPTION_CREATE.value
-                sub_config.add_subscription = not is_wsx # WSX clients already had their subscriptions created above
+
+                # Append information about current server which will let all workers
+                # know if they should create a subscription object (if they are different) or not.
+                sub_config.server_receiving_subscription_id = self.server.id
+                sub_config.server_receiving_subscription_pid = self.server.pid
+                sub_config.is_api_call = True
 
                 self.broker_client.publish(sub_config)
 

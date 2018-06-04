@@ -41,7 +41,6 @@ class WebSocket(WorkerImpl):
 
     def on_broker_msg_CHANNEL_WEB_SOCKET_CREATE(self, msg):
         if self.server.zato_lock_manager.acquire(msg.config_cid, ttl=10, block=False):
-            update_bind_port(msg, self.worker_idx)
             start_connectors(self, 'zato.channel.web-socket.start', msg)
 
 # ################################################################################################################################
