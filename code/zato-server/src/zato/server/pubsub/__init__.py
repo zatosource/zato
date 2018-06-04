@@ -939,7 +939,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def create_subscription(self, config):
+    def subscribe(self, config):
         with self.lock:
 
             if config.add_subscription:
