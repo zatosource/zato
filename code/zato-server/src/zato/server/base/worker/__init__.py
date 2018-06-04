@@ -669,9 +669,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Channels
         for name, data in self.worker_config.channel_web_socket.items():
 
-            # Each worker uses a unique bind port
-            update_bind_port(data.config, self.worker_idx)
-
             self.web_socket_api.create(name, bunchify(data.config), self.on_message_invoke_service,
                 self.request_dispatcher.url_data.authenticate_web_socket)
 

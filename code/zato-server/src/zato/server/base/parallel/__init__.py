@@ -471,6 +471,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         if is_first:
 
+            logger.info('First worker of `%s` is %s', self.name, self.pid)
+
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
                 'parallel_server': self,
             })
