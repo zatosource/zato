@@ -1181,11 +1181,12 @@ class PubSub(object):
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
         config['wsx'] = config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
-        msg = 'Setting info about delivery server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s`'.format(
-            ' ' if config['server_pid'] else ' (no PID) ')
+        self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
+
+        msg = 'Set info about delivery server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s` '\
+            'sks:`{}`'.format(' ' if config['server_pid'] else ' (no PID) ', self.sub_key_servers)
         logger.info(msg, config)
         logger_zato.info(msg, config)
-        self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
 # ################################################################################################################################
 
