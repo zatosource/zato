@@ -720,7 +720,7 @@ class PubSubTool(object):
         except Exception:
             e = format_exc()
             logger.warn(e)
-            logger_zato(e)
+            logger_zato.warn(e)
 
         finally:
             if session:
