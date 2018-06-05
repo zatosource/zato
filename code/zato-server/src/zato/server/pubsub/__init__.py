@@ -1163,16 +1163,6 @@ class PubSub(object):
         ws_sub_key.cluster_id = self.cluster_id
         session.add(ws_sub_key)
 
-        self._set_sub_key_server({
-            'sub_key': sub_key,
-            'cluster_id': self.cluster_id,
-            'server_name': self.server.name,
-            'server_pid': self.server.pid,
-            'endpoint_type': PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
-            'channel_name': channel_name,
-            'pub_client_id': pub_client_id,
-        })
-
         # Update in-RAM state of workers
         self.broker_client.publish({
             'action': BROKER_MSG_PUBSUB.SUB_KEY_SERVER_SET.value,
