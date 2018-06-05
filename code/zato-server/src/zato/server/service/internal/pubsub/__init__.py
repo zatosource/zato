@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from logging import getLogger
 from traceback import format_exc
 
 # Zato
@@ -17,6 +18,10 @@ from zato.common import PUBSUB
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
 from zato.server.service import AsIs, Bool, Int, List, ListOfDicts, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
+
+# ################################################################################################################################
+
+logger_pubsub = getLogger('zato_pubsub')
 
 # ################################################################################################################################
 
@@ -130,17 +135,17 @@ class AfterPublish(AdminService):
                 # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
                 # Note that only non-GD messages go to RAM because the GD ones are still in the SQL database.
                 if notif_error_sub_keys:
-                    self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list)
+                    self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, True)
 
         except Exception:
             self.logger.warn('Error in after_publish callback, e:`%r`', format_exc())
 
 # ################################################################################################################################
 
-    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list):
+    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_error=False):
         """ Stores in RAM all input messages for all sub_keys.
         """
-        self.pubsub.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list)
+        self.pubsub.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_error)
 
 # ################################################################################################################################
 
@@ -156,22 +161,27 @@ class AfterPublish(AdminService):
             server_name, server_pid, pub_client_id, channel_name, endpoint_type = server_info
             service_name = endpoint_type_service[endpoint_type]
 
-            try:
-                self.server.servers[server_name].invoke(service_name, {
-                    'pub_client_id': pub_client_id,
-                    'channel_name': channel_name,
-                    'request': {
-                        'endpoint_type': endpoint_type,
-                        'has_gd': has_gd_msg_list,
-                        'sub_key_list': sub_key_list,
-                        'non_gd_msg_list': non_gd_msg_list,
-                        'is_bg_call': is_bg_call,
-                        'pub_time_max': pub_time_max,
-                    },
-                }, pid=server_pid)
+            full_request = {
+                'pub_client_id': pub_client_id,
+                'channel_name': channel_name,
+                'request': {
+                    'endpoint_type': endpoint_type,
+                    'has_gd': has_gd_msg_list,
+                    'sub_key_list': sub_key_list,
+                    'non_gd_msg_list': non_gd_msg_list,
+                    'is_bg_call': is_bg_call,
+                    'pub_time_max': pub_time_max,
+                },
+            }
 
-            except Exception, e:
-                self.logger.warn('Error in pub/sub notification %r', format_exc(e))
+            try:
+                self.server.servers[server_name].invoke(service_name, full_request, pid=server_pid)
+            except Exception:
+
+                for logger in (self.logger, logger_pubsub):
+                    logger.warn('Error in pub/sub notification, service:`%s` req:`%s` pid:`%s` e:`%s`',
+                        service_name, full_request, server_pid, format_exc())
+
                 notif_error_sub_keys.extend(sub_key_list)
 
         return notif_error_sub_keys
