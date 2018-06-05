@@ -45,6 +45,9 @@ hook_type_model = {
     PUBSUB.HOOK_TYPE.SUB: PubSubSubscription,
 }
 
+_no_sk='no-sk'
+_notify_error='notify-error'
+
 # ################################################################################################################################
 
 class CommonSubData:
@@ -123,9 +126,10 @@ class AfterPublish(AdminService):
             is_bg_call = self.request.input.is_bg_call
             pub_time_max = self.request.input.pub_time_max
 
-            # We already know that we can store some of the messages in RAM ..
-            if not_found:
-                self._store_in_ram(cid, topic_id, topic_name, not_found, non_gd_msg_list)
+            # We already know that we can store some of the messages in RAM,
+            # but only if there are any non-GD ones to keep in RAM.
+            if not_found and non_gd_msg_list:
+                self._store_in_ram(cid, topic_id, topic_name, not_found, non_gd_msg_list, _no_sk)
 
             # .. but if some servers are up, attempt to notify pub/sub tasks about the messages ..
             if current_servers:
@@ -135,7 +139,7 @@ class AfterPublish(AdminService):
                 # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
                 # Note that only non-GD messages go to RAM because the GD ones are still in the SQL database.
                 if notif_error_sub_keys:
-                    self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, True)
+                    self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, _notify_error)
 
         except Exception:
             self.logger.warn('Error in after_publish callback, e:`%r`', format_exc())
