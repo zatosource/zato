@@ -485,7 +485,7 @@ class InRAMSyncBacklog(object):
                 # if this particular message belonged to this particular sub_key or not.
                 try:
                     sub_key_to_msg_id.remove(msg_id)
-                except ValueError:
+                except KeyError:
                     pass # OK, message was not found for this sub_key
 
                 # .. now delete the sub_key either because we are explicitly told to (e.g. during unsubscribe)
