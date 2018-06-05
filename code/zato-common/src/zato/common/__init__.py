@@ -987,9 +987,9 @@ class IPC:
         INVOKE_WORKER_STORE = 'invoke-worker-store'
 
     class STATUS:
-        SUCCESS = 'zato.success'
-        FAILURE = 'zato.failure'
-        LENGTH = 12 # Length of either success or failure messages
+        SUCCESS = 'zs'
+        FAILURE = 'zf'
+        LENGTH = 2 # Length of either success or failure messages
 
     class CONNECTOR:
         class IBM_MQ:

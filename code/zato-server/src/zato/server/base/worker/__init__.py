@@ -2041,7 +2041,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         finally:
             data = '{};{}'.format(status, response)
 
-        with open(msg.reply_to_fifo, 'wb') as fifo:
-            fifo.write(data)
+        try:
+            with open(msg.reply_to_fifo, 'wb') as fifo:
+                fifo.write(data)
+        except Exception:
+            logger.warn('Could not write to FIFO, m:`%s`, r:`%s`, s:`%s`, e:`%s`', msg, response, status, format_exc())
 
 # ################################################################################################################################

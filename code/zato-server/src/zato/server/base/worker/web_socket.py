@@ -49,7 +49,6 @@ class WebSocket(WorkerImpl):
 
         # Each worker uses a unique bind port
         msg = bunchify(msg)
-        update_bind_port(msg, self.worker_idx)
 
         self.web_socket_channel_create_edit(msg.old_name, msg, 'edit', 5, False)
 

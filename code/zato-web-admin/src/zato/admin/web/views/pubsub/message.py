@@ -298,6 +298,10 @@ def publish_action(req):
 
         for x in range(1):
 
+            # import time
+            # time.sleep(0.02)
+            # print(x)
+
             msg_id = req.POST.get('msg_id') or new_msg_id()
             gd = req.POST['gd']
 

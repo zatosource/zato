@@ -72,10 +72,14 @@ class IPCAPI(object):
 
         try:
             buff = StringIO()
-            data = object() # Just a sentinel because '' or None are expected from os.read
+            data = object() # Use a sentinel because '' or None are expected from os.read
+
+            # The most common use-case for IPC are publish/subscribe messages and the most
+            # common response is this: 'zs;{"r": {"r": null}}'
+            # which is 21 bytes. For other messages, the buffer size makes no difference.
 
             while data not in empty:
-                data = os.read(fifo, 1)
+                data = os.read(fifo, 21)
                 buff.write(data)
 
             response = buff.getvalue()
@@ -95,7 +99,7 @@ class IPCAPI(object):
             if e.errno not in fifo_ignore_err:
                 raise
 
-    def invoke_by_pid(self, service, payload, target_pid, fifo_response_buffer_size, timeout=5, is_async=False):
+    def invoke_by_pid(self, service, payload, target_pid, fifo_response_buffer_size, timeout=90, is_async=False):
         """ Invokes a service through IPC, synchronously or in background. If target_pid is an exact PID then this one worker
         process will be invoked if it exists at all.
         """
