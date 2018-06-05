@@ -469,8 +469,12 @@ class InRAMSyncBacklog(object):
             # .. first, direct mappings ..
             del self.msg_id_to_msg[msg_id]
 
+            logger.info('Deleting msg from mapping dict `%s`', msg_id)
+
             # .. now, remove the message from topic ..
             self.topic_msg_id[topic_id].remove(msg_id)
+
+            logger.info('Deleting msg from mapping topic `%s`', msg_id)
 
             # .. now, find the message for each sub_key ..
             for sub_key in sub_keys:
@@ -1370,12 +1374,15 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list):
+    def store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_error=False, _logger=logger):
         """ Stores in RAM up to input non-GD messages for each sub_key. A backlog queue for each sub_key
         cannot be longer than topic's max_depth_non_gd and overflowed messages are not kept in RAM.
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """
+        _logger.info('Storing in RAM. CID:`%s`, topic ID:`%s`, name:`%s`, sub_keys:`%s`, ngd-list:`%s`, e:`%d`',
+            cid, topic_id, topic_name, sub_keys, [elem['pub_msg_id'] for elem in non_gd_msg_list], from_error)
+
         with self.lock:
 
             # Store the non-GD messages in backlog ..
