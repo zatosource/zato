@@ -1407,8 +1407,10 @@ class PubSub(object):
                 # Delete subscriptions, and any related messages, from RAM
                 self.sync_backlog.unsubscribe(topic_id, topic_name, sub_keys)
 
-                # Delete subscription metadata from local pubsub
-                subscriptions_by_topic = self.subscriptions_by_topic[topic_name]
+                # Delete subscription metadata from local pubsub, note that we use .get
+                # instead of deleting directly because this dictionary will be empty
+                # right after a server starts but before any client for that topic (such as WSX) connects to it.
+                subscriptions_by_topic = self.subscriptions_by_topic.get(topic_name, [])
 
                 for sub in subscriptions_by_topic[:]:
                     if sub.sub_key in sub_keys:
