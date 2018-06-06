@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -35,7 +35,10 @@ from zato.common import CONTENT_TYPE, DATA_FORMAT, Inactive, SEC_DEF_TYPE, soape
 from zato.common.util import get_component_name
 from zato.server.connection.queue import ConnectionQueue
 
+# ################################################################################################################################
+
 logger = getLogger(__name__)
+has_debug = logger.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -49,7 +52,7 @@ class HTTPSAdapter(requests.adapters.HTTPAdapter):
 # ################################################################################################################################
 
 class BaseHTTPSOAPWrapper(object):
-    """ Base class for HTTP/SOAP connections wrappers.
+    """ Base class for HTTP/SOAP connection wrappers.
     """
     def __init__(self, config, requests_module=None):
         self.config = config
@@ -65,6 +68,14 @@ class BaseHTTPSOAPWrapper(object):
 
         self.address = None
         self.path_params = []
+        self.base_headers = {}
+
+        # API keys
+        if self.config['sec_type'] == SEC_DEF_TYPE.APIKEY:
+            username = self.config.get('orig_username')
+            if not username:
+                username = self.config['username']
+            self.base_headers[username] = self.config['password']
 
         self.set_address_data()
 
@@ -85,14 +96,12 @@ class BaseHTTPSOAPWrapper(object):
         except RequestsTimeout, e:
             raise TimeoutException(cid, format_exc(e))
 
-    def ping(self, cid):
+    def ping(self, cid, _has_debug=has_debug):
         """ Pings a given HTTP/SOAP resource
         """
-        if logger.isEnabledFor(DEBUG):
-            msg = 'About to ping:[{}]'.format(self.config_no_sensitive)
-            logger.debug(msg)
+        logger.info('About to ping:`%s`', self.config_no_sensitive)
 
-        # session will write some info to it ..
+        # Session object will write some info to it ..
         verbose = StringIO()
 
         start = datetime.utcnow()
@@ -144,12 +153,13 @@ class BaseHTTPSOAPWrapper(object):
                 elif self.config['soap_version'] == '1.2':
                     return CONTENT_TYPE.SOAP12
 
-    def _create_headers(self, cid, user_headers, now=None):
-        headers = {
+    def _create_headers(self, cid, user_headers, now=None, _deepcopy=deepcopy):
+        headers = _deepcopy(self.base_headers)
+        headers.update({
             'X-Zato-CID': cid,
             'X-Zato-Component': self._component_name,
             'X-Zato-Msg-TS': now or datetime.utcnow().isoformat(),
-            }
+        })
 
         if self.config.get('transport') == URL_TYPE.SOAP:
             headers['SOAPAction'] = self.config.get('soap_action')
@@ -224,10 +234,19 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         self.set_auth()
 
     def set_auth(self):
-        self.requests_auth = self.auth if self.config['sec_type'] == SEC_DEF_TYPE.BASIC_AUTH else None
-        self.username = self.requests_auth[0] if self.requests_auth else None
 
-        if self.config['sec_type'] == SEC_DEF_TYPE.WSS:
+        sec_type = self.config['sec_type']
+
+        self.requests_auth = None
+        self.username = None
+
+        # HTTP Basic Auth
+        if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
+            self.requests_auth = self.auth
+            self.username = self.requests_auth[0]
+
+        # WS-Security
+        elif sec_type == SEC_DEF_TYPE.WSS:
             self.soap[self.config['soap_version']]['header'] = \
                 self.soap[self.config['soap_version']]['header_template'].format(
                     Username=self.config['username'], Password=self.config['password'])
@@ -310,7 +329,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-    def http_request(self, method, cid, data='', params=None, *args, **kwargs):
+    def http_request(self, method, cid, data='', params=None, _has_debug=has_debug, *args, **kwargs):
         self._enforce_is_active()
 
         # We never touch strings/unicode because apparently the user already serialized outgoing data
@@ -325,6 +344,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         headers = self._create_headers(cid, kwargs.pop('headers', {}))
         if self.config['transport'] == 'soap':
             data, headers = self._soap_data(data, headers)
+
 
         params = params or {}
 
@@ -341,7 +361,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
-        if logger.isEnabledFor(DEBUG):
+        if _has_debug:
             logger.debug('CID:`%s`, response:`%s`', cid, response.text)
 
         if needs_serialize:

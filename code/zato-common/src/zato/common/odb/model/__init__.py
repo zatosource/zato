@@ -487,7 +487,7 @@ class HTTPSOAP(Base):
     __tablename__ = 'http_soap'
     __table_args__ = (
         UniqueConstraint('name', 'connection', 'transport', 'cluster_id'),
-        Index('path_host_conn_act_clus_idx', 'url_path', 'host', 'connection', 'soap_action', 'cluster_id', unique=True), {})
+        Index('path_host_conn_act_clus_idx', 'url_path', 'host', 'connection', 'soap_action', 'cluster_id', unique=False), {})
 
     id = Column(Integer, Sequence('http_soap_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
