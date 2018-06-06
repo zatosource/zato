@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2013 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -89,7 +89,7 @@ class TLSTestCase(TestCase):
 # ################################################################################################################################
 
 class TestUpdateBindPort(TestCase):
-    
+
     def test_update_bind_port_zeromq(self):
         config1 = Bunch()
         config1.address = 'tcp://*:37047'
@@ -130,5 +130,5 @@ class TestUpdateBindPort(TestCase):
 class TestAPIKeyUsername(TestCase):
     def test_update_apikey_username(self):
         config = Bunch(username='x-aaa')
-        util.update_apikey_username(config)
+        util.update_apikey_username_to_channel(config)
         self.assertEquals(config.username, 'HTTP_X_AAA')
