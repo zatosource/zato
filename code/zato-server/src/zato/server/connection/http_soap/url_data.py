@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -29,7 +29,7 @@ from zato.bunch import Bunch
 from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
 from zato.common.broker_message import code_to_name, CHANNEL, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
-from zato.common.util import parse_tls_channel_security_definition, update_apikey_username
+from zato.common.util import parse_tls_channel_security_definition, update_apikey_username_to_channel
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.jwt import JWT
 from zato.url_dispatcher import CyURLData, Matcher
@@ -637,7 +637,8 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def _update_apikey(self, name, config):
-        update_apikey_username(config)
+        config.orig_username = config.username
+        update_apikey_username_to_channel(config)
         self.apikey_config[name] = Bunch()
         self.apikey_config[name].config = config
 
