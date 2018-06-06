@@ -41,7 +41,7 @@
 {% block body %}
     <div>
         <div id="hd">
-            <div id="console-header">&nbsp;<img src="/static/gfx/logo.png" alt="Zato logo" style="vertical-align:middle"/><span id="logo">Zato</span>
+            <div id="console-header">&nbsp;<a href="http://zato.io/?v={{ zato_version|cut:"Zato " }}" id="logo-link"><img src="/static/gfx/logo.png" alt="Zato logo" style="vertical-align:middle"/><span id="logo">Zato</span></a>
             {% if user.is_authenticated %}
                 <span id="logout">
                     <a class="top" href="{% url "account-settings-basic" %}">My settings</a>
@@ -302,7 +302,6 @@
                 <li><a href="https://zato.io/docs?v={{ zato_version|cut:"Zato " }}">Docs</a></li>
                 <li><a href="https://github.com/zatosource/zato/issues">Suggest a feature</a></li>
                 <li><a href="https://zato.io/support.html">Support</a></li>
-                <li><a style="margin-right:5px" href="https://zato.io/docs/project/get-involved.html">Get involved</a></li>
 
                 </ul>
                 <br style="clear:left"/>
