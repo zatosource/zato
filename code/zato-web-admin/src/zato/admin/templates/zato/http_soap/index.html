@@ -273,7 +273,7 @@
                         {% ifequal connection 'channel' %}
                             <td>{{ item.method|default:'' }}</td>
                             <td class='ignore'>{{ item.service_name }}</td>
-                            <td class='ignore'>{{ item.content_encoding }}</td>
+                            <td class='ignore'>{{ item.content_encoding|default:'' }}</td>
                         {% endifequal %}
 
                         <!-- 14,15,16 -->
