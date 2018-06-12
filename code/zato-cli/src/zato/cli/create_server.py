@@ -575,6 +575,7 @@ class Create(ZatoCommand):
     opts.append({'name':'server_name', 'help':"Server's name"})
     opts.append({'name':'--secret_key', 'help':"Server's secret key (in Fernet format, must be the same for all servers)"})
     opts.append({'name':'--jwt_secret', 'help':"Server's JWT secret (in Fernet format, must be the same for all servers)"})
+    opts.append({'name':'--http_port', 'help':"Server's HTTP port"})
 
     def __init__(self, args):
         super(Create, self).__init__(args)
@@ -594,7 +595,7 @@ class Create(ZatoCommand):
 
         self.dirs_prepared = True
 
-    def execute(self, args, port=http_plain_server_port, show_output=True, return_server_id=False):
+    def execute(self, args, default_http_port=http_plain_server_port, show_output=True, return_server_id=False):
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
@@ -653,7 +654,7 @@ class Create(ZatoCommand):
             server_conf = open(server_conf_loc, 'w')
             server_conf.write(
                 server_conf_template.format(
-                    port=port,
+                    port=args.http_port or default_http_port,
                     gunicorn_workers=1,
                     odb_db_name=args.odb_db_name or args.sqlite_path,
                     odb_engine=odb_engine,
