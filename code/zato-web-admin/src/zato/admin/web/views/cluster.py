@@ -230,6 +230,10 @@ def servers(req):
     """
     items = req.zato.odb.query(Server).order_by('name').all()
 
+    for item in items:
+        if item.up_mod_date:
+            item.up_mod_date_user = from_utc_to_user(item.up_mod_date.replace(tzinfo=UTC).isoformat(), req.zato.user_profile)
+
     try:
         client = get_lb_client(req.zato.get('cluster'))
         server_data_dict = client.get_server_data_dict()
@@ -246,9 +250,6 @@ def servers(req):
                     item.in_lb = True
                     item.lb_address = lb_address
                     item.lb_state = lb_state
-
-                    if item.up_mod_date:
-                        item.up_mod_date_user = from_utc_to_user(item.up_mod_date.replace(tzinfo=UTC).isoformat(), req.zato.user_profile)
 
                     if item.up_status == SERVER_UP_STATUS.RUNNING:
                         item.may_be_deleted = False
