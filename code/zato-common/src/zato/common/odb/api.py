@@ -400,7 +400,13 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             server = session.query(Server).\
                 filter(Server.token==token).\
-                one()
+                first()
+
+            # It may be the case that the server has been deleted from web-admin before it shut down,
+            # in which case during the shut down it will not be able to find itself in ODB anymore.
+            if not server:
+                logger.info('No server found for token `%s`, status:`%s`', token, status)
+                return
 
             server.up_status = status
             server.up_mod_date = datetime.utcnow()
