@@ -321,6 +321,7 @@ def run_command(args):
         ('create_odb', 'zato.cli.create_odb.Create'),
         ('create_scheduler', 'zato.cli.create_scheduler.Create'),
         ('create_server', 'zato.cli.create_server.Create'),
+        ('create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
         ('create_user', 'zato.cli.web_admin_auth.CreateUser'),
         ('create_web_admin', 'zato.cli.create_web_admin.Create'),
         ('delete_odb', 'zato.cli.delete_odb.Delete'),
