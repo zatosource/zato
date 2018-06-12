@@ -573,8 +573,8 @@ class Create(ZatoCommand):
     opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':"Server's name"})
-    opts.append({'name':'secret_key', 'help':"Server's secret key (in Fernet format, must be the same for all servers)"})
-    opts.append({'name':'jwt_secret', 'help':"Server's JWT secret (in Fernet format, must be the same for all servers)"})
+    opts.append({'name':'--secret_key', 'help':"Server's secret key (in Fernet format, must be the same for all servers)"})
+    opts.append({'name':'--jwt_secret', 'help':"Server's JWT secret (in Fernet format, must be the same for all servers)"})
 
     def __init__(self, args):
         super(Create, self).__init__(args)
@@ -604,7 +604,7 @@ class Create(ZatoCommand):
             first()
 
         if not cluster:
-            self.logger.error("Cluster `{}` doesn't exist in ODB", args.cluster_name)
+            self.logger.error("Cluster `%s` doesn't exist in ODB", args.cluster_name)
             return self.SYS_ERROR.NO_SUCH_CLUSTER
 
         server = Server()

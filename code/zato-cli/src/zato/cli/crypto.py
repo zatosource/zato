@@ -21,8 +21,16 @@ from zato.common.util import get_config
 
 # ################################################################################################################################
 
+class CreateSecretKey(ZatoCommand):
+    """ Creates a new secret key in Fernet format.
+    """
+    def execute(self, args):
+        self.logger.info(CryptoManager.generate_key())
+
+# ################################################################################################################################
+
 class Encrypt(ZatoCommand):
-    """ Encrypts secrets using a public key
+    """ Encrypts secrets using a public key.
     """
     allow_empty_secrets = True
     opts = [{'name':'--secret', 'help':'Secret to encrypt'}]
@@ -36,7 +44,7 @@ class Encrypt(ZatoCommand):
 # ################################################################################################################################
 
 class Decrypt(ZatoCommand):
-    """ Decrypts secrets using a private key
+    """ Decrypts secrets using a private key.
     """
     allow_empty_secrets = True
     opts = [{'name':'--secret', 'help':'Secret to decrypt'}]
@@ -50,7 +58,7 @@ class Decrypt(ZatoCommand):
 # ################################################################################################################################
 
 class UpdateCrypto(ManageCommand):
-    """ Updates cryptographic material of a given Zato component
+    """ Updates cryptographic material of a given Zato component.
     """
     opts = [
         {'name':'pub_key_path', 'help':'Path to a public key in PEM'},
@@ -139,7 +147,7 @@ class UpdateCrypto(ManageCommand):
 # ################################################################################################################################
 
 class GetHashRounds(ZatoCommand):
-    """ Encrypts secrets using a public key
+    """ Encrypts secrets using a public key.
     """
     allow_empty_secrets = True
     opts = [
