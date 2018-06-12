@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -217,8 +217,8 @@ def delete(req, id):
         req.zato.odb.delete(cluster)
         req.zato.odb.commit()
 
-    except Exception, e:
-        msg = 'Could not delete the cluster, e:[{e}]'.format(e=format_exc(e))
+    except Exception:
+        msg = 'Cluster could not be deleted, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:

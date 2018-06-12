@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -129,6 +129,12 @@ class ZatoMiddleware(object):
         except Exception:
             req.zato.odb.rollback()
             raise
+
+    def process_response(self, req, resp):
+        if getattr(req, 'zato', None):
+            req.zato.odb.close()
+
+        return resp
 
     def process_template_response(self, req, resp):
         if resp.context_data:
