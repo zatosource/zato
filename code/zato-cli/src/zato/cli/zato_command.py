@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -125,6 +125,10 @@ def get_parser():
     create_scheduler.add_argument('path', help='Path to an empty directory to install the scheduler in')
     create_scheduler.set_defaults(command='create_scheduler')
     add_opts(create_scheduler, create_scheduler_mod.Create.opts)
+
+    create_key = create_subs.add_parser('secret_key', description=crypto_mod.CreateSecretKey.__doc__, parents=[base_parser])
+    create_key.set_defaults(command='create_secret_key')
+    add_opts(create_key, crypto_mod.CreateSecretKey.opts)
 
     create_server = create_subs.add_parser('server', description=create_server_mod.Create.__doc__, parents=[base_parser])
     create_server.add_argument('path', help='Path to an empty directory to install the server in')
