@@ -148,7 +148,7 @@ def index(req):
 
     delete_form = DeleteClusterForm(prefix='delete')
 
-    items = req.zato.odb.query(Cluster).order_by('name').all()
+    items = req.zato.odb.query(Cluster).order_by(Cluster.name).all()
     for item in items:
         client = get_lb_client(item)
 
@@ -228,7 +228,7 @@ def delete(req, id):
 def servers(req):
     """ A view for server management.
     """
-    items = req.zato.odb.query(Server).order_by('name').all()
+    items = req.zato.odb.query(Server).order_by(Cluster.name).all()
 
     for item in items:
         if item.up_mod_date:
