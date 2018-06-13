@@ -303,7 +303,7 @@ class SimpleIOPayload(SIOConverter):
                 name = name.name
             setattr(self, name, '')
 
-    def set_payload_attrs(self, attrs, _keyed=(dict, KeyedTuple, WritableKeyedTuple)):
+    def set_payload_attrs(self, attrs, _keyed=(dict, WritableKeyedTuple, KeyedTuple)):
         """ Called when the user wants to set the payload to a bunch of attributes.
         """
         names = None
@@ -362,7 +362,7 @@ class SimpleIOPayload(SIOConverter):
         return '{} elem:[{}] not found in item:[{}]'.format(
             'Expected' if is_required else 'Optional', name, msg_item)
 
-    def getvalue(self, serialize=True):
+    def getvalue(self, serialize=True, _keyed_tuple=(WritableKeyedTuple, KeyedTuple)):
         """ Gets the actual payload's value converted to a string representing either XML or JSON.
         """
         if self.zato_is_xml:
@@ -385,7 +385,7 @@ class SimpleIOPayload(SIOConverter):
         if output:
 
             # All elements must be of the same type so it's OK to do it
-            is_sa_namedtuple = isinstance(output[0], KeyedTuple)
+            is_sa_namedtuple = isinstance(output[0], _keyed_tuple)
 
             for item in output:
 
