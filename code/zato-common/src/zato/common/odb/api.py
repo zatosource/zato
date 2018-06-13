@@ -26,6 +26,7 @@ from springpython.context import DisposableObject
 from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.expression import true
 
@@ -46,6 +47,48 @@ from zato.common.util import current_host, get_component_name, get_engine_url, g
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+# Taken from https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WriteableTuple
+
+class WritableKeyedTuple(object):
+
+    def __init__(self, elem):
+        self._elem = elem
+
+    def __getattr__(self, key):
+        return getattr(self._elem, key)
+
+    def __repr__(self):
+        inner = [
+            (key, getattr(self._elem, key))
+            for key in self._elem.keys()
+        ]
+        outer = [
+            (key, getattr(self, key))
+            for key in dir(self) if not key.startswith("_")
+        ]
+        return "WritableKeyedTuple(%s)" % (
+            ", ".join(
+                "%s=%s" % (key, value) for
+                (key, value) in inner + outer
+            )
+        )
+
+class WritableTupleQuery(Query):
+
+    def __iter__(self):
+        it = super(WritableTupleQuery, self).__iter__()
+
+        cdesc = self.column_descriptions
+        if len(cdesc) > 1 or not isinstance(cdesc[0]['type'], type):
+            return (
+                WritableKeyedTuple(elem)
+                for elem in it
+            )
+        else:
+            return it
 
 # ################################################################################################################################
 
@@ -70,9 +113,9 @@ class SessionWrapper(object):
             self.logger.warn(msg, name, format_exc(e))
         else:
             if use_scoped_session:
-                self._Session = scoped_session(sessionmaker(bind=self.pool.engine))
+                self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
             else:
-                self._Session = sessionmaker(bind=self.pool.engine)
+                self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
 
             self._session = self._Session()
             self.session_initialized = True

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -32,6 +32,7 @@ from sqlalchemy.util import KeyedTuple
 # Zato
 from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, SIMPLE_IO, simple_types, TRACE1, ZatoException, \
      ZATO_OK
+from zato.common.odb.api import WritableKeyedTuple
 from zato.common.util import make_repr
 from zato.server.service.reqresp.sio import AsIs, convert_param, ForceType, ServiceInput, SIOConverter
 
@@ -302,11 +303,11 @@ class SimpleIOPayload(SIOConverter):
                 name = name.name
             setattr(self, name, '')
 
-    def set_payload_attrs(self, attrs):
+    def set_payload_attrs(self, attrs, _keyed=(dict, KeyedTuple, WritableKeyedTuple)):
         """ Called when the user wants to set the payload to a bunch of attributes.
         """
         names = None
-        if isinstance(attrs, (dict, KeyedTuple)):
+        if isinstance(attrs, _keyed):
             names = attrs.keys()
         elif self._is_sqlalchemy(attrs):
             names = attrs._sa_class_manager.keys()
