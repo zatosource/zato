@@ -1,6 +1,6 @@
---- requests/sessions.py.orig	2015-08-20 23:40:49.804271155 +0200
-+++ requests/sessions.py	2015-08-20 23:42:56.128273198 +0200
-@@ -283,7 +283,7 @@
+--- requests/sessions.py.orig	2018-06-13 19:13:32.341392552 +0200
++++ requests/sessions.py	2018-06-13 19:14:30.558396946 +0200
+@@ -341,7 +341,7 @@
          'max_redirects',
      ]
  
@@ -9,7 +9,7 @@
  
          #: A case-insensitive dictionary of headers to be sent on each
          #: :class:`Request <Request>` sent from this
-@@ -331,8 +331,8 @@
+@@ -393,8 +393,8 @@
  
          # Default connection adapters.
          self.adapters = OrderedDict()
@@ -18,9 +18,9 @@
 +        self.mount('https://', HTTPAdapter(pool_connections=pool_connections, pool_maxsize=pool_maxsize))
 +        self.mount('http://', HTTPAdapter(pool_connections=pool_connections, pool_maxsize=pool_maxsize))
  
-         # Only store 1000 redirects to prevent using infinite memory
-         self.redirect_cache = RecentlyUsedContainer(REDIRECT_CACHE_SIZE)
-@@ -566,6 +566,9 @@
+     def __enter__(self):
+         return self
+@@ -615,6 +615,9 @@
          # Get the appropriate adapter to use
          adapter = self.get_adapter(url=request.url)
  
@@ -28,14 +28,5 @@
 +        dispatch_hook('zato_pre_request', hooks, zato_pre_request_data)
 +
          # Start time (approximately) of the request
-         start = datetime.utcnow()
+         start = preferred_clock()
  
-@@ -671,7 +674,7 @@
-             self.redirect_cache[redirect] = to
- 
- 
--def session():
-+def session(*args, **kwargs):
-     """Returns a :class:`Session` for context-management."""
- 
-     return Session()

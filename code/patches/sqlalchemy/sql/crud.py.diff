@@ -1,0 +1,19 @@
+--- sqlalchemy/sql/crud.py.orig 2018-06-13 18:47:01.970272519 +0200
++++ sqlalchemy/sql/crud.py	2018-06-13 18:47:16.255273597 +0200
+@@ -136,16 +136,6 @@
+             _getattr_col_key, _column_as_key,
+             _col_bind_name, check_columns, values, kw)
+ 
+-    if parameters and stmt_parameters:
+-        check = set(parameters).intersection(
+-            _column_as_key(k) for k in stmt_parameters
+-        ).difference(check_columns)
+-        if check:
+-            raise exc.CompileError(
+-                "Unconsumed column names: %s" %
+-                (", ".join("%s" % c for c in check))
+-            )
+-
+     if stmt._has_multi_parameters:
+         values = _extend_values_for_multiparams(compiler, stmt, values, kw)
+ 
