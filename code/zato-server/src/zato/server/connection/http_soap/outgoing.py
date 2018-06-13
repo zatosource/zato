@@ -25,9 +25,10 @@ from lxml.etree import fromstring, tostring
 # parse
 from parse import PARSE_RE
 
-# Requests
+# requests
 import requests
 from requests.exceptions import Timeout as RequestsTimeout
+from requests.sessions import Session as requests_session
 
 # Zato
 from zato.common import CONTENT_TYPE, DATA_FORMAT, Inactive, SEC_DEF_TYPE, soapenv11_namespace, soapenv12_namespace, TimeoutException, \
@@ -54,13 +55,13 @@ class HTTPSAdapter(requests.adapters.HTTPAdapter):
 class BaseHTTPSOAPWrapper(object):
     """ Base class for HTTP/SOAP connection wrappers.
     """
-    def __init__(self, config, requests_module=None):
+    def __init__(self, config, _requests_session=None):
         self.config = config
         self.config['timeout'] = float(self.config['timeout']) if self.config['timeout'] else 0
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
-        self.requests_module = requests_module or requests
-        self.session = self.requests_module.session(pool_maxsize=self.config['pool_size'])
+        self.requests_session = requests_session or _requests_session
+        self.session = requests_session(pool_maxsize=self.config['pool_size'])
         self.https_adapter = HTTPSAdapter()
         self.session.mount('https://', self.https_adapter)
         self._component_name = get_component_name()
