@@ -52,6 +52,17 @@ def get_parser():
 
     subs = parser.add_subparsers()
 
+
+    #
+    # apispec
+    #
+    apispec = subs.add_parser(
+        'apispec',
+        description='API specifications generator',
+        parents=[base_parser])
+    apispec.set_defaults(command='apispec')
+    apispec.add_argument('path', help='Path to a Zato server')
+
     #
     # ca
     #

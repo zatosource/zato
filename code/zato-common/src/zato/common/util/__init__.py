@@ -108,10 +108,10 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
 from zato.common import CHANNEL, CLI_ARG_SEP, curdir as common_curdir, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
-     SECRET_SHADOW, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, zato_no_op_marker, ZATO_NOT_GIVEN, \
-     ZMQ
+     SECRET_SHADOW, SECRETS, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, zato_no_op_marker, \
+     ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
-from zato.common.crypto import CryptoManager
+from zato.common.crypto import CryptoManager, ServerCryptoManager
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.odb.query import _service as _service
 
@@ -1345,7 +1345,7 @@ def get_crypto_manager_from_server_config(config, repo_dir):
 
 # ################################################################################################################################
 
-def get_odb_session_from_server_config(config, cm):
+def get_odb_session_from_server_config(config, cm, odb_password_encrypted):
 
     engine_args = Bunch()
     engine_args.odb_type = config.odb.engine
@@ -1354,7 +1354,7 @@ def get_odb_session_from_server_config(config, cm):
     engine_args.odb_port = config.odb.port
     engine_args.odb_db_name = config.odb.db_name
 
-    if cm:
+    if odb_password_encrypted:
         engine_args.odb_password = cm.decrypt(config.odb.password) if config.odb.password else ''
     else:
         engine_args.odb_password = config.odb.password
@@ -1363,10 +1363,10 @@ def get_odb_session_from_server_config(config, cm):
 
 # ################################################################################################################################
 
-def get_server_client_auth(config, repo_dir):
+def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
     """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
     """
-    session = get_odb_session_from_server_config(config, get_crypto_manager_from_server_config(config, repo_dir))
+    session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
 
     with closing(session) as session:
         cluster = session.query(Server).\
@@ -1385,7 +1385,8 @@ def get_server_client_auth(config, repo_dir):
                 first()
 
             if security:
-                return (security.username, security.password)
+                password = security.password.replace(SECRETS.PREFIX, '')
+                return (security.username, cm.decrypt(password))
 
 def get_client_from_server_conf(server_dir):
     from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
