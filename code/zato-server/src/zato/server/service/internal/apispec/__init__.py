@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -33,8 +33,7 @@ class GetAPISpec(Service):
         if cluster_id and cluster_id != self.server.cluster_id:
             raise ValueError('Input cluster ID `%s` different than ours `%s`', cluster_id, self.server.cluster_id)
 
-        info = Generator(self.server.service_store.services, self.server.sio_config, self.request.input.query).get_info(
-            ignore_prefix=ignore_prefix)
-        self.response.payload = dumps(info)
+        self.response.payload = dumps(Generator(self.server.service_store.services, self.request.input.query).get_info(
+            ignore_prefix=ignore_prefix))
 
 # ################################################################################################################################
