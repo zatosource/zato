@@ -608,14 +608,12 @@ class Create(ZatoCommand):
             self.logger.error("Cluster `%s` doesn't exist in ODB", args.cluster_name)
             return self.SYS_ERROR.NO_SUCH_CLUSTER
 
-        server = Server()
-        server.cluster_id = cluster.id
+        server = Server(cluster=cluster)
         server.name = args.server_name
         server.token = self.token
         server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED
         server.last_join_mod_by = self._get_user_host()
         server.last_join_mod_date = datetime.utcnow()
-
         session.add(server)
 
         try:
@@ -654,7 +652,7 @@ class Create(ZatoCommand):
             server_conf = open(server_conf_loc, 'w')
             server_conf.write(
                 server_conf_template.format(
-                    port=args.http_port or default_http_port,
+                    port=args.get('http_port', None) or default_http_port,
                     gunicorn_workers=1,
                     odb_db_name=args.odb_db_name or args.sqlite_path,
                     odb_engine=odb_engine,
