@@ -527,6 +527,28 @@ class SIO_TYPE_MAP:
             UTC: ('string', 'date-time'),
         }
 
+    class SOAP_12:
+
+        name = APISPEC.SOAP_12
+        STRING = ('string', 'xsd:string')
+        DEFAULT = STRING
+        INTEGER = ('integer', 'xsd:integer')
+        BOOLEAN = ('boolean', 'xsd:boolean')
+
+        map = {
+            AsIs: STRING,
+            Boolean: BOOLEAN,
+            CSV: STRING,
+            Dict: ('dict', 'zato:dict'),
+            Float: ('number', 'float'),
+            Integer: INTEGER,
+            List: ('list', 'zato:list'),
+            ListOfDicts: ('list-of-dicts', 'zato:list-of-dicts'),
+            Opaque: ('opaque', 'anyType'),
+            Unicode: STRING,
+            UTC: ('string', 'xsd:dateTime'),
+        }
+
 # ################################################################################################################################
 
     class ZATO:
@@ -555,6 +577,6 @@ class SIO_TYPE_MAP:
 
     class __metaclass__(type):
         def __iter__(self):
-            return iter((self.OPEN_API_V2, self.ZATO))
+            return iter((self.OPEN_API_V2, self.SOAP_12, self.ZATO))
 
 # ################################################################################################################################

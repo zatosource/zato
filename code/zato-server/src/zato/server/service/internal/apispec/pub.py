@@ -7,10 +7,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
-import json, re
 
-# pkg_resources
+# stdlib
+import json
 import pkg_resources
+import re
 
 # Paste
 from paste.util.converters import asbool
