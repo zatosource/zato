@@ -129,7 +129,7 @@ def _job(session, cluster_id):
         filter(Job.cluster_id==Cluster.id).\
         filter(Job.service_id==Service.id).\
         filter(Cluster.id==cluster_id).\
-        order_by('job.name')
+        order_by(Job.name)
 
 @query_wrapper
 def job_list(session, cluster_id, needs_columns=False):
@@ -158,7 +158,7 @@ def apikey_security_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==APIKeySecurity.cluster_id).\
         filter(SecurityBase.id==APIKeySecurity.id).\
-        order_by('sec_base.name')
+        order_by(SecurityBase.name)
 
 @query_wrapper
 def aws_security_list(session, cluster_id, needs_columns=False):
@@ -172,7 +172,7 @@ def aws_security_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==AWSSecurity.cluster_id).\
         filter(SecurityBase.id==AWSSecurity.id).\
-        order_by('sec_base.name')
+        order_by(SecurityBase.name)
 
 @query_wrapper
 def basic_auth_list(session, cluster_id, cluster_name, needs_columns=False):
@@ -193,7 +193,7 @@ def basic_auth_list(session, cluster_id, cluster_name, needs_columns=False):
         q = q.filter(Cluster.name==cluster_name)
 
     q = q.filter(SecurityBase.id==HTTPBasicAuth.id).\
-        order_by('sec_base.name')
+        order_by(SecurityBase.name)
 
     return q
 
@@ -213,7 +213,7 @@ def _jwt(session, cluster_id, cluster_name, needs_columns=False):
         q = q.filter(Cluster.name==cluster_name)
 
     q = q.filter(SecurityBase.id==JWT.id).\
-        order_by('sec_base.name')
+        order_by(SecurityBase.name)
 
     return q
 
@@ -241,7 +241,7 @@ def ntlm_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==NTLM.cluster_id).\
         filter(SecurityBase.id==NTLM.id).\
-        order_by('sec_base.name')
+        order_by(SecurityBase.name)
 
 @query_wrapper
 def oauth_list(session, cluster_id, needs_columns=False):
@@ -256,7 +256,7 @@ def oauth_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==OAuth.cluster_id).\
         filter(SecurityBase.id==OAuth.id).\
-        order_by('sec_base.name')
+        order_by(SecurityBase.name)
 
 @query_wrapper
 def openstack_security_list(session, cluster_id, needs_columns=False):
@@ -268,7 +268,7 @@ def openstack_security_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==OpenStackSecurity.cluster_id).\
         filter(SecurityBase.id==OpenStackSecurity.id).\
-        order_by('sec_base.name')
+        order_by(SecurityBase.name)
 
 @query_wrapper
 def tls_ca_cert_list(session, cluster_id, needs_columns=False):
@@ -277,7 +277,7 @@ def tls_ca_cert_list(session, cluster_id, needs_columns=False):
     return session.query(TLSCACert).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==TLSCACert.cluster_id).\
-        order_by('sec_tls_ca_cert.name')
+        order_by(TLSCACert.name)
 
 @query_wrapper
 def tls_channel_sec_list(session, cluster_id, needs_columns=False):
@@ -290,7 +290,7 @@ def tls_channel_sec_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==TLSChannelSecurity.cluster_id).\
         filter(SecurityBase.id==TLSChannelSecurity.id).\
-        order_by('sec_base.name')
+        order_by(SecurityBase.name)
 
 @query_wrapper
 def tls_key_cert_list(session, cluster_id, needs_columns=False):
@@ -303,7 +303,7 @@ def tls_key_cert_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==TLSKeyCertSecurity.cluster_id).\
         filter(SecurityBase.id==TLSKeyCertSecurity.id).\
-        order_by('sec_base.name')
+        order_by(SecurityBase.name)
 
 @query_wrapper
 def wss_list(session, cluster_id, needs_columns=False):
@@ -318,7 +318,7 @@ def wss_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==WSSDefinition.cluster_id).\
         filter(SecurityBase.id==WSSDefinition.id).\
-        order_by('sec_base.name')
+        order_by(SecurityBase.name)
 
 @query_wrapper
 def xpath_sec_list(session, cluster_id, needs_columns=False):
@@ -330,7 +330,7 @@ def xpath_sec_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==XPathSecurity.cluster_id).\
         filter(SecurityBase.id==XPathSecurity.id).\
-        order_by('sec_base.name')
+        order_by(SecurityBase.name)
 
 # ################################################################################################################################
 
@@ -764,19 +764,19 @@ def _msg_list(class_, order_by, session, cluster_id, needs_columns=False):
 def namespace_list(session, cluster_id, needs_columns=False):
     """ All the namespaces.
     """
-    return _msg_list(MsgNamespace, 'msg_ns.name', session, cluster_id, query_wrapper)
+    return _msg_list(MsgNamespace, MsgNamespace.name, session, cluster_id, query_wrapper)
 
 @query_wrapper
 def xpath_list(session, cluster_id, needs_columns=False):
     """ All the XPaths.
     """
-    return _msg_list(XPath, 'msg_xpath.name', session, cluster_id, query_wrapper)
+    return _msg_list(XPath, XPath.name, session, cluster_id, query_wrapper)
 
 @query_wrapper
 def json_pointer_list(session, cluster_id, needs_columns=False):
     """ All the JSON Pointers.
     """
-    return _msg_list(JSONPointer, 'msg_json_pointer.name', session, cluster_id, query_wrapper)
+    return _msg_list(JSONPointer, JSONPointer.name, session, cluster_id, query_wrapper)
 
 # ################################################################################################################################
 
