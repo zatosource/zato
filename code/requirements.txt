@@ -101,7 +101,7 @@ posix-ipc==1.0.0
 prettytable==0.7.2
 psutil==2.2.1
 psycogreen==1.0
-psycopg2==2.7.3.1
+psycopg2==2.7.4
 py-cpuinfo==3.3.0
 pyaml==14.5.2
 pyasn1==0.1.8
