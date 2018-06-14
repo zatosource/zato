@@ -21,7 +21,7 @@ class GetAPISpec(Service):
     """ Returns API specifications for all services.
     """
     class SimpleIO:
-        input_optional = ('cluster_id', 'query', Bool('return_internal'))
+        input_optional = ('cluster_id', 'query', Bool('return_internal'), 'format')
 
     def handle(self):
         cluster_id = self.request.input.get('cluster_id')
@@ -33,7 +33,11 @@ class GetAPISpec(Service):
         if cluster_id and cluster_id != self.server.cluster_id:
             raise ValueError('Input cluster ID `%s` different than ours `%s`', cluster_id, self.server.cluster_id)
 
-        self.response.payload = dumps(Generator(self.server.service_store.services, self.request.input.query).get_info(
-            ignore_prefix=ignore_prefix))
+        data = Generator(self.server.service_store.services, self.server.sio_config,
+            self.request.input.query).get_info(ignore_prefix=ignore_prefix)
+
+        wsdl = self.invoke('apispec.get-wsdl', {'data': data})
+
+        self.response.payload = dumps(wsdl)
 
 # ################################################################################################################################
