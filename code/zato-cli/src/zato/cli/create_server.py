@@ -22,6 +22,7 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
+from zato.cli._apispec_default import apispec_files
 from zato.common import CONTENT_TYPE, SERVER_JOIN_STATUS
 from zato.common.crypto import well_known_data
 from zato.common.defaults import http_plain_server_port
@@ -705,6 +706,18 @@ class Create(ZatoCommand):
 
             if show_output:
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
+
+            # Sphinx APISpec files
+            for file_path, contents in apispec_files.items():
+                full_path = os.path.join(self.target_dir, 'config/repo/static/sphinxdoc/apispec', file_path)
+                dir_name = os.path.dirname(full_path)
+                try:
+                    os.makedirs(dir_name, 0770)
+                except OSError:
+                    # That is fine, the directory must have already created in one of previous iterations
+                    pass 
+                finally:
+                    ZXLmc lkzxjcmz ;Mzx;;j:
 
             # Initial info
             self.store_initial_info(self.target_dir, self.COMPONENTS.SERVER.code)
