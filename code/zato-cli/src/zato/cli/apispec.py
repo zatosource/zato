@@ -45,5 +45,5 @@ class APISpec(ZatoCommand):
         data = response.data['response']['data']
 
         print()
-        print()
+        print(data)
         print()

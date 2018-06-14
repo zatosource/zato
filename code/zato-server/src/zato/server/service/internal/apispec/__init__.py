@@ -36,8 +36,8 @@ class GetAPISpec(Service):
         data = Generator(self.server.service_store.services, self.server.sio_config,
             self.request.input.query).get_info(ignore_prefix=ignore_prefix)
 
-        wsdl = self.invoke('apispec.get-wsdl', {'data': data})
+        out = self.invoke('apispec.get-sphinx', {'data': data})
 
-        self.response.payload = dumps(wsdl)
+        self.response.payload = dumps(out)
 
 # ################################################################################################################################
