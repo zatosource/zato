@@ -717,7 +717,9 @@ class Create(ZatoCommand):
                     # That is fine, the directory must have already created in one of previous iterations
                     pass 
                 finally:
-                    ZXLmc lkzxjcmz ;Mzx;;j:
+                    api_file = open(full_path, 'w')
+                    api_file.write(contents)
+                    api_file.close()
 
             # Initial info
             self.store_initial_info(self.target_dir, self.COMPONENTS.SERVER.code)
