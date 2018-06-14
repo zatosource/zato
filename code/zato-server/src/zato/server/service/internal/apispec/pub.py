@@ -127,3 +127,50 @@ class GetDefaultAuthType(Service):
 
     def handle(self):
         self.response.payload.auth_type = 'Basic realm="{}"'.format(self.server.fs_server_config.apispec.pub_name)
+
+
+'''
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+import os
+
+# Zato
+from zato.server.service import Opaque, Service
+
+class GetSphinx(Service):
+    name = 'apispec.get-sphinx'
+
+    class SimpleIO:
+        input_required = Opaque('data'),
+        output_required = Opaque('data'),
+
+    def handle(self):
+        files = {}
+        apispec_dir = os.path.join(self.server.static_dir, 'sphinxdoc', 'apispec')
+        for dir_path, dir_names, file_names in os.walk(apispec_dir):
+            if dir_path == apispec_dir:
+                base_dir = '.'
+            else:
+                base_dir = os.path.basename(dir_path)
+            
+
+            for file_name in file_names:
+                relative_path = os.path.join(base_dir, file_name)
+
+                f = open(os.path.join(dir_path, file_name))
+                contents = f.read()
+                f.close()
+
+                files[relative_path] = contents
+
+        self.response.payload.data = files
+        '''

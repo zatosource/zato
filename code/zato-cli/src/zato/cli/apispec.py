@@ -8,10 +8,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+import os
 
 # Zato
 from zato.cli import ZatoCommand
-from zato.common.util import get_client_from_server_conf
+from zato.common.util import fs_safe_now, get_client_from_server_conf
 
 # ################################################################################################################################
 
@@ -44,6 +46,24 @@ class APISpec(ZatoCommand):
         response = client.invoke('zato.apispec.get-api-spec', request)
         data = response.data['response']['data']
 
+        now = fs_safe_now()
+        out_dir = '{}.{}'.format('apispec', now)
+        out_dir = os.path.abspath(out_dir)
+        os.mkdir(out_dir)
+
+        for file_path, contents in data.items():
+            full_file_path = os.path.join(out_dir, file_path)
+            file_dir = os.path.abspath(os.path.dirname(full_file_path))
+            try:
+                os.makedirs(file_dir)
+            except OSError:
+                pass # Must have been already created
+            finally:
+                f = open(full_file_path, 'w')
+                f.write(contents)
+                f.close()
+
         print()
-        print(data)
+        print(now, data.keys())
+        self.logger.info('Output saved to %s', out_dir)
         print()
