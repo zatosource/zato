@@ -229,9 +229,9 @@ apispec_files['_templates/layout.html'] = """
 """.lstrip()
 
 # Default download files
-apispec_files['download/api.openapi'] = ''
-apispec_files['download/api.raml'] = ''
-apispec_files['download/api.wsdl'] = ''
+apispec_files['download/api.raml'] = '' # RAML
+apispec_files['download/api.wsdl'] = '' # WSDL
+apispec_files['download/api.yaml'] = '' # OpenAPI
 
 # Make for Linux
 apispec_files['Makefile'] = """
@@ -477,4 +477,7 @@ API documentation
    :glob:
 
    ./*
+
+Download: :download:`OpenAPI <./download/api.yaml>`, :download:`RAML <./download/api.raml>`, :download:`WSDL <./download/api.wsdl>`
+
 """.lstrip()

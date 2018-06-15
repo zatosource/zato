@@ -63,7 +63,4 @@ class APISpec(ZatoCommand):
                 f.write(contents)
                 f.close()
 
-        print()
-        print(now, data.keys())
         self.logger.info('Output saved to %s', out_dir)
-        print()

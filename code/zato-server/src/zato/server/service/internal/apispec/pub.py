@@ -143,8 +143,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os
 
+# Bunch
+from bunch import bunchify
+
 # Zato
+from zato.server.apispec.wsdl import WSDLGenerator
 from zato.server.service import Opaque, Service
+
+# ################################################################################################################################
 
 class GetSphinx(Service):
     name = 'apispec.get-sphinx'
@@ -153,15 +159,17 @@ class GetSphinx(Service):
         input_required = Opaque('data'),
         output_required = Opaque('data'),
 
-    def handle(self):
-        files = {}
+# ################################################################################################################################
+
+    def add_default_files(self, files):
+        """ Returns default static files that always exist.
+        """ 
         apispec_dir = os.path.join(self.server.static_dir, 'sphinxdoc', 'apispec')
         for dir_path, dir_names, file_names in os.walk(apispec_dir):
             if dir_path == apispec_dir:
                 base_dir = '.'
             else:
                 base_dir = os.path.basename(dir_path)
-            
 
             for file_name in file_names:
                 relative_path = os.path.join(base_dir, file_name)
@@ -172,5 +180,23 @@ class GetSphinx(Service):
 
                 files[relative_path] = contents
 
+# ################################################################################################################################
+
+    def get_wsdl(self, data):
+        services = bunchify(data['services'])
+        target_ns = 'urn:zato-apispec'
+        return WSDLGenerator(services, target_ns).generate()
+
+# ################################################################################################################################
+
+    def handle(self):
+        data = bunchify(self.request.input.data)
+        files = {}
+
+        self.add_default_files(files)
+        files['download/api.wsdl'] = self.get_wsdl(data)
+
         self.response.payload.data = files
-        '''
+        
+# ################################################################################################################################
+'''
