@@ -141,14 +141,20 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from cStringIO import StringIO
 import os
 
 # Bunch
 from bunch import bunchify
 
 # Zato
+from zato.common.util import fs_safe_name
 from zato.server.apispec.wsdl import WSDLGenerator
 from zato.server.service import Opaque, Service
+
+# ################################################################################################################################
+
+no_value = '---'
 
 # ################################################################################################################################
 
@@ -189,13 +195,37 @@ class GetSphinx(Service):
 
 # ################################################################################################################################
 
+    def get_service_table_line(self, ns, name, docs):
+        name_fs_safe = fs_safe_name(name)
+        return bunchify({
+            'ns': ns or no_value,
+            'name': name,
+            'name': name_fs_safe,
+            'name_link': """:doc:`{} <{}.rst>`""".format(name, name_fs_safe),
+            'description': 'TODO'
+        })
+
+# ################################################################################################################################
+
     def add_services(self, data, files):
+
+        buff = StringIO()
+        lines = []
+
+        longest_ns = 0
+        longest_name = 0
+        longest_desc = 0
+
         for elem in data.services:
             name = elem.name
             ns = elem.namespace_name
             docs = elem.docs
             sio = elem.simple_io
-            print(111, `ns`, name, sio)
+
+            service_line = self.get_service_table_line(ns, name, docs)
+            longest_ns = max(longest_ns, len(service_line.ns))
+            longest_name = max(longest_name, len(service_line.name_link))
+            longest_desc = max(longest_desc, len(service_line.description))
 
 # ################################################################################################################################
 
