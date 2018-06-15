@@ -467,6 +467,7 @@ def setup(app):
     app.add_stylesheet('custom.css')
 """.lstrip()
 
+# Main file
 apispec_files['index.rst'] = """
 API documentation
 =================
@@ -478,6 +479,14 @@ API documentation
 
    ./*
 
-Download: :download:`OpenAPI <./download/api.yaml>`, :download:`RAML <./download/api.raml>`, :download:`WSDL <./download/api.wsdl>`
+.. include:: ./intro.rst
 
+.. include:: ./services.rst
 """.lstrip()
+
+
+# Default include files
+apispec_files['services.rst'] = ''
+apispec_files['intro.rst'] = """
+Download: :download:`OpenAPI <./download/api.yaml>`, :download:`RAML <./download/api.raml>`, :download:`WSDL <./download/api.wsdl>`
+"""
