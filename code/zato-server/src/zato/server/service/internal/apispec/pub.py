@@ -189,11 +189,22 @@ class GetSphinx(Service):
 
 # ################################################################################################################################
 
+    def add_services(self, data, files):
+        for elem in data.services:
+            name = elem.name
+            ns = elem.namespace_name
+            docs = elem.docs
+            sio = elem.simple_io
+            print(111, `ns`, name, sio)
+
+# ################################################################################################################################
+
     def handle(self):
         data = bunchify(self.request.input.data)
         files = {}
 
         self.add_default_files(files)
+        self.add_services(data, files)
         files['download/api.wsdl'] = self.get_wsdl(data)
 
         self.response.payload.data = files
