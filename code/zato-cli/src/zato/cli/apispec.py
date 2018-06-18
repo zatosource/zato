@@ -30,7 +30,7 @@ class APISpec(ZatoCommand):
     def execute(self, args):
         client = get_client_from_server_conf(args.path)
         request = {
-            'return_internal': True
+            'return_internal': False
         }
 
         response = client.invoke('zato.apispec.get-api-spec', request)
