@@ -142,6 +142,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from cStringIO import StringIO
+from itertools import chain
+from operator import attrgetter
 import os
 
 # Bunch
@@ -150,7 +152,7 @@ from bunch import bunchify
 # Zato
 from zato.common.util import fs_safe_name
 from zato.server.apispec.wsdl import WSDLGenerator
-from zato.server.service import Opaque, Service
+from zato.server.service import Int, Float, Opaque, Service
 
 # ################################################################################################################################
 
@@ -161,11 +163,17 @@ len_col_sep = len(col_sep)
 # ################################################################################################################################
 
 class GetSphinx(Service):
+    """ Generates API docs in Sphinx.
+
+    It may also embolden things otherwise unheard of to come into existence.
+    """
     name = 'apispec.get-sphinx'
 
     class SimpleIO:
         input_required = Opaque('data'),
+        input_optional = (Int('aaa'), Int('bbbb.zzzz'), 'aaa', 'ggg')
         output_required = Opaque('data'),
+        output_optional = (Int('ccc'), Int('ddd.eee'))
 
 # ################################################################################################################################
 
@@ -197,29 +205,123 @@ class GetSphinx(Service):
 
 # ################################################################################################################################
 
-    def get_service_table_line(self, ns, name, docs):
-        name_fs_safe = fs_safe_name(name)
+    def get_service_table_line(self, ns, name, docs, sio):
+        name_fs_safe = 'service_{}'.format(fs_safe_name(name))
+        file_name = '{}.rst'.format(name_fs_safe)
+
         return bunchify({
             'ns': ns or no_value,
             'orig_name': name,
             'name': name_fs_safe,
-            'name_link': """:doc:`{} <./service_{}.rst>`""".format(name, name_fs_safe),
-            'description': 'TODO'
+            'name_link': """:doc:`{} <./{}>`""".format(name, name_fs_safe),
+            'file_name': file_name,
+            'description': docs.summary or no_value,
+            'docs': docs,
+            'sio': sio
         })
 
 # ################################################################################################################################
 
-    def write_separators(self, buff, ns_border, name_border, desc_border):
-        buff.write(ns_border)
+    def write_separators(self, buff, border1, border2, border3):
+        buff.write(border1)
         buff.write(col_sep)
 
-        buff.write(name_border)
+        buff.write(border2)
         buff.write(col_sep)
 
-        buff.write(desc_border)
+        buff.write(border3)
         buff.write(col_sep)
 
         buff.write('\n')
+
+# ################################################################################################################################
+
+    def write_sio(self, title, buff, elems):
+
+        sio_lines = []
+        longest_name = 4     # len('Name')
+        longest_datatype = 8 # len('Datatype')
+        longest_required = 8 # len('Required')
+
+        for elem in elems:
+            longest_name = max(longest_name, len(elem.name))
+            longest_datatype = max(longest_datatype, len(elem.subtype))
+
+            sio_lines.append(bunchify({
+                'name': elem.name,
+                'datatype': elem.subtype,
+                'is_required': elem.is_required,
+                'is_required_str': 'Yes' if elem.is_required else no_value,
+            }))
+
+        longest_name += len_col_sep
+        longest_datatype += len_col_sep
+
+        name_border = '=' * longest_name
+        datatype_border = '=' * longest_datatype
+        required_border = '=' * longest_required
+
+        buff.write(title)
+        buff.write('\n')
+        buff.write('-' * len(title))
+        buff.write('\n' * 2)
+
+        self.write_separators(buff, name_border, datatype_border, required_border)
+
+        buff.write('Name'.ljust(longest_name))
+        buff.write(col_sep)
+
+        buff.write('Datatype'.ljust(longest_datatype))
+        buff.write(col_sep)
+
+        buff.write('Required'.ljust(longest_required))
+        buff.write(col_sep)
+        buff.write('\n')
+
+        self.write_separators(buff, name_border, datatype_border, required_border)
+
+        for item in sio_lines:
+
+            # First, add the services to the main table
+            buff.write(item.name.ljust(longest_name))
+            buff.write(col_sep)
+
+            buff.write(item.datatype.ljust(longest_datatype))
+            buff.write(col_sep)
+
+            buff.write(item.is_required_str.ljust(longest_required))
+            buff.write(col_sep)
+
+            buff.write('\n')
+
+        self.write_separators(buff, name_border, datatype_border, required_border)
+        buff.write('\n')
+
+# ################################################################################################################################
+
+    def get_service_page(self, item):
+        buff = StringIO()
+
+        buff.write(item.orig_name)
+        buff.write('\n')
+
+        buff.write('=' * len(item.orig_name))
+        buff.write('\n')
+        buff.write('\n')
+
+        buff.write(item.docs.full)
+        buff.write('\n')
+        buff.write('\n')
+
+        input_required = sorted(item.sio.zato.input_required, key=attrgetter('name'))
+        input_optional = sorted(item.sio.zato.input_optional, key=attrgetter('name'))
+        output_required = sorted(item.sio.zato.output_required, key=attrgetter('name'))
+        output_optional = sorted(item.sio.zato.output_optional, key=attrgetter('name'))
+
+        self.write_sio('Input', buff, chain(input_required, input_optional))
+        self.write_sio('Output', buff, chain(output_required, output_optional))
+
+        return buff.getvalue()
 
 # ################################################################################################################################
 
@@ -228,9 +330,9 @@ class GetSphinx(Service):
         buff = StringIO()
         lines = []
 
-        longest_ns = 2    # NS
-        longest_name = 4  # Name
-        longest_desc = 11 # Description
+        longest_ns = 2    # len('NS')
+        longest_name = 4  # len('Name')
+        longest_desc = 11 # len('Description')
 
         for elem in data.services:
             name = elem.name
@@ -238,7 +340,7 @@ class GetSphinx(Service):
             docs = elem.docs
             sio = elem.simple_io
 
-            service_line = self.get_service_table_line(ns, name, docs)
+            service_line = self.get_service_table_line(ns, name, docs, sio)
             lines.append(service_line)
 
             longest_ns = max(longest_ns, len(service_line.ns))
@@ -254,8 +356,6 @@ class GetSphinx(Service):
 
         self.write_separators(buff, ns_border, name_border, desc_border)
 
-        print('aaa', longest_ns, longest_name, longest_desc)
-
         buff.write('NS'.ljust(longest_ns))
         buff.write(col_sep)
 
@@ -269,6 +369,8 @@ class GetSphinx(Service):
         self.write_separators(buff, ns_border, name_border, desc_border)
 
         for item in lines:
+
+            # First, add the services to the main table
             buff.write(item.ns.ljust(longest_ns))
             buff.write(col_sep)
 
@@ -280,8 +382,13 @@ class GetSphinx(Service):
 
             buff.write('\n')
 
+            # Now, create a description file for each service
+            files[item.file_name] = self.get_service_page(item)
+
+        # Finish the table
         self.write_separators(buff, ns_border, name_border, desc_border)
 
+        # Save the table's contents
         files['services.rst'] = buff.getvalue()
 
 # ################################################################################################################################

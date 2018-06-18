@@ -487,5 +487,5 @@ API documentation
 
 # Default include files
 apispec_files['intro.rst'] = """
-Download: :download:`OpenAPI <./download/api.yaml>`, :download:`RAML <./download/api.raml>`, :download:`WSDL <./download/api.wsdl>`
+Download: :download:`OpenAPI/Swagger <./download/api.yaml>`, :download:`WSDL <./download/api.wsdl>`
 """

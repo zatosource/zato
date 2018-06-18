@@ -232,7 +232,7 @@ class WSDLGenerator(object):
             for elem in sio.output_required:
                 self.append_xs_elem(sio_output_req, elem, 1, 1)
 
-            for elem in sio.output_required:
+            for elem in sio.output_optional:
                 self.append_xs_elem(sio_output_opt, elem, 0, 1)
 
             # Current service's request and response names
