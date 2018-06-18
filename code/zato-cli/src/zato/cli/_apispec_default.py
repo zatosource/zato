@@ -255,7 +255,7 @@ help:
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
     @$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-    
+
 """.lstrip().replace('    ', '\t')
 
 # Make for Windows
@@ -486,7 +486,6 @@ API documentation
 
 
 # Default include files
-apispec_files['services.rst'] = ''
 apispec_files['intro.rst'] = """
 Download: :download:`OpenAPI <./download/api.yaml>`, :download:`RAML <./download/api.raml>`, :download:`WSDL <./download/api.wsdl>`
 """

@@ -155,6 +155,8 @@ from zato.server.service import Opaque, Service
 # ################################################################################################################################
 
 no_value = '---'
+col_sep = ' ' # Column separator
+len_col_sep = len(col_sep)
 
 # ################################################################################################################################
 
@@ -169,7 +171,7 @@ class GetSphinx(Service):
 
     def add_default_files(self, files):
         """ Returns default static files that always exist.
-        """ 
+        """
         apispec_dir = os.path.join(self.server.static_dir, 'sphinxdoc', 'apispec')
         for dir_path, dir_names, file_names in os.walk(apispec_dir):
             if dir_path == apispec_dir:
@@ -199,11 +201,25 @@ class GetSphinx(Service):
         name_fs_safe = fs_safe_name(name)
         return bunchify({
             'ns': ns or no_value,
-            'name': name,
+            'orig_name': name,
             'name': name_fs_safe,
-            'name_link': """:doc:`{} <{}.rst>`""".format(name, name_fs_safe),
+            'name_link': """:doc:`{} <./service_{}.rst>`""".format(name, name_fs_safe),
             'description': 'TODO'
         })
+
+# ################################################################################################################################
+
+    def write_separators(self, buff, ns_border, name_border, desc_border):
+        buff.write(ns_border)
+        buff.write(col_sep)
+
+        buff.write(name_border)
+        buff.write(col_sep)
+
+        buff.write(desc_border)
+        buff.write(col_sep)
+
+        buff.write('\n')
 
 # ################################################################################################################################
 
@@ -212,9 +228,9 @@ class GetSphinx(Service):
         buff = StringIO()
         lines = []
 
-        longest_ns = 0
-        longest_name = 0
-        longest_desc = 0
+        longest_ns = 2    # NS
+        longest_name = 4  # Name
+        longest_desc = 11 # Description
 
         for elem in data.services:
             name = elem.name
@@ -223,9 +239,50 @@ class GetSphinx(Service):
             sio = elem.simple_io
 
             service_line = self.get_service_table_line(ns, name, docs)
+            lines.append(service_line)
+
             longest_ns = max(longest_ns, len(service_line.ns))
             longest_name = max(longest_name, len(service_line.name_link))
             longest_desc = max(longest_desc, len(service_line.description))
+
+        longest_ns += len_col_sep
+        longest_name += len_col_sep
+
+        ns_border = '=' * longest_ns
+        name_border = '=' * longest_name
+        desc_border = '=' * longest_desc
+
+        self.write_separators(buff, ns_border, name_border, desc_border)
+
+        print('aaa', longest_ns, longest_name, longest_desc)
+
+        buff.write('NS'.ljust(longest_ns))
+        buff.write(col_sep)
+
+        buff.write('Name'.ljust(longest_name))
+        buff.write(col_sep)
+
+        buff.write('Description'.ljust(longest_desc))
+        buff.write(col_sep)
+        buff.write('\n')
+
+        self.write_separators(buff, ns_border, name_border, desc_border)
+
+        for item in lines:
+            buff.write(item.ns.ljust(longest_ns))
+            buff.write(col_sep)
+
+            buff.write(item.name_link.ljust(longest_name))
+            buff.write(col_sep)
+
+            buff.write(item.description.ljust(longest_desc))
+            buff.write(col_sep)
+
+            buff.write('\n')
+
+        self.write_separators(buff, ns_border, name_border, desc_border)
+
+        files['services.rst'] = buff.getvalue()
 
 # ################################################################################################################################
 
@@ -238,6 +295,6 @@ class GetSphinx(Service):
         files['download/api.wsdl'] = self.get_wsdl(data)
 
         self.response.payload.data = files
-        
+
 # ################################################################################################################################
 '''
