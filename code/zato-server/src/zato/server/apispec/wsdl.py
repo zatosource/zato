@@ -213,6 +213,10 @@ class WSDLGenerator(object):
 
         for service in self.services:
             service_name = self.slugify(service.name)
+
+            if 'soap_12' not in service.simple_io:
+                continue
+
             sio = service.simple_io.soap_12
 
             sio_input_req = []
@@ -221,7 +225,7 @@ class WSDLGenerator(object):
             sio_output_req = []
             sio_output_opt = []
 
-            # Fist, collect all I/O elements
+            # First, collect all I/O elements
 
             for elem in sio.input_required:
                 self.append_xs_elem(sio_input_req, elem, 1, 1)

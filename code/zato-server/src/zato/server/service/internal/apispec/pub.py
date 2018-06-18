@@ -212,6 +212,7 @@ class GetSphinx(Service):
         return bunchify({
             'ns': ns or no_value,
             'orig_name': name,
+            'sphinx_name': name.replace('_', '\_'), # Needed for Sphinx to ignore undescores
             'name': name_fs_safe,
             'name_link': """:doc:`{} <./{}>`""".format(name, name_fs_safe),
             'file_name': file_name,
@@ -236,7 +237,7 @@ class GetSphinx(Service):
 
 # ################################################################################################################################
 
-    def write_sio(self, title, buff, elems):
+    def write_sio(self, buff, elems):
 
         sio_lines = []
         longest_name = 4     # len('Name')
@@ -244,11 +245,12 @@ class GetSphinx(Service):
         longest_required = 8 # len('Required')
 
         for elem in elems:
-            longest_name = max(longest_name, len(elem.name))
+            elem_name = elem.name.replace('_', '\_') # Sphinx treats _ as hyperlinks
+            longest_name = max(longest_name, len(elem_name))
             longest_datatype = max(longest_datatype, len(elem.subtype))
 
             sio_lines.append(bunchify({
-                'name': elem.name,
+                'name': elem_name,
                 'datatype': elem.subtype,
                 'is_required': elem.is_required,
                 'is_required_str': 'Yes' if elem.is_required else no_value,
@@ -260,11 +262,6 @@ class GetSphinx(Service):
         name_border = '=' * longest_name
         datatype_border = '=' * longest_datatype
         required_border = '=' * longest_required
-
-        buff.write(title)
-        buff.write('\n')
-        buff.write('-' * len(title))
-        buff.write('\n' * 2)
 
         self.write_separators(buff, name_border, datatype_border, required_border)
 
@@ -302,10 +299,16 @@ class GetSphinx(Service):
     def get_service_page(self, item):
         buff = StringIO()
 
-        buff.write(item.orig_name)
+        input_title = 'Input'
+        len_input_title = len(input_title)
+
+        output_title = 'Output'
+        len_output_title = len(output_title)
+
+        buff.write(item.sphinx_name)
         buff.write('\n')
 
-        buff.write('=' * len(item.orig_name))
+        buff.write('=' * len(item.sphinx_name))
         buff.write('\n')
         buff.write('\n')
 
@@ -313,15 +316,40 @@ class GetSphinx(Service):
         buff.write('\n')
         buff.write('\n')
 
+        # No SimpleIO for that services
+        if 'zato' not in item.sio:
+            return buff
+
         input_required = sorted(item.sio.zato.input_required, key=attrgetter('name'))
         input_optional = sorted(item.sio.zato.input_optional, key=attrgetter('name'))
         output_required = sorted(item.sio.zato.output_required, key=attrgetter('name'))
         output_optional = sorted(item.sio.zato.output_optional, key=attrgetter('name'))
 
-        self.write_sio('Input', buff, chain(input_required, input_optional))
-        self.write_sio('Output', buff, chain(output_required, output_optional))
+        # Input
+        buff.write(input_title)
+        buff.write('\n')
+        buff.write('-' * len_input_title)
+        buff.write('\n' * 2)
 
-        return buff.getvalue()
+        if input_required or input_optional:
+            self.write_sio(buff, chain(input_required, input_optional))
+        else:
+            buff.write('(None)')
+            buff.write('\n')
+
+        # Output
+        buff.write(output_title)
+        buff.write('\n')
+        buff.write('-' * len_output_title)
+        buff.write('\n' * 2)
+
+        if output_required or output_optional:
+            self.write_sio(buff, chain(output_required, output_optional))
+        else:
+            buff.write('(None)')
+            buff.write('\n')
+
+        return buff
 
 # ################################################################################################################################
 
@@ -383,7 +411,7 @@ class GetSphinx(Service):
             buff.write('\n')
 
             # Now, create a description file for each service
-            files[item.file_name] = self.get_service_page(item)
+            files[item.file_name] = self.get_service_page(item).getvalue()
 
         # Finish the table
         self.write_separators(buff, ns_border, name_border, desc_border)
