@@ -30,7 +30,7 @@ class APISpec(ZatoCommand):
     def execute(self, args):
         client = get_client_from_server_conf(args.path)
         request = {
-            'return_internal': False
+            'return_internal': True
         }
 
         response = client.invoke('zato.apispec.get-api-spec', request)
@@ -49,8 +49,9 @@ class APISpec(ZatoCommand):
             except OSError:
                 pass # Must have been already created
             finally:
-                f = open(full_file_path, 'w')
-                f.write(contents)
-                f.close()
+                if contents:
+                    f = open(full_file_path, 'w')
+                    f.write(contents)
+                    f.close()
 
         self.logger.info('Output saved to %s', out_dir)
