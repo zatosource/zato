@@ -328,10 +328,6 @@ class Edit(_CreateEdit):
                 self.logger.error(msg)
                 raise Exception(msg)
 
-            # Make sure this combination of channel parameters does not exist already
-            if input.connection == CONNECTION.CHANNEL:
-                self.ensure_channel_is_unique(session, input.url_path, input.soap_action, input.cluster_id)
-
             # Will raise exception if the security type doesn't match connection
             # type and transport
             sec_info = self._handle_security_info(session, input.security_id, input.connection, input.transport)
