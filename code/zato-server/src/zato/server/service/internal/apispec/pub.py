@@ -153,6 +153,7 @@ from bunch import Bunch, bunchify
 from yaml import dump as yaml_dump, Dumper as YAMLDumper
 
 # Zato
+from zato.common import URL_TYPE
 from zato.common.util import fs_safe_name
 from zato.server.apispec import Generator
 from zato.server.apispec.wsdl import WSDLGenerator
@@ -489,6 +490,14 @@ class GetOpenAPI(Service):
 
 # ################################################################################################################################
 
+    def get_rest_channel(self, service_name):
+        for channel_item in self.server.worker_store.request_dispatcher.url_data.channel_data:
+            if channel_item['service_name'] == service_name:
+                if channel_item['transport'] == URL_TYPE.PLAIN_HTTP:
+                    return channel_item
+
+# ################################################################################################################################
+
     def handle(self):
         data = Generator(self.server.service_store.services, self.server.sio_config, '').get_info(ignore_prefix='zato')
         data = bunchify(data)
@@ -504,7 +513,18 @@ class GetOpenAPI(Service):
 
         # Responses to refer to in paths
         out.components = Bunch()
-        out.components.schemas = self._get_response_schemas(data)
+        out.components.schemas = Bunch()
+
+        # REST paths
+        out.paths = Bunch()
+
+        # Schemas for all services - it is possible that not all of them will be output,
+        # for instance, if a service is not exposed through any REST channel.
+        schemas = self._get_response_schemas(data)
+
+        for item in data.services:
+            rest_channel = self.get_rest_channel(item.name)
+            print(111, rest_channel)
 
         _yaml = yaml_dump(out.toDict(), Dumper=YAMLDumper, default_flow_style=False)
 
@@ -554,4 +574,5 @@ components:
           type: string'''
 
 # ################################################################################################################################
+
 """
