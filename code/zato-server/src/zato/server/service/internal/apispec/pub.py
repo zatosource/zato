@@ -432,4 +432,61 @@ class GetSphinx(Service):
         self.response.payload.data = files
 
 # ################################################################################################################################
+
+class GetOpenAPI(Service):
+    """ Generates OpenAPI specifications
+
+    Possibly other things too.
+    """
+    name = 'apispec.get-openapi'
+
+    #class SimpleIO:
+    #    output_required = ('qqq', 'aaa')
+
+    def handle(self):
+        #self.response.payload.qqq = 'qqq-111'
+        #self.response.payload.aaa = 'aaa-222'
+
+        """
+openapi: '3.0.0'
+info:
+  title: API spec
+  version: '1.0'
+
+servers:
+- url: http://localhost:11223
+
+paths:
+  /zzz:
+    get:
+      parameters:
+        - name: q
+          description: ''
+          in: query
+          required: true
+          schema:
+            type: string
+
+      responses:
+        200:
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zzz_response'
+
+components:
+  schemas:
+    zzz_response:
+      title: ''
+      type: object
+      required:
+        - qqq
+      properties:
+        qqq:
+          type: string
+        aaa:
+          type: string"""
+
+# ################################################################################################################################
 '''
