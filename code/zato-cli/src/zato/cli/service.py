@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2013 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import os
-
 # Zato
 from zato.cli import ZatoCommand
-from zato.client import AnyServiceInvoker, CID_NO_CLIP, DEFAULT_MAX_CID_REPR, DEFAULT_MAX_RESPONSE_REPR
+from zato.client import CID_NO_CLIP, DEFAULT_MAX_CID_REPR, DEFAULT_MAX_RESPONSE_REPR
 from zato.common import BROKER, DATA_FORMAT, ZATO_INFO_FILE
-from zato.common.util import get_config
+from zato.common.util import get_client_from_server_conf
+
+# ################################################################################################################################
 
 class Invoke(ZatoCommand):
     """ Invokes a service by its name
@@ -42,24 +41,17 @@ class Invoke(ZatoCommand):
             BROKER.DEFAULT_EXPIRATION), 'default':BROKER.DEFAULT_EXPIRATION},
     ]
 
+# ################################################################################################################################
+
     def execute(self, args):
 
-        repo_dir = os.path.join(os.path.abspath(os.path.join(self.original_dir, args.path)), 'config', 'repo')
-        config = get_config(repo_dir, 'server.conf')
+        client = get_client_from_server_conf(args.path)
 
         headers = {}
-
         if args.headers:
             for pair in args.headers.strip().split(';'):
                 k, v = pair.strip().split('=', 1)
                 headers[k] = v
-
-        repo_dir = os.path.join(os.path.abspath(os.path.join(args.path)), 'config', 'repo')
-        config = get_config(repo_dir, 'server.conf')
-
-        client = AnyServiceInvoker(
-            'http://{}'.format(config.main.gunicorn_bind), args.url_path, self.get_server_client_auth(config, repo_dir),
-            max_response_repr=int(args.max_response_repr), max_cid_repr=int(args.max_cid_repr))
 
         # Prevents attempts to convert/escape XML into JSON
         to_json = True if args.data_format == DATA_FORMAT.JSON else False
@@ -75,3 +67,5 @@ class Invoke(ZatoCommand):
         if args.verbose:
             self.logger.debug('inner.text:[{}]'.format(response.inner.text))
             self.logger.debug('response:[{}]'.format(response))
+
+# ################################################################################################################################
