@@ -310,6 +310,7 @@ ping_query=SELECT 1 FROM dual
 def run_command(args):
     command_class = {}
     command_imports = (
+        ('apispec', 'zato.cli.apispec.APISpec'),
         ('ca_create_ca', 'zato.cli.ca_create_ca.Create'),
         ('ca_create_lb_agent', 'zato.cli.ca_create_lb_agent.Create'),
         ('ca_create_server', 'zato.cli.ca_create_server.Create'),
