@@ -211,10 +211,9 @@ class Create(_CreateEdit):
 
             try:
 
-                item = HTTPSOAP()
+                item = HTTPSOAP(cluster=self._get_zato_cluster_from_request())
                 item.connection = input.connection
                 item.transport = input.transport
-                item.cluster_id = input.cluster_id
                 item.is_internal = input.is_internal
                 item.name = input.name
                 item.is_active = input.is_active
