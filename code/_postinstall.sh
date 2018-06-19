@@ -68,6 +68,7 @@ patch -p0 -d eggs < patches/outbox/outbox.py.diff
 patch -p0 -d eggs < patches/outbox/outbox.py2.diff
 patch -p0 -d eggs < patches/outbox/outbox.py3.diff
 patch -p0 -d eggs < patches/outbox/outbox.py4.diff
+patch -p0 -d eggs < patches/psycopg2/__init__.py.diff
 patch -p0 -d eggs < patches/redis/redis/connection.py.diff
 patch -p0 -d eggs < patches/requests/models.py.diff
 patch -p0 -d eggs < patches/requests/sessions.py.diff
