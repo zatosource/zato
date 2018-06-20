@@ -515,6 +515,12 @@ class GetOpenAPI(Service):
 
 # ################################################################################################################################
 
+    def has_path_elem(self, url_path, elem_name):
+        pattern = '{%s}' %  elem_name
+        return pattern in url_path
+
+# ################################################################################################################################
+
     def handle(self):
         data = Generator(self.server.service_store.services, self.server.sio_config, '').get_info(ignore_prefix='qqq')
         data = bunchify(data)
@@ -552,23 +558,11 @@ class GetOpenAPI(Service):
                     input_required = item.simple_io.openapi_v3.input_required
                     input_optional = item.simple_io.openapi_v3.input_optional
 
-                    if item.name == 'zato.channel.web-socket.edit':
-                        print()
-                        print()
-
-                        print(sorted([elem.name for elem in input_required]))
-                        print()
-                        print(sorted([elem.name for elem in input_optional]))
-
-                        print()
-                        print()
-
-
                     for sio_elem in chain(input_required, input_optional):
                         channel_params.append({
                             b'name': sio_elem.name.encode('utf8'),
                             b'description': b'',
-                            b'in': b'query',
+                            b'in': b'path' if self.has_path_elem(rest_channel.url_path, sio_elem.name) else b'query',
                             b'required': sio_elem.is_required,
                             b'schema': {
                                 b'type': sio_elem.type.encode('utf8'),
@@ -597,4 +591,6 @@ class GetOpenAPI(Service):
         f = open('/tmp/api.yaml', 'w')
         f.write(_yaml)
         f.close()
-        '''
+
+# ################################################################################################################################
+'''
