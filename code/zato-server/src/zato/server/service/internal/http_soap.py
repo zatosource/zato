@@ -211,7 +211,7 @@ class Create(_CreateEdit):
 
             try:
 
-                item = HTTPSOAP(cluster=self._get_zato_cluster_from_request())
+                item = self._new_zato_instance_with_cluster(HTTPSOAP)
                 item.connection = input.connection
                 item.transport = input.transport
                 item.is_internal = input.is_internal
