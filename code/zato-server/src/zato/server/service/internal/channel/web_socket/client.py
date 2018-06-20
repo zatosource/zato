@@ -39,7 +39,7 @@ class Create(AdminService):
         with closing(self.odb.session()) as session:
 
             # Create the client itself
-            client = WebSocketClient()
+            client = self._new_zato_instance_with_cluster(WebSocketClient)
             channel = session.query(ChannelWebSocket).\
                 filter(Cluster.id==self.server.cluster_id).\
                 filter(ChannelWebSocket.name==req.channel_name).\
@@ -57,7 +57,6 @@ class Create(AdminService):
             client.server_proc_pid = self.server.pid
             client.channel_id = channel.id
             client.server_id = self.server.id
-            client.cluster_id = self.server.cluster_id
             client.server_name = self.server.name
 
             session.add(client)
