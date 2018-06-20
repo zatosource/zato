@@ -27,7 +27,7 @@ from zato.server.service.reqresp.sio import AsIs, SIO_TYPE_MAP, is_bool, is_int
 
 # ################################################################################################################################
 
-_sio_attrs = ('input_required', 'output_required', 'input_optional', 'output_optional')
+_sio_attrs = ('input_required', 'input_optional', 'output_required', 'output_optional')
 
 # ################################################################################################################################
 
@@ -132,6 +132,7 @@ class ServiceInfo(object):
 
         # SimpleIO
         sio = getattr(self.service_class, 'SimpleIO', None)
+
         if sio:
             for api_spec_info in SIO_TYPE_MAP:
 

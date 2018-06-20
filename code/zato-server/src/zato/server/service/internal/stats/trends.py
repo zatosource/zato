@@ -20,6 +20,7 @@ class GetTrends(StatsReturningService):
         request_elem = 'zato_stats_get_trends_request'
         response_elem = 'zato_stats_get_trends_response'
         input_required = StatsReturningService.SimpleIO.input_required + (Integer('n'), 'n_type')
+        input_optional = ('service_name',)
 
     def handle(self):
         self.response.payload[:] = (elem.to_dict() for elem in self.get_stats(self.request.input.start,
