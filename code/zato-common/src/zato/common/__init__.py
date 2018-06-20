@@ -1030,6 +1030,7 @@ class AMQP:
     class DEFAULT:
         POOL_SIZE = 10
         PRIORITY = 5
+        PREFETCH_COUNT = 0
 
     class ACK_MODE:
         ACK = NameId('Ack', 'ack')
