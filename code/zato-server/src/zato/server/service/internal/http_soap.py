@@ -211,7 +211,7 @@ class Create(_CreateEdit):
 
             try:
 
-                item = HTTPSOAP(cluster=self._get_zato_cluster_from_request())
+                item = self._new_zato_instance_with_cluster(HTTPSOAP)
                 item.connection = input.connection
                 item.transport = input.transport
                 item.is_internal = input.is_internal
@@ -327,10 +327,6 @@ class Edit(_CreateEdit):
                 msg = 'Service `{}` does not exist on this cluster'.format(input.service)
                 self.logger.error(msg)
                 raise Exception(msg)
-
-            # Make sure this combination of channel parameters does not exist already
-            if input.connection == CONNECTION.CHANNEL:
-                self.ensure_channel_is_unique(session, input.url_path, input.soap_action, input.cluster_id)
 
             # Will raise exception if the security type doesn't match connection
             # type and transport

@@ -129,7 +129,7 @@ class GetDefaultAuthType(Service):
         self.response.payload.auth_type = 'Basic realm="{}"'.format(self.server.fs_server_config.apispec.pub_name)
 
 
-'''
+"""
 # -*- coding: utf-8 -*-
 
 """
@@ -147,10 +147,15 @@ from operator import attrgetter
 import os
 
 # Bunch
-from bunch import bunchify
+from bunch import Bunch, bunchify
+
+# PyYAML
+from yaml import dump as yaml_dump, Dumper as YAMLDumper
 
 # Zato
+from zato.common import URL_TYPE
 from zato.common.util import fs_safe_name
+from zato.server.apispec import Generator
 from zato.server.apispec.wsdl import WSDLGenerator
 from zato.server.service import Int, Float, Opaque, Service
 
@@ -440,14 +445,94 @@ class GetOpenAPI(Service):
     """
     name = 'apispec.get-openapi'
 
-    #class SimpleIO:
-    #    output_required = ('qqq', 'aaa')
+    class SimpleIO:
+        input_optional = ('data',)
+
+# ################################################################################################################################
+
+    def _get_response_name(self, service_name):
+        return b'response_{}'.format(fs_safe_name(service_name))
+
+# ################################################################################################################################
+
+    def _get_response_schemas(self, data):
+
+        out = Bunch()
+
+        for item in data.services:
+
+            response_name = self._get_response_name(item.name)
+            output_required_names = [elem.name.encode('utf8') for elem in item.simple_io.openapi_v3.output_required]
+
+            output_required = item.simple_io.openapi_v3.output_required
+            output_optional = item.simple_io.openapi_v3.output_optional
+
+            properties = {}
+            if output_required or output_optional:
+                for out_elem in chain(output_required, output_optional):
+                    properties[out_elem.name.encode('utf8')] = {
+                        b'type': out_elem.type.encode('utf8'),
+                        b'format': out_elem.subtype.encode('utf8'),
+                    }
+
+            out[response_name] = {
+                b'title': b'Response object for {}'.format(item.name),
+                b'type': b'object',
+            }
+
+            if output_required_names:
+                out[response_name][b'required'] = output_required_names
+
+            if properties:
+                out[response_name][b'properties'] = properties
+
+        return out
+
+# ################################################################################################################################
+
+    def get_rest_channel(self, service_name):
+        for channel_item in self.server.worker_store.request_dispatcher.url_data.channel_data:
+            if channel_item['service_name'] == service_name:
+                if channel_item['transport'] == URL_TYPE.PLAIN_HTTP:
+                    return channel_item
+
+# ################################################################################################################################
 
     def handle(self):
-        #self.response.payload.qqq = 'qqq-111'
-        #self.response.payload.aaa = 'aaa-222'
+        data = Generator(self.server.service_store.services, self.server.sio_config, '').get_info(ignore_prefix='zato')
+        data = bunchify(data)
 
-        """
+        # Basic information, always available
+        out = Bunch()
+        out.openapi = b'3.0.0'
+        out.info = {
+            b'title': b'API spec',
+            b'version': b'1.0',
+        }
+        out.servers = [{b'url': b'http://localhost:11223'}]
+
+        # Responses to refer to in paths
+        out.components = Bunch()
+        out.components.schemas = Bunch()
+
+        # REST paths
+        out.paths = Bunch()
+
+        # Schemas for all services - it is possible that not all of them will be output,
+        # for instance, if a service is not exposed through any REST channel.
+        schemas = self._get_response_schemas(data)
+
+        for item in data.services:
+            rest_channel = self.get_rest_channel(item.name)
+            print(111, rest_channel)
+
+        _yaml = yaml_dump(out.toDict(), Dumper=YAMLDumper, default_flow_style=False)
+
+        print(_yaml)
+
+# ################################################################################################################################
+
+'''
 openapi: '3.0.0'
 info:
   title: API spec
@@ -486,7 +571,8 @@ components:
         qqq:
           type: string
         aaa:
-          type: string"""
+          type: string'''
 
 # ################################################################################################################################
-'''
+
+"""
