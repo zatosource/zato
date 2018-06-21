@@ -13,7 +13,6 @@
     <script type="text/javascript" src="/static/js/stringformat.js"></script>
     <script type="text/javascript" src="/static/mootools/mootools.js"></script>
     <script type="text/javascript" src="/static/superfish/js/superfish.js"></script>
-    <script type="text/javascript" src="/static/brython/_brython/brython.js"></script>
 
     <script>
 
@@ -41,7 +40,7 @@
 {% block body %}
     <div>
         <div id="hd">
-            <div id="console-header">&nbsp;<img src="/static/gfx/logo.png" alt="Zato logo" style="vertical-align:middle"/><span id="logo">Zato</span>
+            <div id="console-header">&nbsp;<a href="http://zato.io/?v={{ zato_version|cut:"Zato " }}" id="logo-link"><img src="/static/gfx/logo.png" alt="Zato logo" style="vertical-align:middle"/><span id="logo">Zato</span></a>
             {% if user.is_authenticated %}
                 <span id="logout">
                     <a class="top" href="{% url "account-settings-basic" %}">My settings</a>
@@ -59,15 +58,6 @@
                 <li><span class="like-a">Services &darr;</span>
                     <ul>
                         <li><a href="{% url "service" %}?cluster={{ cluster_id|default:'' }}">List services</a></li>
-                        <ul>
-                            <li>
-                                <span class="like-a">Documentation &rarr;</span>
-                                <ul>
-                                    <li><a href="{% url "docs-index" %}?cluster={{ cluster_id|default:'' }}">Web-admin</a></li>
-                                    <li><a href="{% url "docs-index" %}?cluster={{ cluster_id|default:'' }}">Public</a></li>
-                                </ul>
-                            </li>
-                        </ul>
                     </ul>
                 </li>
 
@@ -172,7 +162,6 @@
                                 <li class='wide'><a href="{% url "out-sap" %}?cluster={{ cluster_id|default:'' }}">SAP RFC</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
                                 <li class='wide'><a href="{% url "out-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
-                                <!-- <li class='wide'><a href="{% url "out-stomp" %}?cluster={{ cluster_id|default:'' }}">STOMP</a></li> -->
                                 <li class='wide'><a href="{% url "out-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>
@@ -302,7 +291,6 @@
                 <li><a href="https://zato.io/docs?v={{ zato_version|cut:"Zato " }}">Docs</a></li>
                 <li><a href="https://github.com/zatosource/zato/issues">Suggest a feature</a></li>
                 <li><a href="https://zato.io/support.html">Support</a></li>
-                <li><a style="margin-right:5px" href="https://zato.io/docs/project/get-involved.html">Get involved</a></li>
 
                 </ul>
                 <br style="clear:left"/>

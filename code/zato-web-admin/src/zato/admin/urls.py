@@ -174,15 +174,6 @@ urlpatterns += [
         login_required(service.slow_response), name='service-slow-response'),
     ]
 
-urlpatterns += [
-
-    # Services docs
-
-    url(r'^zato/docs/web-admin/$',
-        login_required(docs.Index()), name=docs.Index.url_name),
-
-    ]
-
 # ################################################################################################################################
 
 # Messages..

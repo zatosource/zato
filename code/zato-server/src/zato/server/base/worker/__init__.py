@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -46,7 +46,7 @@ from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, \
-     store_tls, update_apikey_username, update_bind_port, visit_py_source
+     store_tls, update_apikey_username_to_channel, update_bind_port, visit_py_source
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cache import CacheAPI
@@ -336,11 +336,13 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration dictionary.
         """
         security_name = config.get('security_name')
-        sec_config = {'security_name':security_name, 'sec_type':None, 'username':None, 'password':None, 'password_type':None}
+        sec_config = {'security_name':security_name, 'sec_type':None, 'username':None, 'password':None, 'password_type':None,
+            'orig_username':None}
         _sec_config = None
 
         # This will be set to True only if the method's invoked on a server's starting up
         if has_sec_config:
+
             # It's possible that there is no security config attached at all
             if security_name:
                 _sec_config = config
@@ -357,6 +359,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         if _sec_config:
             sec_config['sec_type'] = _sec_config['sec_type']
             sec_config['username'] = _sec_config.get('username')
+            sec_config['orig_username'] = _sec_config.get('orig_username')
             sec_config['password'] = _sec_config.get('password')
             sec_config['password_type'] = _sec_config.get('password_type')
             sec_config['salt'] = _sec_config.get('salt')
@@ -783,7 +786,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ API keys need to be upper-cased and in the format that WSGI environment will have them in.
         """
         for config_dict in self.worker_config.apikey.values():
-            update_apikey_username(config_dict.config)
+            config_dict.config.orig_username = config_dict.config.username
+            update_apikey_username_to_channel(config_dict.config)
 
 # ################################################################################################################################
 

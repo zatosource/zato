@@ -25,6 +25,7 @@ import threading
 import traceback
 import socket
 import sys
+import unicodedata
 from ast import literal_eval
 from contextlib import closing
 from cStringIO import StringIO
@@ -107,10 +108,10 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
 from zato.common import CHANNEL, CLI_ARG_SEP, curdir as common_curdir, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
-     SECRET_SHADOW, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, zato_no_op_marker, ZATO_NOT_GIVEN, \
-     ZMQ
+     SECRET_SHADOW, SECRETS, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, zato_no_op_marker, \
+     ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
-from zato.common.crypto import CryptoManager
+from zato.common.crypto import CryptoManager, ServerCryptoManager
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.odb.query import _service as _service
 
@@ -1345,7 +1346,7 @@ def get_crypto_manager_from_server_config(config, repo_dir):
 
 # ################################################################################################################################
 
-def get_odb_session_from_server_config(config, cm):
+def get_odb_session_from_server_config(config, cm, odb_password_encrypted):
 
     engine_args = Bunch()
     engine_args.odb_type = config.odb.engine
@@ -1354,7 +1355,7 @@ def get_odb_session_from_server_config(config, cm):
     engine_args.odb_port = config.odb.port
     engine_args.odb_db_name = config.odb.db_name
 
-    if cm:
+    if odb_password_encrypted:
         engine_args.odb_password = cm.decrypt(config.odb.password) if config.odb.password else ''
     else:
         engine_args.odb_password = config.odb.password
@@ -1363,10 +1364,10 @@ def get_odb_session_from_server_config(config, cm):
 
 # ################################################################################################################################
 
-def get_server_client_auth(config, repo_dir):
+def get_server_client_auth(config, repo_dir, cm, odb_password_encrypted):
     """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
     """
-    session = get_odb_session_from_server_config(config, get_crypto_manager_from_server_config(config, repo_dir))
+    session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
 
     with closing(session) as session:
         cluster = session.query(Server).\
@@ -1385,7 +1386,8 @@ def get_server_client_auth(config, repo_dir):
                 first()
 
             if security:
-                return (security.username, security.password)
+                password = security.password.replace(SECRETS.PREFIX, '')
+                return (security.username, cm.decrypt(password))
 
 def get_client_from_server_conf(server_dir):
     from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
@@ -1628,27 +1630,7 @@ def require_tcp_port(address):
 
 # ################################################################################################################################
 
-def get_brython_js():
-    code_root = os.path.normpath(os.path.join(common_curdir, '..', '..', '..', '..'))
-    brython_path = os.path.join(
-        code_root, 'zato-web-admin', 'src', 'zato', 'admin', 'static', 'brython', '_brython', 'brython.js')
-
-    f = open(brython_path)
-    brython = f.read()
-    f.close()
-
-    # To make it 100% certain that we are returning the correct file
-    expected = '450c1a7fcab574947c5a5299b81512be2f251649c326209e7c612ed1be6f35e5'
-    actual = sha256(brython).hexdigest()
-
-    if actual != expected:
-        raise ValueError('Failed to validate hash of `{}`'.format(brython_path))
-
-    return brython
-
-# ################################################################################################################################
-
-def update_apikey_username(config):
+def update_apikey_username_to_channel(config):
     config.username = 'HTTP_{}'.format(config.get('username', '').upper().replace('-', '_'))
 
 # ################################################################################################################################
@@ -1732,5 +1714,51 @@ def get_sql_engine_display_name(engine, fs_sql_config):
 
 def pretty_format_float(value):
     return ('%f' % value).rstrip('0').rstrip('.') if value else value
+
+# ################################################################################################################################
+# The slugify function below is taken from Django:
+
+"""
+Copyright (c) Django Software Foundation and individual contributors.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+    1. Redistributions of source code must retain the above copyright notice,
+       this list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+
+    3. Neither the name of Django nor the names of its contributors may be used
+       to endorse or promote products derived from this software without
+       specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
+def slugify(value, allow_unicode=False):
+    """ Convert to ASCII if 'allow_unicode' is False. Convert spaces to underscores.
+    Remove characters that aren't alphanumerics, underscores, or hyphens.
+    Convert to lowercase. Also strip leading and trailing whitespace.
+    """
+    if allow_unicode:
+        value = unicodedata.normalize('NFKC', value)
+        value = re.sub('[^\w\s-]', '', value, flags=re.U).strip().lower()
+        return re.sub('[-\s]+', '_', value, flags=re.U)
+    value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    value = re.sub('[^\w\s-]', '', value).strip().lower()
+    return re.sub('[-\s]+', '_', value)
 
 # ################################################################################################################################

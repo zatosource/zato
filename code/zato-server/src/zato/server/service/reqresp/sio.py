@@ -505,26 +505,48 @@ class SIO_TYPE_MAP:
 
 # ################################################################################################################################
 
-    class OPEN_API_V2:
+    class OPEN_API_V3:
 
-        name = APISPEC.OPEN_API_V2
-        STRING = ('string', None)
+        name = APISPEC.OPEN_API_V3
+        STRING = ('string', 'string')
         DEFAULT = STRING
         INTEGER = ('integer', 'int32')
-        BOOLEAN = ('boolean', None)
+        BOOLEAN = ('boolean', 'boolean')
 
         map = {
             AsIs: STRING,
             Boolean: BOOLEAN,
             CSV: STRING,
-            Dict: (None, None),
+            Dict: ('string', 'binary'),
             Float: ('number', 'float'),
             Integer: INTEGER,
-            List: (None, None),
-            ListOfDicts: (None, None),
-            Opaque: (None, None),
+            List: ('string', 'binary'),
+            ListOfDicts: ('string', 'binary'),
+            Opaque: ('string', 'binary'),
             Unicode: STRING,
             UTC: ('string', 'date-time'),
+        }
+
+    class SOAP_12:
+
+        name = APISPEC.SOAP_12
+        STRING = ('string', 'xsd:string')
+        DEFAULT = STRING
+        INTEGER = ('integer', 'xsd:integer')
+        BOOLEAN = ('boolean', 'xsd:boolean')
+
+        map = {
+            AsIs: STRING,
+            Boolean: BOOLEAN,
+            CSV: STRING,
+            Dict: ('dict', 'zato:dict'),
+            Float: ('number', 'float'),
+            Integer: INTEGER,
+            List: ('list', 'zato:list'),
+            ListOfDicts: ('list-of-dicts', 'zato:list-of-dicts'),
+            Opaque: ('opaque', 'anyType'),
+            Unicode: STRING,
+            UTC: ('string', 'xsd:dateTime'),
         }
 
 # ################################################################################################################################
@@ -555,6 +577,6 @@ class SIO_TYPE_MAP:
 
     class __metaclass__(type):
         def __iter__(self):
-            return iter((self.OPEN_API_V2, self.ZATO))
+            return iter((self.OPEN_API_V3, self.SOAP_12, self.ZATO))
 
 # ################################################################################################################################

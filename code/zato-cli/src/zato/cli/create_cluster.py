@@ -28,21 +28,7 @@ from zato.common.util.time_ import utcnow_as_ms
 
 msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
 
-apispec_name_path = {
-    'zato.apispec.pub.brython-js': '/zato/apispec/static/brython/_brython/brython.js',
-    'zato.apispec.pub.brython-json': '/zato/apispec/static/brython/_brython/libs/json.js',
-    'zato.apispec.pub.main': '/zato/apispec',
-    'zato.apispec.pub.frontend': '/zato/apispec/static/brython/_zato/docs.py',
-}
-
 zato_services = {
-
-    # API Spec
-    'zato.apispec.get-api-spec':'zato.server.service.internal.apispec.GetAPISpec',
-    'zato.apispec.pub.main':'zato.server.service.internal.apispec.pub.Main',
-    'zato.apispec.pub.brython-js':'zato.server.service.internal.apispec.pub.BrythonJS',
-    'zato.apispec.pub.brython-json':'zato.server.service.internal.apispec.pub.BrythonJSON',
-    'zato.apispec.pub.frontend':'zato.server.service.internal.apispec.pub.Frontend',
 
     # Channels - AMQP
     'zato.channel.amqp.create':'zato.server.service.internal.channel.amqp_.Create',
@@ -508,13 +494,11 @@ class Create(ZatoCommand):
 
         self.add_default_rbac_permissions(session, cluster)
         root_rbac_role = self.add_default_rbac_roles(session, cluster)
-        apispec_rbac_role = self.add_rbac_role_and_acct(
-            session, cluster, root_rbac_role, 'API Specification Readers', 'apispec', 'apispec')
         ide_pub_rbac_role = self.add_rbac_role_and_acct(
             session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
 
         self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec,
-            apispec_rbac_role, ide_pub_rbac_role)
+            ide_pub_rbac_role)
 
         self.add_ping_services(session, cluster)
         self.add_default_cache(session, cluster)
@@ -549,7 +533,7 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
     def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec,
-        apispec_rbac_role, ide_pub_rbac_role):
+        ide_pub_rbac_role):
         """ Adds these Zato internal services that can be accessed through SOAP requests.
         """
         #
@@ -584,9 +568,6 @@ class Create(ZatoCommand):
             elif name == 'zato.ide-deploy.create':
                 self.add_rbac_channel(session, cluster, service, ide_pub_rbac_role, '/ide-deploy', permit_write=True,
                                       data_format=DATA_FORMAT.JSON)
-
-            elif 'apispec.pub' in name:
-                self.add_rbac_channel(session, cluster, service, apispec_rbac_role, apispec_name_path[service.name])
 
             elif 'check' in name:
                 self.add_check(session, cluster, service, pubapi_sec)
@@ -729,8 +710,8 @@ class Create(ZatoCommand):
         role = RBACRole(name=role_name, parent=root_rbac_role, cluster=cluster)
         session.add(role)
 
-        apispec_auth = HTTPBasicAuth(None, account_name, True, account_name, realm, uuid4().hex, cluster)
-        session.add(apispec_auth)
+        auth = HTTPBasicAuth(None, account_name, True, account_name, realm, uuid4().hex, cluster)
+        session.add(auth)
 
         client_role_def = MISC.SEPARATOR.join(('sec_def', 'basic_auth', account_name))
         client_role_name = MISC.SEPARATOR.join((client_role_def, role.name))

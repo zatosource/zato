@@ -22,6 +22,7 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
+from zato.cli._apispec_default import apispec_files
 from zato.common import CONTENT_TYPE, SERVER_JOIN_STATUS
 from zato.common.crypto import well_known_data
 from zato.common.defaults import http_plain_server_port
@@ -186,10 +187,6 @@ level=WARN
 custom_auth_list_service=
 
 [[auth_type_hook]]
-/zato/apispec/static/brython/_brython/brython.js=zato.apispec.pub.get-default-auth-type
-/zato/apispec/static/brython/_brython/libs/json.js=zato.apispec.pub.get-default-auth-type
-/zato/apispec/static/brython/_zato/docs.py=zato.apispec.pub.get-default-auth-type
-/zato/apispec=zato.apispec.pub.get-default-auth-type
 
 [component_enabled]
 stats=True
@@ -262,18 +259,8 @@ ip=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, eth0
 boot_if_preferred_not_found=False
 allow_loopback=False
 
-[apispec]
-pub_enabled=False
-pub_name=API specification
-pub_css_style="color:#eee; font-weight:bold; font-size:17px; padding-left:2px"
-
 [shmem]
 size=0.1 # In MB
-
-[apispec_services_allowed]
-# By default, public APIspec endpoints return nothing.
-order=false_true
-*=False
 
 [os_environ]
 sample_key=sample_value
@@ -573,8 +560,9 @@ class Create(ZatoCommand):
     opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':"Server's name"})
-    opts.append({'name':'secret_key', 'help':"Server's secret key (in Fernet format, must be the same for all servers)"})
-    opts.append({'name':'jwt_secret', 'help':"Server's JWT secret (in Fernet format, must be the same for all servers)"})
+    opts.append({'name':'--secret_key', 'help':"Server's secret key (in Fernet format, must be the same for all servers)"})
+    opts.append({'name':'--jwt_secret', 'help':"Server's JWT secret (in Fernet format, must be the same for all servers)"})
+    opts.append({'name':'--http_port', 'help':"Server's HTTP port"})
 
     def __init__(self, args):
         super(Create, self).__init__(args)
@@ -594,7 +582,7 @@ class Create(ZatoCommand):
 
         self.dirs_prepared = True
 
-    def execute(self, args, port=http_plain_server_port, show_output=True, return_server_id=False):
+    def execute(self, args, default_http_port=http_plain_server_port, show_output=True, return_server_id=False):
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
@@ -604,17 +592,15 @@ class Create(ZatoCommand):
             first()
 
         if not cluster:
-            self.logger.error("Cluster `{}` doesn't exist in ODB", args.cluster_name)
+            self.logger.error("Cluster `%s` doesn't exist in ODB", args.cluster_name)
             return self.SYS_ERROR.NO_SUCH_CLUSTER
 
-        server = Server()
-        server.cluster_id = cluster.id
+        server = Server(cluster=cluster)
         server.name = args.server_name
         server.token = self.token
         server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED
         server.last_join_mod_by = self._get_user_host()
         server.last_join_mod_date = datetime.utcnow()
-
         session.add(server)
 
         try:
@@ -653,7 +639,7 @@ class Create(ZatoCommand):
             server_conf = open(server_conf_loc, 'w')
             server_conf.write(
                 server_conf_template.format(
-                    port=port,
+                    port=args.get('http_port', None) or default_http_port,
                     gunicorn_workers=1,
                     odb_db_name=args.odb_db_name or args.sqlite_path,
                     odb_engine=odb_engine,
@@ -706,6 +692,20 @@ class Create(ZatoCommand):
 
             if show_output:
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
+
+            # Sphinx APISpec files
+            for file_path, contents in apispec_files.items():
+                full_path = os.path.join(self.target_dir, 'config/repo/static/sphinxdoc/apispec', file_path)
+                dir_name = os.path.dirname(full_path)
+                try:
+                    os.makedirs(dir_name, 0770)
+                except OSError:
+                    # That is fine, the directory must have already created in one of previous iterations
+                    pass
+                finally:
+                    api_file = open(full_path, 'w')
+                    api_file.write(contents)
+                    api_file.close()
 
             # Initial info
             self.store_initial_info(self.target_dir, self.COMPONENTS.SERVER.code)
