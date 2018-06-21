@@ -470,6 +470,7 @@ class GetByService(StatsReturningService):
         request_elem = 'zato_stats_get_by_service_request'
         response_elem = 'zato_stats_get_by_service_response'
         input_required = StatsReturningService.SimpleIO.input_required + ('service_id',)
+        input_optional = ('service_name',)
         output_optional = ('service_name', 'usage', 'mean', 'rate', 'time', 'usage_trend', 'mean_trend',
                     'min_resp_time', 'max_resp_time',)
 

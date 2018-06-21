@@ -910,9 +910,3 @@ $.fn.zato.toggle_time = function(link_name, current_value, new_value) {
 
 $.fn.zato.empty_value = '<span class="form_hint">---</span>';
 
-// For Brython
-
-window.zato_select_data_target = null;
-window.zato_select_data_target_items = {};
-window.zato_dyn_form_skip_edit = null;
-window.zato_dyn_form_skip_clear_field = [];
