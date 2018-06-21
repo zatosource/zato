@@ -1887,6 +1887,7 @@ class ChannelWebSocket(Base):
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
+    is_out = Column(Boolean(), nullable=False, default=sa_false())
 
     address = Column(String(200), nullable=False)
     data_format = Column(String(20), nullable=False)
