@@ -90,10 +90,11 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def _new_zato_instance_with_cluster(self, instance_class, **kwargs):
+    def _new_zato_instance_with_cluster(self, instance_class, cluster_id=None, **kwargs):
         with closing(self.odb.session()) as session:
+            cluster_id = cluster_id or self.request.input.cluster_id
             cluster = session.query(Cluster).\
-                   filter(Cluster.id==self.request.input.cluster_id).\
+                   filter(Cluster.id==cluster_id).\
                    one()
         return instance_class(cluster=cluster, **kwargs)
 
