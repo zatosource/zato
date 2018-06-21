@@ -234,6 +234,7 @@ class GetSummaryBase(StatsReturningService):
     """
     class SimpleIO(StatsReturningService.SimpleIO):
         input_required = (UTC('start'), Integer('n'), 'n_type')
+        input_optional = ('service_name',)
 
     stats_key_prefix = None
 

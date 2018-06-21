@@ -187,10 +187,6 @@ level=WARN
 custom_auth_list_service=
 
 [[auth_type_hook]]
-/zato/apispec/static/brython/_brython/brython.js=zato.apispec.pub.get-default-auth-type
-/zato/apispec/static/brython/_brython/libs/json.js=zato.apispec.pub.get-default-auth-type
-/zato/apispec/static/brython/_zato/docs.py=zato.apispec.pub.get-default-auth-type
-/zato/apispec=zato.apispec.pub.get-default-auth-type
 
 [component_enabled]
 stats=True
@@ -263,18 +259,8 @@ ip=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, eth0
 boot_if_preferred_not_found=False
 allow_loopback=False
 
-[apispec]
-pub_enabled=False
-pub_name=API specification
-pub_css_style="color:#eee; font-weight:bold; font-size:17px; padding-left:2px"
-
 [shmem]
 size=0.1 # In MB
-
-[apispec_services_allowed]
-# By default, public APIspec endpoints return nothing.
-order=false_true
-*=False
 
 [os_environ]
 sample_key=sample_value
@@ -715,7 +701,7 @@ class Create(ZatoCommand):
                     os.makedirs(dir_name, 0770)
                 except OSError:
                     # That is fine, the directory must have already created in one of previous iterations
-                    pass 
+                    pass
                 finally:
                     api_file = open(full_path, 'w')
                     api_file.write(contents)

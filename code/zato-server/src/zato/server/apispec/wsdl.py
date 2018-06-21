@@ -9,9 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from cStringIO import StringIO
 from json import load
-from string import punctuation, whitespace
+from string import whitespace
 
 # Bunch
 from bunch import bunchify

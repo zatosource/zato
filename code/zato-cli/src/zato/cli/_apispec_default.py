@@ -13,6 +13,10 @@ apispec_files = {}
 
 # Custom CSS styles
 apispec_files['_static/custom.css'] = """
+* {
+  font-size:0.99em;
+}
+
 code {
   font-size:1.2em
 }
@@ -487,5 +491,5 @@ API documentation
 
 # Default include files
 apispec_files['intro.rst'] = """
-Download: :download:`OpenAPI/Swagger <./download/api.yaml>`, :download:`WSDL <./download/api.wsdl>`
+Download: :download:`OpenAPI/Swagger <./download/openapi.yaml>`, :download:`WSDL <./download/api.wsdl>`
 """

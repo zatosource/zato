@@ -1629,26 +1629,6 @@ def require_tcp_port(address):
 
 # ################################################################################################################################
 
-def get_brython_js():
-    code_root = os.path.normpath(os.path.join(common_curdir, '..', '..', '..', '..'))
-    brython_path = os.path.join(
-        code_root, 'zato-web-admin', 'src', 'zato', 'admin', 'static', 'brython', '_brython', 'brython.js')
-
-    f = open(brython_path)
-    brython = f.read()
-    f.close()
-
-    # To make it 100% certain that we are returning the correct file
-    expected = '450c1a7fcab574947c5a5299b81512be2f251649c326209e7c612ed1be6f35e5'
-    actual = sha256(brython).hexdigest()
-
-    if actual != expected:
-        raise ValueError('Failed to validate hash of `{}`'.format(brython_path))
-
-    return brython
-
-# ################################################################################################################################
-
 def update_apikey_username_to_channel(config):
     config.username = 'HTTP_{}'.format(config.get('username', '').upper().replace('-', '_'))
 

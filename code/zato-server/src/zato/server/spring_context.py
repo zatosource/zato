@@ -39,7 +39,6 @@ class ZatoContext(PythonConfig):
         return [
             'zato.server.service.internal',
             'zato.server.service.internal.apispec',
-            'zato.server.service.internal.apispec.pub',
             'zato.server.service.internal.cache.builtin',
             'zato.server.service.internal.cache.builtin.entry',
             'zato.server.service.internal.cache.builtin.pubapi',
