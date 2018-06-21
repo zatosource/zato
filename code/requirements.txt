@@ -169,7 +169,7 @@ untokenize==0.1.1
 urllib3==1.10.4
 vine==1.1.3
 warlock==1.1.0
-watchdog==0.6.0
+watchdog==0.8.3
 WebHelpers==1.3
 werkzeug==0.9.4
 wrapt==1.6.0
