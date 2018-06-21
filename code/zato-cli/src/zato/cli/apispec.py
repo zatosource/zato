@@ -24,13 +24,19 @@ stderr_sleep_bg = 1.2
 
 class APISpec(ZatoCommand):
     """API specifications generator."""
+    opts = [
+        {'name':'--include', 'help':'A comma-separated list of patterns to include services by', 'default':'*'},
+        {'name':'--exclude', 'help':'A comma-separated list of patterns to exclude services by', 'default':'zato.*'},
+    ]
 
 # ################################################################################################################################
 
     def execute(self, args):
         client = get_client_from_server_conf(args.path)
         request = {
-            'return_internal': False
+            'return_internal': False,
+            'include': args.include,
+            'exclude': args.exclude,
         }
 
         response = client.invoke('zato.apispec.get-api-spec', request)
