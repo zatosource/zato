@@ -24,7 +24,7 @@ from zato.server.apispec.wsdl import WSDLGenerator
 from zato.server.service import Opaque, Service
 
 # Zato
-from zato.common.util import fs_safe_name
+from zato.common.util import aslist, fs_safe_name
 from zato.server.apispec import Generator
 from zato.server.service import Bool
 
@@ -40,20 +40,23 @@ class GetAPISpec(Service):
     """ Returns API specifications for all services.
     """
     class SimpleIO:
-        input_optional = ('cluster_id', 'query', Bool('return_internal'), 'format')
+        input_optional = ('cluster_id', 'query', Bool('return_internal'), 'include', 'exclude')
 
     def handle(self):
         cluster_id = self.request.input.get('cluster_id')
+
+        include = aslist(self.request.input.include, ',')
+        exclude = aslist(self.request.input.exclude, ',')
+
         if self.request.input.get('return_internal'):
-            ignore_prefix = ''
-        else:
-            ignore_prefix = 'zato'
+            if 'zato.*' not in exclude:
+                exclude.append('zato.*')
 
         if cluster_id and cluster_id != self.server.cluster_id:
             raise ValueError('Input cluster ID `%s` different than ours `%s`', cluster_id, self.server.cluster_id)
 
         data = Generator(self.server.service_store.services, self.server.sio_config,
-            self.request.input.query).get_info(ignore_prefix=ignore_prefix)
+            include, exclude, self.request.input.query).get_info()
 
         out = self.invoke(GetSphinx.get_name(), {'data': data})
 

@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from copy import deepcopy
+from fnmatch import fnmatch
 from inspect import getmodule
 
 # Bunch
@@ -237,9 +238,11 @@ class ServiceInfo(object):
 # ################################################################################################################################
 
 class Generator(object):
-    def __init__(self, service_store_services, simple_io_config, query=None):
+    def __init__(self, service_store_services, simple_io_config, include, exclude, query=None):
         self.service_store_services = service_store_services
         self.simple_io_config = simple_io_config
+        self.include = include or []
+        self.exclude = exclude or []
         self.query = query
         self.services = {}
 
@@ -252,10 +255,10 @@ class Generator(object):
     def to_html(self, value):
         return markdown(value).lstrip('<p>').rstrip('</p>')
 
-    def get_info(self, ignore_prefix='TODO'):
+    def get_info(self):
         """ Returns a list of dicts containing metadata about services in the scope required to generate docs and API clients.
         """
-        self.parse(ignore_prefix)
+        self.parse()
 
         if self.query:
             query_items = [elem.strip() for elem in self.query.strip().split()]
@@ -318,14 +321,26 @@ class Generator(object):
 
 # ################################################################################################################################
 
-    def parse(self, ignore_prefix):
+    def _should_handle(self, name, list_):
+        for match_elem in list_:
+            if fnmatch(name, match_elem):
+                return True
+
+# ################################################################################################################################
+
+    def parse(self):
+
         for impl_name, details in self.service_store_services.iteritems():
-            if ignore_prefix and impl_name.startswith(ignore_prefix):
+
+            details = bunchify(details)
+            _should_include = self._should_handle(details.name, self.include)
+            _should_exclude = self._should_handle(details.name, self.exclude)
+
+            if (not _should_include) or _should_exclude:
                 continue
-            else:
-                details = bunchify(details)
-                info = ServiceInfo(details['name'], details['service_class'], self.simple_io_config)
-                self.services[info.name] = info
+
+            info = ServiceInfo(details.name, details.service_class, self.simple_io_config)
+            self.services[info.name] = info
 
         for name, info in self.services.iteritems():
             self.invokes[name] = info.invokes
