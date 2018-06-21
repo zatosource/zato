@@ -13,7 +13,6 @@
     <script type="text/javascript" src="/static/js/stringformat.js"></script>
     <script type="text/javascript" src="/static/mootools/mootools.js"></script>
     <script type="text/javascript" src="/static/superfish/js/superfish.js"></script>
-    <script type="text/javascript" src="/static/brython/_brython/brython.js"></script>
 
     <script>
 
@@ -59,15 +58,6 @@
                 <li><span class="like-a">Services &darr;</span>
                     <ul>
                         <li><a href="{% url "service" %}?cluster={{ cluster_id|default:'' }}">List services</a></li>
-                        <ul>
-                            <li>
-                                <span class="like-a">Documentation &rarr;</span>
-                                <ul>
-                                    <li><a href="{% url "docs-index" %}?cluster={{ cluster_id|default:'' }}">Web-admin</a></li>
-                                    <li><a href="{% url "docs-index" %}?cluster={{ cluster_id|default:'' }}">Public</a></li>
-                                </ul>
-                            </li>
-                        </ul>
                     </ul>
                 </li>
 
@@ -172,7 +162,6 @@
                                 <li class='wide'><a href="{% url "out-sap" %}?cluster={{ cluster_id|default:'' }}">SAP RFC</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
                                 <li class='wide'><a href="{% url "out-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
-                                <!-- <li class='wide'><a href="{% url "out-stomp" %}?cluster={{ cluster_id|default:'' }}">STOMP</a></li> -->
                                 <li class='wide'><a href="{% url "out-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>
