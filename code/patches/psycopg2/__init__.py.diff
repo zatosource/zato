@@ -1,0 +1,16 @@
+--- psycopg2/__init__.py.orig	2018-06-19 16:02:23.018445647 +0200
++++ psycopg2/__init__.py	2018-06-19 16:02:31.170445779 +0200
+@@ -132,13 +132,3 @@
+         conn.cursor_factory = cursor_factory
+ 
+     return conn
+-
+-
+-# This is a wheel package: issue a warning on import
+-from warnings import warn   # noqa
+-warn("""\
+-The psycopg2 wheel package will be renamed from release 2.8; in order to \
+-keep installing from binary please use "pip install psycopg2-binary" instead. \
+-For details see: \
+-<http://initd.org/psycopg/docs/install.html#binary-install-from-pypi>.\
+-""")

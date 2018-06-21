@@ -45,17 +45,46 @@ req_resp = {
     'Ping': 'ping',
 }
 
+def _is_column_required(column):
+    return not (bool(column.nullable) is True)
+
+def get_columns_to_visit(columns, is_required):
+    out = []
+
+    # Models with inheritance may have multiple attributes of the same name,
+    # e.g. VaultConnection.id will have SecBase.id and we need to make sure only one of the is returned.
+    names_seen = set()
+
+    for elem in columns:
+        if is_required:
+            if not _is_column_required(elem):
+                continue
+        else:
+            if _is_column_required(elem):
+                continue
+
+        if elem.name not in names_seen:
+            names_seen.add(elem.name)
+            out.append(elem)
+        else:
+            continue
+
+    return out
 
 def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_cluster_id):
 
     # This can be either a list or an SQLAlchemy object
     elems = attrs.get(elems_name) or []
+    columns = []
 
     # Generate elems out of SQLAlchemy tables, including calls to ForceType's subclasses, such as Bool or Int.
 
     if elems and isclass(elems) and issubclass(elems, Base):
-        columns = []
-        for column in [elem for elem in elems._sa_class_manager.mapper.mapped_table.columns]:
+
+        columns_to_visit = [elem for elem in elems._sa_class_manager.mapper.mapped_table.columns]
+        columns_to_visit = get_columns_to_visit(columns_to_visit, is_required)
+
+        for column in columns_to_visit:
 
             # Each model has a cluster_id column but it's not really needed for anything on output
             if column.name == 'cluster_id' and is_output:
@@ -66,12 +95,6 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
                 continue
 
             if column.name in attrs.skip_input_params:
-                continue
-
-            # We're building SimpleIO.input/output_required here so any nullable columns
-            # should not be taken into account. They will be included the next time get_io
-            # is called, i.e. to build SimpleIO.input/output_optional.
-            if is_required and column.nullable:
                 continue
 
             # We never return passwords
@@ -98,10 +121,7 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
                 else:
                     columns.append(column.name)
 
-        # Override whatever objects it used to be
-        elems = columns
-
-    return elems
+    return columns
 
 def update_attrs(cls, name, attrs):
 
@@ -196,8 +216,9 @@ class AdminServiceMeta(type):
                 is_get_list = name=='GetList'
 
                 sio_elem = getattr(SimpleIO, _name)
-                sio_elem.extend(
-                    get_io(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, 'cluster_id' in sio_elem))
+                has_cluster_id = 'cluster_id' in sio_elem
+                sio_to_add = get_io(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id)
+                sio_elem.extend(sio_to_add)
 
                 if attrs.is_create_edit and is_required:
                     sio_elem.extend(attrs.create_edit_input_required_extra)
@@ -289,7 +310,9 @@ class CreateEditMeta(AdminServiceMeta):
                         instance = session.query(attrs.model).filter_by(id=input.id).one()
                         old_name = instance.name
                     else:
-                        instance = attrs.model()
+                        create_edit_hook_initial = attrs.instance_hook(self, input, None, attrs)
+                        create_edit_hook_initial = create_edit_hook_initial or {}
+                        instance = self._new_zato_instance_with_cluster(attrs.model, **create_edit_hook_initial)
 
                     # Update the instance with data received on input, however,
                     # note that this may overwrite some of existing attributes

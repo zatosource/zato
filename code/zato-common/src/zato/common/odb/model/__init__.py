@@ -487,7 +487,7 @@ class HTTPSOAP(Base):
     __tablename__ = 'http_soap'
     __table_args__ = (
         UniqueConstraint('name', 'connection', 'transport', 'cluster_id'),
-        Index('path_host_conn_act_clus_idx', 'url_path', 'host', 'connection', 'soap_action', 'cluster_id', unique=True), {})
+        Index('path_host_conn_act_clus_idx', 'url_path', 'host', 'connection', 'soap_action', 'cluster_id', unique=False), {})
 
     id = Column(Integer, Sequence('http_soap_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -2198,7 +2198,6 @@ class PubSubMessage(Base):
     # ID of an external client on whose behalf the endpoint published the message
     ext_client_id = Column(Text(), nullable=True)
 
-
     # Will group messages belonging logically to the same group, useful if multiple
     # messages are published with the same timestamp by the same client but they still
     # need to be correctly ordered.
@@ -2212,7 +2211,6 @@ class PubSubMessage(Base):
     ext_pub_time = Column(Numeric(20, 7, asdecimal=False), nullable=True) # When the message was created by publisher
     expiration_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
     last_updated = Column(Numeric(20, 7, asdecimal=False), nullable=True)
-
 
     data = Column(Text(), nullable=False)
     data_prefix = Column(Text(), nullable=False)

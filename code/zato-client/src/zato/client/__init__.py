@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2013 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -444,6 +444,7 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
     """
 
     # To avoid circular references
+    from zato.common.crypto import ServerCryptoManager
     from zato.common.util import get_crypto_manager_from_server_config, get_odb_session_from_server_config
 
     class ZatoClient(AnyServiceInvoker):
@@ -453,14 +454,14 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
             self.odb_session = None
 
     repo_dir = os.path.join(os.path.abspath(os.path.join(server_dir)), 'config', 'repo')
-    config = get_config_func(repo_dir, 'server.conf')
+    cm = ServerCryptoManager.from_repo_dir(None, repo_dir, None)
 
+    secrets_conf = get_config_func(repo_dir, 'secrets.conf', needs_user_config=False)
+    config = get_config_func(repo_dir, 'server.conf', crypto_manager=cm, secrets_conf=secrets_conf)
     server_url = server_url if server_url else config.main.gunicorn_bind
-    client = ZatoClient('http://{}'.format(server_url),
-        '/zato/admin/invoke', client_auth_func(config, repo_dir), max_response_repr=15000)
-
-    session = get_odb_session_from_server_config(
-        config, get_crypto_manager_from_server_config(config, repo_dir))
+    client_auth = client_auth_func(config, repo_dir, cm, False)
+    client = ZatoClient('http://{}'.format(server_url), '/zato/admin/invoke', client_auth, max_response_repr=15000)
+    session = get_odb_session_from_server_config(config, None, False)
 
     client.cluster_id = session.query(Server).\
         filter(Server.token == config.main.token).\

@@ -16,6 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
+from zato.common.odb.model import Cluster
 from zato.common.util import get_response_value, replace_private_key
 from zato.common.util.sql import search as sql_search
 from zato.server.service import Bool, Int, Service
@@ -86,6 +87,16 @@ class AdminService(Service):
 
     def handle(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
+
+# ################################################################################################################################
+
+    def _new_zato_instance_with_cluster(self, instance_class, cluster_id=None, **kwargs):
+        with closing(self.odb.session()) as session:
+            cluster_id = cluster_id or self.request.input.cluster_id
+            cluster = session.query(Cluster).\
+                   filter(Cluster.id==cluster_id).\
+                   one()
+        return instance_class(cluster=cluster, **kwargs)
 
 # ################################################################################################################################
 

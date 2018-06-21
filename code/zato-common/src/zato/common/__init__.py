@@ -1018,7 +1018,8 @@ class WEB_SOCKET:
         INVOKE_SERVICE = 'invoke-service'
 
 class APISPEC:
-    OPEN_API_V2 = 'openapi-v2'
+    OPEN_API_V3 = 'openapi_v3'
+    SOAP_12 = 'soap_12'
     NAMESPACE_NULL = ''
 
 class PADDING:

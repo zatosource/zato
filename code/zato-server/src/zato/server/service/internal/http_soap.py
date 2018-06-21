@@ -23,9 +23,9 @@ from paste.util.converters import asbool
 from webhelpers.paginate import Page
 
 # Zato
-from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE, \
-     ZATO_SEC_USE_RBAC
+from zato.common import BATCH_DEFAULTS, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+     HTTP_SOAP_SERIALIZATION_TYPE, MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
+     ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, JSONPointer, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsJSONPointer, \
      HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, TLSCACert, to_json, XPath
@@ -66,8 +66,8 @@ class _HTTPSOAPService(object):
             if connection == 'outgoing':
 
                 if transport == URL_TYPE.PLAIN_HTTP and \
-                   sec_def.sec_type not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT):
-                    raise Exception('Only HTTP Basic Auth and TLS keys/certs are supported, not `{}`'.format(sec_def.sec_type))
+                   sec_def.sec_type not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT, SEC_DEF_TYPE.APIKEY):
+                    raise Exception('Unsupported sec_type `{}`'.format(sec_def.sec_type))
 
                 elif transport == URL_TYPE.SOAP and sec_def.sec_type \
                      not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.WSS):
@@ -141,6 +141,18 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
                 filter(TLSCACert.id==sec_tls_ca_cert_id).\
                 one()[0]
 
+    def ensure_channel_is_unique(self, session, url_path, soap_action, cluster_id):
+        existing_one = session.query(HTTPSOAP.id).\
+            filter(HTTPSOAP.cluster_id==cluster_id).\
+            filter(HTTPSOAP.url_path==url_path).\
+            filter(HTTPSOAP.soap_action==soap_action).\
+            filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
+            first()
+
+        if existing_one:
+            raise Exception('Such a channel already exists, url_path:`{}`, soap_action:`{}`, cluster_id:`{}`'.format(
+                url_path, soap_action, cluster_id))
+
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -183,7 +195,7 @@ class Create(_CreateEdit):
                 filter(Service.cluster_id==Cluster.id).\
                 filter(Service.name==input.service).first()
 
-            if input.connection == 'channel' and not service:
+            if input.connection == CONNECTION.CHANNEL and not service:
                 msg = 'Service `{}` does not exist on this cluster'.format(input.service)
                 self.logger.error(msg)
                 raise Exception(msg)
@@ -193,12 +205,15 @@ class Create(_CreateEdit):
             sec_info = self._handle_security_info(session, input.security_id,
                 input.connection, input.transport)
 
+            # Make sure this combination of channel parameters does not exist already
+            if input.connection == CONNECTION.CHANNEL:
+                self.ensure_channel_is_unique(session, input.url_path, input.soap_action, input.cluster_id)
+
             try:
 
-                item = HTTPSOAP()
+                item = self._new_zato_instance_with_cluster(HTTPSOAP)
                 item.connection = input.connection
                 item.transport = input.transport
-                item.cluster_id = input.cluster_id
                 item.is_internal = input.is_internal
                 item.name = input.name
                 item.is_active = input.is_active
@@ -230,7 +245,7 @@ class Create(_CreateEdit):
                 session.add(item)
                 session.commit()
 
-                if input.connection == 'channel':
+                if input.connection == CONNECTION.CHANNEL:
                     input.impl_name = service.impl_name
                     input.service_id = service.id
                     input.service_name = service.name
@@ -249,7 +264,7 @@ class Create(_CreateEdit):
                 input.id = item.id
                 input.update(sec_info)
 
-                if input.connection == 'channel':
+                if input.connection == CONNECTION.CHANNEL:
                     action = CHANNEL.HTTP_SOAP_CREATE_EDIT.value
                 else:
                     action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
@@ -308,7 +323,7 @@ class Edit(_CreateEdit):
                 filter(Service.cluster_id==Cluster.id).\
                 filter(Service.name==input.service).first()
 
-            if input.connection == 'channel' and not service:
+            if input.connection == CONNECTION.CHANNEL and not service:
                 msg = 'Service `{}` does not exist on this cluster'.format(input.service)
                 self.logger.error(msg)
                 raise Exception(msg)
@@ -358,7 +373,7 @@ class Edit(_CreateEdit):
                 session.add(item)
                 session.commit()
 
-                if input.connection == 'channel':
+                if input.connection == CONNECTION.CHANNEL:
                     input.impl_name = service.impl_name
                     input.service_id = service.id
                     input.service_name = service.name
@@ -387,7 +402,7 @@ class Edit(_CreateEdit):
                 if item.sec_tls_ca_cert_id and item.sec_tls_ca_cert_id != ZATO_NONE:
                     self.add_tls_ca_cert(input, item.sec_tls_ca_cert_id)
 
-                if input.connection == 'channel':
+                if input.connection == CONNECTION.CHANNEL:
                     action = CHANNEL.HTTP_SOAP_CREATE_EDIT.value
                 else:
                     action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
@@ -428,7 +443,7 @@ class Delete(AdminService, _HTTPSOAPService):
                 session.delete(item)
                 session.commit()
 
-                if item.connection == 'channel':
+                if item.connection == CONNECTION.CHANNEL:
                     action = CHANNEL.HTTP_SOAP_DELETE.value
                 else:
                     action = OUTGOING.HTTP_SOAP_DELETE.value

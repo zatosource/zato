@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -17,7 +17,7 @@ import cloghandler
 cloghandler = cloghandler # For pyflakes
 
 # Zato
-from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
+from zato.cli import apispec as apispec_mod, ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
      ca_create_server as ca_create_server_mod, ca_create_web_admin as ca_create_web_admin_mod, \
      check_config as check_config_mod, component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_scheduler as create_scheduler_mod, \
@@ -51,6 +51,18 @@ def get_parser():
     parser.add_argument('--version', action='version', version=version)
 
     subs = parser.add_subparsers()
+
+
+    #
+    # apispec
+    #
+    apispec = subs.add_parser(
+        'apispec',
+        description='API specifications generator',
+        parents=[base_parser])
+    apispec.set_defaults(command='apispec')
+    apispec.add_argument('path', help='Path to a Zato server')
+    add_opts(apispec, apispec_mod.APISpec.opts)
 
     #
     # ca
@@ -125,6 +137,10 @@ def get_parser():
     create_scheduler.add_argument('path', help='Path to an empty directory to install the scheduler in')
     create_scheduler.set_defaults(command='create_scheduler')
     add_opts(create_scheduler, create_scheduler_mod.Create.opts)
+
+    create_key = create_subs.add_parser('secret_key', description=crypto_mod.CreateSecretKey.__doc__, parents=[base_parser])
+    create_key.set_defaults(command='create_secret_key')
+    add_opts(create_key, crypto_mod.CreateSecretKey.opts)
 
     create_server = create_subs.add_parser('server', description=create_server_mod.Create.__doc__, parents=[base_parser])
     create_server.add_argument('path', help='Path to an empty directory to install the server in')

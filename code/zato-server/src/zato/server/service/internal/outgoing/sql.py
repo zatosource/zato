@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -17,7 +17,7 @@ from uuid import uuid4
 # Zato
 from zato.common import ZatoException, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import OUTGOING
-from zato.common.odb.model import SQLConnectionPool
+from zato.common.odb.model import Cluster, SQLConnectionPool
 from zato.common.odb.query import out_sql_list
 from zato.common.util import get_sql_engine_display_name
 from zato.server.service import AsIs, Integer
@@ -89,10 +89,10 @@ class Create(AdminService, _SQLService):
                 raise Exception('An outgoing SQL connection [{0}] already exists on this cluster'.format(input.name))
 
             try:
-                item = SQLConnectionPool()
+                cluster = session.query(Cluster).filter_by(id=input.cluster_id).one()
+                item = SQLConnectionPool(cluster=cluster)
                 item.name = input.name
                 item.is_active = input.is_active
-                item.cluster_id = input.cluster_id
                 item.engine = input.engine
                 item.host = input.host
                 item.port = input.port
