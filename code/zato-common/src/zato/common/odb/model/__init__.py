@@ -10,11 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from ftplib import FTP_PORT
-from json import dumps
+from json import dumps as json_dumps, loads as json_loads
 
 # SQLAlchemy
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, Index, Integer, LargeBinary, \
-     Numeric, Sequence, SmallInteger, String, Text, true as sa_true, UniqueConstraint
+     Numeric, Sequence, SmallInteger, String, Text, true as sa_true, TypeDecorator, UniqueConstraint
 from sqlalchemy.orm import backref, relationship
 
 # Zato
@@ -39,7 +39,31 @@ def to_json(model, return_as_dict=False):
     if return_as_dict:
         return out
     else:
-        return dumps([out])
+        return json_dumps([out])
+
+# ################################################################################################################################
+
+class _JSON(TypeDecorator):
+    """ Python 2.7 ships with SQLite 3.8 whereas it was 3.9 that introduced the JSON datatype.
+    Because of it, we need our own wrapper around JSON data.
+    """
+    @property
+    def python_type(self):
+        return object
+
+    impl = Text
+
+    def process_bind_param(self, value, dialect):
+        return json_dumps(value)
+
+    def process_literal_param(self, value, dialect):
+        return value
+
+    def process_result_value(self, value, dialect):
+        try:
+            return json_loads(value)
+        except(ValueError, TypeError):
+            return None
 
 # ################################################################################################################################
 
