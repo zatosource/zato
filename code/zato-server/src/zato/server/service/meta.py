@@ -310,9 +310,7 @@ class CreateEditMeta(AdminServiceMeta):
                         instance = session.query(attrs.model).filter_by(id=input.id).one()
                         old_name = instance.name
                     else:
-                        create_edit_hook_initial = attrs.instance_hook(self, input, None, attrs)
-                        create_edit_hook_initial = create_edit_hook_initial or {}
-                        instance = self._new_zato_instance_with_cluster(attrs.model, **create_edit_hook_initial)
+                        instance = self._new_zato_instance_with_cluster(attrs.model)
 
                     # Update the instance with data received on input, however,
                     # note that this may overwrite some of existing attributes
