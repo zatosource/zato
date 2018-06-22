@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Zato
 from zato.common.odb.model import Cache
 
 # ################################################################################################################################
@@ -19,7 +20,7 @@ def common_instance_hook(self, input, instance, attrs):
         with attrs._meta_session.no_autoflush:
             attrs._meta_session.query(Cache).\
                 filter(Cache.is_default.is_(True)).\
-                filter(Cache.id.isnot(instance.id)).\
+                filter(Cache.id != instance.id).\
                 update({'is_default':False})
 
 # ################################################################################################################################
