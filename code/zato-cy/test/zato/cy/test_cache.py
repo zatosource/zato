@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import sys
 from decimal import Decimal
 from time import sleep
-from unittest import main as unittest_main, TestCase
+from unittest import TestCase
 from uuid import uuid4
 
 # Zato
