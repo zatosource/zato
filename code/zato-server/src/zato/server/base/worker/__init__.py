@@ -439,6 +439,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ Initializes plain HTTP/SOAP connections.
         """
         for config_dict, config_data in self.yield_outconn_http_config_dicts():
+
             wrapper = self._http_soap_wrapper_from_config(config_data.config)
             config_data.conn = wrapper
 
@@ -1093,22 +1094,29 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def _update_tls_outconns(self, material_type_id, update_key, msg):
-        for config_dict in self.yield_outconn_http_config_dicts():
-            if config_dict.config[material_type_id] == msg.id:
-                config_dict.conn.config[update_key] = msg.full_path
-                config_dict.conn.https_adapter.clear_pool()
+
+        for config_dict, config_data in self.yield_outconn_http_config_dicts():
+
+            # Here, config_data is a string such as _zato_id_633 that points to an actual outconn name
+            if isinstance(config_data, basestring):
+                config_data = config_dict[config_data]
+
+            if config_data.config[material_type_id] == msg.id:
+                config_data.conn.config[update_key] = msg.full_path
+                config_data.conn.https_adapter.clear_pool()
 
 # ################################################################################################################################
 
-    def _add_tls_from_msg(self, config_attr, msg):
+    def _add_tls_from_msg(self, config_attr, msg, msg_key):
         config = getattr(self.worker_config, config_attr)
-        config[msg.name] = Bunch(config=Bunch(value=msg.value))
+        config[msg.name] = Bunch(config=Bunch(value=msg[msg_key]))
 
     def update_tls_ca_cert(self, msg):
         msg.full_path = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(msg.value))
 
     def update_tls_key_cert(self, msg):
-        msg.full_path = get_tls_key_cert_full_path(self.server.tls_dir, get_tls_from_payload(msg.value, True))
+        decrypted = self.server.decrypt(msg.auth_data)
+        msg.full_path = get_tls_key_cert_full_path(self.server.tls_dir, get_tls_from_payload(decrypted, True))
 
 # ################################################################################################################################
 
@@ -1138,15 +1146,17 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_CREATE(self, msg):
         self.update_tls_key_cert(msg)
-        self._add_tls_from_msg('tls_key_cert', msg)
-        store_tls(self.server.tls_dir, msg.value, True)
+        self._add_tls_from_msg('tls_key_cert', msg, 'auth_data')
+        decrypted = self.server.decrypt(msg.auth_data)
+        store_tls(self.server.tls_dir, decrypted, True)
         dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_EDIT(self, msg):
         self.update_tls_key_cert(msg)
         del self.worker_config.tls_key_cert[msg.old_name]
-        self._add_tls_from_msg('tls_key_cert', msg)
-        store_tls(self.server.tls_dir, msg.value, True)
+        self._add_tls_from_msg('tls_key_cert', msg, 'auth_data')
+        decrypted = self.server.decrypt(msg.auth_data)
+        store_tls(self.server.tls_dir, decrypted, True)
         self._update_tls_outconns('security_id', 'tls_key_cert_full_path', msg)
         dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_EDIT.value, msg)
 
@@ -1158,14 +1168,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def on_broker_msg_SECURITY_TLS_CA_CERT_CREATE(self, msg):
         self.update_tls_ca_cert(msg)
-        self._add_tls_from_msg('tls_ca_cert', msg)
+        self._add_tls_from_msg('tls_ca_cert', msg, 'value')
         store_tls(self.server.tls_dir, msg.value)
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_TLS_CA_CERT_EDIT(self, msg):
         self.update_tls_ca_cert(msg)
         del self.worker_config.tls_ca_cert[msg.old_name]
-        self._add_tls_from_msg('tls_ca_cert', msg)
+        self._add_tls_from_msg('tls_ca_cert', msg, 'value')
         store_tls(self.server.tls_dir, msg.value)
         self._update_tls_outconns('sec_tls_ca_cert_id', 'tls_verify', msg)
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_EDIT.value, msg)

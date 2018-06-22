@@ -60,6 +60,15 @@ class WritableKeyedTuple(object):
     def __getattr__(self, key):
         return getattr(self._elem, key)
 
+    def __setattribute__(self, key, value):
+        return setattr(self._elem, key, value)
+
+    def __getitem__(self, idx):
+        return self._elem.__getitem__(idx)
+
+    def __setitem__(self, idx, value):
+        return self._elem.__setitem__(idx, value)
+
     def __repr__(self):
         inner = [
             (key, getattr(self._elem, key))
