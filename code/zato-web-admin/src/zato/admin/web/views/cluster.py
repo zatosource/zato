@@ -228,7 +228,7 @@ def delete(req, id):
 def servers(req):
     """ A view for server management.
     """
-    items = req.zato.odb.query(Server).order_by(Cluster.name).all()
+    items = req.zato.odb.query(Server).order_by(Server.name).all()
 
     for item in items:
         if item.up_mod_date:
