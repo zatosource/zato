@@ -1215,6 +1215,7 @@ class ChannelAMQP(Base):
     consumer_tag_prefix = Column(String(200), nullable=False)
     pool_size = Column(Integer, nullable=False)
     ack_mode = Column(String(20), nullable=False)
+    prefetch_count = Column(Integer, nullable=False)
     data_format = Column(String(20), nullable=True)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
