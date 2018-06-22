@@ -472,6 +472,8 @@ class CreateEdit(_BaseView):
 
                 self.post_process_return_data(return_data)
 
+                logger.debug('CreateEdit data for frontend `%s`', return_data)
+
                 return HttpResponse(dumps(return_data), content_type='application/javascript')
             else:
                 msg = 'response:[{}], details.response.details:[{}]'.format(response, response.details)

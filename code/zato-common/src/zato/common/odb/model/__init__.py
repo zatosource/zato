@@ -881,6 +881,9 @@ class CacheBuiltin(Cache):
     sync_method = Column(String(20), nullable=False)
     persistent_storage = Column(String(40), nullable=False)
 
+    def __init__(self, cluster=None):
+        self.cluster = cluster
+
 # ################################################################################################################################
 
 class CacheMemcached(Cache):
@@ -893,6 +896,9 @@ class CacheMemcached(Cache):
     servers = Column(Text, nullable=False)
     is_debug = Column(Boolean(), nullable=False)
     extra = Column(LargeBinary(20000), nullable=True)
+
+    def __init__(self, cluster=None):
+        self.cluster = cluster
 
 # ################################################################################################################################
 
