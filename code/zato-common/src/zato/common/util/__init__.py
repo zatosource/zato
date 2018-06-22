@@ -107,11 +107,11 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
-from zato.common import CHANNEL, CLI_ARG_SEP, curdir as common_curdir, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
+from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
      SECRET_SHADOW, SECRETS, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, zato_no_op_marker, \
      ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
-from zato.common.crypto import CryptoManager, ServerCryptoManager
+from zato.common.crypto import CryptoManager
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.odb.query import _service as _service
 
