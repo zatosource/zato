@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -33,7 +33,9 @@ def instance_hook(self, input, instance, attrs):
     common_instance_hook(self, input, instance, attrs)
 
     if attrs.is_create_edit:
-        # Parse extra arguments to confirm their syntax is correct
+
+        # Parse extra arguments to confirm their syntax is correct,
+        # output is ignored on purpose, we just want to validate it.
         parse_extra_into_dict(input.extra)
 
     elif attrs.is_delete:

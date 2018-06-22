@@ -45,7 +45,7 @@ $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
         var delete_link = String.format("<span class='form_hint'>(Delete)</span>");
     }
     else {
-        var delete_link = String.format("<a href='javascript:$.fn.zato.cache.builtin.delete_({0});'>Delete</a>", item.id);
+        var delete_link = String.format("<a href=\"javascript:$.fn.zato.cache.builtin.delete_('{0}')\">Delete</a>", data.cache_id);
     }
 
     row += "<td class='numbering'>&nbsp;</td>";
@@ -53,19 +53,28 @@ $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? "Yes":"No");
     row += String.format('<td>{0}</td>', is_default ? "Yes":"No");
+
     row += String.format('<td>{0}</td>', "<span class='form_hint'>(n/a)</span>");
     row += String.format('<td>{0}</td>', item.max_size);
     row += String.format('<td>{0}</td>', item.max_item_size);
     row += String.format('<td>{0}</td>', extend_expiry_on_get ? "Yes":"No");
     row += String.format('<td>{0}</td>', extend_expiry_on_set ? "Yes":"No");
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cache.builtin.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cache.builtin.clear('{0}')\">Edit</a>", item.id));
+
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"/zato/cache/builtin/details/entry/create/cache-id/{0}/cluster/{1}/\">Add a new entry</a>",
+            data.cache_id, item.cluster_id));
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.cache.builtin.clear('{0}')\">Clear</a>", data.cache_id));
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.cache.builtin.edit('{0}')\">Edit</a>", data.cache_id));
     row += String.format('<td>{0}</td>', delete_link);
-    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.cache_id);
+
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", is_default);
-    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.extend_expiry_on_get);
-    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.extend_expiry_on_set);
+    row += String.format("<td class='ignore'>{0}</td>", item.extend_expiry_on_get);
+    row += String.format("<td class='ignore'>{0}</td>", item.extend_expiry_on_set);
+    row += String.format("<td class='ignore'>{0}</td>", data.cache_id);
 
     if(include_tr) {
         row += '</tr>';
