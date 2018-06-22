@@ -20,7 +20,6 @@
     <a href="{% url "service-overview" service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
     <a href="{% url "service-invoker" service.name %}?cluster={{ cluster_id }}" class="common current">Invoker</a>
     <a href="{% url "service-source-info" service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
-    <a href="{% url "service-wsdl" service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
     <a href="{% url "service-request-response" service.name %}?cluster={{ cluster_id }}" class="common">Sample request/response</a>
     <a href="{% url "service-slow-response" service.name %}?cluster={{ cluster_id }}" class="common">Slow responses</a>
 </div>
@@ -36,7 +35,7 @@
                 {% csrf_token %}
                     <textarea style="width:100%; height:350px" id="payload" name="payload"></textarea>
                     <br/><br/>
-                    
+
                     <table>
                         <tr>
                             <td>
@@ -63,14 +62,14 @@
                             </td>
                         </tr>
                     </table>
-                    
+
                     <input type="hidden" id="name" name="name" value="{{ service.name }}" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                    
+
                     <div style="text-align:right">
                         <input type="submit" value="Submit" />
                     </div>
-                    
+
                 </form>
             </td>
         </tr>
