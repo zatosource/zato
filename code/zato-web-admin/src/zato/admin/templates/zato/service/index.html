@@ -42,10 +42,6 @@
 
     var on_upload_complete = function(id, file_name, response){
         if(response.success) {
-            var html = '<a href="{% url "service-wsdl-download" service.name cluster_id %}" class="common">Click to download</a>';
-            html += '<br/>';
-            html += '<div style="margin-top:7px">Direct address: {{ wsdl_public_url }}</div>';
-            $('#td_wsdl').html(html);
             $.fn.zato.user_message(true, 'Service package uploaded, check the server logs for details');
         }
         else {
