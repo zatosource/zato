@@ -30,7 +30,16 @@
     {% comment %} Our CSS must come last {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 
-    {% block "extra_css" %}{% endblock %}
+    {% if not items %}
+        <style type="text/css">
+            .ui-dialog-titlebar {
+                padding-bottom:10px !important;
+            }
+    </style>
+    {% endif %}
+
+    {% block "extra_css" %}
+    {% endblock %}
 
     {% block "extra_js" %}
     {% endblock %}
