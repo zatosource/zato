@@ -40,7 +40,6 @@
     <a href="{% url "service-overview" service.name %}?cluster={{ cluster_id }}" class="common current">Overview</a>
     <a href="{% url "service-invoker" service.name %}?cluster={{ cluster_id }}" class="common">Invoker</a>
     <a href="{% url "service-source-info" service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
-    <a href="{% url "service-wsdl" service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
     <a href="{% url "service-request-response" service.name %}?cluster={{ cluster_id }}" class="common">Sample request/response</a>
     <a href="{% url "service-slow-response" service.name %}?cluster={{ cluster_id }}" class="common">Slow responses</a>
 </div>
@@ -135,31 +134,6 @@
                                             IBM MQ: {% if not service.wmq_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.wmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
                                             ZeroMQ: {% if not service.zmq_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.zmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
                                             Scheduler: {% if not service.scheduler_jobs %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.scheduler_jobs %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
-                                        </td>
-                                    </tr>
-                                </table>
-
-                                <table style="width:100%">
-                                    <tr>
-                                        <td class='inline_header'>Services</td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            Invokes:
-                                            {% if service.invokes %}
-                                                {% for service_name in service.invokes %}<a href="{% url "service-overview" service_name %}?cluster={{ cluster_id }}" class="common">{{ service_name }}</a>{% if not forloop.last %}, {% endif %}
-                                                {% endfor %}
-                                            {% else %}
-                                                <span class="form_hint">(None)</span>
-                                            {% endif %}
-                                            <br/>
-                                            Invoked by:
-                                            {% if service.invoked_by %}
-                                                {% for service_name in service.invoked_by %}<a href="{% url "service-overview" service_name %}?cluster={{ cluster_id }}" class="common">{{ service_name }}</a>{% if not forloop.last %}, {% endif %}
-                                                {% endfor %}
-                                            {% else %}
-                                                <span class="form_hint">(None)</span>
-                                            {% endif %}
                                         </td>
                                     </tr>
                                 </table>

@@ -27,8 +27,12 @@ output_optional_extra = ['info',]
 
 def instance_hook(service, input, instance, attrs):
 
+    if attrs.is_delete:
+        return
+
     instance.username = service.cid # Required by model
-    instance.info = get_tls_from_payload(input.value)
+    instance.info = get_tls_from_payload(input.value).encode('utf8')
+    instance.value = instance.value.encode('utf8')
 
     with service.lock():
         full_path = store_tls(service.server.tls_dir, service.request.input.value)

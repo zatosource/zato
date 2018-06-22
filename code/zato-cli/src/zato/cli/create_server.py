@@ -48,7 +48,7 @@ service_sources=./service-sources.txt
 [crypto]
 use_tls=False
 tls_protocol=TLSv1
-tls_ciphers=EECDH+AES:EDH+AES:-SHA1:EECDH+RC4:EDH+RC4:RC4-SHA:EECDH+AES256:EDH+AES256:AES256-SHA:!aNULL:!eNULL:!EXP:!LOW:!MD5
+tls_ciphers=ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:HIGH:!aNULL:!eNULL:!EXP:!LOW:!MD5
 tls_client_certs=optional
 priv_key_location=zato-server-priv-key.pem
 pub_key_location=zato-server-pub-key.pem
@@ -148,9 +148,6 @@ log_connection_info_sleep_time=5 # In seconds
 zato.helpers.input-logger=Sample payload for a startup service (first worker)
 zato.notif.init-notifiers=
 zato.kvdb.log-connection-info=
-#zato.pubsub.cleanup.delete-expired=10
-#zato.pubsub.cleanup.delete-delivered=10
-#zato.pubsub.cleanup.delete-marked-deleted=120
 zato.sso.cleanup.cleanup=300
 zato.updates.check-updates=
 

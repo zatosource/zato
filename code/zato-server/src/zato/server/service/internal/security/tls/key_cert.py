@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -29,6 +29,9 @@ output_optional_extra = ['info']
 
 def instance_hook(self, input, instance, attrs):
 
+    if attrs.is_delete:
+        return
+
     decrypted = self.server.decrypt(input.auth_data).encode('utf8')
 
     instance.username = self.cid # Required by model
@@ -43,6 +46,10 @@ def instance_hook(self, input, instance, attrs):
 def response_hook(self, input, instance, attrs, service_type):
     if service_type == 'create_edit':
         self.response.payload.info = instance.info
+
+    elif service_type == 'get_list':
+        for elem in self.response.payload:
+            elem.auth_data = self.server.decrypt(elem.auth_data)
 
 def broker_message_hook(self, input, instance, attrs, service_type):
     if service_type == 'delete':
