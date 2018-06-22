@@ -1107,13 +1107,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _add_tls_from_msg(self, config_attr, msg):
+    def _add_tls_from_msg(self, config_attr, msg, msg_key):
         config = getattr(self.worker_config, config_attr)
-        config[msg.name] = Bunch(config=Bunch(value=msg.auth_data))
+        config[msg.name] = Bunch(config=Bunch(value=msg[msg_key]))
 
     def update_tls_ca_cert(self, msg):
-        decrypted = self.server.decrypt(msg.auth_data)
-        msg.full_path = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(decrypted))
+        msg.full_path = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(msg.value))
 
     def update_tls_key_cert(self, msg):
         decrypted = self.server.decrypt(msg.auth_data)
@@ -1147,7 +1146,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_CREATE(self, msg):
         self.update_tls_key_cert(msg)
-        self._add_tls_from_msg('tls_key_cert', msg)
+        self._add_tls_from_msg('tls_key_cert', msg, 'auth_data')
         decrypted = self.server.decrypt(msg.auth_data)
         store_tls(self.server.tls_dir, decrypted, True)
         dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_CREATE.value, msg)
@@ -1155,7 +1154,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def on_broker_msg_SECURITY_TLS_KEY_CERT_EDIT(self, msg):
         self.update_tls_key_cert(msg)
         del self.worker_config.tls_key_cert[msg.old_name]
-        self._add_tls_from_msg('tls_key_cert', msg)
+        self._add_tls_from_msg('tls_key_cert', msg, 'auth_data')
         decrypted = self.server.decrypt(msg.auth_data)
         store_tls(self.server.tls_dir, decrypted, True)
         self._update_tls_outconns('security_id', 'tls_key_cert_full_path', msg)
@@ -1169,17 +1168,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def on_broker_msg_SECURITY_TLS_CA_CERT_CREATE(self, msg):
         self.update_tls_ca_cert(msg)
-        self._add_tls_from_msg('tls_ca_cert', msg)
-        decrypted = self.server.decrypt(msg.auth_data)
-        store_tls(self.server.tls_dir, decrypted)
+        self._add_tls_from_msg('tls_ca_cert', msg, 'value')
+        store_tls(self.server.tls_dir, msg.value)
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_TLS_CA_CERT_EDIT(self, msg):
         self.update_tls_ca_cert(msg)
         del self.worker_config.tls_ca_cert[msg.old_name]
-        self._add_tls_from_msg('tls_ca_cert', msg)
-        decrypted = self.server.decrypt(msg.auth_data)
-        store_tls(self.server.tls_dir, decrypted)
+        self._add_tls_from_msg('tls_ca_cert', msg, 'value')
+        store_tls(self.server.tls_dir, msg.value)
         self._update_tls_outconns('sec_tls_ca_cert_id', 'tls_verify', msg)
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_EDIT.value, msg)
 
