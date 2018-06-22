@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -243,17 +243,6 @@ def overview(req, service_name):
                         url += '&highlight={}'.format(item.id)
                         service.scheduler_jobs.append(ExposedThrough(item.id, item.name, url))
 
-            response = req.zato.client.invoke('zato.apispec.get-api-spec', {'query':service.name})
-            if response.has_data:
-                if response.data.services:
-                    service_data = response.data.services[0]
-                    service.docs_full = service_data.docs.full
-                    service.docs_full_html = service_data.docs.full_html
-                    service.docs_summary = service_data.docs.summary
-                    service.docs_description = service_data.docs.description
-                    service.invokes = service_data.invokes
-                    service.invoked_by = service_data.invoked_by
-
     return_data = {'zato_clusters':req.zato.clusters,
         'service': service,
         'cluster_id':cluster_id,
@@ -296,55 +285,6 @@ def source_info(req, service_name):
         }
 
     return TemplateResponse(req, 'zato/service/source-info.html', return_data)
-
-@method_allowed('GET')
-def wsdl(req, service_name):
-    service = Service(name=service_name)
-    has_wsdl = False
-    wsdl_public_url = get_public_wsdl_url(req.zato.cluster, service_name)
-
-    input_dict = {
-        'name': service_name,
-        'cluster_id': req.zato.cluster_id
-    }
-
-    response = req.zato.client.invoke('zato.service.has-wsdl', input_dict)
-    if response.has_data:
-        service.id = response.data.service_id
-        has_wsdl = response.data.has_wsdl
-
-    return_data = {
-        'cluster_id':req.zato.cluster_id,
-        'service':service,
-        'has_wsdl':has_wsdl,
-        'wsdl_public_url':wsdl_public_url,
-        }
-
-    return TemplateResponse(req, 'zato/service/wsdl.html', return_data)
-
-@method_allowed('POST')
-def wsdl_upload(req, service_name, cluster_id):
-    """ Handles a WSDL file upload.
-    """
-    try:
-        input_dict = {
-            'name': service_name,
-            'cluster_id': cluster_id,
-            'wsdl': req.read().encode('base64'),
-            'wsdl_name': req.GET['qqfile']
-        }
-        req.zato.client.invoke('zato.service.set-wsdl', input_dict)
-
-        return HttpResponse(dumps({'success': True}))
-
-    except Exception, e:
-        msg = 'Could not upload the WSDL, e:[{e}]'.format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-
-@method_allowed('GET')
-def wsdl_download(req, service_name, cluster_id):
-    return HttpResponseRedirect(get_public_wsdl_url(req.zato.cluster, service_name))
 
 @method_allowed('GET')
 def request_response(req, service_name):
