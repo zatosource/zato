@@ -27,6 +27,7 @@ class CreateForm(DataFormatForm):
     pool_size = forms.CharField(
         initial=AMQP.DEFAULT.POOL_SIZE, widget=forms.TextInput(attrs={'style':'width:10%', 'class':'required'}))
     ack_mode = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:20%'}))
+    prefetch_count = forms.CharField(initial=AMQP.DEFAULT.PREFETCH_COUNT, widget=forms.TextInput(attrs={'style':'width:10%'}))
     service = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
 
     def __init__(self, prefix=None, post_data=None, req=None):
