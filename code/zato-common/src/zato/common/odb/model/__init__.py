@@ -106,7 +106,7 @@ class ZatoInstallState(Base):
     source_user = Column(String(200), nullable=False)
 
     def __init__(self, id=None, version=None, install_time=None, source_host=None,
-                 source_user=None):
+            source_user=None):
         self.id = id
         self.version = version
         self.install_time = install_time
@@ -138,10 +138,10 @@ class Cluster(Base):
     cw_srv_keep_alive_dt = Column(DateTime(), nullable=True)
 
     def __init__(self, id=None, name=None, description=None, odb_type=None,
-                 odb_host=None, odb_port=None, odb_user=None, odb_db_name=None,
-                 odb_schema=None, broker_host=None,
-                 broker_port=None, lb_host=None, lb_port=None,
-                 lb_agent_port=None, cw_srv_id=None, cw_srv_keep_alive_dt=None):
+            odb_host=None, odb_port=None, odb_user=None, odb_db_name=None,
+            odb_schema=None, broker_host=None,
+            broker_port=None, lb_host=None, lb_port=None,
+            lb_agent_port=None, cw_srv_id=None, cw_srv_keep_alive_dt=None):
         self.id = id
         self.name = name
         self.description = description
@@ -195,7 +195,7 @@ class Server(Base):
     cluster = relationship(Cluster, backref=backref('servers', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, cluster=None, token=None,
-                 last_join_status=None, last_join_mod_date=None, last_join_mod_by=None):
+            last_join_status=None, last_join_mod_date=None, last_join_mod_by=None):
         self.id = id
         self.name = name
         self.cluster = cluster
@@ -289,9 +289,9 @@ class WSSDefinition(SecurityBase):
     nonce_freshness_time = Column(Integer(), nullable=True)
 
     def __init__(self, id=None, name=None, is_active=None, username=None,
-                 password=None, password_type=None, reject_empty_nonce_creat=None,
-                 reject_stale_tokens=None, reject_expiry_limit=None,
-                 nonce_freshness_time=None, cluster=None, password_type_raw=None):
+            password=None, password_type=None, reject_empty_nonce_creat=None,
+            reject_stale_tokens=None, reject_expiry_limit=None,
+            nonce_freshness_time=None, cluster=None, password_type_raw=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -319,8 +319,8 @@ class OAuth(SecurityBase):
     max_nonce_log = Column(Integer(), nullable=False)
 
     def __init__(self, id=None, name=None, is_active=None, username=None,
-                 password=None, proto_version=None, sig_method=None,
-                 max_nonce_log=None, cluster=None):
+            password=None, proto_version=None, sig_method=None,
+            max_nonce_log=None, cluster=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -429,7 +429,7 @@ class XPathSecurity(SecurityBase):
     password_expr = Column(String(200), nullable=True)
 
     def __init__(self, id=None, name=None, is_active=None, username=None, password=None, username_expr=None, password_expr=None,
-                 cluster=None):
+            cluster=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -635,8 +635,8 @@ class SQLConnectionPool(Base):
     engine_display_name = None # For auto-completion, not used by DB
 
     def __init__(self, id=None, name=None, is_active=None, db_name=None,
-                 username=None, engine=None, extra=None, host=None, port=None,
-                 pool_size=None, cluster=None):
+            username=None, engine=None, extra=None, host=None, port=None,
+            pool_size=None, cluster=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -671,7 +671,7 @@ class Service(Base):
     cluster = relationship(Cluster, backref=backref('services', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, impl_name=None,
-                 is_internal=None, cluster=None, wsdl=None, wsdl_name=None):
+            is_internal=None, cluster=None, wsdl=None, wsdl_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -773,9 +773,9 @@ class Job(Base):
     service = relationship(Service, backref=backref('jobs', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, job_type=None,
-                 start_date=None, extra=None, cluster=None, cluster_id=None,
-                 service=None, service_id=None, service_name=None, interval_based=None,
-                 cron_style=None, definition_text=None, job_type_friendly=None):
+            start_date=None, extra=None, cluster=None, cluster_id=None,
+            service=None, service_id=None, service_name=None, interval_based=None,
+            cron_style=None, definition_text=None, job_type_friendly=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -814,7 +814,7 @@ class IntervalBasedJob(Base):
     job = relationship(Job, backref=backref('interval_based', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
 
     def __init__(self, id=None, job=None, weeks=None, days=None, hours=None,
-                 minutes=None, seconds=None, repeats=None, definition_text=None):
+            minutes=None, seconds=None, repeats=None, definition_text=None):
         self.id = id
         self.job = job
         self.weeks = weeks
@@ -917,7 +917,7 @@ class ConnDefAMQP(Base):
     cluster = relationship(Cluster, backref=backref('amqp_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, host=None, port=None, vhost=None, username=None, password=None, frame_max=None,
-            heartbeat=None, cluster_id=None):
+            heartbeat=None, cluster_id=None, cluster=None):
         self.id = id
         self.name = name
         self.host = host
@@ -928,6 +928,7 @@ class ConnDefAMQP(Base):
         self.frame_max = frame_max
         self.heartbeat = heartbeat
         self.cluster_id = cluster_id
+        self.cluster = cluster
 
 # ################################################################################################################################
 
@@ -962,8 +963,8 @@ class ConnDefWMQ(Base):
     cluster = relationship(Cluster, backref=backref('wmq_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, host=None, port=None, queue_manager=None, channel=None, cache_open_send_queues=None,
-        cache_open_receive_queues=None, use_shared_connections=None, ssl=None, ssl_cipher_spec=None, ssl_key_repository=None,
-        needs_mcd=None, max_chars_printed=None, cluster_id=None, username=None, password=None, use_jms=None):
+            cache_open_receive_queues=None, use_shared_connections=None, ssl=None, ssl_cipher_spec=None, ssl_key_repository=None,
+            needs_mcd=None, max_chars_printed=None, cluster_id=None, cluster=None, username=None, password=None, use_jms=None):
         self.id = id
         self.name = name
         self.host = host
@@ -979,6 +980,7 @@ class ConnDefWMQ(Base):
         self.needs_mcd = needs_mcd
         self.max_chars_printed = max_chars_printed
         self.cluster_id = cluster_id
+        self.cluster = cluster
         self.username = username
         self.password = password
         self.use_jms = use_jms
@@ -1009,9 +1011,9 @@ class OutgoingAMQP(Base):
     def_ = relationship(ConnDefAMQP, backref=backref('out_conns_amqp', cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, delivery_mode=None,
-                 priority=None, content_type=None, content_encoding=None,
-                 expiration=None, user_id=None, app_id=None, def_id=None,
-                 delivery_mode_text=None, def_name=None):
+            priority=None, content_type=None, content_encoding=None,
+            expiration=None, user_id=None, app_id=None, def_id=None,
+            delivery_mode_text=None, def_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -1050,8 +1052,8 @@ class OutgoingFTP(Base):
     cluster = relationship(Cluster, backref=backref('out_conns_ftp', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, host=None, user=None,
-                 password=None, acct=None, timeout=None, port=None, dircache=None,
-                 cluster_id=None):
+            password=None, acct=None, timeout=None, port=None, dircache=None,
+            cluster_id=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -1192,7 +1194,7 @@ class OutgoingZMQ(Base):
     cluster = relationship(Cluster, backref=backref('out_conns_zmq', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, address=None,
-                 socket_type=None, cluster_id=None):
+            socket_type=None, cluster_id=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -1284,7 +1286,7 @@ class ChannelWMQ(Base):
     def_ = relationship(ConnDefWMQ, backref=backref('channels_wmq', cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, queue=None,
-                 def_id=None, def_name=None, service_name=None, data_format=None):
+            def_id=None, def_name=None, service_name=None, data_format=None):
         self.id = id
         self.name = name
         self.is_active = is_active
