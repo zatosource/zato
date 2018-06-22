@@ -2094,6 +2094,10 @@ class PubSubEndpoint(Base):
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
     security = relationship(SecurityBase, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
+    # Identifies the endpoint through a reference to a generic connection
+    gen_conn_id = Column(Integer, ForeignKey('generic_conn.id', ondelete='CASCADE'), nullable=True)
+    gen_conn = relationship('GenericConn', backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
+
     # Identifies the endpoint through a long-running WebSockets channel
     ws_channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
     ws_channel = relationship(
@@ -2102,10 +2106,10 @@ class PubSubEndpoint(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
-    sec_type = None          # Not used by DB
-    sec_name = None          # Not used by DB
-    ws_channel_name = None   # Not used by DB
-    service_name = None      # Not used by DB
+    sec_type = None         # Not used by DB
+    sec_name = None         # Not used by DB
+    ws_channel_name = None  # Not used by DB
+    service_name = None     # Not used by DB
 
 # ################################################################################################################################
 
@@ -2370,6 +2374,10 @@ class PubSubSubscription(Base):
     out_amqp = relationship(
         OutgoingAMQP, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
+    out_gen_conn_id = Column(Integer, ForeignKey('generic_conn.id', ondelete='CASCADE'), nullable=True)
+    out_gen_conn = relationship(
+        'GenericConn', backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
+
     ws_channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
     ws_channel = relationship(
         ChannelWebSocket, backref=backref('pubsub_ws_subs', order_by=id, cascade='all, delete, delete-orphan'))
@@ -2483,5 +2491,206 @@ class SMSTwilio(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('sms_twilio_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class GenericConnDef(Base):
+    """ Generic connection definitions - with details kept in JSON.
+    """
+    __tablename__ = 'generic_conn_def'
+    __table_args__ = (
+        UniqueConstraint('name', 'type_', 'cluster_id'),
+    {})
+
+    id = Column(Integer, Sequence('generic_conn_def_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    type_ = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False, default=False)
+    cache_expiry = Column(Integer, nullable=True, default=0)
+    address = Column(Text(), nullable=True)
+    port = Column(Integer, nullable=True)
+    timeout = Column(Integer, nullable=True)
+    data_format = Column(String(60), nullable=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    # Both are needed because some connections can be duplex
+    is_channel = Column(Boolean(), nullable=False)
+    is_outconn = Column(Boolean(), nullable=False)
+
+    version = Column(String(200), nullable=True)
+    extra = Column(Text(), nullable=True)
+    pool_size = Column(Integer(), nullable=False)
+
+    # This can be used if only one security definition should be assigned to the object
+    username = Column(String(1000), nullable=True)
+    username_type = Column(String(45), nullable=True)
+    secret = Column(String(1000), nullable=True)
+    secret_type = Column(String(45), nullable=True)
+
+    # Is RBAC enabled for the object
+    sec_use_rbac = Column(Boolean(), nullable=False, default=False)
+
+    cache_id = Column(Integer, ForeignKey('cache.id', ondelete='CASCADE'), nullable=True)
+    cache = relationship('Cache', backref=backref('generic_conn_def_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('generic_conn_def_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class GenericConnDefSec(Base):
+    """ N:N security mappings for generic connection definitions.
+    """
+    __tablename__ = 'generic_conn_def_sec'
+    __table_args__ = (
+        UniqueConstraint('conn_def_id', 'sec_base_id', 'cluster_id'),
+    {})
+
+    id = Column(Integer, Sequence('generic_conn_def_sec_seq'), primary_key=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    conn_def_id = Column(Integer, ForeignKey('generic_conn_def.id', ondelete='CASCADE'), nullable=False)
+    conn_def = relationship(GenericConnDef, backref=backref('generic_conn_def_sec_list', order_by=id,
+        cascade='all, delete, delete-orphan'))
+
+    sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    sec_base = relationship(SecurityBase, backref=backref('generic_conn_def_sec_list', order_by=id,
+        cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('generic_conn_def_sec_list', order_by=id,
+        cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class GenericConn(Base):
+    """ Generic connections - with details kept in JSON.
+    """
+    __tablename__ = 'generic_conn'
+    __table_args__ = (
+        UniqueConstraint('name', 'type_', 'cluster_id'),
+    {})
+
+    id = Column(Integer, Sequence('generic_conn_def_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    type_ = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False, default=False)
+    cache_expiry = Column(Integer, nullable=True, default=0)
+    address = Column(Text(), nullable=True)
+    port = Column(Integer, nullable=True)
+    timeout = Column(Integer, nullable=True)
+    data_format = Column(String(60), nullable=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    # Both are needed because some connections can be duplex
+    is_channel = Column(Boolean(), nullable=False)
+    is_outconn = Column(Boolean(), nullable=False)
+
+    version = Column(String(200), nullable=True)
+    extra = Column(Text(), nullable=True)
+    pool_size = Column(Integer(), nullable=False)
+
+    # This can be used if only one security definition should be assigned to the object
+    username = Column(String(1000), nullable=True)
+    username_type = Column(String(45), nullable=True)
+    secret = Column(String(1000), nullable=True)
+    secret_type = Column(String(45), nullable=True)
+
+    # Is RBAC enabled for the object
+    sec_use_rbac = Column(Boolean(), nullable=False, default=False)
+
+    # Some connections will have a connection definition assigned
+    conn_def_id = Column(Integer, ForeignKey('generic_conn_def.id', ondelete='CASCADE'), nullable=True)
+    conn_def = relationship(GenericConnDef, backref=backref('generic_conn_def_list',
+        order_by=id, cascade='all, delete, delete-orphan'))
+
+    cache_id = Column(Integer, ForeignKey('cache.id', ondelete='CASCADE'), nullable=True)
+    cache = relationship('Cache', backref=backref('generic_conn_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('generic_conn_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class GenericConnSec(Base):
+    """ N:N security mappings for generic connections.
+    """
+    __tablename__ = 'generic_conn_sec'
+    __table_args__ = (
+        UniqueConstraint('conn_id', 'sec_base_id', 'cluster_id'),
+    {})
+
+    id = Column(Integer, Sequence('generic_conn_sec_seq'), primary_key=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    conn_id = Column(Integer, ForeignKey('generic_conn.id', ondelete='CASCADE'), nullable=False)
+    conn = relationship(GenericConn, backref=backref('generic_conn_list', order_by=id,
+        cascade='all, delete, delete-orphan'))
+
+    sec_base_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    sec_base = relationship(SecurityBase, backref=backref('generic_conn_sec_list', order_by=id,
+        cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('generic_conn_sec_list', order_by=id,
+        cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class GenericConnClient(Base):
+    """ A live client connection.
+    """
+    __tablename__ = 'generic_conn_client'
+    __table_args__ = (
+        Index('gen_conn_cli_idx', 'cluster_id', 'pub_client_id', unique=False),
+        Index('gen_conn_cli_ext_n_idx', 'cluster_id', 'ext_client_name', unique=False),
+        Index('gen_conn_cli_ext_i_idx', 'cluster_id', 'ext_client_id', unique=False),
+        Index('gen_conn_cli_pr_addr_idx', 'cluster_id', 'peer_address', unique=False),
+        Index('gen_conn_cli_pr_fqdn_idx', 'cluster_id', 'peer_fqdn', unique=False),
+    {})
+
+    # This ID is for SQL
+    id = Column(Integer, Sequence('generic_conn_client_seq'), primary_key=True)
+
+    is_internal = Column(Boolean(), nullable=False)
+
+    # This one is assigned by Zato
+    pub_client_id = Column(String(200), nullable=False)
+
+    # These are assigned by clients themselves
+    ext_client_id = Column(String(200), nullable=False)
+    ext_client_name = Column(String(200), nullable=True)
+
+    local_address = Column(String(400), nullable=False)
+    peer_address = Column(String(400), nullable=False)
+    peer_fqdn = Column(String(400), nullable=False)
+
+    connection_time = Column(DateTime, nullable=False)
+    last_seen = Column(DateTime, nullable=False)
+
+    server_proc_pid = Column(Integer, nullable=True)
+    server_name = Column(String(200), nullable=True) # References server.name
+
+    conn_id = Column(Integer, ForeignKey('generic_conn.id', ondelete='CASCADE'), nullable=False)
+    conn = relationship(
+        GenericConn, backref=backref('clients', order_by=local_address, cascade='all, delete, delete-orphan'))
+
+    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=True)
+    server = relationship(
+        Server, backref=backref('gen_conn_clients', order_by=local_address, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(
+        Cluster, backref=backref('gen_conn_clients', order_by=last_seen, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
