@@ -24,10 +24,20 @@ label = 'a Memcached cache definition'
 broker_message = CACHE
 broker_message_prefix = 'MEMCACHED_'
 list_func = cache_memcached_list
+skip_input_params = ['cache_id']
 
 # ################################################################################################################################
 
-instance_hook = common_instance_hook
+def response_hook(self, input, _ignored, attrs, service_type):
+
+    if service_type == 'create_edit':
+        self.response.payload.cache_id = self.response.payload.id
+
+    elif service_type == 'get_list':
+        for elem in self.response.payload:
+            elem.id = elem.cache_id
+
+# ################################################################################################################################
 
 def instance_hook(self, input, instance, attrs):
     common_instance_hook(self, input, instance, attrs)

@@ -1,5 +1,5 @@
 
-// /////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.data_table.CacheMemcached = new Class({
     toString: function() {
@@ -9,7 +9,7 @@ $.fn.zato.data_table.CacheMemcached = new Class({
     }
 });
 
-// /////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
     $('#data-table').tablesorter();
@@ -20,14 +20,19 @@ $(document).ready(function() {
     $.fn.zato.data_table.setup_forms(['name', 'servers']);
 })
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.cache.memcached.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new cache definition', null);
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.cache.memcached.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the cache definition', id);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.cache.memcached.data_table.new_row = function(item, data, include_tr) {
     var row = '';
@@ -44,7 +49,7 @@ $.fn.zato.cache.memcached.data_table.new_row = function(item, data, include_tr) 
         var delete_link = String.format("<span class='form_hint'>(Delete)</span>");
     }
     else {
-        var delete_link = String.format("<a href='javascript:$.fn.zato.cache.builtin.delete_({0});'>Delete</a>", item.id);
+        var delete_link = String.format("<a href='javascript:$.fn.zato.cache.memcached.delete_({0});'>Delete</a>", item.id);
     }
 
     row += "<td class='numbering'>&nbsp;</td>";
@@ -67,9 +72,13 @@ $.fn.zato.cache.memcached.data_table.new_row = function(item, data, include_tr) 
     return row;
 }
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.cache.memcached.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Cache definition `{0}` deleted',
         'Are you sure you want to delete the cache definition `{0}`?',
         true);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
