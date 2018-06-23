@@ -49,7 +49,7 @@
 {% block body %}
     <div>
         <div id="hd">
-            <div id="console-header">&nbsp;<a href="http://zato.io/?v={{ zato_version|cut:"Zato " }}" id="logo-link"><img src="/static/gfx/logo.png" alt="Zato logo" style="vertical-align:middle"/><span id="logo">Zato</span></a>
+            <div id="console-header">&nbsp;<a href="https://zato.io/?v={{ zato_version|cut:"Zato " }}" id="logo-link"><img src="/static/gfx/logo.png" alt="Zato logo" style="vertical-align:middle"/><span id="logo">Zato</span></a>
             {% if user.is_authenticated %}
                 <span id="logout">
                     <a class="top" href="{% url "account-settings-basic" %}">My settings</a>
