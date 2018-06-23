@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -52,7 +52,9 @@ class OdooWrapper(object):
 
         try:
             ping_odoo(conn)
-        except Exception, e:
-            logger.warn('Could not ping Odoo (%s), e:`%s`', self.config.name, format_exc(e))
+        except Exception:
+            logger.warn('Could not ping Odoo (%s), e:`%s`', self.config.name, format_exc())
 
         self.client.put_client(conn)
+
+# ################################################################################################################################

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -27,6 +27,12 @@ from zato.cache import Cache as _CyCache
 from zato.common import CACHE, ZATO_NOT_GIVEN
 from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
 from zato.common.util import parse_extra_into_dict
+
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
 
 builtin_ops = [
     'CLEAR',
@@ -54,10 +60,6 @@ for builtin_op in builtin_ops:
     broker_msg_value = getattr(CACHE_BROKER_MSG, 'BUILTIN_STATE_CHANGED_{}'.format(builtin_op)).value
 
     builtin_op_to_broker_msg[common_key] = broker_msg_value
-
-# ################################################################################################################################
-
-logger = getLogger(__name__)
 
 # ################################################################################################################################
 
@@ -783,12 +785,12 @@ class CacheAPI(object):
     def _edit(self, config):
         """ A low-level method for updating configuration of a given cache. Must be called with self.lock held.
         """
-        cache = self.caches[config.cache_type].pop(config.old_name)
-
         if config.cache_type == CACHE.TYPE.BUILTIN:
+            cache = self.caches[config.cache_type].pop(config.old_name)
             cache.update_config(config)
             self._add_cache(config, cache)
         else:
+            cache = self.caches[config.cache_type][config.old_name]
             cache.disconnect_all()
             self._delete(config.cache_type, config.old_name)
             self._create_memcached(config)
