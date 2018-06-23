@@ -645,7 +645,7 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
         }
 
         if($.fn.zato.data_table.add_row_hook) {
-            $.fn.zato.data_table.add_row_hook(instance, name, html_elem);
+            $.fn.zato.data_table.add_row_hook(instance, name, html_elem, data);
         }
 
     })

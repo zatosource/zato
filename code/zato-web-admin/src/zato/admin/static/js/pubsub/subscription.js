@@ -174,7 +174,7 @@ $.fn.zato.pubsub.on_rest_soap_outconn_changed = function(field_id) {
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.pubsub.subscription.add_row_hook = function(instance, elem_name, html_elem) {
+$.fn.zato.pubsub.subscription.add_row_hook = function(instance, elem_name, html_elem, data) {
     if(elem_name == 'endpoint_id') {
         instance.endpoint_name = html_elem.find('option:selected').text();
     }
