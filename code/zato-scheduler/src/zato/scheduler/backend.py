@@ -30,6 +30,8 @@ from paste.util.converters import asbool
 from zato.common import SCHEDULER
 from zato.common.util import add_scheduler_jobs, add_startup_jobs, make_repr, new_cid, spawn_greenlet
 
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -205,8 +207,7 @@ class Job(object):
 
     def main_loop(self):
 
-        if logger.isEnabledFor(DEBUG):
-            logger.debug('Job entering main loop `%s`', self)
+        logger.info('Job entering main loop `%s`', self)
 
         _sleep = gevent.sleep
 
@@ -237,8 +238,7 @@ class Job(object):
                     else:
                         _sleep(self.get_sleep_time(datetime.datetime.utcnow()))
 
-            if logger.isEnabledFor(DEBUG):
-                logger.debug('Job leaving main loop `%s` after %d iterations', self, self.current_run)
+            logger.info('Job leaving main loop `%s` after %d iterations', self, self.current_run)
 
         except Exception, e:
             logger.warn(format_exc(e))
@@ -254,8 +254,7 @@ class Job(object):
                 logger.warn('Job `%s` cannot start without start_time set', self.name)
                 return
 
-            if logger.isEnabledFor(DEBUG):
-                logger.debug('Job starting `%s`', self)
+            logger.info('Job starting `%s`', self)
 
             _utcnow = datetime.datetime.utcnow
             _sleep = gevent.sleep
@@ -296,7 +295,6 @@ class Scheduler(object):
         self._add_startup_jobs = config._add_startup_jobs
         self._add_scheduler_jobs = config._add_scheduler_jobs
         self.job_log = getattr(logger, config.job_log_level)
-        self._has_debug = logger.isEnabledFor(DEBUG)
 
     def on_max_repeats_reached(self, job):
         with self.lock:
@@ -311,11 +309,7 @@ class Scheduler(object):
             if job.is_active:
                 if spawn:
                     self.spawn_job(job)
-
-                    if self._has_debug:
-                        logger.debug('Job scheduled `%s`', job)
-                    else:
-                        self.job_log('Job scheduled `%s` (%s, start: %s UTC)', job.name, job.type, job.start_time)
+                    self.job_log('Job scheduled `%s` (%s, start: %s UTC)', job.name, job.type, job.start_time)
 
             else:
                 logger.warn('Skipping inactive job `%s`', job)
@@ -355,10 +349,7 @@ class Scheduler(object):
         """ API for job deletion and stopping. Must be called with a self.lock held.
         """
         if self._unschedule(job):
-            if logger.isEnabledFor(DEBUG):
-                logger.debug('Job %s `%s`', message, job)
-            else:
-                logger.info('Job %s `%s` (%s)', message, job.name, job.type)
+            logger.info('Unscheduled job %s `%s` (%s)', message, job.name, job.type)
         else:
             logger.debug('Job not found `%s`', job)
 
