@@ -1555,7 +1555,7 @@ def _channel_web_socket(session, cluster_id):
         ChannelWebSocket.is_internal, ChannelWebSocket.address,
         ChannelWebSocket.data_format, ChannelWebSocket.service_id, ChannelWebSocket.security_id,
         ChannelWebSocket.new_token_wait_time, ChannelWebSocket.token_ttl,
-        SecurityBase.sec_type,
+        ChannelWebSocket.is_out, SecurityBase.sec_type,
         VaultConnection.default_auth_method.label('vault_conn_default_auth_method'),
         SecurityBase.name.label('sec_name'),
         Service.name.label('service_name'),

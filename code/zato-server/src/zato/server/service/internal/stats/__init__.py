@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -76,10 +76,9 @@ class BaseAggregatingService(AdminService):
         if max_batch_size:
             batch_size = min(key_len, max_batch_size)
             if batch_size < key_len:
-                msg = ('batch_size:[{}] < key_len:[{}], max_batch_size:[{}], key:[{}], '
-                'consider decreasing the job interval or increasing the max_batch_size').format(
-                    batch_size, key_len, max_batch_size, key)
-                self.logger.warn(msg)
+                msg = 'batch_size:`%s` < key_len:`%s`, max_batch_size:`%s`, key:`%s`, ' \
+                'consider decreasing the job interval or increasing max_batch_size'
+                self.logger.warn(msg, batch_size, key_len, max_batch_size, key)
         else:
             batch_size = key_len
 
