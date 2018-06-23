@@ -932,6 +932,10 @@ class TLS:
     DIR_KEYS_CERTS = 'keys-certs'
 
 class ODOO:
+
+    class CLIENT_TYPE:
+        OPENERP_CLIENT_LIB = 'openerp-client-lib'
+
     class DEFAULT:
         PORT = 8069
         POOL_SIZE = 3
