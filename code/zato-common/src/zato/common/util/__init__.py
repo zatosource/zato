@@ -98,7 +98,6 @@ from springpython.remoting.xmlrpc import SSLClientTransport
 # SQLAlchemy
 import sqlalchemy as sa
 from sqlalchemy import orm
-from sqlalchemy.exc import IntegrityError, ProgrammingError
 
 # Texttable
 from texttable import Texttable
@@ -112,8 +111,7 @@ from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_de
      ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
-from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
-from zato.common.odb.query import _service as _service
+from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 
 # ################################################################################################################################
 
@@ -293,8 +291,7 @@ def make_repr(_object, ignore_double_underscore=True, to_avoid_list='repr_to_avo
     for attr in attrs:
         attr_obj = getattr(_object, attr)
         if not callable(attr_obj):
-            buff.write(' ')
-            buff.write('\n%s:`%r`' % (attr, attr_obj))
+            buff.write('; %s:`%r`' % (attr, attr_obj))
 
     out = _repr_template.safe_substitute(
         class_name=_object.__class__.__name__, mem_loc=hex(id(_object)), attrs=buff.getvalue())
@@ -764,32 +761,39 @@ def dotted_getattr(o, path):
 
 # ################################################################################################################################
 
-def get_service_by_name(session, cluster_id, name):
-    logger.debug('Looking for name:`%s` in cluster_id:`%s`'.format(name, cluster_id))
-    return _service(session, cluster_id).\
-           filter(Service.name==name).\
-           one()
-
-# ################################################################################################################################
-
 def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
     """ Adds internal jobs to the ODB. Note that it isn't being added
     directly to the scheduler because we want users to be able to fine-tune the job's
     settings.
     """
     with closing(odb.session()) as session:
+        now = datetime.utcnow()
         for item in jobs:
 
             if not stats_enabled and item['name'].startswith('zato.stats'):
                 continue
 
             try:
-                service_id = get_service_by_name(session, cluster_id, item['service'])[0]
+                extra = item.get('extra', '').encode('utf-8')
 
-                now = datetime.utcnow()
+                service = session.query(Service).\
+                    filter(Service.name==item['name']).\
+                    filter(Cluster.id==cluster_id).\
+                    one()
 
-                job = Job(None, item['name'], True, 'interval_based', now, item.get('extra', '').encode('utf-8'),
-                          cluster_id=cluster_id, service_id=service_id)
+                cluster = session.query(Cluster).\
+                    filter(Cluster.id==cluster_id).\
+                    one()
+
+                existing_one = session.query(Job).\
+                    filter(Job.name==item['name']).\
+                    filter(Job.cluster_id==cluster_id).\
+                    first()
+
+                if existing_one:
+                    continue
+
+                job = Job(None, item['name'], True, 'interval_based', now, cluster=cluster, service=service, extra=extra)
 
                 kwargs = {}
                 for name in('seconds', 'minutes'):
@@ -801,9 +805,12 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
                 session.add(job)
                 session.add(ib_job)
                 session.commit()
-            except(IntegrityError, ProgrammingError), e:
-                session.rollback()
-                logger.debug('Caught an expected error, carrying on anyway, e:`%s`', format_exc(e).decode('utf-8'))
+
+            except Exception:
+                logger.warn(format_exc())
+
+            else:
+                logger.info('Initial job added `%s`', job.name)
 
 # ################################################################################################################################
 
