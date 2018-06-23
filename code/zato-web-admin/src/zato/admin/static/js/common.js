@@ -621,28 +621,31 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     var id = '';
     var tag_name = '';
     var html_elem;
+    var value = '';
 
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');
         html_elem = $('#id_' + prefix + name);
         tag_name = html_elem.prop('tagName');
 
-        console.log('Creating elem from: ' + name);
-
         if(tag_name && html_elem.prop('type') == 'checkbox') {
-            instance[name] = html_elem.is(':checked');
+            value = html_elem.is(':checked');
         }
 
         else {
-            instance[name] = elem.value;
+            value = elem.value;
         }
+
+        console.log('Creating elem from: `'+ name +'` and `'+ value +'`');
+
+        instance[name] = value
 
         if(tag_name && tag_name.toLowerCase() == 'select') {
             instance[name + '_select'] = $('#id_' + prefix + name + ' :selected').text();
         }
 
         if($.fn.zato.data_table.add_row_hook) {
-            $.fn.zato.data_table.add_row_hook(instance, name, html_elem);
+            $.fn.zato.data_table.add_row_hook(instance, name, html_elem, data);
         }
 
     })

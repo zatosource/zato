@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,34 +21,50 @@ from zato.common.util import ping_odoo
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
+# ################################################################################################################################
+
 elem = 'email_imap'
 model = OutgoingOdoo
 label = 'an Odoo connection'
 broker_message = OUTGOING
 broker_message_prefix = 'ODOO_'
 list_func = out_odoo_list
-skip_input_params = ['password']
+skip_input_params = ['password', 'client_type']
+
+# ################################################################################################################################
 
 def instance_hook(service, input, instance, attrs):
     if 'create' in service.get_name().lower():
         instance.password = uuid4().hex
 
+# ################################################################################################################################
+
 def broker_message_hook(service, input, instance, attrs, service_type):
     if service_type == 'create_edit':
         input.password = instance.password
+
+# ################################################################################################################################
 
 class GetList(AdminService):
     _filter_by = OutgoingOdoo.name,
     __metaclass__ = GetListMeta
 
+# ################################################################################################################################
+
 class Create(AdminService):
     __metaclass__ = CreateEditMeta
+
+# ################################################################################################################################
 
 class Edit(AdminService):
     __metaclass__ = CreateEditMeta
 
+# ################################################################################################################################
+
 class Delete(AdminService):
     __metaclass__ = DeleteMeta
+
+# ################################################################################################################################
 
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an Odoo connection
@@ -65,6 +81,8 @@ class ChangePassword(ChangePasswordBase):
 
         return self._handle(OutgoingOdoo, _auth, OUTGOING.ODOO_CHANGE_PASSWORD.value,
             publish_instance_attrs=['host', 'protocol', 'port', 'database', 'user', 'password', 'pool_size'])
+
+# ################################################################################################################################
 
 class Ping(AdminService):
 
@@ -86,3 +104,5 @@ class Ping(AdminService):
             response_time = time() - start_time
 
             self.response.payload.info = 'Ping OK, took:`{0:03.4f} s`'.format(response_time)
+
+# ################################################################################################################################
