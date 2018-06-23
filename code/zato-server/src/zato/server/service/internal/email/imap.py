@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,6 +19,8 @@ from zato.common.odb.query import email_imap_list
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
+# ################################################################################################################################
+
 elem = 'email_imap'
 model = IMAP
 label = 'an IMAP connection'
@@ -26,21 +28,34 @@ broker_message = EMAIL
 broker_message_prefix = 'IMAP_'
 list_func = email_imap_list
 
+# ################################################################################################################################
+
 def instance_hook(service, input, instance, attrs):
-    instance.username = input.username or '' # So it's not stored as None/NULL
+    if attrs.is_create_edit:
+        instance.username = input.username or '' # So it's not stored as None/NULL
+
+# ################################################################################################################################
 
 class GetList(AdminService):
     _filter_by = IMAP.name,
     __metaclass__ = GetListMeta
 
+# ################################################################################################################################
+
 class Create(AdminService):
     __metaclass__ = CreateEditMeta
+
+# ################################################################################################################################
 
 class Edit(AdminService):
     __metaclass__ = CreateEditMeta
 
+# ################################################################################################################################
+
 class Delete(AdminService):
     __metaclass__ = DeleteMeta
+
+# ################################################################################################################################
 
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an IMAP connection.
@@ -56,6 +71,8 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
 
         return self._handle(IMAP, _auth, EMAIL.IMAP_CHANGE_PASSWORD.value)
+
+# ################################################################################################################################
 
 class Ping(AdminService):
 
@@ -74,4 +91,7 @@ class Ping(AdminService):
         self.email.imap.get(item.name, True).conn.ping()
         response_time = time() - start_time
 
-        self.response.payload.info = 'Ping NOOP submitted, took:`{0:03.4f} s`, check server logs for details.'.format(response_time)
+        self.response.payload.info = 'Ping NOOP submitted, took:`{0:03.4f} s`, check server logs for details.'.format(
+            response_time)
+
+# ################################################################################################################################
