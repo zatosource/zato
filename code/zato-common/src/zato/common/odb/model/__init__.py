@@ -1091,11 +1091,13 @@ class OutgoingOdoo(Base):
     protocol = Column(String(200), nullable=False)
     pool_size = Column(Integer(), nullable=False, server_default=str(ODOO.DEFAULT.POOL_SIZE))
     password = Column(String(400), nullable=False)
+    client_type = Column(String(40), nullable=False, server_default=str(ODOO.CLIENT_TYPE.OPENERP_CLIENT_LIB))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_odoo', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self):
+    def __init__(self, cluster):
+        self.cluster = cluster
         self.protocol_name = None # Not used by the DB
 
 # ################################################################################################################################
