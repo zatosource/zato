@@ -98,7 +98,6 @@ from springpython.remoting.xmlrpc import SSLClientTransport
 # SQLAlchemy
 import sqlalchemy as sa
 from sqlalchemy import orm
-from sqlalchemy.exc import IntegrityError, ProgrammingError
 
 # Texttable
 from texttable import Texttable
@@ -113,7 +112,6 @@ from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_de
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
-from zato.common.odb.query import _service as _service
 
 # ################################################################################################################################
 
@@ -795,7 +793,7 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
                 if existing_one:
                     continue
 
-                job = Job(None, item['name'], True, 'interval_based', now, cluster=cluster, service=service)
+                job = Job(None, item['name'], True, 'interval_based', now, cluster=cluster, service=service, extra=extra)
 
                 kwargs = {}
                 for name in('seconds', 'minutes'):

@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import datetime
-from logging import getLogger, DEBUG
+from logging import getLogger
 from traceback import format_exc
 
 # datetime
