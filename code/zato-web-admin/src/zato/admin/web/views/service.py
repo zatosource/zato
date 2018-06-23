@@ -23,7 +23,7 @@ from dateutil.relativedelta import relativedelta
 
 # Django
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # lxml
