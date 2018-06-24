@@ -245,6 +245,34 @@ class SecurityBase(Base):
 
 # ################################################################################################################################
 
+class MultiSecurity(Base):
+    """ An N:N mapping between security definitions and objects making use of them.
+    """
+    __tablename__ = 'sec_multi'
+    __table_args__ = (UniqueConstraint('cluster_id', 'conn_id', 'conn_type', 'security_id', 'is_channel', 'is_outconn'), {})
+
+    id = Column(Integer, Sequence('sec_multi_seq'), primary_key=True)
+    is_active = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False)
+
+    priority = Column(Integer(), nullable=False)
+    conn_id = Column(String(100), nullable=False)
+    conn_type = Column(String(100), nullable=False)
+
+    is_channel = Column(Boolean(), nullable=False)
+    is_outconn = Column(Boolean(), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    security = relationship(SecurityBase, backref=backref('sec_multi_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('sec_multi_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
 class HTTPBasicAuth(SecurityBase):
     """ An HTTP Basic Auth definition.
     """
@@ -2371,8 +2399,6 @@ class PubSubMessage(Base):
     """ An individual message published to a topic.
     """
     __tablename__ = 'pubsub_message'
-
-
     __table_args__ = (
 
         # This index is needed for FKs from other tables,
