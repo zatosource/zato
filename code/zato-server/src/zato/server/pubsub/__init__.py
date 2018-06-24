@@ -946,14 +946,7 @@ class PubSub(object):
     def subscribe(self, config):
         with self.lock:
 
-                # This will only exist in API-originating subscriptions
-            if config.get('is_api_call'):
-
-                same_server = config.server_receiving_subscription_id == self.server.id
-                same_pid = config.server_receiving_subscription_pid == self.server.pid
-
-                if not (same_server and same_pid):
-                    self._add_subscription(config)
+            self._add_subscription(config)
 
             # We don't start dedicated tasks for WebSockets - they are all dynamic without a fixed server.
             # But for other endpoint types, we create and start a delivery task here.

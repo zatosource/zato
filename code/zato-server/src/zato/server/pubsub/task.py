@@ -569,10 +569,13 @@ class PubSubTool(object):
         #
         # time 0001: pub to a, b, c
         # time 0001: store last_gd_run = 0001 for each of a, b, c
+        # ---
         # time 0002: pub to a, b
         # time 0002: store last_gd_run = 0002 for a, b
+        # ---
         # time 0003: pub to b, c
         # time 0003: store last_gd_run = 0003 for b, c
+        # ---
         # time 0004: pub to c
         # time 0004: store last_gd_run = 0004 for c
         #
@@ -601,10 +604,13 @@ class PubSubTool(object):
         delivery_lock = RLock()
 
         self.delivery_lists[sub_key] = delivery_list
-        self.delivery_tasks[sub_key] = DeliveryTask(self.pubsub, sub_key, delivery_lock, delivery_list,
-            self.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered, self.pubsub.get_subscription_by_sub_key(sub_key).config)
-
         self.sub_key_locks[sub_key] = delivery_lock
+
+        sub = self.pubsub.get_subscription_by_sub_key(sub_key)
+
+        self.delivery_tasks[sub_key] = DeliveryTask(
+            self.pubsub, sub_key, delivery_lock, delivery_list, self.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered,
+            sub.config)
 
 # ################################################################################################################################
 
