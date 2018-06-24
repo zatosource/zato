@@ -54,20 +54,32 @@ logger = logging.getLogger(__name__)
 
 class WritableKeyedTuple(object):
 
+# ################################################################################################################################
+
     def __init__(self, elem):
         self._elem = elem
+
+# ################################################################################################################################
 
     def __getattr__(self, key):
         return getattr(self._elem, key)
 
+# ################################################################################################################################
+
     def __setattribute__(self, key, value):
         return setattr(self._elem, key, value)
+
+# ################################################################################################################################
 
     def __getitem__(self, idx):
         return self._elem.__getitem__(idx)
 
+# ################################################################################################################################
+
     def __setitem__(self, idx, value):
         return self._elem.__setitem__(idx, value)
+
+# ################################################################################################################################
 
     def __repr__(self):
         inner = [
@@ -84,6 +96,8 @@ class WritableKeyedTuple(object):
                 (key, value) in inner + outer
             )
         )
+
+# ################################################################################################################################
 
 class WritableTupleQuery(Query):
 
@@ -185,10 +199,16 @@ class SQLConnectionPool(object):
         self.checkins = 0
         self.checkouts = 0
 
+# ################################################################################################################################
+
     def __str__(self):
         return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
 
+# ################################################################################################################################
+
     __repr__ = __str__
+
+# ################################################################################################################################
 
     def _create_engine(self, engine_url, config, extra):
         if 'mxodbc' in engine_url:
@@ -220,10 +240,14 @@ class SQLConnectionPool(object):
         else:
             return create_engine(engine_url, **extra)
 
+# ################################################################################################################################
+
     def on_checkin(self, dbapi_conn, conn_record):
         if self.has_debug:
             self.logger.debug('Checked in dbapi_conn:%s, conn_record:%s', dbapi_conn, conn_record)
         self.checkins += 1
+
+# ################################################################################################################################
 
     def on_checkout(self, dbapi_conn, conn_record, conn_proxy):
         if self.has_debug:
@@ -233,13 +257,19 @@ class SQLConnectionPool(object):
         self.checkouts += 1
         self.logger.debug('co-cin-diff %d-%d-%d', self.checkouts, self.checkins, self.checkouts - self.checkins)
 
+# ################################################################################################################################
+
     def on_connect(self, dbapi_conn, conn_record):
         if self.has_debug:
             self.logger.debug('Connect dbapi_conn:%s, conn_record:%s', dbapi_conn, conn_record)
 
+# ################################################################################################################################
+
     def on_first_connect(self, dbapi_conn, conn_record):
         if self.has_debug:
             self.logger.debug('First connect dbapi_conn:%s, conn_record:%s', dbapi_conn, conn_record)
+
+# ################################################################################################################################
 
     def ping(self, fs_sql_config):
         """ Pings the SQL database and returns the response time, in milliseconds.
@@ -256,17 +286,25 @@ class SQLConnectionPool(object):
 
         return response_time
 
+# ################################################################################################################################
+
     def _conn(self):
         """ Returns an SQLAlchemy connection object.
         """
         return self.engine.connect()
 
+# ################################################################################################################################
+
     conn = property(fget=_conn, doc=_conn.__doc__)
+
+# ################################################################################################################################
 
     def _impl(self):
         """ Returns the underlying connection's implementation, the SQLAlchemy engine.
         """
         return self.engine
+
+# ################################################################################################################################
 
     impl = property(fget=_impl, doc=_impl.__doc__)
 
@@ -283,6 +321,8 @@ class PoolStore(DisposableObject):
         self.wrappers = {}
         self.logger = getLogger(self.__class__.__name__)
 
+# ################################################################################################################################
+
     def __getitem__(self, name, enforce_is_active=True):
         """ Checks out the connection pool. If enforce_is_active is False,
         the pool's is_active flag will be ignored.
@@ -296,7 +336,11 @@ class PoolStore(DisposableObject):
             else:
                 return self.wrappers[name]
 
+# ################################################################################################################################
+
     get = __getitem__
+
+# ################################################################################################################################
 
     def __setitem__(self, name, config):
         """ Stops a connection pool if it exists and replaces it with a new one
@@ -315,12 +359,16 @@ class PoolStore(DisposableObject):
 
             self.wrappers[name] = wrapper
 
+# ################################################################################################################################
+
     def __delitem__(self, name):
         """ Stops a pool and deletes it from the store.
         """
         with self._lock:
             self.wrappers[name].pool.engine.dispose()
             del self.wrappers[name]
+
+# ################################################################################################################################
 
     def __str__(self):
         out = StringIO()
@@ -329,7 +377,11 @@ class PoolStore(DisposableObject):
         out.write(']>')
         return out.getvalue()
 
+# ################################################################################################################################
+
     __repr__ = __str__
+
+# ################################################################################################################################
 
     def change_password(self, name, password):
         """ Updates the password which means recreating the pool using the new
@@ -340,6 +392,8 @@ class PoolStore(DisposableObject):
             config = deepcopy(self.wrappers[name].pool.config)
             config['password'] = password
             self[name] = config
+
+# ################################################################################################################################
 
     def destroy(self):
         """ Invoked when Spring Python's container is releasing the store.
@@ -379,10 +433,14 @@ class ODBManager(SessionWrapper):
         self.pool = pool
         self.decrypt_func = decrypt_func
 
+# ################################################################################################################################
+
     def on_deployment_finished(self):
         """ Commits all the implicit BEGIN blocks opened by SELECTs.
         """
         self._session.commit()
+
+# ################################################################################################################################
 
     def fetch_server(self, odb_config):
         """ Fetches the server from the ODB. Also sets the 'cluster' attribute
@@ -407,6 +465,8 @@ class ODBManager(SessionWrapper):
                 logger.error(msg)
                 raise
 
+# ################################################################################################################################
+
     def get_servers(self, up_status=SERVER_UP_STATUS.RUNNING, filter_out_self=True):
         """ Returns all servers matching criteria provided on input.
         """
@@ -422,6 +482,8 @@ class ODBManager(SessionWrapper):
                 query = query.filter(Server.id != self.server_id)
 
             return query.all()
+
+# ################################################################################################################################
 
     def get_missing_services(self, server, locally_deployed):
         """ Returns services deployed on the server given on input that are not among locally_deployed.
@@ -443,6 +505,8 @@ class ODBManager(SessionWrapper):
                     missing.append(item)
 
         return missing
+
+# ################################################################################################################################
 
     def server_up_down(self, token, status, update_host=False, bind_host=None, bind_port=None, preferred_address=None,
         crypto_use_tls=None):
@@ -472,6 +536,8 @@ class ODBManager(SessionWrapper):
 
             session.add(server)
             session.commit()
+
+# ################################################################################################################################
 
     def get_url_security(self, cluster_id, connection=None):
         """ Returns the security configuration of HTTP URLs.
@@ -554,6 +620,8 @@ class ODBManager(SessionWrapper):
 
             return result, columns
 
+# ################################################################################################################################
+
     def add_service(self, name, impl_name, is_internal, deployment_time, details, source_info):
         """ Adds information about the server's service into the ODB.
         """
@@ -580,6 +648,8 @@ class ODBManager(SessionWrapper):
             logger.error('Could not add service, name:[%s], e:[%s]', name, format_exc(e).decode('utf-8'))
             self._session.rollback()
 
+# ################################################################################################################################
+
     def drop_deployed_services(self, server_id):
         """ Removes all the deployed services from a server.
         """
@@ -588,6 +658,8 @@ class ODBManager(SessionWrapper):
                 filter(DeployedService.server_id==server_id).\
                 delete()
             session.commit()
+
+# ################################################################################################################################
 
     def add_deployed_service(self, deployment_time, details, service, source_info):
         """ Adds information about the server's deployed service into the ODB.
@@ -623,6 +695,8 @@ class ODBManager(SessionWrapper):
             logger.error(msg)
             self._session.rollback()
 
+# ################################################################################################################################
+
     def is_service_active(self, service_id):
         """ Returns whether the given service is active or not.
         """
@@ -630,6 +704,8 @@ class ODBManager(SessionWrapper):
             return session.query(Service.is_active).\
                 filter(Service.id==service_id).\
                 one()[0]
+
+# ################################################################################################################################
 
     def hot_deploy(self, deployment_time, details, payload_name, payload, server_id):
         """ Inserts hot-deployed data into the DB along with setting the preliminary
@@ -666,6 +742,8 @@ class ODBManager(SessionWrapper):
 
             return dp.id
 
+# ################################################################################################################################
+
     def _become_cluster_wide(self, cluster, session):
         """ Update all the Cluster's attributes that are related to connector servers.
         """
@@ -681,6 +759,8 @@ class ODBManager(SessionWrapper):
 
         return True
 
+# ################################################################################################################################
+
     def conn_server_past_grace_time(self, cluster, grace_time):
         """ Whether it's already past the grace time the connector server had
         for updating its keep-alive timestamp.
@@ -695,6 +775,8 @@ class ODBManager(SessionWrapper):
 
         # Return True if 'now' is past what it's allowed
         return now > max_allowed
+
+# ################################################################################################################################
 
     def become_cluster_wide(self, grace_time):
         """ Makes an attempt for the server to become a connector one, that is,
@@ -718,6 +800,8 @@ class ODBManager(SessionWrapper):
                     self.server.id, self.server.name, cluster.id, cluster.name, cluster.cw_srv_id, cluster.cw_srv_keep_alive_dt)
                 logger.debug(msg)
 
+# ################################################################################################################################
+
     def clear_cluster_wide(self):
         """ Invoked when the cluster-wide singleton server is making a clean shutdown, sets
         all the relevant data to NULL in the ODB.
@@ -735,6 +819,8 @@ class ODBManager(SessionWrapper):
             session.commit()
 
             self.logger.info('({}) Cleared cluster-wide singleton server flag'.format(self.server.name))
+
+# ################################################################################################################################
 
     def add_delivery(self, deployment_time, details, service, source_info):
         """ Adds information about the server's deployed service into the ODB.
@@ -790,11 +876,15 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.apikey_security_list(session, cluster_id, needs_columns)
 
+# ################################################################################################################################
+
     def get_aws_security_list(self, cluster_id, needs_columns=False):
         """ Returns a list of AWS definitions existing on the given cluster.
         """
         with closing(self.session()) as session:
             return query.aws_security_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
 
     def get_basic_auth_list(self, cluster_id, cluster_name, needs_columns=False):
         """ Returns a list of HTTP Basic Auth definitions existing on the given cluster.
@@ -802,11 +892,15 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.basic_auth_list(session, cluster_id, cluster_name, needs_columns)
 
+# ################################################################################################################################
+
     def get_jwt_list(self, cluster_id, cluster_name, needs_columns=False):
         """ Returns a list of JWT definitions existing on the given cluster.
         """
         with closing(self.session()) as session:
             return query.jwt_list(session, cluster_id, cluster_name, needs_columns)
+
+# ################################################################################################################################
 
     def get_ntlm_list(self, cluster_id, needs_columns=False):
         """ Returns a list of NTLM definitions existing on the given cluster.
@@ -814,11 +908,15 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.ntlm_list(session, cluster_id, needs_columns)
 
+# ################################################################################################################################
+
     def get_oauth_list(self, cluster_id, needs_columns=False):
         """ Returns a list of OAuth accounts existing on the given cluster.
         """
         with closing(self.session()) as session:
             return query.oauth_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
 
     def get_openstack_security_list(self, cluster_id, needs_columns=False):
         """ Returns a list of OpenStack security accounts existing on the given cluster.
@@ -826,11 +924,15 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.openstack_security_list(session, cluster_id, needs_columns)
 
+# ################################################################################################################################
+
     def get_tls_ca_cert_list(self, cluster_id, needs_columns=False):
         """ Returns a list of TLS CA certs on the given cluster.
         """
         with closing(self.session()) as session:
             return query.tls_ca_cert_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
 
     def get_tls_channel_sec_list(self, cluster_id, needs_columns=False):
         """ Returns a list of definitions for securing TLS channels.
@@ -838,11 +940,15 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.tls_channel_sec_list(session, cluster_id, needs_columns)
 
+# ################################################################################################################################
+
     def get_tls_key_cert_list(self, cluster_id, needs_columns=False):
         """ Returns a list of TLS key/cert pairs on the given cluster.
         """
         with closing(self.session()) as session:
             return query.tls_key_cert_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
 
     def get_wss_list(self, cluster_id, needs_columns=False):
         """ Returns a list of WS-Security definitions on the given cluster.
@@ -850,11 +956,15 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.wss_list(session, cluster_id, needs_columns)
 
+# ################################################################################################################################
+
     def get_vault_connection_list(self, cluster_id, needs_columns=False):
         """ Returns a list of Vault connections on the given cluster.
         """
         with closing(self.session()) as session:
             return query.vault_connection_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
 
     def get_xpath_sec_list(self, cluster_id, needs_columns=False):
         """ Returns a list of XPath-based security definitions on the given cluster.
@@ -870,11 +980,15 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.definition_amqp(session, cluster_id, def_id)
 
+# ################################################################################################################################
+
     def get_definition_amqp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of AMQP definitions on the given cluster.
         """
         with closing(self.session()) as session:
             return query.definition_amqp_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
 
     def get_out_amqp(self, cluster_id, out_id):
         """ Returns an outgoing AMQP connection's details.
@@ -882,17 +996,23 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.out_amqp(session, cluster_id, out_id)
 
+# ################################################################################################################################
+
     def get_out_amqp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing AMQP connections.
         """
         with closing(self.session()) as session:
             return query.out_amqp_list(session, cluster_id, needs_columns)
 
+# ################################################################################################################################
+
     def get_channel_amqp(self, cluster_id, channel_id):
         """ Returns a particular AMQP channel.
         """
         with closing(self.session()) as session:
             return query.channel_amqp(session, cluster_id, channel_id)
+
+# ################################################################################################################################
 
     def get_channel_amqp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of AMQP channels.
@@ -908,11 +1028,15 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.definition_wmq(session, cluster_id, def_id)
 
+# ################################################################################################################################
+
     def get_definition_wmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of IBM MQ definitions on the given cluster.
         """
         with closing(self.session()) as session:
             return query.definition_wmq_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
 
     def get_out_wmq(self, cluster_id, out_id):
         """ Returns an outgoing IBM MQ connection's details.
@@ -920,17 +1044,23 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.out_wmq(session, cluster_id, out_id)
 
+# ################################################################################################################################
+
     def get_out_wmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing IBM MQ connections.
         """
         with closing(self.session()) as session:
             return query.out_wmq_list(session, cluster_id, needs_columns)
 
+# ################################################################################################################################
+
     def get_channel_wmq(self, cluster_id, channel_id):
         """ Returns a particular IBM MQ channel.
         """
         with closing(self.session()) as session:
             return query.channel_wmq(session, cluster_id, channel_id)
+
+# ################################################################################################################################
 
     def get_channel_wmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of IBM MQ channels.
@@ -946,17 +1076,23 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.channel_stomp(session, cluster_id, channel_id)
 
+# ################################################################################################################################
+
     def get_channel_stomp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of STOMP channels.
         """
         with closing(self.session()) as session:
             return query.channel_stomp_list(session, cluster_id, needs_columns)
 
+# ################################################################################################################################
+
     def get_out_stomp(self, cluster_id, out_id):
         """ Returns an outgoing STOMP connection's details.
         """
         with closing(self.session()) as session:
             return query.out_stomp(session, cluster_id, out_id)
+
+# ################################################################################################################################
 
     def get_out_stomp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing STOMP connections.
@@ -972,17 +1108,23 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.out_zmq(session, cluster_id, out_id)
 
+# ################################################################################################################################
+
     def get_out_zmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing ZMQ connections.
         """
         with closing(self.session()) as session:
             return query.out_zmq_list(session, cluster_id, needs_columns)
 
+# ################################################################################################################################
+
     def get_channel_zmq(self, cluster_id, channel_id):
         """ Returns a particular ZMQ channel.
         """
         with closing(self.session()) as session:
             return query.channel_zmq(session, cluster_id, channel_id)
+
+# ################################################################################################################################
 
     def get_channel_zmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of ZMQ channels.
@@ -998,6 +1140,8 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.channel_web_socket(session, cluster_id, channel_id)
 
+# ################################################################################################################################
+
     def get_channel_web_socket_list(self, cluster_id, needs_columns=False):
         """ Returns a list of WebSocket channels.
         """
@@ -1011,6 +1155,8 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.out_sql(session, cluster_id, out_id)
+
+# ################################################################################################################################
 
     def get_out_sql_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing SQL connections.
@@ -1026,6 +1172,8 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.out_odoo(session, cluster_id, out_id)
 
+# ################################################################################################################################
+
     def get_out_odoo_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing Odoo connections.
         """
@@ -1039,6 +1187,8 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.out_sap(session, cluster_id, out_id)
+
+# ################################################################################################################################
 
     def get_out_sap_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing SAP RFC connections.
@@ -1054,6 +1204,8 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.out_ftp(session, cluster_id, out_id)
 
+# ################################################################################################################################
+
     def get_out_ftp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing FTP connections.
         """
@@ -1067,6 +1219,8 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.cache_builtin(session, cluster_id, id)
+
+# ################################################################################################################################
 
     def get_cache_builtin_list(self, cluster_id, needs_columns=False):
         """ Returns a list of built-in cache definitions.
@@ -1082,6 +1236,8 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.cache_memcached(session, cluster_id, id)
 
+# ################################################################################################################################
+
     def get_cache_memcached_list(self, cluster_id, needs_columns=False):
         """ Returns a list of Memcached-based cache definitions.
         """
@@ -1096,11 +1252,15 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.namespace_list(session, cluster_id, needs_columns)
 
+# ################################################################################################################################
+
     def get_xpath_list(self, cluster_id, needs_columns=False):
         """ Returns a list of XPath expressions.
         """
         with closing(self.session()) as session:
             return query.xpath_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
 
     def get_json_pointer_list(self, cluster_id, needs_columns=False):
         """ Returns a list of JSON Pointer expressions.
@@ -1139,6 +1299,8 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.cloud_openstack_swift_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
 
     def get_cloud_aws_s3_list(self, cluster_id, needs_columns=False):
         """ Returns a list of AWS S3 connections.
@@ -1280,10 +1442,5 @@ class ODBManager(SessionWrapper):
     _migrate_30_encrypt_sec_vault_conn_sec     = _migrate_30_encrypt_sec_base
     _migrate_30_encrypt_sec_wss                = _migrate_30_encrypt_sec_base
     _migrate_30_encrypt_sec_xpath_sec          = _migrate_30_encrypt_sec_base
-
-# ################################################################################################################################
-
-    def _migrate_30_encrypt_tls_key_cert(self, session, id, encrypted_value):
-        pass
 
 # ################################################################################################################################
