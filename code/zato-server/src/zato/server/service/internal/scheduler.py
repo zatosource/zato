@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -26,7 +26,11 @@ from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
 from zato.common.odb.query import job_by_name, job_list
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
+# ################################################################################################################################
+
 _service_name_prefix = 'zato.scheduler.job.'
+
+# ################################################################################################################################
 
 def _create_edit(action, cid, input, payload, logger, session, broker_client, response):
     """ Creating and updating a job requires a series of very similar steps
@@ -38,8 +42,11 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     name = input.name
     service_name = input.service
 
-    if job_type not in(SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED,
-                           SCHEDULER.JOB_TYPE.CRON_STYLE):
+    cluster = session.query(Cluster).\
+        filter(Cluster.id==cluster_id).\
+        one()
+
+    if job_type not in(SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED, SCHEDULER.JOB_TYPE.CRON_STYLE):
         msg = 'Unrecognized job type [{0}]'.format(job_type)
         logger.error(msg)
         raise ZatoException(cid, msg)
@@ -56,7 +63,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         existing_one = existing_one_base.filter(Job.id != job_id).first()
 
     if existing_one:
-        raise ZatoException(cid, 'Job [{0}] already exists on this cluster'.format(name))
+        raise ZatoException(cid, 'Job `{}` already exists on this cluster'.format(name))
 
     # Is the service's name correct?
     service = session.query(Service).\
@@ -65,7 +72,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         filter(Service.name==service_name).first()
 
     if not service:
-        msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
+        msg = 'Service `{}` does not exist on this cluster'.format(service_name)
         logger.error(msg)
         raise ZatoException(cid, msg)
 
@@ -78,7 +85,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     start_date = parse(input.start_date)
 
     if action == 'create':
-        job = Job(None, name, is_active, job_type, start_date, extra, cluster_id=cluster_id, service=service)
+        job = Job(None, name, is_active, job_type, start_date, extra, cluster=cluster, service=service)
     else:
         job = session.query(Job).filter_by(id=job_id).one()
         old_name = job.name
@@ -157,10 +164,9 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
 
         broker_client.publish(msg, MESSAGE_TYPE.TO_SCHEDULER)
 
-    except Exception, e:
+    except Exception:
         session.rollback()
-        msg = 'Could not complete the request, e:[{e}]'.format(e=format_exc(e))
-        logger.error(msg)
+        logger.error('Could not complete the request, e:`%s`', format_exc())
         raise
     else:
         response.payload.id = job.id
@@ -170,6 +176,8 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             # Needs to be returned because we might've been performing
             # a substitution like changing '@hourly' into '0 * * * *'.
             response.payload.cron_definition = cs_job.cron_definition
+
+# ################################################################################################################################
 
 class _CreateEdit(AdminService):
     """ A base class for both creating and editing scheduler jobs.
@@ -186,6 +194,8 @@ class _CreateEdit(AdminService):
             _create_edit(self.__class__.__name__.lower(), self.cid, self.request.input, self.request.payload,
                     self.logger, session, self.broker_client, self.response)
 
+# ################################################################################################################################
+
 class _Get(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id',)
@@ -194,6 +204,8 @@ class _Get(AdminService):
         output_repeated = True
         default_value = ''
         date_time_format = scheduler_date_time_format
+
+# ################################################################################################################################
 
 class GetList(_Get):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
@@ -216,6 +228,8 @@ class GetList(_Get):
         for item in self.response.payload.zato_output:
             item.start_date = item.start_date.isoformat()
 
+# ################################################################################################################################
+
 class GetByName(_Get):
     """ Returns a job by its name.
     """
@@ -235,6 +249,8 @@ class GetByName(_Get):
             self.response.payload = self.get_data(session)
             self.response.payload.start_date = self.response.payload.start_date.isoformat()
 
+# ################################################################################################################################
+
 class Create(_CreateEdit):
     """ Creates a new scheduler's job.
     """
@@ -244,6 +260,8 @@ class Create(_CreateEdit):
         request_elem = 'zato_scheduler_job_create_request'
         response_elem = 'zato_scheduler_job_create_response'
 
+# ################################################################################################################################
+
 class Edit(_CreateEdit):
     """ Updates a scheduler's job.
     """
@@ -252,6 +270,8 @@ class Edit(_CreateEdit):
     class SimpleIO(_CreateEdit.SimpleIO):
         request_elem = 'zato_scheduler_job_edit_request'
         response_elem = 'zato_scheduler_job_edit_response'
+
+# ################################################################################################################################
 
 class Delete(AdminService):
     """ Deletes a scheduler's job.
@@ -276,12 +296,13 @@ class Delete(AdminService):
                 msg = {'action': SCHEDULER_MSG.DELETE.value, 'name': job.name}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_SCHEDULER)
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                msg = 'Could not delete the job, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not delete the job, e:`%s`', format_exc())
 
                 raise
+
+# ################################################################################################################################
 
 class Execute(AdminService):
     """ Executes a scheduler's job.
@@ -303,12 +324,13 @@ class Execute(AdminService):
                 msg = {'action': SCHEDULER_MSG.EXECUTE.value, 'name': job.name}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_SCHEDULER)
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                msg = 'Could not execute the job, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not execute the job, e:`%s`', format_exc())
 
                 raise
+
+# ################################################################################################################################
 
 class SetActiveStatus(AdminService):
     """ Actives or deactivates a job.
@@ -328,9 +350,10 @@ class SetActiveStatus(AdminService):
                     one().is_active = self.request.input.is_active
                 session.commit()
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                msg = 'Could not update is_active status, e:[{}]'.format(format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not update is_active status, e:`%s`', format_exc())
 
                 raise
+
+# ################################################################################################################################

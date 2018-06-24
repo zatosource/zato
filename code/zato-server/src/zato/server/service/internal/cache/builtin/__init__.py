@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -27,7 +27,7 @@ label = 'a built-in cache definition'
 broker_message = CACHE
 broker_message_prefix = 'BUILTIN_'
 list_func = cache_builtin_list
-output_optional_extra = ['current_size']
+output_optional_extra = ['current_size', 'cache_id']
 
 # ################################################################################################################################
 
@@ -36,9 +36,19 @@ instance_hook = common_instance_hook
 # ################################################################################################################################
 
 def response_hook(self, input, _ignored, attrs, service_type):
-    if service_type == 'get_list':
+
+    if service_type == 'create_edit':
+        self.response.payload.cache_id = self.response.payload.id
+
+    elif service_type == 'get_list':
         for item in self.response.payload:
             item.current_size = self.cache.get_size(_COMMON_CACHE.TYPE.BUILTIN, item.name)
+
+# ################################################################################################################################
+
+def broker_message_hook(self, input, instance, attrs, service_type):
+    if service_type == 'delete':
+        input.cache_type = _COMMON_CACHE.TYPE.BUILTIN
 
 # ################################################################################################################################
 

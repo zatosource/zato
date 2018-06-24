@@ -23,16 +23,19 @@
             'name',
             '_is_active',
             '_is_default',
+
             'cur_size',
             'max_size',
             'max_item_size',
             '_extend_expiry_on_get',
             '_extend_expiry_on_set',
+
             '_create',
             '_clear',
             '_edit',
             '_delete',
             'id',
+
             'is_active',
             'is_default',
             'extend_expiry_on_get',
@@ -71,15 +74,19 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Default</a></th>
+
                         <th><a href="#">Current size</a></th>
                         <th><a href="#">Max size</a></th>
                         <th><a href="#">Max item size</a></th>
                         <th><a href="#">Extend exp. on get</a></th>
                         <th><a href="#">Extend exp. on set</a></th>
+
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -96,16 +103,19 @@
                         <td><a href="{% url "cache-builtin-get-entries" item.cache_id %}?cluster=1">{{ item.name }}</a></td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.is_default|yesno:'Yes,No' }}</td>
+
                         <td id="cache_current_size_{{ item.cache_id }}">{{ item.current_size }}</td>
                         <td>{{ item.max_size }}</td>
                         <td>{{ item.max_item_size }}</td>
                         <td>{{ item.extend_expiry_on_get|yesno:'Yes,No' }}</td>
                         <td>{{ item.extend_expiry_on_set|yesno:'Yes,No'  }}</td>
+
                         <td><a href="{% url "cache-builtin-create-entry" item.cache_id cluster_id %}">Add a new entry</a></td>
                         <td><a href="javascript:$.fn.zato.cache.builtin.clear('{{ item.cache_id }}')">Clear</a></td>
                         <td><a href="javascript:$.fn.zato.cache.builtin.edit('{{ item.cache_id }}')">Edit</a></td>
                         <td>{% if item.is_default %}<span class="form_hint">Delete</span>{% else %}<a href="javascript:$.fn.zato.cache.builtin.delete_('{{ item.cache_id }}')">Delete</a>{% endif %}</td>
                         <td class='ignore item_id_{{ item.cache_id }}'>{{ item.cache_id }}</td>
+
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_default }}</td>
                         <td class='ignore'>{{ item.extend_expiry_on_get }}</td>

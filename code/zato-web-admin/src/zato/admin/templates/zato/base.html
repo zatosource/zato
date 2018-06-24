@@ -20,9 +20,12 @@
     <link rel="manifest" href="/static/favicon/manifest.json">
     <meta name="msapplication-TileImage" content="/static/favicon/ms-icon-144x144.png">
 
+    <script src="/static/brython/dist/brython.js"></script>
+    <script src="/static/brython/dist/brython_stdlib.js"></script>
+
     {% block head %}{% endblock %}
 </head>
-<body>
+<body onload="brython()">
     {% block body %}{% endblock %}
 </body>
 </html>

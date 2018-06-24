@@ -18,14 +18,14 @@
 
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
-    
+
     <script>
     var friendly_names = new Object();
 
     {% for name, friendly_name in friendly_names%}
         friendly_names['{{ name }}'] = '{{ friendly_name }}';
     {% endfor %}
-    
+
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
@@ -77,8 +77,8 @@
 
     <div class='page_prompt' style="clear:left">
         Create a new job:
-            <a href="javascript:$.fn.zato.scheduler.create('one_time')" class="common">one-time</a>, 
-            <a href="javascript:$.fn.zato.scheduler.create('interval_based')" class="common">interval-based</a>, 
+            <a href="javascript:$.fn.zato.scheduler.create('one_time')" class="common">one-time</a>,
+            <a href="javascript:$.fn.zato.scheduler.create('interval_based')" class="common">interval-based</a>,
             <a href="javascript:$.fn.zato.scheduler.create('cron_style')" class="common">cron-style</a>
     </div>
 
@@ -129,14 +129,14 @@
                         <td class='ignore'>{{ job.is_active }}</td>
                         <td class='ignore'>{{ job.job_type }}</td>
                         <td class='ignore'>{{ job.start_date }}</td>
-                        <td class='ignore'>{{ job.extra }}</td>
-                        <td class='ignore'>{{ job.interval_based.weeks }}</td>
-                        <td class='ignore'>{{ job.interval_based.days }}</td>
-                        <td class='ignore'>{{ job.interval_based.hours }}</td>
-                        <td class='ignore'>{{ job.interval_based.minutes }}</td>
-                        <td class='ignore'>{{ job.interval_based.seconds }}</td>
-                        <td class='ignore'>{{ job.interval_based.repeats }}</td>
-                        <td class='ignore'>{{ job.cron_style.cron_definition }}</td>
+                        <td class='ignore'>{{ job.extra|default:"" }}</td>
+                        <td class='ignore'>{{ job.interval_based.weeks|default:"" }}</td>
+                        <td class='ignore'>{{ job.interval_based.days|default:"" }}</td>
+                        <td class='ignore'>{{ job.interval_based.hours|default:"" }}</td>
+                        <td class='ignore'>{{ job.interval_based.minutes|default:"" }}</td>
+                        <td class='ignore'>{{ job.interval_based.seconds|default:"" }}</td>
+                        <td class='ignore'>{{ job.interval_based.repeats|default:"" }}</td>
+                        <td class='ignore'>{{ job.cron_style.cron_definition|default:"" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -160,7 +160,7 @@
                             <td style="vertical-align:middle">Name</td>
                             <td>{{ create_one_time_form.name }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ create_one_time_form.is_active }}</td>
@@ -185,7 +185,7 @@
                             <td style="vertical-align:middle">Extra data</td>
                             <td>{{ create_one_time_form.extra }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -212,7 +212,7 @@
                             <td style="vertical-align:middle">Name</td>
                             <td>{{ edit_one_time_form.name }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ edit_one_time_form.is_active }}</td>
@@ -237,7 +237,7 @@
                             <td style="vertical-align:middle">Extra data</td>
                             <td>{{ edit_one_time_form.extra }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -254,7 +254,7 @@
                 </form>
             </div>
         </div>
-        
+
         <div id="create-interval_based" class='data-popup ignore'>
             <div>
                 <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-interval_based">
@@ -264,7 +264,7 @@
                             <td style="vertical-align:middle">Name</td>
                             <td>{{ create_interval_based_form.name }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ create_interval_based_form.is_active }}</td>
@@ -319,7 +319,7 @@
                             <td style="vertical-align:middle">Extra data</td>
                             <td>{{ create_interval_based_form.extra }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -335,7 +335,7 @@
                 </form>
             </div>
         </div>
-        
+
         <div id="edit-interval_based" class='data-popup ignore'>
             <div>
                 <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-interval_based">
@@ -345,7 +345,7 @@
                             <td style="vertical-align:middle">Name</td>
                             <td>{{ edit_interval_based_form.name }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ edit_interval_based_form.is_active }}</td>
@@ -400,7 +400,7 @@
                             <td style="vertical-align:middle">Extra data</td>
                             <td>{{ edit_interval_based_form.extra }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -417,7 +417,7 @@
                 </form>
             </div>
         </div>
-        
+
         <div id="create-cron_style" class='data-popup ignore'>
             <div>
                 <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-cron_style">
@@ -427,7 +427,7 @@
                             <td style="vertical-align:middle">Name</td>
                             <td>{{ create_cron_style_form.name }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ create_cron_style_form.is_active }}</td>
@@ -459,7 +459,7 @@
                             <td style="vertical-align:middle">Extra data</td>
                             <td>{{ create_cron_style_form.extra }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -475,7 +475,7 @@
                 </form>
             </div>
         </div>
-        
+
         <div id="edit-cron_style" class='data-popup ignore'>
             <div>
                 <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-cron_style">
@@ -485,7 +485,7 @@
                             <td style="vertical-align:middle">Name</td>
                             <td>{{ edit_cron_style_form.name }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ edit_cron_style_form.is_active }}</td>
@@ -517,7 +517,7 @@
                             <td style="vertical-align:middle">Extra data</td>
                             <td>{{ edit_cron_style_form.extra }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -540,8 +540,8 @@
             <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />
             <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />
         </form>
-        
-        
+
+
     {% endif %} {% comment %}cluster_id{% endcomment %}
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}

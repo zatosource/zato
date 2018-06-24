@@ -16,7 +16,7 @@ from django.views.static import serve as django_static_serve
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import account, cluster, docs, http_soap, kvdb, load_balancer, main, scheduler, service, stats
+from zato.admin.web.views import account, cluster, http_soap, kvdb, load_balancer, main, scheduler, service, stats
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -159,11 +159,6 @@ urlpatterns += [
         login_required(service.invoker), name='service-invoker'),
     url(r'^zato/service/source-info/(?P<service_name>.*)/$',
         login_required(service.source_info), name='service-source-info'),
-    url(r'^zato/service/wsdl/(?P<service_name>.*)/cluster/(?P<cluster_id>.*)/upload/$',
-        login_required(service.wsdl_upload), name='service-wsdl-upload'),
-    url(r'^zato/service/wsdl/(?P<service_name>.*)/cluster/(?P<cluster_id>.*)/download/$',
-        login_required(service.wsdl_download), name='service-wsdl-download'),
-    url(r'^zato/service/wsdl/(?P<service_name>.*)/$', login_required(service.wsdl), name='service-wsdl'),
     url(r'^zato/service/request-response/(?P<service_name>.*)/cluster/(?P<cluster_id>.*)/configure/$',
         login_required(service.request_response_configure), name='service-request-response-configure'),
     url(r'^zato/service/request-response/(?P<service_name>.*)/$',

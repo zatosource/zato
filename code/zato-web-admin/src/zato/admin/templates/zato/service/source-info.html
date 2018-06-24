@@ -23,7 +23,6 @@
     <a href="{% url "service-overview" service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
     <a href="{% url "service-invoker" service.name %}?cluster={{ cluster_id }}" class="common">Invoker</a>
     <a href="{% url "service-source-info" service.name %}?cluster={{ cluster_id }}" class="common current">Source code</a>
-    <a href="{% url "service-wsdl" service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
     <a href="{% url "service-request-response" service.name %}?cluster={{ cluster_id }}" class="common">Sample request/response</a>
     <a href="{% url "service-slow-response" service.name %}?cluster={{ cluster_id }}" class="common">Slow responses</a>
 </div>

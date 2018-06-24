@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -24,16 +24,28 @@ label = 'a Memcached cache definition'
 broker_message = CACHE
 broker_message_prefix = 'MEMCACHED_'
 list_func = cache_memcached_list
+skip_input_params = ['cache_id']
 
 # ################################################################################################################################
 
-instance_hook = common_instance_hook
+def response_hook(self, input, _ignored, attrs, service_type):
+
+    if service_type == 'create_edit':
+        self.response.payload.cache_id = self.response.payload.id
+
+    elif service_type == 'get_list':
+        for elem in self.response.payload:
+            elem.id = elem.cache_id
+
+# ################################################################################################################################
 
 def instance_hook(self, input, instance, attrs):
     common_instance_hook(self, input, instance, attrs)
 
     if attrs.is_create_edit:
-        # Parse extra arguments to confirm their syntax is correct
+
+        # Parse extra arguments to confirm their syntax is correct,
+        # output is ignored on purpose, we just want to validate it.
         parse_extra_into_dict(input.extra)
 
     elif attrs.is_delete:
