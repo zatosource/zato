@@ -37,7 +37,7 @@ from bunch import Bunch
 from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, \
      ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
+     HTTPSOAP, JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
      WSSDefinition, VaultConnection
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
@@ -854,17 +854,7 @@ class ODBManager(SessionWrapper):
         """ Returns the list of all HTTP/SOAP connections.
         """
         with closing(self.session()) as session:
-            item_list = query.http_soap_list(session, cluster_id, connection, transport, True, needs_columns)
-
-            if connection == 'channel':
-                for item in item_list:
-                    item.replace_patterns_json_pointer = [elem.pattern.name for elem in session.query(HTTPSOAP).
-                        filter(HTTPSOAP.id == item.id).one().replace_patterns_json_pointer]
-
-                    item.replace_patterns_xpath = [elem.pattern.name for elem in session.query(HTTPSOAP).
-                        filter(HTTPSOAP.id == item.id).one().replace_patterns_xpath]
-
-            return item_list
+            return query.http_soap_list(session, cluster_id, connection, transport, True, needs_columns)
 
 # ################################################################################################################################
 
@@ -1281,30 +1271,6 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.json_pointer_list(session, cluster_id, needs_columns)
-
-# ################################################################################################################################
-
-    def audit_set_request_http_soap(self, conn_id, name, cid, transport,
-            connection, req_time, user_token, remote_addr, req_headers,
-            req_payload):
-
-        with closing(self.session()) as session:
-
-            audit = HTTSOAPAudit()
-            audit.conn_id = conn_id
-            audit.cluster_id = self.cluster.id
-            audit.name = name
-            audit.cid = cid
-            audit.transport = transport
-            audit.connection = connection
-            audit.req_time = req_time
-            audit.user_token = user_token
-            audit.remote_addr = remote_addr
-            audit.req_headers = req_headers
-            audit.req_payload = req_payload
-
-            session.add(audit)
-            session.commit()
 
 # ################################################################################################################################
 

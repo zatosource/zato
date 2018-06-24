@@ -1665,36 +1665,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Delete the pattern from its store
         self.json_pointer_store.on_broker_msg_delete(msg, *args)
 
-        # Delete the pattern from url_data's cache and let know servers that it should be deleted from the ODB as well
-        for item_id, pattern_list in self.request_dispatcher.url_data.on_broker_msg_MSG_JSON_POINTER_DELETE(msg):
-
-            # This is a bit inefficient, if harmless, because each worker in a cluster will publish it
-            # so the list of patterns will be updated that many times.
-
-            msg = {}
-            msg['action'] = broker_message.SERVICE.PUBLISH.value
-            msg['service'] = 'zato.http-soap.set-audit-replace-patterns'
-            msg['payload'] = {'id':item_id, 'audit_repl_patt_type':MSG_PATTERN_TYPE.JSON_POINTER.id, 'pattern_list':pattern_list}
-            msg['cid'] = new_cid()
-            msg['channel'] = CHANNEL.WORKER
-            msg['data_format'] = DATA_FORMAT.JSON
-
-            self.broker_client.invoke_async(msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_RESPONSE(self, msg, *args):
-        return self.on_message_invoke_service(msg, CHANNEL.AUDIT, 'SCHEDULER_JOB_EXECUTED', args)
-
-    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_CONFIG(self, msg, *args):
-        return self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_CONFIG(msg)
-
-    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_STATE(self, msg, *args):
-        return self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_STATE(msg)
-
-    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(self, msg, *args):
-        return self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(msg)
-
 # ################################################################################################################################
 
     def _on_broker_msg_cloud_create_edit(self, msg, conn_type, config_dict, wrapper_class):

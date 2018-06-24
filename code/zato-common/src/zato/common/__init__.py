@@ -550,7 +550,6 @@ class SCHEDULER:
 
 class CHANNEL(Attrs):
     AMQP = 'amqp'
-    AUDIT = 'audit'
     DELIVERY = 'delivery'
     FANOUT_CALL = 'fanout-call'
     FANOUT_ON_FINAL = 'fanout-on-final'
@@ -631,8 +630,6 @@ class BROKER:
 
 class MISC:
     DEFAULT_HTTP_TIMEOUT=10
-    DEFAULT_AUDIT_BACK_LOG = 24 * 60 # 24 hours * 60 days ≅ 2 months
-    DEFAULT_AUDIT_MAX_PAYLOAD = 0 # Using 0 means there's no limit
     OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
@@ -640,9 +637,6 @@ class MISC:
 class ADAPTER_PARAMS:
     APPLY_AFTER_REQUEST = 'apply-after-request'
     APPLY_BEFORE_REQUEST = 'apply-before-request'
-
-class AUDIT_LOG:
-    REPLACE_WITH = SECRET_SHADOW
 
 class INFO_FORMAT:
     DICT = 'dict'

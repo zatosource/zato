@@ -222,11 +222,6 @@ class RequestDispatcher(object):
         # OK, we can possibly handle it
         if url_match not in no_url_match:
 
-            # This is a synchronous call so that whatever happens next we are always
-            # able to have at least initial audit log of requests.
-            if channel_item['audit_enabled']:
-                self.url_data.audit_set_request(cid, channel_item, payload, wsgi_environ)
-
             try:
 
                 # Raise 404 if the channel is inactive

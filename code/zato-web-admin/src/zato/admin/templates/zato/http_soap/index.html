@@ -228,13 +228,8 @@
                         <td class="impexp"><input type="checkbox" /></td>
 
                         <td>
-
                             <!-- 3 -->
-                            {% ifequal connection 'channel' %}
-                                <a href="{% url "http-soap-details" connection transport item.id item.name cluster_id %}">{{ item.name }}</a>
-                            {% else %}
-                                {{ item.name }}
-                            {% endifequal %}
+                            {{ item.name }}
                         </td>
 
                         <!-- 4 -->

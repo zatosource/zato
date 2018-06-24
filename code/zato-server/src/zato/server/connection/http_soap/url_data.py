@@ -26,7 +26,7 @@ from secwall.wsse import WSSE
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
+from zato.common import DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
 from zato.common.broker_message import code_to_name, CHANNEL, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition, update_apikey_username_to_channel
@@ -1145,12 +1145,6 @@ class URLData(CyURLData, OAuthDataStore):
             channel_item['security_id'] = msg['security_id']
             channel_item['security_name'] = msg['security_name']
 
-        channel_item['audit_enabled'] = old_data.get('audit_enabled', False)
-        channel_item['audit_max_payload'] = old_data.get('audit_max_payload', 0)
-        channel_item['audit_repl_patt_type'] = old_data.get('audit_repl_patt_type', None)
-        channel_item['replace_patterns_json_pointer'] = old_data.get('replace_patterns_json_pointer', [])
-        channel_item['replace_patterns_xpath'] = old_data.get('replace_patterns_xpath', [])
-
         channel_item['service_impl_name'] = msg['impl_name']
         channel_item['match_target'] = match_target
         channel_item['match_target_compiled'] = Matcher(channel_item['match_target'])
@@ -1241,128 +1235,11 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
-    def replace_payload(self, pattern_name, payload, pattern_type):
-        """ Replaces elements in a given payload using either JSON Pointer or XPath
-        """
-        store = self.json_pointer_store if pattern_type == MSG_PATTERN_TYPE.JSON_POINTER.id else self.xpath_store
-
-        logger.debug('Replacing pattern:`%r` in`%r` , store:`%r`', pattern_name, payload, store)
-
-        return store.set(pattern_name, payload, AUDIT_LOG.REPLACE_WITH, True)
-
-# ################################################################################################################################
-
-    def _dump_wsgi_environ(self, wsgi_environ):
-        """ A convenience method to dump WSGI environment with all the element repr'ed.
-        """
-        # TODO: There should be another copy of WSGI environ added with password masked out
-        env = wsgi_environ.items()
-        for elem in env:
-            if elem[0] == 'zato.channel_item':
-                elem[1]['password'] = AUDIT_LOG.REPLACE_WITH
-
-        return dumps({key: repr(value) for key, value in env})
-
-    def audit_set_request(self, cid, channel_item, payload, wsgi_environ):
-        """ Stores initial audit information, right after receiving a request.
-        """
-        if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.JSON_POINTER.id:
-            payload = loads(payload) if payload else ''
-            pattern_list = channel_item['replace_patterns_json_pointer']
-        else:
-            pattern_list = channel_item['replace_patterns_xpath']
-
-        if payload:
-            for name in pattern_list:
-                logger.debug('Before `%r`:`%r`', name, payload)
-                payload = self.replace_payload(name, payload, channel_item.audit_repl_patt_type)
-                logger.debug('After `%r`:`%r`', name, payload)
-
-        if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.JSON_POINTER.id:
-            payload = dumps(payload)
-
-        if channel_item['audit_max_payload']:
-            payload = payload[:channel_item['audit_max_payload']]
-
-        remote_addr = wsgi_environ.get('HTTP_X_FORWARDED_FOR')
-        if not remote_addr:
-            remote_addr = wsgi_environ.get('REMOTE_ADDR', '(None)')
-
-        self.odb.audit_set_request_http_soap(channel_item['id'], channel_item['name'], cid,
-            channel_item['transport'], channel_item['connection'], datetime.utcnow(),
-            channel_item.get('username'), remote_addr, self._dump_wsgi_environ(wsgi_environ), payload)
-
-    def audit_set_response(self, cid, response, wsgi_environ):
-        """ Stores audit info regarding a response to a previous request.
-        """
-        payload = dumps({
-            'cid': cid,
-            'invoke_ok': wsgi_environ['zato.http.response.status'][0] not in ('4', '5'),
-            'auth_ok': wsgi_environ['zato.http.response.status'][0] != '4',
-            'resp_time': datetime.utcnow().isoformat(),
-            'resp_headers': self._dump_wsgi_environ(wsgi_environ),
-            'resp_payload': response,
-        })
-
-        self.broker_client.publish({
-            'cid': cid,
-            'data_format':DATA_FORMAT.JSON,
-            'action': CHANNEL.HTTP_SOAP_AUDIT_RESPONSE.value,
-            'payload': payload,
-            'service': 'zato.http-soap.set-audit-response-data'
-        })
-
-    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_CONFIG(self, msg):
-        for item in self.channel_data:
-            if item['id'] == msg.id:
-                item['audit_max_payload'] = msg.audit_max_payload
-
-    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_STATE(self, msg):
-        for item in self.channel_data:
-            if item['id'] == msg.id:
-                item['audit_enabled'] = msg.audit_enabled
-                break
-
-    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(self, msg):
-        for item in self.channel_data:
-            if item['id'] == msg.id:
-                item['audit_repl_patt_type'] = msg.audit_repl_patt_type
-
-                if item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.JSON_POINTER.id:
-                    item['replace_patterns_json_pointer'] = msg.pattern_list
-                else:
-                    item['replace_patterns_xpath'] = msg.pattern_list
-
-                break
-
-    def _yield_pattern_list(self, msg):
-        for item in self.channel_data:
-            if msg.msg_pattern_type == MSG_PATTERN_TYPE.JSON_POINTER.id:
-                pattern_list = item['replace_patterns_json_pointer']
-            else:
-                pattern_list = item['replace_patterns_xpath']
-
-            if pattern_list:
-                yield item, pattern_list
-
     def on_broker_msg_MSG_JSON_POINTER_EDIT(self, msg):
-        with self.update_lock:
-            for _, pattern_list in self._yield_pattern_list(msg):
-                if msg.old_name in pattern_list:
-                    pattern_list.remove(msg.old_name)
-                    pattern_list.append(msg.name)
+        pass
 
     def on_broker_msg_MSG_JSON_POINTER_DELETE(self, msg):
-        with self.update_lock:
-            for item, pattern_list in self._yield_pattern_list(msg):
-
-                try:
-                    pattern_list.remove(msg.name)
-                except ValueError:
-                    # It's OK, this item wasn't using that particular JSON Pointer
-                    pass
-
-                yield item['id'], pattern_list
+        pass
 
 # ################################################################################################################################
 
