@@ -745,14 +745,6 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_live_browser(self, session, cluster, service, live_browser_sec):
-        channel = ChannelWebSocket(None, msg_browser_defaults.CHANNEL, True, True,
-            'ws://0.0.0.0:{}/{}'.format(msg_browser_defaults.PORT, msg_browser_defaults.CHANNEL), DATA_FORMAT.JSON, 5,
-            msg_browser_defaults.TOKEN_TTL, service=service, cluster=cluster, security=live_browser_sec)
-        session.add(channel)
-
-# ################################################################################################################################
-
     def add_rbac_channel(self, session, cluster, service, rbac_role, url_path, permit_read=True, permit_write=False, **kwargs):
         """ Create an RBAC-authenticated plain HTTP channel associated with a service.
 
