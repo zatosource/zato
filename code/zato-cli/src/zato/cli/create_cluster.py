@@ -880,7 +880,7 @@ class Create(ZatoCommand):
 
     def add_pubsub_sec_endpoints(self, session, cluster):
 
-        sec = HTTPBasicAuth(None, 'zato.pubsub.demo.secdef', True, 'zato.pubsub', 'Zato pub/sub', uuid4().hex, cluster)
+        sec = HTTPBasicAuth(None, 'zato.pubsub.demo.secdef', True, 'zato.pubsub', 'Zato pub/sub demo', uuid4().hex, cluster)
         session.add(sec)
 
         impl_name1 = 'zato.server.service.internal.pubsub.pubapi.TopicService'

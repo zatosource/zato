@@ -248,7 +248,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, self.deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
-            self.fs_server_config.main.token, self.deployment_key)
+                                                 self.fs_server_config.main.token, self.deployment_key)
 
         logger.debug('Will use the lock_name: `%s`', lock_name)
 
@@ -417,7 +417,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         # For server-to-server communication
         self.servers = Servers(self.odb, self.cluster.name, self.decrypt)
         logger.info('Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`', self.name,
-            self.cluster.name, self.pid, 's' if use_tls else '', self.preferred_address,
+                    self.cluster.name, self.pid, 's' if use_tls else '', self.preferred_address,
             self.port)
 
         # Reads in all configuration from ODB
@@ -470,7 +470,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self._after_init_accepted(locally_deployed)
 
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host,
-            self.port, self.preferred_address, use_tls)
+                                self.port, self.preferred_address, use_tls)
 
         if is_first:
 
@@ -547,7 +547,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
     def invoke_startup_services(self, is_first):
         _invoke_startup_services('Parallel', 'startup_services_first_worker' if is_first else 'startup_services_any_worker',
-            self.fs_server_config, self.repo_location, self.broker_client, 'zato.notif.init-notifiers',
+                                 self.fs_server_config, self.repo_location, self.broker_client, 'zato.notif.init-notifiers',
             is_sso_enabled=self.is_sso_enabled)
 
 # ################################################################################################################################
@@ -708,7 +708,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         """
         self.invoke('zato.pubsub.publish.publish', {
             'topic_name': topic_name,
-            'data': {
+            'endpoint_id': 1,
+            'has_gd': False,
+            'data': dumps({
                 'meta': {
                     'pickup_ts_utc': request['ts_utc'],
                     'stanza': request['stanza'],
@@ -718,7 +720,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
                 'data': {
                     'raw': request['raw_data'],
                 }
-            }
+            })
         })
 
 # ################################################################################################################################
