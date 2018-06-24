@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-# Taken from https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WriteableTuple
+# Based on https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WriteableTuple
 
 class WritableKeyedTuple(object):
 
@@ -78,6 +78,11 @@ class WritableKeyedTuple(object):
 
     def __setitem__(self, idx, value):
         return self._elem.__setitem__(idx, value)
+
+# ################################################################################################################################
+
+    def __nonzero__(self):
+        return bool(self._elem)
 
 # ################################################################################################################################
 

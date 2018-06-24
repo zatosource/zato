@@ -948,7 +948,7 @@ class Create(ZatoCommand):
         sub.creation_time = utcnow_as_ms()
         sub.topic = topic
         sub.endpoint = endpoint_demo
-        sub.sub_key = new_sub_key()
+        sub.sub_key = new_sub_key(endpoint_demo.endpoint_type)
         sub.has_gd = False
         sub.sub_pattern_matched = 'sub=/zato/demo/*'
         sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
