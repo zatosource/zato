@@ -305,9 +305,6 @@ class ConfigLoader(object):
             for key in item.keys():
                 hs_item[key] = getattr(item, key)
 
-            hs_item['replace_patterns_json_pointer'] = item.replace_patterns_json_pointer
-            hs_item['replace_patterns_xpath'] = item.replace_patterns_xpath
-
             hs_item['match_target'] = '{}{}{}'.format(hs_item['soap_action'], MISC.SEPARATOR, hs_item['url_path'])
             hs_item['match_target_compiled'] = Matcher(hs_item['match_target'])
 

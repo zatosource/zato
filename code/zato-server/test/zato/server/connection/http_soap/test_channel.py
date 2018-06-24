@@ -251,7 +251,7 @@ class TestRequestDispatcher(MessageHandlingBase):
         self.assertEquals(soap_action, 'aaa')
 
     def test_dispatch_no_url_data(self):
-        rd = channel.RequestDispatcher(DummyURLData(False, Bunch(audit_enabled=False)))
+        rd = channel.RequestDispatcher(DummyURLData(False, Bunch()))
         rd.security = DummySecurity()
 
         cid = uuid4().hex
@@ -313,7 +313,6 @@ class TestRequestDispatcher(MessageHandlingBase):
         channel_item_return_value.transport = uuid4().hex
         channel_item_return_value.data_format = uuid4().hex
         channel_item_return_value.match_target = uuid4().hex
-        channel_item_return_value.audit_enabled = False
         channel_item_return_value.method = ''
 
         payload = uuid4().hex
