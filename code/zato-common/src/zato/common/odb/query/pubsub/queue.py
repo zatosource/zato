@@ -96,7 +96,7 @@ def get_queue_depth_by_sub_key(session, cluster_id, sub_key, now):
     """ Returns queue depth for a given sub_key - does not include messages expired, in staging, or already delivered.
     """
     current_q = session.query(PubSubEnqMsg.id).\
-        filter(PubSubSubscription.id==PubSubEnqMsg.subscription_id).\
+        filter(PubSubSubscription.sub_key==PubSubEnqMsg.sub_key).\
         filter(PubSubEnqMsg.is_in_staging != True).\
         filter(PubSubEnqMsg.pub_msg_id==PubSubMessage.pub_msg_id).\
         filter(PubSubMessage.expiration_time>=now).\

@@ -22,7 +22,7 @@ from zato.common import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE,
      PUBSUB, URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
      CassandraQuery, ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
-     CronStyleJob, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \
+     CronStyleJob, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \
      MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
      OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, \
      PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic, RBACClientRole, \
@@ -614,10 +614,6 @@ def _http_soap(session, cluster_id):
         case([(
             HTTPSOAP.serialization_type != None, HTTPSOAP.serialization_type)],
              else_=HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id).label('serialization_type'),
-        HTTPSOAP.audit_enabled,
-        HTTPSOAP.audit_back_log,
-        HTTPSOAP.audit_max_payload,
-        HTTPSOAP.audit_repl_patt_type,
         HTTPSOAP.timeout,
         HTTPSOAP.sec_tls_ca_cert_id,
         HTTPSOAP.sec_use_rbac,
@@ -777,62 +773,6 @@ def json_pointer_list(session, cluster_id, needs_columns=False):
     """ All the JSON Pointers.
     """
     return _msg_list(JSONPointer, JSONPointer.name, session, cluster_id, query_wrapper)
-
-# ################################################################################################################################
-
-def _http_soap_audit(session, cluster_id, conn_id=None, start=None, stop=None, query=None, id=None, needs_req_payload=False):
-    columns = [
-        HTTSOAPAudit.id,
-        HTTSOAPAudit.name.label('conn_name'),
-        HTTSOAPAudit.cid,
-        HTTSOAPAudit.transport,
-        HTTSOAPAudit.connection,
-        HTTSOAPAudit.req_time.label('req_time_utc'),
-        HTTSOAPAudit.resp_time.label('resp_time_utc'),
-        HTTSOAPAudit.user_token,
-        HTTSOAPAudit.invoke_ok,
-        HTTSOAPAudit.auth_ok,
-        HTTSOAPAudit.remote_addr,
-    ]
-
-    if needs_req_payload:
-        columns.extend([
-            HTTSOAPAudit.req_headers, HTTSOAPAudit.req_payload, HTTSOAPAudit.resp_headers, HTTSOAPAudit.resp_payload
-        ])
-
-    q = session.query(*columns)
-
-    if query:
-        query = '%{}%'.format(query)
-        q = q.filter(
-            HTTSOAPAudit.cid.ilike(query) |
-            HTTSOAPAudit.req_headers.ilike(query) | HTTSOAPAudit.req_payload.ilike(query) |
-            HTTSOAPAudit.resp_headers.ilike(query) | HTTSOAPAudit.resp_payload.ilike(query)
-        )
-
-    if id:
-        q = q.filter(HTTSOAPAudit.id == id)
-
-    if conn_id:
-        q = q.filter(HTTSOAPAudit.conn_id == conn_id)
-
-    if start:
-        q = q.filter(HTTSOAPAudit.req_time >= start)
-
-    if stop:
-        q = q.filter(HTTSOAPAudit.req_time <= start)
-
-    q = q.order_by(HTTSOAPAudit.req_time.desc())
-
-    return q
-
-@query_wrapper
-def http_soap_audit_item_list(session, cluster_id, conn_id, start, stop, query, needs_req_payload, needs_columns=False):
-    return _http_soap_audit(session, cluster_id, conn_id, start, stop, query)
-
-@query_wrapper
-def http_soap_audit_item(session, cluster_id, id, needs_columns=False):
-    return _http_soap_audit(session, cluster_id, id=id, needs_req_payload=True)
 
 # ################################################################################################################################
 

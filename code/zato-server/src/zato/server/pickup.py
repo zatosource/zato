@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -38,7 +38,7 @@ _singleton = object()
 class PickupEvent(object):
     """ Encapsulates information about a file picked up from file system.
     """
-    __slots__ = ('base_dir', 'file_name', 'full_path', 'stanza', 'ts_utc', 'raw_data', 'data', 'has_raw_data', 'has_data', 
+    __slots__ = ('base_dir', 'file_name', 'full_path', 'stanza', 'ts_utc', 'raw_data', 'data', 'has_raw_data', 'has_data',
         'parse_error')
 
     def __init__(self):
@@ -112,7 +112,7 @@ class PickupManager(object):
 
 # ################################################################################################################################
 
-    def invoke_callbacks(self, pickup_event, recipients):
+    def invoke_callbacks(self, pickup_event, services, topics):
 
         request = {
             'base_dir': pickup_event.base_dir,
@@ -128,8 +128,12 @@ class PickupManager(object):
         }
 
         try:
-            for recipient in recipients:
-                spawn_greenlet(self.server.invoke, recipient, request)
+            for service in services:
+                spawn_greenlet(self.server.invoke, service, request)
+
+            for topic in topics:
+                spawn_greenlet(self.server.publish_pickup, topic, request)
+
         except Exception, e:
             logger.warn(format_exc(e))
 
@@ -198,7 +202,7 @@ class PickupManager(object):
                                 else:
                                     pe.data = pe.raw_data
 
-                            spawn_greenlet(self.invoke_callbacks, pe, config.recipients)
+                            spawn_greenlet(self.invoke_callbacks, pe, config.services, config.topics)
                             self.post_handle(pe.full_path, config)
 
                         except Exception, e:

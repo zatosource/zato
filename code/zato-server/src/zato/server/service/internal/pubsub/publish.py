@@ -90,9 +90,9 @@ class Publish(AdminService):
     """
     class SimpleIO:
         input_required = ('topic_name',)
-        input_optional = ('data', List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'), 'mime_type',
-            AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time', 'pub_pattern_matched', 'security_id',
-            'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
+        input_optional = (AsIs('data'), List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'),
+            'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time', 'pub_pattern_matched',
+            'security_id', 'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
             Int('position_in_group'), 'endpoint_id')
         output_optional = (AsIs('msg_id'), List('msg_id_list'))
 
@@ -327,9 +327,11 @@ class Publish(AdminService):
             # If so, later on we will need to turn all the messages into GD ones.
             sk_server = self.pubsub.get_sub_key_server(sub.sub_key)
             if not sk_server:
-                has_wsx_no_server = True # We have found at least one WSX subscriber that has no server = is not connected
+                logger_pubsub.info('No sk_server for sub_key `%s` among `%s`', sub.sub_key,
+                    sorted(self.pubsub.sub_key_servers.keys()))
+                has_wsx_no_server = True # We have found at least one WSX subscriber that has no server = it is not connected
 
-        logger_pubsub.info('Subscriptions for topic `%s` `%s`', topic.name, _subs_found)
+        logger_pubsub.info('Found subscriptions for topic `%s` `%s`', topic.name, _subs_found)
 
         # If input.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other input parameters describe it.

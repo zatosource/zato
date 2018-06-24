@@ -1249,8 +1249,7 @@ class URLDataTestCase(TestCase):
 
             for name in('connection', 'data_format', 'has_rbac', 'host', 'id', 'is_active', 'is_internal', 'method', 'name',
                 'ping_method', 'pool_size', 'service_id', 'impl_name', 'service_name', 'soap_action', 'soap_version',
-                'transport', 'url_path', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'audit_max_payload',
-                'audit_repl_patt_type', 'replace_patterns_json_pointer', 'replace_patterns_xpath', 'content_type'):
+                'transport', 'url_path', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'content_type'):
                 msg[name] = uuid4().hex
 
             msg['sec_use_rbac'] = False

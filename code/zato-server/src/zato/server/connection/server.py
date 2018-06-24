@@ -119,7 +119,9 @@ class Servers(object):
         # Remote server = use HTTP
         server_name, cluster_name = self._get_full_name(item)
         full_name = '{}@{}'.format(server_name, cluster_name)
-        return self._servers.setdefault(full_name, self._add_server(cluster_name, server_name))
+        if full_name not in self._servers:
+            self._servers[full_name] = self._add_server(cluster_name, server_name)
+        return self._servers[full_name]
 
 # ################################################################################################################################
 

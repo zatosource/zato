@@ -71,6 +71,7 @@ class SubCtx(object):
         self.delivery_endpoint = None
         self.out_http_soap_id = None
         self.out_http_method = None
+        self.out_amqp_id = None
         self.creation_time = None
         self.sub_key = None
         self.ws_sub = None
@@ -102,6 +103,7 @@ class SubCtxAMQP(SubCtx):
         super(SubCtxAMQP, self).__init__(*args, **kwargs)
         self.amqp_exchange = None
         self.amqp_routing_key = None
+        self.out_amqp_id = None
 
 # ################################################################################################################################
 
@@ -320,15 +322,16 @@ class SubscribeServiceImpl(_Subscribe):
 
                 # Non-WebSocket clients cannot subscribe to the same topic multiple times
                 if not ctx.ws_channel_id:
+
                     if has_subscription(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id):
                         raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
                             self.pubsub.get_endpoint_by_id(ctx.endpoint_id).name, ctx.topic.name))
 
                 # Is it a WebSockets client?
-                has_wsx = bool(ctx.ws_channel_id)
+                is_wsx = bool(ctx.ws_channel_id)
 
                 ctx.creation_time = now = utcnow_as_ms()
-                ctx.sub_key = new_sub_key()
+                ctx.sub_key = new_sub_key(self.endpoint_type)
 
                 # Create a new subscription object and flush the session because the subscription's ID
                 # may be needed for the WSX subscription
@@ -336,7 +339,7 @@ class SubscribeServiceImpl(_Subscribe):
                 session.flush()
 
                 # If we subscribe a WSX client, we need to create its accompanying SQL models
-                if has_wsx:
+                if is_wsx:
 
                     # This object persists across multiple WSX connections
                     add_wsx_subscription(session, ctx.cluster_id, ctx.is_internal, ctx.sub_key,
@@ -376,7 +379,7 @@ class SubscribeServiceImpl(_Subscribe):
                 # Update current server's pub/sub config
                 self.pubsub.add_subscription(sub_config)
 
-                if has_wsx:
+                if is_wsx:
 
                     # Let the WebSocket connection object know that it should handle this particular sub_key
                     ctx.web_socket.pubsub_tool.add_sub_key(ctx.sub_key)
@@ -387,7 +390,7 @@ class SubscribeServiceImpl(_Subscribe):
                 # Produce response
                 self.response.payload.sub_key = ctx.sub_key
 
-                if has_wsx:
+                if is_wsx:
 
                     # Let the pub/sub task know it can fetch any messages possibly enqueued for that subscriber,
                     # note that since this is a new subscription, it is certain that only GD messages may be available,
@@ -406,7 +409,12 @@ class SubscribeServiceImpl(_Subscribe):
 
                 # Notify workers of a new subscription
                 sub_config.action = BROKER_MSG_PUBSUB.SUBSCRIPTION_CREATE.value
-                sub_config.add_subscription = not ctx.ws_channel_id # WSX clients already had their subscriptions created above
+
+                # Append information about current server which will let all workers
+                # know if they should create a subscription object (if they are different) or not.
+                sub_config.server_receiving_subscription_id = self.server.id
+                sub_config.server_receiving_subscription_pid = self.server.pid
+                sub_config.is_api_call = True
 
                 self.broker_client.publish(sub_config)
 
@@ -438,6 +446,16 @@ class SubscribeSOAP(SubscribeServiceImpl):
     """ Handles pub/sub subscriptions for SOAP clients.
     """
     endpoint_type = PUBSUB.ENDPOINT_TYPE.SOAP.id
+
+    def _handle_subscription(self, ctx):
+        self._subscribe_impl(ctx)
+
+# ################################################################################################################################
+
+class SubscribeAMQP(SubscribeServiceImpl):
+    """ Handles pub/sub subscriptions for AMQP endpoints.
+    """
+    endpoint_type = PUBSUB.ENDPOINT_TYPE.AMQP.id
 
     def _handle_subscription(self, ctx):
         self._subscribe_impl(ctx)

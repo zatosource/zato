@@ -188,7 +188,6 @@ custom_auth_list_service=
 [component_enabled]
 stats=True
 slow_response=True
-live_msg_browser=False
 cassandra=True
 email=True
 search=True
@@ -226,11 +225,6 @@ store_frequency=1
 max_history=100
 data_len=0
 
-[live_msg_browser]
-include_internal=False
-service=True
-out=True
-
 [content_type]
 json = {JSON}
 plain_xml = {PLAIN_XML}
@@ -267,36 +261,41 @@ pickup_conf = """[json]
 pickup_from=./pickup/incoming/json
 move_processed_to=./pickup/processed/json
 patterns=*.json
-recipients=zato.pickup.log-json
 parse_with=py:rapidjson.loads
+services=zato.pickup.log-json
+topics=
 
 [xml]
 pickup_from=./pickup/incoming/xml
 move_processed_to=./pickup/processed/xml
 patterns=*.xml
-recipients=zato.pickup.log-xml
 parse_with=py:lxml.objectify.fromstring
+services=zato.pickup.log-xml
+topics=
 
 [csv]
 pickup_from=./pickup/incoming/csv
 move_processed_to=./pickup/processed/csv
 patterns=*.csv
-recipients=zato.pickup.log-csv
 read_on_pickup=False
 parse_on_pickup=False
 delete_after_pickup=False
+services=zato.pickup.log-csv
+topics=
 
 [user_conf]
 pickup_from=./config/repo/user-conf
 patterns=*.conf
-recipients=zato.pickup.update-user-conf
 parse_on_pickup=False
+services=zato.pickup.update-user-conf
+topics=
 
 [static]
 pickup_from=./pickup/incoming/static
 patterns=*
-recipients=zato.pickup.update-static
 parse_on_pickup=False
+services=zato.pickup.update-static
+topics=
 """
 
 service_sources_contents = """# Visit https://zato.io/docs for more information.

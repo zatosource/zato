@@ -32,10 +32,10 @@ def has_subscription(session, cluster_id, topic_id, endpoint_id):
     """
     return session.query(exists().where(and_(
         PubSubSubscription.endpoint_id==endpoint_id,
-            PubSubSubscription.topic_id==topic_id,
-            PubSubSubscription.cluster_id==cluster_id,
-            ))).\
-        scalar()
+        PubSubSubscription.topic_id==topic_id,
+        PubSubSubscription.cluster_id==cluster_id,
+        ))).\
+        scalar()[0]
 
 # ################################################################################################################################
 
@@ -86,6 +86,7 @@ def add_subscription(session, cluster_id, ctx):
     # AMQP
     ps_sub.amqp_exchange = ctx.amqp_exchange
     ps_sub.amqp_routing_key = ctx.amqp_routing_key
+    ps_sub.out_amqp_id = ctx.out_amqp_id
 
     # Local files
     ps_sub.files_directory_list = ctx.files_directory_list

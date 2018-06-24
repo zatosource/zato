@@ -846,16 +846,6 @@ urlpatterns += [
 
     url(r'^zato/http-soap/$',
         login_required(http_soap.index), name='http-soap'),
-    url(r'^zato/http-soap/details/(?P<connection>.*)/(?P<transport>.*)/(?P<id>.*)/(?P<name>.*)/(?P<cluster_id>.*)/$',
-        login_required(http_soap.details), name='http-soap-details'),
-    url(r'^zato/http-soap/audit/set-state/(?P<connection>.*)/(?P<transport>.*)/(?P<id>.*)/(?P<name>.*)/(?P<cluster_id>.*)/$',
-        login_required(http_soap.audit_set_state), name='http-soap-audit-set-state'),
-    url(r'^zato/http-soap/audit/set-config/(?P<connection>.*)/(?P<transport>.*)/(?P<id>.*)/(?P<name>.*)/(?P<cluster_id>.*)/$',
-        login_required(http_soap.audit_set_config), name='http-soap-audit-set-config'),
-    url(r'^zato/http-soap/audit/log/(?P<connection>.*)/(?P<transport>.*)/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<cluster_id>.*)/$',
-        login_required(http_soap.audit_log), name='http-soap-audit-log'),
-    url(r'^zato/http-soap/audit/item/(?P<connection>.*)/(?P<transport>.*)/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<cluster_id>.*)/(?P<id>.*)/$',
-        login_required(http_soap.audit_item), name='http-soap-audit-item'),
     ]
 
 # ################################################################################################################################

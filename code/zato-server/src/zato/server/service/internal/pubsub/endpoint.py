@@ -214,11 +214,15 @@ class _GetEndpointQueue(AdminService):
         sk_server = self.pubsub.get_delivery_server_by_sub_key(item.sub_key)
 
         if sk_server:
-            response = self.servers[sk_server.server_name].invoke(GetEndpointQueueNonGDDepth.get_name(), {
-                'sub_key': item.sub_key,
-            }, pid=sk_server.server_pid)
 
-            current_depth_non_gd = response['response']['current_depth_non_gd']
+            if sk_server.server_name == self.server.name and sk_server.server_pid == self.server.pid:
+                pubsub_tool = self.pubsub.get_pubsub_tool_by_sub_key(item.sub_key)
+                _, current_depth_non_gd = pubsub_tool.get_queue_depth(item.sub_key)
+            else:
+                response = self.servers[sk_server.server_name].invoke(GetEndpointQueueNonGDDepth.get_name(), {
+                    'sub_key': item.sub_key,
+                }, pid=sk_server.server_pid)
+                current_depth_non_gd = response['response']['current_depth_non_gd']
 
         # No delivery server = there cannot be any non-GD messages waiting for that subscriber
         else:
@@ -325,6 +329,11 @@ class UpdateEndpointQueue(AdminService):
 
             self.response.payload.id = self.request.input.id
             self.response.payload.name = item.topic.name
+
+            # Notify all processes, including our own, that this subscription's parameters have changed
+            updated_params_msg = item.asdict()
+            updated_params_msg['action'] = PUBSUB.SUBSCRIPTION_EDIT.value
+            self.broker_client.publish(updated_params_msg)
 
             # We change the delivery server in background - note how we send name, not ID, on input.
             # This is because our invocation target will want to use self.servers[server_name].invoke(...)
