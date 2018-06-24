@@ -578,16 +578,6 @@ class ConnectorAMQP(Connector):
             kwargs.update(properties)
 
         with self._producers[out_name].acquire(acquire_block, acquire_timeout) as producer:
-            print()
-            print()
-
-            print(111, out_name)
-            print(111, msg)
-            print(111, headers)
-            print(111, kwargs)
-
-            print()
-            print()
             return producer.publish(msg, headers=headers, **kwargs)
 
 # ################################################################################################################################

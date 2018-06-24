@@ -923,6 +923,14 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def edit_subscription(self, config):
+        with self.lock:
+            sub = self._get_subscription_by_sub_key(config.sub_key)
+            for key, value in config.iteritems():
+                sub.config[key] = value
+
+# ################################################################################################################################
+
     def _add_subscription(self, config):
         """ Low-level implementation of self.add_subscription.
         """
