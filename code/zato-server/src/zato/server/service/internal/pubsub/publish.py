@@ -90,9 +90,9 @@ class Publish(AdminService):
     """
     class SimpleIO:
         input_required = ('topic_name',)
-        input_optional = ('data', List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'), 'mime_type',
-            AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time', 'pub_pattern_matched', 'security_id',
-            'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
+        input_optional = (AsIs('data'), List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'),
+            'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time', 'pub_pattern_matched',
+            'security_id', 'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
             Int('position_in_group'), 'endpoint_id')
         output_optional = (AsIs('msg_id'), List('msg_id_list'))
 
