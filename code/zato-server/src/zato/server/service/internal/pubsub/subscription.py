@@ -71,6 +71,7 @@ class SubCtx(object):
         self.delivery_endpoint = None
         self.out_http_soap_id = None
         self.out_http_method = None
+        self.out_amqp_id = None
         self.creation_time = None
         self.sub_key = None
         self.ws_sub = None
@@ -102,6 +103,7 @@ class SubCtxAMQP(SubCtx):
         super(SubCtxAMQP, self).__init__(*args, **kwargs)
         self.amqp_exchange = None
         self.amqp_routing_key = None
+        self.out_amqp_id = None
 
 # ################################################################################################################################
 
@@ -352,7 +354,6 @@ class SubscribeServiceImpl(_Subscribe):
                 sub_config.topic_name = ctx.topic.name
                 sub_config.task_delivery_interval = ctx.topic.task_delivery_interval
                 sub_config.endpoint_type = self.endpoint_type
-
 
                 for name in sub_broker_attrs:
                     sub_config[name] = getattr(ps_sub, name, None)
