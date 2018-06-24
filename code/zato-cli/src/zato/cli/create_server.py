@@ -261,36 +261,41 @@ pickup_conf = """[json]
 pickup_from=./pickup/incoming/json
 move_processed_to=./pickup/processed/json
 patterns=*.json
-services=zato.pickup.log-json
 parse_with=py:rapidjson.loads
+services=zato.pickup.log-json
+topics=
 
 [xml]
 pickup_from=./pickup/incoming/xml
 move_processed_to=./pickup/processed/xml
 patterns=*.xml
-services=zato.pickup.log-xml
 parse_with=py:lxml.objectify.fromstring
+services=zato.pickup.log-xml
+topics=
 
 [csv]
 pickup_from=./pickup/incoming/csv
 move_processed_to=./pickup/processed/csv
 patterns=*.csv
-services=zato.pickup.log-csv
 read_on_pickup=False
 parse_on_pickup=False
 delete_after_pickup=False
+services=zato.pickup.log-csv
+topics=
 
 [user_conf]
 pickup_from=./config/repo/user-conf
 patterns=*.conf
-services=zato.pickup.update-user-conf
 parse_on_pickup=False
+services=zato.pickup.update-user-conf
+topics=
 
 [static]
 pickup_from=./pickup/incoming/static
 patterns=*
-services=zato.pickup.update-static
 parse_on_pickup=False
+services=zato.pickup.update-static
+topics=
 """
 
 service_sources_contents = """# Visit https://zato.io/docs for more information.
