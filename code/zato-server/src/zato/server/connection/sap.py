@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -56,3 +56,5 @@ class SAPWrapper(object):
             self.logger.warn('Could not ping SAP (%s), e:`%s`', self.config.name, format_exc(e))
 
         self.client.put_client(conn)
+
+# ################################################################################################################################

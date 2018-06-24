@@ -68,8 +68,8 @@ def main():
     # Run the scheduler server
     try:
         SchedulerServer(config, repo_location).serve_forever()
-    except Exception, e:
-        logger.warn(format_exc(e))
+    except Exception:
+        logger.warn(format_exc())
 
 # ################################################################################################################################
 

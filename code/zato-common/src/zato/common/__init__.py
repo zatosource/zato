@@ -932,6 +932,10 @@ class TLS:
     DIR_KEYS_CERTS = 'keys-certs'
 
 class ODOO:
+
+    class CLIENT_TYPE:
+        OPENERP_CLIENT_LIB = 'openerp-client-lib'
+
     class DEFAULT:
         PORT = 8069
         POOL_SIZE = 3
@@ -1030,6 +1034,7 @@ class AMQP:
     class DEFAULT:
         POOL_SIZE = 10
         PRIORITY = 5
+        PREFETCH_COUNT = 0
 
     class ACK_MODE:
         ACK = NameId('Ack', 'ack')
