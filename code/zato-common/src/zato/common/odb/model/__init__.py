@@ -2686,6 +2686,31 @@ class PubSubEndpointQueueInteraction(Base):
 
 # ################################################################################################################################
 
+class PubSubChannel(Base):
+    """ An N:N mapping between arbitrary channels and topics to which their messages should be sent.
+    """
+    __tablename__ = 'pubsub_channel'
+    __table_args__ = (UniqueConstraint('cluster_id', 'conn_id', 'conn_type', 'topic_id'), {})
+
+    id = Column(Integer, Sequence('pubsub_channel_seq'), primary_key=True)
+    is_active = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False)
+
+    conn_id = Column(String(100), nullable=False)
+    conn_type = Column(String(100), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic = relationship(
+        PubSubTopic, backref=backref('pubsub_channel_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pubsub_channel_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
 class SMSTwilio(Base):
     """ Outgoing SMS connections with Twilio.
     """
