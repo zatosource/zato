@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -396,7 +396,7 @@ class Migrate(ManageCommand):
             all_sections = ('main', 'crypto', 'odb', 'hot_deploy', 'deploy_patterns_allowed', 'invoke_patterns_allowed',
                 'invoke_target_patterns_allowed', 'singleton', 'spring', 'misc', 'stats', 'kvdb', 'startup_services_first_worker',
                 'startup_services_any_worker', 'pubsub', 'profiler', 'user_config', 'newrelic', 'sentry', 'rbac',
-                'component_enabled', 'live_msg_browser', 'content_type', 'zeromq_mdp', 'updates', 'preferred_address',
+                'component_enabled', 'content_type', 'zeromq_mdp', 'updates', 'preferred_address',
                 'apispec', 'os_environ')
 
             new_cp = ConfigParser()

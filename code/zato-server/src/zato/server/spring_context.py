@@ -71,7 +71,6 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.message.namespace',
             'zato.server.service.internal.message.xpath',
             'zato.server.service.internal.message.json_pointer',
-            'zato.server.service.internal.message.live_browser',
             'zato.server.service.internal.notif',
             'zato.server.service.internal.notif.cloud.openstack.swift',
             'zato.server.service.internal.notif.sql',

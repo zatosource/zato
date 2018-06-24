@@ -35,11 +35,6 @@ class ConfigLoader(object):
         # Which components are enabled
         self.component_enabled.stats = asbool(self.fs_server_config.component_enabled.stats)
         self.component_enabled.slow_response = asbool(self.fs_server_config.component_enabled.slow_response)
-        self.component_enabled.live_msg_browser = asbool(self.fs_server_config.component_enabled.live_msg_browser)
-
-        # Details of what is enabled in live message browser
-        self.live_msg_browser = self.fs_server_config.live_msg_browser
-        self.live_msg_browser.include_internal = asbool(self.live_msg_browser.include_internal)
 
         #
         # Cassandra - start
