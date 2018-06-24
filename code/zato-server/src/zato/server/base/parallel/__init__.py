@@ -574,8 +574,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             mpt = stanza_config.get('move_processed_to')
             stanza_config.move_processed_to = absolutize(mpt, self.base_dir) if mpt else None
 
-            services = stanza_config.services
+            services = stanza_config.get('services') or []
             stanza_config.services = [services] if not isinstance(services, list) else services
+
+            topics = stanza_config.get('topics') or []
+            stanza_config.topics = [topics] if not isinstance(topics, list) else topics
 
             flags = globre.EXACT
 
@@ -697,6 +700,26 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         """ Invokes a service in background.
         """
         return self.worker_store.invoke(service, request, is_async=True, callback=callback, *args, **kwargs)
+
+# ################################################################################################################################
+
+    def publish_pickup(self, topic_name, request, *args, **kwargs):
+        """ Publishes a pickedup file to a named topic.
+        """
+        self.invoke('zato.pubsub.publish.publish', {
+            'topic_name': topic_name,
+            'data': {
+                'meta': {
+                    'pickup_ts_utc': request['ts_utc'],
+                    'stanza': request['stanza'],
+                    'full_path': request['full_path'],
+                    'file_name': request['file_name'],
+                },
+                'data': {
+                    'raw': request['raw_data'],
+                }
+            }
+        })
 
 # ################################################################################################################################
 
