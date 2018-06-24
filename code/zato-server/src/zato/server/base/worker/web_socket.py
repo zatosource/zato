@@ -41,7 +41,6 @@ class WebSocket(WorkerImpl):
 
     def on_broker_msg_CHANNEL_WEB_SOCKET_CREATE(self, msg):
         if self.server.zato_lock_manager.acquire(msg.config_cid, ttl=10, block=False):
-            update_bind_port(msg, self.worker_idx)
             start_connectors(self, 'zato.channel.web-socket.start', msg)
 
 # ################################################################################################################################
@@ -50,7 +49,6 @@ class WebSocket(WorkerImpl):
 
         # Each worker uses a unique bind port
         msg = bunchify(msg)
-        update_bind_port(msg, self.worker_idx)
 
         self.web_socket_channel_create_edit(msg.old_name, msg, 'edit', 5, False)
 

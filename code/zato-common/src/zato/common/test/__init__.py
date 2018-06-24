@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -286,7 +286,7 @@ class FakeServer(object):
         self.time_util = Bunch()
         self.servers = []
         self.ipc_api = None
-        self.component_enabled = Bunch(live_msg_browser=True)
+        self.component_enabled = Bunch()
 
 # ################################################################################################################################
 

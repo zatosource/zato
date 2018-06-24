@@ -112,12 +112,13 @@ class NotifyPubSubMessage(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = (AsIs('pub_client_id'), 'channel_name', AsIs('request'))
-        output_required = (AsIs('response'),)
+        output_required = (AsIs('r'),)
+        response_elem = 'r'
 
     def handle(self):
         req = self.request.input
         try:
-            self.response.payload.response = self.server.worker_store.web_socket_api.notify_pubsub_message(
+            self.response.payload.r = self.server.worker_store.web_socket_api.notify_pubsub_message(
                 req.channel_name, self.cid, req.pub_client_id, req.request)
         except Exception, e:
             self.logger.warn(format_exc(e))
