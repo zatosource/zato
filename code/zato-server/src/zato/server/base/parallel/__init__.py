@@ -27,6 +27,9 @@ import gevent.monkey # Needed for Cassandra
 # globre
 import globre
 
+# numpy
+from numpy.random import seed as numpy_seed
+
 # Paste
 from paste.util.converters import asbool
 
@@ -132,7 +135,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.ipc_forwarder = IPCAPI(True)
         self.wmq_ipc_tcp_port = None
         self.fifo_response_buffer_size = None # Will be in megabytes
-        self.live_msg_browser = None
         self.is_first_worker = None
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
@@ -472,6 +474,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         if is_first:
 
+            logger.info('First worker of `%s` is %s', self.name, self.pid)
+
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
                 'parallel_server': self,
             })
@@ -739,6 +743,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
         """
+        # Each subprocess needs to have the random number generator re-seeded.
+        numpy_seed()
 
         worker.app.zato_wsgi_app.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
             'arbiter': arbiter,

@@ -469,8 +469,12 @@ class InRAMSyncBacklog(object):
             # .. first, direct mappings ..
             del self.msg_id_to_msg[msg_id]
 
+            logger.info('Deleting msg from mapping dict `%s`', msg_id)
+
             # .. now, remove the message from topic ..
             self.topic_msg_id[topic_id].remove(msg_id)
+
+            logger.info('Deleting msg from mapping topic `%s`', msg_id)
 
             # .. now, find the message for each sub_key ..
             for sub_key in sub_keys:
@@ -481,7 +485,7 @@ class InRAMSyncBacklog(object):
                 # if this particular message belonged to this particular sub_key or not.
                 try:
                     sub_key_to_msg_id.remove(msg_id)
-                except ValueError:
+                except KeyError:
                     pass # OK, message was not found for this sub_key
 
                 # .. now delete the sub_key either because we are explicitly told to (e.g. during unsubscribe)
@@ -939,11 +943,10 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def create_subscription(self, config):
+    def subscribe(self, config):
         with self.lock:
 
-            if config.add_subscription:
-                self._add_subscription(config)
+            self._add_subscription(config)
 
             # We don't start dedicated tasks for WebSockets - they are all dynamic without a fixed server.
             # But for other endpoint types, we create and start a delivery task here.
@@ -1153,16 +1156,6 @@ class PubSub(object):
         ws_sub_key.cluster_id = self.cluster_id
         session.add(ws_sub_key)
 
-        self._set_sub_key_server({
-            'sub_key': sub_key,
-            'cluster_id': self.cluster_id,
-            'server_name': self.server.name,
-            'server_pid': self.server.pid,
-            'endpoint_type': PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
-            'channel_name': channel_name,
-            'pub_client_id': pub_client_id,
-        })
-
         # Update in-RAM state of workers
         self.broker_client.publish({
             'action': BROKER_MSG_PUBSUB.SUB_KEY_SERVER_SET.value,
@@ -1181,11 +1174,12 @@ class PubSub(object):
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
         config['wsx'] = config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
-        msg = 'Setting info about delivery server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s`'.format(
-            ' ' if config['server_pid'] else ' (no PID) ')
+        self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
+
+        msg = 'Set info about delivery server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s` '\
+            'sks:`{}`'.format(' ' if config['server_pid'] else ' (no PID) ', self.sub_key_servers)
         logger.info(msg, config)
         logger_zato.info(msg, config)
-        self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
 # ################################################################################################################################
 
@@ -1364,12 +1358,15 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list):
+    def store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_error=0, _logger=logger):
         """ Stores in RAM up to input non-GD messages for each sub_key. A backlog queue for each sub_key
         cannot be longer than topic's max_depth_non_gd and overflowed messages are not kept in RAM.
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """
+        _logger.info('Storing in RAM. CID:`%s`, topic ID:`%s`, name:`%s`, sub_keys:`%s`, ngd-list:`%s`, e:`%d`',
+            cid, topic_id, topic_name, sub_keys, [elem['pub_msg_id'] for elem in non_gd_msg_list], from_error)
+
         with self.lock:
 
             # Store the non-GD messages in backlog ..
@@ -1394,8 +1391,10 @@ class PubSub(object):
                 # Delete subscriptions, and any related messages, from RAM
                 self.sync_backlog.unsubscribe(topic_id, topic_name, sub_keys)
 
-                # Delete subscription metadata from local pubsub
-                subscriptions_by_topic = self.subscriptions_by_topic[topic_name]
+                # Delete subscription metadata from local pubsub, note that we use .get
+                # instead of deleting directly because this dictionary will be empty
+                # right after a server starts but before any client for that topic (such as WSX) connects to it.
+                subscriptions_by_topic = self.subscriptions_by_topic.get(topic_name, [])
 
                 for sub in subscriptions_by_topic[:]:
                     if sub.sub_key in sub_keys:

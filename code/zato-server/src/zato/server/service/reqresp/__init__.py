@@ -133,7 +133,9 @@ class Request(SIOConverter):
         self.encrypt_func = encrypt_func
 
         if is_sio:
-            self.init_flat_sio(cid, sio, data_format, transport, wsgi_environ, getattr(sio, 'input_required', []))
+            required_list = getattr(sio, 'input_required', [])
+            required_list = [required_list] if isinstance(required_list, basestring) else required_list
+            self.init_flat_sio(cid, sio, data_format, transport, wsgi_environ, required_list)
 
         # We merge channel params in if requested even if it's not SIO
         else:
@@ -150,8 +152,10 @@ class Request(SIOConverter):
         self.transport = transport
         self._wsgi_environ = wsgi_environ
 
-        path_prefix = getattr(sio, 'request_elem', 'request')
         optional_list = getattr(sio, 'input_optional', [])
+        optional_list = [optional_list] if isinstance(optional_list, basestring) else optional_list
+
+        path_prefix = getattr(sio, 'request_elem', 'request')
         default_value = getattr(sio, 'default_value', NO_DEFAULT_VALUE)
         use_text = getattr(sio, 'use_text', True)
         use_channel_params_only = getattr(sio, 'use_channel_params_only', False)
@@ -548,8 +552,13 @@ class Response(object):
 
     def init(self, cid, io, data_format, _not_given=NOT_GIVEN):
         self.data_format = data_format
+
         required_list = getattr(io, 'output_required', [])
+        required_list = [required_list] if isinstance(required_list, basestring) else required_list
+
         optional_list = getattr(io, 'output_optional', [])
+        optional_list = [optional_list] if isinstance(optional_list, basestring) else optional_list
+
         response_elem = getattr(io, 'response_elem', _not_given)
         response_elem = response_elem if response_elem != _not_given else 'response'
         namespace = getattr(io, 'namespace', '')

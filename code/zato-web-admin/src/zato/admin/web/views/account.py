@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_PROMPT = 'Click to pick a color'
 
-profile_attrs = ('timezone', 'date_format', 'time_format', 'msg_browser_max_shown', 'msg_browser_show_internal')
+profile_attrs = ('timezone', 'date_format', 'time_format')
 
 @method_allowed('GET')
 def settings_basic(req):

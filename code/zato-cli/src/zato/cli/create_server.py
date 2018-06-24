@@ -188,7 +188,6 @@ custom_auth_list_service=
 [component_enabled]
 stats=True
 slow_response=True
-live_msg_browser=False
 cassandra=True
 email=True
 search=True
@@ -225,11 +224,6 @@ enabled=True
 store_frequency=1
 max_history=100
 data_len=0
-
-[live_msg_browser]
-include_internal=False
-service=True
-out=True
 
 [content_type]
 json = {JSON}
