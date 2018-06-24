@@ -777,6 +777,7 @@ class PUBSUB:
         TASK_DELIVERY_INTERVAL = 2000
         WAIT_TIME_SOCKET_ERROR = 10
         WAIT_TIME_NON_SOCKET_ERROR = 30
+        INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
 
     class QUEUE_TYPE:
         STAGING = 'staging'
@@ -846,6 +847,7 @@ class PUBSUB:
         FILES = NameId('Files', 'files')
         FTP = NameId('FTP', 'ftp')
         IMAP = NameId('IMAP', 'imap')
+        INTERNAL = NameId('Internal', 'internal')
         REST = NameId('REST', 'rest')
         SERVICE = NameId('Service', 'service')
         SMS_TWILIO = NameId('SMS - Twilio', 'sms_twilio')

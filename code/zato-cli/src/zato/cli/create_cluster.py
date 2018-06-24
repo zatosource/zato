@@ -880,8 +880,12 @@ class Create(ZatoCommand):
 
     def add_pubsub_sec_endpoints(self, session, cluster):
 
-        sec = HTTPBasicAuth(None, 'zato.pubsub.demo.secdef', True, 'zato.pubsub', 'Zato pub/sub demo', uuid4().hex, cluster)
-        session.add(sec)
+        sec_demo = HTTPBasicAuth(None, 'zato.pubsub.demo.secdef', True, 'zato.pubsub.demo', 'Zato pub/sub demo', uuid4().hex, cluster)
+        session.add(sec_demo)
+
+        sec_default_internal = HTTPBasicAuth(None, 'zato.pubsub.internal.secdef', True, 'zato.pubsub.internal',
+            'Zato pub/sub internal', uuid4().hex, cluster)
+        session.add(sec_default_internal)
 
         impl_name1 = 'zato.server.service.internal.pubsub.pubapi.TopicService'
         impl_name2 = 'zato.server.service.internal.pubsub.pubapi.SubscribeService'
@@ -895,32 +899,41 @@ class Create(ZatoCommand):
 
         chan_topic = HTTPSOAP(None, 'zato.pubsub.topic.topic_name', True, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, '/zato/pubsub/topic/{topic_name}',
-            None, '', None, DATA_FORMAT.JSON, security=sec, service=service_topic, cluster=cluster)
+            None, '', None, DATA_FORMAT.JSON, security=None, service=service_topic, cluster=cluster)
 
         chan_sub = HTTPSOAP(None, 'zato.pubsub.subscribe.topic.topic_name', True, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, '/zato/pubsub/subscribe/topic/{topic_name}',
-            None, '', None, DATA_FORMAT.JSON, security=sec, service=service_sub, cluster=cluster)
+            None, '', None, DATA_FORMAT.JSON, security=None, service=service_sub, cluster=cluster)
 
         chan_msg = HTTPSOAP(None, 'zato.pubsub.msg.msg_id', True, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, '/zato/pubsub/msg/{msg_id}',
-            None, '', None, DATA_FORMAT.JSON, security=sec, service=service_msg, cluster=cluster)
+            None, '', None, DATA_FORMAT.JSON, security=None, service=service_msg, cluster=cluster)
 
         chan_demo = HTTPSOAP(None, 'pubsub.demo.sample.channel', True, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, '/zato/pubsub/zato.demo.sample',
-            None, '', None, DATA_FORMAT.JSON, security=sec, service=service_demo, cluster=cluster)
+            None, '', None, DATA_FORMAT.JSON, security=sec_demo, service=service_demo, cluster=cluster)
 
         outconn_demo = HTTPSOAP(None, 'pubsub.demo.sample.outconn', True, True, CONNECTION.OUTGOING,
             URL_TYPE.PLAIN_HTTP, 'http://localhost:11223', '/zato/pubsub/zato.demo.sample',
-            None, '', None, DATA_FORMAT.JSON, security=sec, cluster=cluster)
+            None, '', None, DATA_FORMAT.JSON, security=sec_demo, cluster=cluster)
 
-        endpoint = PubSubEndpoint()
-        endpoint.name = 'zato.pubsub.demo.endpoint'
-        endpoint.is_internal = True
-        endpoint.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
-        endpoint.topic_patterns = 'pub=/zato/demo/*\nsub=/zato/demo/*'
-        endpoint.security = sec
-        endpoint.cluster = cluster
-        endpoint.endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
+        endpoint_default_internal = PubSubEndpoint()
+        endpoint_default_internal.name = PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME
+        endpoint_default_internal.is_internal = True
+        endpoint_default_internal.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
+        endpoint_default_internal.topic_patterns = 'pub=/*\nsub=/*'
+        endpoint_default_internal.security = sec_default_internal
+        endpoint_default_internal.cluster = cluster
+        endpoint_default_internal.endpoint_type = PUBSUB.ENDPOINT_TYPE.INTERNAL.id
+
+        endpoint_demo = PubSubEndpoint()
+        endpoint_demo.name = 'zato.pubsub.demo.endpoint'
+        endpoint_demo.is_internal = True
+        endpoint_demo.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
+        endpoint_demo.topic_patterns = 'pub=/zato/demo/*\nsub=/zato/demo/*'
+        endpoint_demo.security = sec_demo
+        endpoint_demo.cluster = cluster
+        endpoint_demo.endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
 
         topic = PubSubTopic()
         topic.name = '/zato/demo/sample'
@@ -934,7 +947,7 @@ class Create(ZatoCommand):
         sub = PubSubSubscription()
         sub.creation_time = utcnow_as_ms()
         sub.topic = topic
-        sub.endpoint = endpoint
+        sub.endpoint = endpoint_demo
         sub.sub_key = new_sub_key()
         sub.has_gd = False
         sub.sub_pattern_matched = 'sub=/zato/demo/*'
@@ -944,7 +957,8 @@ class Create(ZatoCommand):
         sub.delivery_err_should_block = False
         sub.out_http_soap = outconn_demo
 
-        session.add(endpoint)
+        session.add(endpoint_default_internal)
+        session.add(endpoint_demo)
         session.add(topic)
         session.add(sub)
 
