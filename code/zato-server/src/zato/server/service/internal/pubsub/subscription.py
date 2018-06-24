@@ -320,6 +320,7 @@ class SubscribeServiceImpl(_Subscribe):
 
                 # Non-WebSocket clients cannot subscribe to the same topic multiple times
                 if not ctx.ws_channel_id:
+
                     if has_subscription(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id):
                         raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
                             self.pubsub.get_endpoint_by_id(ctx.endpoint_id).name, ctx.topic.name))
@@ -328,7 +329,7 @@ class SubscribeServiceImpl(_Subscribe):
                 is_wsx = bool(ctx.ws_channel_id)
 
                 ctx.creation_time = now = utcnow_as_ms()
-                ctx.sub_key = new_sub_key()
+                ctx.sub_key = new_sub_key(self.endpoint_type)
 
                 # Create a new subscription object and flush the session because the subscription's ID
                 # may be needed for the WSX subscription
@@ -444,6 +445,16 @@ class SubscribeSOAP(SubscribeServiceImpl):
     """ Handles pub/sub subscriptions for SOAP clients.
     """
     endpoint_type = PUBSUB.ENDPOINT_TYPE.SOAP.id
+
+    def _handle_subscription(self, ctx):
+        self._subscribe_impl(ctx)
+
+# ################################################################################################################################
+
+class SubscribeAMQP(SubscribeServiceImpl):
+    """ Handles pub/sub subscriptions for AMQP endpoints.
+    """
+    endpoint_type = PUBSUB.ENDPOINT_TYPE.AMQP.id
 
     def _handle_subscription(self, ctx):
         self._subscribe_impl(ctx)

@@ -32,10 +32,10 @@ def has_subscription(session, cluster_id, topic_id, endpoint_id):
     """
     return session.query(exists().where(and_(
         PubSubSubscription.endpoint_id==endpoint_id,
-            PubSubSubscription.topic_id==topic_id,
-            PubSubSubscription.cluster_id==cluster_id,
-            ))).\
-        scalar()
+        PubSubSubscription.topic_id==topic_id,
+        PubSubSubscription.cluster_id==cluster_id,
+        ))).\
+        scalar()[0]
 
 # ################################################################################################################################
 
