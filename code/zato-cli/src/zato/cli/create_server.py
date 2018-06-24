@@ -261,21 +261,21 @@ pickup_conf = """[json]
 pickup_from=./pickup/incoming/json
 move_processed_to=./pickup/processed/json
 patterns=*.json
-recipients=zato.pickup.log-json
+services=zato.pickup.log-json
 parse_with=py:rapidjson.loads
 
 [xml]
 pickup_from=./pickup/incoming/xml
 move_processed_to=./pickup/processed/xml
 patterns=*.xml
-recipients=zato.pickup.log-xml
+services=zato.pickup.log-xml
 parse_with=py:lxml.objectify.fromstring
 
 [csv]
 pickup_from=./pickup/incoming/csv
 move_processed_to=./pickup/processed/csv
 patterns=*.csv
-recipients=zato.pickup.log-csv
+services=zato.pickup.log-csv
 read_on_pickup=False
 parse_on_pickup=False
 delete_after_pickup=False
@@ -283,13 +283,13 @@ delete_after_pickup=False
 [user_conf]
 pickup_from=./config/repo/user-conf
 patterns=*.conf
-recipients=zato.pickup.update-user-conf
+services=zato.pickup.update-user-conf
 parse_on_pickup=False
 
 [static]
 pickup_from=./pickup/incoming/static
 patterns=*
-recipients=zato.pickup.update-static
+services=zato.pickup.update-static
 parse_on_pickup=False
 """
 
