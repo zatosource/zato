@@ -34,11 +34,11 @@ from sqlalchemy.sql.expression import true
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, ZATO_NONE, \
-     ZATO_ODB_POOL_NAME
+from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, \
+     ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, JWT, OAuth, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, WSSDefinition, \
-     VaultConnection
+     HTTPSOAP, HTTSOAPAudit, JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
+     WSSDefinition, VaultConnection
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.util import current_host, get_component_name, get_engine_url, get_http_json_channel, get_http_soap_channel, \
@@ -482,6 +482,15 @@ class ODBManager(SessionWrapper):
                 query = query.filter(Server.id != self.server_id)
 
             return query.all()
+
+# ################################################################################################################################
+
+    def get_default_internal_pubsub_endpoint(self):
+        with closing(self.session()) as session:
+            return session.query(PubSubEndpoint).\
+                   filter(PubSubEndpoint.name==PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME).\
+                   filter(PubSubEndpoint.endpoint_type==PUBSUB.ENDPOINT_TYPE.INTERNAL.id).\
+                   one()
 
 # ################################################################################################################################
 
