@@ -53,6 +53,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.cloud.aws.s3',
             'zato.server.service.internal.cloud.openstack.swift',
             'zato.server.service.internal.connector.amqp_',
+            'zato.server.service.internal.crypto',
             'zato.server.service.internal.definition.amqp_',
             'zato.server.service.internal.definition.cassandra',
             'zato.server.service.internal.definition.jms_wmq',
