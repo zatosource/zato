@@ -42,7 +42,7 @@
     window.zato_select_data_target = 'endpoint_id';
     window.zato_select_data_target_items = {
         'endpoint_id': {
-            'amqp': [],
+            'amqp': {{ select_data_target.amqp|safe }},
             'files': [],
             'ftp': [],
             'rest': {{ select_data_target.rest|safe }},

@@ -858,7 +858,7 @@ class PUBSUB:
 
         class __metaclass__(type):
             def __iter__(self):
-                return iter((self.REST, self.SERVICE, self.SOAP, self.WEB_SOCKETS))
+                return iter((self.AMQP, self.INTERNAL, self.REST, self.SERVICE, self.SOAP, self.WEB_SOCKETS))
 
     class REDIS:
         META_TOPIC_LAST_KEY = 'zato.ps.meta.topic.last.%s.%s'
@@ -867,8 +867,8 @@ class PUBSUB:
 
 # Not to be made available externally yet.
 skip_endpoint_types = (
-    PUBSUB.ENDPOINT_TYPE.AMQP.id,
     PUBSUB.ENDPOINT_TYPE.FTP.id,
+    PUBSUB.ENDPOINT_TYPE.INTERNAL.id,
     PUBSUB.ENDPOINT_TYPE.IMAP.id,
     PUBSUB.ENDPOINT_TYPE.SERVICE.id,
     PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id,
