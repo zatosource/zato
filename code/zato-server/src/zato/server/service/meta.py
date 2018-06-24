@@ -23,7 +23,7 @@ from bunch import bunchify
 from sqlalchemy import Boolean, Integer
 
 # Zato
-from zato.common import NO_DEFAULT_VALUE, ZATO_NOT_GIVEN
+from zato.common import ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
 from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO, GetListAdminSIO
@@ -149,11 +149,8 @@ def update_attrs(cls, name, attrs):
     attrs.create_edit_rewrite = getattr(mod, 'create_edit_rewrite', [])
     attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
     attrs.request_as_is = getattr(mod, 'request_as_is', [])
+    attrs.sio_default_value = getattr(mod, 'sio_default_value', None)
     attrs._meta_session = None
-
-    default_value = getattr(mod, 'default_value', singleton)
-    default_value = NO_DEFAULT_VALUE if default_value is singleton else default_value
-    attrs.default_value = default_value
 
     attrs.is_edit = False
     attrs.is_create_edit = False
@@ -196,6 +193,7 @@ class AdminServiceMeta(type):
         class SimpleIO(_BaseClass):
             request_elem = 'zato_{}_{}_request'.format(attrs.elem, req_resp[name])
             response_elem = 'zato_{}_{}_response'.format(attrs.elem, req_resp[name])
+            default_value = attrs['sio_default_value']
             input_required = sio['input_required'] + attrs['input_required_extra']
             input_optional = sio['input_optional'] + attrs['input_optional_extra']
 
@@ -205,7 +203,6 @@ class AdminServiceMeta(type):
 
             output_required = sio['output_required'] + attrs['output_required_extra']
             output_optional = attrs['output_optional_extra']
-            default_value = attrs.default_value
 
         for io in 'input', 'output':
             for req in 'required', 'optional':

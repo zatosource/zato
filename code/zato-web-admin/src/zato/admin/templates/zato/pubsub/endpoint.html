@@ -114,7 +114,13 @@
                         <td>{{ item.name }}</td>
                         <td>{{ item.role }}</td>
                         <td>{{ item.topic_patterns_html|safe|default:'<span class="form_hint">---</span>' }}</td>
-                        <td>{{ item.client_html|safe|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>
+                            {% if item.client_html %}
+                                {{ item.client_html|safe }}
+                            {% else %}
+                                {{ item.endpoint_type|upper }}
+                            {% endif %}
+                        </td>
                         <td>
                             {% if 'pub' in item.role %}
                                 <a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}">Topics</a>

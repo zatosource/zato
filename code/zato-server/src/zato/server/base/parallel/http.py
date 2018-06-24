@@ -73,14 +73,8 @@ class HTTPHandler(object):
         channel_item = wsgi_environ['zato.channel_item']
 
         if channel_item:
-
             # For access log
             channel_name = channel_item.get('name', '-')
-
-            # Note that this call is asynchronous and we do it the last possible moment.
-            if wsgi_environ['zato.channel_item'].get('audit_enabled'):
-                self.worker_store.request_dispatcher.url_data.audit_set_response(cid, payload, wsgi_environ)
-
         else:
             # 404 Not Found since we cannot find the channel
             channel_name = '-'

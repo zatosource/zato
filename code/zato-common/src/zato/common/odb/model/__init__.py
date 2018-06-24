@@ -105,6 +105,9 @@ class ZatoInstallState(Base):
     source_host = Column(String(200), nullable=False)
     source_user = Column(String(200), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     def __init__(self, id=None, version=None, install_time=None, source_host=None, source_user=None):
         self.id = id
         self.version = version
@@ -135,6 +138,9 @@ class Cluster(Base):
     lb_agent_port = Column(Integer(), nullable=False)
     cw_srv_id = Column(Integer(), nullable=True)
     cw_srv_keep_alive_dt = Column(DateTime(), nullable=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     def __init__(self, id=None, name=None, description=None, odb_type=None, odb_host=None, odb_port=None, odb_user=None,
             odb_db_name=None, odb_schema=None, broker_host=None, broker_port=None, lb_host=None, lb_port=None,
@@ -188,6 +194,9 @@ class Server(Base):
 
     token = Column(String(32), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('servers', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -228,8 +237,39 @@ class SecurityBase(Base):
     is_active = Column(Boolean(), nullable=False)
     sec_type = Column(String(45), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('security_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class MultiSecurity(Base):
+    """ An N:N mapping between security definitions and objects making use of them.
+    """
+    __tablename__ = 'sec_multi'
+    __table_args__ = (UniqueConstraint('cluster_id', 'conn_id', 'conn_type', 'security_id', 'is_channel', 'is_outconn'), {})
+
+    id = Column(Integer, Sequence('sec_multi_seq'), primary_key=True)
+    is_active = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False)
+
+    priority = Column(Integer(), nullable=False)
+    conn_id = Column(String(100), nullable=False)
+    conn_type = Column(String(100), nullable=False)
+
+    is_channel = Column(Boolean(), nullable=False)
+    is_outconn = Column(Boolean(), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    security = relationship(SecurityBase, backref=backref('sec_multi_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('sec_multi_list', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -495,6 +535,9 @@ class TLSCACert(Base):
     info = Column(LargeBinary(200000), nullable=False)
     is_active = Column(Boolean(), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('ca_cert_list', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -536,15 +579,13 @@ class HTTPSOAP(Base):
     url_params_pri = Column(String(200), nullable=True, default=URL_PARAMS_PRIORITY.DEFAULT)
     params_pri = Column(String(200), nullable=True, default=PARAMS_PRIORITY.DEFAULT)
 
-    audit_enabled = Column(Boolean, nullable=False, default=False)
-    audit_back_log = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_BACK_LOG)
-    audit_max_payload = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_MAX_PAYLOAD)
-    audit_repl_patt_type = Column(String(200), nullable=False, default=MSG_PATTERN_TYPE.JSON_POINTER.id)
-
     has_rbac = Column(Boolean, nullable=False, default=False)
     sec_use_rbac = Column(Boolean(), nullable=False, default=False)
 
     cache_expiry = Column(Integer, nullable=True, default=0)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
     security = relationship(SecurityBase, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
@@ -624,6 +665,9 @@ class SQLConnectionPool(Base):
     port = Column(Integer(), nullable=False)
     pool_size = Column(Integer(), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('sql_pools', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -660,6 +704,9 @@ class Service(Base):
     wsdl_name = Column(String(200), nullable=True)
 
     slow_threshold = Column(Integer, nullable=False, default=99999)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('services', order_by=name, cascade='all, delete, delete-orphan'))
@@ -726,6 +773,9 @@ class DeployedService(Base):
     source_hash = Column(String(512), nullable=True)
     source_hash_method = Column(String(20), nullable=True)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False, primary_key=True)
     server = relationship(Server, backref=backref('deployed_services', order_by=deployment_time, cascade='all, delete, delete-orphan'))
 
@@ -758,6 +808,9 @@ class Job(Base):
                            SCHEDULER.JOB_TYPE.CRON_STYLE, name='job_type'), nullable=False)
     start_date = Column(DateTime(), nullable=False)
     extra = Column(LargeBinary(500000), nullable=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('jobs', order_by=name, cascade='all, delete, delete-orphan'))
@@ -802,6 +855,9 @@ class IntervalBasedJob(Base):
     seconds = Column(Integer, nullable=True)
     repeats = Column(Integer, nullable=True)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=False)
     job = relationship(Job, backref=backref('interval_based', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
 
@@ -828,6 +884,9 @@ class CronStyleJob(Base):
     id = Column(Integer, Sequence('job_cron_seq'), primary_key=True)
     cron_definition = Column(String(4000), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=False)
     job = relationship(
         Job, backref=backref('cron_style', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
@@ -851,6 +910,9 @@ class Cache(Base):
     is_active = Column(Boolean(), nullable=False)
     is_default = Column(Boolean(), nullable=False)
     cache_type = Column(String(45), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('cache_list', order_by=name, cascade='all, delete, delete-orphan'))
@@ -912,6 +974,9 @@ class ConnDefAMQP(Base):
     frame_max = Column(Integer(), nullable=False)
     heartbeat = Column(Integer(), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('amqp_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -957,6 +1022,9 @@ class ConnDefWMQ(Base):
     max_chars_printed = Column(Integer, nullable=False)
     username = Column(String(100), nullable=True)
     password = Column(String(200), nullable=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('wmq_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1006,6 +1074,9 @@ class OutgoingAMQP(Base):
     app_id = Column(String(200), nullable=True)
     pool_size = Column(SmallInteger(), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     def_id = Column(Integer, ForeignKey('conn_def_amqp.id', ondelete='CASCADE'), nullable=False)
     def_ = relationship(ConnDefAMQP, backref=backref('out_conns_amqp', cascade='all, delete, delete-orphan'))
 
@@ -1046,6 +1117,9 @@ class OutgoingFTP(Base):
     port = Column(Integer, server_default=str(FTP_PORT), nullable=False)
     dircache = Column(Boolean(), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_ftp', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1084,6 +1158,9 @@ class OutgoingOdoo(Base):
     password = Column(String(400), nullable=False)
     client_type = Column(String(40), nullable=False, server_default=str(ODOO.CLIENT_TYPE.OPENERP_CLIENT_LIB))
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_odoo', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1112,6 +1189,9 @@ class OutgoingSAP(Base):
     pool_size = Column(Integer(), nullable=False, server_default=str(SAP.DEFAULT.POOL_SIZE))
     router = Column(String(400), nullable=True)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_sap', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1137,6 +1217,9 @@ class OutgoingSTOMP(Base):
     proto_version = Column(String(20), nullable=False, server_default=STOMP.DEFAULT.PROTOCOL)
     timeout = Column(Integer(), nullable=False, server_default=str(STOMP.DEFAULT.TIMEOUT))
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_stomp', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1158,6 +1241,9 @@ class OutgoingWMQ(Base):
     delivery_mode = Column(SmallInteger(), nullable=False)
     priority = Column(SmallInteger(), server_default=str(WMQ_DEFAULT_PRIORITY), nullable=False)
     expiration = Column(String(20), nullable=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     def_id = Column(Integer, ForeignKey('conn_def_wmq.id', ondelete='CASCADE'), nullable=False)
     def_ = relationship(ConnDefWMQ, backref=backref('out_conns_wmq', cascade='all, delete, delete-orphan'))
@@ -1192,6 +1278,9 @@ class OutgoingZMQ(Base):
     socket_type = Column(String(20), nullable=False)
     socket_method = Column(String(20), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_zmq', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1221,6 +1310,9 @@ class ChannelAMQP(Base):
     ack_mode = Column(String(20), nullable=False)
     prefetch_count = Column(Integer, nullable=False)
     data_format = Column(String(20), nullable=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('channels_amqp', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1260,6 +1352,9 @@ class ChannelSTOMP(Base):
     timeout = Column(Integer(), nullable=False, server_default=str(STOMP.DEFAULT.TIMEOUT))
     sub_to = Column(Text, nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('channels_stomp', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1279,6 +1374,9 @@ class ChannelWMQ(Base):
     is_active = Column(Boolean(), nullable=False)
     queue = Column(String(200), nullable=False)
     data_format = Column(String(20), nullable=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('channels_wmq', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1317,6 +1415,9 @@ class ChannelZMQ(Base):
     pool_strategy = Column(String(20), nullable=False)
     service_source = Column(String(20), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('channels_zmq', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1350,6 +1451,9 @@ class DeploymentPackage(Base):
     payload_name = Column(String(200), nullable=False)
     payload = Column(LargeBinary(5000000), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False, primary_key=False)
     server = relationship(
         Server, backref=backref('originating_deployment_packages',
@@ -1371,6 +1475,9 @@ class DeploymentStatus(Base):
     __table_args__ = (UniqueConstraint('package_id', 'server_id'), {})
 
     id = Column(Integer, Sequence('depl_status_seq'), primary_key=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     package_id = Column(
         Integer, ForeignKey('deployment_package.id', ondelete='CASCADE'), nullable=False, primary_key=False)
@@ -1403,6 +1510,9 @@ class MsgNamespace(Base):
     name = Column(String(200), nullable=False)
     value = Column(String(500), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('namespaces', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1423,6 +1533,9 @@ class XPath(Base):
     id = Column(Integer, Sequence('msg_xpath_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     value = Column(String(1500), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('xpaths', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1445,6 +1558,9 @@ class JSONPointer(Base):
     name = Column(String(200), nullable=False)
     value = Column(String(1500), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('json_pointers', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1453,96 +1569,6 @@ class JSONPointer(Base):
         self.name = name
         self.value = value
         self.cluster_id = cluster_id
-
-# ################################################################################################################################
-
-class HTTSOAPAudit(Base):
-    """ An audit log for HTTP/SOAP channels and outgoing connections.
-    """
-    __tablename__ = 'http_soap_audit'
-
-    id = Column(Integer, Sequence('http_soap_audit_seq'), primary_key=True)
-    name = Column(String(200), nullable=False, index=True)
-    cid = Column(String(200), nullable=False, index=True)
-
-    transport = Column(String(200), nullable=False, index=True)
-    connection = Column(String(200), nullable=False, index=True)
-
-    req_time = Column(DateTime(), nullable=False)
-    resp_time = Column(DateTime(), nullable=True)
-
-    user_token = Column(String(200), nullable=True, index=True)
-    invoke_ok = Column(Boolean(), nullable=True)
-    auth_ok = Column(Boolean(), nullable=True)
-    remote_addr = Column(String(200), nullable=False, index=True)
-
-    req_headers = Column(LargeBinary(), nullable=True)
-    req_payload = Column(LargeBinary(), nullable=True)
-    resp_headers = Column(LargeBinary(), nullable=True)
-    resp_payload = Column(LargeBinary(), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    conn_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
-
-    def __init__(self, id=None, name=None, cid=None, transport=None, connection=None, req_time=None, resp_time=None,
-            user_token=None, invoke_ok=None, auth_ok=None, remote_addr=None, req_headers=None, req_payload=None,
-            resp_headers=None, resp_payload=None):
-
-        self.id = id
-        self.name = name
-        self.cid = cid
-
-        self.transport = transport
-        self.connection = connection
-
-        self.req_time = req_time
-        self.resp_time = resp_time
-
-        self.user_token = user_token
-        self.invoke_ok = invoke_ok
-        self.auth_ok = auth_ok
-        self.remote_addr = remote_addr
-
-        self.req_headers = req_headers
-        self.req_payload = req_payload
-        self.resp_headers = resp_headers
-        self.resp_payload = resp_payload
-
-# ################################################################################################################################
-
-class HTTSOAPAuditReplacePatternsJSONPointer(Base):
-    """ JSONPointer replace patterns for HTTP/SOAP connections.
-    """
-    __tablename__ = 'http_soap_au_rpl_p_jp'
-    __table_args__ = (UniqueConstraint('conn_id', 'pattern_id'), {})
-
-    id = Column(Integer, Sequence('htp_sp_ad_rpl_p_jp_seq'), primary_key=True)
-    conn_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
-    pattern_id = Column(Integer, ForeignKey('msg_json_pointer.id', ondelete='CASCADE'), nullable=False)
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-
-    replace_patterns_json_pointer = relationship(HTTPSOAP,
-        backref=backref('replace_patterns_json_pointer', order_by=id, cascade='all, delete, delete-orphan'))
-
-    pattern = relationship(JSONPointer)
-
-# ################################################################################################################################
-
-class HTTSOAPAuditReplacePatternsXPath(Base):
-    """ XPath replace patterns for HTTP/SOAP connections.
-    """
-    __tablename__ = 'http_soap_au_rpl_p_xp'
-    __table_args__ = (UniqueConstraint('conn_id', 'pattern_id'), {})
-
-    id = Column(Integer, Sequence('htp_sp_ad_rpl_p_xp_seq'), primary_key=True)
-    conn_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
-    pattern_id = Column(Integer, ForeignKey('msg_xpath.id', ondelete='CASCADE'), nullable=False)
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-
-    replace_patterns_xpath = relationship(HTTPSOAP,
-        backref=backref('replace_patterns_xpath', order_by=id, cascade='all, delete, delete-orphan'))
-
-    pattern = relationship(XPath)
 
 # ################################################################################################################################
 
@@ -1571,6 +1597,9 @@ class OpenStackSwift(Base):
     should_retr_ratelimit = Column(Boolean(), nullable=False)
     needs_tls_compr = Column(Boolean(), nullable=False)
     custom_options = Column(String(2000), nullable=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('openstack_swift_conns', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1617,6 +1646,9 @@ class AWSS3(Base):
     bucket = Column(String(2000), nullable=True)
     encrypt_at_rest = Column(Boolean(), nullable=False, default=False)
     storage_class = Column(String(200), nullable=False, default=CLOUD.AWS.S3.STORAGE_CLASS.DEFAULT)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
     security = relationship(SecurityBase, backref=backref('aws_s3_conns', order_by=is_active, cascade='all, delete, delete-orphan'))
@@ -1717,6 +1749,9 @@ class CassandraConn(Base):
     tls_client_cert = Column(String(200), nullable=True)
     tls_client_priv_key = Column(String(200), nullable=True)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('cassandra_conn_list', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1732,6 +1767,9 @@ class ElasticSearch(Base):
     hosts = Column(String(400), nullable=False)
     timeout = Column(Integer(), nullable=False)
     body_as = Column(String(45), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('search_es_conns', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1751,6 +1789,9 @@ class Solr(Base):
     options = Column(String(800), nullable=True)
     pool_size = Column(Integer(), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('search_solr_conns', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1766,6 +1807,9 @@ class CassandraQuery(Base):
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     value = Column(LargeBinary(40000), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('cassandra_queries', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1792,6 +1836,9 @@ class SMTP(Base):
     mode = Column(String(20), nullable=False)
     ping_address = Column(String(200), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('smtp_conns', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1814,6 +1861,9 @@ class IMAP(Base):
     mode = Column(String(20), nullable=False)
     get_criteria = Column(String(2000), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('imap_conns', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1830,6 +1880,9 @@ class RBACRole(Base):
     parent_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=True)
     parent = relationship('RBACRole', backref=backref('children'), remote_side=[id])
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('rbac_roles', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1843,6 +1896,9 @@ class RBACPermission(Base):
 
     id = Column(Integer, Sequence('rbac_perm_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('rbac_permissions', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1859,6 +1915,9 @@ class RBACClientRole(Base):
     name = Column(String(400), nullable=False)
     client_def = Column(String(200), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     role_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=False)
     role = relationship(RBACRole, backref=backref('rbac_client_roles', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1874,6 +1933,9 @@ class RBACRolePermission(Base):
     __table_args__ = (UniqueConstraint('role_id', 'perm_id', 'service_id', 'cluster_id'), {})
 
     id = Column(Integer, Sequence('rbac_role_perm_seq'), primary_key=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     role_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=False)
     role = relationship(RBACRole, backref=backref('rbac_role_perms', order_by=id, cascade='all, delete, delete-orphan'))
@@ -1905,6 +1967,9 @@ class KVData(Base):
     creation_time = Column(DateTime(), nullable=False)
     expiry_time = Column(DateTime(), nullable=True)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
     cluster = relationship(Cluster, backref=backref('kv_data', order_by=key, cascade='all, delete, delete-orphan'))
 
@@ -1927,6 +1992,9 @@ class ChannelWebSocket(Base):
     data_format = Column(String(20), nullable=False)
     new_token_wait_time = Column(Integer(), nullable=False)
     token_ttl = Column(Integer(), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('web_socket', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1993,6 +2061,9 @@ class WebSocketClient(Base):
     server_proc_pid = Column(Integer, nullable=False)
     server_name = Column(String(200), nullable=False) # References server.name
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=False)
     channel = relationship(
         ChannelWebSocket, backref=backref('clients', order_by=local_address, cascade='all, delete, delete-orphan'))
@@ -2021,6 +2092,9 @@ class WebSocketClientPubSubKeys(Base):
     # The same as in web_socket_sub.sub_key
     sub_key = Column(String(200), nullable=False)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     client_id = Column(Integer, ForeignKey('web_socket_client.id', ondelete='CASCADE'), nullable=False)
     client = relationship(
         WebSocketClient, backref=backref('web_socket_cli_ps_keys', order_by=id, cascade='all, delete, delete-orphan'))
@@ -2046,6 +2120,9 @@ class WebSocketSubscription(Base):
     is_internal = Column(Boolean(), nullable=False)
     sub_key = Column(String(200), nullable=False)
     ext_client_id = Column(String(200), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
     channel = relationship(
@@ -2096,6 +2173,9 @@ class PubSubEndpoint(Base):
 
     # Patterns for tags of messages
     message_tag_patterns = Column(Text, nullable=True) # Unused for now
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     # Endpoint is a service
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
@@ -2149,6 +2229,9 @@ class PubSubTopic(Base):
     task_sync_interval = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_SYNC_INTERVAL))
     task_delivery_interval = Column(Integer(), nullable=False, server_default=str(PUBSUB.DEFAULT.TASK_DELIVERY_INTERVAL))
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     # A hook service invoked during publications to this specific topic
     hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
 
@@ -2191,6 +2274,9 @@ class PubSubEndpointTopic(Base):
     in_reply_to = Column(String(200), nullable=True)
     ext_client_id = Column(Text(), nullable=True)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True)
     endpoint = relationship(
         PubSubEndpoint, backref=backref('pubsub_endpoint_topics', order_by=endpoint_id, cascade='all, delete, delete-orphan'))
@@ -2209,8 +2295,6 @@ class PubSubMessage(Base):
     """ An individual message published to a topic.
     """
     __tablename__ = 'pubsub_message'
-
-
     __table_args__ = (
 
         # This index is needed for FKs from other tables,
@@ -2266,6 +2350,9 @@ class PubSubMessage(Base):
     # to be available in the topic for other subscribers to receive it,
     # i.e. it can be said that it has been already transported to all subsriber queues (possibly to one only).
     is_in_sub_queue = Column(Boolean(), nullable=False, server_default=sa_false())
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     published_by_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
     published_by = relationship(
@@ -2366,6 +2453,9 @@ class PubSubSubscription(Base):
     smtp_body = Column(Text, nullable=True)
     smtp_is_html = Column(Boolean(), nullable=True)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(
         PubSubTopic, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
@@ -2442,6 +2532,9 @@ class PubSubEndpointEnqueuedMessage(Base):
     delivery_status = Column(Integer, nullable=False, server_default=str(PUBSUB.DELIVERY_STATUS.INITIALIZED))
     delivery_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     pub_msg_id = Column(String(200), ForeignKey('pubsub_message.pub_msg_id', ondelete='CASCADE'), nullable=False)
 
     endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
@@ -2475,6 +2568,9 @@ class PubSubEndpointQueueInteraction(Base):
     inter_type = Column(String(200), nullable=False)
     inter_details = Column(Text, nullable=True)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
     queue_id = Column(Integer, ForeignKey('pubsub_endp_msg_queue.id', ondelete='CASCADE'), nullable=False)
     queue = relationship(
         PubSubEndpointEnqueuedMessage, backref=backref(
@@ -2483,6 +2579,31 @@ class PubSubEndpointQueueInteraction(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(
         Cluster, backref=backref('pubsub_endpoint_queue_interactions', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class PubSubChannel(Base):
+    """ An N:N mapping between arbitrary channels and topics to which their messages should be sent.
+    """
+    __tablename__ = 'pubsub_channel'
+    __table_args__ = (UniqueConstraint('cluster_id', 'conn_id', 'conn_type', 'topic_id'), {})
+
+    id = Column(Integer, Sequence('pubsub_channel_seq'), primary_key=True)
+    is_active = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False)
+
+    conn_id = Column(String(100), nullable=False)
+    conn_type = Column(String(100), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic = relationship(
+        PubSubTopic, backref=backref('pubsub_channel_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pubsub_channel_list', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -2504,6 +2625,9 @@ class SMSTwilio(Base):
 
     default_from = Column(String(200), nullable=True)
     default_to = Column(String(200), nullable=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('sms_twilio_list', order_by=name, cascade='all, delete, delete-orphan'))

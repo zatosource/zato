@@ -57,7 +57,7 @@ class CommonSubData:
         'out_http_method', 'creation_time', 'last_interaction_time', Int('total_depth'), Int('current_depth_gd'),
         Int('current_depth_non_gd'), 'sub_key', 'has_gd', 'is_staging_enabled', 'sub_id', 'name', AsIs('ws_ext_client_id'),
         AsIs('ext_client_id'), 'topic_id')
-    amqp = ('amqp_exchange', 'amqp_routing_key')
+    amqp = ('out_amqp_id', 'amqp_exchange', 'amqp_routing_key')
     files = ('files_directory_list',)
     ftp = ('ftp_directory_list',)
     pubapi = ('security_id',)

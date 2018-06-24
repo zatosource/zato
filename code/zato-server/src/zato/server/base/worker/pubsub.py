@@ -63,6 +63,12 @@ class PubSub(WorkerImpl):
 
 # ################################################################################################################################
 
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg):
+        msg.pop('action') # Not needed by pub/sub
+        self.pubsub.edit_subscription(msg)
+
+# ################################################################################################################################
+
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg):
         self.pubsub.unsubscribe(msg.topic_sub_keys)
 

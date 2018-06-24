@@ -223,10 +223,6 @@ class CHANNEL(Constants):
 
     HTTP_SOAP_CREATE_EDIT = ValueConstant('') # Same for creating and updating
     HTTP_SOAP_DELETE = ValueConstant('')
-    HTTP_SOAP_AUDIT_RESPONSE = ValueConstant('')
-    HTTP_SOAP_AUDIT_PATTERNS = ValueConstant('')
-    HTTP_SOAP_AUDIT_STATE = ValueConstant('')
-    HTTP_SOAP_AUDIT_CONFIG = ValueConstant('')
 
     STOMP_CREATE = ValueConstant('')
     STOMP_EDIT = ValueConstant('')

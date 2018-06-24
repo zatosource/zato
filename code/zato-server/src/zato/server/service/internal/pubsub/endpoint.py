@@ -330,6 +330,11 @@ class UpdateEndpointQueue(AdminService):
             self.response.payload.id = self.request.input.id
             self.response.payload.name = item.topic.name
 
+            # Notify all processes, including our own, that this subscription's parameters have changed
+            updated_params_msg = item.asdict()
+            updated_params_msg['action'] = PUBSUB.SUBSCRIPTION_EDIT.value
+            self.broker_client.publish(updated_params_msg)
+
             # We change the delivery server in background - note how we send name, not ID, on input.
             # This is because our invocation target will want to use self.servers[server_name].invoke(...)
             if can_update_delivery_server:

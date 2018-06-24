@@ -550,7 +550,6 @@ class SCHEDULER:
 
 class CHANNEL(Attrs):
     AMQP = 'amqp'
-    AUDIT = 'audit'
     DELIVERY = 'delivery'
     FANOUT_CALL = 'fanout-call'
     FANOUT_ON_FINAL = 'fanout-on-final'
@@ -631,8 +630,6 @@ class BROKER:
 
 class MISC:
     DEFAULT_HTTP_TIMEOUT=10
-    DEFAULT_AUDIT_BACK_LOG = 24 * 60 # 24 hours * 60 days ≅ 2 months
-    DEFAULT_AUDIT_MAX_PAYLOAD = 0 # Using 0 means there's no limit
     OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
@@ -640,9 +637,6 @@ class MISC:
 class ADAPTER_PARAMS:
     APPLY_AFTER_REQUEST = 'apply-after-request'
     APPLY_BEFORE_REQUEST = 'apply-before-request'
-
-class AUDIT_LOG:
-    REPLACE_WITH = SECRET_SHADOW
 
 class INFO_FORMAT:
     DICT = 'dict'
@@ -777,6 +771,7 @@ class PUBSUB:
         TASK_DELIVERY_INTERVAL = 2000
         WAIT_TIME_SOCKET_ERROR = 10
         WAIT_TIME_NON_SOCKET_ERROR = 30
+        INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
 
     class QUEUE_TYPE:
         STAGING = 'staging'
@@ -846,6 +841,7 @@ class PUBSUB:
         FILES = NameId('Files', 'files')
         FTP = NameId('FTP', 'ftp')
         IMAP = NameId('IMAP', 'imap')
+        INTERNAL = NameId('Internal', 'internal')
         REST = NameId('REST', 'rest')
         SERVICE = NameId('Service', 'service')
         SMS_TWILIO = NameId('SMS - Twilio', 'sms_twilio')
@@ -856,7 +852,7 @@ class PUBSUB:
 
         class __metaclass__(type):
             def __iter__(self):
-                return iter((self.REST, self.SERVICE, self.SOAP, self.WEB_SOCKETS))
+                return iter((self.AMQP, self.INTERNAL, self.REST, self.SERVICE, self.SOAP, self.WEB_SOCKETS))
 
     class REDIS:
         META_TOPIC_LAST_KEY = 'zato.ps.meta.topic.last.%s.%s'
@@ -865,8 +861,8 @@ class PUBSUB:
 
 # Not to be made available externally yet.
 skip_endpoint_types = (
-    PUBSUB.ENDPOINT_TYPE.AMQP.id,
     PUBSUB.ENDPOINT_TYPE.FTP.id,
+    PUBSUB.ENDPOINT_TYPE.INTERNAL.id,
     PUBSUB.ENDPOINT_TYPE.IMAP.id,
     PUBSUB.ENDPOINT_TYPE.SERVICE.id,
     PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id,
