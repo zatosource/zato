@@ -80,8 +80,8 @@ class DeliveryTask(object):
         self.confirm_pubsub_msg_delivered_cb = confirm_pubsub_msg_delivered_cb
         self.sub_config = sub_config
         self.topic_name = sub_config.topic_name
-        self.wait_sock_err = self.sub_config.wait_sock_err
-        self.wait_non_sock_err = self.sub_config.wait_non_sock_err
+        self.wait_sock_err = float(self.sub_config.wait_sock_err)
+        self.wait_non_sock_err = float(self.sub_config.wait_non_sock_err)
         self.last_run = utcnow_as_ms()
         self.delivery_interval = self.sub_config.task_delivery_interval / 1000.0
         self.delivery_max_retry = self.sub_config.delivery_max_retry
