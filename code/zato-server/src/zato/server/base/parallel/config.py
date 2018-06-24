@@ -35,11 +35,6 @@ class ConfigLoader(object):
         # Which components are enabled
         self.component_enabled.stats = asbool(self.fs_server_config.component_enabled.stats)
         self.component_enabled.slow_response = asbool(self.fs_server_config.component_enabled.slow_response)
-        self.component_enabled.live_msg_browser = asbool(self.fs_server_config.component_enabled.live_msg_browser)
-
-        # Details of what is enabled in live message browser
-        self.live_msg_browser = self.fs_server_config.live_msg_browser
-        self.live_msg_browser.include_internal = asbool(self.live_msg_browser.include_internal)
 
         #
         # Cassandra - start
@@ -303,14 +298,12 @@ class ConfigLoader(object):
 
         # All the HTTP/SOAP channels.
         http_soap = []
+
         for item in self.odb.get_http_soap_list(server.cluster.id, 'channel'):
 
             hs_item = {}
             for key in item.keys():
                 hs_item[key] = getattr(item, key)
-
-            hs_item['replace_patterns_json_pointer'] = item.replace_patterns_json_pointer
-            hs_item['replace_patterns_xpath'] = item.replace_patterns_xpath
 
             hs_item['match_target'] = '{}{}{}'.format(hs_item['soap_action'], MISC.SEPARATOR, hs_item['url_path'])
             hs_item['match_target_compiled'] = Matcher(hs_item['match_target'])
@@ -378,7 +371,7 @@ class ConfigLoader(object):
 # ################################################################################################################################
 
     def _migrate_30_encrypt_secrets(self):
-        """ New in 3.0 - sall passwords are always encrypted so we need to look up any that are not,
+        """ New in 3.0 - all passwords are always encrypted so we need to look up any that are not,
         for instance, because it is a cluster newly migrated from 2.0 to 3.0, and encrypt them now in ODB.
         """
         sec_config_dict_types = ('apikey', 'aws', 'basic_auth', 'jwt', 'ntlm', 'oauth', 'openstack_security',
@@ -424,6 +417,9 @@ class ConfigLoader(object):
 
         # Signal to ODB that we are done with deploying everything
         self.odb.on_deployment_finished()
+
+        # Populate default pub/sub endpoint data
+        self.default_internal_pubsub_endpoint_id = self.odb.get_default_internal_pubsub_endpoint().id
 
         # Default content type
         self.json_content_type = self.fs_server_config.content_type.json

@@ -673,9 +673,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Channels
         for name, data in self.worker_config.channel_web_socket.items():
 
-            # Each worker uses a unique bind port
-            update_bind_port(data.config, self.worker_idx)
-
             self.web_socket_api.create(name, bunchify(data.config), self.on_message_invoke_service,
                 self.request_dispatcher.url_data.authenticate_web_socket)
 
@@ -775,11 +772,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for value in self.worker_config.pubsub_subscription.values():
             config = bunchify(value['config'])
             config.add_subscription = True # We don't create WSX subscriptions here so it is always True
-            self.pubsub.create_subscription(config)
+            self.pubsub.subscribe(config)
 
         for value in self.worker_config.pubsub_topic.values():
             self.pubsub.create_topic(bunchify(value['config']))
 
+        self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.AMQP.id] = None # Not used for now
         self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.REST.id] = self.worker_config.out_plain_http.get_by_id
         self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.SOAP.id] = self.worker_config.out_soap.get_by_id
         self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id] = None # Not used by needed for API completeness
@@ -1667,36 +1665,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Delete the pattern from its store
         self.json_pointer_store.on_broker_msg_delete(msg, *args)
 
-        # Delete the pattern from url_data's cache and let know servers that it should be deleted from the ODB as well
-        for item_id, pattern_list in self.request_dispatcher.url_data.on_broker_msg_MSG_JSON_POINTER_DELETE(msg):
-
-            # This is a bit inefficient, if harmless, because each worker in a cluster will publish it
-            # so the list of patterns will be updated that many times.
-
-            msg = {}
-            msg['action'] = broker_message.SERVICE.PUBLISH.value
-            msg['service'] = 'zato.http-soap.set-audit-replace-patterns'
-            msg['payload'] = {'id':item_id, 'audit_repl_patt_type':MSG_PATTERN_TYPE.JSON_POINTER.id, 'pattern_list':pattern_list}
-            msg['cid'] = new_cid()
-            msg['channel'] = CHANNEL.WORKER
-            msg['data_format'] = DATA_FORMAT.JSON
-
-            self.broker_client.invoke_async(msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_RESPONSE(self, msg, *args):
-        return self.on_message_invoke_service(msg, CHANNEL.AUDIT, 'SCHEDULER_JOB_EXECUTED', args)
-
-    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_CONFIG(self, msg, *args):
-        return self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_CONFIG(msg)
-
-    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_STATE(self, msg, *args):
-        return self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_STATE(msg)
-
-    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(self, msg, *args):
-        return self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(msg)
-
 # ################################################################################################################################
 
     def _on_broker_msg_cloud_create_edit(self, msg, conn_type, config_dict, wrapper_class):
@@ -2058,7 +2026,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         finally:
             data = '{};{}'.format(status, response)
 
-        with open(msg.reply_to_fifo, 'wb') as fifo:
-            fifo.write(data)
+        try:
+            with open(msg.reply_to_fifo, 'wb') as fifo:
+                fifo.write(data)
+        except Exception:
+            logger.warn('Could not write to FIFO, m:`%s`, r:`%s`, s:`%s`, e:`%s`', msg, response, status, format_exc())
 
 # ################################################################################################################################

@@ -32,7 +32,7 @@
         </tr>
         <tr>
             <td style="width:15%">Time zone</td>
-            <td style="width:25%;text-align:left">{{ form.timezone }} 
+            <td style="width:25%;text-align:left">{{ form.timezone }}
             <br/>
             <span class="form_hint">(default: UTC)</span></td>
             <td style="width:15%">Date and time format</td>
@@ -43,42 +43,27 @@
         </tr>
 
         <tr>
-            <td class="inline_header" colspan="4">Live message browser</td>
-        </tr>
-        <tr>
-            <td style="width:15%">Max number of messages shown</td>
-            <td style="width:25%;text-align:left">{{ form.msg_browser_max_shown }} 
-            <br/>
-            <span class="form_hint">(default: 1000)</span></td>
-            <td style="width:15%">Show internal messages?</td>
-            <td style="width:40%;text-align:left">{{ form.msg_browser_show_internal }}
-            <br/>
-            <span class="form_hint">(default: No)
-            </span></td>
-        </tr>
-
-        <tr>
             <td class="inline_header" colspan="4">Cluster color markers</td>
         </tr>
 
         {% for cluster in clusters %}
             <tr>
                 <td style="width:15%;line-height:25px">{{ cluster.name }}</td>
-                
+
                 <td style="text-align:left;line-height:25px" colspan="3">
-                    <input type="checkbox" 
-                        id="checkbox_{{ cluster.id }}" 
-                        name="checkbox_{{ cluster.id }}" 
-                        style="vertical-align:middle;margin-bottom:5px" 
+                    <input type="checkbox"
+                        id="checkbox_{{ cluster.id }}"
+                        name="checkbox_{{ cluster.id }}"
+                        style="vertical-align:middle;margin-bottom:5px"
                         {% if cluster.id|slugify in cluster_colors %}checked="checked"{% endif %}
                         />&nbsp;
-                    
+
                     <span id="color_picker_span_{{ cluster.id }}" {% if not cluster.id|slugify in cluster_colors %}class="hidden"{% endif %}>
                         {% if cluster.id|slugify in cluster_colors %}
-                            <input type="text" 
-                                style="color:#{{ cluster_colors|bunchget:cluster.id }}; background-color:#{{ cluster_colors|bunchget:cluster.id }}" 
-                                id="color_{{ cluster.id }}" 
-                                name="color_{{ cluster.id }}" 
+                            <input type="text"
+                                style="color:#{{ cluster_colors|bunchget:cluster.id }}; background-color:#{{ cluster_colors|bunchget:cluster.id }}"
+                                id="color_{{ cluster.id }}"
+                                name="color_{{ cluster.id }}"
                                 value="{{ cluster_colors|bunchget:cluster.id }}" />
 
                         {% else %}

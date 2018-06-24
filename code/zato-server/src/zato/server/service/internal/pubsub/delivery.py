@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from json import dumps
+
 # Zato
 from zato.common import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
@@ -91,21 +94,48 @@ class DeliverMessage(AdminService):
 
 # ################################################################################################################################
 
+    def _get_data_from_message(self, msg):
+
+        # A list of messages is given on input so we need to serialize each of them individually
+        if isinstance(msg, list):
+            return [elem.to_external_dict() for elem in msg]
+
+        # A single message was given on input
+        else:
+            return msg.to_external_dict()
+
+# ################################################################################################################################
+
     def _deliver_rest_soap(self, msg, subscription, impl_getter):
         if not subscription.config.out_http_soap_id:
             raise ValueError('Missing out_http_soap_id for subscription `{}`'.format(subscription))
         else:
-
-            # A list of messages is given on input so we need to serialize each of them individually
-            if isinstance(msg, list):
-                data = [elem.to_external_dict() for elem in msg]
-
-            # A single message was given on input
-            else:
-                data = msg.to_external_dict()
-
+            data = self._get_data_from_message(msg)
             endpoint = impl_getter(subscription.config.out_http_soap_id)
             endpoint.conn.http_request(subscription.config.out_http_method, self.cid, data=data)
+
+# ################################################################################################################################
+
+    def _deliver_amqp(self, msg, subscription, _ignored_impl_getter):
+
+        # Ultimately we should use impl_getter to get the outconn
+        for value in self.server.worker_store.worker_config.out_amqp.itervalues():
+            if value['config']['id'] == subscription.config.out_amqp_id:
+
+                data = self._get_data_from_message(msg)
+                name = value['config']['name']
+                kwargs = {}
+
+                if subscription.config.amqp_exchange:
+                    kwargs['exchange'] = subscription.config.amqp_exchange
+
+                if subscription.config.amqp_routing_key:
+                    kwargs['routing_key'] = subscription.config.amqp_routing_key
+
+                self.outgoing.amqp.send(dumps(data), name, **kwargs)
+
+                # We found our outconn and the message was sent, we can stop now
+                break
 
 # ################################################################################################################################
 
@@ -116,6 +146,7 @@ class DeliverMessage(AdminService):
 
 # We need to register it here because it refers to DeliverMessage's methods
 deliver_func = {
+    PUBSUB.ENDPOINT_TYPE.AMQP.id: DeliverMessage._deliver_amqp,
     PUBSUB.ENDPOINT_TYPE.REST.id: DeliverMessage._deliver_rest_soap,
     PUBSUB.ENDPOINT_TYPE.SOAP.id: DeliverMessage._deliver_rest_soap,
     PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: DeliverMessage._deliver_wsx,

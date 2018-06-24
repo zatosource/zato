@@ -265,6 +265,9 @@ class EndpointQueues(_EndpointObjects):
 
         data_list = Bunch()
         data_list.service_list = []
+        data_list.out_amqp_list = self.req.zato.client.invoke('zato.outgoing.amqp.get-list', {
+                'cluster_id': self.req.zato.cluster_id
+            }).data
 
         out['edit_form'] = EditSubscriptionForm(self.req, data_list, prefix='edit')
 

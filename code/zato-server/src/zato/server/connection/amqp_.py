@@ -131,7 +131,7 @@ class Consumer(object):
                 consumer = _Consumer(conn, queues=self.queue, callbacks=[self._on_amqp_message],
                     no_ack=_no_ack[self.config.ack_mode], tag_prefix='{}/{}'.format(
                         self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))
-                consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False) 
+                consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False)
                 consumer.consume()
             except Exception, e:
                 err_conn_attempts += 1

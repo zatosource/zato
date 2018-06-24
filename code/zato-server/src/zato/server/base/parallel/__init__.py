@@ -27,6 +27,9 @@ import gevent.monkey # Needed for Cassandra
 # globre
 import globre
 
+# numpy
+from numpy.random import seed as numpy_seed
+
 # Paste
 from paste.util.converters import asbool
 
@@ -132,7 +135,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.ipc_forwarder = IPCAPI(True)
         self.wmq_ipc_tcp_port = None
         self.fifo_response_buffer_size = None # Will be in megabytes
-        self.live_msg_browser = None
         self.is_first_worker = None
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
@@ -141,6 +143,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
         self.startup_callable_tool = None
+        self.default_internal_pubsub_endpoint_id = None
         self._hash_secret_method = None
         self._hash_secret_rounds = None
         self._hash_secret_salt_size = None
@@ -246,7 +249,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, self.deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
-            self.fs_server_config.main.token, self.deployment_key)
+                                                 self.fs_server_config.main.token, self.deployment_key)
 
         logger.debug('Will use the lock_name: `%s`', lock_name)
 
@@ -415,7 +418,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         # For server-to-server communication
         self.servers = Servers(self.odb, self.cluster.name, self.decrypt)
         logger.info('Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`', self.name,
-            self.cluster.name, self.pid, 's' if use_tls else '', self.preferred_address,
+                    self.cluster.name, self.pid, 's' if use_tls else '', self.preferred_address,
             self.port)
 
         # Reads in all configuration from ODB
@@ -468,9 +471,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self._after_init_accepted(locally_deployed)
 
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host,
-            self.port, self.preferred_address, use_tls)
+                                self.port, self.preferred_address, use_tls)
 
         if is_first:
+
+            logger.info('First worker of `%s` is %s', self.name, self.pid)
 
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
                 'parallel_server': self,
@@ -543,7 +548,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
     def invoke_startup_services(self, is_first):
         _invoke_startup_services('Parallel', 'startup_services_first_worker' if is_first else 'startup_services_any_worker',
-            self.fs_server_config, self.repo_location, self.broker_client, 'zato.notif.init-notifiers',
+                                 self.fs_server_config, self.repo_location, self.broker_client, 'zato.notif.init-notifiers',
             is_sso_enabled=self.is_sso_enabled)
 
 # ################################################################################################################################
@@ -570,8 +575,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             mpt = stanza_config.get('move_processed_to')
             stanza_config.move_processed_to = absolutize(mpt, self.base_dir) if mpt else None
 
-            recipients = stanza_config.recipients
-            stanza_config.recipients = [recipients] if not isinstance(recipients, list) else recipients
+            services = stanza_config.get('services') or []
+            stanza_config.services = [services] if not isinstance(services, list) else services
+
+            topics = stanza_config.get('topics') or []
+            stanza_config.topics = [topics] if not isinstance(topics, list) else topics
 
             flags = globre.EXACT
 
@@ -696,6 +704,28 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def publish_pickup(self, topic_name, request, *args, **kwargs):
+        """ Publishes a pickedup file to a named topic.
+        """
+        self.invoke('zato.pubsub.publish.publish', {
+            'topic_name': topic_name,
+            'endpoint_id': self.default_internal_pubsub_endpoint_id,
+            'has_gd': False,
+            'data': dumps({
+                'meta': {
+                    'pickup_ts_utc': request['ts_utc'],
+                    'stanza': request['stanza'],
+                    'full_path': request['full_path'],
+                    'file_name': request['file_name'],
+                },
+                'data': {
+                    'raw': request['raw_data'],
+                }
+            })
+        })
+
+# ################################################################################################################################
+
     def deliver_pubsub_msg(self, msg):
         """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
         """
@@ -739,6 +769,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
         """
+        # Each subprocess needs to have the random number generator re-seeded.
+        numpy_seed()
 
         worker.app.zato_wsgi_app.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
             'arbiter': arbiter,

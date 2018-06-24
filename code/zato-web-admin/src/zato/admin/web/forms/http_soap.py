@@ -102,25 +102,3 @@ class SearchForm(_ChooseClusterForm):
 
         self.initial['connection'] = data.get('connection') or ''
         self.initial['transport'] = data.get('transport') or ''
-
-class ReplacePatternsForm(forms.Form):
-    audit_repl_patt_type = forms.ChoiceField(widget=forms.Select())
-    pattern_list = forms.CharField(widget=forms.Textarea(attrs={'rows':13, 'cols':70}), required=False)
-    audit_max_payload = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
-
-    def __init__(self, initial=None):
-        super(ReplacePatternsForm, self).__init__(initial=initial)
-
-        self.fields['audit_repl_patt_type'].choices = []
-        self.fields['audit_repl_patt_type'].choices.append(['', '----------'])
-
-        for item in MSG_PATTERN_TYPE:
-            self.fields['audit_repl_patt_type'].choices.append([item.id, item.name])
-
-class AuditLogEntryList(forms.Form):
-    """ List of audit log entries for a given HTTP/SOAP object.
-    """
-    start = forms.CharField(widget=forms.TextInput(attrs={'style':'width:150px; height:19px'}))
-    stop = forms.CharField(widget=forms.TextInput(attrs={'style':'width:150px; height:19px'}))
-    current_batch = forms.CharField(initial=BATCH_DEFAULTS.PAGE_NO, widget=forms.TextInput(attrs={'style':'width:50px; height:19px'}))
-    batch_size = forms.CharField(initial=BATCH_DEFAULTS.SIZE, widget=forms.TextInput(attrs={'style':'width:50px; height:19px'}))
