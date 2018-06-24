@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -637,9 +637,6 @@ class MISC:
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
 
-class LIVE_MSG_BROWSER:
-    DEFAULT_MAX_SHOWN = 1000
-
 class ADAPTER_PARAMS:
     APPLY_AFTER_REQUEST = 'apply-after-request'
     APPLY_BEFORE_REQUEST = 'apply-before-request'
@@ -1003,12 +1000,6 @@ class WEB_SOCKET:
     class DEFAULT:
         NEW_TOKEN_TIMEOUT = 5
         TOKEN_TTL = 3600
-
-        class LIVE_MSG_BROWSER:
-            CHANNEL = 'zato.web.admin.msg.live.browser'
-            USER = CHANNEL + '.user'
-            TOKEN_TTL = 864000 # 10 days
-            PORT = 48901
 
     class PATTERN:
         BY_EXT_ID = 'zato.by-ext-id.{}'

@@ -26,8 +26,6 @@ from zato.common.pubsub import new_sub_key
 from zato.common.util import get_http_json_channel, get_http_soap_channel
 from zato.common.util.time_ import utcnow_as_ms
 
-msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
-
 zato_services = {
 
     # Channels - AMQP
@@ -487,18 +485,12 @@ class Create(ZatoCommand):
             'Zato internal invoker', uuid4().hex, cluster)
         session.add(internal_invoke_sec)
 
-        live_browser_sec = JWT(
-            None, msg_browser_defaults.CHANNEL, True, msg_browser_defaults.USER,
-            uuid4().hex, msg_browser_defaults.TOKEN_TTL, cluster)
-        session.add(live_browser_sec)
-
         self.add_default_rbac_permissions(session, cluster)
         root_rbac_role = self.add_default_rbac_roles(session, cluster)
         ide_pub_rbac_role = self.add_rbac_role_and_acct(
             session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
 
-        self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec,
-            ide_pub_rbac_role)
+        self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, ide_pub_rbac_role)
 
         self.add_ping_services(session, cluster)
         self.add_default_cache(session, cluster)
@@ -532,8 +524,7 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec,
-        ide_pub_rbac_role):
+    def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, ide_pub_rbac_role):
         """ Adds these Zato internal services that can be accessed through SOAP requests.
         """
         #
@@ -561,9 +552,6 @@ class Create(ZatoCommand):
 
             elif name == 'zato.security.jwt.log-out':
                 self.add_jwt_log_out(session, cluster, service)
-
-            elif name == 'zato.message.live-browser.dispatch':
-                self.add_live_browser(session, cluster, service, live_browser_sec)
 
             elif name == 'zato.ide-deploy.create':
                 self.add_rbac_channel(session, cluster, service, ide_pub_rbac_role, '/ide-deploy', permit_write=True,
