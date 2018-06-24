@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -75,6 +75,10 @@ class Index(_Index):
 
             # Services
             data_list.service_list = self.req.zato.client.invoke('zato.service.get-list', {
+                'cluster_id': self.req.zato.cluster_id
+            }).data
+
+            data_list.out_amqp_list = self.req.zato.client.invoke('zato.outgoing.amqp.get-list', {
                 'cluster_id': self.req.zato.cluster_id
             }).data
 
