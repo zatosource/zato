@@ -574,8 +574,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             mpt = stanza_config.get('move_processed_to')
             stanza_config.move_processed_to = absolutize(mpt, self.base_dir) if mpt else None
 
-            recipients = stanza_config.recipients
-            stanza_config.recipients = [recipients] if not isinstance(recipients, list) else recipients
+            services = stanza_config.services
+            stanza_config.services = [services] if not isinstance(services, list) else services
 
             flags = globre.EXACT
 
