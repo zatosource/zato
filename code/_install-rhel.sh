@@ -18,9 +18,9 @@ sudo yum -y install \
 #    curl "$PYTHON_URL" | sudo tar -C / -jx
 #fi
 
-curl https://bootstrap.pypa.io/get-pip.py | sudo /opt/zato/code/bin/python2.7
-sudo /opt/zato/code/bin/python2.7 -m pip install -U setuptools virtualenv==15.1.0
+curl https://bootstrap.pypa.io/get-pip.py | sudo /opt/zato/current/code/bin/python2.7
+sudo /opt/zato/current/code/bin/python2.7 -m pip install -U setuptools virtualenv==15.1.0
 
-/opt/zato/code/bin/python2.7 -m virtualenv .
+/opt/zato/current/code/bin/python2.7 -m virtualenv .
 source ./bin/activate
 source ./_postinstall.sh
