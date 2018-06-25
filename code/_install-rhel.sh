@@ -1,9 +1,9 @@
 #!/bin/bash
 
-PYTHON_VER="2.7.13"
-PYTHON_URL="https://travis-ci-integration.s3.amazonaws.com/python27/python27.tar.bz2"
-PYTHON_PREFIX="/opt/zato/python/$PYTHON_VER"
-PATH="$PYTHON_PREFIX/bin:$PATH"
+#PYTHON_VER="2.7.13"
+#PYTHON_URL="https://travis-ci-integration.s3.amazonaws.com/python27/python27.tar.bz2"
+#PYTHON_PREFIX="/opt/zato/python/$PYTHON_VER"
+#PATH="$PYTHON_PREFIX/bin:$PATH"
 
 sudo yum -y install \
     bzip2 bzip2-devel curl cyrus-sasl-devel gcc-c++ git haproxy \
@@ -19,7 +19,7 @@ then
 fi
 
 curl https://bootstrap.pypa.io/get-pip.py | sudo $(type -p python2.7)
-sudo $(type -p python2.7) -m pip install -U setuptools virtualenv==15.1.0
+sudo /opt/zato/current/bin/python -m pip install -U setuptools virtualenv==15.1.0
 
 python2.7 -m virtualenv .
 source ./bin/activate
