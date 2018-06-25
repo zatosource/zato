@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,8 +23,6 @@ class BasicSettingsForm(forms.Form):
     timezone = forms.ChoiceField()
     date_format = forms.ChoiceField()
     time_format = forms.ChoiceField()
-    msg_browser_max_shown = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
-    msg_browser_show_internal = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     def __init__(self, initial, *args, **kwargs):
         super(BasicSettingsForm, self).__init__(initial, *args, **kwargs)

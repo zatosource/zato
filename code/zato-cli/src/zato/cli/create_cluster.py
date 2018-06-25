@@ -495,6 +495,7 @@ class Create(ZatoCommand):
         self.add_ping_services(session, cluster)
         self.add_default_cache(session, cluster)
         self.add_cache_endpoints(session, cluster)
+        self.add_crypto_endpoints(session, cluster)
         self.add_pubsub_sec_endpoints(session, cluster)
 
         # For IBM MQ connections / connectors
@@ -745,14 +746,6 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
-    def add_live_browser(self, session, cluster, service, live_browser_sec):
-        channel = ChannelWebSocket(None, msg_browser_defaults.CHANNEL, True, True,
-            'ws://0.0.0.0:{}/{}'.format(msg_browser_defaults.PORT, msg_browser_defaults.CHANNEL), DATA_FORMAT.JSON, 5,
-            msg_browser_defaults.TOKEN_TTL, service=service, cluster=cluster, security=live_browser_sec)
-        session.add(channel)
-
-# ################################################################################################################################
-
     def add_rbac_channel(self, session, cluster, service, rbac_role, url_path, permit_read=True, permit_write=False, **kwargs):
         """ Create an RBAC-authenticated plain HTTP channel associated with a service.
 
@@ -862,6 +855,43 @@ class Create(ZatoCommand):
         }
 
         sec = HTTPBasicAuth(None, 'zato.default.cache.client', True, 'zato.cache', 'Zato cache', uuid4().hex, cluster)
+        session.add(sec)
+
+        for name, impl_name in service_to_impl.iteritems():
+
+            service = Service(None, name, True, impl_name, True, cluster)
+            session.add(service)
+
+            url_path = service_to_endpoint[name]
+
+            http_soap = HTTPSOAP(None, name, True, True, 'channel', 'plain_http', None, url_path, None, '',
+                None, DATA_FORMAT.JSON, security=None, service=service, cluster=cluster)
+
+            session.add(http_soap)
+
+# ################################################################################################################################
+
+    def add_crypto_endpoints(self, session, cluster):
+
+        service_to_endpoint = {
+            'zato.crypto.encrypt':  '/zato/crypto/encrypt',
+            'zato.crypto.decrypt':  '/zato/crypto/decrypt',
+            'zato.crypto.hash-secret':  '/zato/crypto/hash-secret',
+            'zato.crypto.verify-hash':  '/zato/crypto/verify-hash',
+            'zato.crypto.generate-secret':  '/zato/crypto/generate-secret',
+            'zato.crypto.generate-password':  '/zato/crypto/generate-password',
+        }
+
+        service_to_impl = {
+            'zato.crypto.encrypt':  'zato.server.service.internal.crypto.Encrypt',
+            'zato.crypto.decrypt':  'zato.server.service.internal.crypto.Decrypt',
+            'zato.crypto.hash-secret':  'zato.server.service.internal.crypto.HashSecret',
+            'zato.crypto.verify-hash':  'zato.server.service.internal.crypto.VerifyHash',
+            'zato.crypto.generate-secret':  'zato.server.service.internal.crypto.GenerateSecret',
+            'zato.crypto.generate-password':  'zato.server.service.internal.crypto.GeneratePassword',
+        }
+
+        sec = HTTPBasicAuth(None, 'zato.default.crypto.client', True, 'zato.crypto', 'Zato crypto', uuid4().hex, cluster)
         session.add(sec)
 
         for name, impl_name in service_to_impl.iteritems():
