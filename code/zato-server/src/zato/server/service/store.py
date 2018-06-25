@@ -411,9 +411,8 @@ class ServiceStore(InitializingObject):
 
         si = self._get_source_code_info(mod)
 
-        if not(service_id and is_active is not None and slow_threshold):
-            service_id, is_active, slow_threshold = self.odb.add_service(
-                name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
+        service_id, is_active, slow_threshold = self.odb.add_service(
+            name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
 
         deployed.append(class_)
 
