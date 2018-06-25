@@ -46,7 +46,6 @@ then
     source ./_install-deb.sh
 elif [ "$(type -p yum)" ]
 then
-    source ./clean.sh
     source ./_install-rhel.sh
 elif [ "$(type -p apk)" ]
 then
