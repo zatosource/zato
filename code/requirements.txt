@@ -80,7 +80,7 @@ netifaces==0.10.4
 newrelic==2.20.0.17
 nltk==3.2.1
 nose==1.3.3
-numpy==1.14.0
+numpy==1.14.5
 oauth==1.0.1
 openerp-client-lib==1.1.2
 ordereddict==1.1
@@ -144,7 +144,7 @@ pysandra-unit==0.4.1
 ruamel.ordereddict==0.4.9
 ruamel.yaml==0.13.7
 sarge==0.1.3
-scipy==1.0.0
+scipy==1.1.0
 sec-wall==1.2
 setproctitle==1.1.10
 simple-rbac==0.1.1
