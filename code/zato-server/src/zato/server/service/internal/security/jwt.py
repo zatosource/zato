@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -75,7 +75,7 @@ class Create(AdminService):
                 if existing_one:
                     raise Exception('JWT definition `{}` already exists on this cluster'.format(input.name))
 
-                item = JWT()
+                item = self._new_zato_instance_with_cluster(JWT)
                 item.name = input.name
                 item.is_active = input.is_active
                 item.username = input.username
