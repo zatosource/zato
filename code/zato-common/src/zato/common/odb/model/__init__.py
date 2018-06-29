@@ -1164,7 +1164,7 @@ class OutgoingOdoo(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_odoo', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, cluster):
+    def __init__(self, cluster=None):
         self.cluster = cluster
         self.protocol_name = None # Not used by the DB
 
@@ -1195,7 +1195,7 @@ class OutgoingSAP(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_sap', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, cluster):
+    def __init__(self, cluster=None):
         self.cluster = cluster
 
 # ################################################################################################################################
@@ -1223,7 +1223,7 @@ class OutgoingSTOMP(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_stomp', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, cluster):
+    def __init__(self, cluster=None):
         self.cluster = cluster
 
 # ################################################################################################################################
