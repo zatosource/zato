@@ -47,6 +47,11 @@ hook_type_to_method = {
 
 # ################################################################################################################################
 
+_search_service_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-gd'
+_search_service_non_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-non-gd'
+
+# ################################################################################################################################
+
 _pub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.PUBLISHER.id)
 _sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
 
@@ -1644,4 +1649,67 @@ class PubSub(object):
                     logger_zato.warn(format_exc())
                     logger.warn(format_exc())
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Public API methods
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def publish(self, topic_name, *args, **kwargs):
+        """ Publishes a new message to input topic_name.
+        POST /zato/pubsub/topic/{topic_name}
+        """
+        data = kwargs.get('data') or ''
+        msg_id = kwargs.get('msg_id') or ''
+        has_gd = kwargs.get('has_gd')
+        priority = kwargs.get('priority')
+        expiration = kwargs.get('expiration')
+        mime_type = kwargs.get('mime_type')
+        correl_id = kwargs.get('correl_id')
+        in_reply_to = kwargs.get('in_reply_to')
+        ext_client_id = kwargs.get('ext_client_id')
+        ext_pub_time = kwargs.get('ext_pub_time')
+        endpoint_id = kwargs.get('endpoint_id')
+
+        response = self.invoke_service('zato.pubsub.publish.publish', {
+            'topic_name': topic_name,
+            'data': data,
+            'msg_id': msg_id,
+            'has_gd': has_gd,
+            'priority': priority,
+            'expiration': expiration,
+            'mime_type': mime_type,
+            'correl_id': correl_id,
+            'in_reply_to': in_reply_to,
+            'ext_client_id': ext_client_id,
+            'ext_pub_time': ext_pub_time,
+            'endpoint_id': self.server.default_internal_pubsub_endpoint_id,
+        }, serialize=False)
+
+        return response.response['msg_id']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def get_messages(self, topic_name, sub_key, has_gd, *args, **kwargs):
+        """ Looks up messages in subscriber's queue by input criteria without deleting them from the queue.
+        GET /zato/pubsub/topic/{topic_name}
+        """
+        service_name = _search_service_gd if has_gd else _search_service_non_gd
+
+        paginate = kwargs.get('paginate') or True
+        query = kwargs.get('query') or ''
+        cur_page = kwargs.get('cur_page') or 1
+
+        return self.invoke_service(service_name, {
+            'cluster_id': self.server.cluster_id,
+            'sub_key': sub_key,
+            'paginate': paginate,
+            'query': query,
+            'cur_page': cur_page,
+        }, serialize=False).response
+
+# ################################################################################################################################
 # ################################################################################################################################

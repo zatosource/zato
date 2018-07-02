@@ -283,7 +283,15 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def run(self, default_sleep_time=0.1, _status=PUBSUB.RUN_DELIVERY_STATUS):
+    def run(self, default_sleep_time=0.1, _status=PUBSUB.RUN_DELIVERY_STATUS, _notify=PUBSUB.DELIVERY_METHOD.NOTIFY.id):
+
+        # We are a task that does not notify endpoints of nothing - they will query us themselves
+        # so we can just return immediately.
+        if self.sub_config.delivery_method != _notify:
+            logger.info('Not starting a non-notify delivery task for sub_key:`%s` (%s)',
+                self.sub_key, self.sub_config.delivery_method)
+            return
+
         logger.info('Starting delivery task for sub_key:`%s`', self.sub_key)
 
         try:

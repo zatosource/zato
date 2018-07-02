@@ -74,7 +74,7 @@ class Create(_CreateEdit):
                 if existing_one:
                     raise Exception('XPath security definition [{0}] already exists on this cluster'.format(input.name))
 
-                auth = XPathSecurity()
+                auth = self._new_zato_instance_with_cluster(XPathSecurity)
                 auth.name = input.name
                 auth.is_active = input.is_active
                 auth.username = input.username
