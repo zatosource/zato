@@ -113,12 +113,26 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def delete_messages(self, msg_list):
-        """ Requests that all messages from input list be deleted before the next delivery.
+    def _delete_messages(self, to_delete):
+        """ Actually deletes messages - must be called with self.interrupt_lock held.
         """
-        logger.info('Marking message(s) to be deleted `%s` from `%s` (%s)', msg_list, self.sub_key, self.topic_name)
+        logger.info('Deleting message(s) `%s` from `%s` (%s)', to_delete, self.sub_key, self.topic_name)
 
+        # Mark as deleted in SQL
+        self.pubsub.set_to_delete(self.sub_key, [msg.pub_msg_id for msg in to_delete])
+
+        # Delete from our in-RAM delivery list
+        for msg in to_delete:
+            self.delivery_list.remove_pubsub_msg(msg)
+
+# ################################################################################################################################
+
+    def delete_messages(self, msg_list, _notify=PUBSUB.DELIVERY_METHOD.NOTIFY.id):
+        """ For notify tasks, requests that all messages from input list be deleted before the next delivery.
+        Otherwise, deletes the messages immediately.
+        """
         with self.interrupt_lock:
+
             # Build a list of actual messages to be deleted - we cannot use a msg_id list only
             # because the SortedList always expects actual message objects for comparison purposes.
             # This will not be called too often so it is fine to iterate over self.delivery_list
@@ -129,7 +143,15 @@ class DeliveryTask(object):
                     msg_list.remove(msg.pub_msg_id) # We can trim it since we know it won't appear again
                     to_delete.append(msg)
 
-            self.delete_requested.extend(to_delete)
+            # We are a task that sends out notifications
+            if self.sub_config.delivery_method == _notify:
+
+                logger.info('Marking message(s) to be deleted `%s` from `%s` (%s)', msg_list, self.sub_key, self.topic_name)
+                self.delete_requested.extend(to_delete)
+
+            # We do not send notifications and self.run never runs so we need to delete the messages here
+            else:
+                self._delete_messages(to_delete)
 
 # ################################################################################################################################
 
@@ -213,13 +235,7 @@ class DeliveryTask(object):
             # Delete these messages first, before starting any delivery, either because the hooks told us to
             # or because self.delete_requested was not empty before this iteration.
             if to_delete:
-
-                # Mark as deleted in SQL
-                self.pubsub.set_to_delete(self.sub_key, [msg.pub_msg_id for msg in to_delete])
-
-                # Delete from our in-RAM delivery list
-                for msg in to_delete:
-                    self.delivery_list.remove_pubsub_msg(msg)
+                self._delete_messages(to_delete)
 
             if to_skip:
                 logger.info('Skipping messages `%s`', to_skip)
@@ -292,7 +308,8 @@ class DeliveryTask(object):
                 self.sub_key, self.sub_config.delivery_method)
             return
 
-        logger.info('Starting delivery task for sub_key:`%s`', self.sub_key)
+        logger.info('Starting delivery task for sub_key:`%s` (%s, %s)',
+            self.sub_key, self.topic_name, self.sub_config.delivery_method)
 
         try:
             while self.keep_running:
