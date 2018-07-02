@@ -435,14 +435,26 @@ class DeleteEndpointQueue(AdminService):
 
 # ################################################################################################################################
 
-class GetEndpointQueueMessagesGD(AdminService):
+class _GetMessagesBase(object):
+    def _get_sub_by_sub_input(self):
+        if self.request.input.sub_id:
+            return self.pubsub.get_subscription_by_id(self.request.input.sub_id)
+        elif self.request.input.sub_key:
+            return self.pubsub.get_subscription_by_sub_key(self.request.input.sub_key)
+        else:
+            raise Exception('Either sub_id or sub_key must be given on input')
+
+# ################################################################################################################################
+
+class GetEndpointQueueMessagesGD(AdminService, _GetMessagesBase):
     """ Returns a list of GD messages queued up for input subscription.
     """
     _filter_by = PubSubMessage.data_prefix,
     SimpleIO = _GetEndpointQueueMessagesSIO
 
     def get_data(self, session):
-        sub = self.pubsub.get_subscription_by_id(self.request.input.sub_id)
+        sub = self._get_sub_by_sub_input()
+
         return self._search(
             pubsub_messages_for_queue, session, self.request.input.cluster_id, sub.sub_key, True, False)
 
@@ -478,13 +490,13 @@ class GetServerEndpointQueueMessagesNonGD(AdminService):
 
 # ################################################################################################################################
 
-class GetEndpointQueueMessagesNonGD(NonGDSearchService):
+class GetEndpointQueueMessagesNonGD(NonGDSearchService, _GetMessagesBase):
     """ Returns a list of non-GD messages for an input queue by its sub_key.
     """
     SimpleIO = _GetEndpointQueueMessagesSIO
 
     def handle(self):
-        sub = self.pubsub.get_subscription_by_id(self.request.input.sub_id)
+        sub = self._get_sub_by_sub_input()
         sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
 
         if sk_server:
