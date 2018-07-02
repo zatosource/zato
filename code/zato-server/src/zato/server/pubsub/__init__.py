@@ -47,6 +47,17 @@ hook_type_to_method = {
 
 # ################################################################################################################################
 
+_service_get_messages_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-gd'
+_service_get_messages_non_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-non-gd'
+
+_service_get_message_gd = 'zato.pubsub.message.get-from-queue-gd'
+_service_get_message_non_gd = 'zato.pubsub.message.get-from-queue-non-gd'
+
+_service_delete_message_gd = 'zato.pubsub.message.queue-delete-gd'
+_service_delete_message_non_gd = 'zato.pubsub.message.queue-delete-non-gd'
+
+# ################################################################################################################################
+
 _pub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.PUBLISHER.id)
 _sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
 
@@ -1644,4 +1655,127 @@ class PubSub(object):
                     logger_zato.warn(format_exc())
                     logger.warn(format_exc())
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+# Public API methods
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def publish(self, topic_name, *args, **kwargs):
+        """ Publishes a new message to input topic_name.
+        POST /zato/pubsub/topic/{topic_name}
+        """
+        data = kwargs.get('data') or ''
+        msg_id = kwargs.get('msg_id') or ''
+        has_gd = kwargs.get('has_gd')
+        priority = kwargs.get('priority')
+        expiration = kwargs.get('expiration')
+        mime_type = kwargs.get('mime_type')
+        correl_id = kwargs.get('correl_id')
+        in_reply_to = kwargs.get('in_reply_to')
+        ext_client_id = kwargs.get('ext_client_id')
+        ext_pub_time = kwargs.get('ext_pub_time')
+        endpoint_id = kwargs.get('endpoint_id')
+
+        response = self.invoke_service('zato.pubsub.publish.publish', {
+            'topic_name': topic_name,
+            'data': data,
+            'msg_id': msg_id,
+            'has_gd': has_gd,
+            'priority': priority,
+            'expiration': expiration,
+            'mime_type': mime_type,
+            'correl_id': correl_id,
+            'in_reply_to': in_reply_to,
+            'ext_client_id': ext_client_id,
+            'ext_pub_time': ext_pub_time,
+            'endpoint_id': self.server.default_internal_pubsub_endpoint_id,
+        }, serialize=False)
+
+        return response.response['msg_id']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def get_messages(self, topic_name, sub_key, has_gd, *args, **kwargs):
+        """ Looks up messages in subscriber's queue by input criteria without deleting them from the queue.
+        GET /zato/pubsub/topic/{topic_name}
+        """
+        service_name = _service_get_messages_gd if has_gd else _service_get_messages_non_gd
+
+        paginate = kwargs.get('paginate') or True
+        query = kwargs.get('query') or ''
+        cur_page = kwargs.get('cur_page') or 1
+
+        return self.invoke_service(service_name, {
+            'cluster_id': self.server.cluster_id,
+            'sub_key': sub_key,
+            'paginate': paginate,
+            'query': query,
+            'cur_page': cur_page,
+        }, serialize=False).response
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def get_message(self, topic_name, msg_id, has_gd, *args, **kwargs):
+        """ Returns details of a particular message without deleting it from the subscriber's queue.
+        GET /zato/pubsub/msg/{msg_id}
+        """
+        if has_gd:
+            service_name = _service_get_message_gd
+            service_data = {
+                'cluster_id': self.server.cluster_id,
+                'msg_id': msg_id
+            }
+        else:
+            sub_key = kwargs.get('sub_key')
+            server_name = kwargs.get('server_name')
+            server_pid = kwargs.get('server_pid')
+
+            if not(sub_key and server_name and server_pid):
+                raise Exception('All of sub_key, server_name and server_pid are required for non-GD messages')
+
+            service_name = _service_get_message_non_gd
+            service_data = {
+                'cluster_id': self.server.cluster_id,
+                'msg_id': msg_id,
+                'sub_key': sub_key,
+                'server_name': server_name,
+                'server_pid': server_pid,
+            }
+
+        return self.invoke_service(service_name, service_data, serialize=False).response
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def delete_message(self, sub_key, msg_id, has_gd, *args, **kwargs):
+        """ Deletes a message from a subscriber's queue.
+        DELETE /zato/pubsub/msg/{msg_id}
+        """
+        service_data = {
+            'sub_key': sub_key,
+            'msg_id': msg_id,
+        }
+        if has_gd:
+            service_name = _service_delete_message_gd
+            service_data['cluster_id'] = self.server.cluster_id
+        else:
+            server_name = kwargs.get('server_name')
+            server_pid = kwargs.get('server_pid')
+
+            if not(sub_key and server_name and server_pid):
+                raise Exception('All of sub_key, server_name and server_pid are required for non-GD messages')
+
+            service_name = _service_delete_message_non_gd
+            service_data['server_name'] = server_name
+            service_data['server_pid'] = server_pid
+
+        # There is no response currently but one may be added at a later time
+        return self.invoke_service(service_name, service_data, serialize=False)
+
+# ################################################################################################################################
 # ################################################################################################################################
