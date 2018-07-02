@@ -271,7 +271,7 @@ class Publish(AdminService):
             elif ws_channel_id:
                 endpoint_id = pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
             else:
-                raise NotImplementedError('To be implemented')
+                raise Exception('Either security_id or ws_channel_id is required if there is no endpoint_id')
 
             kwargs = {'security_id':security_id} if security_id else {'ws_channel_id':ws_channel_id}
             pub_pattern_matched = pubsub.is_allowed_pub_topic(input.topic_name, **kwargs)

@@ -47,8 +47,8 @@ class GetList(_Base):
         input_required = (AsIs('cache_id'),)
         input_optional = GetListAdminSIO.input_optional + (Int('max_chars'),)
         output_required = (AsIs('cache_id'), 'key', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
-            'last_read', 'prev_read', 'last_write', 'prev_write', 'chars_omitted', 'server')
-        output_optional = ('value',)
+            'last_read', 'prev_read', 'last_write', 'prev_write', 'server')
+        output_optional = ('value', 'chars_omitted')
         output_repeated = True
 
 # ################################################################################################################################

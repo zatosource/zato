@@ -1,8 +1,8 @@
 #!/bin/bash
 
-if ! [[ "$(< /etc/alpine-release)" =~ '^3\.7\.' ]]
+if ! [[ "$(< /etc/alpine-release)" =~ '^3\.6\.' ]]
 then
-    echo "install.sh: Unsupported OS: only Alpine Linux 3.7.x is supported." >&2
+    echo "install.sh: Unsupported OS: only Alpine Linux 3.6.x is supported." >&2
     exit 1
 fi
 

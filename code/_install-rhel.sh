@@ -1,5 +1,3 @@
-#!/bin/bash
-
 PYTHON_VER="2.7.13"
 PYTHON_URL="https://travis-ci-integration.s3.amazonaws.com/python27/python27.tar.bz2"
 PYTHON_PREFIX="/opt/zato/python/$PYTHON_VER"
