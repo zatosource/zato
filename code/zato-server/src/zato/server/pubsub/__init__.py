@@ -47,8 +47,14 @@ hook_type_to_method = {
 
 # ################################################################################################################################
 
-_search_service_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-gd'
-_search_service_non_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-non-gd'
+_service_get_messages_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-gd'
+_service_get_messages_non_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-non-gd'
+
+_service_get_message_gd = 'zato.pubsub.message.get-from-queue-gd'
+_service_get_message_non_gd = 'zato.pubsub.message.get-from-queue-non-gd'
+
+_service_delete_message_gd = 'zato.pubsub.message.queue-delete-gd'
+_service_delete_message_non_gd = 'zato.pubsub.message.queue-delete-non-gd'
 
 # ################################################################################################################################
 
@@ -1697,7 +1703,7 @@ class PubSub(object):
         """ Looks up messages in subscriber's queue by input criteria without deleting them from the queue.
         GET /zato/pubsub/topic/{topic_name}
         """
-        service_name = _search_service_gd if has_gd else _search_service_non_gd
+        service_name = _service_get_messages_gd if has_gd else _service_get_messages_non_gd
 
         paginate = kwargs.get('paginate') or True
         query = kwargs.get('query') or ''
@@ -1710,6 +1716,66 @@ class PubSub(object):
             'query': query,
             'cur_page': cur_page,
         }, serialize=False).response
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def get_message(self, topic_name, msg_id, has_gd, *args, **kwargs):
+        """ Returns details of a particular message without deleting it from the subscriber's queue.
+        GET /zato/pubsub/msg/{msg_id}
+        """
+        if has_gd:
+            service_name = _service_get_message_gd
+            service_data = {
+                'cluster_id': self.server.cluster_id,
+                'msg_id': msg_id
+            }
+        else:
+            sub_key = kwargs.get('sub_key')
+            server_name = kwargs.get('server_name')
+            server_pid = kwargs.get('server_pid')
+
+            if not(sub_key and server_name and server_pid):
+                raise Exception('All of sub_key, server_name and server_pid are required for non-GD messages')
+
+            service_name = _service_get_message_non_gd
+            service_data = {
+                'cluster_id': self.server.cluster_id,
+                'msg_id': msg_id,
+                'sub_key': sub_key,
+                'server_name': server_name,
+                'server_pid': server_pid,
+            }
+
+        return self.invoke_service(service_name, service_data, serialize=False).response
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def delete_message(self, sub_key, msg_id, has_gd, *args, **kwargs):
+        """ Deletes a message from a subscriber's queue.
+        DELETE /zato/pubsub/msg/{msg_id}
+        """
+        service_data = {
+            'sub_key': sub_key,
+            'msg_id': msg_id,
+        }
+        if has_gd:
+            service_name = _service_delete_message_gd
+            service_data['cluster_id'] = self.server.cluster_id
+        else:
+            server_name = kwargs.get('server_name')
+            server_pid = kwargs.get('server_pid')
+
+            if not(sub_key and server_name and server_pid):
+                raise Exception('All of sub_key, server_name and server_pid are required for non-GD messages')
+
+            service_name = _service_delete_message_non_gd
+            service_data['server_name'] = server_name
+            service_data['server_pid'] = server_pid
+
+        # There is no response currently but one may be added at a later time
+        return self.invoke_service(service_name, service_data, serialize=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
