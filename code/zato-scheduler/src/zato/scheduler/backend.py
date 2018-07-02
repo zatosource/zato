@@ -18,7 +18,7 @@ from dateutil.rrule import rrule, SECONDLY
 
 # gevent
 import gevent # Imported directly so it can be mocked out in tests
-from gevent import lock
+from gevent import lock, sleep
 
 # paodate
 from paodate import Delta
@@ -424,14 +424,18 @@ class Scheduler(object):
         job.on_max_repeats_reached_cb = self.on_max_repeats_reached
         self.job_greenlets[job.name] = self._spawn(job.run)
 
+    def add_startup_jobs(self):
+        sleep(40) # To make sure that at least one server is running if the environment was started from quickstart scripts
+        cluster_conf = self.config.main.cluster
+        add_startup_jobs(cluster_conf.id, self.odb, self.startup_jobs, asbool(cluster_conf.stats_enabled))
+
     def run(self):
 
         try:
 
             # Add the statistics-related scheduler jobs to the ODB
             if self._add_startup_jobs:
-                cluster_conf = self.config.main.cluster
-                add_startup_jobs(cluster_conf.id, self.odb, self.startup_jobs, asbool(cluster_conf.stats_enabled))
+                spawn_greenlet(self.add_startup_jobs)
 
             # All other jobs
             if self._add_scheduler_jobs:

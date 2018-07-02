@@ -159,7 +159,7 @@ cdef class CyURLData(object):
                     if matcher.is_static:
                         self.url_path_cache[target] = item_bunch
 
-                    return {}, item_bunch
+                    return match, item_bunch
 
             return None, None
 
