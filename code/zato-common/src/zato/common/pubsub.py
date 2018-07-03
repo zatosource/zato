@@ -14,11 +14,18 @@ from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 
-_skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pub_pattern_matched', 'sub_pattern_matched',
+skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pub_pattern_matched', 'sub_pattern_matched',
     'published_by_id', 'data_prefix', 'data_prefix_short', 'pub_time', 'expiration_time', 'recv_time',
     'pub_msg_id', 'pub_correl_id')
 
 _data_keys=('data', 'data_prefix', 'data_prefix_short')
+
+msg_pub_attrs = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id',
+    'position_in_group', 'pub_time', 'ext_pub_time', 'data', 'data_prefix', 'data_prefix_short', 'mime_type', 'priority',
+    'expiration', 'expiration_time', 'has_gd', 'delivery_status', 'size', 'published_by_id', 'topic_id',
+    'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso',
+    'recv_time', 'data_prefix_short', 'server_name', 'server_pid', 'pub_pattern_matched', 'sub_pattern_matched',
+    'delivery_count')
 
 # ################################################################################################################################
 
@@ -42,12 +49,7 @@ class PubSubMessage(object):
     """
     # We are not using __slots__ because they can't be inherited by subclasses
     # and this class, as well as its subclasses, will be rewritten in Cython anyway.
-    _attrs = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id', 'position_in_group',
-        'pub_time', 'ext_pub_time', 'data', 'data_prefix', 'data_prefix_short', 'mime_type', 'priority', 'expiration',
-        'expiration_time', 'has_gd', 'delivery_status', 'size', 'published_by_id', 'topic_id',
-        'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso',
-        'recv_time', 'data_prefix_short', 'server_name', 'server_pid', 'pub_pattern_matched', 'sub_pattern_matched',
-        'delivery_count')
+    pub_attrs = msg_pub_attrs
 
     def __init__(self):
         self.recv_time = utcnow_as_ms()
@@ -90,7 +92,7 @@ class PubSubMessage(object):
         """
         skip = skip or []
         out = {}
-        for key in sorted(PubSubMessage._attrs):
+        for key in sorted(PubSubMessage.pub_attrs):
             if key != 'topic' and key not in skip:
                 value = getattr(self, key)
                 if value is not None:
@@ -106,7 +108,7 @@ class PubSubMessage(object):
 
         return out
 
-    def to_external_dict(self, skip=_skip_to_external, needs_utf8_encode=False):
+    def to_external_dict(self, skip=skip_to_external, needs_utf8_encode=False):
         """ Returns a dict representation of self ready to be delivered to external systems,
         i.e. without internal attributes on output.
         """

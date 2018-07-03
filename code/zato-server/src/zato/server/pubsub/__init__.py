@@ -28,6 +28,7 @@ from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_delivery_server_for_sub_key, get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
+from zato.common.pubsub import skip_to_external
 from zato.common.util import is_func_overridden, make_repr, new_cid, spawn_greenlet
 from zato.common.util.pubsub import make_short_msg_copy_from_dict
 from zato.common.util.time_ import utcnow_as_ms
@@ -47,11 +48,11 @@ hook_type_to_method = {
 
 # ################################################################################################################################
 
-_service_get_messages_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-gd'
-_service_get_messages_non_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-non-gd'
+_service_read_messages_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-gd'
+_service_read_messages_non_gd = 'zato.pubsub.endpoint.get-endpoint-queue-messages-non-gd'
 
-_service_get_message_gd = 'zato.pubsub.message.get-from-queue-gd'
-_service_get_message_non_gd = 'zato.pubsub.message.get-from-queue-non-gd'
+_service_read_message_gd = 'zato.pubsub.message.get-from-queue-gd'
+_service_read_message_non_gd = 'zato.pubsub.message.get-from-queue-non-gd'
 
 _service_delete_message_gd = 'zato.pubsub.message.queue-delete-gd'
 _service_delete_message_non_gd = 'zato.pubsub.message.queue-delete-non-gd'
@@ -1691,7 +1692,7 @@ class PubSub(object):
             'in_reply_to': in_reply_to,
             'ext_client_id': ext_client_id,
             'ext_pub_time': ext_pub_time,
-            'endpoint_id': self.server.default_internal_pubsub_endpoint_id,
+            'endpoint_id': endpoint_id or self.server.default_internal_pubsub_endpoint_id,
         }, serialize=False)
 
         return response.response['msg_id']
@@ -1699,11 +1700,35 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def get_messages(self, topic_name, sub_key, has_gd, *args, **kwargs):
-        """ Looks up messages in subscriber's queue by input criteria without deleting them from the queue.
-        GET /zato/pubsub/topic/{topic_name}
+    def get_messages(self, topic_name, sub_key, needs_details=False, _skip=skip_to_external):
+        """ Returns messages from a subscriber's queue, deleting them from the queue in progress.
+        GET /zato/pubsub/topic/{topic_name}?sub_key=...
         """
-        service_name = _service_get_messages_gd if has_gd else _service_get_messages_non_gd
+        response = self.invoke_service('zato.pubsub.endpoint.get-delivery-messages', {
+            'cluster_id': self.server.cluster_id,
+            'sub_key': sub_key,
+        }, serialize=False).response
+
+        # Already includes all the details ..
+        if needs_details:
+            return response
+
+        # .. otherwise, we need to make sure they are not returned
+        out = []
+        for item in response:
+            for name in _skip:
+                item.pop(name, None)
+            out.append(item)
+        return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def read_messages(self, topic_name, sub_key, has_gd, *args, **kwargs):
+        """ Looks up messages in subscriber's queue by input criteria without deleting them from the queue.
+        GET /zato/pubsub/topic/{topic_name}?read=1&sub_key=...
+        """
+        service_name = _service_read_messages_gd if has_gd else _service_read_messages_non_gd
 
         paginate = kwargs.get('paginate') or True
         query = kwargs.get('query') or ''
@@ -1720,12 +1745,12 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def get_message(self, topic_name, msg_id, has_gd, *args, **kwargs):
+    def read_message(self, topic_name, msg_id, has_gd, *args, **kwargs):
         """ Returns details of a particular message without deleting it from the subscriber's queue.
         GET /zato/pubsub/msg/{msg_id}
         """
         if has_gd:
-            service_name = _service_get_message_gd
+            service_name = _service_read_message_gd
             service_data = {
                 'cluster_id': self.server.cluster_id,
                 'msg_id': msg_id
@@ -1738,7 +1763,7 @@ class PubSub(object):
             if not(sub_key and server_name and server_pid):
                 raise Exception('All of sub_key, server_name and server_pid are required for non-GD messages')
 
-            service_name = _service_get_message_non_gd
+            service_name = _service_read_message_non_gd
             service_data = {
                 'cluster_id': self.server.cluster_id,
                 'msg_id': msg_id,
