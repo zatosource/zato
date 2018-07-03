@@ -21,9 +21,10 @@ from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, 
      pubsub_endpoint_queue_list_by_sub_keys, pubsub_messages_for_queue, server_by_id
 from zato.common.odb.query.pubsub.endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id
+from zato.common.pubsub import msg_pub_attrs
 from zato.common.util.pubsub import make_short_msg_copy_from_msg
 from zato.common.util.time_ import datetime_from_ms
-from zato.server.service import AsIs, Int, List
+from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
 from zato.server.service.internal.pubsub.search import NonGDSearchService
@@ -39,6 +40,22 @@ broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
 skip_input_params = ['sub_key', 'is_sub_allowed']
 output_optional_extra = ['ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key']
+
+# ################################################################################################################################
+
+msg_pub_attrs_sio = []
+
+for name in msg_pub_attrs:
+    if name in ('topic', 'is_in_sub_queue', 'position_in_group', 'group_id'):
+        continue
+    elif name.endswith('_id'):
+        msg_pub_attrs_sio.append(AsIs(name))
+    elif name in ('position_in_group', 'priority', 'size', 'delivery_count'):
+        msg_pub_attrs_sio.append(Int(name))
+    elif name.startswith(('has_', 'is_')):
+        msg_pub_attrs_sio.append(Bool(name))
+    else:
+        msg_pub_attrs_sio.append(name)
 
 # ################################################################################################################################
 
@@ -437,9 +454,9 @@ class DeleteEndpointQueue(AdminService):
 
 class _GetMessagesBase(object):
     def _get_sub_by_sub_input(self):
-        if self.request.input.sub_id:
+        if self.request.input.get('sub_id'):
             return self.pubsub.get_subscription_by_id(self.request.input.sub_id)
-        elif self.request.input.sub_key:
+        elif self.request.input.get('sub_key'):
             return self.pubsub.get_subscription_by_sub_key(self.request.input.sub_key)
         else:
             raise Exception('Either sub_id or sub_key must be given on input')
@@ -608,5 +625,42 @@ class GetTopicSubList(AdminService):
             })
 
         self.response.payload.topic_sub_list = out
+
+# ################################################################################################################################
+
+class GetServerDeliveryMessages(AdminService):
+    """ Returns a list of messages to be delivered to input endpoint. The messages must exist on current server.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('sub_key',)
+        output_optional = ('msg_list',)
+
+    def handle(self):
+        ps_tool = self.pubsub.get_pubsub_tool_by_sub_key(self.request.input.sub_key)
+        self.response.payload.msg_list = ps_tool.pull_messages(self.request.input.sub_key)
+
+# ################################################################################################################################
+
+class GetDeliveryMessages(AdminService, _GetMessagesBase):
+    """ Returns a list of messages to be delivered to input endpoint.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'sub_key')
+        output_optional = msg_pub_attrs_sio
+        output_repeated = True
+        skip_empty_keys = True
+        default_value = None
+
+    def handle(self):
+        sub = self._get_sub_by_sub_input()
+        sk_server = self.pubsub.get_delivery_server_by_sub_key(sub.sub_key)
+
+        if sk_server:
+            response = self.servers[sk_server.server_name].invoke(GetServerDeliveryMessages.get_name(), {
+                'sub_key': sub.sub_key,
+            }, pid=sk_server.server_pid)
+
+            if response:
+                self.response.payload[:] = reversed(response['response']['msg_list'])
 
 # ################################################################################################################################

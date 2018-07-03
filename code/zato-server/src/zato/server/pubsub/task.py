@@ -156,7 +156,7 @@ class DeliveryTask(object):
 # ################################################################################################################################
 
     def get_messages(self, has_gd):
-        """ Returns all messages enqueued in the delivery list.
+        """ Returns all messages enqueued in the delivery list, without deleting them from self.delivery_list.
         """
         if has_gd is None:
             out = [msg for msg in self.delivery_list]
@@ -174,6 +174,34 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
+    def pull_messages(self):
+        """ Implements pull-style delivery - returns messages enqueued for sub_key, deleting them in progress.
+        """
+        # Output to produce
+        out = []
+
+        # A function wrapper that will append to output
+        _append_to_out_func = self._append_to_pull_messages(out)
+
+        # Runs the delivery with our custom function that handles all messages to be delivered
+        self.run_delivery(_append_to_out_func)
+
+        # OK, we have the output and can return it
+        return [elem.to_dict() for elem in out]
+
+# ################################################################################################################################
+
+    def _append_to_pull_messages(self, out):
+        def _impl(sub_key, to_deliver):
+            if isinstance(to_deliver, list):
+                out.extend(to_deliver)
+            else:
+                out.append(to_deliver)
+
+        return _impl
+
+# ################################################################################################################################
+
     def get_message(self, msg_id):
         """ Returns a particular message enqueued by this delivery task.
         """
@@ -183,13 +211,17 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def _run_delivery(self, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
+    def run_delivery(self, deliver_pubsub_msg_cb=None, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
         # Try to deliver a batch of messages or a single message if batch size is 1
         # and we should not wrap it in a list.
         try:
+
+            # For pull-type deliveries, this will be given on input. For notify-type deliveries,
+            # we use the callback assigned to self.
+            deliver_pubsub_msg_cb = deliver_pubsub_msg_cb if deliver_pubsub_msg_cb else self.deliver_pubsub_msg_cb
 
             # Deliver up to that many messages in one batch
             current_batch = self.delivery_list[:self.sub_config.delivery_batch_size]
@@ -241,7 +273,7 @@ class DeliveryTask(object):
                 logger.info('Skipping messages `%s`', to_skip)
 
             # This is the call that actually delivers messages
-            self.deliver_pubsub_msg_cb(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
+            deliver_pubsub_msg_cb(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
 
         except Exception as e:
             # Do not attempt to deliver any other message in case of an error. Our parent will sleep for a small amount of
@@ -323,7 +355,7 @@ class DeliveryTask(object):
                         # Get the list of all message IDs for which delivery was successful,
                         # indicating whether all currently lined up messages have been
                         # successfully delivered.
-                        result = self._run_delivery()
+                        result = self.run_delivery()
 
                         # On success, sleep for a moment because we have just run out of all messages.
                         if result == _status.OK:
@@ -333,7 +365,7 @@ class DeliveryTask(object):
                             sleep(default_sleep_time)
 
                         # Otherwise, sleep for a longer time because our endpoint must have returned an error.
-                        # After this sleep, self._run_delivery will again attempt to deliver all messages
+                        # After this sleep, self.run_delivery will again attempt to deliver all messages
                         # we queued up. Note that we are the only delivery task for this sub_key  so when we sleep here
                         # for a moment, we do not block other deliveries.
                         else:
@@ -856,10 +888,18 @@ class PubSubTool(object):
 # ################################################################################################################################
 
     def get_messages(self, sub_key, has_gd=None):
-        """ Returns all messages enqueued for sub_key.
+        """ Returns all messages enqueued for sub_key without deleting them from their queue.
         """
         with self.lock:
             return self.delivery_tasks[sub_key].get_messages(has_gd)
+
+# ################################################################################################################################
+
+    def pull_messages(self, sub_key, has_gd=None):
+        """ Implements pull-style delivery - returns messages enqueued for sub_key, deleting them in progress.
+        """
+        with self.lock:
+            return self.delivery_tasks[sub_key].pull_messages()
 
 # ################################################################################################################################
 
