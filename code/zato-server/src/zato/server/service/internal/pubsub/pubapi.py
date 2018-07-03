@@ -10,12 +10,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime
+from traceback import format_exc
 
 # rapidjson
-from rapidjson import loads
+from rapidjson import dumps, loads
 
 # Zato
-from zato.common import CONTENT_TYPE
+from zato.common import CONTENT_TYPE, PUBSUB
 from zato.common.exception import BadRequest, Forbidden
 from zato.common.util import new_cid
 from zato.server.connection.web_socket import WebSocket
@@ -41,8 +42,11 @@ def parse_basic_auth(auth, prefix = 'Basic '):
 class PubSubService(Service):
     class SimpleIO:
         input_required = ('topic_name',)
-        input_optional = (Bool('gd'),)
         response_elem = None
+        skip_empty_keys = True
+        default_value = None
+
+# ################################################################################################################################
 
     def _pubsub_check_credentials(self):
         auth = self.wsgi_environ.get('HTTP_AUTHORIZATION')
@@ -69,53 +73,71 @@ class PubSubService(Service):
         if not auth_ok:
             raise Forbidden(self.cid)
 
-        return security_id
+        try:
+            endpoint_id = self.pubsub.get_endpoint_id_by_sec_id(security_id)
+        except KeyError:
+            self.logger.warn('Client credentials are valid but there is no pub/sub endpoint using them, sec_id:`%s`, e:`%s`',
+                security_id, format_exc())
+            raise Forbidden(self.cid)
+        else:
+            return endpoint_id
 
 # ################################################################################################################################
 
 class TopicService(PubSubService):
-    """ Main service responsible for publications to a given topic. Handles security and distribution
-    of messages to target queues.
+    """ Main service responsible for publications to and deliveries from a given topic. Handles security and distribution
+    of messages to target queues or recipients.
     """
     class SimpleIO(PubSubService.SimpleIO):
-        input_optional = PubSubService.SimpleIO.input_optional + (
-            Int('priority'), Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'))
+        input_optional = ('data', AsIs('msg_id'), 'has_gd', Int('priority'),
+            Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time',
+            'sub_key')
         output_optional = (AsIs('msg_id'),)
 
 # ################################################################################################################################
 
-    def handle_POST(self):
-
-        # Check credentials first
-        security_id = self._pubsub_check_credentials()
-
-        # Regardless of mime-type, we always accept it in JSON payload
-        try:
-            data_parsed = loads(self.request.raw_request)
-        except ValueError:
-            raise BadRequest(self.cid, 'JSON input could not be parsed')
-        else:
-            data = self.request.raw_request
-
+    def _publish(self, endpoint_id):
+        """ POST /zato/pubsub/subscribe/topic/{topic_name} {"data":"my data", ...}
+        """
         # Ignore the header set by curl and similar tools
         mime_type = self.wsgi_environ.get('CONTENT_TYPE')
         mime_type = mime_type if mime_type != 'application/x-www-form-urlencoded' else CONTENT_TYPE.JSON
 
         input = self.request.input
 
-        self.response.payload.msg_id = self.invoke('zato.pubsub.publish.publish', {
-            'topic_name': input.topic_name,
+        ctx = {
             'mime_type': mime_type,
-            'security_id': security_id,
-            'data': data,
-            'data_parsed': data_parsed,
+            'data': input.data,
             'priority': input.priority,
             'expiration': input.expiration,
             'correl_id': input.correl_id,
             'in_reply_to': input.in_reply_to,
             'ext_client_id': input.ext_client_id,
-            'has_gd': input.gd,
-        })['response']['msg_id']
+            'has_gd': input.has_gd or False,
+            'endpoint_id': endpoint_id,
+        }
+
+        return self.pubsub.publish(input.topic_name, **ctx)
+
+# ################################################################################################################################
+
+    def _get_messages(self, ctx):
+        """ POST /zato/pubsub/topic/{topic_name}?sub_key=...
+        """
+        return self.pubsub.get_messages(self.request.input.topic_name, self.request.input.sub_key)
+
+# ################################################################################################################################
+
+    def handle_POST(self):
+
+        # Checks credentials and returns endpoint_id if valid
+        endpoint_id = self._pubsub_check_credentials()
+
+        # Both publish and get_messages are using POST but sub_key is absent in the latter.
+        if self.request.input.sub_key:
+            self.response.payload = dumps(self._get_messages(endpoint_id))
+        else:
+            self.response.payload.msg_id = self._publish(endpoint_id)
 
 # ################################################################################################################################
 
@@ -123,20 +145,31 @@ class SubscribeService(PubSubService):
     """ Service through which HTTP Basic Auth-using clients subscribe to topics.
     """
     class SimpleIO(PubSubService.SimpleIO):
-        input_optional = PubSubService.SimpleIO.input_optional + ('deliver_to', 'delivery_format')
         output_optional = ('sub_key', Int('queue_depth'))
 
     def handle_POST(self, _new_cid=new_cid, _utcnow=datetime.utcnow):
 
-        # Check credentials first
-        security_id = self._pubsub_check_credentials()
+        # Checks credentials and returns endpoint_id if valid
+        endpoint_id = self._pubsub_check_credentials()
 
-        response = self.invoke('zato.pubsub.subscription.subscribe-service-impl', {
+        # At this point we know that the credentials are valid and in principle, there is such an endpoint,
+        # but we still don't know if it has permissions to subscribe to this topic and we don't want to reveal
+        # information about what topics exist or not.
+        try:
+            topic = self.pubsub.get_topic_by_name(self.request.input.topic_name)
+        except KeyError:
+            self.logger.warn(format_exc())
+            raise Forbidden(self.cid)
+
+        # We know the topic exists but we also need to make sure the endpoint can subscribe to it
+        if not self.pubsub.is_allowed_sub_topic_by_endpoint_id(topic.name, endpoint_id):
+            raise Forbidden(self.cid)
+
+        response = self.invoke('zato.pubsub.subscription.subscribe-rest', {
             'topic_name': self.request.input.topic_name,
-            'security_id': security_id,
-            'has_gd': self.request.input.gd,
-            'deliver_to': self.request.input.deliver_to,
-            'delivery_format': self.request.input.delivery_format,
+            'endpoint_id': endpoint_id,
+            'delivery_batch_size': PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE,
+            'delivery_format': PUBSUB.DELIVERY_METHOD.PULL.id,
         })['response']
 
         self.response.payload.sub_key = response['sub_key']
@@ -146,15 +179,5 @@ class SubscribeService(PubSubService):
 
     def handle_GET(self):
         pass
-
-# ################################################################################################################################
-
-class Hook1(AdminService):
-    pass
-
-# ################################################################################################################################
-
-class Hook2(AdminService):
-    pass
 
 # ################################################################################################################################
