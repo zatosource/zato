@@ -1692,7 +1692,7 @@ class PubSub(object):
             'in_reply_to': in_reply_to,
             'ext_client_id': ext_client_id,
             'ext_pub_time': ext_pub_time,
-            'endpoint_id': self.server.default_internal_pubsub_endpoint_id,
+            'endpoint_id': endpoint_id or self.server.default_internal_pubsub_endpoint_id,
         }, serialize=False)
 
         return response.response['msg_id']

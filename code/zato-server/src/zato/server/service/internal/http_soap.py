@@ -13,23 +13,17 @@ from contextlib import closing
 from json import dumps
 from traceback import format_exc
 
-# dateutil
-from dateutil.parser import parse
-
 # Paste
 from paste.util.converters import asbool
 
-# WebHelpers
-from webhelpers.paginate import Page
-
 # Zato
-from zato.common import BATCH_DEFAULTS, CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     HTTP_SOAP_SERIALIZATION_TYPE, MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
+from zato.common import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+     HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
-from zato.common.odb.model import Cluster, JSONPointer, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json, XPath
+from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
-from zato.server.service import Boolean, Integer, List
+from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
