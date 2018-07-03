@@ -10,8 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from datetime import datetime
-from json import dumps, loads
 from operator import itemgetter
 from threading import RLock
 from traceback import format_exc
@@ -26,8 +24,8 @@ from secwall.wsse import WSSE
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
-from zato.common.broker_message import code_to_name, CHANNEL, SECURITY, VAULT as VAULT_BROKER_MSG
+from zato.common import DATA_FORMAT, MISC, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
+from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition, update_apikey_username_to_channel
 from zato.server.connection.http_soap import Forbidden, Unauthorized

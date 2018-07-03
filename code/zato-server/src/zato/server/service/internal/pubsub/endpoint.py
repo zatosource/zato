@@ -13,7 +13,7 @@ from contextlib import closing
 from json import loads
 
 # Zato
-from zato.common import PUBSUB as COMMON_PUBSUB, ZATO_NONE
+from zato.common import PUBSUB as COMMON_PUBSUB
 from zato.common.broker_message import PUBSUB
 from zato.common.exception import BadRequest, Conflict
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic
