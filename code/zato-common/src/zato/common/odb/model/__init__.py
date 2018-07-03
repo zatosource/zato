@@ -19,7 +19,7 @@ from sqlalchemy.orm import backref, relationship
 
 # Zato
 from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, \
-     MSG_PATTERN_TYPE, ODOO, SAP, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
+     ODOO, SAP, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base
 from zato.common.odb.model.sso import _SSOAttr, _SSOSession, _SSOUser

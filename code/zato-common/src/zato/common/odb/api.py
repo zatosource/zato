@@ -37,12 +37,12 @@ from bunch import Bunch
 from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, \
      ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     HTTPSOAP, JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
+     JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
      WSSDefinition, VaultConnection
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
-from zato.common.util import current_host, get_component_name, get_engine_url, get_http_json_channel, get_http_soap_channel, \
-     parse_extra_into_dict, parse_tls_channel_security_definition
+from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
+     parse_tls_channel_security_definition
 
 # ################################################################################################################################
 

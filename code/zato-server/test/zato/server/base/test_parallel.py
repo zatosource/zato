@@ -10,10 +10,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import httplib
-from ast import literal_eval
 from cStringIO import StringIO
 from datetime import datetime
-from json import loads
 from unittest import TestCase
 
 # Bunch
@@ -29,8 +27,8 @@ from pytz import UTC
 from tzlocal import get_localzone
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, ZATO_NONE
-from zato.common.broker_message import CHANNEL as CHANNEL_BROKER_MESSAGE, SERVICE
+from zato.common import CHANNEL, ZATO_NONE
+from zato.common.broker_message import SERVICE
 from zato.common.odb.api import ODBManager
 from zato.common.test import rand_int, rand_string
 from zato.common.util import new_cid, utcnow
