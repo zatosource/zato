@@ -60,6 +60,8 @@ class Index(_Index):
         data_list.service_list = []
         select_data_target = Bunch()
         topic_name = None
+        create_form = None
+        edit_form = None
 
         for endpoint_type in PUBSUB.ENDPOINT_TYPE:
             select_data_target[endpoint_type.id] = []
@@ -89,9 +91,12 @@ class Index(_Index):
                     'id': self.input.topic_id
                 }).data.response.name
 
+            create_form = CreateForm(self.req, data_list)
+            edit_form = EditForm(self.req, data_list, prefix='edit')
+
         return {
-            'create_form': CreateForm(self.req, data_list),
-            'edit_form': EditForm(self.req, data_list, prefix='edit'),
+            'create_form': create_form,
+            'edit_form': edit_form,
             'select_data_target': select_data_target,
             'topic_name': topic_name,
             'topic_id': self.input.topic_id,

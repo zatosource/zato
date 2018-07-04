@@ -1420,8 +1420,12 @@ class PubSub(object):
                     if sub.sub_key in sub_keys:
                         subscriptions_by_topic.remove(sub)
 
-                # Find and stop all delivery tasks if we are the server that handles them
                 for sub_key in sub_keys:
+
+                    # Remove mappings between sub_keys and sub objects
+                    del self.subscriptions_by_sub_key[sub_key]
+
+                    # Find and stop all delivery tasks if we are the server that handles them
                     sub_key_server = self.sub_key_servers.get(sub_key)
                     if sub_key_server:
 
@@ -1702,7 +1706,7 @@ class PubSub(object):
 
     def get_messages(self, topic_name, sub_key, needs_details=False, _skip=skip_to_external):
         """ Returns messages from a subscriber's queue, deleting them from the queue in progress.
-        GET /zato/pubsub/topic/{topic_name}?sub_key=...
+        POST /zato/pubsub/topic/{topic_name}?sub_key=...
         """
         response = self.invoke_service('zato.pubsub.endpoint.get-delivery-messages', {
             'cluster_id': self.server.cluster_id,
@@ -1726,7 +1730,6 @@ class PubSub(object):
 
     def read_messages(self, topic_name, sub_key, has_gd, *args, **kwargs):
         """ Looks up messages in subscriber's queue by input criteria without deleting them from the queue.
-        GET /zato/pubsub/topic/{topic_name}?read=1&sub_key=...
         """
         service_name = _service_read_messages_gd if has_gd else _service_read_messages_non_gd
 
@@ -1747,7 +1750,6 @@ class PubSub(object):
 
     def read_message(self, topic_name, msg_id, has_gd, *args, **kwargs):
         """ Returns details of a particular message without deleting it from the subscriber's queue.
-        GET /zato/pubsub/msg/{msg_id}
         """
         if has_gd:
             service_name = _service_read_message_gd
