@@ -13,18 +13,13 @@ from datetime import datetime
 from traceback import format_exc
 
 # rapidjson
-from rapidjson import dumps, loads
+from rapidjson import dumps
 
 # Zato
 from zato.common import CONTENT_TYPE, PUBSUB
 from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
 from zato.common.util import new_cid
-from zato.server.connection.web_socket import WebSocket
-from zato.server.service import AsIs, Bool, Int, Service
-from zato.server.service.internal import AdminService
-
-# For pyflakes
-WebSocket = WebSocket
+from zato.server.service import AsIs, Int, Service
 
 # ################################################################################################################################
 
@@ -196,7 +191,6 @@ class SubscribeService(PubSubService):
     def handle_DELETE(self):
 
         # Local aliases
-        topic_name = self.request.input.topic_name
         sub_key = self.request.input.sub_key
 
         # Checks credentials and returns endpoint_id if valid
