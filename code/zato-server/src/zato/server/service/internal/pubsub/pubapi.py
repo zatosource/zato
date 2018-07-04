@@ -105,6 +105,10 @@ class TopicService(PubSubService):
     def _publish(self, endpoint_id):
         """ POST /zato/pubsub/topic/{topic_name} {"data":"my data", ...}
         """
+        # We always require some data on input
+        if not self.request.input.data:
+            raise BadRequest(self.cid, 'No data sent on input')
+
         # Ignore the header set by curl and similar tools
         mime_type = self.wsgi_environ.get('CONTENT_TYPE')
         mime_type = mime_type if mime_type != 'application/x-www-form-urlencoded' else CONTENT_TYPE.JSON
