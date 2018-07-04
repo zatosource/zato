@@ -34,14 +34,29 @@ def parse_basic_auth(auth, prefix = 'Basic '):
 
 # ################################################################################################################################
 
-class PubSubService(Service):
-    class SimpleIO:
-        input_required = ('topic_name',)
-        response_elem = None
-        skip_empty_keys = True
-        default_value = None
+class BaseSIO:
+    input_required = ('topic_name',)
+    response_elem = None
+    skip_empty_keys = True
+    default_value = None
 
 # ################################################################################################################################
+
+class TopicSIO(BaseSIO):
+    input_optional = ('data', AsIs('msg_id'), 'has_gd', Int('priority'),
+        Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time',
+        'sub_key')
+    output_optional = (AsIs('msg_id'),)
+
+# ################################################################################################################################
+
+class SubSIO(BaseSIO):
+    input_optional = ('sub_key',)
+    output_optional = ('sub_key', 'queue_depth')
+
+# ################################################################################################################################
+
+class PubSubService(Service):
 
     def _pubsub_check_credentials(self):
         auth = self.wsgi_environ.get('HTTP_AUTHORIZATION')
@@ -83,16 +98,12 @@ class TopicService(PubSubService):
     """ Main service responsible for publications to and deliveries from a given topic. Handles security and distribution
     of messages to target queues or recipients.
     """
-    class SimpleIO(PubSubService.SimpleIO):
-        input_optional = ('data', AsIs('msg_id'), 'has_gd', Int('priority'),
-            Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time',
-            'sub_key')
-        output_optional = (AsIs('msg_id'),)
+    SimpleIO = TopicSIO
 
 # ################################################################################################################################
 
     def _publish(self, endpoint_id):
-        """ POST /zato/pubsub/subscribe/topic/{topic_name} {"data":"my data", ...}
+        """ POST /zato/pubsub/topic/{topic_name} {"data":"my data", ...}
         """
         # Ignore the header set by curl and similar tools
         mime_type = self.wsgi_environ.get('CONTENT_TYPE')
@@ -139,9 +150,7 @@ class TopicService(PubSubService):
 class SubscribeService(PubSubService):
     """ Service through which REST clients subscribe to or unsubscribe from topics.
     """
-    class SimpleIO(PubSubService.SimpleIO):
-        input_optional = ('sub_key',)
-        output_optional = ('sub_key', 'queue_depth')
+    SimpleIO = SubSIO
 
 # ################################################################################################################################
 
@@ -165,7 +174,8 @@ class SubscribeService(PubSubService):
 # ################################################################################################################################
 
     def handle_POST(self, _new_cid=new_cid, _utcnow=datetime.utcnow):
-
+        """ POST /zato/pubsub/subscribe/topic/{topic_name}
+        """
         # Checks credentials and returns endpoint_id if valid
         endpoint_id = self._pubsub_check_credentials()
 
@@ -189,7 +199,8 @@ class SubscribeService(PubSubService):
 # ################################################################################################################################
 
     def handle_DELETE(self):
-
+        """ DELETE /zato/pubsub/subscribe/topic/{topic_name}?sub_key=..
+        """
         # Local aliases
         sub_key = self.request.input.sub_key
 
@@ -219,5 +230,41 @@ class SubscribeService(PubSubService):
             'cluster_id': self.server.cluster_id,
             'sub_key': sub_key
         })
+
+# ################################################################################################################################
+
+class PublishMessage(Service):
+    SimpleIO = TopicSIO
+
+    def handle(self):
+        self.response.payload = self.invoke(
+            TopicService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'POST'})
+
+# ################################################################################################################################
+
+class GetMessages(Service):
+    SimpleIO = TopicSIO
+
+    def handle(self):
+        self.response.payload = self.invoke(
+            TopicService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'POST'})
+
+# ################################################################################################################################
+
+class Subscribe(Service):
+    SimpleIO = SubSIO
+
+    def handle(self):
+        self.response.payload = self.invoke(
+            SubscribeService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'POST'})
+
+# ################################################################################################################################
+
+class Unsubscribe(Service):
+    SimpleIO = SubSIO
+
+    def handle(self):
+        self.response.payload = self.invoke(
+            SubscribeService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'DELETE'})
 
 # ################################################################################################################################
