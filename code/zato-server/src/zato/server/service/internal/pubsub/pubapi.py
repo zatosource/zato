@@ -17,7 +17,7 @@ from rapidjson import dumps, loads
 
 # Zato
 from zato.common import CONTENT_TYPE, PUBSUB
-from zato.common.exception import BadRequest, Forbidden
+from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
 from zato.common.util import new_cid
 from zato.server.connection.web_socket import WebSocket
 from zato.server.service import AsIs, Bool, Int, Service
@@ -177,15 +177,19 @@ class SubscribeService(PubSubService):
         # Make sure this endpoint has correct subscribe permissions (patterns)
         self._check_sub_access(endpoint_id)
 
-        response = self.invoke('zato.pubsub.subscription.subscribe-rest', {
-            'topic_name': self.request.input.topic_name,
-            'endpoint_id': endpoint_id,
-            'delivery_batch_size': PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE,
-            'delivery_format': PUBSUB.DELIVERY_METHOD.PULL.id,
-        })['response']
-
-        self.response.payload.sub_key = response['sub_key']
-        self.response.payload.queue_depth = response['queue_depth']
+        try:
+            response = self.invoke('zato.pubsub.subscription.subscribe-rest', {
+                'topic_name': self.request.input.topic_name,
+                'endpoint_id': endpoint_id,
+                'delivery_batch_size': PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE,
+                'delivery_format': PUBSUB.DELIVERY_METHOD.PULL.id,
+            })['response']
+        except PubSubSubscriptionExists:
+            self.logger.warn(format_exc())
+            raise BadRequest(self.cid, 'Subscription to topic `{}` already exists'.format(self.request.input.topic_name))
+        else:
+            self.response.payload.sub_key = response['sub_key']
+            self.response.payload.queue_depth = response['queue_depth']
 
 # ################################################################################################################################
 
