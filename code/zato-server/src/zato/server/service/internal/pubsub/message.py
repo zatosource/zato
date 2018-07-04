@@ -397,12 +397,13 @@ class GetFromQueueGD(AdminService):
                 first()
             if item:
                 item.expiration = item.expiration or None
+                item_dict = item._asdict()
                 for name in('expiration_time', 'recv_time', 'ext_pub_time', 'last_delivery_time'):
-                    value = getattr(item, name, None)
+                    value = item_dict.get(name)
                     if value:
-                        setattr(item, name, datetime_from_ms(value * 1000.0))
-                self.response.payload = item._asdict()
-                self.response.payload['published_by_name'] = self.pubsub.get_endpoint_by_id(item.published_by_id).name
+                        item_dict[name] = datetime_from_ms(value * 1000.0)
+                self.response.payload = item_dict
+                self.response.payload['published_by_name'] = self.pubsub.get_endpoint_by_id(item_dict['published_by_id']).name
             else:
                 raise NotFound(self.cid, 'No such message `{}`'.format(self.request.input.msg_id))
 
