@@ -966,14 +966,6 @@ class PubSub(object):
     def subscribe(self, config):
         with self.lock:
 
-            print()
-            print()
-
-            print(111, config)
-
-            print()
-            print()
-
             self._add_subscription(config)
 
             # We don't start dedicated tasks for WebSockets - they are all dynamic without a fixed server.
@@ -1428,8 +1420,12 @@ class PubSub(object):
                     if sub.sub_key in sub_keys:
                         subscriptions_by_topic.remove(sub)
 
-                # Find and stop all delivery tasks if we are the server that handles them
                 for sub_key in sub_keys:
+
+                    # Remove mappings between sub_keys and sub objects
+                    del self.subscriptions_by_sub_key[sub_key]
+
+                    # Find and stop all delivery tasks if we are the server that handles them
                     sub_key_server = self.sub_key_servers.get(sub_key)
                     if sub_key_server:
 
