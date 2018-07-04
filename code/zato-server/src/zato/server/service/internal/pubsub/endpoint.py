@@ -662,5 +662,7 @@ class GetDeliveryMessages(AdminService, _GetMessagesBase):
 
             if response:
                 self.response.payload[:] = reversed(response['response']['msg_list'])
+        else:
+            self.logger.info('Could not find delivery server for sub_key:`%s`', sub.sub_key)
 
 # ################################################################################################################################

@@ -134,7 +134,15 @@ class TopicService(PubSubService):
     def _get_messages(self, ctx):
         """ POST /zato/pubsub/topic/{topic_name}?sub_key=...
         """
-        return self.pubsub.get_messages(self.request.input.topic_name, self.request.input.sub_key)
+        sub_key = self.request.input.sub_key
+
+        try:
+            self.pubsub.get_subscription_by_sub_key(sub_key)
+        except KeyError:
+            self.logger.warn('Could not find sub_key:`%s`, e:`%s`', sub_key, format_exc())
+            raise Forbidden(self.cid)
+        else:
+            return self.pubsub.get_messages(self.request.input.topic_name, sub_key)
 
 # ################################################################################################################################
 
@@ -145,7 +153,8 @@ class TopicService(PubSubService):
 
         # Both publish and get_messages are using POST but sub_key is absent in the latter.
         if self.request.input.sub_key:
-            self.response.payload = dumps(self._get_messages(endpoint_id))
+            response = dumps(self._get_messages(endpoint_id))
+            self.response.payload = response
         else:
             self.response.payload.msg_id = self._publish(endpoint_id)
 
@@ -191,7 +200,8 @@ class SubscribeService(PubSubService):
                 'topic_name': self.request.input.topic_name,
                 'endpoint_id': endpoint_id,
                 'delivery_batch_size': PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE,
-                'delivery_format': PUBSUB.DELIVERY_METHOD.PULL.id,
+                'delivery_method': PUBSUB.DELIVERY_METHOD.PULL.id,
+                'server_id': self.server.id,
             })['response']
         except PubSubSubscriptionExists:
             self.logger.warn(format_exc())
