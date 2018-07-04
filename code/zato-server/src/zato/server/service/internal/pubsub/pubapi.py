@@ -142,15 +142,15 @@ class TopicService(PubSubService):
 # ################################################################################################################################
 
 class SubscribeService(PubSubService):
-    """ Service through which HTTP Basic Auth-using clients subscribe to topics.
+    """ Service through which REST clients subscribe to or unsubscribe from topics.
     """
     class SimpleIO(PubSubService.SimpleIO):
-        output_optional = ('sub_key', Int('queue_depth'))
+        input_optional = ('sub_key',)
+        output_optional = ('sub_key', 'queue_depth')
 
-    def handle_POST(self, _new_cid=new_cid, _utcnow=datetime.utcnow):
+# ################################################################################################################################
 
-        # Checks credentials and returns endpoint_id if valid
-        endpoint_id = self._pubsub_check_credentials()
+    def _check_sub_access(self, endpoint_id):
 
         # At this point we know that the credentials are valid and in principle, there is such an endpoint,
         # but we still don't know if it has permissions to subscribe to this topic and we don't want to reveal
@@ -163,7 +163,19 @@ class SubscribeService(PubSubService):
 
         # We know the topic exists but we also need to make sure the endpoint can subscribe to it
         if not self.pubsub.is_allowed_sub_topic_by_endpoint_id(topic.name, endpoint_id):
+            endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
+            self.logger.warn('Endpoint `%s` is not allowed to subscribe to `%s`', endpoint.name, self.request.input.topic_name)
             raise Forbidden(self.cid)
+
+# ################################################################################################################################
+
+    def handle_POST(self, _new_cid=new_cid, _utcnow=datetime.utcnow):
+
+        # Checks credentials and returns endpoint_id if valid
+        endpoint_id = self._pubsub_check_credentials()
+
+        # Make sure this endpoint has correct subscribe permissions (patterns)
+        self._check_sub_access(endpoint_id)
 
         response = self.invoke('zato.pubsub.subscription.subscribe-rest', {
             'topic_name': self.request.input.topic_name,
@@ -177,7 +189,37 @@ class SubscribeService(PubSubService):
 
 # ################################################################################################################################
 
-    def handle_GET(self):
-        pass
+    def handle_DELETE(self):
+
+        # Local aliases
+        topic_name = self.request.input.topic_name
+        sub_key = self.request.input.sub_key
+
+        # Checks credentials and returns endpoint_id if valid
+        endpoint_id = self._pubsub_check_credentials()
+
+        # To unsubscribe, we also need to have the right subscription permissions first (patterns) ..
+        self._check_sub_access(endpoint_id)
+
+        # .. also check that sub_key exists and that we are not using another endpoint's sub_key.
+        try:
+            sub = self.pubsub.get_subscription_by_sub_key(sub_key)
+        except KeyError:
+            self.logger.warn('Could not find subscription by sub_key:`%s`, endpoint:`%s`',
+                sub_key, self.pubsub.get_endpoint_by_id(endpoint_id).name)
+            raise Forbidden(self.cid)
+        else:
+            if sub.endpoint_id != endpoint_id:
+                sub_endpoint = self.pubsub.get_endpoint_by_id(sub.endpoint_id)
+                self_endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
+                self.logger.warn('Endpoint `%s` cannot unsubscribe sk:`%s` (%s) created by `%s`',
+                    self_endpoint.name, sub_key, self.pubsub.get_topic_by_sub_key(sub_key).name, sub_endpoint.name)
+                raise Forbidden(self.cid)
+
+        # We have all permissions checked now and can proceed to the actual call
+        self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
+            'cluster_id': self.server.cluster_id,
+            'sub_key': sub_key
+        })
 
 # ################################################################################################################################
