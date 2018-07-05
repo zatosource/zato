@@ -56,8 +56,8 @@ cdef class Matcher(object):
         self.pattern = pattern
         self.matcher = None
         self.is_static = True
-        self._brace_pattern = re_compile('\{[a-zA-Z0-9 _\$.\-|=~^]+\}')
-        self._elem_re_template = r'(?P<{}>[a-zA-Z0-9 _\$.\-|=~^]+)'
+        self._brace_pattern = re_compile('\{[a-zA-Z0-9 _\$.\-|=~^\/]+\}')
+        self._elem_re_template = r'(?P<{}>[a-zA-Z0-9 _\$.\-|=~^\/]+)'
         self._set_up_matcher(self.pattern)
 
 # ################################################################################################################################
