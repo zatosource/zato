@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -53,11 +53,11 @@ def instance_hook(self, input, instance, attrs):
 
     if attrs.is_create_edit:
         with closing(self.odb.session()) as session:
-            return {'service': session.query(ServiceModel).\
+
+            instance.service = session.query(ServiceModel).\
                 filter(ServiceModel.name==input.service_name).\
                 filter(ServiceModel.cluster_id==input.cluster_id).\
                 one()
-            }
 
 # ################################################################################################################################
 

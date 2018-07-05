@@ -152,6 +152,7 @@ def update_attrs(cls, name, attrs):
     attrs.sio_default_value = getattr(mod, 'sio_default_value', None)
     attrs._meta_session = None
 
+    attrs.is_create = False
     attrs.is_edit = False
     attrs.is_create_edit = False
     attrs.is_delete = False
@@ -169,6 +170,7 @@ def update_attrs(cls, name, attrs):
 
             attrs.input_required = attrs.model
             attrs.input_optional = attrs.model
+            attrs.is_create = name == 'Create'
             attrs.is_edit = name == 'Edit'
             attrs.is_create_edit = True
 
