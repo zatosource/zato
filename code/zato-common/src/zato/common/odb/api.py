@@ -87,20 +87,9 @@ class WritableKeyedTuple(object):
 # ################################################################################################################################
 
     def __repr__(self):
-        inner = [
-            (key, getattr(self._elem, key))
-            for key in self._elem.keys()
-        ]
-        outer = [
-            (key, getattr(self, key))
-            for key in dir(self) if not key.startswith("_")
-        ]
-        return "WritableKeyedTuple(%s)" % (
-            ", ".join(
-                "%s=%s" % (key, value) for
-                (key, value) in inner + outer
-            )
-        )
+        inner = [(key, getattr(self._elem, key)) for key in self._elem.keys()]
+        outer = [(key, getattr(self, key)) for key in dir(self) if not key.startswith('_')]
+        return 'WritableKeyedTuple(%s)' % (', '.join('%s=%s' % (key, value) for (key, value) in inner + outer))
 
 # ################################################################################################################################
 
@@ -109,12 +98,9 @@ class WritableTupleQuery(Query):
     def __iter__(self):
         it = super(WritableTupleQuery, self).__iter__()
 
-        cdesc = self.column_descriptions
-        if len(cdesc) > 1 or not isinstance(cdesc[0]['type'], type):
-            return (
-                WritableKeyedTuple(elem)
-                for elem in it
-            )
+        columns_desc = self.column_descriptions
+        if len(columns_desc) > 1 or not isinstance(columns_desc[0]['type'], type):
+            return (WritableKeyedTuple(elem) for elem in it)
         else:
             return it
 
