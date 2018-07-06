@@ -750,6 +750,7 @@ class ObjectImporter(object):
         if response.ok:
             verb = 'Updated' if is_edit else 'Created'
             self.logger.info("{} object '{}' with {}".format(verb, item.name, service_name))
+
         return response
 
 # ################################################################################################################################
@@ -1097,14 +1098,14 @@ class EnMasse(ManageCommand):
     """
     opts = [
         {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},  # nopep8
-        {'name':'--export-local', 'help':'Export local JSON definitions into one file (can be used with --export-odb)', 'action':'store_true'},
+        {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export-odb)', 'action':'store_true'},
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
-        {'name':'--import', 'help':'Import definitions from a local JSON (excludes --export-*)', 'action':'store_true'},
+        {'name':'--import', 'help':'Import definitions from a local file (excludes --export-*)', 'action':'store_true'},
         {'name':'--clean-odb', 'help':'Delete all ODB definitions before proceeding', 'action':'store_true'},
         {'name':'--dump-format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
-        {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to JSON', 'action':'store_true'},
+        {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to file', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
-        {'name':'--input', 'help':'Path to an input JSON document'},
+        {'name':'--input', 'help':'Path to input file with objects to import'},
         {'name':'--cols_width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH), 'action':'store_true'},
     ]
 
@@ -1118,14 +1119,14 @@ class EnMasse(ManageCommand):
 
     def load_input(self):
         _, _, ext = self.args.input.rpartition('.')
-        codec_klass = self.CODEC_BY_EXTENSION.get(ext.lower())
-        if codec_klass is None:
+        codec_class = self.CODEC_BY_EXTENSION.get(ext.lower())
+        if codec_class is None:
             exts = ', '.join(sorted(self.CODEC_BY_EXTENSION))
             self.logger.error('Unrecognized file extension "{}": must be one of {}'.format(ext.lower(), exts))
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
 
         path = os.path.join(self.curdir, self.args.input)
-        parser = InputParser(path, self.logger, codec_klass())
+        parser = InputParser(path, self.logger, codec_class())
         results = parser.parse()
         if not results.ok:
             self.logger.error('JSON parsing failed')
@@ -1399,3 +1400,5 @@ class EnMasse(ManageCommand):
             return [results]
 
         return []
+
+# ################################################################################################################################
