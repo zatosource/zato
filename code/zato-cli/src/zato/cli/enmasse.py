@@ -72,7 +72,9 @@ def populate_services_from_apispec(client, logger):
     """ Request a list of services from the APISpec service, and merge the results into SERVICES_BY_PREFIX,
     creating new ServiceInfo instances to represent previously unknown services as appropriate."""
     response = client.invoke('zato.apispec.get-api-spec', {
-        'return_internal': True
+        'return_internal': True,
+        'include': '*',
+        'needs_sphinx': False
     })
 
     if not response.ok:
@@ -80,6 +82,7 @@ def populate_services_from_apispec(client, logger):
         return
 
     by_prefix = {}  # { "zato.apispec": {"get-api-spec": { .. } } }
+
     for service in response.data['namespaces']['']['services']:
         prefix, _, name = service['name'].rpartition('.')
         methods = by_prefix.setdefault(prefix, {})
@@ -155,34 +158,38 @@ def test_item(item, cond):
     return True
 
 class ServiceInfo(object):
-    def __init__(self, prefix=None,
-                 name=None,
-                 object_dependencies=None,
-                 service_dependencies=None,
-                 export_filter=None):
+    def __init__(self, prefix=None, name=None, object_dependencies=None, service_dependencies=None, export_filter=None):
         assert name or prefix
-        #: Short service name as appears in export data.
+
+        # Short service name as appears in export data.
         self.name = name or prefix
-        #: Optional name of the object enumeration/retrieval service.
+
+        # Optional name of the object enumeration/retrieval service.
         self.prefix = prefix
-        #: Overwritten by populate_services_from_apispec().
+
+        # Overwritten by populate_services_from_apispec().
         self.methods = {}
-        #: Specifies a list of object dependencies:
-        #:      field_name: {"dependent_type": "shortname", "dependent_field": "fieldname", "empty_value": None, or e.g. ZATO_NO_SECURITY}
+
+        # Specifies a list of object dependencies:
+        # field_name: {"dependent_type": "shortname", "dependent_field":
+        #  "fieldname", "empty_value": None, or e.g. ZATO_NO_SECURITY}
         self.object_dependencies = object_dependencies or {}
+
         #: Specifies a list of service dependencies. The field's value contains
         #: the name of a service that must exist.
         #:      field_name: {"only_if_field": "field_name" or None, "only_if_value": "value" or None}
         self.service_dependencies = service_dependencies or {}
-        #: List of field/value specifications that should be ignored during export:
-        #:      field_name: value
+
+        # List of field/value specifications that should be ignored during export:
+        #      field_name: value
         self.export_filter = export_filter or {}
 
 # ################################################################################################################################
 
     @property
     def is_security(self):
-        """If True, indicates the service is source of authentication credentials for use in another service."""
+        """ If True, indicates the service is source of authentication credentials for use in another service.
+        """
         return self.prefix and self.prefix.startswith('zato.security.')
 
 # ################################################################################################################################
@@ -880,31 +887,33 @@ class ObjectManager(object):
 # ################################################################################################################################
 
     def refresh_by_type(self, item_type):
-        sinfo = SERVICE_BY_NAME[item_type]
+        service_info = SERVICE_BY_NAME[item_type]
+
         # Temporarily preserve function of the old enmasse.
-        service_name = sinfo.get_service_name('get-list')
+        service_name = service_info.get_service_name('get-list')
+
         if service_name is None:
-            self.logger.debug("Type {} has no 'get-list' service".format(sinfo.name))
+            self.logger.debug("Type {} has no 'get-list' service".format(service_info.name))
             return
 
-        self.logger.debug("Invoking {} for {}".format(service_name, sinfo.name))
+        self.logger.debug("Invoking {} for {}".format(service_name, service_info.name))
         response = self.client.invoke(service_name, {
             'cluster_id': self.client.cluster_id
         })
 
         if not response.ok:
-            self.logger.warning('Could not fetch objects of type {}: {}'.format(sinfo.name, response.details))
+            self.logger.warning('Could not fetch objects of type {}: {}'.format(service_info.name, response.details))
             return
 
-        self.objects[sinfo.name] = []
+        self.objects[service_info.name] = []
         for item in map(Bunch, response.data):
             if any(getattr(item, key, None) == value
-                   for key, value in sinfo.export_filter.items()):
+                   for key, value in service_info.export_filter.items()):
                 continue
             if self.is_ignored_name(item):
                 continue
 
-            self.objects[sinfo.name].append(item)
+            self.objects[service_info.name].append(item)
 
 # ################################################################################################################################
 
