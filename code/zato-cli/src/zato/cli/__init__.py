@@ -695,7 +695,7 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def get_odb_session_from_server_config(self, config, cm):
-        return cli_util.get_odb_session_from_server_config(config, cm)
+        return cli_util.get_odb_session_from_server_config(config, cm, False)
 
 # ################################################################################################################################
 
