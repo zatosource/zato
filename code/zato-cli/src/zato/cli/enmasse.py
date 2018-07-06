@@ -9,19 +9,29 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import collections, copy, json, logging, os, re, sys
+import collections
+import copy
+import json
+import logging
+import os
+import re
+import sys
 from datetime import datetime
 
-# Serialization formats.
+# anyjson
 import anyjson
-import pyaml
-import yaml
 
 # Bunch
 from zato.bunch import Bunch, bunchify, debunchify
 
+# pyyaml
+import pyaml
+
 # Texttable
 import texttable
+
+# yaml
+import yaml
 
 # Zato
 from zato.cli import ManageCommand
