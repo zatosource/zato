@@ -40,7 +40,7 @@ class GetAPISpec(Service):
     """ Returns API specifications for all services.
     """
     class SimpleIO:
-        input_optional = ('cluster_id', 'query', Bool('return_internal'), 'include', 'exclude')
+        input_optional = ('cluster_id', 'query', Bool('return_internal'), 'include', 'exclude', 'needs_sphinx')
 
     def handle(self):
         cluster_id = self.request.input.get('cluster_id')
@@ -48,17 +48,29 @@ class GetAPISpec(Service):
         include = aslist(self.request.input.include, ',')
         exclude = aslist(self.request.input.exclude, ',')
 
-        if self.request.input.get('return_internal'):
+        include = [elem for elem in include if elem]
+        exclude = [elem for elem in exclude if elem]
+
+        if not self.request.input.get('return_internal'):
             if 'zato.*' not in exclude:
                 exclude.append('zato.*')
 
         if cluster_id and cluster_id != self.server.cluster_id:
             raise ValueError('Input cluster ID `%s` different than ours `%s`', cluster_id, self.server.cluster_id)
 
+        # Default to Sphinx output unless explicitly overridden
+        if isinstance(self.request.input.needs_sphinx, bool):
+            needs_sphinx = self.request.input.needs_sphinx
+        else:
+            needs_sphinx = True
+
         data = Generator(self.server.service_store.services, self.server.sio_config,
             include, exclude, self.request.input.query).get_info()
 
-        out = self.invoke(GetSphinx.get_name(), {'data': data})
+        if needs_sphinx:
+            out = self.invoke(GetSphinx.get_name(), {'data': data})
+        else:
+            out = data
 
         self.response.payload = dumps(out)
 
