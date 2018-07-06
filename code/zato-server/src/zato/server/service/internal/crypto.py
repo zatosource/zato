@@ -26,8 +26,11 @@ class Decrypt(Service):
     """ Decrypts data previously encrypted using the server's default key.
     """
     class SimpleIO:
-        input_required = ('clear_text',)
-        output_required = ('decrypted',)
+        input_required = ('encrypted',)
+        output_required = ('clear_text',)
+
+    def handle(self):
+        self.response.payload.clear_text = self.crypto.decrypt(self.request.input.encrypted)
 
 # ################################################################################################################################
 

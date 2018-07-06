@@ -36,6 +36,7 @@ import yaml
 # Zato
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
+from zato.common import SECRETS
 from zato.common.util import get_client_from_server_conf
 
 DEFAULT_COLS_WIDTH = '15,100'
@@ -635,7 +636,7 @@ class ObjectImporter(object):
             self.remove_from_import_list(item_type, attrs.name)
 
         # We'll see how expensive this call is. Seems to be but let's see in practice if it's a burden.
-        self.object_mgr.refresh_by_type(item_type)
+        self.object_mgr.get_objects_by_type(item_type)
 
 # ################################################################################################################################
 
@@ -918,7 +919,7 @@ class ObjectManager(object):
 
 # ################################################################################################################################
 
-    def refresh_by_type(self, item_type):
+    def get_objects_by_type(self, item_type):
         service_info = SERVICE_BY_NAME[item_type]
 
         # Temporarily preserve function of the old enmasse.
@@ -945,6 +946,12 @@ class ObjectManager(object):
             if self.is_ignored_name(item):
                 continue
 
+            # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
+            for key, value in item.items():
+                if isinstance(value, basestring):
+                    if value.startswith(SECRETS.PREFIX):
+                        item[key] = None # Enmasse does not export secrets such as passwords or other auth information
+
             self.objects[service_info.name].append(item)
 
 # ################################################################################################################################
@@ -952,7 +959,7 @@ class ObjectManager(object):
     def _refresh_objects(self):
         self.objects = Bunch()
         for service_info in SERVICES:
-            self.refresh_by_type(service_info.name)
+            self.get_objects_by_type(service_info.name)
 
         for item_type, items in self.objects.items():
             for item in items:
