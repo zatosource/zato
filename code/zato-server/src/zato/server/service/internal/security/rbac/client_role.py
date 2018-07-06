@@ -61,12 +61,6 @@ class GetList(AdminService):
 class Create(AdminService):
     __metaclass__ = CreateEditMeta
 
-class Edit(AdminService):
-    """ This service is a no-op added only for API completeness.
-    """
-    def handle(self):
-        pass
-
 class Delete(AdminService):
     __metaclass__ = DeleteMeta
 
