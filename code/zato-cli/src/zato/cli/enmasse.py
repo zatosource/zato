@@ -50,8 +50,7 @@ ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
 ERROR_TYPE_MISSING = Code('E04', 'type missing')
 
 def find_first(it, pred):
-    """Given any iterable, return the first element `elem` from it matching
-    `pred(elem)`"""
+    """Given any iterable, return the first element `elem` from it matching `pred(elem)`"""
     for obj in it:
         if pred(obj):
             return obj
@@ -104,8 +103,9 @@ def populate_services_from_apispec(client, logger):
 
         service_info.methods = methods
 
-#: The common prefix for a set of services is tested against the first element in this list using startswith(). If it matches, that prefix is replaced by the
-#: second element. The prefixes must match exactly if the first element does not end in a period.
+# The common prefix for a set of services is tested against the first element in this list using startswith().
+# If it matches, that prefix is replaced by the second element. The prefixes must match exactly if the first element
+# does not end in a period.
 SHORTNAME_BY_PREFIX = [
     ('zato.pubsub.', 'pubsub'),
     ('zato.definition.', 'def'),
@@ -139,15 +139,16 @@ def make_service_name(prefix):
     return escaped
 
 def normalize_service_name(item):
-    """Given an item originating from the API or from an import file, if the item contains either the 'service' or 'service_name' keys, ensure the other key is
-    set. Either the dict contains neither key, or both keys set to the same value."""
+    """ Given an item originating from the API or from an import file, if the item contains either the 'service'
+    or 'service_name' keys, ensure the other key is set. Either the dict contains neither key, or both keys set
+    to the same value."""
     if 'service' in item or 'service_name' in item:
         item.setdefault('service', item.get('service_name'))
         item.setdefault('service_name', item.get('service'))
 
 def test_item(item, cond):
-    """Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match. Currently only supports testing whether
-    a field has a particular value. Returns ``True`` if `cond` is ``None``."""
+    """ Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match.
+    Currently only supports testing whether a field has a particular value. Returns ``True`` if `cond` is ``None``."""
     if cond is not None:
         only_if_field = cond.get('only_if_field')
         only_if_value = cond.get('only_if_value')
@@ -200,7 +201,8 @@ class ServiceInfo(object):
 # ################################################################################################################################
 
     def get_required_keys(self):
-        """Return the set of keys required to create a new instance."""
+        """ Return the set of keys required to create a new instance.
+        """
         method_sig = self.methods.get('create')
         if method_sig is None:
             return set()
@@ -215,7 +217,8 @@ class ServiceInfo(object):
     def __repr__(self):
         return '<ServiceInfo for {}>'.format(self.prefix)
 
-#: ServiceInfo templates for services that have additional semantics not yet described by apispec. To be replaced by introspection later.
+# ServiceInfo templates for services that have additional semantics not yet described by apispec.
+# To be replaced by introspection later.
 SERVICES = [
     ServiceInfo(
         name='channel_amqp',
@@ -483,8 +486,7 @@ class DependencyScanner(object):
 # ################################################################################################################################
 
     def scan_item(self, item_type, item, results):
-        """
-        Scan the data of a single item for required dependencies, recording any that are missing in :py:attr:`missing`.
+        """ Scan the data of a single item for required dependencies, recording any that are missing in :py:attr:`missing`.
 
         :param item_type: ServiceInfo.name of the item's type.
         :param item: dict describing the item.
@@ -521,7 +523,9 @@ class DependencyScanner(object):
             for (missing_type, missing_name), dep_names in sorted(self.missing.items()):
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
                 raw = (missing_type, missing_name, dep_names, existing)
-                results.add_warning(raw, WARNING_MISSING_DEF, "'{}' is needed by '{}' but was not among '{}'", missing_name, sorted(dep_names), existing)
+                results.add_warning(
+                    raw, WARNING_MISSING_DEF, "'{}' is needed by '{}' but was not among '{}'",
+                        missing_name, sorted(dep_names), existing)
 
         return results
 
@@ -610,11 +614,13 @@ class ObjectImporter(object):
         # We quit on first error encountered
         if response and not response.ok:
             raw = (item_type, attrs_dict, response.details)
-            self.results.add_error(raw, ERROR_COULD_NOT_IMPORT_OBJECT, "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'",
-                                   is_edit, attrs.name, attrs_dict, item_type, response.details)
+            self.results.add_error(raw, ERROR_COULD_NOT_IMPORT_OBJECT,
+                "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'",
+                    is_edit, attrs.name, attrs_dict, item_type, response.details)
             return self.results
 
-        # It's been just imported so we don't want to create in next steps (this in fact would result in an error as the object already exists).
+        # It's been just imported so we don't want to create in next steps
+        # (this in fact would result in an error as the object already exists).
         if is_edit:
             self.remove_from_import_list(item_type, attrs.name)
 
@@ -625,7 +631,8 @@ class ObjectImporter(object):
 
     def add_warning(self, results, item_type, value_dict, item):
         raw = (item_type, value_dict)
-        results.add_warning(raw, WARNING_ALREADY_EXISTS_IN_ODB, '{} already exists in ODB {} ({})', dict(value_dict), dict(item), item_type)
+        results.add_warning(
+            raw, WARNING_ALREADY_EXISTS_IN_ODB, '{} already exists in ODB {} ({})', dict(value_dict), dict(item), item_type)
 
 # ################################################################################################################################
 
@@ -825,7 +832,8 @@ class ObjectManager(object):
     def fix_up_odb_object(self, item_type, item):
         """ For each ODB object, ensure fields that specify a dependency have their associated name field updated
         to match the dependent object. Otherwise, ensure the field is set to the corresponding empty value
-        (either None or ZATO_NO_SECURITY)."""
+        (either None or ZATO_NO_SECURITY).
+        """
         normalize_service_name(item)
         service_info = SERVICE_BY_NAME[item_type]
 
@@ -1011,7 +1019,8 @@ class InputParser(object):
 
         if not isinstance(obj, dict):
             raw = (abs_path, obj)
-            results.add_error(raw, ERROR_INVALID_INPUT, "Include {} is incorrect: expected a dictionary containing one item, or a fully formed dump file.")
+            results.add_error(raw, ERROR_INVALID_INPUT,
+                "Include {} is incorrect: expected a dictionary containing one item, or a fully formed dump file.")
             return
 
         if 'name' in obj or 'id' in obj:
