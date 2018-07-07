@@ -312,7 +312,7 @@ class Service(object):
                 method = name.replace('handle_', '')
                 class_.http_method_handlers[method] = getattr(class_, name)
 
-    def _init(self, is_http=False):
+    def _init(self, may_have_wsgi_environ=False):
         """ Actually initializes the service.
         """
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
@@ -342,7 +342,7 @@ class Service(object):
         if self.component_enabled_patterns:
             self.patterns = PatternsFacade(self)
 
-        if is_http:
+        if may_have_wsgi_environ:
             self.request.http.init(self.wsgi_environ)
 
         # self.is_sio attribute is set by ServiceStore during deployment
@@ -880,8 +880,8 @@ class Service(object):
     @staticmethod
     def update(service, channel_type, server, broker_client, _ignored, cid, payload, raw_request, transport=None,
         simple_io_config=None, data_format=None, wsgi_environ={}, job_type=None, channel_params=None, merge_channel_params=True,
-        params_priority=None, in_reply_to=None, environ=None, init=True, wmq_ctx=None, _HTTP_SOAP=CHANNEL.HTTP_SOAP,
-        _AMQP=CHANNEL.AMQP, _WMQ=CHANNEL.WEBSPHERE_MQ):
+        params_priority=None, in_reply_to=None, environ=None, init=True, wmq_ctx=None,
+        _wsgi_channels=(CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC), _AMQP=CHANNEL.AMQP, _WMQ=CHANNEL.WEBSPHERE_MQ):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
@@ -924,7 +924,7 @@ class Service(object):
                 sec_def_info.get('username'), sec_def_info.get('impl')), channel_item)
 
         if init:
-            service._init(channel_type==_HTTP_SOAP)
+            service._init(channel_type in _wsgi_channels)
 
 # ################################################################################################################################
 
