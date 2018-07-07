@@ -50,7 +50,7 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
 
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', has_gd);
-    row += String.format('<td>{0}/{1}</td>', item.max_depth_gd, item.max_depth_non_gd);
+    row += String.format('<td>{0} / {1}</td>', item.max_depth_gd, item.max_depth_non_gd);
     row += String.format('<td>{0}</td>', data.current_depth_link);
     row += String.format('<td>{0}</td>', last_pub_time);
 
