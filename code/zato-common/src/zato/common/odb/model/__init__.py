@@ -2003,7 +2003,6 @@ class ChannelWebSocket(Base):
     cluster = relationship(Cluster, backref=backref('web_socket_list', order_by=name, cascade='all, delete, delete-orphan'))
 
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
-    security = relationship(SecurityBase, backref=backref('web_socket_list', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, address=None, data_format=None,
             new_token_wait_time=None, token_ttl=None, service_id=None, service=None, cluster_id=None, cluster=None,

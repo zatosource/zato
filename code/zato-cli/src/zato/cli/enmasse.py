@@ -9,23 +9,34 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import collections, copy, json, logging, os, re, sys
+import collections
+import copy
+import json
+import logging
+import os
+import re
+import sys
 from datetime import datetime
 
-# Serialization formats.
+# anyjson
 import anyjson
-import pyaml
-import yaml
 
 # Bunch
 from zato.bunch import Bunch, bunchify, debunchify
 
+# pyyaml
+import pyaml
+
 # Texttable
 import texttable
+
+# yaml
+import yaml
 
 # Zato
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
+from zato.common import SECRETS
 from zato.common.util import get_client_from_server_conf
 
 DEFAULT_COLS_WIDTH = '15,100'
@@ -50,8 +61,7 @@ ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
 ERROR_TYPE_MISSING = Code('E04', 'type missing')
 
 def find_first(it, pred):
-    """Given any iterable, return the first element `elem` from it matching
-    `pred(elem)`"""
+    """Given any iterable, return the first element `elem` from it matching `pred(elem)`"""
     for obj in it:
         if pred(obj):
             return obj
@@ -72,7 +82,9 @@ def populate_services_from_apispec(client, logger):
     """ Request a list of services from the APISpec service, and merge the results into SERVICES_BY_PREFIX,
     creating new ServiceInfo instances to represent previously unknown services as appropriate."""
     response = client.invoke('zato.apispec.get-api-spec', {
-        'return_internal': True
+        'return_internal': True,
+        'include': '*',
+        'needs_sphinx': False
     })
 
     if not response.ok:
@@ -80,6 +92,7 @@ def populate_services_from_apispec(client, logger):
         return
 
     by_prefix = {}  # { "zato.apispec": {"get-api-spec": { .. } } }
+
     for service in response.data['namespaces']['']['services']:
         prefix, _, name = service['name'].rpartition('.')
         methods = by_prefix.setdefault(prefix, {})
@@ -92,17 +105,18 @@ def populate_services_from_apispec(client, logger):
         if prefix in IGNORE_PREFIXES:
             continue
 
-        sinfo = SERVICE_BY_PREFIX.get(prefix)
-        if sinfo is None:
-            sinfo = ServiceInfo(prefix=prefix, name=make_service_name(prefix))
-            SERVICE_BY_PREFIX[prefix] = sinfo
-            SERVICE_BY_NAME[sinfo.name] = sinfo
-            SERVICES.append(sinfo)
+        service_info = SERVICE_BY_PREFIX.get(prefix)
+        if service_info is None:
+            service_info = ServiceInfo(prefix=prefix, name=make_service_name(prefix))
+            SERVICE_BY_PREFIX[prefix] = service_info
+            SERVICE_BY_NAME[service_info.name] = service_info
+            SERVICES.append(service_info)
 
-        sinfo.methods = methods
+        service_info.methods = methods
 
-#: The common prefix for a set of services is tested against the first element in this list using startswith(). If it matches, that prefix is replaced by the
-#: second element. The prefixes must match exactly if the first element does not end in a period.
+# The common prefix for a set of services is tested against the first element in this list using startswith().
+# If it matches, that prefix is replaced by the second element. The prefixes must match exactly if the first element
+# does not end in a period.
 SHORTNAME_BY_PREFIX = [
     ('zato.pubsub.', 'pubsub'),
     ('zato.definition.', 'def'),
@@ -136,15 +150,16 @@ def make_service_name(prefix):
     return escaped
 
 def normalize_service_name(item):
-    """Given an item originating from the API or from an import file, if the item contains either the 'service' or 'service_name' keys, ensure the other key is
-    set. Either the dict contains neither key, or both keys set to the same value."""
+    """ Given an item originating from the API or from an import file, if the item contains either the 'service'
+    or 'service_name' keys, ensure the other key is set. Either the dict contains neither key, or both keys set
+    to the same value."""
     if 'service' in item or 'service_name' in item:
         item.setdefault('service', item.get('service_name'))
         item.setdefault('service_name', item.get('service'))
 
 def test_item(item, cond):
-    """Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match. Currently only supports testing whether
-    a field has a particular value. Returns ``True`` if `cond` is ``None``."""
+    """ Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match.
+    Currently only supports testing whether a field has a particular value. Returns ``True`` if `cond` is ``None``."""
     if cond is not None:
         only_if_field = cond.get('only_if_field')
         only_if_value = cond.get('only_if_value')
@@ -155,34 +170,38 @@ def test_item(item, cond):
     return True
 
 class ServiceInfo(object):
-    def __init__(self, prefix=None,
-                 name=None,
-                 object_dependencies=None,
-                 service_dependencies=None,
-                 export_filter=None):
+    def __init__(self, prefix=None, name=None, object_dependencies=None, service_dependencies=None, export_filter=None):
         assert name or prefix
-        #: Short service name as appears in export data.
+
+        # Short service name as appears in export data.
         self.name = name or prefix
-        #: Optional name of the object enumeration/retrieval service.
+
+        # Optional name of the object enumeration/retrieval service.
         self.prefix = prefix
-        #: Overwritten by populate_services_from_apispec().
+
+        # Overwritten by populate_services_from_apispec().
         self.methods = {}
-        #: Specifies a list of object dependencies:
-        #:      field_name: {"dependent_type": "shortname", "dependent_field": "fieldname", "empty_value": None, or e.g. ZATO_NO_SECURITY}
+
+        # Specifies a list of object dependencies:
+        # field_name: {"dependent_type": "shortname", "dependent_field":
+        #  "fieldname", "empty_value": None, or e.g. ZATO_NO_SECURITY}
         self.object_dependencies = object_dependencies or {}
+
         #: Specifies a list of service dependencies. The field's value contains
         #: the name of a service that must exist.
         #:      field_name: {"only_if_field": "field_name" or None, "only_if_value": "value" or None}
         self.service_dependencies = service_dependencies or {}
-        #: List of field/value specifications that should be ignored during export:
-        #:      field_name: value
+
+        # List of field/value specifications that should be ignored during export:
+        #      field_name: value
         self.export_filter = export_filter or {}
 
 # ################################################################################################################################
 
     @property
     def is_security(self):
-        """If True, indicates the service is source of authentication credentials for use in another service."""
+        """ If True, indicates the service is source of authentication credentials for use in another service.
+        """
         return self.prefix and self.prefix.startswith('zato.security.')
 
 # ################################################################################################################################
@@ -193,7 +212,8 @@ class ServiceInfo(object):
 # ################################################################################################################################
 
     def get_required_keys(self):
-        """Return the set of keys required to create a new instance."""
+        """ Return the set of keys required to create a new instance.
+        """
         method_sig = self.methods.get('create')
         if method_sig is None:
             return set()
@@ -208,7 +228,8 @@ class ServiceInfo(object):
     def __repr__(self):
         return '<ServiceInfo for {}>'.format(self.prefix)
 
-#: ServiceInfo templates for services that have additional semantics not yet described by apispec. To be replaced by introspection later.
+# ServiceInfo templates for services that have additional semantics not yet described by apispec.
+# To be replaced by introspection later.
 SERVICES = [
     ServiceInfo(
         name='channel_amqp',
@@ -441,8 +462,8 @@ class InputValidator(object):
             return
 
         item_dict = dict(item)
-        sinfo = SERVICE_BY_NAME[item_type]
-        required_keys = sinfo.get_required_keys()
+        service_info = SERVICE_BY_NAME[item_type]
+        required_keys = service_info.get_required_keys()
         # OK, the keys are there, but do they all have non-None values?
         for req_key in required_keys:
             if item.get(req_key) is None: # 0 or '' can be correct values
@@ -476,23 +497,23 @@ class DependencyScanner(object):
 # ################################################################################################################################
 
     def scan_item(self, item_type, item, results):
-        """
-        Scan the data of a single item for required dependencies, recording any that are missing in :py:attr:`missing`.
+        """ Scan the data of a single item for required dependencies, recording any that are missing in :py:attr:`missing`.
 
         :param item_type: ServiceInfo.name of the item's type.
         :param item: dict describing the item.
         """
-        sinfo = SERVICE_BY_NAME[item_type]
-        for dep_key, dep_info in sinfo.object_dependencies.items():
+        service_info = SERVICE_BY_NAME[item_type]
+        for dep_key, dep_info in service_info.object_dependencies.items():
             if not test_item(item, dep_info.get('condition')):
                 continue
 
             if dep_key not in item:
-                results.add_error((dep_key, dep_info), ERROR_MISSING_DEP, "{} lacks required {} field: {}", item_type, dep_key, item)
+                results.add_error(
+                    (dep_key, dep_info), ERROR_MISSING_DEP, "{} lacks required {} field: {}", item_type, dep_key, item)
 
             value = item.get(dep_key)
             if value != dep_info.get('empty_value'):
-                dep = self.find({dep_info['dependent_field']: value})
+                dep = self.find(dep_info['dependent_type'], {dep_info['dependent_field']: value})
                 if dep is None:
                     key = (dep_info['dependent_type'], item[dep_key])
                     names = self.missing.setdefault(key, [])
@@ -513,7 +534,9 @@ class DependencyScanner(object):
             for (missing_type, missing_name), dep_names in sorted(self.missing.items()):
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
                 raw = (missing_type, missing_name, dep_names, existing)
-                results.add_warning(raw, WARNING_MISSING_DEF, "'{}' is needed by '{}' but was not among '{}'", missing_name, sorted(dep_names), existing)
+                results.add_warning(
+                    raw, WARNING_MISSING_DEF, "'{}' is needed by '{}' but was not among '{}'",
+                        missing_name, sorted(dep_names), existing)
 
         return results
 
@@ -533,10 +556,10 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def validate_service_required(self, item_type, item):
-        sinfo = SERVICE_BY_NAME[item_type]
+        service_info = SERVICE_BY_NAME[item_type]
         item_dict = dict(item)
 
-        for dep_field, dep_info in sinfo.service_dependencies.items():
+        for dep_field, dep_info in service_info.service_dependencies.items():
             if not test_item(item, dep_info.get('condition')):
                 continue
 
@@ -602,22 +625,25 @@ class ObjectImporter(object):
         # We quit on first error encountered
         if response and not response.ok:
             raw = (item_type, attrs_dict, response.details)
-            self.results.add_error(raw, ERROR_COULD_NOT_IMPORT_OBJECT, "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'",
-                                   is_edit, attrs.name, attrs_dict, item_type, response.details)
+            self.results.add_error(raw, ERROR_COULD_NOT_IMPORT_OBJECT,
+                "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'",
+                    is_edit, attrs.name, attrs_dict, item_type, response.details)
             return self.results
 
-        # It's been just imported so we don't want to create in next steps (this in fact would result in an error as the object already exists).
+        # It's been just imported so we don't want to create in next steps
+        # (this in fact would result in an error as the object already exists).
         if is_edit:
             self.remove_from_import_list(item_type, attrs.name)
 
         # We'll see how expensive this call is. Seems to be but let's see in practice if it's a burden.
-        self.object_mgr.refresh_by_type(item_type)
+        self.object_mgr.get_objects_by_type(item_type)
 
 # ################################################################################################################################
 
     def add_warning(self, results, item_type, value_dict, item):
         raw = (item_type, value_dict)
-        results.add_warning(raw, WARNING_ALREADY_EXISTS_IN_ODB, '{} already exists in ODB {} ({})', dict(value_dict), dict(item), item_type)
+        results.add_warning(
+            raw, WARNING_ALREADY_EXISTS_IN_ODB, '{} already exists in ODB {} ({})', dict(value_dict), dict(item), item_type)
 
 # ################################################################################################################################
 
@@ -713,15 +739,15 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def _import_object(self, def_type, item, is_edit):
-        sinfo = SERVICE_BY_NAME[def_type]
+        service_info = SERVICE_BY_NAME[def_type]
 
         if is_edit:
-            service_name = sinfo.get_service_name('edit')
+            service_name = service_info.get_service_name('edit')
         else:
-            service_name = sinfo.get_service_name('create')
+            service_name = service_info.get_service_name('create')
 
         # service and service_name are interchangeable
-        required = sinfo.get_required_keys()
+        required = service_info.get_required_keys()
         self._swap_service_name(required, item, 'service', 'service_name')
         self._swap_service_name(required, item, 'service_name', 'service')
 
@@ -730,25 +756,26 @@ class ObjectImporter(object):
             odb_item = self.object_mgr.find(def_type, {'name': item.name})
             item.id = odb_item.id
 
-        for field_name, info in sinfo.object_dependencies.items():
+        for field_name, info in service_info.object_dependencies.items():
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
                 dep_obj = self.object_mgr.find(info['dependent_type'], {
                     info['dependent_field']: item[field_name]
                 })
                 item[info['id_field']] = dep_obj.id
 
-        self.logger.debug("Invoking {} for {}".format(service_name, sinfo.name))
+        self.logger.debug("Invoking {} for {}".format(service_name, service_info.name))
         response = self.client.invoke(service_name, item)
         if response.ok:
             verb = 'Updated' if is_edit else 'Created'
             self.logger.info("{} object '{}' with {}".format(verb, item.name, service_name))
+
         return response
 
 # ################################################################################################################################
 
     def _maybe_change_password(self, object_id, item_type, attrs):
-        sinfo = SERVICE_BY_NAME[item_type]
-        service_name = sinfo.get_service_name('change-password')
+        service_info = SERVICE_BY_NAME[item_type]
+        service_name = service_info.get_service_name('change-password')
         if service_name is None or 'password' not in attrs:
             return None
 
@@ -770,17 +797,21 @@ class ObjectManager(object):
 # ################################################################################################################################
 
     def find(self, item_type, fields):
+
         if item_type == 'def_sec':
             return self.find_sec(fields)
+
         # This probably isn't necessary any more:
         item_type = item_type.replace('-', '_')
-        lst = self.objects.get(item_type, ())
-        return find_first(lst, lambda item: dict_match(item, fields))
+        objects_by_type = self.objects.get(item_type, ())
+
+        return find_first(objects_by_type, lambda item: dict_match(item, fields))
 
 # ################################################################################################################################
 
     def find_sec(self, fields):
-        """Find any security definition with the given name."""
+        """ Find any security definition with the given name.
+        """
         for service in SERVICES:
             if service.is_security:
                 item = self.find(service.name, fields)
@@ -810,28 +841,37 @@ class ObjectManager(object):
 # ################################################################################################################################
 
     def fix_up_odb_object(self, item_type, item):
-        """For each ODB object, ensure fields that specify a dependency have their associated name field updated to match the dependent object. Otherwise,
-        ensure the field is set to the corresponding empty value (either None or ZATO_NO_SECURITY)."""
+        """ For each ODB object, ensure fields that specify a dependency have their associated name field updated
+        to match the dependent object. Otherwise, ensure the field is set to the corresponding empty value
+        (either None or ZATO_NO_SECURITY).
+        """
         normalize_service_name(item)
-        sinfo = SERVICE_BY_NAME[item_type]
-        for field_name, info in sinfo.object_dependencies.iteritems():
+        service_info = SERVICE_BY_NAME[item_type]
+
+        for field_name, info in service_info.object_dependencies.iteritems():
+
             if 'id_field' not in info:
                 continue
 
             if not test_item(item, info.get('condition')):
-                # If the field's condition is false, then just set empty values
-                # and stop.
+                # If the field's condition is false, then just set empty values and stop.
                 item[field_name] = info.get('empty_value')
                 item[info['id_field']] = None
                 continue
 
             dep_id = item.get(info['id_field'])
+
             if dep_id is None:
                 item[field_name] = info.get('empty_value')
                 continue
 
             dep = self.find(info['dependent_type'], {'id': dep_id})
-            item[field_name] = dep[info['dependent_field']]
+
+            if not dep:
+                raise Exception('Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`'.format(
+                    service_info.name, field_name, info['dependent_type'], dep_id, dep))
+            else:
+                item[field_name] = dep[info['dependent_field']]
 
         return item
 
@@ -851,9 +891,9 @@ class ObjectManager(object):
 # ################################################################################################################################
 
     def delete(self, item_type, item):
-        sinfo = SERVICE_BY_NAME[item_type]
+        service_info = SERVICE_BY_NAME[item_type]
 
-        service_name = sinfo.get_service_name('delete')
+        service_name = service_info.get_service_name('delete')
         if service_name is None:
             self.logger.error('Prefix {} has no delete service'.format(item_type))
             return
@@ -879,39 +919,47 @@ class ObjectManager(object):
 
 # ################################################################################################################################
 
-    def refresh_by_type(self, item_type):
-        sinfo = SERVICE_BY_NAME[item_type]
+    def get_objects_by_type(self, item_type):
+        service_info = SERVICE_BY_NAME[item_type]
+
         # Temporarily preserve function of the old enmasse.
-        service_name = sinfo.get_service_name('get-list')
+        service_name = service_info.get_service_name('get-list')
+
         if service_name is None:
-            self.logger.debug("Type {} has no 'get-list' service".format(sinfo.name))
+            self.logger.debug("Type {} has no 'get-list' service".format(service_info.name))
             return
 
-        self.logger.debug("Invoking {} for {}".format(service_name, sinfo.name))
+        self.logger.debug("Invoking {} for {}".format(service_name, service_info.name))
         response = self.client.invoke(service_name, {
             'cluster_id': self.client.cluster_id
         })
 
         if not response.ok:
-            self.logger.warning('Could not fetch objects of type {}: {}'.format(sinfo.name, response.details))
+            self.logger.warning('Could not fetch objects of type {}: {}'.format(service_info.name, response.details))
             return
 
-        self.objects[sinfo.name] = []
+        self.objects[service_info.name] = []
         for item in map(Bunch, response.data):
             if any(getattr(item, key, None) == value
-                   for key, value in sinfo.export_filter.items()):
+                   for key, value in service_info.export_filter.items()):
                 continue
             if self.is_ignored_name(item):
                 continue
 
-            self.objects[sinfo.name].append(item)
+            # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
+            for key, value in item.items():
+                if isinstance(value, basestring):
+                    if value.startswith(SECRETS.PREFIX):
+                        item[key] = None # Enmasse does not export secrets such as passwords or other auth information
+
+            self.objects[service_info.name].append(item)
 
 # ################################################################################################################################
 
     def _refresh_objects(self):
         self.objects = Bunch()
-        for sinfo in SERVICES:
-            self.refresh_by_type(sinfo.name)
+        for service_info in SERVICES:
+            self.get_objects_by_type(service_info.name)
 
         for item_type, items in self.objects.items():
             for item in items:
@@ -988,7 +1036,8 @@ class InputParser(object):
 
         if not isinstance(obj, dict):
             raw = (abs_path, obj)
-            results.add_error(raw, ERROR_INVALID_INPUT, "Include {} is incorrect: expected a dictionary containing one item, or a fully formed dump file.")
+            results.add_error(raw, ERROR_INVALID_INPUT,
+                "Include {} is incorrect: expected a dictionary containing one item, or a fully formed dump file.")
             return
 
         if 'name' in obj or 'id' in obj:
@@ -1075,14 +1124,14 @@ class EnMasse(ManageCommand):
     """
     opts = [
         {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},  # nopep8
-        {'name':'--export-local', 'help':'Export local JSON definitions into one file (can be used with --export-odb)', 'action':'store_true'},
+        {'name':'--export-local', 'help':'Export local file definitions into one file (can be used with --export-odb)', 'action':'store_true'},
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
-        {'name':'--import', 'help':'Import definitions from a local JSON (excludes --export-*)', 'action':'store_true'},
+        {'name':'--import', 'help':'Import definitions from a local file (excludes --export-*)', 'action':'store_true'},
         {'name':'--clean-odb', 'help':'Delete all ODB definitions before proceeding', 'action':'store_true'},
         {'name':'--dump-format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
-        {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to JSON', 'action':'store_true'},
+        {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to file', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
-        {'name':'--input', 'help':'Path to an input JSON document'},
+        {'name':'--input', 'help':'Path to input file with objects to import'},
         {'name':'--cols_width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH), 'action':'store_true'},
     ]
 
@@ -1096,14 +1145,14 @@ class EnMasse(ManageCommand):
 
     def load_input(self):
         _, _, ext = self.args.input.rpartition('.')
-        codec_klass = self.CODEC_BY_EXTENSION.get(ext.lower())
-        if codec_klass is None:
+        codec_class = self.CODEC_BY_EXTENSION.get(ext.lower())
+        if codec_class is None:
             exts = ', '.join(sorted(self.CODEC_BY_EXTENSION))
             self.logger.error('Unrecognized file extension "{}": must be one of {}'.format(ext.lower(), exts))
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
 
         path = os.path.join(self.curdir, self.args.input)
-        parser = InputParser(path, self.logger, codec_klass())
+        parser = InputParser(path, self.logger, codec_class())
         results = parser.parse()
         if not results.ok:
             self.logger.error('JSON parsing failed')
@@ -1198,11 +1247,11 @@ class EnMasse(ManageCommand):
 
         # Preserve old format by wrapping security services into one key.
         output['def_sec'] = []
-        for sinfo in SERVICES:
-            if sinfo.is_security:
+        for service_info in SERVICES:
+            if service_info.is_security:
                 output['def_sec'].extend(
-                    dict(item, type=sinfo.name)
-                    for item in output.pop(sinfo.name, [])
+                    dict(item, type=service_info.name)
+                    for item in output.pop(service_info.name, [])
                 )
 
         for _, items in output.items():
@@ -1377,3 +1426,5 @@ class EnMasse(ManageCommand):
             return [results]
 
         return []
+
+# ################################################################################################################################
