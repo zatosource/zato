@@ -9,16 +9,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from datetime import datetime
 from traceback import format_exc
 
 # rapidjson
 from rapidjson import dumps
 
 # Zato
-from zato.common import CONTENT_TYPE, PUBSUB
+from zato.common import CHANNEL, CONTENT_TYPE, PUBSUB
 from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
-from zato.common.util import new_cid
 from zato.server.service import AsIs, Int, Service
 
 # ################################################################################################################################
@@ -58,7 +56,14 @@ class SubSIO(BaseSIO):
 
 class PubSubService(Service):
 
-    def _pubsub_check_credentials(self):
+    def _pubsub_check_credentials(self, _invoke_channels=(CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)):
+
+        # If we are being through a CHANNEL.INVOKE* channel, it means that our caller used self.invoke
+        # or self.invoke_async, so there will never by any credentials in HTTP headers (there is no HTTP request after all),
+        # and we can run as an internal endpoint in this situation.
+        if self.channel.type in _invoke_channels:
+            return self.server.default_internal_pubsub_endpoint_id
+
         auth = self.wsgi_environ.get('HTTP_AUTHORIZATION')
         if not auth:
             raise Forbidden(self.cid)
@@ -186,7 +191,7 @@ class SubscribeService(PubSubService):
 
 # ################################################################################################################################
 
-    def handle_POST(self, _new_cid=new_cid, _utcnow=datetime.utcnow):
+    def handle_POST(self):
         """ POST /zato/pubsub/subscribe/topic/{topic_name}
         """
         # Checks credentials and returns endpoint_id if valid
