@@ -2516,6 +2516,10 @@ class PubSubEndpointEnqueuedMessage(Base):
         Index('pubsb_enms_q_endptp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
     {})
 
+    __mapper_args__ = {
+        'confirm_deleted_rows': False
+    }
+
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
     creation_time = Column(Numeric(20, 7, asdecimal=False), nullable=False) # When was the message enqueued
 
