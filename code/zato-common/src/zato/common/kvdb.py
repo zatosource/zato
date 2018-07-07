@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,6 +14,9 @@ from importlib import import_module
 from logging import getLogger
 from string import punctuation
 from time import gmtime
+
+# Cryptography
+from cryptography.fernet import InvalidToken
 
 # PyParsing
 from pyparsing import alphanums, oneOf, OneOrMore, Optional, White, Word
@@ -127,7 +130,16 @@ class KVDB(object):
                 config['db'] = int(self.config.db)
 
         if self.config.get('password'):
-            config['password'] = self.decrypt_func(self.config.password)
+            # Heuristics - gA is a prefix of encrypted secrets so there is a chance
+            # we need to decrypt it. If the decryption fails, this is fine, we need
+            # assume in such a case that it was an actual password starting with this prefix.
+            if self.config.password.startswith('gA'):
+                try:
+                    config['password'] = self.decrypt_func(self.config.password)
+                except InvalidToken:
+                    config['password'] = self.config.password
+            else:
+                config['password'] = self.config.password
 
         if self.config.get('socket_timeout'):
             config['socket_timeout'] = float(self.config.socket_timeout)
