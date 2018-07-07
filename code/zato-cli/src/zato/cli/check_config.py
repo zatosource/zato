@@ -283,12 +283,18 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def _on_scheduler(self, args, *ignored_args, **ignored_kwargs):
+        repo_dir = join(self.component_dir, 'config', 'repo')
+        server_conf_path = join(repo_dir, 'scheduler.conf')
+
         cm = self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None), SchedulerCryptoManager)
-        conf = ConfigObj(join(self.component_dir, 'config', 'repo', 'scheduler.conf'), use_zato=False)
+
+        secrets_conf_path = ConfigObj(join(repo_dir, 'secrets.conf'), use_zato=False)
+        server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
+
         fs_sql_config = self.get_sql_ini('sql.conf')
 
-        self.check_sql_odb_server_scheduler(cm, conf, fs_sql_config)
-        self.on_server_check_kvdb(cm, conf, 'broker')
+        self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config)
+        self.on_server_check_kvdb(cm, server_conf, 'broker')
 
         self.ensure_no_pidfile('scheduler')
 
