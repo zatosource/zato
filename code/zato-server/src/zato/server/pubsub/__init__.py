@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from contextlib import closing
-from traceback import format_exc
+from traceback import format_exc, format_stack
 
 # gevent
 from gevent import sleep, spawn
@@ -983,7 +983,6 @@ class PubSub(object):
 
                         config.server_pid = self.server.pid
                         config.server_name = self.server.name
-                        self.set_sub_key_server(config)
 
                         # Starts the delivery task and notifies other servers that we are the one
                         # to handle deliveries for this particular sub_key.

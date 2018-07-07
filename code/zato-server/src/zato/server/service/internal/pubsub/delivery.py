@@ -66,7 +66,12 @@ class CreateDeliveryTask(AdminService):
         # 1) This server had this task when it was starting up
         # 2) The task was migrated to another server
         #
-        self.pubsub.set_sub_key_server(msg)
+        different_cluster = config.cluster_id != self.server.cluster_id
+        different_server = config.server_id != self.server.id
+        different_pid = config.server_pid != self.server.pid
+
+        if different_cluster and different_server and different_pid:
+            self.pubsub.set_sub_key_server(msg)
 
         # Update in-RAM state of workers
         msg['action'] = BROKER_MSG_PUBSUB.SUB_KEY_SERVER_SET.value
