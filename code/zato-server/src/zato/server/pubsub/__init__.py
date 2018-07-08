@@ -966,6 +966,12 @@ class PubSub(object):
     def subscribe(self, config):
         with self.lock:
 
+            # It's possible that we already have this subscription - this may happen if we are the server that originally
+            # handled the request to create the subscription and we are now called again through
+            # on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE. In such a case, we can just ignore it.
+            if self.has_sub_key(config.sub_key):
+                return
+
             self._add_subscription(config)
 
             # We don't start dedicated tasks for WebSockets - they are all dynamic without a fixed server.
