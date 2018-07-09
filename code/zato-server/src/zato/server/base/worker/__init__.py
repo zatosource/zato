@@ -772,7 +772,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for value in self.worker_config.pubsub_subscription.values():
             config = bunchify(value['config'])
             config.add_subscription = True # We don't create WSX subscriptions here so it is always True
-            self.pubsub.subscribe(config)
+            self.pubsub._subscribe(config)
 
         for value in self.worker_config.pubsub_topic.values():
             self.pubsub.create_topic(bunchify(value['config']))
@@ -1275,6 +1275,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
             'zato_ctx': kwargs.get('zato_ctx'),
+            'wsgi_environ': kwargs.get('wsgi_environ'),
         }, channel, None, needs_response=True, serialize=serialize)
 
 # ################################################################################################################################
