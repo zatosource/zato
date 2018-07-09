@@ -40,6 +40,7 @@ logger_zato = getLogger('zato')
 # ################################################################################################################################
 
 _hook_action = PUBSUB.HOOK_ACTION
+_notify_methods = (PUBSUB.DELIVERY_METHOD.NOTIFY.id, PUBSUB.DELIVERY_METHOD.WEB_SOCKET.id)
 
 # ################################################################################################################################
 
@@ -308,7 +309,7 @@ class DeliveryTask(object):
                 len_delivered = len(delivered_msg_id_list)
                 suffix = ' ' if len_delivered == 1 else 's '
                 logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [dlvc:%d]',
-                    len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config.endpoint_name,
+                    len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config,
                     self.delivery_counter)
 
                 self.delivery_counter += 1
@@ -334,11 +335,11 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def run(self, default_sleep_time=0.1, _status=PUBSUB.RUN_DELIVERY_STATUS, _notify=PUBSUB.DELIVERY_METHOD.NOTIFY.id):
+    def run(self, default_sleep_time=0.1, _status=PUBSUB.RUN_DELIVERY_STATUS, _notify_methods=_notify_methods):
 
         # We are a task that does not notify endpoints of nothing - they will query us themselves
         # so we can just return immediately.
-        if self.sub_config.delivery_method != _notify:
+        if self.sub_config.delivery_method not in _notify_methods:
             logger.info('Not starting a non-notify delivery task for sub_key:`%s` (%s)',
                 self.sub_key, self.sub_config.delivery_method)
             return
@@ -842,7 +843,7 @@ class PubSubTool(object):
             self.delivery_lists[sub_key].add(GDMessage(sub_key, topic_name, msg))
             count += 1
 
-        logger.info('Pushing %d GD message{}to for sub_key task:%s msg_ids:%s'.format(
+        logger.info('Pushing %d GD message{}to task:%s msg_ids:%s'.format(
             ' ' if count==1 else 's '), count, sub_key, msg_ids)
 
 # ################################################################################################################################
