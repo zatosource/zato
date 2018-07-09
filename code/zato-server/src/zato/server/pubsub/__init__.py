@@ -112,6 +112,7 @@ class Endpoint(object):
         self.config = config
         self.id = config.id
         self.name = config.name
+        self.endpoint_type = config.endpoint_type
         self.role = config.role
         self.is_active = config.is_active
         self.is_internal = config.is_internal
@@ -125,6 +126,9 @@ class Endpoint(object):
         self.sub_topics = {}
 
         self.set_up_patterns()
+
+    def __repr__(self):
+        return make_repr(self)
 
 # ################################################################################################################################
 
@@ -791,6 +795,16 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_endpoint_by_name(self, endpoint_name):
+        with self.lock:
+            for endpoint in self.endpoints.values():
+                if endpoint.name == endpoint_name:
+                    return endpoint
+            else:
+                raise KeyError('Could not find endpoint by name `{}` among `{}`'.format(endpoint_name, self.endpoints))
+
+# ################################################################################################################################
+
     def get_endpoint_id_by_sec_id(self, sec_id):
         with self.lock:
             return self.sec_id_to_endpoint_id[sec_id]
@@ -963,7 +977,9 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def subscribe(self, config):
+    def _subscribe(self, config):
+        """ Low-level implementation of self.subscribe. Must be called with self.lock held.
+        """
         with self.lock:
 
             # It's possible that we already have this subscription - this may happen if we are the server that originally
@@ -1808,6 +1824,56 @@ class PubSub(object):
 
         # There is no response currently but one may be added at a later time
         return self.invoke_service(service_name, service_data, serialize=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def subscribe(self, topic_name, **kwargs):
+
+        # Are we going to subscribe a WSX client?
+        use_current_wsx = kwargs.get('use_current_wsx')
+
+        # This is always needed to invoke the subscription service
+        request = {
+            'topic_name': topic_name,
+        }
+
+        # This is a subscription for a WebSocket client ..
+        if use_current_wsx:
+            service = kwargs.get('service')
+
+            if use_current_wsx and (not service):
+                raise Exception('Parameter `service` is required if `use_current_wsx` is True')
+
+            # If the caller wants to subscribe a WebSocket, make sure the WebSocket's metadata
+            # is given to us on input.
+            wsx_environ = service.wsgi_environ.get('zato.request_ctx.async_msg', {}).get('environ')
+            if not wsx_environ:
+                raise Exception('Could not find `[\'zato.request_ctx.async_msg\'][\'environ\']` in WSGI environ `{}`'.format(
+                    service.wsgi_environ))
+
+            # All set, we can carry on with other steps now
+            sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
+            wsgi_environ = service.wsgi_environ
+
+        # .. this is a subscription for any client that is not WebSockets-based
+        else:
+
+            # Non-WSX endpoints always need to be identified by their names
+            endpoint_name = kwargs.get('endpoint_name')
+            if not endpoint_name:
+                raise Exception('Parameter `service_name` is required for non-WebSockets subscriptions')
+            else:
+                endpoint = self.get_endpoint_by_name(endpoint_name)
+
+            # Required to subscribe non-WSX endpoints
+            request['endpoint_id'] = endpoint.id
+
+            sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(endpoint.endpoint_type)
+            wsgi_environ = {}
+
+        response = self.invoke_service(sub_service_name, request, wsgi_environ=wsgi_environ, serialize=False)
+        return response.sub_key
 
 # ################################################################################################################################
 # ################################################################################################################################

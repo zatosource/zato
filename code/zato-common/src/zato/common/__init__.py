@@ -859,6 +859,21 @@ class PUBSUB:
         META_ENDPOINT_PUB_KEY = 'zato.ps.meta.endpoint.pub.%s.%s'
         META_ENDPOINT_SUB_KEY = 'zato.ps.meta.endpoint.sub.%s.%s'
 
+class _PUBSUB_SUBSCRIBE_CLASS:
+
+    classes = {
+        PUBSUB.ENDPOINT_TYPE.AMQP.id: 'zato.pubsub.subscription.subscribe-amqp',
+        PUBSUB.ENDPOINT_TYPE.REST.id: 'zato.pubsub.subscription.subscribe-rest',
+        PUBSUB.ENDPOINT_TYPE.SOAP.id: 'zato.pubsub.subscription.subscribe-soap',
+        PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: 'zato.pubsub.subscription.create-wsx-subscription',
+    }
+
+    @staticmethod
+    def get(name):
+        return _PUBSUB_SUBSCRIBE_CLASS.classes[name]
+
+PUBSUB.SUBSCRIBE_CLASS = _PUBSUB_SUBSCRIBE_CLASS
+
 # Not to be made available externally yet.
 skip_endpoint_types = (
     PUBSUB.ENDPOINT_TYPE.FTP.id,

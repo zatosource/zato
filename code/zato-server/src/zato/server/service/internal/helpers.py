@@ -120,6 +120,7 @@ class WebSocketsGateway(Service):
         input_optional = (AsIs('request'),)
 
     def handle(self):
+        self.wsgi_environ['zato.orig_channel'] = self.channel
         self.response.payload = self.invoke(self.request.input.service, self.request.input.request,
             wsgi_environ=self.wsgi_environ)
 
