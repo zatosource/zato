@@ -847,13 +847,21 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
+    def _enqueue_gd_messages_by_sub_key(self, sub_key, gd_msg_list):
+        """ Low-level implementation of self.enqueue_gd_messages_by_sub_key which expects the message list on input.
+        Must be called with self.sub_key_locks[sub_key] held.
+        """
+        topic_name = self.pubsub.get_topic_name_by_sub_key(sub_key)
+        self._push_gd_messages_by_sub_key(sub_key, topic_name, gd_msg_list)
+
+# ################################################################################################################################
+
     def enqueue_gd_messages_by_sub_key(self, sub_key, session=None):
         """ Fetches GD messages from SQL for sub_key given on input and adds them to local queue of messages to deliver.
         """
         with self.sub_key_locks[sub_key]:
-            topic_name = self.pubsub.get_topic_name_by_sub_key(sub_key)
             gd_msg_list = self._fetch_gd_messages_by_sub_key_list([sub_key], utcnow_as_ms(), session)
-            self._push_gd_messages_by_sub_key(sub_key, topic_name, gd_msg_list)
+            self._enqueue_gd_messages_by_sub_key(sub_key, gd_msg_list)
 
 # ################################################################################################################################
 
