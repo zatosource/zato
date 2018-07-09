@@ -318,6 +318,8 @@ class SubscribeServiceImpl(_Subscribe):
         """
         with self.lock('zato.pubsub.subscribe.%s' % (ctx.topic_name)):
 
+            endpoint = self.pubsub.get_endpoint_by_id(ctx.endpoint_id)
+
             with closing(self.odb.session()) as session:
 
                 # Non-WebSocket clients cannot subscribe to the same topic multiple times
@@ -325,7 +327,7 @@ class SubscribeServiceImpl(_Subscribe):
 
                     if has_subscription(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id):
                         raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
-                            self.pubsub.get_endpoint_by_id(ctx.endpoint_id).name, ctx.topic.name))
+                            endpoint.name, ctx.topic.name))
 
                 # Is it a WebSockets client?
                 is_wsx = bool(ctx.ws_channel_id)
@@ -353,6 +355,7 @@ class SubscribeServiceImpl(_Subscribe):
                 sub_config = Bunch()
                 sub_config.topic_name = ctx.topic.name
                 sub_config.task_delivery_interval = ctx.topic.task_delivery_interval
+                sub_config.endpoint_name = endpoint.name
                 sub_config.endpoint_type = self.endpoint_type
 
                 for name in sub_broker_attrs:
@@ -549,7 +552,18 @@ class CreateWSXSubscription(AdminService):
         # Local aliases
         topic_name = self.request.input.topic_name
         topic_name_list = set(self.request.input.topic_name_list)
-        environ = self.wsgi_environ['zato.request_ctx.async_msg']['environ']
+        async_msg = self.wsgi_environ['zato.request_ctx.async_msg']
+
+
+        # This will exist if are being invoked directly ..
+        environ = async_msg.get('environ')
+
+        # .. however, if there is a service on whose behalf we are invoked, the 'environ' key will be further nested.
+        if not environ:
+            _wsgi_environ = async_msg['wsgi_environ']
+            _async_msg = _wsgi_environ['zato.request_ctx.async_msg']
+            environ = _async_msg['environ']
+
         ws_channel_id = environ['ws_channel_config'].id
 
         # Make sure the WSX channel actually points to an endpoint. If it does not,
