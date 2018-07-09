@@ -305,8 +305,11 @@ class DeliveryTask(object):
                         self.delivery_list.remove_pubsub_msg(msg)
 
                 # Status of messages is updated in both SQL and RAM so we can now log success
-                logger.info('Successfully delivered message(s) %s to %s (dlvc:%d)',
-                    delivered_msg_id_list, self.sub_key, self.delivery_counter)
+                len_delivered = len(delivered_msg_id_list)
+                suffix = ' ' if len_delivered == 1 else 's '
+                logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [dlvc:%d]',
+                    len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config.endpoint_name,
+                    self.delivery_counter)
 
                 self.delivery_counter += 1
 
