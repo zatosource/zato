@@ -61,7 +61,7 @@ class CreateDeliveryTask(AdminService):
         }
 
         # Register this delivery task with current server's pubsub but only if we do not have it already.
-        # It is possible that we do, for instance:
+        # It is possible that we do have it, for instance:
         #
         # 1) This server had this task when it was starting up
         # 2) The task was migrated to another server
