@@ -86,6 +86,7 @@ class DeliveryTask(object):
         self.last_run = utcnow_as_ms()
         self.delivery_interval = self.sub_config.task_delivery_interval / 1000.0
         self.delivery_max_retry = self.sub_config.delivery_max_retry
+        self.previous_delivery_method = self.sub_config.delivery_method
 
         # This is a total of messages processed so far
         self.delivery_counter = 0
@@ -336,19 +337,34 @@ class DeliveryTask(object):
 # ################################################################################################################################
 
     def run(self, default_sleep_time=0.1, _status=PUBSUB.RUN_DELIVERY_STATUS, _notify_methods=_notify_methods):
-
-        # We are a task that does not notify endpoints of nothing - they will query us themselves
-        # so we can just return immediately.
-        if self.sub_config.delivery_method not in _notify_methods:
-            logger.info('Not starting a non-notify delivery task for sub_key:`%s` (%s)',
-                self.sub_key, self.sub_config.delivery_method)
-            return
-
+        """ Runs the delivery task's main loop.
+        """
         logger.info('Starting delivery task for sub_key:`%s` (%s, %s)',
             self.sub_key, self.topic_name, self.sub_config.delivery_method)
 
         try:
             while self.keep_running:
+
+                # We are a task that does not notify endpoints of nothing - they will query us themselves
+                # so in such a case we can sleep for a while and repeat the loop - perhaps in the meantime
+                # someone will change delivery_method to one that allows for notifications to be sent.
+                # If not, we will be simply looping forever, checking periodically
+                # if we can send notifications already.
+
+                # Apparently, our delivery method has changed since the last time our self.sub_config
+                # was modified, so we can log this fact and store it for later use.
+                if self.sub_config.delivery_method != self.previous_delivery_method:
+                    logger.info('Changed delivery_method from `%s` to `%s` for `%s` (%s -> %s)`',
+                        self.previous_delivery_method, self.sub_config.delivery_method, self.sub_key,
+                        self.topic_name, self.sub_config.endpoint_name)
+
+                    # Our new value is now the last value too until potentially overridden at one point
+                    self.previous_delivery_method = self.sub_config.delivery_method
+
+                if self.sub_config.delivery_method not in _notify_methods:
+                    sleep(5)
+                    continue
+
                 if self._should_wake():
 
                     with self.delivery_lock:
