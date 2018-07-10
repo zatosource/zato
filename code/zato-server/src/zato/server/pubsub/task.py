@@ -672,7 +672,7 @@ class PubSubTool(object):
         #
         # The reason why this is fine is that when we query the database not only do we use this last_gd_run but we also give it
         # a delivery status to return messages by (initialized only) and on top of it, we provide it a list of message IDs
-        # that are currently being delivered by tasks, so in other words, we never receive duplicates from the databases
+        # that are currently being delivered by tasks, so in other words, the database will never give us duplicates
         # that have been already delivered or are about to be.
         #
         self.last_gd_run = {}
