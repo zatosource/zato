@@ -70,9 +70,10 @@ class SortedList(_SortedList):
 class DeliveryTask(object):
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
-    def __init__(self, pubsub, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg_cb,
+    def __init__(self, pubsub_tool, pubsub, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg_cb,
             confirm_pubsub_msg_delivered_cb, sub_config):
         self.keep_running = True
+        self.pubsub_tool = pubsub_tool
         self.pubsub = pubsub
         self.sub_key = sub_key
         self.delivery_lock = delivery_lock
@@ -341,6 +342,20 @@ class DeliveryTask(object):
         """
         logger.info('Starting delivery task for sub_key:`%s` (%s, %s)',
             self.sub_key, self.topic_name, self.sub_config.delivery_method)
+
+        #
+        # Before starting anything, check if there are any messages already queued up in the database for this task.
+        # This may happen, for instance, if:
+        #
+        # * Our delivery_method is `pull`
+        # * Some messages get published to topic but the subscribers never gets them
+        # * Our server is restarted
+        # * The server is ultimately brought up and we need to find these messages that were previously
+        #   published but never delivered
+        #
+        # Since this is about messages taken from the database, by definition, all of them they must be GD ones.
+        #
+        self.pubsub_tool.enqueue_initial_messages(self.sub_key)
 
         try:
             while self.keep_running:
@@ -686,8 +701,8 @@ class PubSubTool(object):
         sub = self.pubsub.get_subscription_by_sub_key(sub_key)
 
         self.delivery_tasks[sub_key] = DeliveryTask(
-            self.pubsub, sub_key, delivery_lock, delivery_list, self.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered,
-            sub.config)
+            self, self.pubsub, sub_key, delivery_lock, delivery_list, self.deliver_pubsub_msg,
+            self.confirm_pubsub_msg_delivered, sub.config)
 
 # ################################################################################################################################
 
@@ -879,6 +894,14 @@ class PubSubTool(object):
         with self.sub_key_locks[sub_key]:
             gd_msg_list = self._fetch_gd_messages_by_sub_key_list([sub_key], utcnow_as_ms(), session)
             self._enqueue_gd_messages_by_sub_key(sub_key, gd_msg_list)
+
+
+# ################################################################################################################################
+
+    def enqueue_initial_messages(self, sub_key):
+        """ Looks up any messages for input task in the database and pushes them all and enqueues in batches any found.
+        """
+        print(444, sub_key)
 
 # ################################################################################################################################
 
