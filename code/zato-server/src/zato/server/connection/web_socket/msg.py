@@ -43,21 +43,21 @@ error_response = {
 class MSG_PREFIX:
     _COMMON = 'zwsx.{}'
 
-    REQ_TO_CLIENT = _COMMON.format('rq-client')
-    RESP_AUTH = _COMMON.format('rsp-auth')
-    RESP_OK = _COMMON.format('rsp-ok')
+    REQ_TO_CLIENT = _COMMON.format('rqclient')
+    RESP_AUTH = _COMMON.format('rspauth')
+    RESP_OK = _COMMON.format('rspok')
 
     # A message from server indicating an error, no response from client is expected
-    MSG_ERR = _COMMON.format('msg-err')
+    MSG_ERR = _COMMON.format('msgerr')
 
     # As above but in response to a previous request from client
-    RESP_ERROR = _COMMON.format('rsp-err')
+    RESP_ERROR = _COMMON.format('rsperr')
 
     # A publish/subscribe message from server to client
-    PUBSUB_REQ = _COMMON.format('ps-rq')
+    PUBSUB_REQ = _COMMON.format('psrq')
 
     # A client response to a previous pub/sub request
-    PUBSUB_RESP = _COMMON.format('ps-rsp')
+    PUBSUB_RESP = _COMMON.format('psrsp')
 
 # ################################################################################################################################
 
