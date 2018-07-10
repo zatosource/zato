@@ -985,10 +985,8 @@ class PubSub(object):
             # It's possible that we already have this subscription - this may happen if we are the server that originally
             # handled the request to create the subscription and we are now called again through
             # on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE. In such a case, we can just ignore it.
-            if self.has_sub_key(config.sub_key):
-                return
-
-            self._add_subscription(config)
+            if not self.has_sub_key(config.sub_key):
+                self._add_subscription(config)
 
             # We don't start dedicated tasks for WebSockets - they are all dynamic without a fixed server.
             # But for other endpoint types, we create and start a delivery task here.
@@ -1593,6 +1591,7 @@ class PubSub(object):
         while self.keep_running:
 
             # Sleep for a while before continuing - the call to sleep is here because this while loop is quite long
+            # so it would be inconvenient to have it down below.
             sleep(0.01)
 
             # Blocks other pub/sub processes for a moment

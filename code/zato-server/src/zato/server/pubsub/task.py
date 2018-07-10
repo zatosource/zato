@@ -309,7 +309,7 @@ class DeliveryTask(object):
                 len_delivered = len(delivered_msg_id_list)
                 suffix = ' ' if len_delivered == 1 else 's '
                 logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [dlvc:%d]',
-                    len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config,
+                    len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config.endpoint_name,
                     self.delivery_counter)
 
                 self.delivery_counter += 1
