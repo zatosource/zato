@@ -16,7 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common import PUBSUB
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
-from zato.server.service import AsIs, Bool, Int, List, ListOfDicts, Opaque
+from zato.server.service import AsIs, Bool, Int, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -200,7 +200,6 @@ class AfterWSXReconnect(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('sql_ws_client_id', 'channel_name', AsIs('pub_client_id'), Opaque('web_socket'))
         input_optional = (List('sub_key_list'),)
-        output_optional = (ListOfDicts('queue_depth'),)
 
     def handle(self):
 
@@ -212,66 +211,48 @@ class AfterWSXReconnect(AdminService):
         # values are a dictionary of gd, non_gd for Guaranteed Delivery and non-GD messages for that sub_key
         response = []
 
-        with closing(self.odb.session()) as session:
+        try:
+            with closing(self.odb.session()) as session:
 
-            # Everything is performed using that WebSocket's pub/sub lock to ensure that both
-            # in-RAM and SQL (non-GD and GD) messages are made available to the WebSocket as a single unit.
-            with pubsub_tool.lock:
+                # Everything is performed using that WebSocket's pub/sub lock to ensure that both
+                # in-RAM and SQL (non-GD and GD) messages are made available to the WebSocket as a single unit.
+                with pubsub_tool.lock:
 
-                # Response to produce
-                response = {}
+                    get_in_ram_service = 'zato.pubsub.topic.get-in-ram-message-list'
+                    _, non_gd_messages = self.servers.invoke_all(get_in_ram_service, {'sub_key_list':sub_key_list}, timeout=120)
 
-                get_in_ram_service = 'zato.pubsub.topic.get-in-ram-message-list'
-                non_gd_messages = self.servers.invoke_all(get_in_ram_service, {'sub_key_list':sub_key_list}, timeout=120)
-
-                # Parse non-GD messages on output from all servers, if any at all, into per-sub_key lists ..
-                if non_gd_messages:
-                    non_gd_messages = self._parse_non_gd_messages(sub_key_list, non_gd_messages)
-
-                    # If there are any non-GD messages, add them to this WebSocket's pubsub tool.
+                    # Parse non-GD messages on output from all servers, if any at all, into per-sub_key lists ..
                     if non_gd_messages:
-                        for sub_key, messages in non_gd_messages.items():
-                            pubsub_tool.add_sub_key_no_lock(sub_key)
-                            pubsub_tool.add_non_gd_messages_by_sub_key(sub_key, messages)
+                        non_gd_messages = self._parse_non_gd_messages(sub_key_list, non_gd_messages)
 
-                # For each sub_key from input ..
-                for sub_key in sub_key_list:
+                        # If there are any non-GD messages, add them to this WebSocket's pubsub tool.
+                        if non_gd_messages:
+                            for sub_key, messages in non_gd_messages.items():
+                                pubsub_tool.add_sub_key_no_lock(sub_key)
+                                pubsub_tool.add_non_gd_messages_by_sub_key(sub_key, messages)
 
-                    # .. add relevant SQL objects ..
-                    self.pubsub.add_ws_client_pubsub_keys(
-                        session, self.request.input.sql_ws_client_id, sub_key,
-                        self.request.input.channel_name, self.request.input.pub_client_id)
+                    # For each sub_key from input ..
+                    for sub_key in sub_key_list:
 
-                    # .. update state of that WebSocket's pubsub tool that keeps track of message delivery
-                    pubsub_tool.add_sub_key_no_lock(sub_key)
+                        # .. add relevant SQL objects ..
+                        self.pubsub.add_ws_client_pubsub_keys(
+                            session, self.request.input.sql_ws_client_id, sub_key,
+                            self.request.input.channel_name, self.request.input.pub_client_id)
 
-                    # .. add any GD messages waiting for this sub_key - note that we providing our
-                    # own session on input so as to control when the SQL commit happens,
-                    # which we want to take place after all sub_keys have been processed.
-                    pubsub_tool.enqueue_gd_messages_by_sub_key(sub_key, session)
+                        # .. update state of that WebSocket's pubsub tool that keeps track of message delivery
+                        pubsub_tool.add_sub_key_no_lock(sub_key)
 
-                    # Will hold depths of queues
-                    response[sub_key] = {
-                        'queue_depth_gd': None,
-                        'queue_depth_non_gd': None,
-                    }
+                    # Everything is ready - note that pubsub_tool itself will enqueue any initial messages
+                    # using its enqueue_initial_messages method which does it in batches.
+                    session.commit()
 
-                    # .. set current depth for GD messages ..
-                    response[sub_key]['queue_depth_gd'] = self.invoke('zato.pubsub.queue.get-queue-depth-by-sub-key', {
-                        'sub_key': sub_key
-                    })['response']['queue_depth'][sub_key]
-
-                    # .. get depths for a given sub_key, but ignore the GD one
-                    # because it only indicates how many GD messages are in the delivery task,
-                    # not a total of GD messages which we have already obtained above.
-                    _, queue_depth_non_gd = pubsub_tool.get_queue_depth(sub_key)
-
-                    # .. set current depth for GD messages ..
-                    response[sub_key]['queue_depth_non_gd'] = queue_depth_non_gd
-
-                session.commit()
-
-            self.response.payload.queue_depth = response
+        except Exception:
+            self.logger.warn('Error while restoring WSX pub/sub for keys `%s`, e:`%s`', self.request.input.sub_key_list,
+                format_exc())
+        else:
+            # No exception = all good and we can register this pubsub_tool with self.pubsub now
+            for sub_key in sub_key_list:
+                self.pubsub.set_pubsub_tool_for_sub_key(sub_key, pubsub_tool)
 
 # ################################################################################################################################
 
