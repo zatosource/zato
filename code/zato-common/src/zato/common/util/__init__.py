@@ -474,6 +474,8 @@ def payload_from_request(cid, request, data_format, transport):
             else:
                 if isinstance(request, objectify.ObjectifiedElement):
                     payload = request
+                elif len(request) == 0:
+                    payload = objectify.fromstring('<empty/>')
                 else:
                     payload = objectify.fromstring(request)
         elif data_format in(DATA_FORMAT.DICT, DATA_FORMAT.JSON):
