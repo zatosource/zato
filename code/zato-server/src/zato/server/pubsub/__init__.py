@@ -26,7 +26,8 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
-     get_delivery_server_for_sub_key, get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
+     get_delivery_server_for_sub_key, get_sql_messages_by_msg_id_list as _get_sql_messages_by_msg_id_list, \
+     get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
 from zato.common.util import is_func_overridden, make_repr, new_cid, spawn_greenlet
@@ -1385,6 +1386,18 @@ class PubSub(object):
         finally:
             if needs_close:
                 session.close()
+
+# ################################################################################################################################
+
+    def get_initial_sql_msg_ids_by_sub_key(self, session, sub_key, pub_time_max):
+        return _get_sql_msg_ids_by_sub_key(session, self.server.cluster_id, [sub_key], None, pub_time_max).\
+               all()
+
+# ################################################################################################################################
+
+    def get_sql_messages_by_msg_id_list(self, session, sub_key, pub_time_max, msg_id_list):
+        return _get_sql_messages_by_msg_id_list(session, self.server.cluster_id, sub_key, pub_time_max, msg_id_list).\
+               all()
 
 # ################################################################################################################################
 
