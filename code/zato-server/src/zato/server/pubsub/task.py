@@ -25,7 +25,7 @@ from sortedcontainers import SortedList as _SortedList
 # Zato
 from zato.common import PUBSUB
 from zato.common.pubsub import PubSubMessage
-from zato.common.util import spawn_greenlet
+from zato.common.util import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub import PubSub
 
@@ -355,7 +355,7 @@ class DeliveryTask(object):
         #
         # Since this is about messages taken from the database, by definition, all of them they must be GD ones.
         #
-        self.pubsub_tool.enqueue_initial_messages(self.sub_key)
+        self.pubsub_tool.enqueue_initial_messages(self.sub_key, self.topic_name, self.sub_config.endpoint_name)
 
         try:
             while self.keep_running:
@@ -895,13 +895,53 @@ class PubSubTool(object):
             gd_msg_list = self._fetch_gd_messages_by_sub_key_list([sub_key], utcnow_as_ms(), session)
             self._enqueue_gd_messages_by_sub_key(sub_key, gd_msg_list)
 
-
 # ################################################################################################################################
 
-    def enqueue_initial_messages(self, sub_key):
+    def enqueue_initial_messages(self, sub_key, topic_name, endpoint_name, _group_size=20):
         """ Looks up any messages for input task in the database and pushes them all and enqueues in batches any found.
         """
-        print(444, sub_key)
+        with self.sub_key_locks[sub_key]:
+
+            pub_time_max = utcnow_as_ms()
+            session = None
+
+            try:
+
+                # One SQL session for all queries
+                session = self.pubsub.server.odb.session()
+
+                # Get IDs of any messages already queued up so as to break them out into batches of messages to fetch
+                msg_ids = self.pubsub.get_initial_sql_msg_ids_by_sub_key(session, sub_key, pub_time_max)
+                msg_ids = [elem.pub_msg_id for elem in msg_ids]
+
+                if msg_ids:
+                    len_msg_ids = len(msg_ids)
+                    suffix = ' ' if len_msg_ids == 1 else 's '
+                    groups = list(grouper(_group_size, msg_ids))
+                    len_groups = len(groups)
+
+                    # This we log using both loggers because we run during server startup so we should
+                    # let users know that their server have to do something extra
+                    for _logger in logger, logger_zato:
+                        _logger.info('Found %d initial message%sto enqueue for sub_key:`%s` (%s -> %s), `%s`, g:%d, gs:%d',
+                            len_msg_ids, suffix, sub_key, topic_name, endpoint_name, msg_ids, len(groups), _group_size)
+
+                    for idx, group in enumerate(groups, 1):
+                        group_msg_ids = [elem for elem in group if elem]
+                        logger.info('Enqueuing group %d/%d (gs:%d) (%s, %s -> %s) `%s`',
+                            idx, len_groups, _group_size, sub_key, topic_name, endpoint_name, group_msg_ids)
+
+                        msg_list = self.pubsub.get_sql_messages_by_msg_id_list(session, sub_key, pub_time_max, group_msg_ids)
+                        self._enqueue_gd_messages_by_sub_key(sub_key, msg_list)
+
+            except Exception:
+                for _logger in logger, logger_zato:
+                    _logger.warn('Could not enqueue initial messages for `%s` (%s -> %s), e:`%s`',
+                        sub_key, topic_name, endpoint_name, format_exc())
+
+            finally:
+                if session:
+                    session.close()
 
 # ################################################################################################################################
 
