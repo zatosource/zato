@@ -16,7 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common import PUBSUB
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
-from zato.server.service import AsIs, Bool, Int, List, Opaque
+from zato.server.service import AsIs, Bool, Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -192,24 +192,30 @@ class AfterPublish(AdminService):
 
 # ################################################################################################################################
 
-class AfterWSXReconnect(AdminService):
-    """ Invoked by WSX clients after they reconnect with a list of their sub_keys on input. Collects all messages
-    waiting on other servers for that WebSocket and lets the caller know how many of them are available. At the same time,
-    the collection process triggers that WebSocket's delivery task (via pubsub_tool) to start deliveries.
+class ResumeWSXSubscription(AdminService):
+    """ Invoked by WSX clients after they reconnect with a list of their sub_keys on input.
+    Collects all messages waiting on other servers for that WebSocket and enqueues any available for a task that is started
+    on behalf of that WebSocket.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('sql_ws_client_id', 'channel_name', AsIs('pub_client_id'), Opaque('web_socket'))
-        input_optional = (List('sub_key_list'),)
+        input_required = ('sub_key',)
 
     def handle(self):
 
         # Local aliases
-        sub_key_list = self.request.input.sub_key_list
-        pubsub_tool = self.request.input.web_socket.pubsub_tool
+        sub_key_list = [self.request.input.sub_key]
+        async_msg = self.wsgi_environ['zato.request_ctx.async_msg']
 
-        # Response to produce - a list of dictionaries, each keyed by sub_key,
-        # values are a dictionary of gd, non_gd for Guaranteed Delivery and non-GD messages for that sub_key
-        response = []
+        # This will exist if are being invoked directly ..
+        environ = async_msg.get('environ')
+
+        # .. however, if there is a service on whose behalf we are invoked, the 'environ' key will be further nested.
+        if not environ:
+            _wsgi_environ = async_msg['wsgi_environ']
+            _async_msg = _wsgi_environ['zato.request_ctx.async_msg']
+            environ = _async_msg['environ']
+
+        pubsub_tool = environ['web_socket'].pubsub_tool
 
         try:
             with closing(self.odb.session()) as session:
@@ -235,9 +241,8 @@ class AfterWSXReconnect(AdminService):
                     for sub_key in sub_key_list:
 
                         # .. add relevant SQL objects ..
-                        self.pubsub.add_ws_client_pubsub_keys(
-                            session, self.request.input.sql_ws_client_id, sub_key,
-                            self.request.input.channel_name, self.request.input.pub_client_id)
+                        self.pubsub.add_ws_client_pubsub_keys(session, environ['sql_ws_client_id'], sub_key,
+                            environ['ws_channel_config']['name'], environ['pub_client_id'])
 
                         # .. update state of that WebSocket's pubsub tool that keeps track of message delivery
                         pubsub_tool.add_sub_key_no_lock(sub_key)

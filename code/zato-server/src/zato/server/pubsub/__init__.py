@@ -1902,13 +1902,13 @@ class PubSub(object):
         """
         wsx_environ = self._find_wsx_environ(service)
 
-        self.invoke_service('zato.pubsub.after-wsx-reconnect', {
+        self.invoke_service('zato.pubsub.resume-wsx-subscription', {
             'sql_ws_client_id': wsx_environ['sql_ws_client_id'],
             'channel_name': wsx_environ['ws_channel_config']['name'],
             'pub_client_id': wsx_environ['pub_client_id'],
             'web_socket': wsx_environ['web_socket'],
-            'sub_key_list': [sub_key]
-        })
+            'sub_key': sub_key
+        }, wsgi_environ=service.wsgi_environ)
 
 # ################################################################################################################################
 # ################################################################################################################################
