@@ -1,10 +1,10 @@
 #!/bin/bash
 
-if ! [[ "$(< /etc/alpine-release)" =~ '^3\.6\.' ]]
-then
-    echo "install.sh: Unsupported OS: only Alpine Linux 3.6.x is supported." >&2
-    exit 1
-fi
+# if ! [[ "$(< /etc/alpine-release)" =~ '^3\.6\.' ]]
+# then
+#     echo "install.sh: Unsupported OS: only Alpine Linux 3.6.x is supported." >&2
+#     exit 1
+# fi
 
 # Alpine does not use glibc, so pip disables binary wheels, therefore we also
 # need SciPy dependencies.
