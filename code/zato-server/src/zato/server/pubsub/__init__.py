@@ -1699,6 +1699,16 @@ class PubSub(object):
 # Public API methods
 
 # ################################################################################################################################
+
+    def _find_wsx_environ(self, service):
+        wsx_environ = service.wsgi_environ.get('zato.request_ctx.async_msg', {}).get('environ')
+        if not wsx_environ:
+            raise Exception('Could not find `[\'zato.request_ctx.async_msg\'][\'environ\']` in WSGI environ `{}`'.format(
+                service.wsgi_environ))
+        else:
+            return wsx_environ
+
+# ################################################################################################################################
 # ################################################################################################################################
 
     def publish(self, topic_name, *args, **kwargs):
@@ -1858,11 +1868,8 @@ class PubSub(object):
                 raise Exception('Parameter `service` is required if `use_current_wsx` is True')
 
             # If the caller wants to subscribe a WebSocket, make sure the WebSocket's metadata
-            # is given to us on input.
-            wsx_environ = service.wsgi_environ.get('zato.request_ctx.async_msg', {}).get('environ')
-            if not wsx_environ:
-                raise Exception('Could not find `[\'zato.request_ctx.async_msg\'][\'environ\']` in WSGI environ `{}`'.format(
-                    service.wsgi_environ))
+            # is given to us on input - the call below will raise an exception if it was not.
+            self._find_wsx_environ(service)
 
             # All set, we can carry on with other steps now
             sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
@@ -1886,6 +1893,22 @@ class PubSub(object):
 
         response = self.invoke_service(sub_service_name, request, wsgi_environ=wsgi_environ, serialize=False)
         return response.sub_key
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def resume_wsx_subscription(self, sub_key, service):
+        """ Invoked by WSX clients that want to resume deliveries of their messages after they reconnect.
+        """
+        wsx_environ = self._find_wsx_environ(service)
+
+        self.invoke_service('zato.pubsub.after-wsx-reconnect', {
+            'sql_ws_client_id': wsx_environ['sql_ws_client_id'],
+            'channel_name': wsx_environ['ws_channel_config']['name'],
+            'pub_client_id': wsx_environ['pub_client_id'],
+            'web_socket': wsx_environ['web_socket'],
+            'sub_key_list': [sub_key]
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################
