@@ -554,7 +554,6 @@ class CreateWSXSubscription(AdminService):
         topic_name_list = set(self.request.input.topic_name_list)
         async_msg = self.wsgi_environ['zato.request_ctx.async_msg']
 
-
         # This will exist if are being invoked directly ..
         environ = async_msg.get('environ')
 
