@@ -60,19 +60,6 @@ class CreateDeliveryTask(AdminService):
             'task_delivery_interval': config['task_delivery_interval'],
         }
 
-        # Register this delivery task with current server's pubsub but only if we do not have it already.
-        # It is possible that we do have it, for instance:
-        #
-        # 1) This server had this task when it was starting up
-        # 2) The task was migrated to another server
-        #
-        different_cluster = config.cluster_id != self.server.cluster_id
-        different_server = config.server_id != self.server.id
-        different_pid = config.server_pid != self.server.pid
-
-        if different_cluster and different_server and different_pid:
-            self.pubsub.set_sub_key_server(msg)
-
         # Update in-RAM state of workers
         msg['action'] = BROKER_MSG_PUBSUB.SUB_KEY_SERVER_SET.value
         self.broker_client.publish(msg)
