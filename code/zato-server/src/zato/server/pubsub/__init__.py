@@ -1584,11 +1584,15 @@ class PubSub(object):
 
     def invoke_on_outgoing_soap_invoke_hook(self, batch, sub, http_soap):
         hook = self.get_on_outgoing_soap_invoke_hook(sub.sub_key)
+        topic = self.get_topic_by_id(sub.config.topic_id)
         if hook:
-            topic = self.get_topic_by_id(sub.config.topic_id)
             hook(topic, batch, http_soap=http_soap)
         else:
-            raise Exception('Hook service does not implement `on_outgoing_soap_invoke` method')
+            # We know that this service exists, it just does not implement the expected method
+            service_info = self.server.service_store.get_service_class_by_id(topic.config.hook_service_id)
+            service_class = service_info['service_class']
+            service_name = service_class.get_name()
+            raise Exception('Hook service `{}` does not implement `on_outgoing_soap_invoke` method'.format(service_name))
 
 # ################################################################################################################################
 
