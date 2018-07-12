@@ -43,8 +43,8 @@ logger_overflow = logging.getLogger('zato_pubsub_overflow')
 # ################################################################################################################################
 
 hook_type_to_method = {
-    PUBSUB.HOOK_TYPE.PUB: 'before_publish',
-    PUBSUB.HOOK_TYPE.SUB: 'before_delivery',
+    PUBSUB.HOOK_TYPE.BEFORE_PUBLISH: 'before_publish',
+    PUBSUB.HOOK_TYPE.BEFORE_DELIVERY: 'before_delivery',
 }
 
 # ################################################################################################################################
@@ -166,7 +166,7 @@ class Endpoint(object):
 # ################################################################################################################################
 
 class Topic(object):
-    """ An individiual topic ib in pub/sub workflows.
+    """ An individiual topic in in pub/sub workflows.
     """
     def __init__(self, config):
         self.config = config
@@ -1043,10 +1043,16 @@ class PubSub(object):
 
     def _create_topic(self, config):
         if config.hook_service_id:
+
             config.before_publish_hook_service_invoker = self.get_hook_service_invoker(
-                config.hook_service_name, PUBSUB.HOOK_TYPE.PUB)
+                config.hook_service_name, PUBSUB.HOOK_TYPE.BEFORE_PUBLISH)
+
             config.before_delivery_hook_service_invoker = self.get_hook_service_invoker(
-                config.hook_service_name, PUBSUB.HOOK_TYPE.SUB)
+                config.hook_service_name, PUBSUB.HOOK_TYPE.BEFORE_DELIVERY)
+
+            config.on_soap_suds_invoke_invoker = self.get_hook_service_invoker(
+                config.hook_service_name, PUBSUB.HOOK_TYPE.ON_SOAP_SUDS_INVOKE)
+
         else:
             config.hook_service_invoker = None
 
