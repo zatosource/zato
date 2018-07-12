@@ -950,12 +950,12 @@ class PubSubHook(Service):
         """ Invoked for each pub/sub message before it is delivered to an endpoint.
         """
 
-    def on_soap_suds_invoke(self, _zato_no_op_marker=zato_no_op_marker):
+    def on_outgoing_soap_invoke(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoke for each message that is to be sent through outgoing a SOAP Suds connection.
         """
 
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_PUBLISH] = 'before_publish'
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_DELIVERY] = 'before_delivery'
-PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_SOAP_SUDS_INVOKE] = 'on_soap_suds_invoke'
+PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE] = 'on_outgoing_soap_invoke'
 
 # ################################################################################################################################
