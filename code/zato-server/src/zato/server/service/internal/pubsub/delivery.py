@@ -112,17 +112,7 @@ class DeliverMessage(AdminService):
             # .. while suds-based outgoing connections need to invoke the hook service which will
             # in turn issue a SOAP request to the remote server.
             else:
-                outconn_name = http_soap['config']['name']
-
-                ''''
-                with self.outgoing.soap[outconn_name].conn.client() as client:
-
-                    bank_code = '12070000'
-                    output = client.service.getBank(bank_code)
-
-                    self.logger.info('BIC `%s`', output.bic)
-                    self.logger.info('Name `%s`', output.bezeichnung)
-                    '''
+                self.pubsub.invoke_on_outgoing_soap_invoke_hook(msg, subscription, http_soap)
 
 # ################################################################################################################################
 

@@ -737,7 +737,7 @@ class PUBSUB:
     class HOOK_TYPE:
         BEFORE_PUBLISH = 'before_publish'
         BEFORE_DELIVERY = 'before_delivery'
-        ON_SOAP_SUDS_INVOKE = 'on_soap_suds_invoke'
+        ON_OUTGOING_SOAP_INVOKE = 'on_soap_suds_invoke'
 
     class HOOK_ACTION:
         SKIP = 'skip'

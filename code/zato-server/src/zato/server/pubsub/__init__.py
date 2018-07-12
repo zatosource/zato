@@ -45,6 +45,7 @@ logger_overflow = logging.getLogger('zato_pubsub_overflow')
 hook_type_to_method = {
     PUBSUB.HOOK_TYPE.BEFORE_PUBLISH: 'before_publish',
     PUBSUB.HOOK_TYPE.BEFORE_DELIVERY: 'before_delivery',
+    PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE: 'on_outgoing_soap_invoke',
 }
 
 # ################################################################################################################################
@@ -182,6 +183,7 @@ class Topic(object):
         self.task_delivery_interval = config.task_delivery_interval
         self.before_publish_hook_service_invoker = config.get('before_publish_hook_service_invoker')
         self.before_delivery_hook_service_invoker = config.get('before_delivery_hook_service_invoker')
+        self.on_outgoing_soap_invoke_invoker = config.get('on_outgoing_soap_invoke_invoker')
         self.meta_store_frequency = config.meta_store_frequency
 
         # For now, task sync interval is the same for GD and non-GD messages
@@ -265,10 +267,12 @@ class Subscription(object):
 # ################################################################################################################################
 
 class HookCtx(object):
-    def __init__(self, hook_type, topic, msg):
+    def __init__(self, hook_type, topic, msg, *args, **kwargs):
         self.hook_type = hook_type
         self.msg = msg
         self.topic = topic
+        self.http_soap = kwargs.get('http_soap', {})
+        self.outconn_name = self.http_soap.get('config', {}).get('name')
 
 # ################################################################################################################################
 
@@ -878,9 +882,14 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def _get_topic_by_sub_key(self, sub_key):
+        return self._get_topic_by_name(self._get_subscription_by_sub_key(sub_key).topic_name)
+
+# ################################################################################################################################
+
     def get_topic_by_sub_key(self, sub_key):
         with self.lock:
-            return self._get_topic_by_name(self._get_subscription_by_sub_key(sub_key).topic_name)
+            return self._get_topic_by_sub_key(sub_key)
 
 # ################################################################################################################################
 
@@ -1031,10 +1040,10 @@ class PubSub(object):
         if not is_func_overridden(func):
             return
 
-        def _invoke_hook_service(topic, msg):
+        def _invoke_hook_service(topic, msg, *args, **kwargs):
             """ A function to invoke pub/sub hook services.
             """
-            ctx = HookCtx(hook_type, topic, msg)
+            ctx = HookCtx(hook_type, topic, msg, *args, **kwargs)
             return self.invoke_service(service_name, {'ctx':ctx}, serialize=False).getvalue(serialize=False)['response']
 
         return _invoke_hook_service
@@ -1050,8 +1059,8 @@ class PubSub(object):
             config.before_delivery_hook_service_invoker = self.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.BEFORE_DELIVERY)
 
-            config.on_soap_suds_invoke_invoker = self.get_hook_service_invoker(
-                config.hook_service_name, PUBSUB.HOOK_TYPE.ON_SOAP_SUDS_INVOKE)
+            config.on_outgoing_soap_invoke_invoker = self.get_hook_service_invoker(
+                config.hook_service_name, PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE)
 
         else:
             config.hook_service_invoker = None
@@ -1526,9 +1535,18 @@ class PubSub(object):
         or None if such a hook is not defined for sub_key's topic.
         """
         with self.lock:
-            sub = self.subscriptions_by_sub_key[sub_key]
-            topic = self.get_topic_by_name(sub.topic_name)
-            return topic.before_delivery_hook_service_invoker
+            sub = self.get_subscription_by_sub_key(sub_key)
+            return self._get_topic_by_name(sub.topic_name).before_delivery_hook_service_invoker
+
+# ################################################################################################################################
+
+    def get_on_outgoing_soap_invoke_hook(self, sub_key):
+        """ Returns a hook that sends outgoing SOAP Suds connections-based messages or None if there is no such hook
+        for sub_key's topic.
+        """
+        with self.lock:
+            sub = self.get_subscription_by_sub_key(sub_key)
+            return self._get_topic_by_name(sub.topic_name).on_outgoing_soap_invoke_invoker
 
 # ################################################################################################################################
 
@@ -1545,6 +1563,19 @@ class PubSub(object):
                 raise ValueError('Invalid action returned `{}` for msg `{}`'.format(hook_action, msg))
             else:
                 messages[hook_action].append(msg)
+
+# ################################################################################################################################
+
+    def invoke_on_outgoing_soap_invoke_hook(self, batch, sub, http_soap):
+        outconn_name = http_soap['config']['name']
+
+        hook = self.get_on_outgoing_soap_invoke_hook(sub.sub_key)
+
+        if not hook:
+            raise Exception('Hook service does not implement `on_outgoing_soap_invoke` method')
+
+        topic = self.get_topic_by_id(sub.config.topic_id)
+        hook(topic, batch, http_soap=http_soap)
 
 # ################################################################################################################################
 
