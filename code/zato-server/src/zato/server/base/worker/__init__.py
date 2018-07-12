@@ -1551,17 +1551,24 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def on_broker_msg_hot_deploy(self, msg, service, payload, action, *args):
+    def on_broker_msg_hot_deploy(self, msg, service, payload, action, *args, **kwargs):
         msg.cid = new_cid()
         msg.service = service
         msg.payload = payload
-        return self.on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_{}'.format(action), args)
+        return self.on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_{}'.format(action), args, **kwargs)
 
 # ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, msg, *args):
-        return self.on_broker_msg_hot_deploy(msg, 'zato.hot-deploy.create', {'package_id': msg.package_id}, 'CREATE_SERVICE',
-            *args)
+
+        # Uploads the service
+        response = self.on_broker_msg_hot_deploy(
+            msg, 'zato.hot-deploy.create', {'package_id': msg.package_id}, 'CREATE_SERVICE', *args,
+            serialize=False, needs_response=True)
+
+        # Lets pub/sub know that this service has been just deployed - pub/sub will go through
+        # all of its topics and reconfigure any of its hooks that this service implements.
+        self.pubsub.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(response.services_deployed)
 
 # ################################################################################################################################
 
