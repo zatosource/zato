@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from json import dumps
 
 # Zato
-from zato.common import PUBSUB
+from zato.common import HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.pubsub import HandleNewMessageCtx
@@ -98,13 +98,21 @@ class DeliverMessage(AdminService):
 
 # ################################################################################################################################
 
-    def _deliver_rest_soap(self, msg, subscription, impl_getter):
+    def _deliver_rest_soap(self, msg, subscription, impl_getter, _suds=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id):
         if not subscription.config.out_http_soap_id:
             raise ValueError('Missing out_http_soap_id for subscription `{}`'.format(subscription))
         else:
             data = self._get_data_from_message(msg)
-            endpoint = impl_getter(subscription.config.out_http_soap_id)
-            endpoint.conn.http_request(subscription.config.out_http_method, self.cid, data=data)
+            http_soap = impl_getter(subscription.config.out_http_soap_id)
+
+            # Non-Suds based connections can just send the message as is ..
+            if http_soap['config']['serialization_type'] != _suds:
+                http_soap.conn.http_request(subscription.config.out_http_method, self.cid, data=data)
+
+            # .. while suds-based outgoing connections need to invoke the hook service which will
+            # in turn issue a SOAP request to the remote server.
+            else:
+                self.pubsub.invoke_on_outgoing_soap_invoke_hook(msg, subscription, http_soap)
 
 # ################################################################################################################################
 
