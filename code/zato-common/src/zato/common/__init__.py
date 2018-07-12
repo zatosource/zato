@@ -735,8 +735,9 @@ class PUBSUB:
                 return iter((self.CSV, self.DICT, self.JSON, self.POST, self.SOAP, self.XML))
 
     class HOOK_TYPE:
-        PUB = 'pub'
-        SUB = 'sub'
+        BEFORE_PUBLISH = 'before_publish'
+        BEFORE_DELIVERY = 'before_delivery'
+        ON_OUTGOING_SOAP_INVOKE = 'on_soap_suds_invoke'
 
     class HOOK_ACTION:
         SKIP = 'skip'

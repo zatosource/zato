@@ -931,12 +931,15 @@ class Service(object):
 class PubSubHook(Service):
     """ Subclasses of this class may act as pub/sub hooks.
     """
+    _hook_func_name = {}
+
     class SimpleIO:
         input_required = (Opaque('ctx'),)
         output_optional = ('hook_action',)
 
-    def handle(self, _pub=PUBSUB.HOOK_TYPE.PUB):
-        func = self.before_publish if self.request.input.ctx.hook_type == _pub else self.before_delivery
+    def handle(self, _pub=PUBSUB.HOOK_TYPE.BEFORE_PUBLISH):
+        func_name = self._hook_func_name[self.request.input.ctx.hook_type]
+        func = getattr(self, func_name)
         func()
 
     def before_publish(self, _zato_no_op_marker=zato_no_op_marker):
@@ -946,5 +949,13 @@ class PubSubHook(Service):
     def before_delivery(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked for each pub/sub message before it is delivered to an endpoint.
         """
+
+    def on_outgoing_soap_invoke(self, _zato_no_op_marker=zato_no_op_marker):
+        """ Invoke for each message that is to be sent through outgoing a SOAP Suds connection.
+        """
+
+PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_PUBLISH] = 'before_publish'
+PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_DELIVERY] = 'before_delivery'
+PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE] = 'on_outgoing_soap_invoke'
 
 # ################################################################################################################################
