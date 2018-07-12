@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -42,7 +42,7 @@ from springpython.context import InitializingObject
 from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceInfo, TRACE1
 from zato.common.match import Matcher
 from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
-from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, Service
+from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -169,6 +169,12 @@ class ServiceStore(InitializingObject):
 
 # ################################################################################################################################
 
+    def get_service_class_by_id(self, service_id):
+        impl_name = self.id_to_impl_name[service_id]
+        return self.services[impl_name]
+
+# ################################################################################################################################
+
     def _invoke_hook(self, object_, hook_name):
         """ A utility method for invoking various service's hooks.
         """
@@ -180,10 +186,10 @@ class ServiceStore(InitializingObject):
 
 # ################################################################################################################################
 
-    def new_instance(self, class_name):
+    def new_instance(self, impl_name):
         """ Returns a new instance of a service of the given impl name.
         """
-        _info = self.services[class_name]
+        _info = self.services[impl_name]
         return _info['service_class'](), _info['is_active']
 
 # ################################################################################################################################
@@ -349,7 +355,7 @@ class ServiceStore(InitializingObject):
         """
         try:
             if issubclass(item, Service):
-                if item is not AdminService and item is not Service:
+                if item is not Service and item is not AdminService and item is not PubSubHook:
                     if not hasattr(item, DONT_DEPLOY_ATTR_NAME):
 
                         service_name = item.get_name()
