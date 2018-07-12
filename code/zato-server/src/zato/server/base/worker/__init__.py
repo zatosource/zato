@@ -14,6 +14,8 @@ from datetime import datetime
 from errno import ENOENT
 from inspect import isclass
 from json import loads
+from shutil import rmtree
+from tempfile import gettempdir
 from threading import RLock
 from time import sleep
 from traceback import format_exc
@@ -1457,6 +1459,20 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def on_broker_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an outgoing HTTP/SOAP connection.
         """
+        # With outgoing SOAP messages using suds, we need to delete /tmp/suds
+        # before the connection can be created. This is because our method can
+        # also be invoked by ReloadWSDL action and suds will not always reload
+        # the WSDL if /tmp/suds is around.
+        if msg.transport == URL_TYPE.SOAP and msg.serialization_type == HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id:
+
+            # This is how suds obtains the location of its tmp directory in suds/cache.py
+            suds_tmp_dir = os.path.join(gettempdir(), 'suds')
+            if os.path.exists(suds_tmp_dir):
+                try:
+                    rmtree(suds_tmp_dir, True)
+                except Exception:
+                    logger.warn('Could not remove suds directory `%s`, e:`%s`', suds_tmp_dir, format_exc())
+
         # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
