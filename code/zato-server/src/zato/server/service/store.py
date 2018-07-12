@@ -169,6 +169,12 @@ class ServiceStore(InitializingObject):
 
 # ################################################################################################################################
 
+    def get_service_class_by_id(self, service_id):
+        impl_name = self.id_to_impl_name[service_id]
+        return self.services[impl_name]
+
+# ################################################################################################################################
+
     def _invoke_hook(self, object_, hook_name):
         """ A utility method for invoking various service's hooks.
         """
@@ -180,10 +186,10 @@ class ServiceStore(InitializingObject):
 
 # ################################################################################################################################
 
-    def new_instance(self, class_name):
+    def new_instance(self, impl_name):
         """ Returns a new instance of a service of the given impl name.
         """
-        _info = self.services[class_name]
+        _info = self.services[impl_name]
         return _info['service_class'](), _info['is_active']
 
 # ################################################################################################################################
