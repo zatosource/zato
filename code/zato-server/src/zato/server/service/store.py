@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -42,7 +42,7 @@ from springpython.context import InitializingObject
 from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceInfo, TRACE1
 from zato.common.match import Matcher
 from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
-from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, Service
+from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -349,7 +349,7 @@ class ServiceStore(InitializingObject):
         """
         try:
             if issubclass(item, Service):
-                if item is not AdminService and item is not Service:
+                if item is not Service and item is not AdminService and item is not PubSubHook:
                     if not hasattr(item, DONT_DEPLOY_ATTR_NAME):
 
                         service_name = item.get_name()

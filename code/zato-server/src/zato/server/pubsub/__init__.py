@@ -181,10 +181,8 @@ class Topic(object):
         self.depth_check_freq = config.depth_check_freq
         self.pub_buffer_size_gd = config.pub_buffer_size_gd
         self.task_delivery_interval = config.task_delivery_interval
-        self.before_publish_hook_service_invoker = config.get('before_publish_hook_service_invoker')
-        self.before_delivery_hook_service_invoker = config.get('before_delivery_hook_service_invoker')
-        self.on_outgoing_soap_invoke_invoker = config.get('on_outgoing_soap_invoke_invoker')
         self.meta_store_frequency = config.meta_store_frequency
+        self._set_hooks()
 
         # For now, task sync interval is the same for GD and non-GD messages
         # so we can arbitrarily pick the former to serve for both types of messages.
@@ -208,6 +206,13 @@ class Topic(object):
 
         # The last time a GD message was published to this topic
         self.gd_pub_time_max = None
+
+# ################################################################################################################################
+
+    def _set_hooks(self):
+        self.before_publish_hook_service_invoker = self.config.get('before_publish_hook_service_invoker')
+        self.before_delivery_hook_service_invoker = self.config.get('before_delivery_hook_service_invoker')
+        self.on_outgoing_soap_invoke_invoker = self.config.get('on_outgoing_soap_invoke_invoker')
 
 # ################################################################################################################################
 
@@ -1028,16 +1033,21 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_hook_service_invoker(self, service_name, hook_type):
-        """ Returns a function that will invoke pub/sub hooks or None if a given service does not implement input hook_type.
-        """
+    def _is_hook_overridden(self, service_name, hook_type):
         impl_name = self.server.service_store.name_to_impl_name[service_name]
         service_class = self.server.service_store.service_data(impl_name)['service_class']
         func_name = hook_type_to_method[hook_type]
         func = getattr(service_class, func_name)
 
+        return is_func_overridden(func)
+
+# ################################################################################################################################
+
+    def get_hook_service_invoker(self, service_name, hook_type):
+        """ Returns a function that will invoke pub/sub hooks or None if a given service does not implement input hook_type.
+        """
         # Do not continue if we already know that user did not override the hook method
-        if not is_func_overridden(func):
+        if not self._is_hook_overridden(service_name, hook_type):
             return
 
         def _invoke_hook_service(topic, msg, *args, **kwargs):
@@ -1050,21 +1060,27 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _create_topic(self, config):
+    def _set_topic_config_hook_data(self, config):
         if config.hook_service_id:
 
+            # Invoked before messages are published
             config.before_publish_hook_service_invoker = self.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.BEFORE_PUBLISH)
 
+            # Invoked before messages are delivered
             config.before_delivery_hook_service_invoker = self.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.BEFORE_DELIVERY)
 
+            # Invoked for outgoing SOAP connections
             config.on_outgoing_soap_invoke_invoker = self.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE)
-
         else:
             config.hook_service_invoker = None
 
+# ################################################################################################################################
+
+    def _create_topic(self, config):
+        self._set_topic_config_hook_data(config)
         config.meta_store_frequency = self.topic_meta_store_frequency
 
         self.topics[config.id] = Topic(config)
@@ -1567,15 +1583,25 @@ class PubSub(object):
 # ################################################################################################################################
 
     def invoke_on_outgoing_soap_invoke_hook(self, batch, sub, http_soap):
-        outconn_name = http_soap['config']['name']
-
         hook = self.get_on_outgoing_soap_invoke_hook(sub.sub_key)
-
-        if not hook:
+        if hook:
+            topic = self.get_topic_by_id(sub.config.topic_id)
+            hook(topic, batch, http_soap=http_soap)
+        else:
             raise Exception('Hook service does not implement `on_outgoing_soap_invoke` method')
 
-        topic = self.get_topic_by_id(sub.config.topic_id)
-        hook(topic, batch, http_soap=http_soap)
+# ################################################################################################################################
+
+    def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, services_deployed):
+        """ Invoked after a package with one or more services is hot-deployed. Goes over all topics
+        and updates hooks that any of these services possibly implements.
+        """
+        with self.lock:
+            for topic in self.topics.values():
+                hook_service_id = topic.config.get('hook_service_id')
+                if hook_service_id in services_deployed:
+                    self._set_topic_config_hook_data(topic.config)
+                    topic._set_hooks()
 
 # ################################################################################################################################
 
