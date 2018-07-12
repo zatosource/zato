@@ -137,7 +137,7 @@ def get(req, cluster_id, object_type, object_id, msg_id):
                         'zato.pubsub.hook.get-hook-service', {
                         'cluster_id': cluster_id,
                         'endpoint_id': hook_pub_endpoint_id,
-                        'hook_type': PUBSUB.HOOK_TYPE.PUB,
+                        'hook_type': PUBSUB.HOOK_TYPE.BEFORE_PUBLISH,
                     }).data.response
                     return_data.hook_pub_service_id = hook_pub_service_response.id
                     return_data.hook_pub_service_name = hook_pub_service_response.name
@@ -147,7 +147,7 @@ def get(req, cluster_id, object_type, object_id, msg_id):
                             'zato.pubsub.hook.get-hook-service', {
                             'cluster_id': cluster_id,
                             'endpoint_id': hook_sub_endpoint_id,
-                            'hook_type': PUBSUB.HOOK_TYPE.SUB,
+                            'hook_type': PUBSUB.HOOK_TYPE.BEFORE_DELIVERY,
                         }).data.response
                         return_data.hook_sub_service_id = hook_sub_service_response.id
                         return_data.hook_sub_service_name = hook_sub_service_response.name

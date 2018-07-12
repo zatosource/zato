@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -24,6 +24,7 @@ from zato.common import DEPLOYMENT_STATUS, KVDB
 from zato.common.broker_message import HOT_DEPLOY
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.util import fs_safe_now, is_python_file, is_archive_file, new_cid
+from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
 
 MAX_BACKUPS = 1000
@@ -39,6 +40,7 @@ class Create(AdminService):
         response_elem = 'zato_hot_deploy_create_response'
         input_required = ('package_id',)
         input_optional = ('is_startup',)
+        output_optional = (AsIs('services_deployed'),)
 
     def _delete(self, items):
         for item in items:
@@ -123,10 +125,13 @@ class Create(AdminService):
         f.write(payload)
         f.close()
 
+        services_deployed = []
+
         for service in self.server.service_store.import_services_from_file(file_name, False, current_work_dir):
 
             impl_name = self.server.service_store.name_to_impl_name[service.get_name()]
             service_id = self.server.service_store.impl_name_to_id[impl_name]
+            services_deployed.append(service_id)
 
             msg = {}
             msg['cid'] = new_cid()
@@ -135,22 +140,21 @@ class Create(AdminService):
 
             self.broker_client.publish(msg)
 
-        return True
+        return services_deployed
 
     def _deploy_package(self, session, package_id, payload_name, payload):
         """ Deploy a package, either a plain Python file or an archive, and update
         the deployment status.
         """
-        success = False
         current_work_dir = self.server.hot_deploy_config.current_work_dir
-
         file_name = os.path.join(current_work_dir, payload_name)
-        success = self._deploy_file(current_work_dir, payload, file_name)
+        services_deployed = self._deploy_file(current_work_dir, payload, file_name)
 
-        if success:
+        if services_deployed:
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
             msg = 'Uploaded package id:`%s`, payload_name:`%s`'
             self.logger.info(msg, package_id, payload_name)
+            return services_deployed
         else:
             msg = 'Package id:`%s`, payload_name:`%s` has not been deployed'
             self.logger.warn(msg, package_id, payload_name)
@@ -170,7 +174,7 @@ class Create(AdminService):
         dp = self.get_package(package_id, session)
 
         if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
-            self._deploy_package(session, package_id, dp.payload_name, dp.payload)
+            return self._deploy_package(session, package_id, dp.payload_name, dp.payload)
         else:
             # This shouldn't really happen at all because the pickup notifier is to
             # filter such things out but life is full of surprises
@@ -214,7 +218,7 @@ class Create(AdminService):
                         self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires)
 
                     # .. all workers get here.
-                    self.deploy_package(self.request.input.package_id, session)
+                    self.response.payload.services_deployed = self.deploy_package(self.request.input.package_id, session)
 
                 except(IOError, OSError), e:
                     if e.errno == ENOENT:

@@ -22,8 +22,8 @@ from zato.server.service.internal import AdminService, AdminSIO
 # ################################################################################################################################
 
 hook_type_model = {
-    PUBSUB.HOOK_TYPE.PUB: PubSubTopic,
-    PUBSUB.HOOK_TYPE.SUB: PubSubSubscription,
+    PUBSUB.HOOK_TYPE.BEFORE_PUBLISH: PubSubTopic,
+    PUBSUB.HOOK_TYPE.BEFORE_DELIVERY: PubSubSubscription,
 }
 
 # ################################################################################################################################
