@@ -42,8 +42,8 @@ endpoint_type_service = {
 # ################################################################################################################################
 
 hook_type_model = {
-    PUBSUB.HOOK_TYPE.PUB: PubSubTopic,
-    PUBSUB.HOOK_TYPE.SUB: PubSubSubscription,
+    PUBSUB.HOOK_TYPE.BEFORE_PUBLISH: PubSubTopic,
+    PUBSUB.HOOK_TYPE.BEFORE_DELIVERY: PubSubSubscription,
 }
 
 _no_sk='no-sk'

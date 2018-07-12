@@ -43,8 +43,9 @@ logger_overflow = logging.getLogger('zato_pubsub_overflow')
 # ################################################################################################################################
 
 hook_type_to_method = {
-    PUBSUB.HOOK_TYPE.PUB: 'before_publish',
-    PUBSUB.HOOK_TYPE.SUB: 'before_delivery',
+    PUBSUB.HOOK_TYPE.BEFORE_PUBLISH: 'before_publish',
+    PUBSUB.HOOK_TYPE.BEFORE_DELIVERY: 'before_delivery',
+    PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE: 'on_outgoing_soap_invoke',
 }
 
 # ################################################################################################################################
@@ -166,7 +167,7 @@ class Endpoint(object):
 # ################################################################################################################################
 
 class Topic(object):
-    """ An individiual topic ib in pub/sub workflows.
+    """ An individiual topic in in pub/sub workflows.
     """
     def __init__(self, config):
         self.config = config
@@ -180,9 +181,8 @@ class Topic(object):
         self.depth_check_freq = config.depth_check_freq
         self.pub_buffer_size_gd = config.pub_buffer_size_gd
         self.task_delivery_interval = config.task_delivery_interval
-        self.before_publish_hook_service_invoker = config.get('before_publish_hook_service_invoker')
-        self.before_delivery_hook_service_invoker = config.get('before_delivery_hook_service_invoker')
         self.meta_store_frequency = config.meta_store_frequency
+        self._set_hooks()
 
         # For now, task sync interval is the same for GD and non-GD messages
         # so we can arbitrarily pick the former to serve for both types of messages.
@@ -206,6 +206,13 @@ class Topic(object):
 
         # The last time a GD message was published to this topic
         self.gd_pub_time_max = None
+
+# ################################################################################################################################
+
+    def _set_hooks(self):
+        self.before_publish_hook_service_invoker = self.config.get('before_publish_hook_service_invoker')
+        self.before_delivery_hook_service_invoker = self.config.get('before_delivery_hook_service_invoker')
+        self.on_outgoing_soap_invoke_invoker = self.config.get('on_outgoing_soap_invoke_invoker')
 
 # ################################################################################################################################
 
@@ -265,10 +272,12 @@ class Subscription(object):
 # ################################################################################################################################
 
 class HookCtx(object):
-    def __init__(self, hook_type, topic, msg):
+    def __init__(self, hook_type, topic, msg, *args, **kwargs):
         self.hook_type = hook_type
         self.msg = msg
         self.topic = topic
+        self.http_soap = kwargs.get('http_soap', {})
+        self.outconn_name = self.http_soap.get('config', {}).get('name')
 
 # ################################################################################################################################
 
@@ -878,9 +887,14 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def _get_topic_by_sub_key(self, sub_key):
+        return self._get_topic_by_name(self._get_subscription_by_sub_key(sub_key).topic_name)
+
+# ################################################################################################################################
+
     def get_topic_by_sub_key(self, sub_key):
         with self.lock:
-            return self._get_topic_by_name(self._get_subscription_by_sub_key(sub_key).topic_name)
+            return self._get_topic_by_sub_key(sub_key)
 
 # ################################################################################################################################
 
@@ -1019,37 +1033,54 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_hook_service_invoker(self, service_name, hook_type):
-        """ Returns a function that will invoke pub/sub hooks or None if a given service does not implement input hook_type.
-        """
+    def _is_hook_overridden(self, service_name, hook_type):
         impl_name = self.server.service_store.name_to_impl_name[service_name]
         service_class = self.server.service_store.service_data(impl_name)['service_class']
         func_name = hook_type_to_method[hook_type]
         func = getattr(service_class, func_name)
 
+        return is_func_overridden(func)
+
+# ################################################################################################################################
+
+    def get_hook_service_invoker(self, service_name, hook_type):
+        """ Returns a function that will invoke pub/sub hooks or None if a given service does not implement input hook_type.
+        """
         # Do not continue if we already know that user did not override the hook method
-        if not is_func_overridden(func):
+        if not self._is_hook_overridden(service_name, hook_type):
             return
 
-        def _invoke_hook_service(topic, msg):
+        def _invoke_hook_service(topic, msg, *args, **kwargs):
             """ A function to invoke pub/sub hook services.
             """
-            ctx = HookCtx(hook_type, topic, msg)
+            ctx = HookCtx(hook_type, topic, msg, *args, **kwargs)
             return self.invoke_service(service_name, {'ctx':ctx}, serialize=False).getvalue(serialize=False)['response']
 
         return _invoke_hook_service
 
 # ################################################################################################################################
 
-    def _create_topic(self, config):
+    def _set_topic_config_hook_data(self, config):
         if config.hook_service_id:
+
+            # Invoked before messages are published
             config.before_publish_hook_service_invoker = self.get_hook_service_invoker(
-                config.hook_service_name, PUBSUB.HOOK_TYPE.PUB)
+                config.hook_service_name, PUBSUB.HOOK_TYPE.BEFORE_PUBLISH)
+
+            # Invoked before messages are delivered
             config.before_delivery_hook_service_invoker = self.get_hook_service_invoker(
-                config.hook_service_name, PUBSUB.HOOK_TYPE.SUB)
+                config.hook_service_name, PUBSUB.HOOK_TYPE.BEFORE_DELIVERY)
+
+            # Invoked for outgoing SOAP connections
+            config.on_outgoing_soap_invoke_invoker = self.get_hook_service_invoker(
+                config.hook_service_name, PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE)
         else:
             config.hook_service_invoker = None
 
+# ################################################################################################################################
+
+    def _create_topic(self, config):
+        self._set_topic_config_hook_data(config)
         config.meta_store_frequency = self.topic_meta_store_frequency
 
         self.topics[config.id] = Topic(config)
@@ -1520,9 +1551,18 @@ class PubSub(object):
         or None if such a hook is not defined for sub_key's topic.
         """
         with self.lock:
-            sub = self.subscriptions_by_sub_key[sub_key]
-            topic = self.get_topic_by_name(sub.topic_name)
-            return topic.before_delivery_hook_service_invoker
+            sub = self.get_subscription_by_sub_key(sub_key)
+            return self._get_topic_by_name(sub.topic_name).before_delivery_hook_service_invoker
+
+# ################################################################################################################################
+
+    def get_on_outgoing_soap_invoke_hook(self, sub_key):
+        """ Returns a hook that sends outgoing SOAP Suds connections-based messages or None if there is no such hook
+        for sub_key's topic.
+        """
+        with self.lock:
+            sub = self.get_subscription_by_sub_key(sub_key)
+            return self._get_topic_by_name(sub.topic_name).on_outgoing_soap_invoke_invoker
 
 # ################################################################################################################################
 
@@ -1539,6 +1579,33 @@ class PubSub(object):
                 raise ValueError('Invalid action returned `{}` for msg `{}`'.format(hook_action, msg))
             else:
                 messages[hook_action].append(msg)
+
+# ################################################################################################################################
+
+    def invoke_on_outgoing_soap_invoke_hook(self, batch, sub, http_soap):
+        hook = self.get_on_outgoing_soap_invoke_hook(sub.sub_key)
+        topic = self.get_topic_by_id(sub.config.topic_id)
+        if hook:
+            hook(topic, batch, http_soap=http_soap)
+        else:
+            # We know that this service exists, it just does not implement the expected method
+            service_info = self.server.service_store.get_service_class_by_id(topic.config.hook_service_id)
+            service_class = service_info['service_class']
+            service_name = service_class.get_name()
+            raise Exception('Hook service `{}` does not implement `on_outgoing_soap_invoke` method'.format(service_name))
+
+# ################################################################################################################################
+
+    def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, services_deployed):
+        """ Invoked after a package with one or more services is hot-deployed. Goes over all topics
+        and updates hooks that any of these services possibly implements.
+        """
+        with self.lock:
+            for topic in self.topics.values():
+                hook_service_id = topic.config.get('hook_service_id')
+                if hook_service_id in services_deployed:
+                    self._set_topic_config_hook_data(topic.config)
+                    topic._set_hooks()
 
 # ################################################################################################################################
 

@@ -135,3 +135,17 @@ class HandleNewMessageCtx(object):
         self.non_gd_msg_list = non_gd_msg_list
         self.is_bg_call = is_bg_call
         self.pub_time_max = pub_time_max
+
+# ################################################################################################################################
+
+class HookCtx(object):
+    """ Data and metadata that pub/sub hooks receive on input to their methods.
+    """
+    __slots__ = ('msg', 'response', 'soap_suds_client')
+
+    def __init__(self, msg, soap_suds_client=None):
+        self.msg = msg
+        self.soap_suds_client
+        self.response = None
+
+# ################################################################################################################################
