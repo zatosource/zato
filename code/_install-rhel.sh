@@ -13,7 +13,7 @@ sudo yum -y install \
 if ! [ "$(type -p python2.7)" ]
 then
     # CentOS 6.x requires python2.7 build.
-    curl "$PYTHON_URL" | sudo tar -C / -jx
+    curl "$PYTHON_URL" | tac | tac | sudo tar -C / -jx
 fi
 
 curl https://bootstrap.pypa.io/get-pip.py | sudo $(type -p python2.7)
