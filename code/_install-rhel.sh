@@ -1,5 +1,5 @@
 PYTHON_VER="2.7.15"
-PYTHON_URL="https://travis-ci-integration.s3.amazonaws.com/python27/python27.tar.bz2"
+PYTHON_URL="https://zato.io/support/python27/python27.tar.bz2"
 PYTHON_PREFIX="/opt/zato/python/$PYTHON_VER"
 PATH="$PYTHON_PREFIX/bin:$PATH"
 
@@ -13,7 +13,7 @@ sudo yum -y install \
 if ! [ "$(type -p python2.7)" ]
 then
     # CentOS 6.x requires python2.7 build.
-    curl "$PYTHON_URL" | sudo tar -C / -jx
+    curl "$PYTHON_URL" | tac | tac | sudo tar -C / -jx
 fi
 
 curl https://bootstrap.pypa.io/get-pip.py | sudo $(type -p python2.7)
