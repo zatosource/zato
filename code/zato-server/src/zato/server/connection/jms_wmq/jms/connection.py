@@ -240,8 +240,8 @@ class WebSphereMQConnection(object):
                 connect_options = self.CMQC.MQCNO_HANDLE_SHARE_NONE
 
             try:
-                self.mgr.connect_with_options(self.queue_manager, cd=cd, opts=connect_options, sco=sco, user=self.username,
-                    password=self.password)
+                self.mgr.connect_with_options(self.queue_manager, cd=cd, opts=connect_options, sco=sco, user=str(self.username),
+                    password=str(self.password))
             except self.mq.MQMIError, e:
                 exc = WebSphereMQException(e, e.comp, e.reason)
                 raise exc

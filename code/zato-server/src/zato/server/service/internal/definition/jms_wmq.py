@@ -98,20 +98,34 @@ class Create(AdminService):
                 input.password = uuid4().hex
                 input.use_jms = input.use_jms or False
 
-                def_ = ConnDefWMQ(None, input.name, input.host, input.port, input.queue_manager,
-                    input.channel, input.cache_open_send_queues, input.cache_open_receive_queues,
-                    input.use_shared_connections, input.ssl, input.ssl_cipher_spec,
-                    input.ssl_key_repository, input.needs_mcd, input.max_chars_printed,
-                    input.cluster_id, input.username, input.password, input.use_jms or False)
-                session.add(def_)
+                definition = self._new_zato_instance_with_cluster(ConnDefWMQ)
+                definition.name = input.name
+                definition.host = input.host
+                definition.port = input.port
+                definition.queue_manager = input.queue_manager
+                definition.channel = input.channel
+                definition.cache_open_send_queues = input.cache_open_send_queues
+                definition.cache_open_receive_queues = input.cache_open_receive_queues
+                definition.use_shared_connections = input.use_shared_connections
+                definition.ssl = input.ssl
+                definition.ssl_cipher_spec = input.ssl_cipher_spec
+                definition.ssl_key_repository = input.ssl_key_repository
+                definition.needs_mcd = input.needs_mcd
+                definition.max_chars_printed = input.max_chars_printed
+                definition.cluster_id = input.cluster_id
+                definition.username = input.username
+                definition.password = input.password
+                definition.use_jms = input.use_jms
+
+                session.add(definition)
                 session.commit()
 
-                input.id = def_.id
+                input.id = definition.id
                 input.action = DEFINITION.WMQ_CREATE.value
                 self.broker_client.publish(input)
 
-                self.response.payload.id = def_.id
-                self.response.payload.name = def_.name
+                self.response.payload.id = definition.id
+                self.response.payload.name = definition.name
 
             except Exception:
                 self.logger.error('Could not create an IBM MQ MQ definition, e:`%s`', format_exc())
