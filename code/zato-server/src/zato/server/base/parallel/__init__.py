@@ -486,7 +486,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             spawn_greenlet(self.set_up_pickup)
 
             # IPC
-            self.ipc_forwarder.name = '{}-{}'.format(fs_safe_name(self.cluster.name), self.name)
+            ipc_forwarder_name = '{}-{}'.format(self.cluster.name, self.name)
+            ipc_forwarder_name = fs_safe_name(ipc_forwarder_name)
+
+            self.ipc_forwarder.name = ipc_forwarder_name
             self.ipc_forwarder.pid = self.pid
             spawn_greenlet(self.ipc_forwarder.run)
 
