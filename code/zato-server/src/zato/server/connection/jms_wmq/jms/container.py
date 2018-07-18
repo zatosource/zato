@@ -132,7 +132,7 @@ class WebSphereMQChannel(object):
 
 # ################################################################################################################################
 
-    def start(self, sleep_on_error=3):
+    def start(self, sleep_on_error=3, _connection_closing='zato.connection.closing'):
         """ Runs a background queue listener in its own  thread.
         """
         self.keep_running = True
@@ -149,6 +149,12 @@ class WebSphereMQChannel(object):
                     msg = self.conn.receive(self.queue_name, 100)
                     if self.has_debug:
                         self.logger.debug('Message received `%s`' % str(msg).decode('utf-8'))
+
+                    if msg == _connection_closing:
+                        self.logger.info('Received request to quit, closing channel for queue `%s` (%s)',
+                            self.queue_name, self.conn.get_connection_info())
+                        self.keep_running = False
+                        return
 
                     if msg:
                         start_new_thread(_invoke_callback, (
