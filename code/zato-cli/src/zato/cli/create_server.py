@@ -635,7 +635,7 @@ class Create(ZatoCommand):
             server_conf = open(server_conf_loc, 'w')
             server_conf.write(
                 server_conf_template.format(
-                    port=args.get('http_port', None) or default_http_port,
+                    port=args.http_port or default_http_port,
                     gunicorn_workers=1,
                     odb_db_name=args.odb_db_name or args.sqlite_path,
                     odb_engine=odb_engine,
