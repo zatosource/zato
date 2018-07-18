@@ -372,10 +372,10 @@ class WebSphereMQConnection(object):
 
 # ################################################################################################################################
 
-    def receive(self, destination, wait_interval):
+    def receive(self, destination, wait_interval, _connection_closing='zato.connection.closing'):
         if self._disconnecting:
             logger.info('Connection factory disconnecting, aborting receive')
-            return
+            return _connection_closing
         else:
             if self.has_debug:
                 logger.debug('receive -> not disconnecting')
