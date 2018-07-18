@@ -46,7 +46,7 @@ from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
 from zato.common.zato_keyutils import KeyUtils
 from zato.common.pubsub import SkipDelivery
-from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
+from zato.common.util import absolutize, fs_safe_name, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
 from zato.common.util.posix_ipc_ import ServerStartupIPC
@@ -486,7 +486,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             spawn_greenlet(self.set_up_pickup)
 
             # IPC
-            self.ipc_forwarder.name = self.name
+            self.ipc_forwarder.name = '{}-{}'.format(fs_safe_name(self.cluster.name), self.name)
             self.ipc_forwarder.pid = self.pid
             spawn_greenlet(self.ipc_forwarder.run)
 
