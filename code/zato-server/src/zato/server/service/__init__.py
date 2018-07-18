@@ -743,13 +743,28 @@ class Service(object):
         """
         raise NotImplementedError('Should be overridden by subclasses')
 
-    def lock(self, name=None, ttl=20, block=10):
+    def lock(self, name=None, *args, **kwargs):#ttl=20, block=10):
         """ Creates a distributed lock.
 
         name - defaults to self.name effectively making access to this service serialized
         ttl - defaults to 20 seconds and is the max time the lock will be held
         block - how long (in seconds) we will wait to acquire the lock before giving up
         """
+
+        # The relevant part of signature in 2.0 was `expires=20, timeout=10`
+        # and the 3.0 -> 2.0 mapping is: ttl->expires, block=timeout
+
+        if not args:
+            ttl = kwargs.get('ttl') or kwargs.get('expires') or 20
+            block = kwargs.get('block') or kwargs.get('timeout') or 10
+        else:
+            if len(args) == 1:
+                ttl = args[0]
+                block = 10
+            else:
+                ttl = args[0]
+                block = args[1]
+
         return self.server.zato_lock_manager(name or self.name, ttl=ttl, block=block)
 
 # ################################################################################################################################
