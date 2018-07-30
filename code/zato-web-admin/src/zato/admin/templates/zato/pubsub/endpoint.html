@@ -136,7 +136,13 @@
                             {% endif %}
                         </td>
 
-                        <td><a href="javascript:$.fn.zato.pubsub.endpoint.edit('{{ item.id }}')">Edit</a></td>
+                        <td>
+                            {% if item.is_internal %}
+                                <span class="form_hint">Edit</span>
+                            {% else %}
+                                <a href="javascript:$.fn.zato.pubsub.endpoint.edit('{{ item.id }}')">Edit</a>
+                            {% endif %}
+                        </td>
                         <td>
                             {% if item.is_internal %}
                                 <span class="form_hint">Delete</span>
