@@ -18,7 +18,7 @@ except ImportError:
 import os
 from copy import deepcopy
 
-from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_logging_conf_contents, common_odb_opts, sql_conf_contents, ZatoCommand
 from zato.common.crypto import SchedulerCryptoManager, well_known_data
 
 config_template = """[bind]
@@ -113,14 +113,14 @@ class Create(ZatoCommand):
     needs_empty_dir = True
     allow_empty_secrets = True
 
-    opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
+    opts = deepcopy(common_odb_opts)
 
     opts.append({'name':'pub_key_path', 'help':"Path to scheduler's public key in PEM"})
     opts.append({'name':'priv_key_path', 'help':"Path to scheduler's private key in PEM"})
     opts.append({'name':'cert_path', 'help':"Path to the admin's certificate in PEM"})
     opts.append({'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
     opts.append({'name':'cluster_id', 'help':"ID of the cluster this scheduler will belong to"})
-    opts.append({'name':'--secret_key', 'help':"Scheduler's secret crypto key"})
+    opts.append({'name':'secret_key', 'help':"Scheduler's secret crypto key"})
 
     def __init__(self, args):
         self.target_dir = os.path.abspath(args.path)
@@ -140,7 +140,7 @@ class Create(ZatoCommand):
 
         self.copy_scheduler_crypto(repo_dir, args)
 
-        secret_key = args.secret_key or SchedulerCryptoManager.generate_key()
+        secret_key = args.get('secret_key') or SchedulerCryptoManager.generate_key()
         cm = SchedulerCryptoManager.from_secret_key(secret_key)
 
         odb_engine=args.odb_type
