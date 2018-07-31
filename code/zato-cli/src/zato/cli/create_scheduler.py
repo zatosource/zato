@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -20,6 +20,9 @@ from copy import deepcopy
 
 from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
 from zato.common.crypto import SchedulerCryptoManager, well_known_data
+from zato.common.odb.model import Cluster
+
+# ################################################################################################################################
 
 config_template = """[bind]
 host=0.0.0.0
@@ -27,6 +30,7 @@ port=31530
 
 [cluster]
 id={cluster_id}
+name={cluster_name}
 stats_enabled=True
 
 [odb]
@@ -64,6 +68,8 @@ ca_certs_location=zato-scheduler-ca-certs.pem
 [api_users]
 user1={user1_password}
 """
+
+# ################################################################################################################################
 
 startup_jobs="""[zato.stats.process-raw-times]
 seconds=90
@@ -107,6 +113,8 @@ minutes=3
 service=zato.outgoing.sql.auto-ping
 """
 
+# ################################################################################################################################
+
 class Create(ZatoCommand):
     """ Creates a new scheduler instance.
     """
@@ -119,12 +127,32 @@ class Create(ZatoCommand):
     opts.append({'name':'priv_key_path', 'help':"Path to scheduler's private key in PEM"})
     opts.append({'name':'cert_path', 'help':"Path to the admin's certificate in PEM"})
     opts.append({'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
-    opts.append({'name':'cluster_id', 'help':"ID of the cluster this scheduler will belong to"})
+    opts.append({'name':'cluster_name', 'help':"Name of the cluster this scheduler will belong to"})
+    opts.append({'name':'--cluster_id', 'help':"ID of the cluster this scheduler will belong to"})
     opts.append({'name':'--secret_key', 'help':"Scheduler's secret crypto key"})
+
+# ################################################################################################################################
 
     def __init__(self, args):
         self.target_dir = os.path.abspath(args.path)
         super(Create, self).__init__(args)
+
+# ################################################################################################################################
+
+    def _get_cluster_id_by_name(self, args, cluster_name):
+        engine = self._get_engine(args)
+        session = self._get_session(engine)
+
+        cluster_id = session.query(Cluster.id).\
+            filter(Cluster.name==cluster_name).\
+            first()
+
+        if not cluster_id:
+            raise Exception('No such cluster name `{}`'.format(cluster_name))
+        else:
+            return cluster_id[0]
+
+# ################################################################################################################################
 
     def execute(self, args, show_output=True, needs_created_flag=False):
         os.chdir(self.target_dir)
@@ -140,12 +168,24 @@ class Create(ZatoCommand):
 
         self.copy_scheduler_crypto(repo_dir, args)
 
-        secret_key = args.secret_key or SchedulerCryptoManager.generate_key()
+        if hasattr(args, 'get'):
+            secret_key = args.get('secret_key')
+        else:
+            secret_key = args.secret_key
+
+        secret_key = secret_key or SchedulerCryptoManager.generate_key()
+
+        secret_key = secret_key or SchedulerCryptoManager.generate_key()
         cm = SchedulerCryptoManager.from_secret_key(secret_key)
 
         odb_engine=args.odb_type
         if odb_engine.startswith('postgresql'):
             odb_engine = 'postgresql+pg8000'
+
+        if args.cluster_id:
+            cluster_id = args.cluster_id
+        else:
+            cluster_id = self._get_cluster_id_by_name(args, args.cluster_name)
 
         config = {
             'odb_db_name': args.odb_db_name or args.sqlite_path,
@@ -158,7 +198,8 @@ class Create(ZatoCommand):
             'broker_port': args.kvdb_port,
             'broker_password': cm.encrypt(args.kvdb_password) if args.kvdb_password else '',
             'user1_password': cm.encrypt(cm.generate_password()),
-            'cluster_id': args.cluster_id,
+            'cluster_id': cluster_id,
+            'cluster_name': args.cluster_name,
             'secret_key1': secret_key,
             'well_known_data': cm.encrypt(well_known_data)
         }
@@ -184,3 +225,5 @@ class Create(ZatoCommand):
         # it doesn't return a non-zero exit code.
         if needs_created_flag:
             return True
+
+# ################################################################################################################################
