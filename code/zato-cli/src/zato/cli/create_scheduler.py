@@ -140,7 +140,12 @@ class Create(ZatoCommand):
 
         self.copy_scheduler_crypto(repo_dir, args)
 
-        secret_key = args.secret_key or SchedulerCryptoManager.generate_key()
+        if hasattr(args, 'get'):
+            secret_key = args.get('secret_key')
+        else:
+            secret_key = args.secret_key
+
+        secret_key = secret_key or SchedulerCryptoManager.generate_key()
         cm = SchedulerCryptoManager.from_secret_key(secret_key)
 
         odb_engine=args.odb_type
