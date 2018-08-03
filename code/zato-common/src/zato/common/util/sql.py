@@ -70,6 +70,7 @@ def search(search_func, config, filter_by, session=None, cluster_id=None, *args,
     result = search_func(session, cluster_id, *args, **kwargs)
 
     # Fills out all the search-related information
+    print(111, result)
     result.set_data(cur_page, page_size)
 
     return result
