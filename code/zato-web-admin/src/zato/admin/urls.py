@@ -44,6 +44,7 @@ from zato.admin.web.views.outgoing import odoo as out_odoo
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import stomp as out_stomp
 from zato.admin.web.views.outgoing import sap as out_sap
+from zato.admin.web.views.outgoing import wsx as out_wsx
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
 from zato.admin.web.views.pubsub import message as pubsub_message
@@ -685,35 +686,20 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # SQL connection pools
+    # .. SAP RFC
 
-    url(r'^zato/outgoing/sql/$',
-        login_required(out_sql.index), name='out-sql'),
-    url(r'^zato/outgoing/sql/create/$',
-        login_required(out_sql.create), name='out-sql-create'),
-    url(r'^zato/outgoing/sql/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_sql.ping), name='out-sql-ping'),
-    url(r'^zato/outgoing/sql/edit/$',
-        login_required(out_sql.edit), name='out-sql-edit'),
-    url(r'^zato/outgoing/sql/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_sql.Delete()), name=out_sql.Delete.url_name),
-    url(r'^zato/outgoing/sql/change-password/$',
-        login_required(out_sql.change_password), name='out-sql-change-password'),
-    ]
-
-# ################################################################################################################################
-
-urlpatterns += [
-
-    # .. ZeroMQ
-    url(r'^zato/outgoing/zmq/$',
-        login_required(out_zmq.Index()), name=out_zmq.Index.url_name),
-    url(r'^zato/outgoing/zmq/create/$',
-        login_required(out_zmq.Create()), name=out_zmq.Create.url_name),
-    url(r'^zato/outgoing/zmq/edit/$',
-        login_required(out_zmq.Edit()), name=out_zmq.Edit.url_name),
-    url(r'^zato/outgoing/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_zmq.Delete()), name=out_zmq.Delete.url_name),
+    url(r'^zato/outgoing/sap/$',
+        login_required(out_sap.Index()), name=out_sap.Index.url_name),
+    url(r'^zato/outgoing/sap/create/$',
+        login_required(out_sap.Create()), name=out_sap.Create.url_name),
+    url(r'^zato/outgoing/sap/edit/$',
+        login_required(out_sap.Edit()), name=out_sap.Edit.url_name),
+    url(r'^zato/outgoing/sap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_sap.Delete()), name=out_sap.Delete.url_name),
+    url(r'^zato/outgoing/sap/change-password/$',
+        login_required(out_sap.change_password), name='out-sap-change-password'),
+    url(r'^zato/outgoing/sap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_sap.ping), name='out-sap-ping'),
     ]
 
 # ################################################################################################################################
@@ -739,20 +725,53 @@ urlpatterns += [
 
 urlpatterns += [
 
-    # .. SAP RFC
+    # SQL connection pools
 
-    url(r'^zato/outgoing/sap/$',
-        login_required(out_sap.Index()), name=out_sap.Index.url_name),
-    url(r'^zato/outgoing/sap/create/$',
-        login_required(out_sap.Create()), name=out_sap.Create.url_name),
-    url(r'^zato/outgoing/sap/edit/$',
-        login_required(out_sap.Edit()), name=out_sap.Edit.url_name),
-    url(r'^zato/outgoing/sap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_sap.Delete()), name=out_sap.Delete.url_name),
-    url(r'^zato/outgoing/sap/change-password/$',
-        login_required(out_sap.change_password), name='out-sap-change-password'),
-    url(r'^zato/outgoing/sap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(out_sap.ping), name='out-sap-ping'),
+    url(r'^zato/outgoing/sql/$',
+        login_required(out_sql.index), name='out-sql'),
+    url(r'^zato/outgoing/sql/create/$',
+        login_required(out_sql.create), name='out-sql-create'),
+    url(r'^zato/outgoing/sql/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_sql.ping), name='out-sql-ping'),
+    url(r'^zato/outgoing/sql/edit/$',
+        login_required(out_sql.edit), name='out-sql-edit'),
+    url(r'^zato/outgoing/sql/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_sql.Delete()), name=out_sql.Delete.url_name),
+    url(r'^zato/outgoing/sql/change-password/$',
+        login_required(out_sql.change_password), name='out-sql-change-password'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. WSX
+
+    url(r'^zato/outgoing/wsx/$',
+        login_required(out_wsx.Index()), name=out_wsx.Index.url_name),
+    url(r'^zato/outgoing/wsx/create/$',
+        login_required(out_wsx.Create()), name=out_wsx.Create.url_name),
+    url(r'^zato/outgoing/wsx/edit/$',
+        login_required(out_wsx.Edit()), name=out_wsx.Edit.url_name),
+    url(r'^zato/outgoing/wsx/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_wsx.Delete()), name=out_wsx.Delete.url_name),
+    url(r'^zato/outgoing/wsx/change-password/$',
+        login_required(out_wsx.change_password), name='out-wsx-change-password'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. ZeroMQ
+    url(r'^zato/outgoing/zmq/$',
+        login_required(out_zmq.Index()), name=out_zmq.Index.url_name),
+    url(r'^zato/outgoing/zmq/create/$',
+        login_required(out_zmq.Create()), name=out_zmq.Create.url_name),
+    url(r'^zato/outgoing/zmq/edit/$',
+        login_required(out_zmq.Edit()), name=out_zmq.Edit.url_name),
+    url(r'^zato/outgoing/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_zmq.Delete()), name=out_zmq.Delete.url_name),
     ]
 
 # ################################################################################################################################
@@ -813,13 +832,13 @@ urlpatterns += [
 urlpatterns += [
 
     # .. WebSocket
-    url(r'^zato/channel/web-socket/$',
+    url(r'^zato/channel/wsx/$',
         login_required(channel_web_socket.Index()), name=channel_web_socket.Index.url_name),
-    url(r'^zato/channel/web-socket/create/$',
+    url(r'^zato/channel/wsx/create/$',
         login_required(channel_web_socket.Create()), name=channel_web_socket.Create.url_name),
-    url(r'^zato/channel/web-socket/edit/$',
+    url(r'^zato/channel/wsx/edit/$',
         login_required(channel_web_socket.Edit()), name=channel_web_socket.Edit.url_name),
-    url(r'^zato/channel/web-socket/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+    url(r'^zato/channel/wsx/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_web_socket.Delete()), name=channel_web_socket.Delete.url_name),
     ]
 
