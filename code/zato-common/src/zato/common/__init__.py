@@ -1058,6 +1058,15 @@ class SERVER_STARTUP:
         IN_PROCESS_OTHER = 'in-process-other'
         AFTER_STARTED = 'after-started'
 
+class GENERIC:
+    class CONNECTION:
+
+        # Under which SQL column all the opaque data is currently kept - may be changed across releases
+        ATTR_NAME = 'opaque1'
+
+        class TYPE:
+            OUTCONN_WSX = 'outconn-wsx'
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
