@@ -12,31 +12,33 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
+from zato.common import PLACEHOLDER
 from zato.admin.web.forms import ChangePasswordForm
-from zato.admin.web.forms.outgoing.ftp import CreateForm, EditForm
+from zato.admin.web.forms.outgoing.wsx import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
      method_allowed
-from zato.common.odb.model import OutgoingFTP
+from zato.common.odb.model import GenericConn
 
 logger = logging.getLogger(__name__)
 
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'out-ftp'
-    template = 'zato/outgoing/ftp.html'
-    service_name = 'zato.outgoing.ftp.get-list'
-    output_class = OutgoingFTP
+    url_name = 'out-wsx'
+    template = 'zato/outgoing/wsx.html'
+    service_name = 'zato.generic.connection.get-list'
+    output_class = GenericConn
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'host', 'user', 'acct', 'timeout', 'port', 'dircache')
+        input_required = ('cluster_id', 'type_')
+        output_required = ('id', 'name', 'address')
+        output_optional = ('is_active', 'is_zato', 'on_connect_service_id')
         output_repeated = True
 
     def handle(self):
         return {
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
+            'create_form': CreateForm(req=self.req),
+            'edit_form': EditForm(prefix='edit', req=self.req),
             'change_password_form': ChangePasswordForm()
         }
 
@@ -44,26 +46,31 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'host', 'user', 'timeout', 'acct', 'port', 'dircache')
+        input_required = ('name', 'is_active', 'is_zato', 'address', 'on_connect_service_id')
         output_required = ('id', 'name')
 
+    def get_initial_input(self):
+        return {
+            'host': PLACEHOLDER
+        }
+
     def success_message(self, item):
-        return 'Successfully {0} the outgoing FTP connection [{1}]'.format(self.verb, item.name)
+        return 'Successfully {} outgoing WebSocket connection `{}`'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
-    url_name = 'out-ftp-create'
-    service_name = 'zato.outgoing.ftp.create'
+    url_name = 'out-wsx-create'
+    service_name = 'zato.generic.connection.create'
 
 class Edit(_CreateEdit):
-    url_name = 'out-ftp-edit'
+    url_name = 'out-wsx-edit'
     form_prefix = 'edit-'
-    service_name = 'zato.outgoing.ftp.edit'
+    service_name = 'zato.generic.connection.edit'
 
 class Delete(_Delete):
-    url_name = 'out-ftp-delete'
-    error_message = 'Could not delete the outgoing FTP connection'
-    service_name = 'zato.outgoing.ftp.delete'
+    url_name = 'out-wsx-delete'
+    error_message = 'Could not delete outgoing WebSocket connection'
+    service_name = 'zato.outgoing.wsx.delete'
 
 @method_allowed('POST')
 def change_password(req):
-    return _change_password(req, 'zato.outgoing.ftp.change-password')
+    return _change_password(req, 'zato.generic.connection.change-password')

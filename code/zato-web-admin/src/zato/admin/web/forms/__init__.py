@@ -14,8 +14,21 @@ from django import forms
 # Zato
 from zato.common import DELEGATED_TO_RBAC, SIMPLE_IO, ZATO_NONE, ZATO_SEC_USE_RBAC
 
+# ################################################################################################################################
+
 INITIAL_CHOICES_DICT = {'': '----------'}
 INITIAL_CHOICES = INITIAL_CHOICES_DICT.items()[0]
+
+# ################################################################################################################################
+
+SELECT_SERVICE_FIELDS = [
+    'service_name',
+    'service_id',
+    'service',
+    'hook_service_id',
+    'hook_service_name',
+    'on_connect_service_id',
+]
 
 # ################################################################################################################################
 
@@ -88,16 +101,14 @@ def add_http_soap_select(form, field_name, req, connection, transport, needs_ini
 def add_services(form, req, by_id=False, initial_service=None, api_name='zato.service.get-list', has_name_filter=True):
     if req.zato.cluster_id:
 
-        service_fields = ['service_name', 'service_id', 'service', 'hook_service_id', 'hook_service_name']
-
-        for name in service_fields:
+        for name in SELECT_SERVICE_FIELDS:
             field = form.fields.get(name)
             if field:
                 field_name = name
                 break
         else:
             raise ValueError('Could not find any service field (tried: `{}` in `{}`)'.format(
-                service_fields, form.fields))
+                SELECT_SERVICE_FIELDS, form.fields))
 
         field.choices = []
         field.choices.append(INITIAL_CHOICES)
