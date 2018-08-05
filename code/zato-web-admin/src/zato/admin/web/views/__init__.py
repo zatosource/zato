@@ -321,11 +321,16 @@ class Index(_BaseView):
     def get_service_name(self, req):
         raise NotImplementedError('May be implemented in subclasses')
 
+    def get_initial_input(self):
+        return {}
+
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
             service_name = self.service_name if self.service_name else self.get_service_name()
-            return func(service_name, self.input)
+            request = self.get_initial_input()
+            request.update(self.input)
+            return func(service_name, request)
 
     def _handle_item_list(self, item_list):
         """ Creates a new instance of the model class for each of the element received
