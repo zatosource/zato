@@ -21,6 +21,10 @@
             <input type="hidden" name="has_gd" value="{{ has_gd }}" />
         {% endif %}
 
+        {% if has_generic %}
+            <input type="hidden"  name="type_" value="{{ generic_type }}" />
+        {% endif %}
+
         <input type="submit"  style="vertical-align:top" value="{{ page_prompt }}" />
     </form>
     </div>

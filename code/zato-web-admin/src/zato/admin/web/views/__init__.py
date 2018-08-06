@@ -294,9 +294,9 @@ class Index(_BaseView):
         self.clear_user_message()
 
     def can_invoke_admin_service(self):
-        """ Returns a boolean flag indicating that we know what service to invoke,
-        what cluster on and all the required parameters were given in GET request.
-        cluster_id doesn't have to be in GET, 'cluster' will suffice.
+        """ Returns a boolean flag indicating that we know what service to invoke, what cluster it is on
+        and that all the required parameters were given in GET request. cluster_id doesn't have to be in GET,
+        'cluster' will suffice.
         """
         input_elems = self.req.GET.keys() + self.req.zato.args.keys()
 
