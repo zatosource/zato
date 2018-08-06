@@ -15,12 +15,23 @@ from json import dumps
 from bunch import Bunch
 
 # Zato
+from zato.common.broker_message import GENERIC
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
 from zato.server.generic.connection import attrs_gen_conn, GenericConnection
 from zato.server.service import Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 from zato.server.service.internal.generic import _BaseService
+from zato.server.service.meta import DeleteMeta
+
+# ################################################################################################################################
+
+elem = 'generic_connection'
+model = ModelGenericConn
+label = 'a connection'
+broker_message = GENERIC
+broker_message_prefix = 'CONNECTION_'
+list_func = None
 
 # ################################################################################################################################
 
@@ -73,6 +84,10 @@ class _CreateEdit(_BaseService):
             self.response.payload.id = instance.id
             self.response.payload.name = instance.name
 
+
+        data['action'] = GENERIC.CONNECTION_EDIT if self.is_edit else GENERIC.CONNECTION_CREATE
+        self.broker_client.publish(data)
+
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -86,7 +101,7 @@ class Edit(_CreateEdit):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    pass
+    __metaclass__ = DeleteMeta
 
 # ################################################################################################################################
 
@@ -137,21 +152,7 @@ class GetList(AdminService):
                 self._enrich_conn_dict(conn_dict)
                 out['response'].append(conn_dict)
 
-        print(out)
-
         self.response.payload = dumps(out)
-
-# ################################################################################################################################
-
-class Get(AdminService):
-
-    def handle(self):
-        with closing(self.server.odb.session()) as session:
-            item = session.query(ModelGenericConn).\
-                filter(ModelGenericConn.id==id).\
-                one()
-
-        return GenericConnection.from_model(item)
 
 # ################################################################################################################################
 
