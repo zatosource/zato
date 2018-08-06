@@ -56,10 +56,8 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = True
         initial_input_dict['pool_size'] = 1
         initial_input_dict['sec_use_rbac'] = False
-        initial_input_dict['zzz'] = 'qqq'
 
     def success_message(self, item):
-        print(111, item)
         return 'Successfully {} outgoing WebSocket connection `{}`'.format(self.verb, item.name)
 
 class Create(_CreateEdit):

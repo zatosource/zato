@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from copy import deepcopy
+from json import dumps
 
 # Bunch
 from bunch import Bunch
@@ -86,15 +87,23 @@ class GetList(AdminService):
 
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'type_')
-        output_optional = attrs_gen_conn
-        output_repeated = True
 
     def get_data(self, session):
         return self._search(connection_list, session, self.request.input.cluster_id, self.request.input.type_, False)
 
     def handle(self):
+        out = {'_meta':{}, 'response':[]}
+
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+
+            search_result = self.get_data(session)
+            out['_meta'].update(search_result.to_dict())
+
+            for item in search_result:
+                conn = GenericConnection.from_model(item)
+                out['response'].append(conn.to_dict())
+
+        self.response.payload = dumps(out)
 
 # ################################################################################################################################
 
