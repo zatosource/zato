@@ -24,7 +24,7 @@ class CreateForm(forms.Form):
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        #add_services(self, req, by_id=True)
+        add_services(self, req, by_id=True)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

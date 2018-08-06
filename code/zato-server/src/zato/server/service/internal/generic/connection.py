@@ -33,15 +33,15 @@ class _CreateEditSIO(AdminSIO):
 
 # ################################################################################################################################
 
-class Create(_BaseService):
+class _CreateEdit(_BaseService):
+    """ Creates a new or updates an existing generic connection in ODB.
+    """
     class SimpleIO(_CreateEditSIO):
         output_required = ('id', 'name')
         default_value = None
         response_elem = None
 
     def handle(self, _force_null=('conn_def_id', 'cache_id', 'timeout', 'port', 'cache_expiry')):
-        """ Creates a new generic connection in ODB.
-        """
         data = deepcopy(self.request.input)
         for key, value in self.request.raw_request.items():
             if key not in data:
@@ -55,11 +55,16 @@ class Create(_BaseService):
         conn = GenericConnection.from_dict(data)
         conn_dict = conn.to_sql_dict()
 
-        model = self._new_zato_instance_with_cluster(ModelGenericConn)
-        for key, value in conn_dict.items():
-            setattr(model, key, value)
-
         with closing(self.server.odb.session()) as session:
+
+            if self.is_edit:
+                model = self._get_instance(session, ModelGenericConn, data.type_, data.name)
+            else:
+                model = self._new_zato_instance_with_cluster(ModelGenericConn)
+
+            for key, value in conn_dict.items():
+                setattr(model, key, value)
+
             session.add(model)
             session.commit()
 
@@ -70,8 +75,13 @@ class Create(_BaseService):
 
 # ################################################################################################################################
 
-class Update(AdminService):
-    pass
+class Create(_CreateEdit):
+    is_edit = False
+
+# ################################################################################################################################
+
+class Edit(_CreateEdit):
+    is_edit = True
 
 # ################################################################################################################################
 
@@ -88,8 +98,30 @@ class GetList(AdminService):
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'type_')
 
+# ################################################################################################################################
+
     def get_data(self, session):
         return self._search(connection_list, session, self.request.input.cluster_id, self.request.input.type_, False)
+
+# ################################################################################################################################
+
+    def _enrich_conn_dict(self, conn_dict):
+        for key, service_id in conn_dict.items():
+            if service_id:
+                if key.endswith('_service_id'):
+                    prefix = key.split('_service_id')[0]
+                    service_attr = prefix + '_service_name'
+                    try:
+                        service_name = self.invoke('zato.service.get-by-id', {
+                            'cluster_id': self.request.input.cluster_id,
+                            'id': service_id,
+                        })['zato_service_get_by_name_response']['name']
+                    except Exception:
+                        pass
+                    else:
+                        conn_dict[service_attr] = service_name
+
+# ################################################################################################################################
 
     def handle(self):
         out = {'_meta':{}, 'response':[]}
@@ -101,7 +133,11 @@ class GetList(AdminService):
 
             for item in search_result:
                 conn = GenericConnection.from_model(item)
-                out['response'].append(conn.to_dict())
+                conn_dict = conn.to_dict()
+                self._enrich_conn_dict(conn_dict)
+                out['response'].append(conn_dict)
+
+        print(out)
 
         self.response.payload = dumps(out)
 
