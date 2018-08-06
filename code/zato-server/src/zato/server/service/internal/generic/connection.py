@@ -8,64 +8,64 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from copy import deepcopy
 
 # Bunch
 from bunch import Bunch
 
 # Zato
+from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
 from zato.server.generic.connection import attrs_gen_conn, GenericConnection
-from zato.server.service.internal import AdminService, ChangePasswordBase, GetListAdminSIO
+from zato.server.service import Bool, Int
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal.generic import _BaseService
 
 # ################################################################################################################################
 
-class Create(AdminService):
+class _CreateEditSIO(AdminSIO):
+    input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
+        Bool('sec_use_rbac'), 'cluster_id')
+    input_optional = ('id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
+        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id')
+    force_empty_keys = True
 
-    id = Column(Integer, Sequence('generic_conn_def_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    type_ = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    is_internal = Column(Boolean(), nullable=False, default=False)
-    is_channel = Column(Boolean(), nullable=False)
-    is_outconn = Column(Boolean(), nullable=False)
-    pool_size = Column(Integer(), nullable=False)
-    sec_use_rbac = Column(Boolean(), nullable=False, default=False)
+# ################################################################################################################################
 
-    cache_expiry = Column(Integer, nullable=True, default=0)
-    address = Column(Text(), nullable=True)
-    port = Column(Integer, nullable=True)
-    timeout = Column(Integer, nullable=True)
-    data_format = Column(String(60), nullable=True)
+class Create(_BaseService):
+    class SimpleIO(_CreateEditSIO):
+        output_required = ('id', 'name')
+        default_value = None
+        response_elem = None
 
-    version = Column(String(200), nullable=True)
-    extra = Column(Text(), nullable=True)
-    username = Column(String(1000), nullable=True)
-    username_type = Column(String(45), nullable=True)
-    secret = Column(String(1000), nullable=True)
-    secret_type = Column(String(45), nullable=True)
-    conn_def_id = Column(Integer, ForeignKey('generic_conn_def.id', ondelete='CASCADE'), nullable=True)
-    cache_id = Column(Integer, ForeignKey('cache.id', ondelete='CASCADE'), nullable=True)
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-
-    def handle(self):
+    def handle(self, _force_null=('conn_def_id', 'cache_id', 'timeout', 'port', 'cache_expiry')):
         """ Creates a new generic connection in ODB.
         """
-        self.logger.warn(self.request.raw_request)
-        '''
-        conn.cluster_id = self.server.cluster.id
+        data = deepcopy(self.request.input)
+        for key, value in self.request.raw_request.items():
+            if key not in data:
+                data[key] = self._convert_sio_elem(key, value)
+
+        for name in _force_null:
+            value = data.get(name)
+            if not value:
+                data[name] = None
+
+        conn = GenericConnection.from_dict(data)
         conn_dict = conn.to_sql_dict()
 
-        model = ModelGenericConn()
+        model = self._new_zato_instance_with_cluster(ModelGenericConn)
         for key, value in conn_dict.items():
             setattr(model, key, value)
 
         with closing(self.server.odb.session()) as session:
             session.add(model)
             session.commit()
-            session.refresh(model) # Needed because .from_model below needs to access all the attributes
 
-        return GenericConnection.from_model(model)
-        '''
+            instance = self._get_instance(session, ModelGenericConn, data.type_, data.name)
+
+            self.response.payload.id = instance.id
+            self.response.payload.name = instance.name
 
 # ################################################################################################################################
 

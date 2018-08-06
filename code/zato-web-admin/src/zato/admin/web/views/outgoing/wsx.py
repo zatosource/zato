@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
-from zato.common import PLACEHOLDER
+from zato.common import GENERIC, PLACEHOLDER
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.wsx import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
@@ -49,12 +49,17 @@ class _CreateEdit(CreateEdit):
         input_required = ('name', 'is_active', 'is_zato', 'address', 'on_connect_service_id')
         output_required = ('id', 'name')
 
-    def get_initial_input(self):
-        return {
-            'host': PLACEHOLDER
-        }
+    def populate_initial_input_dict(self, initial_input_dict):
+        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_WSX
+        initial_input_dict['is_internal'] = False
+        initial_input_dict['is_channel'] = False
+        initial_input_dict['is_outconn'] = True
+        initial_input_dict['pool_size'] = 1
+        initial_input_dict['sec_use_rbac'] = False
+        initial_input_dict['zzz'] = 'qqq'
 
     def success_message(self, item):
+        print(111, item)
         return 'Successfully {} outgoing WebSocket connection `{}`'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
