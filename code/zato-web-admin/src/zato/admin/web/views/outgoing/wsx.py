@@ -19,7 +19,11 @@ from zato.admin.web.views import change_password as _change_password, CreateEdit
      method_allowed
 from zato.common.odb.model import GenericConn
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
 
 class Index(_Index):
     method_allowed = 'GET'
@@ -42,6 +46,8 @@ class Index(_Index):
             'change_password_form': ChangePasswordForm()
         }
 
+# ################################################################################################################################
+
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
@@ -60,20 +66,30 @@ class _CreateEdit(CreateEdit):
     def success_message(self, item):
         return 'Successfully {} outgoing WebSocket connection `{}`'.format(self.verb, item.name)
 
+# ################################################################################################################################
+
 class Create(_CreateEdit):
     url_name = 'out-wsx-create'
     service_name = 'zato.generic.connection.create'
+
+# ################################################################################################################################
 
 class Edit(_CreateEdit):
     url_name = 'out-wsx-edit'
     form_prefix = 'edit-'
     service_name = 'zato.generic.connection.edit'
 
+# ################################################################################################################################
+
 class Delete(_Delete):
     url_name = 'out-wsx-delete'
     error_message = 'Could not delete outgoing WebSocket connection'
-    service_name = 'zato.outgoing.wsx.delete'
+    service_name = 'zato.generic.connection.delete'
+
+# ################################################################################################################################
 
 @method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.generic.connection.change-password')
+
+# ################################################################################################################################
