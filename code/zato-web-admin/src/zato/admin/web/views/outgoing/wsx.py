@@ -32,7 +32,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'type_')
         output_required = ('id', 'name', 'address')
-        output_optional = ('is_active', 'is_zato', 'on_connect_service_id')
+        output_optional = ('is_active', 'is_zato', 'on_connect_service_id', 'on_connect_service_name')
         output_repeated = True
 
     def handle(self):
