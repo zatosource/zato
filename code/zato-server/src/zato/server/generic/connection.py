@@ -6,6 +6,9 @@ Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from json import dumps, loads
+
 # Zato
 from zato.common import GENERIC
 from zato.server.generic import attrs_gen_conn
