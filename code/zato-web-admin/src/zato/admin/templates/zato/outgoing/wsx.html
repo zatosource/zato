@@ -29,6 +29,7 @@
             'address',
             '_is_zato',
             '_on_connect_service',
+            '_change_password',
             '_edit',
             '_delete',
             'id',
@@ -74,6 +75,7 @@
                         <th><a href="#">On connect service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -97,6 +99,7 @@
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.wsx.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.wsx.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -107,7 +110,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='13'>No results</td>
+                        <td colspan='14'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -198,7 +201,7 @@
                 <form action="{% url "out-wsx-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:15%">Name</td>
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>

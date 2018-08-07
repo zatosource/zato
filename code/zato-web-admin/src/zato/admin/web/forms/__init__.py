@@ -190,8 +190,10 @@ class SearchForm(forms.Form):
 # ################################################################################################################################
 
 class ChangePasswordForm(forms.Form):
-    password1 = forms.CharField(widget=forms.PasswordInput(attrs={'class':'required'}))
-    password2 = forms.CharField(widget=forms.PasswordInput(attrs={'class':'required validate-password-confirm'}))
+    password1 = forms.CharField(widget=forms.PasswordInput(
+        attrs={'class':'required', 'style':'width:100%'}))
+    password2 = forms.CharField(widget=forms.PasswordInput(
+        attrs={'class':'required validate-password-confirm', 'style':'width:100%'}))
 
 # ################################################################################################################################
 

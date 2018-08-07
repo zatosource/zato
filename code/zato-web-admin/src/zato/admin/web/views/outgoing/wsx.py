@@ -15,8 +15,8 @@ import logging
 from zato.common import GENERIC, PLACEHOLDER
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.wsx import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-     method_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
+     Index as _Index, method_allowed
 from zato.common.odb.model import GenericConn
 
 # ################################################################################################################################
@@ -62,6 +62,15 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = True
         initial_input_dict['pool_size'] = 1
         initial_input_dict['sec_use_rbac'] = False
+
+    def post_process_return_data(self, return_data):
+
+        on_connect_service_id = self.input_dict.get('on_connect_service_id')
+        if on_connect_service_id:
+            response = id_only_service(self.req, 'zato.service.get-by-id', on_connect_service_id, {'cluster_id':self.cluster_id})
+            return_data['on_connect_service_name'] = response.data['name']
+
+        return return_data
 
     def success_message(self, item):
         return 'Successfully {} outgoing WebSocket connection `{}`'.format(self.verb, item.name)

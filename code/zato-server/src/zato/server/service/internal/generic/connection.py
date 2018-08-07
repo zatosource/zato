@@ -84,8 +84,7 @@ class _CreateEdit(_BaseService):
             self.response.payload.id = instance.id
             self.response.payload.name = instance.name
 
-
-        data['action'] = GENERIC.CONNECTION_EDIT if self.is_edit else GENERIC.CONNECTION_CREATE
+        data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value
         self.broker_client.publish(data)
 
 # ################################################################################################################################
