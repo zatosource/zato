@@ -37,23 +37,24 @@ $.fn.zato.outgoing.wsx.data_table.new_row = function(item, data, include_tr) {
     }
 
     var is_active = item.is_active == true;
-    var dircache = item.dircache == true;
+    var is_zato = item.is_zato == true;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.host);
-    row += String.format('<td>{0}</td>', item.user ? item.user : '');
-    row += String.format('<td>{0}</td>', item.acct ? item.acct : '');
-    row += String.format('<td>{0}</td>', item.timeout ? item.timeout : '');
-    row += String.format('<td>{0}</td>', item.port);
-    row += String.format('<td>{0}</td>', dircache ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', item.address);
+    row += String.format('<td>{0}</td>', is_zato ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>',
+        String.format("<a href='/zato/service/overview/{0}/?cluster={1}'>{0}</a>",
+        data.on_connect_service_name, item.cluster_id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.wsx.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.wsx.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
+    row += String.format("<td class='ignore'>{0}</td>", is_zato);
+    row += String.format("<td class='ignore'>{0}</td>", item.on_connect_service_id);
 
     if(include_tr) {
         row += '</tr>';
