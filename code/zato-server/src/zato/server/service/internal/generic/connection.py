@@ -11,15 +11,11 @@ from contextlib import closing
 from copy import deepcopy
 from json import dumps
 
-# Bunch
-from bunch import Bunch
-
 # Zato
-from zato.common import SECRETS
 from zato.common.broker_message import GENERIC
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
-from zato.server.generic.connection import attrs_gen_conn, GenericConnection
+from zato.server.generic.connection import GenericConnection
 from zato.server.service import Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 from zato.server.service.internal.generic import _BaseService
