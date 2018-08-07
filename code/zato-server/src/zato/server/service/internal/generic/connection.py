@@ -15,6 +15,7 @@ from json import dumps
 from bunch import Bunch
 
 # Zato
+from zato.common import SECRETS
 from zato.common.broker_message import GENERIC
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
@@ -52,18 +53,16 @@ class _CreateEdit(_BaseService):
         default_value = None
         response_elem = None
 
-    def handle(self, _force_null=('conn_def_id', 'cache_id', 'timeout', 'port', 'cache_expiry')):
+# ################################################################################################################################
+
+    def handle(self):
         data = deepcopy(self.request.input)
         for key, value in self.request.raw_request.items():
             if key not in data:
                 data[key] = self._convert_sio_elem(key, value)
 
-        for name in _force_null:
-            value = data.get(name)
-            if not value:
-                data[name] = None
-
         conn = GenericConnection.from_dict(data)
+        conn.secret = self.server.encrypt(self.crypto.generate_secret())
         conn_dict = conn.to_sql_dict()
 
         with closing(self.server.odb.session()) as session:
@@ -156,6 +155,16 @@ class GetList(AdminService):
 # ################################################################################################################################
 
 class ChangePassword(ChangePasswordBase):
-    pass
+    """ Changes the secret (password) of a generic connection.
+    """
+    password_required = False
+
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        response_elem = None
+
+    def handle(self):
+        def _auth(instance, secret):
+            instance.secret = secret
+        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value)
 
 # ################################################################################################################################
