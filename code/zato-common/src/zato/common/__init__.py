@@ -1077,7 +1077,7 @@ ZATO_INFO_FILE = b'.zato-info'
 class SECRETS:
 
     # These parameters will be automatically encrypted in SimpleIO input
-    PARAMS = ('auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'token')
+    PARAMS = ('auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'token', 'secret')
 
     # Zato secret (Fernet)
     PREFIX = 'zato.secf.'
