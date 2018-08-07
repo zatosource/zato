@@ -12,10 +12,9 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 class _BaseService(AdminService):
-    def _get_instance(self, session, model_class, type_, name):
+    def _get_instance(self, session, model_class, id):
         return session.query(model_class).\
-               filter(model_class.type_==type_).\
-               filter(model_class.name==name).\
+               filter(model_class.id==id).\
                one()
 
 # ################################################################################################################################

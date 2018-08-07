@@ -64,7 +64,7 @@ class _CreateEdit(_BaseService):
         with closing(self.server.odb.session()) as session:
 
             if self.is_edit:
-                model = self._get_instance(session, ModelGenericConn, data.type_, data.name)
+                model = self._get_instance(session, ModelGenericConn, data.id)
             else:
                 model = self._new_zato_instance_with_cluster(ModelGenericConn)
 
@@ -74,7 +74,7 @@ class _CreateEdit(_BaseService):
             session.add(model)
             session.commit()
 
-            instance = self._get_instance(session, ModelGenericConn, data.type_, data.name)
+            instance = self._get_instance(session, ModelGenericConn, data.id)
 
             self.response.payload.id = instance.id
             self.response.payload.name = instance.name
