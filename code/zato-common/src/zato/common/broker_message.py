@@ -484,6 +484,7 @@ class GENERIC(Constants):
     CONNECTION_CREATE = ValueConstant('')
     CONNECTION_EDIT = ValueConstant('')
     CONNECTION_DELETE = ValueConstant('')
+    CONNECTION_CHANGE_PASSWORD = ValueConstant('')
 
 code_to_name = {}
 
