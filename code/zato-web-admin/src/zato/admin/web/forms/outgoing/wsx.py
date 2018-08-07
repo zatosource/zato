@@ -13,7 +13,6 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_services
-from zato.common import ZMQ
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
