@@ -58,6 +58,7 @@ from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
+from zato.server.generic.connection import GenericConnection
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
@@ -279,6 +280,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # AMQP
         self.init_amqp()
+
+        # Generic connections
+        self.init_generic_connections()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
@@ -858,6 +862,17 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         if wrapper.config['security_name'] == msg['name']:
             wrapper.config['password'] = msg['password']
             wrapper.set_auth()
+
+# ################################################################################################################################
+
+    def init_generic_connections(self):
+        for config_dict in self.worker_config.generic_connection.values():
+            config = bunchify(config_dict['config'])
+            item = GenericConnection.from_model(config)
+
+            print(111, item.to_dict())
+
+        #zzz
 
 # ################################################################################################################################
 

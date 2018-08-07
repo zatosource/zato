@@ -12,11 +12,20 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query import query_wrapper
 
+# ################################################################################################################################
+
 @query_wrapper
-def connection_list(session, cluster_id, type_, needs_columns=False):
+def connection_list(session, cluster_id, type_=None, needs_columns=False):
     """ A list of connections by their type.
     """
-    return session.query(ModelGenericConn).\
-        filter(ModelGenericConn.cluster_id==cluster_id).\
-        filter(ModelGenericConn.type_==type_).\
-        order_by(ModelGenericConn.name)
+    q = session.query(ModelGenericConn).\
+        filter(ModelGenericConn.cluster_id==cluster_id)
+
+    if type_:
+        q = q.filter(ModelGenericConn.type_==type_)
+
+    q = q.order_by(ModelGenericConn.name)
+
+    return q
+
+# ################################################################################################################################

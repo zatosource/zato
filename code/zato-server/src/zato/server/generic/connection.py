@@ -76,18 +76,20 @@ class GenericConnection(object):
 # ################################################################################################################################
 
     @staticmethod
-    def from_model(model):
+    def from_model(data):
         instance = GenericConnection()
 
-        opaque_value = getattr(model, GENERIC.CONNECTION.ATTR_NAME)
+        opaque_value = getattr(data, GENERIC.CONNECTION.ATTR_NAME)
         if opaque_value:
             instance.opaque.update(loads(opaque_value))
 
         for name in instance.__slots__:
             if name != 'opaque':
-                value = getattr(model, name)
+                value = getattr(data, name)
                 setattr(instance, name, value)
         return instance
+
+    from_bunch = from_model
 
 # ################################################################################################################################
 
