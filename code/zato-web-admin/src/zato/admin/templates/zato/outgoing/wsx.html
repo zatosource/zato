@@ -29,6 +29,8 @@
             'address',
             '_is_zato',
             '_on_connect_service',
+            '_on_message_service',
+            '_on_close_service',
             '_change_password',
             '_edit',
             '_delete',
@@ -36,6 +38,8 @@
             'is_active',
             'is_zato',
             'on_connect_service_id',
+            'on_message_service_id',
+            'on_close_service_id',
         ]
     }
     </script>
@@ -72,7 +76,9 @@
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Address</a></th>
                         <th><a href="#">Is Zato</a></th>
-                        <th><a href="#">On connect service</a></th>
+                        <th><a href="#">On connect</a></th>
+                        <th><a href="#">On message</a></th>
+                        <th><a href="#">On close</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -92,6 +98,7 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.address }}</td>
                         <td>{{ item.is_zato|yesno:'Yes,No' }}</td>
+
                         <td>
                             {% if item.on_connect_service_name %}
                                 <a href="{% url "service-overview" item.on_connect_service_name %}?cluster={{ cluster_id }}">{{ item.on_connect_service_name }}</a>
@@ -99,6 +106,23 @@
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
+
+                        <td>
+                            {% if item.on_message_service_name %}
+                                <a href="{% url "service-overview" item.on_message_service_name %}?cluster={{ cluster_id }}">{{ item.on_message_service_name }}</a>
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if item.on_close_service_name %}
+                                <a href="{% url "service-overview" item.on_close_service_name %}?cluster={{ cluster_id }}">{{ item.on_close_service_name }}</a>
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.wsx.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.wsx.delete_('{{ item.id }}')">Delete</a></td>
@@ -106,11 +130,13 @@
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_zato }}</td>
                         <td class='ignore'>{{ item.on_connect_service_id }}</td>
+                        <td class='ignore'>{{ item.on_message_service_id }}</td>
+                        <td class='ignore'>{{ item.on_close_service_id }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='14'>No results</td>
+                        <td colspan='16'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -144,6 +170,14 @@
                         <tr>
                             <td style="vertical-align:middle">On connect service</td>
                             <td>{{ create_form.on_connect_service_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">On message service</td>
+                            <td>{{ create_form.on_message_service_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">On close service</td>
+                            <td>{{ create_form.on_close_service_id }}</td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -182,7 +216,14 @@
                             <td style="vertical-align:middle">On connect service</td>
                             <td>{{ edit_form.on_connect_service_id }}</td>
                         </tr>
-
+                        <tr>
+                            <td style="vertical-align:middle">On message service</td>
+                            <td>{{ edit_form.on_message_service_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">On close service</td>
+                            <td>{{ edit_form.on_close_service_id }}</td>
+                        </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
