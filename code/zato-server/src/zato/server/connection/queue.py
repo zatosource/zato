@@ -86,8 +86,8 @@ class ConnectionQueue(object):
                     gevent.sleep(0.5)
                     now = datetime.utcnow()
 
-                    self.logger.info('%d/%d %s client%sobtained to `%s` (%s) after %s (cap: %ss)',
-                        self.queue.qsize(), self.queue.maxsize, suffix,
+                    self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
+                        self.queue.qsize(), self.queue.maxsize,
                         self.conn_type, self.address, self.conn_name, now - start, self.queue_build_cap)
 
                     if now >= build_until:
