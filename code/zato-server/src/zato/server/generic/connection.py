@@ -9,6 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from json import dumps, loads
 
+# Bunch
+from bunch import bunchify
+
 # Zato
 from zato.common import GENERIC
 from zato.server.generic import attrs_gen_conn
@@ -64,14 +67,14 @@ class GenericConnection(object):
 
 # ################################################################################################################################
 
-    def to_dict(self):
+    def to_dict(self, needs_bunch=False):
         out = {}
         for name in self.__slots__:
             if name != 'opaque':
                 out[name] = getattr(self, name)
         out.update(self.opaque)
 
-        return out
+        return bunchify(out) if needs_bunch else out
 
 # ################################################################################################################################
 

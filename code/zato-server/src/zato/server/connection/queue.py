@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from datetime import datetime, timedelta
+from traceback import format_exc
 
 # gevent
 import gevent
@@ -84,10 +85,11 @@ class ConnectionQueue(object):
                     gevent.sleep(0.5)
 
                     now = datetime.utcnow()
+                    suffix = 's ' if self.queue.maxsize > 1 else ' '
 
-                    self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
-                        self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.conn_name, now - start,
-                        self.queue_build_cap)
+                    self.logger.info('%d/%d %s client%sobtained to `%s` (%s) after %s (cap: %ss)',
+                        self.queue.qsize(), self.queue.maxsize, suffix,
+                        self.conn_type, self.address, self.conn_name, now - start, self.queue_build_cap)
 
                     if now >= build_until:
 
@@ -137,6 +139,9 @@ class Wrapper(object):
     def build_queue(self):
         with self.update_lock:
             if self.config.is_active:
-                self.client.build_queue()
+                try:
+                    self.client.build_queue()
+                except Exception:
+                    logger.warn('Could not build client queue `%s`', format_exc())
             else:
                 logger.info('Skip building inactive connection queue for `%s` (%s)', self.client.conn_name, self.client.conn_type)

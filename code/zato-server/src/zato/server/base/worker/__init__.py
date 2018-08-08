@@ -40,7 +40,7 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common import broker_message, CHANNEL, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, SEC_DEF_TYPE, \
+from zato.common import broker_message, CHANNEL, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, SEC_DEF_TYPE, \
      simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
@@ -59,6 +59,7 @@ from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
 from zato.server.generic.connection import GenericConnection
+from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
@@ -70,7 +71,6 @@ from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
-from zato.server.connection.web_socket.outgoing import OutgoingWebSocket
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.pubsub import PubSub
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
@@ -187,7 +187,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # WebSocket
         self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket, self.server)
-        self.outgoing_web_sockets = OutgoingWebSocket(self.server.cluster_id, self.server.servers, self.server.odb)
 
         # AMQP
         self.amqp_api = ConnectorStore(connector_type.duplex.amqp, ConnectorAMQP)
@@ -198,6 +197,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Caches
         self.cache_api = CacheAPI(self.server)
+
+        # Generic connections - WSX outconns
+        self.outconn_wsx = {}
+
+        # Maps generic connection types to their API handler objects
+        self.generic_conn_api = {
+            GENERIC.CONNECTION.TYPE.OUTCONN_WSX: (self.outconn_wsx, OutconnWSXWrapper),
+        }
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
@@ -867,12 +874,23 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def init_generic_connections(self):
         for config_dict in self.worker_config.generic_connection.values():
+
             config = bunchify(config_dict['config'])
+            config.queue_build_cap = 30
+            config.auth_url = config.address
+
             item = GenericConnection.from_model(config)
 
-            print(111, item.to_dict())
+            config_attr, wrapper = self.generic_conn_api[item.type_]
+            config_attr[config.name] = config
+            config_attr[config.name].conn = wrapper(config, self.server)
+            config_attr[config.name].conn.build_queue()
 
-        #zzz
+            '''config_attr[name].conn = wrapper(config, self.server)
+            config_attr[name].conn.build_queue()
+
+            api.create(item.name, item.to_dict(True))
+            '''
 
 # ################################################################################################################################
 
