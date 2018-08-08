@@ -912,6 +912,7 @@ $.fn.zato.toggle_time = function(link_name, current_value, new_value) {
 }
 
 $.fn.zato.empty_value = '<span class="form_hint">---</span>';
+$.fn.zato.empty_table_cell = String.format('<td>{0}</td>', $.fn.zato.empty_value);
 
 // For Brython
 

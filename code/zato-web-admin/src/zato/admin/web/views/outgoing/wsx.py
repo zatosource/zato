@@ -36,7 +36,9 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'type_')
         output_required = ('id', 'name', 'address')
-        output_optional = ('is_active', 'is_zato', 'on_connect_service_id', 'on_connect_service_name')
+        output_optional = ('is_active', 'is_zato',
+            'on_connect_service_id', 'on_connect_service_name', 'on_message_service_id', 'on_message_service_name',
+            'on_close_service_id', 'on_close_service_name')
         output_repeated = True
 
     def handle(self):
@@ -52,7 +54,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'is_zato', 'address', 'on_connect_service_id')
+        input_required = ('name', 'is_active', 'is_zato', 'address', 'on_connect_service_id', 'on_message_service_id',
+            'on_close_service_id')
         output_required = ('id', 'name')
 
     def populate_initial_input_dict(self, initial_input_dict):
@@ -65,10 +68,14 @@ class _CreateEdit(CreateEdit):
 
     def post_process_return_data(self, return_data):
 
-        on_connect_service_id = self.input_dict.get('on_connect_service_id')
-        if on_connect_service_id:
-            response = id_only_service(self.req, 'zato.service.get-by-id', on_connect_service_id, {'cluster_id':self.cluster_id})
-            return_data['on_connect_service_name'] = response.data['name']
+        for name in ('connect', 'message', 'close'):
+            id_field_name = 'on_{}_service_id'.format(name)
+            service_id = self.input_dict.get(id_field_name)
+
+            if service_id:
+                response = id_only_service(self.req, 'zato.service.get-by-id', service_id, {'cluster_id':self.cluster_id})
+                name_field_name = 'on_{}_service_name'.format(name)
+                return_data[name_field_name] = response.data['name']
 
         return return_data
 

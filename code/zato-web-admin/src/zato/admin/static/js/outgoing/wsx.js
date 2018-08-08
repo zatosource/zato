@@ -45,9 +45,34 @@ $.fn.zato.outgoing.wsx.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.address);
     row += String.format('<td>{0}</td>', is_zato ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>',
-        String.format("<a href='/zato/service/overview/{0}/?cluster={1}'>{0}</a>",
-        data.on_connect_service_name, item.cluster_id));
+
+    if(data.on_connect_service_name) {
+        row += String.format('<td>{0}</td>',
+            String.format("<a href='/zato/service/overview/{0}/?cluster={1}'>{0}</a>",
+            data.on_connect_service_name, item.cluster_id));
+    }
+    else {
+        row += $.fn.zato.empty_table_cell;
+    }
+
+    if(data.on_message_service_name) {
+        row += String.format('<td>{0}</td>',
+            String.format("<a href='/zato/service/overview/{0}/?cluster={1}'>{0}</a>",
+            data.on_message_service_name, item.cluster_id));
+    }
+    else {
+        row += $.fn.zato.empty_table_cell;
+    }
+
+    if(data.on_close_service_name) {
+        row += String.format('<td>{0}</td>',
+            String.format("<a href='/zato/service/overview/{0}/?cluster={1}'>{0}</a>",
+            data.on_close_service_name, item.cluster_id));
+    }
+    else {
+        row += $.fn.zato.empty_table_cell;
+    }
+
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.wsx.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.wsx.delete_({0});'>Delete</a>", item.id));

@@ -28,7 +28,6 @@ class OutconnWSXWrapper(Wrapper):
         super(OutconnWSXWrapper, self).__init__(config, 'outgoing WebSocket', server)
 
     def add_client(self):
-        print(222, self)
         conn = 123
         self.client.put_client(conn)
 

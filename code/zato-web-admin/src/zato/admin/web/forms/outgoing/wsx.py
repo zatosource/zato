@@ -20,6 +20,8 @@ class CreateForm(forms.Form):
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_zato = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     on_connect_service_id = forms.ChoiceField(widget=forms.Select())
+    on_message_service_id = forms.ChoiceField(widget=forms.Select())
+    on_close_service_id = forms.ChoiceField(widget=forms.Select())
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
