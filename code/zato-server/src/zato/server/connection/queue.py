@@ -77,15 +77,14 @@ class ConnectionQueue(object):
 
         start = datetime.utcnow()
         build_until = start + timedelta(seconds=self.queue_build_cap)
+        suffix = 's ' if self.queue.maxsize > 1 else ' '
 
         try:
             while self.keep_connecting:
                 while not self.queue.full():
 
                     gevent.sleep(0.5)
-
                     now = datetime.utcnow()
-                    suffix = 's ' if self.queue.maxsize > 1 else ' '
 
                     self.logger.info('%d/%d %s client%sobtained to `%s` (%s) after %s (cap: %ss)',
                         self.queue.qsize(), self.queue.maxsize, suffix,
@@ -94,14 +93,15 @@ class ConnectionQueue(object):
                     if now >= build_until:
 
                         self.logger.warn('Built %s/%s %s clients to `%s` within %s seconds, sleeping until %s',
-                            self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.queue_build_cap, build_until)
+                            self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.queue_build_cap,
+                            build_until)
                         gevent.sleep(self.queue_build_cap)
 
                         start = datetime.utcnow()
                         build_until = start + timedelta(seconds=self.queue_build_cap)
 
-                self.logger.info(
-                    'Obtained %d %s clients to `%s` for `%s`', self.queue.maxsize, self.conn_type, self.address, self.conn_name)
+                self.logger.info('Obtained %d %s client%sto `%s` for `%s`', self.queue.maxsize, self.conn_type, suffix,
+                    self.address, self.conn_name)
 
                 # Ok, got all the connections
                 return
