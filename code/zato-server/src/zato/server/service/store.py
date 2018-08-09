@@ -175,6 +175,11 @@ class ServiceStore(InitializingObject):
 
 # ################################################################################################################################
 
+    def get_service_name_by_id(self, service_id):
+        return self.get_service_class_by_id(service_id)['name']
+
+# ################################################################################################################################
+
     def _invoke_hook(self, object_, hook_name):
         """ A utility method for invoking various service's hooks.
         """

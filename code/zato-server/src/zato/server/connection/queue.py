@@ -92,9 +92,9 @@ class ConnectionQueue(object):
 
                     if now >= build_until:
 
-                        self.logger.warn('Built %s/%s %s clients to `%s` within %s seconds, sleeping until %s',
+                        self.logger.warn('Built %s/%s %s clients to `%s` within %s seconds, sleeping until %s (UTC)',
                             self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.queue_build_cap,
-                            build_until)
+                            datetime.utcnow() + timedelta(seconds=self.queue_build_cap))
                         gevent.sleep(self.queue_build_cap)
 
                         start = datetime.utcnow()
