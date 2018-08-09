@@ -1024,6 +1024,11 @@ class WEB_SOCKET:
         CREATE_SESSION = 'create-session'
         INVOKE_SERVICE = 'invoke-service'
 
+    class OUT_ACTION:
+        CONNECT = 'connect'
+        MESSAGE = 'message'
+        CLOSE = 'close'
+
 class APISPEC:
     OPEN_API_V3 = 'openapi_v3'
     SOAP_12 = 'soap_12'
