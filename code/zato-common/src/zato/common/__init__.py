@@ -1024,7 +1024,7 @@ class WEB_SOCKET:
         CREATE_SESSION = 'create-session'
         INVOKE_SERVICE = 'invoke-service'
 
-    class OUT_ACTION:
+    class OUT_MSG_TYPE:
         CONNECT = 'connect'
         MESSAGE = 'message'
         CLOSE = 'close'
