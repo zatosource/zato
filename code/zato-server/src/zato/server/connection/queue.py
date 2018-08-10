@@ -92,10 +92,16 @@ class ConnectionQueue(object):
 
                     if now >= build_until:
 
+                        # Log the fact that the queue is not full yet
                         self.logger.warn('Built %s/%s %s clients to `%s` within %s seconds, sleeping until %s (UTC)',
                             self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.queue_build_cap,
                             datetime.utcnow() + timedelta(seconds=self.queue_build_cap))
+
+                        # Sleep for a predetermined time
                         gevent.sleep(self.queue_build_cap)
+
+                        # Spawn additional greenlets to fill up the queue
+                        self._spawn_add_client_func(self.queue.maxsize - self.queue.qsize())
 
                         start = datetime.utcnow()
                         build_until = start + timedelta(seconds=self.queue_build_cap)
@@ -108,12 +114,17 @@ class ConnectionQueue(object):
         except KeyboardInterrupt:
             self.keep_connecting = False
 
+    def _spawn_add_client_func(self, count):
+        """ Spawns as many greenlets to populate the connection queue as there are free slots in the queue available.
+        """
+        for x in range(count):
+            gevent.spawn(self.add_client_func)
+
     def build_queue(self):
         """ Spawns greenlets to populate the queue and waits up to self.queue_build_cap seconds until the queue is full.
         If it never is, raises an exception stating so.
         """
-        for x in range(self.queue.maxsize):
-            gevent.spawn(self.add_client_func)
+        self._spawn_add_client_func(self.queue.maxsize)
 
         # Build the queue in background
         gevent.spawn(self._build_queue)
