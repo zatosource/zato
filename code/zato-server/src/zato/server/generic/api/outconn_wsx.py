@@ -61,27 +61,50 @@ class Close(WSXCtx):
 
 # ################################################################################################################################
 
-class _WSXClient(WebSocketClient):
-    def __init__(self, on_connected_cb, on_message_cb, on_close_cb, *args, **kwargs):
+class _BaseWSXClient(object):
+    def __init__(self, config, on_connected_cb, on_message_cb, on_close_cb, *ignored_args, **ignored_kwargs):
+        self.config = config
         self.on_connected_cb = on_connected_cb
         self.on_message_cb = on_message_cb
         self.on_close_cb = on_close_cb
-        super(_WSXClient, self).__init__(*args, **kwargs)
+
+# ################################################################################################################################
 
     def opened(self):
         self.on_connected_cb()
 
+# ################################################################################################################################
+
     def received_message(self, msg):
         self.on_message_cb(msg.data)
+
+# ################################################################################################################################
 
     def closed(self, code, reason=None):
         self.on_close_cb(code, reason)
 
 # ################################################################################################################################
 
+class _WSXClient(_BaseWSXClient, WebSocketClient):
+    def __init__(self, config, on_connected_cb, on_message_cb, on_close_cb, *args, **kwargs):
+        _BaseWSXClient.__init__(self, config, on_connected_cb, on_message_cb, on_close_cb)
+        WebSocketClient.__init__(self, *args, **kwargs)
+
+# ################################################################################################################################
+
+class ZatoWSXClient(_BaseWSXClient):
+    """ A client through which Zato services can be invoked over outgoing WebSocket connections.
+    """
+    def connect(self):
+        print(333, `self.config`)
+
+    def run_forever(self):
+        print(444, `self.config`)
+
+# ################################################################################################################################
+
 class WSXClient(object):
-    """ A client through which outgoing WebSocket messages can be sent,
-    not meant to be used to invoke Zato services (this is what ZatoWSXClient is for).
+    """ A client through which outgoing WebSocket messages can be sent.
     """
     def __init__(self, config):
         self.config = config
@@ -89,7 +112,8 @@ class WSXClient(object):
         spawn_greenlet(self._init)
 
     def _init(self):
-        self.impl = _WSXClient(self.on_connected_cb, self.on_message_cb, self.on_close_cb, self.config.address)
+        _impl_class = ZatoWSXClient if self.config.is_zato else _WSXClient
+        self.impl = _impl_class(self.config, self.on_connected_cb, self.on_message_cb, self.on_close_cb, self.config.address)
         self.impl.connect()
         self.impl.run_forever()
 
@@ -102,12 +126,6 @@ class WSXClient(object):
 
     def on_close_cb(self, code, reason=None):
         self.config.parent.on_close_cb(code, reason)
-
-# ################################################################################################################################
-
-class ZatoWSXClient(object):
-    """ A client through which Zato services can be invoked over outgoing WebSocket connections.
-    """
 
 # ################################################################################################################################
 
