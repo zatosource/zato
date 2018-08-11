@@ -18,7 +18,7 @@ from rapidjson import dumps
 from zato.common import CHANNEL, CONTENT_TYPE, PUBSUB
 from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
 from zato.server.service import AsIs, Int, Service
-from zato.server.service.internal.pubsub.subscription import SubscribeWebSockets
+from zato.server.service.internal.pubsub.subscription import CreateWSXSubscription
 
 # ################################################################################################################################
 
@@ -281,7 +281,7 @@ class Subscribe(Service):
 # ################################################################################################################################
 
 # Added for completness so as to make WSX clients use services from this module only
-class SubscribeWSX(SubscribeWebSockets):
+class SubscribeWSX(CreateWSXSubscription):
     name = 'zato.pubsub.pubapi.subscribe-wsx'
 
 # ################################################################################################################################
