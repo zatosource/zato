@@ -15,6 +15,7 @@ import os
 from datetime import datetime
 from hashlib import sha256
 from importlib import import_module
+from inspect import getmro, isclass
 from json import dumps
 from traceback import format_exc
 
@@ -358,26 +359,21 @@ class ServiceStore(InitializingObject):
     def _should_deploy(self, name, item):
         """ Is an object something we can deploy on a server?
         """
-        try:
-            if issubclass(item, Service):
-                if item is not Service and item is not AdminService and item is not PubSubHook:
-                    if not hasattr(item, DONT_DEPLOY_ATTR_NAME):
+        if isclass(item) and hasattr(item, '__mro__') and hasattr(item, 'get_name'):
+            if item is not Service and item is not AdminService and item is not PubSubHook:
+                if not hasattr(item, DONT_DEPLOY_ATTR_NAME):
 
-                        service_name = item.get_name()
+                    service_name = item.get_name()
 
-                        # Don't deploy SSO services if SSO as such is not enabled
-                        if not self.server.is_sso_enabled:
-                            if 'zato.sso' in service_name:
-                                return False
+                    # Don't deploy SSO services if SSO as such is not enabled
+                    if not self.server.is_sso_enabled:
+                        if 'zato.sso' in service_name:
+                            return False
 
-                        if self.patterns_matcher.is_allowed(service_name):
-                            return True
-                        else:
-                            logger.info('Skipped disallowed `%s`', service_name)
-        except TypeError, e:
-            # Ignore non-class objects passed in to issubclass
-            if has_trace1:
-                logger.log(TRACE1, 'Ignoring exception, name:`%s`, item:`%s`, e:`%s`', name, item, format_exc(e))
+                    if self.patterns_matcher.is_allowed(service_name):
+                        return True
+                    else:
+                        logger.info('Skipped disallowed `%s`', service_name)
 
 # ################################################################################################################################
 
