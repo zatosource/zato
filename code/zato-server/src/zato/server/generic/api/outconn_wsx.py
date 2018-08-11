@@ -17,7 +17,8 @@ from ws4py.client.threadedclient import WebSocketClient
 
 # Zato
 from zato.common import WEB_SOCKET, ZATO_NONE
-from zato.common.util import spawn_greenlet
+from zato.common.wsx_client import Client as _ZatoWSXClientImpl, Config as _ZatoWSXConfigImpl
+from zato.common.util import new_cid, spawn_greenlet
 from zato.server.connection.queue import Wrapper
 
 # ################################################################################################################################
@@ -95,8 +96,26 @@ class _WSXClient(_BaseWSXClient, WebSocketClient):
 class ZatoWSXClient(_BaseWSXClient):
     """ A client through which Zato services can be invoked over outgoing WebSocket connections.
     """
+    def __init__(self, *args, **kwargs):
+        super(ZatoWSXClient, self).__init__(*args, **kwargs)
+
+        self._zato_client_config = _ZatoWSXConfigImpl()
+        self._zato_client_config.client_name = 'WSX outconn - {}'.format(self.config.name)
+        self._zato_client_config.client_id = 'wsx.outconn.{}'.format(new_cid())
+        self._zato_client_config.address = self.config.address
+        self._zato_client_config.username = 'user1'
+        self._zato_client_config.secret = 'secret1'
+        self._zato_client_config.on_request_callback = self.on_message_cb
+
+        self._zato_client = _ZatoWSXClientImpl(self._zato_client_config)
+
     def connect(self):
-        print(333, `self.config`)
+        self._zato_client.run()
+        response = self._zato_client.invoke({
+            'service':'zato.ping'
+        })
+
+        logger.warn('111 %s', response)
 
     def run_forever(self):
         print(444, `self.config`)
