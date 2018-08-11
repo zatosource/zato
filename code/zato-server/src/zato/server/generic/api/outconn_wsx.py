@@ -108,17 +108,17 @@ class ZatoWSXClient(_BaseWSXClient):
         self._zato_client_config.on_request_callback = self.on_message_cb
 
         self._zato_client = _ZatoWSXClientImpl(self._zato_client_config)
+        self.invoke = self._zato_client.invoke
+
+# ################################################################################################################################
 
     def connect(self):
-        self._zato_client.run()
-        response = self._zato_client.invoke({
-            'service':'zato.ping'
-        })
+        pass
 
-        logger.warn('111 %s', response)
+# ################################################################################################################################
 
     def run_forever(self):
-        print(444, `self.config`)
+        self._zato_client.run()
 
 # ################################################################################################################################
 
