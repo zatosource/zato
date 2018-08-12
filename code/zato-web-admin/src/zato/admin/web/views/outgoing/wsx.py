@@ -38,7 +38,7 @@ class Index(_Index):
         output_required = ('id', 'name', 'address')
         output_optional = ('is_active', 'is_zato',
             'on_connect_service_id', 'on_connect_service_name', 'on_message_service_id', 'on_message_service_name',
-            'on_close_service_id', 'on_close_service_name')
+            'on_close_service_id', 'on_close_service_name', 'subscription_list')
         output_repeated = True
 
     def handle(self):
@@ -55,7 +55,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'is_zato', 'address', 'on_connect_service_id', 'on_message_service_id',
-            'on_close_service_id')
+            'on_close_service_id', 'subscription_list')
         output_required = ('id', 'name')
 
     def populate_initial_input_dict(self, initial_input_dict):

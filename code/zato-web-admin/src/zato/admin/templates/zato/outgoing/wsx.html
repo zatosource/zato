@@ -40,6 +40,7 @@
             'on_connect_service_id',
             'on_message_service_id',
             'on_close_service_id',
+            'subscription_list',
         ]
     }
     </script>
@@ -82,6 +83,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -132,11 +134,12 @@
                         <td class='ignore'>{{ item.on_connect_service_id }}</td>
                         <td class='ignore'>{{ item.on_message_service_id }}</td>
                         <td class='ignore'>{{ item.on_close_service_id }}</td>
+                        <td class='ignore'>{{ item.subscription_list }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='16'>No results</td>
+                        <td colspan='17'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -180,6 +183,10 @@
                         <tr>
                             <td style="vertical-align:middle">On close service</td>
                             <td>{{ create_form.on_close_service_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Pub/sub<br/>subscriptions</td>
+                            <td>{{ create_form.subscription_list }}</td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -227,6 +234,10 @@
                         <tr>
                             <td style="vertical-align:middle">On close service</td>
                             <td>{{ edit_form.on_close_service_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Pub/sub<br/>subscriptions</td>
+                            <td>{{ edit_form.subscription_list }}</td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
