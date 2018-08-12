@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.WSX;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.wsx.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'address']);
+    $.fn.zato.data_table.setup_forms(['name', 'address', 'security_def']);
 })
 
 $.fn.zato.outgoing.wsx.create = function() {
@@ -79,6 +79,7 @@ $.fn.zato.outgoing.wsx.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", is_zato);
     row += String.format("<td class='ignore'>{0}</td>", item.on_connect_service_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.security_def);
     row += String.format("<td class='ignore'>{0}</td>", item.subscription_list);
 
     if(include_tr) {

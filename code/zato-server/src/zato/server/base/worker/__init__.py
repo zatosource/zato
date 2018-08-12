@@ -1014,10 +1014,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def basic_auth_get(self, name):
-        """ Returns the configuration of the HTTP Basic Auth security definition
-        of the given name.
+        """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
         """
         return self.request_dispatcher.url_data.basic_auth_get(name)
+
+    def basic_auth_get_by_id(self, def_id):
+        """ Same as basic_auth_get but by definition ID.
+        """
+        return self.request_dispatcher.url_data.basic_auth_get_by_id(def_id)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
