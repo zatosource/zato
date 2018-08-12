@@ -15,8 +15,7 @@ import logging
 from zato.common import GENERIC
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.wsx import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
-     Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
 from zato.common.odb.model import GenericConn
 
 # ################################################################################################################################
@@ -101,11 +100,5 @@ class Delete(_Delete):
     url_name = 'out-wsx-delete'
     error_message = 'Could not delete outgoing WebSocket connection'
     service_name = 'zato.generic.connection.delete'
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def change_password(req):
-    return _change_password(req, 'zato.generic.connection.change-password')
 
 # ################################################################################################################################
