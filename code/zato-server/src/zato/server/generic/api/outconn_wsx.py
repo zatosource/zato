@@ -101,11 +101,13 @@ class ZatoWSXClient(_BaseWSXClient):
 
         self._zato_client_config = _ZatoWSXConfigImpl()
         self._zato_client_config.client_name = 'WSX outconn - {}'.format(self.config.name)
-        self._zato_client_config.client_id = 'wsx.outconn.{}'.format(new_cid())
+        self._zato_client_config.client_id = 'wsx.out.{}'.format(new_cid(8))
         self._zato_client_config.address = self.config.address
-        self._zato_client_config.username = 'user1'
-        self._zato_client_config.secret = 'secret1'
         self._zato_client_config.on_request_callback = self.on_message_cb
+
+        if self.config.get('username'):
+            self._zato_client_config.username = self.config.username
+            self._zato_client_config.secret = self.config.secret
 
         self._zato_client = _ZatoWSXClientImpl(self._zato_client_config)
         self.invoke = self._zato_client.invoke
@@ -169,12 +171,12 @@ class OutconnWSXWrapper(Wrapper):
     """
     def __init__(self, config, server):
         config.parent = self
-        self._set_service_names(config, server)
+        self._resolve_config_ids(config, server)
         super(OutconnWSXWrapper, self).__init__(config, 'outgoing WebSocket', server)
 
 # ################################################################################################################################
 
-    def _set_service_names(self, config, server):
+    def _resolve_config_ids(self, config, server):
 
         if config.on_connect_service_id:
             config.on_connect_service_name = server.service_store.get_service_name_by_id(config.on_connect_service_id)
@@ -184,6 +186,15 @@ class OutconnWSXWrapper(Wrapper):
 
         if config.on_close_service_id:
             config.on_close_service_name = server.service_store.get_service_name_by_id(config.on_close_service_id)
+
+        if config.get('security_def'):
+            if config.security_def != ZATO_NONE:
+                _ignored_sec_type, sec_def_id = config.security_def.split('/')
+                sec_def_id = int(sec_def_id)
+                sec_def_config = server.worker_store.basic_auth_get_by_id(sec_def_id)
+
+                config.username = sec_def_config['username']
+                config.secret = sec_def_config['password']
 
 # ################################################################################################################################
 
