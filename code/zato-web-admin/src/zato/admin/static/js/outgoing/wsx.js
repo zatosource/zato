@@ -80,6 +80,7 @@ $.fn.zato.outgoing.wsx.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", is_zato);
     row += String.format("<td class='ignore'>{0}</td>", item.on_connect_service_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.subscription_list);
 
     if(include_tr) {
         row += '</tr>';

@@ -120,6 +120,22 @@ class ZatoWSXClient(_BaseWSXClient):
     def run_forever(self):
         self._zato_client.run()
 
+        subscription_list = (self.config.subscription_list or '').splitlines()
+
+        if subscription_list:
+            logger.info('Subscribing WSX outconn `%s` to `%s`', self.config.name, subscription_list)
+
+            for topic_name in subscription_list:
+                try:
+                    self.invoke({
+                        'service':'zato.pubsub.pubapi.subscribe-wsx',
+                        'request': {
+                            'topic_name': topic_name
+                        }
+                    })
+                except Exception:
+                    logger.warn('Could not subscribe WSX outconn to `%s`, e:`%s`', self.config.name, format_exc())
+
 # ################################################################################################################################
 
 class WSXClient(object):

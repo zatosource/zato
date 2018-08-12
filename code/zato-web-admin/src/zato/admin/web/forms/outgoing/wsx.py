@@ -22,6 +22,7 @@ class CreateForm(forms.Form):
     on_connect_service_id = forms.ChoiceField(widget=forms.Select())
     on_message_service_id = forms.ChoiceField(widget=forms.Select())
     on_close_service_id = forms.ChoiceField(widget=forms.Select())
+    subscription_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
