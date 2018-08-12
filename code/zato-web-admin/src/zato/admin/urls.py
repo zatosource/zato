@@ -755,8 +755,6 @@ urlpatterns += [
         login_required(out_wsx.Edit()), name=out_wsx.Edit.url_name),
     url(r'^zato/outgoing/wsx/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_wsx.Delete()), name=out_wsx.Delete.url_name),
-    url(r'^zato/outgoing/wsx/change-password/$',
-        login_required(out_wsx.change_password), name='out-wsx-change-password'),
     ]
 
 # ################################################################################################################################
