@@ -15,7 +15,7 @@ import os
 from datetime import datetime
 from hashlib import sha256
 from importlib import import_module
-from inspect import getmro, isclass
+from inspect import isclass
 from json import dumps
 from traceback import format_exc
 

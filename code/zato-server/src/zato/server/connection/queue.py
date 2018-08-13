@@ -147,6 +147,8 @@ class Wrapper(object):
         self.update_lock = RLock()
         self.logger = logging.getLogger(self.__class__.__name__)
 
+# ################################################################################################################################
+
     def build_queue(self):
         with self.update_lock:
             if self.config.is_active:
@@ -156,3 +158,13 @@ class Wrapper(object):
                     logger.warn('Could not build client queue `%s`', format_exc())
             else:
                 logger.info('Skip building inactive connection queue for `%s` (%s)', self.client.conn_name, self.client.conn_type)
+
+# ################################################################################################################################
+
+    def delete(self):
+        with self.update_lock:
+            for item in self.client.queue:
+                logger.info('Deleting connection from queue for `%s`', self.config.name)
+                item.delete()
+
+# ################################################################################################################################
