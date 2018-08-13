@@ -15,7 +15,7 @@ import logging
 from zato.common import GENERIC
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.wsx import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index
 from zato.common.odb.model import GenericConn
 
 # ################################################################################################################################
@@ -41,7 +41,10 @@ class Index(_Index):
         output_repeated = True
 
     def handle(self):
-        security_list = self.get_sec_def_list('basic_auth').def_items
+        if self.req.zato.get('client'):
+            security_list = self.get_sec_def_list('basic_auth').def_items
+        else:
+            security_list = []
 
         return {
             'create_form': CreateForm(security_list, req=self.req),

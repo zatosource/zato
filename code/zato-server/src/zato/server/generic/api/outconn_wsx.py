@@ -86,7 +86,7 @@ class _BaseWSXClient(object):
 
 # ################################################################################################################################
 
-class _WSXClient(_BaseWSXClient, WebSocketClient):
+class _NonZatoWSXClient(_BaseWSXClient, WebSocketClient):
     def __init__(self, config, on_connected_cb, on_message_cb, on_close_cb, *args, **kwargs):
         _BaseWSXClient.__init__(self, config, on_connected_cb, on_message_cb, on_close_cb)
         WebSocketClient.__init__(self, *args, **kwargs)
@@ -115,7 +115,12 @@ class ZatoWSXClient(_BaseWSXClient):
 # ################################################################################################################################
 
     def connect(self):
-        pass
+        pass # Not needed but added for API completeness
+
+# ################################################################################################################################
+
+    def close(self):
+        self._zato_client.stop()
 
 # ################################################################################################################################
 
@@ -149,7 +154,7 @@ class WSXClient(object):
         spawn_greenlet(self._init)
 
     def _init(self):
-        _impl_class = ZatoWSXClient if self.config.is_zato else _WSXClient
+        _impl_class = ZatoWSXClient if self.config.is_zato else _NonZatoWSXClient
         self.impl = _impl_class(self.config, self.on_connected_cb, self.on_message_cb, self.on_close_cb, self.config.address)
         self.impl.connect()
         self.impl.run_forever()
@@ -163,6 +168,9 @@ class WSXClient(object):
 
     def on_close_cb(self, code, reason=None):
         self.config.parent.on_close_cb(code, reason)
+
+    def delete(self):
+        self.impl.close()
 
 # ################################################################################################################################
 
@@ -200,7 +208,7 @@ class OutconnWSXWrapper(Wrapper):
 
     def on_connected_cb(self):
         self.is_connected = True
-        if self.config.on_connect_service_name:
+        if self.config.get('on_connect_service_name'):
             self.server.invoke(self.config.on_connect_service_name, {
                 'ctx': Connected(self.config, self)
             })
@@ -208,7 +216,7 @@ class OutconnWSXWrapper(Wrapper):
 # ################################################################################################################################
 
     def on_message_cb(self, msg):
-        if self.config.on_message_service_name:
+        if self.config.get('on_message_service_name'):
             self.server.invoke(self.config.on_message_service_name, {
                 'ctx': OnMessage(msg, self.config, self)
             })
@@ -216,7 +224,7 @@ class OutconnWSXWrapper(Wrapper):
 # ################################################################################################################################
 
     def on_close_cb(self, code, reason=None):
-        if self.config.on_close_service_name:
+        if self.config.get('on_close_service_name'):
             self.server.invoke(self.config.on_close_service_name, {
                 'ctx': Close(code, reason, self.config, self)
             })
