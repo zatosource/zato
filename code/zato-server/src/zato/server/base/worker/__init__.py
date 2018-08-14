@@ -203,7 +203,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
-            GENERIC.CONNECTION.TYPE.OUTCONN_WSX: (self.outconn_wsx, OutconnWSXWrapper),
+            GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
+        }
+
+        self._generic_conn_handler = {
+            GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
         }
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
@@ -883,7 +887,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             item_dict.queue_build_cap = self.server.fs_server_config.misc.queue_build_cap
             item_dict.auth_url = config.address
 
-            config_attr, wrapper = self.generic_conn_api[item.type_]
+            config_attr = self.generic_conn_api[item.type_]
+            wrapper = self._generic_conn_handler[item.type_]
+
             config_attr[config.name] = item_dict
             config_attr[config.name].conn = wrapper(item_dict, self.server)
             config_attr[config.name].conn.build_queue()
@@ -1469,15 +1475,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         try:
             try:
                 wrapper = config_dict[name].conn
-            except (KeyError, AttributeError), e:
-                log_func('Could not access wrapper, e:[{}]'.format(format_exc(e)))
+            except(KeyError, AttributeError):
+                log_func('Could not access wrapper, e:`{}`'.format(format_exc()))
             else:
                 try:
                     wrapper.session.close()
                 finally:
                     del config_dict[name]
-        except Exception, e:
-            log_func('Could not delete `{}`, e:`{}`'.format(conn_type, format_exc(e)))
+        except Exception:
+            log_func('Could not delete `{}`, e:`{}`'.format(conn_type, format_exc()))
 
 # ################################################################################################################################
 

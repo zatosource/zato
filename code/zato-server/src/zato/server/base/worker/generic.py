@@ -19,23 +19,34 @@ class Generic(WorkerImpl):
     def __init__(self):
         super(Generic, self).__init__()
 
-    def on_broker_msg_GENERIC_CONNECTION_DELETE(self, msg):
-        found = False
-        for conn_type, value in self.generic_conn_api.items():
-            if found:
-                break
-            for item in value:
-                if found:
-                    break
-                if isinstance(item, dict):
-                    for conn_config in item.values():
-                        if conn_config['id'] == msg.id:
-                            found = conn_config
-                            break
+# ################################################################################################################################
 
-        if not found:
+    def _find_conn_info(self, item_id):
+        found_conn_dict = None
+        found_name = None
+
+        for conn_type, value in self.generic_conn_api.items():
+            for conn_name, conn_dict in value.items():
+                if conn_dict['id'] == item_id:
+                    return conn_dict, value
+
+        return found_conn_dict, found_name
+
+# ################################################################################################################################
+
+    def _delete_generic_connection(self, msg):
+
+        conn_dict, conn_value = self._find_conn_info(msg.id)
+
+        if not conn_dict:
             raise Exception('Could not find configuration matching input message `{}`'.format(msg))
         else:
-            found.conn.delete()
+            conn_dict.conn.delete()
+            del conn_value[conn_dict['name']]
+
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_DELETE(self, msg):
+        self._delete_generic_connection(msg)
 
 # ################################################################################################################################

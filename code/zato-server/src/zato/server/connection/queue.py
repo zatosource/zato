@@ -163,8 +163,11 @@ class Wrapper(object):
 
     def delete(self):
         with self.update_lock:
-            for item in self.client.queue:
-                logger.info('Deleting connection from queue for `%s`', self.config.name)
-                item.delete()
+            for item in self.client.queue.queue:
+                try:
+                    logger.info('Deleting connection from queue for `%s`', self.config.name)
+                    item.delete()
+                except Exception:
+                    logger.warn('Could not delete connection from queue for `%s`, e:`%s`', self.config.name, format_exc())
 
 # ################################################################################################################################
