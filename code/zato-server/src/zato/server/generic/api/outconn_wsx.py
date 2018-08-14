@@ -186,13 +186,13 @@ class OutconnWSXWrapper(Wrapper):
 
     def _resolve_config_ids(self, config, server):
 
-        if config.on_connect_service_id:
+        if config.get('on_connect_service_id'):
             config.on_connect_service_name = server.service_store.get_service_name_by_id(config.on_connect_service_id)
 
-        if config.on_message_service_id:
+        if config.get('on_message_service_id'):
             config.on_message_service_name = server.service_store.get_service_name_by_id(config.on_message_service_id)
 
-        if config.on_close_service_id:
+        if config.get('on_close_service_id'):
             config.on_close_service_name = server.service_store.get_service_name_by_id(config.on_close_service_id)
 
         if config.get('security_def'):
