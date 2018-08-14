@@ -878,21 +878,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def init_generic_connections(self):
         for config_dict in self.worker_config.generic_connection.values():
-
-            config = bunchify(config_dict['config'])
-
-            item = GenericConnection.from_model(config)
-            item_dict = item.to_dict(True)
-
-            item_dict.queue_build_cap = self.server.fs_server_config.misc.queue_build_cap
-            item_dict.auth_url = config.address
-
-            config_attr = self.generic_conn_api[item.type_]
-            wrapper = self._generic_conn_handler[item.type_]
-
-            config_attr[config.name] = item_dict
-            config_attr[config.name].conn = wrapper(item_dict, self.server)
-            config_attr[config.name].conn.build_queue()
+            self._create_generic_connection(bunchify(config_dict['config']))
 
 # ################################################################################################################################
 

@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.server.base.worker.common import WorkerImpl
+from zato.server.generic.connection import GenericConnection
 
 # ################################################################################################################################
 
@@ -43,6 +44,34 @@ class Generic(WorkerImpl):
         else:
             conn_dict.conn.delete()
             del conn_value[conn_dict['name']]
+
+# ################################################################################################################################
+
+    def _create_generic_connection(self, msg):
+
+        item = GenericConnection.from_bunch(msg)
+        item_dict = item.to_dict(True)
+
+        item_dict.queue_build_cap = self.server.fs_server_config.misc.queue_build_cap
+        item_dict.auth_url = msg.address
+
+        config_attr = self.generic_conn_api[item.type_]
+        wrapper = self._generic_conn_handler[item.type_]
+
+        config_attr[msg.name] = item_dict
+        config_attr[msg.name].conn = wrapper(item_dict, self.server)
+        config_attr[msg.name].conn.build_queue()
+
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_CREATE(self, msg):
+
+        # This roundtrip is needed to re-format msg in the format the underlying .from_bunch expects
+        conn = GenericConnection.from_dict(msg)
+        msg = conn.to_sql_dict(True)
+
+        # Actually create the connection now
+        self._create_generic_connection(msg)
 
 # ################################################################################################################################
 

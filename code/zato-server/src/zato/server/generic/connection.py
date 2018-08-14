@@ -82,7 +82,7 @@ class GenericConnection(object):
     def from_model(data):
         instance = GenericConnection()
 
-        opaque_value = getattr(data, GENERIC.CONNECTION.ATTR_NAME)
+        opaque_value = getattr(data, GENERIC.CONNECTION.ATTR_NAME, None)
         if opaque_value:
             instance.opaque.update(loads(opaque_value))
 
@@ -96,7 +96,7 @@ class GenericConnection(object):
 
 # ################################################################################################################################
 
-    def to_sql_dict(self):
+    def to_sql_dict(self, needs_bunch=False):
         out = {}
         for name in self.__slots__:
             if name != 'opaque':
@@ -104,6 +104,6 @@ class GenericConnection(object):
             else:
                 out[GENERIC.CONNECTION.ATTR_NAME] = dumps(self.opaque)
 
-        return out
+        return bunchify(out) if needs_bunch else out
 
 # ################################################################################################################################
