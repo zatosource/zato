@@ -47,7 +47,13 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _create_generic_connection(self, msg):
+    def _create_generic_connection(self, msg, needs_roundtrip=False):
+
+        # This roundtrip is needed to re-format msg in the format the underlying .from_bunch expects
+        # in case this is a broker message rather than a startup one.
+        if needs_roundtrip:
+            conn = GenericConnection.from_dict(msg)
+            msg = conn.to_sql_dict(True)
 
         item = GenericConnection.from_bunch(msg)
         item_dict = item.to_dict(True)
@@ -65,17 +71,17 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_GENERIC_CONNECTION_CREATE(self, msg):
-
-        # This roundtrip is needed to re-format msg in the format the underlying .from_bunch expects
-        conn = GenericConnection.from_dict(msg)
-        msg = conn.to_sql_dict(True)
-
-        # Actually create the connection now
-        self._create_generic_connection(msg)
+        self._create_generic_connection(msg, True)
 
 # ################################################################################################################################
 
     def on_broker_msg_GENERIC_CONNECTION_DELETE(self, msg):
         self._delete_generic_connection(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_GENERIC_CONNECTION_EDIT(self, msg):
+        self._delete_generic_connection(msg)
+        self._create_generic_connection(msg, True)
 
 # ################################################################################################################################
