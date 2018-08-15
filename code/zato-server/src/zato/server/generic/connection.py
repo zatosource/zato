@@ -56,9 +56,11 @@ class GenericConnection(object):
 # ################################################################################################################################
 
     @staticmethod
-    def from_dict(data):
+    def from_dict(data, skip):
         conn = GenericConnection()
         for key, value in data.items():
+            if key in skip:
+                continue
             try:
                 setattr(conn, key, value)
             except AttributeError:
@@ -96,9 +98,12 @@ class GenericConnection(object):
 
 # ################################################################################################################################
 
-    def to_sql_dict(self, needs_bunch=False):
+    def to_sql_dict(self, needs_bunch=False, skip=None):
         out = {}
+        skip = skip or []
         for name in self.__slots__:
+            if name in skip:
+                continue
             if name != 'opaque':
                 out[name] = getattr(self, name)
             else:

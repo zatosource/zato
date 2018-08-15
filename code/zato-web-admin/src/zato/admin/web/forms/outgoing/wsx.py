@@ -19,6 +19,7 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_zato = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    has_auto_reconnect = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     on_connect_service_id = forms.ChoiceField(widget=forms.Select())
     on_message_service_id = forms.ChoiceField(widget=forms.Select())
     on_close_service_id = forms.ChoiceField(widget=forms.Select())
@@ -33,3 +34,4 @@ class CreateForm(forms.Form):
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_zato = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    has_auto_reconnect = forms.BooleanField(required=False, widget=forms.CheckboxInput())
