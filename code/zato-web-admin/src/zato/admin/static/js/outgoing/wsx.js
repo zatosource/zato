@@ -38,6 +38,7 @@ $.fn.zato.outgoing.wsx.data_table.new_row = function(item, data, include_tr) {
 
     var is_active = item.is_active == true;
     var is_zato = item.is_zato == true;
+    var has_auto_reconnect = item.has_auto_reconnect == true;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -81,6 +82,7 @@ $.fn.zato.outgoing.wsx.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.on_connect_service_id);
     row += String.format("<td class='ignore'>{0}</td>", item.security_def);
     row += String.format("<td class='ignore'>{0}</td>", item.subscription_list);
+    row += String.format("<td class='ignore'>{0}</td>", has_auto_reconnect);
 
     if(include_tr) {
         row += '</tr>';
