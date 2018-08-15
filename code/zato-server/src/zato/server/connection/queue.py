@@ -163,6 +163,7 @@ class Wrapper(object):
 
     def delete(self):
         with self.update_lock:
+            self.client.keep_connecting = False
             for item in self.client.queue.queue:
                 try:
                     logger.info('Deleting connection from queue for `%s`', self.config.name)
