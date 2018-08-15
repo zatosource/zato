@@ -229,6 +229,10 @@ class OutconnWSXWrapper(Wrapper):
                 'ctx': Close(code, reason, self.config, self)
             })
 
+        print()
+        print(111, code, reason)
+        print()
+
 # ################################################################################################################################
 
     def add_client(self):
