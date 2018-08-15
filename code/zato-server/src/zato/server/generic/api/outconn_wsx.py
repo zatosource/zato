@@ -91,6 +91,11 @@ class _NonZatoWSXClient(_BaseWSXClient, WebSocketClient):
         _BaseWSXClient.__init__(self, config, on_connected_cb, on_message_cb, on_close_cb)
         WebSocketClient.__init__(self, *args, **kwargs)
 
+    def close(self, code=1000, reason=ZATO_NONE):
+        # It is needed to set this custom reason code because when it is us who closes the connection the 'closed' event
+        # (i.e. on_close_cb) gets invoked and we need to know not to reconnect automatically in such a case.
+        super(_NonZatoWSXClient, self).close(code, reason)
+
 # ################################################################################################################################
 
 class ZatoWSXClient(_BaseWSXClient):
@@ -225,21 +230,25 @@ class OutconnWSXWrapper(Wrapper):
 
     def on_close_cb(self, code, reason=None):
 
-        logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`', self.config.name, code, reason)
+        # Ignore events we generated ourselves, e.g. when someone edits a connection in web-admin
+        # this will result in deleting and rerecreating a connection which implicitly calls this callback.
+        if reason != ZATO_NONE:
 
-        if self.config.get('on_close_service_name'):
-            self.server.invoke(self.config.on_close_service_name, {
-                'ctx': Close(code, reason, self.config, self)
-            })
+            logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`', self.config.name, code, reason)
 
-        if self.config.has_auto_reconnect:
-            logger.info('WebSocket `%s` will reconnect to `%s` (hrc:%d)',
-                self.config.name, self.config.address, self.config.has_auto_reconnect)
-            try:
-                self.server.worker_store.reconnect_generic(self.config.id)
-            except Exception:
-                logger.warn('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
-                    self.config.name, self.config.address, format_exc())
+            if self.config.get('on_close_service_name'):
+                self.server.invoke(self.config.on_close_service_name, {
+                    'ctx': Close(code, reason, self.config, self)
+                })
+
+            if self.config.has_auto_reconnect:
+                logger.info('WebSocket `%s` will reconnect to `%s` (hrc:%d)',
+                    self.config.name, self.config.address, self.config.has_auto_reconnect)
+                try:
+                    self.server.worker_store.reconnect_generic(self.config.id)
+                except Exception:
+                    logger.warn('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
+                        self.config.name, self.config.address, format_exc())
 
 # ################################################################################################################################
 
