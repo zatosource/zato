@@ -56,8 +56,9 @@ class GenericConnection(object):
 # ################################################################################################################################
 
     @staticmethod
-    def from_dict(data, skip):
+    def from_dict(data, skip=None):
         conn = GenericConnection()
+        skip = skip or []
         for key, value in data.items():
             if key in skip:
                 continue
