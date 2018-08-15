@@ -224,14 +224,22 @@ class OutconnWSXWrapper(Wrapper):
 # ################################################################################################################################
 
     def on_close_cb(self, code, reason=None):
+
+        logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`', self.config.name, code, reason)
+
         if self.config.get('on_close_service_name'):
             self.server.invoke(self.config.on_close_service_name, {
                 'ctx': Close(code, reason, self.config, self)
             })
 
-        print()
-        print(111, code, reason)
-        print()
+        if self.config.has_auto_reconnect:
+            logger.info('WebSocket `%s` will reconnect to `%s` (hrc:%d)',
+                self.config.name, self.config.address, self.config.has_auto_reconnect)
+            try:
+                self.server.worker_store.reconnect_generic(self.config.id)
+            except Exception:
+                logger.warn('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
+                    self.config.name, self.config.address, format_exc())
 
 # ################################################################################################################################
 

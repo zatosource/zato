@@ -61,6 +61,7 @@ class _CreateEdit(_BaseService):
         conn.secret = self.server.encrypt(self.crypto.generate_secret())
         conn_dict = conn.to_sql_dict()
 
+
         with closing(self.server.odb.session()) as session:
 
             if self.is_edit:
