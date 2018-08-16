@@ -171,6 +171,7 @@
                                 <li class='wide'><a href="{% url "out-sap" %}?cluster={{ cluster_id|default:'' }}">SAP RFC</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
                                 <li class='wide'><a href="{% url "out-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
+                                <li class='wide'><a href="{% url "out-wsx" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-wsx">WebSockets</a></li>
                                 <li class='wide'><a href="{% url "out-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>
