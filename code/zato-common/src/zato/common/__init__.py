@@ -1024,6 +1024,11 @@ class WEB_SOCKET:
         CREATE_SESSION = 'create-session'
         INVOKE_SERVICE = 'invoke-service'
 
+    class OUT_MSG_TYPE:
+        CONNECT = 'connect'
+        MESSAGE = 'message'
+        CLOSE = 'close'
+
 class APISPEC:
     OPEN_API_V3 = 'openapi_v3'
     SOAP_12 = 'soap_12'
@@ -1058,16 +1063,26 @@ class SERVER_STARTUP:
         IN_PROCESS_OTHER = 'in-process-other'
         AFTER_STARTED = 'after-started'
 
+class GENERIC:
+    class CONNECTION:
+
+        # Under which SQL column all the opaque data is currently kept - may be changed across releases
+        ATTR_NAME = 'opaque1'
+
+        class TYPE:
+            OUTCONN_WSX = 'outconn-wsx'
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
+PLACEHOLDER = 'zato_placeholder'
 
 ZATO_INFO_FILE = b'.zato-info'
 
 class SECRETS:
 
     # These parameters will be automatically encrypted in SimpleIO input
-    PARAMS = ('auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'token')
+    PARAMS = ('auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'token', 'secret')
 
     # Zato secret (Fernet)
     PREFIX = 'zato.secf.'
