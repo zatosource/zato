@@ -41,6 +41,7 @@ from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, Depl
      WSSDefinition, VaultConnection
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
+from zato.common.odb.query import generic as query_generic
 from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
      parse_tls_channel_security_definition
 
@@ -1383,6 +1384,13 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_generic_connection_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of generic connections.
+        """
+        return query_generic.connection_list(self._session, cluster_id, needs_columns=needs_columns)
+
+# ################################################################################################################################
+
     def _migrate_30_encrypt_sec_base(self, session, id, attr_name, encrypted_value):
         """ Sets an encrypted value of a named attribute in a security definition.
         """
@@ -1405,3 +1413,4 @@ class ODBManager(SessionWrapper):
     _migrate_30_encrypt_sec_xpath_sec          = _migrate_30_encrypt_sec_base
 
 # ################################################################################################################################
+

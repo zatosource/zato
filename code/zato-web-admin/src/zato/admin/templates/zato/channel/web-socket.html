@@ -57,7 +57,7 @@
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.channel.web_socket.create()">Create a new WebSocket channel</a>
+            <a href="javascript:$.fn.zato.channel.wsx.create()">Create a new WebSocket channel</a>
         </div>
 
 
@@ -90,8 +90,8 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.address }}</td>
                         <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
-                        <td><a href="javascript:$.fn.zato.channel.web_socket.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.channel.web_socket.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.wsx.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.wsx.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.data_format }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>

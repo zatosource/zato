@@ -57,7 +57,7 @@ $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.jms_wmq');
 $.namespace('zato.channel.stomp');
-$.namespace('zato.channel.web_socket');
+$.namespace('zato.channel.wsx');
 $.namespace('zato.channel.zmq');
 $.namespace('zato.cloud');
 $.namespace('zato.cloud.aws');
@@ -102,6 +102,7 @@ $.namespace('zato.outgoing.odoo');
 $.namespace('zato.outgoing.sql');
 $.namespace('zato.outgoing.stomp');
 $.namespace('zato.outgoing.sap');
+$.namespace('zato.outgoing.wsx');
 $.namespace('zato.outgoing.zmq');
 $.namespace('zato.pattern.delivery');
 $.namespace('zato.pattern.delivery.in_doubt');
@@ -911,6 +912,7 @@ $.fn.zato.toggle_time = function(link_name, current_value, new_value) {
 }
 
 $.fn.zato.empty_value = '<span class="form_hint">---</span>';
+$.fn.zato.empty_table_cell = String.format('<td>{0}</td>', $.fn.zato.empty_value);
 
 // For Brython
 

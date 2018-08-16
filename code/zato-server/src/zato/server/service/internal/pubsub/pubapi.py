@@ -18,6 +18,7 @@ from rapidjson import dumps
 from zato.common import CHANNEL, CONTENT_TYPE, PUBSUB
 from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
 from zato.server.service import AsIs, Int, Service
+from zato.server.service.internal.pubsub.subscription import CreateWSXSubscription
 
 # ################################################################################################################################
 
@@ -49,7 +50,7 @@ class TopicSIO(BaseSIO):
 # ################################################################################################################################
 
 class SubSIO(BaseSIO):
-    input_optional = ('sub_key',)
+    input_optional = ('sub_key', 'delivery_method')
     output_optional = ('sub_key', 'queue_depth')
 
 # ################################################################################################################################
@@ -205,7 +206,7 @@ class SubscribeService(PubSubService):
                 'topic_name': self.request.input.topic_name,
                 'endpoint_id': endpoint_id,
                 'delivery_batch_size': PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE,
-                'delivery_method': PUBSUB.DELIVERY_METHOD.PULL.id,
+                'delivery_method': self.request.input.delivery_method or PUBSUB.DELIVERY_METHOD.PULL.id,
                 'server_id': self.server.id,
             })['response']
         except PubSubSubscriptionExists:
@@ -276,6 +277,12 @@ class Subscribe(Service):
     def handle(self):
         self.response.payload = self.invoke(
             SubscribeService.get_name(), self.request.input, wsgi_environ={'REQUEST_METHOD':'POST'})
+
+# ################################################################################################################################
+
+# Added for completness so as to make WSX clients use services from this module only
+class SubscribeWSX(CreateWSXSubscription):
+    name = 'zato.pubsub.pubapi.subscribe-wsx'
 
 # ################################################################################################################################
 
