@@ -87,6 +87,7 @@ class _BaseWSXClient(object):
 # ################################################################################################################################
 
 class _NonZatoWSXClient(_BaseWSXClient, WebSocketClient):
+
     def __init__(self, config, on_connected_cb, on_message_cb, on_close_cb, *args, **kwargs):
         _BaseWSXClient.__init__(self, config, on_connected_cb, on_message_cb, on_close_cb)
         WebSocketClient.__init__(self, *args, **kwargs)
@@ -228,11 +229,18 @@ class OutconnWSXWrapper(Wrapper):
 
 # ################################################################################################################################
 
+    def _should_handle_close_cb(self, code, reason):
+        if reason != ZATO_NONE:
+            if not self.delete_requested:
+                return True
+
+# ################################################################################################################################
+
     def on_close_cb(self, code, reason=None):
 
         # Ignore events we generated ourselves, e.g. when someone edits a connection in web-admin
         # this will result in deleting and rerecreating a connection which implicitly calls this callback.
-        if reason != ZATO_NONE:
+        if self._should_handle_close_cb(code, reason):
 
             logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`', self.config.name, code, reason)
 
@@ -242,7 +250,7 @@ class OutconnWSXWrapper(Wrapper):
                 })
 
             if self.config.has_auto_reconnect:
-                logger.info('WebSocket `%s` will reconnect to `%s` (hrc:%d)',
+                logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
                     self.config.name, self.config.address, self.config.has_auto_reconnect)
                 try:
                     self.server.worker_store.reconnect_generic(self.config.id)
