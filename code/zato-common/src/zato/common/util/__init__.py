@@ -346,7 +346,7 @@ def tech_account_password(password_clear, salt):
 
 # ################################################################################################################################
 
-def new_cid(random_bytes=random_bytes):
+def new_cid(bytes=12, random_bytes=random_bytes):
     """ Returns a new 96-bit correlation identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.

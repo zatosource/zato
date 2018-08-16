@@ -40,7 +40,7 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common import broker_message, CHANNEL, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, SEC_DEF_TYPE, \
+from zato.common import broker_message, CHANNEL, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, SEC_DEF_TYPE, \
      simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
@@ -58,6 +58,7 @@ from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
+from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
@@ -69,7 +70,6 @@ from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
-from zato.server.connection.web_socket.outgoing import OutgoingWebSocket
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.pubsub import PubSub
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
@@ -186,7 +186,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # WebSocket
         self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket, self.server)
-        self.outgoing_web_sockets = OutgoingWebSocket(self.server.cluster_id, self.server.servers, self.server.odb)
 
         # AMQP
         self.amqp_api = ConnectorStore(connector_type.duplex.amqp, ConnectorAMQP)
@@ -197,6 +196,18 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Caches
         self.cache_api = CacheAPI(self.server)
+
+        # Generic connections - WSX outconns
+        self.outconn_wsx = {}
+
+        # Maps generic connection types to their API handler objects
+        self.generic_conn_api = {
+            GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
+        }
+
+        self._generic_conn_handler = {
+            GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
+        }
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
@@ -279,6 +290,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # AMQP
         self.init_amqp()
+
+        # Generic connections
+        self.init_generic_connections()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
@@ -861,6 +875,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def init_generic_connections(self):
+        for config_dict in self.worker_config.generic_connection.values():
+            self._create_generic_connection(bunchify(config_dict['config']))
+
+# ################################################################################################################################
+
     def apikey_get(self, name):
         """ Returns the configuration of the API key of the given name.
         """
@@ -985,10 +1005,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def basic_auth_get(self, name):
-        """ Returns the configuration of the HTTP Basic Auth security definition
-        of the given name.
+        """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
         """
         return self.request_dispatcher.url_data.basic_auth_get(name)
+
+    def basic_auth_get_by_id(self, def_id):
+        """ Same as basic_auth_get but by definition ID.
+        """
+        return self.request_dispatcher.url_data.basic_auth_get_by_id(def_id)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
@@ -1436,15 +1460,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         try:
             try:
                 wrapper = config_dict[name].conn
-            except (KeyError, AttributeError), e:
-                log_func('Could not access wrapper, e:[{}]'.format(format_exc(e)))
+            except(KeyError, AttributeError):
+                log_func('Could not access wrapper, e:`{}`'.format(format_exc()))
             else:
                 try:
                     wrapper.session.close()
                 finally:
                     del config_dict[name]
-        except Exception, e:
-            log_func('Could not delete `{}`, e:`{}`'.format(conn_type, format_exc(e)))
+        except Exception:
+            log_func('Could not delete `{}`, e:`{}`'.format(conn_type, format_exc()))
 
 # ################################################################################################################################
 
