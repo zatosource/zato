@@ -14,8 +14,23 @@ from django import forms
 # Zato
 from zato.common import DELEGATED_TO_RBAC, SIMPLE_IO, ZATO_NONE, ZATO_SEC_USE_RBAC
 
+# ################################################################################################################################
+
 INITIAL_CHOICES_DICT = {'': '----------'}
 INITIAL_CHOICES = INITIAL_CHOICES_DICT.items()[0]
+
+# ################################################################################################################################
+
+SELECT_SERVICE_FIELDS = [
+    'service_name',
+    'service_id',
+    'service',
+    'hook_service_id',
+    'hook_service_name',
+    'on_connect_service_id',
+    'on_message_service_id',
+    'on_close_service_id',
+]
 
 # ################################################################################################################################
 
@@ -88,32 +103,34 @@ def add_http_soap_select(form, field_name, req, connection, transport, needs_ini
 def add_services(form, req, by_id=False, initial_service=None, api_name='zato.service.get-list', has_name_filter=True):
     if req.zato.cluster_id:
 
-        service_fields = ['service_name', 'service_id', 'service', 'hook_service_id', 'hook_service_name']
+        fields = {}
 
-        for name in service_fields:
+        for name in SELECT_SERVICE_FIELDS:
             field = form.fields.get(name)
             if field:
-                field_name = name
-                break
-        else:
+                fields[name] = field
+
+        if not fields:
             raise ValueError('Could not find any service field (tried: `{}` in `{}`)'.format(
-                service_fields, form.fields))
+                SELECT_SERVICE_FIELDS, form.fields))
 
-        field.choices = []
-        field.choices.append(INITIAL_CHOICES)
+        for field_name, field in fields.items():
 
-        request = {'cluster_id': req.zato.cluster_id, 'name_filter':'*'}
-        if has_name_filter:
-            request['name_filter'] = '*'
+            field.choices = []
+            field.choices.append(INITIAL_CHOICES)
 
-        for service in req.zato.client.invoke(api_name, request).data:
+            request = {'cluster_id': req.zato.cluster_id, 'name_filter':'*'}
+            if has_name_filter:
+                request['name_filter'] = '*'
 
-            # Older parts of web-admin use service names only but newer ones prefer service ID
-            id_attr = service.id if by_id else service.name
-            field.choices.append([id_attr, service.name])
+            for service in req.zato.client.invoke(api_name, request).data:
 
-        if initial_service:
-            form.initial[field_name] = initial_service
+                # Older parts of web-admin use service names only but newer ones prefer service ID
+                id_attr = service.id if by_id else service.name
+                field.choices.append([id_attr, service.name])
+
+            if initial_service:
+                form.initial[field_name] = initial_service
 
 # ################################################################################################################################
 
@@ -179,8 +196,10 @@ class SearchForm(forms.Form):
 # ################################################################################################################################
 
 class ChangePasswordForm(forms.Form):
-    password1 = forms.CharField(widget=forms.PasswordInput(attrs={'class':'required'}))
-    password2 = forms.CharField(widget=forms.PasswordInput(attrs={'class':'required validate-password-confirm'}))
+    password1 = forms.CharField(widget=forms.PasswordInput(
+        attrs={'class':'required', 'style':'width:100%'}))
+    password2 = forms.CharField(widget=forms.PasswordInput(
+        attrs={'class':'required validate-password-confirm', 'style':'width:100%'}))
 
 # ################################################################################################################################
 
