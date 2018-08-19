@@ -58,7 +58,7 @@ class Close(WSXCtx):
     def __init__(self, code, reason=None, *args, **kwargs):
         self.code = code
         self.reason = reason
-        super(OnMessage, self).__init__(*args, **kwargs)
+        super(Close, self).__init__(*args, **kwargs)
 
 # ################################################################################################################################
 
@@ -162,6 +162,11 @@ class WSXClient(object):
     def _init(self):
         _impl_class = ZatoWSXClient if self.config.is_zato else _NonZatoWSXClient
         self.impl = _impl_class(self.config, self.on_connected_cb, self.on_message_cb, self.on_close_cb, self.config.address)
+
+        self.send = self.impl.send
+        if _impl_class is ZatoWSXClient:
+            self.invoke = self.send
+
         self.impl.connect()
         self.impl.run_forever()
 
@@ -245,9 +250,13 @@ class OutconnWSXWrapper(Wrapper):
             logger.info('Remote server closed connection to WebSocket `%s`, c:`%s`, r:`%s`', self.config.name, code, reason)
 
             if self.config.get('on_close_service_name'):
-                self.server.invoke(self.config.on_close_service_name, {
-                    'ctx': Close(code, reason, self.config, self)
-                })
+
+                try:
+                    self.server.invoke(self.config.on_close_service_name, {
+                        'ctx': Close(code, reason, self.config, self)
+                    })
+                except Exception:
+                    logger.warn('Could not invoke CLOSE service `%s`, e:`%s`', self.config.on_close_service_name, format_exc())
 
             if self.config.has_auto_reconnect:
                 logger.info('WebSocket `%s` will reconnect to `%s` (hac:%d)',
