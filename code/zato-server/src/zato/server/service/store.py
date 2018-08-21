@@ -15,6 +15,7 @@ import os
 from datetime import datetime
 from hashlib import sha256
 from importlib import import_module
+from inspect import isclass
 from json import dumps
 from traceback import format_exc
 
@@ -41,6 +42,7 @@ from springpython.context import InitializingObject
 # Zato
 from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceInfo, TRACE1
 from zato.common.match import Matcher
+from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service
 from zato.server.service.internal import AdminService
@@ -172,6 +174,11 @@ class ServiceStore(InitializingObject):
     def get_service_class_by_id(self, service_id):
         impl_name = self.id_to_impl_name[service_id]
         return self.services[impl_name]
+
+# ################################################################################################################################
+
+    def get_service_name_by_id(self, service_id):
+        return self.get_service_class_by_id(service_id)['name']
 
 # ################################################################################################################################
 
@@ -353,26 +360,21 @@ class ServiceStore(InitializingObject):
     def _should_deploy(self, name, item):
         """ Is an object something we can deploy on a server?
         """
-        try:
-            if issubclass(item, Service):
-                if item is not Service and item is not AdminService and item is not PubSubHook:
-                    if not hasattr(item, DONT_DEPLOY_ATTR_NAME):
+        if isclass(item) and hasattr(item, '__mro__') and hasattr(item, 'get_name'):
+            if item is not Service and item is not AdminService and item is not PubSubHook:
+                if not hasattr(item, DONT_DEPLOY_ATTR_NAME) and not issubclass(item, ModelBase):
 
-                        service_name = item.get_name()
+                    service_name = item.get_name()
 
-                        # Don't deploy SSO services if SSO as such is not enabled
-                        if not self.server.is_sso_enabled:
-                            if 'zato.sso' in service_name:
-                                return False
+                    # Don't deploy SSO services if SSO as such is not enabled
+                    if not self.server.is_sso_enabled:
+                        if 'zato.sso' in service_name:
+                            return False
 
-                        if self.patterns_matcher.is_allowed(service_name):
-                            return True
-                        else:
-                            logger.info('Skipped disallowed `%s`', service_name)
-        except TypeError, e:
-            # Ignore non-class objects passed in to issubclass
-            if has_trace1:
-                logger.log(TRACE1, 'Ignoring exception, name:`%s`, item:`%s`, e:`%s`', name, item, format_exc(e))
+                    if self.patterns_matcher.is_allowed(service_name):
+                        return True
+                    else:
+                        logger.info('Skipped disallowed `%s`', service_name)
 
 # ################################################################################################################################
 

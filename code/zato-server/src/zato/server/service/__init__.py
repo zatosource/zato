@@ -256,7 +256,7 @@ class Service(object):
             self._worker_store.sql_pool_store,
             self._worker_store.stomp_outconn_api,
             ZMQFacade(self.server) if self.component_enabled_zeromq else None,
-            self._worker_store.outgoing_web_sockets,
+            self._worker_store.outconn_wsx,
             self._worker_store.vault_conn_api,
             SMSAPI(self._worker_store.sms_twilio_api) if self.component_enabled_sms else None,
             self._worker_config.out_sap,

@@ -177,8 +177,8 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         }
         req.zato.client.invoke(service_name, input_dict)
 
-    except Exception, e:
-        msg = 'Could not change the password, e:[{e}]'.format(e=format_exc(e))
+    except Exception:
+        msg = 'Password could not be changed, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
@@ -294,9 +294,9 @@ class Index(_BaseView):
         self.clear_user_message()
 
     def can_invoke_admin_service(self):
-        """ Returns a boolean flag indicating that we know what service to invoke,
-        what cluster on and all the required parameters were given in GET request.
-        cluster_id doesn't have to be in GET, 'cluster' will suffice.
+        """ Returns a boolean flag indicating that we know what service to invoke, what cluster it is on
+        and that all the required parameters were given in GET request. cluster_id doesn't have to be in GET,
+        'cluster' will suffice.
         """
         input_elems = self.req.GET.keys() + self.req.zato.args.keys()
 
@@ -321,11 +321,16 @@ class Index(_BaseView):
     def get_service_name(self, req):
         raise NotImplementedError('May be implemented in subclasses')
 
+    def get_initial_input(self):
+        return {}
+
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
             service_name = self.service_name if self.service_name else self.get_service_name()
-            return func(service_name, self.input)
+            request = self.get_initial_input()
+            request.update(self.input)
+            return func(service_name, request)
 
     def _handle_item_list(self, item_list):
         """ Creates a new instance of the model class for each of the element received
@@ -556,15 +561,18 @@ class SecurityList(object):
 
 # ################################################################################################################################
 
-def id_only_service(req, service, id, error_template):
+def id_only_service(req, service, id, initial=None, error_template='{}'):
     try:
-        result = req.zato.client.invoke(service, {'id': id})
+        request = {'id': id}
+        if initial:
+            request.update(initial)
+        result = req.zato.client.invoke(service, request)
         if not result.ok:
             raise Exception(result.details)
         else:
             return result
     except Exception:
-        msg = error_template.format(e=format_exc())
+        msg = error_template.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
