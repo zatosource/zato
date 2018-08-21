@@ -1421,7 +1421,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_initial_sql_msg_ids_by_sub_key(self, session, sub_key, pub_time_max):
-        return _get_sql_msg_ids_by_sub_key(session, self.server.cluster_id, [sub_key], None, pub_time_max).\
+        return _get_sql_msg_ids_by_sub_key(session, self.server.cluster_id, sub_key, None, pub_time_max).\
                all()
 
 # ################################################################################################################################
