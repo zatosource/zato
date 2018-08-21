@@ -478,6 +478,14 @@ class SERVER_STATUS(Constants):
 
     STATUS_CHANGED = ValueConstant('')
 
+class GENERIC(Constants):
+    code_start = 107000
+
+    CONNECTION_CREATE = ValueConstant('')
+    CONNECTION_EDIT = ValueConstant('')
+    CONNECTION_DELETE = ValueConstant('')
+    CONNECTION_CHANGE_PASSWORD = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

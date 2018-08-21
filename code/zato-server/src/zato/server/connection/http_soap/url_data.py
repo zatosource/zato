@@ -758,11 +758,18 @@ class URLData(CyURLData, OAuthDataStore):
         self.basic_auth_config[name].config = config
 
     def basic_auth_get(self, name):
-        """ Returns the configuration of the HTTP Basic Auth security definition
-        of the given name.
+        """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
         """
         with self.url_sec_lock:
             return self.basic_auth_config.get(name)
+
+    def basic_auth_get_by_id(self, def_id):
+        """ Same as basic_auth_get but returns information by definition ID.
+        """
+        with self.url_sec_lock:
+            for item in self.basic_auth_config.values():
+                if item.config['id'] == def_id:
+                    return item.config
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition.
