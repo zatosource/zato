@@ -1590,9 +1590,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             msg, 'zato.hot-deploy.create', {'package_id': msg.package_id}, 'CREATE_SERVICE', *args,
             serialize=False, needs_response=True)
 
-        # Lets pub/sub know that this service has been just deployed - pub/sub will go through
-        # all of its topics and reconfigure any of its hooks that this service implements.
-        self.pubsub.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(response.services_deployed)
+        # If there were any services deployed, let pub/sub know that this service has been just deployed -
+        # pub/sub will go through sall of its topics and reconfigure any of its hooks that this service implements.
+        if response.services_deployed:
+            self.pubsub.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(response.services_deployed)
 
 # ################################################################################################################################
 
