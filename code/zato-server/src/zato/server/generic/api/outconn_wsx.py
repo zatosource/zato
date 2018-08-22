@@ -17,7 +17,7 @@ from ws4py.client.threadedclient import WebSocketClient
 
 # Zato
 from zato.common import WEB_SOCKET, ZATO_NONE
-from zato.common.wsx_client import Client as _ZatoWSXClientImpl, Config as _ZatoWSXConfigImpl
+from zato.common.wsx_client import Client as ZatoWSXClientImpl, Config as _ZatoWSXConfigImpl
 from zato.common.util import new_cid, spawn_greenlet
 from zato.server.connection.queue import Wrapper
 
@@ -86,16 +86,27 @@ class _BaseWSXClient(object):
 
 # ################################################################################################################################
 
-class _NonZatoWSXClient(_BaseWSXClient, WebSocketClient):
+class _NonZatoWSXClient(WebSocketClient, _BaseWSXClient):
 
     def __init__(self, config, on_connected_cb, on_message_cb, on_close_cb, *args, **kwargs):
-        _BaseWSXClient.__init__(self, config, on_connected_cb, on_message_cb, on_close_cb)
         WebSocketClient.__init__(self, *args, **kwargs)
+        _BaseWSXClient.__init__(self, config, on_connected_cb, on_message_cb, on_close_cb)
 
     def close(self, code=1000, reason=ZATO_NONE):
         # It is needed to set this custom reason code because when it is us who closes the connection the 'closed' event
         # (i.e. on_close_cb) gets invoked and we need to know not to reconnect automatically in such a case.
         super(_NonZatoWSXClient, self).close(code, reason)
+
+# ################################################################################################################################
+
+class _ZatoWSXClientImpl(ZatoWSXClientImpl):
+    def __init__(self, _outcon_wsx_on_connect_cb, *args, **kwargs):
+        self._outcon_wsx_on_connect_cb = _outcon_wsx_on_connect_cb
+        super(_ZatoWSXClientImpl, self).__init__(*args, **kwargs)
+
+    def on_connected(self):
+        super(_ZatoWSXClientImpl, self).on_connected()
+        self._outcon_wsx_on_connect_cb()
 
 # ################################################################################################################################
 
@@ -115,7 +126,7 @@ class ZatoWSXClient(_BaseWSXClient):
             self._zato_client_config.username = self.config.username
             self._zato_client_config.secret = self.config.secret
 
-        self._zato_client = _ZatoWSXClientImpl(self._zato_client_config)
+        self._zato_client = _ZatoWSXClientImpl(self.opened, self._zato_client_config)
         self.invoke = self.send = self._zato_client.invoke
 
 # ################################################################################################################################
@@ -219,10 +230,14 @@ class OutconnWSXWrapper(Wrapper):
 
     def on_connected_cb(self):
         self.is_connected = True
+
         if self.config.get('on_connect_service_name'):
-            self.server.invoke(self.config.on_connect_service_name, {
-                'ctx': Connected(self.config, self)
-            })
+            try:
+                self.server.invoke(self.config.on_connect_service_name, {
+                    'ctx': Connected(self.config, self)
+                })
+            except Exception:
+                logger.warn('Could not invoke CONNECT service `%s`, e:`%s`', self.config.on_close_service_name, format_exc())
 
 # ################################################################################################################################
 
