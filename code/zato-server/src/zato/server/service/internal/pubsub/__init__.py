@@ -143,7 +143,7 @@ class AfterPublish(AdminService):
                     self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, _notify_error)
 
         except Exception:
-            self.logger.warn('Error in after_publish callback, e:`%r`', format_exc())
+            self.logger.warn('Error in after_publish callback, e:`%s`', format_exc())
 
 # ################################################################################################################################
 
