@@ -139,7 +139,6 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_k
         PubSubMessage.topic_id,
         expr.bindparam('creation_time', now),
         expr.bindparam('endpoint_id', endpoint_id),
-        expr.bindparam('sub_key', sub_key),
         expr.bindparam('is_in_staging', False),
         expr.bindparam('cluster_id', cluster_id),
         ).\
@@ -164,7 +163,7 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_k
                 PubSubEndpointEnqueuedMessage.topic_id,
                 expr.column('creation_time'),
                 expr.column('endpoint_id'),
-                expr.column('sub_key'),
+                expr.bindparam('sub_key', sub_key),
                 expr.column('is_in_staging'),
                 expr.column('cluster_id'),
                 ), select_messages)

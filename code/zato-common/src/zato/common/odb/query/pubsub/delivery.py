@@ -143,7 +143,6 @@ def get_delivery_server_for_sub_key(session, cluster_id, sub_key, is_wsx):
             Server.id.label('server_id'),
             Server.name.label('server_name'),
             Server.cluster_id,
-            expr.bindparam('endpoint_type', _wsx),
             ).\
             filter(WebSocketClient.server_id==Server.id).\
             filter(WebSocketClient.cluster_id==cluster_id).\
