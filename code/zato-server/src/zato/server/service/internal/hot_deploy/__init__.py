@@ -156,8 +156,8 @@ class Create(AdminService):
             self.logger.info(msg, package_id, payload_name)
             return services_deployed
         else:
-            msg = 'Package id:`%s`, payload_name:`%s` has not been deployed'
-            self.logger.warn(msg, package_id, payload_name)
+            msg = 'No services were deployed from module `%s`'
+            self.logger.warn(msg, payload_name)
 
     def _update_deployment_status(self, session, package_id, status):
         ds = session.query(DeploymentStatus).\
