@@ -72,7 +72,7 @@ class _BaseWSXClient(object):
 # ################################################################################################################################
 
     def opened(self):
-        self.on_connected_cb()
+        self.on_connected_cb(self)
 
 # ################################################################################################################################
 
@@ -181,9 +181,9 @@ class WSXClient(object):
         self.impl.connect()
         self.impl.run_forever()
 
-    def on_connected_cb(self):
+    def on_connected_cb(self, conn):
         self.is_connected = True
-        self.config.parent.on_connected_cb()
+        self.config.parent.on_connected_cb(conn)
 
     def on_message_cb(self, msg):
         self.config.parent.on_message_cb(msg)
@@ -228,13 +228,13 @@ class OutconnWSXWrapper(Wrapper):
 
 # ################################################################################################################################
 
-    def on_connected_cb(self):
+    def on_connected_cb(self, conn):
         self.is_connected = True
 
         if self.config.get('on_connect_service_name'):
             try:
                 self.server.invoke(self.config.on_connect_service_name, {
-                    'ctx': Connected(self.config, self)
+                    'ctx': Connected(self.config, conn)
                 })
             except Exception:
                 logger.warn('Could not invoke CONNECT service `%s`, e:`%s`', self.config.on_close_service_name, format_exc())
