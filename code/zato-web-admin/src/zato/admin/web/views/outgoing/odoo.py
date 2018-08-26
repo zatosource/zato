@@ -82,7 +82,7 @@ def change_password(req):
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.outgoing.odoo.ping', id, 'Could not ping the Odoo connection, e:[{e}]')
+    ret = id_only_service(req, 'zato.outgoing.odoo.ping', id, 'Could not ping the Odoo connection, e:`{}`')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse(ret.data.info)

@@ -561,7 +561,7 @@ class SecurityList(object):
 
 # ################################################################################################################################
 
-def id_only_service(req, service, id, initial=None, error_template='{}'):
+def id_only_service(req, service, id, error_template='{}', initial=None):
     try:
         request = {'id': id}
         if initial:

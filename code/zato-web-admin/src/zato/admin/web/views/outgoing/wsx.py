@@ -77,7 +77,7 @@ class _CreateEdit(CreateEdit):
             service_id = self.input_dict.get(id_field_name)
 
             if service_id:
-                response = id_only_service(self.req, 'zato.service.get-by-id', service_id, {'cluster_id':self.cluster_id})
+                response = id_only_service(self.req, 'zato.service.get-by-id', service_id, initial={'cluster_id':self.cluster_id})
                 name_field_name = 'on_{}_service_name'.format(name)
                 return_data[name_field_name] = response.data['name']
 
