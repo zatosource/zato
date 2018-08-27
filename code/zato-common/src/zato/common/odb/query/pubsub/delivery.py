@@ -13,7 +13,6 @@ from logging import getLogger
 
 # SQLAlchemy
 from sqlalchemy import update
-from sqlalchemy.sql import expression as expr
 
 # Zato
 from zato.common import PUBSUB
