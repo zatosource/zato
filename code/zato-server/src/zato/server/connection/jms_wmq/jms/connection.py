@@ -132,6 +132,7 @@ class WebSphereMQConnection(object):
         self.cache_open_receive_queues = cache_open_receive_queues
 
         self.is_connected = False
+        self.is_reconnecting = False
         self._disconnecting = False
 
         self.lock = RLock()
@@ -207,11 +208,19 @@ class WebSphereMQConnection(object):
 
 # ################################################################################################################################
 
+    def reconnect(self):
+        with self.lock:
+            self.close()
+            self.connect()
+
+# ################################################################################################################################
+
     def connect(self):
         with self.lock:
             if self.is_connected:
                 return
 
+            self._disconnecting = False
             conn_name = '%s(%s)' % (self.host, self.port)
 
             logger.info('Connecting to queue manager:`%s`, channel:`%s`' ', connection info:`%s`' % (
