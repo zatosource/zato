@@ -73,7 +73,7 @@ class Delete(_Delete):
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.email.imap.ping', id, 'Could not ping the IMAP connection, e:[{e}]')
+    ret = id_only_service(req, 'zato.email.imap.ping', id, 'Could not ping the IMAP connection, e:`{}`')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse(ret.data.info)

@@ -19,6 +19,7 @@ from gevent.lock import RLock
 import openerplib
 
 # Zato
+from zato.common import SECRETS
 from zato.common.util import ping_odoo
 from zato.server.connection.queue import ConnectionQueue
 
@@ -34,6 +35,12 @@ class OdooWrapper(object):
     def __init__(self, config, server):
         self.config = config
         self.server = server
+
+        # Decrypt the password if it is encrypted. It will be in clear text when the server is starting up
+        # but otherwise for connections created in run-time, it will be decrypted.
+        if self.config.password.startswith(SECRETS.PREFIX):
+            self.config.password = self.server.decrypt(self.config.password)
+
         self.url = '{protocol}://{user}:******@{host}:{port}/{database}'.format(**self.config)
         self.client = ConnectionQueue(
             self.config.pool_size, self.config.queue_build_cap, self.config.name, 'Odoo', self.url, self.add_client)
