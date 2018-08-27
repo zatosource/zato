@@ -125,6 +125,9 @@ class WebSphereMQChannel(object):
         import pymqi
         self.pymqi = pymqi
 
+        self._cc_failed = self.pymqi.CMQC.MQCC_FAILED
+        self._rc_conn_broken = self.pymqi.CMQC.MQRC_CONNECTION_BROKEN
+
 # ################################################################################################################################
 
     def _get_destination_info(self):
@@ -177,8 +180,20 @@ class WebSphereMQChannel(object):
                     self.logger.info('Sleeping for %ss', sleep_on_error)
                     sleep(sleep_on_error)
 
+                except WebSphereMQException as e:
+                    # If current connection is broken we may try to re-estalish it.
+                    sleep(sleep_on_error)
+
+                    if e.completion_code == self._cc_failed and e.reason_code == self._rc_conn_broken:
+                        self.logger.warn('Caught MQRC_CONNECTION_BROKEN, will try to reconnect connection to %s ',
+                            self.conn.get_connection_info())
+                        self.conn.reconnect()
+                        self.conn.ping()
+                    else:
+                        raise
+
                 except Exception as e:
-                    self.logger.error('Exception in the main loop %s', format_exc())
+                    self.logger.error('Exception in the main loop %r %s %s', e.args, type(e), format_exc())
                     sleep(sleep_on_error)
 
         # Start listener in a thread
@@ -320,7 +335,7 @@ class ConnectionContainer(object):
         """ Creates a new connection to IBM MQ.
         """
         if not self.pymqi:
-            return Response(_http_503, 'Could not find pymqi module, MQ connections will not start')
+            return Response(_http_503, 'Could not find pymqi module, IBM MQ connections will not start')
 
         with self.lock:
             try:
