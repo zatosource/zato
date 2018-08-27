@@ -34,12 +34,20 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 address_pattern='http://127.0.0.1:{}/{}'
+not_enabled_msg = 'IBM MQ component is not enabled - set component_enabled.ibm_mq to True in server.conf ' \
+                  'and restart all servers before IBM MQ connections can be used.'
 
 # ################################################################################################################################
 
 class WMQIPC(object):
     """ Implements communication with an IBM MQ MQ connector for a given server.
     """
+
+# ################################################################################################################################
+
+    def _check_enabled(self):
+        if not self.fs_server_config.component_enabled.ibm_mq:
+            raise Exception(not_enabled_msg)
 
 # ################################################################################################################################
 
@@ -55,6 +63,8 @@ class WMQIPC(object):
         """ Starts an HTTP server acting as an IBM MQ MQ connector. Its port will be greater than ipc_tcp_start_port,
         which is the starting point to find a free port from.
         """
+        self._check_enabled()
+
         self.wmq_ipc_tcp_port = get_free_port(ipc_tcp_start_port)
         logger.info('Starting IBM MQ connector for server `%s` on `%s`', self.name, self.wmq_ipc_tcp_port)
 
@@ -117,6 +127,8 @@ class WMQIPC(object):
 # ################################################################################################################################
 
     def send_wmq_message(self, msg):
+        self._check_enabled()
+
         msg['action'] = OUTGOING.WMQ_SEND.value
         response = self.invoke_wmq_connector(msg)
 
@@ -129,15 +141,16 @@ class WMQIPC(object):
 # ################################################################################################################################
 
     def invoke_wmq_connector(self, msg, raise_on_error=True, address_pattern=address_pattern):
-        address = address_pattern.format(self.wmq_ipc_tcp_port, 'api')
+        self._check_enabled()
 
+        address = address_pattern.format(self.wmq_ipc_tcp_port, 'api')
         response = post(address, data=dumps(msg), auth=self.get_wmq_credentials())
 
         if not response.ok:
             if raise_on_error:
                 raise Exception(response.text)
             else:
-                logger.warn(response.text)
+                logger.warn('Error message from IBM MQ connector `{}`'.format(response.text))
         else:
             return response
 
