@@ -73,7 +73,7 @@ class Delete(_Delete):
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.definition.jms-wmq.ping', id, 'Could not ping IBM MQ definition, e:`{e}`')
+    ret = id_only_service(req, 'zato.definition.jms-wmq.ping', id, 'Could not ping IBM MQ definition, e:`{}`')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse(ret.data.info)

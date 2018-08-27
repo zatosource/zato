@@ -50,6 +50,14 @@ host={broker_host}
 port={broker_port}
 password={broker_password}
 db=0
+socket_timeout=
+charset=
+errors=
+use_redis_sentinels=False
+redis_sentinels=
+redis_sentinels_master=
+shadow_password_in_logs=True
+log_connection_info_sleep_time=5 # In seconds
 
 [secret_keys]
 key1={secret_key1}
