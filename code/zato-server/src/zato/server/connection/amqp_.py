@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -384,7 +384,9 @@ class ConnectorAMQP(Connector):
         """
         consumer = Consumer(config, self.on_amqp_message)
         self._consumers.setdefault(config.name, []).append(consumer)
-        consumer.start()
+
+        if config.is_active:
+            consumer.start()
 
 # ################################################################################################################################
 
@@ -457,22 +459,26 @@ class ConnectorAMQP(Connector):
         """
         # Closing consumers may take time so we report the progress after about each 5% of consumers is closed,
         # or, if there are ten consumers or less, after each connection is closed.
-        consumers = self._consumers[config.name]
-        total = len(consumers)
-        progress_after = int(round(total * 0.05)) if total > 10 else 1
-        noun = 'consumer' if total == 1 else 'consumers'
+        consumers = self._consumers.get(config.name)
 
-        for idx, consumer in enumerate(consumers, 1):
-            consumer.stop()
-            if idx % progress_after == 0:
-                if idx != total:
-                    logger.info(
-                        'Stopped %s/%s %s for channel `%s` in AMQP connector `%s`', idx, total, noun, config.name,
-                        self.config.name)
+        # There will be no consumer objects if pool_size is 0.
+        if consumers:
+            total = len(consumers)
+            progress_after = int(round(total * 0.05)) if total > 10 else 1
+            noun = 'consumer' if total == 1 else 'consumers'
 
-        logger.info('Stopped %s/%s %s for channel `%s` in AMQP connector `%s`', total, total, noun, config.name, self.config.name)
+            for idx, consumer in enumerate(consumers, 1):
+                consumer.stop()
+                if idx % progress_after == 0:
+                    if idx != total:
+                        logger.info(
+                            'Stopped %s/%s %s for channel `%s` in AMQP connector `%s`', idx, total, noun, config.name,
+                            self.config.name)
 
-        del self._consumers[config.name]
+            logger.info('Stopped %s/%s %s for channel `%s` in AMQP connector `%s`',
+                total, total, noun, config.name, self.config.name)
+
+            del self._consumers[config.name]
 
         # Note that we do not always delete from self.channels because they may be needed in our super-class,
         # in particular, in its self.edit method.
