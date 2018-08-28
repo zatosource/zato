@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -100,6 +100,7 @@ class Create(AdminService):
 
                 input.action = CHANNEL.AMQP_CREATE.value
                 input.def_name = item.def_.name
+                input.id = item.id
                 input.service_name = service.name
                 self.broker_client.publish(input)
 
@@ -173,6 +174,7 @@ class Edit(AdminService):
 
                 input.action = CHANNEL.AMQP_EDIT.value
                 input.def_name = item.def_.name
+                input.id = item.id
                 input.old_name = old_name
                 input.service_name = service.name
                 self.broker_client.publish(input)
