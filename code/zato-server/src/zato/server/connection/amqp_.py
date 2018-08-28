@@ -384,7 +384,9 @@ class ConnectorAMQP(Connector):
         """
         consumer = Consumer(config, self.on_amqp_message)
         self._consumers.setdefault(config.name, []).append(consumer)
-        consumer.start()
+
+        if config.is_active:
+            consumer.start()
 
 # ################################################################################################################################
 
