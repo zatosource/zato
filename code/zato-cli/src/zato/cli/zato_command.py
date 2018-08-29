@@ -158,6 +158,17 @@ def get_parser():
     add_opts(create_web_admin, create_web_admin_mod.Create.opts)
 
     #
+    # crypto
+    #
+    crypto = subs.add_parser('crypto', description='Cryptographic operations')
+    crypto_subs = crypto.add_subparsers()
+
+    crypto_create_secret_key = crypto_subs.add_parser('create-secret-key',
+        description=crypto_mod.CreateSecretKey.__doc__, parents=[base_parser])
+    crypto_create_secret_key.set_defaults(command='crypto_create_secret_key')
+    add_opts(crypto_create_secret_key, crypto_mod.CreateSecretKey.opts)
+
+    #
     # decrypt
     #
     decrypt = subs.add_parser('decrypt', description=crypto_mod.Decrypt.__doc__, parents=[base_parser])
