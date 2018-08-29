@@ -325,6 +325,7 @@ def run_command(args):
         ('create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
         ('create_user', 'zato.cli.web_admin_auth.CreateUser'),
         ('create_web_admin', 'zato.cli.create_web_admin.Create'),
+        ('crypto_create_secret_key', 'zato.cli.crypto.CreateSecretKey'),
         ('delete_odb', 'zato.cli.delete_odb.Delete'),
         ('decrypt', 'zato.cli.crypto.Decrypt'),
         ('encrypt', 'zato.cli.crypto.Encrypt'),

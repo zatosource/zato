@@ -556,8 +556,8 @@ class Create(ZatoCommand):
     opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':"Server's name"})
-    opts.append({'name':'--secret_key', 'help':"Server's secret key (in Fernet format, must be the same for all servers)"})
-    opts.append({'name':'--jwt_secret', 'help':"Server's JWT secret (in Fernet format, must be the same for all servers)"})
+    opts.append({'name':'--secret_key', 'help':"Server's secret key (must be the same for all servers)"})
+    opts.append({'name':'--jwt_secret', 'help':"Server's JWT secret (must be the same for all servers)"})
     opts.append({'name':'--http_port', 'help':"Server's HTTP port"})
 
     def __init__(self, args):

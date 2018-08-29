@@ -22,7 +22,7 @@ from zato.common.util import get_config
 # ################################################################################################################################
 
 class CreateSecretKey(ZatoCommand):
-    """ Creates a new secret key in Fernet format.
+    """ Creates a new secret key.
     """
     def execute(self, args):
         self.logger.info(CryptoManager.generate_key())
