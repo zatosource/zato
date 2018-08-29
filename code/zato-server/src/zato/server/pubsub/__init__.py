@@ -90,7 +90,6 @@ def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pr
             raise BadRequest(cid, 'Priority `{}` outside of allowed range {}-{}'.format(priority, _pri_min, _pri_max))
     else:
         priority = _pri_def
-        None
 
     return priority
 
