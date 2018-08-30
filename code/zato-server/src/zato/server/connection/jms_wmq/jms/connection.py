@@ -210,8 +210,19 @@ class WebSphereMQConnection(object):
 
     def reconnect(self):
         with self.lock:
+            if self.is_reconnecting:
+                return
+            else:
+                self.is_reconnecting = True
+
+        try:
             self.close()
             self.connect()
+        except Exception:
+            raise
+        finally:
+            if self.is_reconnecting:
+                self.is_reconnecting = False
 
 # ################################################################################################################################
 
