@@ -82,8 +82,11 @@ _http_503 = b'{} {}'.format(httplib.SERVICE_UNAVAILABLE, httplib.responses[httpl
 
 _path_api = '/api'
 _path_ping = '/ping'
-
 _paths = (_path_api, _path_ping)
+
+_cc_failed         = 2    # pymqi.CMQC.MQCC_FAILED
+_rc_conn_broken    = 2009 # pymqi.CMQC.MQRC_CONNECTION_BROKEN
+_rc_not_authorized = 2035 # pymqi.CMQC.MQRC_NOT_AUTHORIZED
 
 # ################################################################################################################################
 
@@ -124,9 +127,6 @@ class WebSphereMQChannel(object):
         # PyMQI is an optional dependency so let's import it here rather than on module level
         import pymqi
         self.pymqi = pymqi
-
-        self._cc_failed = self.pymqi.CMQC.MQCC_FAILED
-        self._rc_conn_broken = self.pymqi.CMQC.MQRC_CONNECTION_BROKEN
 
 # ################################################################################################################################
 
@@ -184,8 +184,8 @@ class WebSphereMQChannel(object):
                     # If current connection is broken we may try to re-estalish it.
                     sleep(sleep_on_error)
 
-                    if e.completion_code == self._cc_failed and e.reason_code == self._rc_conn_broken:
-                        self.logger.warn('Caught MQRC_CONNECTION_BROKEN, will try to reconnect connection to %s ',
+                    if e.completion_code == _cc_failed and e.reason_code == _rc_conn_broken:
+                        self.logger.warn('Caught MQRC_CONNECTION_BROKEN in receive, will try to reconnect connection to %s ',
                             self.conn.get_connection_info())
                         self.conn.reconnect()
                         self.conn.ping()
@@ -496,7 +496,7 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
-    def _on_OUTGOING_WMQ_SEND(self, msg):
+    def _on_OUTGOING_WMQ_SEND(self, msg, is_reconnect=False):
         """ Sends a message to a remote IBM MQ queue.
         """
         with self.lock:
@@ -507,6 +507,9 @@ class ConnectionContainer(object):
             return Response(_http_406, 'Cannot send messages through an inactive connection', 'text/plain')
         else:
             def_id = self.outconn_id_to_def_id[outconn_id]
+            conn = self.connections[def_id]
+            conn.ping()
+
             try:
 
                 delivery_mode = msg.delivery_mode or outconn.delivery_mode
@@ -523,18 +526,41 @@ class ConnectionContainer(object):
                     jms_reply_to = msg.get('reply_to', '').encode('utf8'),
                 )
 
-                self.connections[def_id].send(text_msg, msg.queue_name.encode('utf8'))
+                conn.send(text_msg, msg.queue_name.encode('utf8'))
                 return Response(data=dumps(text_msg.to_dict(False)))
 
-            except Exception as e:
-                self.logger.warn(format_exc())
+            except(self.pymqi.MQMIError, WebSphereMQException) as e:
 
                 if isinstance(e, self.pymqi.MQMIError):
-                    message = e.errorAsString()
+                    cc_code = e.comp
+                    reason_code = e.reason
                 else:
-                    message = e.message
+                    cc_code = e.completion_code
+                    reason_code = e.reason_code
 
-                return Response(_http_503, message)
+                # Try to reconnect if the connection is broken but only if we have not tried to already
+                if (not is_reconnect) and cc_code == _cc_failed and reason_code == _rc_conn_broken:
+                    self.logger.warn('Caught MQRC_CONNECTION_BROKEN in send, will try to reconnect connection to %s ',
+                        conn.get_connection_info())
+
+                    # Sleep for a while before reconnecting
+                    sleep(1)
+
+                    # Try to reconnect
+                    conn.reconnect()
+
+                    # Confirm it by pinging the queue manager
+                    conn.ping()
+
+                    # Resubmit the request
+                    return self._on_OUTGOING_WMQ_SEND(msg, is_reconnect=True)
+                else:
+                    raise
+
+            except Exception as e:
+                exc = format_exc()
+                self.logger.warn(exc)
+                return Response(_http_503, exc)
 
 # ################################################################################################################################
 
@@ -643,11 +669,11 @@ class ConnectionContainer(object):
                     data = 'You are not allowed to access this resource'
                     content_type = 'text/plain'
 
-        except Exception:
+        except Exception as e:
             self.logger.warn(format_exc())
             content_type = 'text/plain'
-            status = _http_500
-            data = 'Internal server error'
+            status = _http_503
+            data = e.message
         finally:
             headers = [('Content-type', content_type)]
             start_response(status, headers)

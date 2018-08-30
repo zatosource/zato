@@ -292,8 +292,8 @@ class SubKeyServer(object):
         self.endpoint_type = config['endpoint_type']
 
         # Attributes below are only for WebSockets
-        self.channel_name = config.get('channel_name')
-        self.pub_client_id = config.get('pub_client_id')
+        self.channel_name = config.get('channel_name', '')
+        self.pub_client_id = config.get('pub_client_id', '')
 
     def __repr__(self):
         return make_repr(self)
@@ -1247,8 +1247,13 @@ class PubSub(object):
         config['wsx'] = config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
-        msg = 'Set info about delivery server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s` '\
-            'sks:`{}`'.format(' ' if config['server_pid'] else ' (no PID) ', self.sub_key_servers)
+        sk_servers = []
+        for sk_server in self.sub_key_servers.values():
+            sk_server_str = 'sk={s.sub_key},chan:{s.channel_name},pubid:{s.pub_client_id}'
+            sk_servers.append(sk_server_str.format(s=sk_server))
+
+        msg = 'Set info about delivery server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s`, '\
+            'sks:`{}`'.format(' ' if config['server_pid'] else ' (no PID) ', '; '.join(sk_servers))
         logger.info(msg, config)
         logger_zato.info(msg, config)
 

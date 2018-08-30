@@ -141,7 +141,8 @@ class CheckConfig(ManageCommand):
             # that we can safely delete.
             pid = open(pidfile).read().strip()
             try:
-                pid = int(pid)
+                if pid:
+                    pid = int(pid)
             except ValueError:
                 raise Exception('Could not parse pid value `{}` as an integer ({})'.format(pid, pidfile))
             else:
@@ -179,11 +180,12 @@ class CheckConfig(ManageCommand):
                     log_path = abspath(join(self.component_dir, 'logs', '{}.log'.format(log_file_marker)))
                     lock_path = abspath(join(self.component_dir, 'logs', '{}.lock'.format(log_file_marker)))
 
-                    for name in Process(pid).open_files():
-                        if name.path == log_path:
-                            has_log = True
-                        elif name.path == lock_path:
-                            has_lock = True
+                    if pid:
+                        for name in Process(pid).open_files():
+                            if name.path == log_path:
+                                has_log = True
+                            elif name.path == lock_path:
+                                has_lock = True
 
                     # Both files exist - this is our component and it's running so we cannot continue
                     if has_log and has_lock:
