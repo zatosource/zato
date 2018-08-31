@@ -140,27 +140,24 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         session.commit()
 
         # Now send it to the broker, but only if the job is active.
-        if is_active:
-            msg_action = SCHEDULER_MSG.CREATE.value if action == 'create' else SCHEDULER_MSG.EDIT.value
-            msg = {'action': msg_action, 'job_type': job_type,
-                   'is_active':is_active, 'start_date':start_date.isoformat(),
-                   'extra':extra, 'service': service.name,
-                   'id':job.id, 'name': name
-                   }
+        # if is_active:
+        msg_action = SCHEDULER_MSG.CREATE.value if action == 'create' else SCHEDULER_MSG.EDIT.value
+        msg = {'action': msg_action, 'job_type': job_type,
+               'is_active':is_active, 'start_date':start_date.isoformat(),
+               'extra':extra, 'service': service.name,
+               'id':job.id, 'name': name
+               }
 
-            if action == 'edit':
-                msg['old_name'] = old_name
+        if action == 'edit':
+            msg['old_name'] = old_name
 
-            if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
-                for param in ib_params + ('repeats',):
-                    value = input[param]
-                    msg[param] = int(value) if value else 0
+        if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
+            for param in ib_params + ('repeats',):
+                value = input[param]
+                msg[param] = int(value) if value else 0
 
-            elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
-                msg['cron_definition'] = cron_definition
-
-        else:
-            msg = {'action': SCHEDULER_MSG.DELETE.value, 'name': name}
+        elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
+            msg['cron_definition'] = cron_definition
 
         broker_client.publish(msg, MESSAGE_TYPE.TO_SCHEDULER)
 
