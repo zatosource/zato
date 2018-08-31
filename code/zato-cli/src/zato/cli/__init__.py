@@ -313,6 +313,7 @@ def run_command(args):
         ('apispec', 'zato.cli.apispec.APISpec'),
         ('ca_create_ca', 'zato.cli.ca_create_ca.Create'),
         ('ca_create_lb_agent', 'zato.cli.ca_create_lb_agent.Create'),
+        ('ca_create_scheduler', 'zato.cli.ca_create_scheduler.Create'),
         ('ca_create_server', 'zato.cli.ca_create_server.Create'),
         ('ca_create_web_admin', 'zato.cli.ca_create_web_admin.Create'),
         ('check_config', 'zato.cli.check_config.CheckConfig'),
