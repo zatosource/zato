@@ -47,17 +47,20 @@ direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 class HTTPRequestData(object):
     """ Data regarding an HTTP request.
     """
-    def __init__(self):
+    def __init__(self, _Bunch=Bunch):
         self.method = None
-        self.GET = None
-        self.POST = None
+        self.GET = _Bunch()
+        self.POST = _Bunch()
+        self.path = None
+        self.params = _Bunch()
 
-    def init(self, wsgi_environ={}):
+    def init(self, wsgi_environ=None):
+        wsgi_environ = wsgi_environ or {}
         self.method = wsgi_environ.get('REQUEST_METHOD')
-
-        # Note tht we always require UTF-8
-        self.GET = wsgi_environ.get('zato.http.GET', {})
-        self.POST = wsgi_environ.get('zato.http.POST', {})
+        self.GET.update(wsgi_environ.get('zato.http.GET', {}))
+        self.POST.update(wsgi_environ.get('zato.http.POST', {}))
+        self.path = wsgi_environ.get('PATH_INFO')
+        self.params.update(wsgi_environ.get('zato.http.path_params', {}))
 
     def __repr__(self):
         return make_repr(self)
