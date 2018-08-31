@@ -473,8 +473,7 @@ class RequestHandler(object):
             raise NotFound(cid, _response_404.format(cid, path_info, soap_action))
 
         if channel_item.merge_url_params_req:
-            channel_params = self.create_channel_params(url_match, channel_item,
-                wsgi_environ, raw_request, post_data)
+            channel_params = self.create_channel_params(url_match, channel_item, wsgi_environ, raw_request, post_data)
         else:
             channel_params = None
 
@@ -483,6 +482,9 @@ class RequestHandler(object):
             cache_key, response = self.get_response_from_cache(service, raw_request, channel_item, channel_params, wsgi_environ)
             if response:
                 return response
+
+        # Add any path params matched to WSGI environment so it can be easily accessible later on
+        wsgi_environ['zato.http.path_params'] = url_match
 
         # No cache for this channel or no cached response, invoke the service then.
         response = service.update_handle(self._set_response_data, service, raw_request,
