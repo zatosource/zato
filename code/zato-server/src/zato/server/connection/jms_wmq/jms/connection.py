@@ -252,7 +252,7 @@ class WebSphereMQConnection(object):
                     raise BaseException(msg)
 
                 kwargs['sco'] = self.mq.sco()
-                sco.KeyRepository = self.ssl_key_repository
+                kwargs['sco'].KeyRepository = self.ssl_key_repository
                 cd.SSLCipherSpec = self.ssl_cipher_spec
 
             if self.use_shared_connections:
@@ -261,7 +261,7 @@ class WebSphereMQConnection(object):
                 connect_options = self.CMQC.MQCNO_HANDLE_SHARE_NONE
 
             try:
-                self.mgr.connect_with_options(self.queue_manager, cd=cd, opts=connect_options, sco=sco, user=self.username,
+                self.mgr.connect_with_options(self.queue_manager, cd=cd, opts=connect_options, user=self.username,
                     password=self.password, **kwargs)
             except self.mq.MQMIError, e:
                 exc = WebSphereMQException(e, e.comp, e.reason)
