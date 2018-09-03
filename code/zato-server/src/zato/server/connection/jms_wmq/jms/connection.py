@@ -98,8 +98,8 @@ class WebSphereMQConnection(object):
         self.port = port
 
         # Credentials
-        self.username = username
-        self.password = password
+        self.username = str(username) if username is not None else username
+        self.password = str(password) if password is not None else password
 
         self.use_shared_connections = use_shared_connections
         self.dynamic_queue_template = dynamic_queue_template
@@ -238,7 +238,7 @@ class WebSphereMQConnection(object):
                 self.queue_manager, self.channel, conn_name))
             self.mgr = self.mq.QueueManager(None)
 
-            sco = self.mq.sco()
+            kwargs = {}
             cd = self.mq.cd()
             cd.ChannelName = self.channel
             cd.ConnectionName = conn_name.encode('utf8')
@@ -251,7 +251,8 @@ class WebSphereMQConnection(object):
                     logger.error(msg)
                     raise BaseException(msg)
 
-                sco.KeyRepository = self.ssl_key_repository
+                kwargs['sco'] = self.mq.sco()
+                kwargs['sco'].KeyRepository = self.ssl_key_repository
                 cd.SSLCipherSpec = self.ssl_cipher_spec
 
             if self.use_shared_connections:
@@ -260,8 +261,8 @@ class WebSphereMQConnection(object):
                 connect_options = self.CMQC.MQCNO_HANDLE_SHARE_NONE
 
             try:
-                self.mgr.connect_with_options(self.queue_manager, cd=cd, opts=connect_options, sco=sco, user=str(self.username),
-                    password=str(self.password))
+                self.mgr.connect_with_options(self.queue_manager, cd=cd, opts=connect_options, user=self.username,
+                    password=self.password, **kwargs)
             except self.mq.MQMIError, e:
                 exc = WebSphereMQException(e, e.comp, e.reason)
                 raise exc
