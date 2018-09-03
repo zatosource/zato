@@ -105,8 +105,8 @@ class SMTPConnection(_Connection):
 
         if config.username or config.password:
 
-            password = self.config.password.encode('utf-8') or None
-            username = self.config.username.encode('utf-8') or None
+            password = (self.config.password or '').encode('utf-8')
+            username = (self.config.username or '').encode('utf-8')
 
             self.conn_class = Outbox
 
