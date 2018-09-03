@@ -1,0 +1,59 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+import logging
+
+# Django
+from django.http import HttpResponse, HttpResponseServerError
+
+# Zato
+from zato.admin.web.forms.search.solr import CreateForm, EditForm
+from zato.admin.web.views import Delete as _Delete, id_only_service, Index as _Index, method_allowed
+
+logger = logging.getLogger(__name__)
+
+class Index(_Index):
+    method_allowed = 'GET'
+    url_name = 'search-solr'
+    template = 'zato/search/solr.html'
+    service_name = 'zato.search.solr.get-list'
+    output_class = Solr
+    paginate = True
+
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'address', 'timeout', 'ping_path', 'options', 'pool_size')
+        output_repeated = True
+
+    def handle(self):
+        return {}
+
+class _CreateEdit(CreateEdit):
+    method_allowed = 'POST'
+
+    class SimpleIO(CreateEdit.SimpleIO):
+        input_required = ('name', 'is_active', 'address', 'timeout', 'ping_path', 'options', 'pool_size')
+        output_required = ('id', 'name')
+
+    def success_message(self, item):
+        return 'Successfully {} the Solr connection [{}]'.format(self.verb, item.name)
+
+class Delete(_Delete):
+    url_name = 'search-solr-delete'
+    error_msolrsage = 'Could not delete the Solr connection'
+    service_name = 'zato.search.solr.delete'
+
+@method_allowed('POST')
+def ping(req, id, cluster_id):
+    ret = id_only_service(req, 'zato.search.solr.ping', id, 'Could not ping the Solr connection, e:`{}`')
+    if isinstance(ret, HttpResponseServerError):
+        return ret
+    return HttpResponse(ret.data.info)
