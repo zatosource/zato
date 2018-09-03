@@ -52,6 +52,7 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 def instance_hook(self, input, instance, attrs):
 
     if attrs.is_create_edit:
+        instance.is_out = False
         instance.service = attrs._meta_session.query(ServiceModel).\
             filter(ServiceModel.name==input.service_name).\
             filter(ServiceModel.cluster_id==input.cluster_id).\
