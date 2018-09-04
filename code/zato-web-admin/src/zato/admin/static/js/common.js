@@ -114,7 +114,7 @@ $.namespace('zato.pubsub.message.publish');
 $.namespace('zato.pubsub.message.queue');
 $.namespace('zato.pubsub.subscription');
 $.namespace('zato.pubsub.task');
-$.namespace('zato.pubsub.task.delivery_server');
+$.namespace('zato.pubsub.task.delivery');
 $.namespace('zato.pubsub.topic');
 $.namespace('zato.query');
 $.namespace('zato.query.cassandra');

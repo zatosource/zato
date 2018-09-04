@@ -15,45 +15,86 @@ import logging
 from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.search.solr import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, id_only_service, Index as _Index, method_allowed
+from zato.common.util import fs_safe_name
+
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+
+class DeliveryServer(object):
+    def __init__(self):
+        self.id = None
+        self.name = None
+        self.pid = None
+        self.thread_id = None
+        self.object_id = None
+        self.is_active = None
+        self.sub_keys = None
+        self.topics = None
+        self.messages = None
+
+        self.last_sync = None
+        self.last_sync_utc = None
+
+        self.last_delivery = None
+        self.last_delivery_utc = None
+
+# ################################################################################################################################
+
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'search-solr'
-    template = 'zato/search/solr.html'
-    service_name = 'zato.search.solr.get-list'
-    output_class = Solr
+    url_name = 'pubsub-task-delivery-server'
+    template = 'zato/pubsub/task/delivery-server.html'
+    service_name = 'pubsub.task.delivery-server.get-list'
+    output_class = DeliveryServer
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'address', 'timeout', 'ping_path', 'options', 'pool_size')
+        output_required = ('name', 'pid', 'thread_id', 'object_id', 'is_active', 'sub_keys', 'topics', 'messages', 'id')
+        output_optional = ('last_sync', 'last_sync_utc', 'last_delivery', 'last_delivery_utc')
         output_repeated = True
+
+    def handle_return_data(self, return_data):
+
+        for item in return_data['items']:
+
+            item.id = fs_safe_name('{}-{}-{}'.format(item.name, item.pid, item.object_id))
+
+            if item.last_sync:
+                item.last_sync_utc = item.last_sync
+                item.last_sync = from_utc_to_user(item.last_sync_utc + '+00:00', self.req.zato.user_profile)
+
+            if item.last_delivery:
+                item.last_delivery_utc = item.last_delivery
+                item.last_delivery = from_utc_to_user(item.last_delivery_utc + '+00:00', self.req.zato.user_profile)
+
+        return return_data
 
     def handle(self):
         return {}
 
-class _CreateEdit(CreateEdit):
-    method_allowed = 'POST'
-
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'address', 'timeout', 'ping_path', 'options', 'pool_size')
-        output_required = ('id', 'name')
-
-    def success_message(self, item):
-        return 'Successfully {} the Solr connection [{}]'.format(self.verb, item.name)
-
-class Delete(_Delete):
-    url_name = 'search-solr-delete'
-    error_msolrsage = 'Could not delete the Solr connection'
-    service_name = 'zato.search.solr.delete'
+# ################################################################################################################################
 
 @method_allowed('POST')
-def ping(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.search.solr.ping', id, 'Could not ping the Solr connection, e:`{}`')
-    if isinstance(ret, HttpResponseServerError):
-        return ret
-    return HttpResponse(ret.data.info)
+def clear_messages(req, id, cluster_id):
+    return id_only_service(req, 'pubsub.task.delivery-server.clear-messages', id, 'Could not clear messages, e:`{}`')
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def toggle_active(req, id, cluster_id):
+    return id_only_service(req, 'pubsub.task.delivery-server.toggle-active', id, 'Could not toggle server\'s active flag, e:`{}`')
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def toggle_active(req, server_name, server_pid, cluster_id):
+    pass
+
+# ################################################################################################################################
