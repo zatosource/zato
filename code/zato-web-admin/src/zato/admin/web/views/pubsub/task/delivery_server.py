@@ -31,9 +31,7 @@ class DeliveryServer(object):
         self.id = None
         self.name = None
         self.pid = None
-        self.thread_id = None
-        self.object_id = None
-        self.is_active = None
+        self.tasks = None
         self.sub_keys = None
         self.topics = None
         self.messages = None
@@ -56,7 +54,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('name', 'pid', 'thread_id', 'object_id', 'is_active', 'sub_keys', 'topics', 'messages', 'id')
+        output_required = ('name', 'pid', 'tasks', 'sub_keys', 'topics', 'messages', 'id')
         output_optional = ('last_sync', 'last_sync_utc', 'last_delivery', 'last_delivery_utc')
         output_repeated = True
 
@@ -64,7 +62,7 @@ class Index(_Index):
 
         for item in return_data['items']:
 
-            item.id = fs_safe_name('{}-{}-{}'.format(item.name, item.pid, item.object_id))
+            item.id = fs_safe_name('{}-{}'.format(item.name, item.pid))
 
             if item.last_sync:
                 item.last_sync_utc = item.last_sync
@@ -78,23 +76,5 @@ class Index(_Index):
 
     def handle(self):
         return {}
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def clear_messages(req, id, cluster_id):
-    return id_only_service(req, 'pubsub.task.delivery-server.clear-messages', id, 'Could not clear messages, e:`{}`')
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def toggle_active(req, id, cluster_id):
-    return id_only_service(req, 'pubsub.task.delivery-server.toggle-active', id, 'Could not toggle server\'s active flag, e:`{}`')
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def toggle_active(req, server_name, server_pid, cluster_id):
-    pass
 
 # ################################################################################################################################
