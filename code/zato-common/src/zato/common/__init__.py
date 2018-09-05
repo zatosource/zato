@@ -845,11 +845,11 @@ class PUBSUB:
         INTERNAL = NameId('Internal', 'internal')
         REST = NameId('REST', 'rest')
         SERVICE = NameId('Service', 'service')
-        SMS_TWILIO = NameId('SMS - Twilio', 'sms_twilio')
+        SMS_TWILIO = NameId('SMS - Twilio', 'smstw')
         SMTP = NameId('SMTP', 'smtp')
         SOAP = NameId('SOAP', 'soap')
         SQL = NameId('SQL', 'sql')
-        WEB_SOCKETS = NameId('WebSockets', 'websockets')
+        WEB_SOCKETS = NameId('WebSockets', 'wsx')
 
         class __metaclass__(type):
             def __iter__(self):
