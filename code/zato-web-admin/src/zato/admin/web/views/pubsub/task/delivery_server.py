@@ -32,9 +32,13 @@ class DeliveryServer(object):
         self.name = None
         self.pid = None
         self.tasks = None
+        self.tasks_running = None
+        self.tasks_stopped = None
         self.sub_keys = None
         self.topics = None
         self.messages = None
+        self.messages_gd = None
+        self.messages_non_gd = None
 
         self.last_sync = None
         self.last_sync_utc = None
@@ -54,7 +58,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('name', 'pid', 'tasks', 'sub_keys', 'topics', 'messages', 'id')
+        output_required = ('id', 'name', 'pid', 'tasks', 'tasks_running', 'tasks_stopped', 'sub_keys', 'topics',
+            'messages', 'messages_gd', 'messages_non_gd')
         output_optional = ('last_sync', 'last_sync_utc', 'last_delivery', 'last_delivery_utc')
         output_repeated = True
 
