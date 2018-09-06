@@ -25,6 +25,8 @@
             'pid',
 
             '_tasks',
+            '_sub_keys',
+            '_topics',
             '_messages',
 
             'last_sync',
@@ -60,6 +62,9 @@
                         <th><a href="#">Server PID</a></th>
 
                         <th><a href="#">Tasks</a></th>
+                        <th><a href="#">Subscriptions</a></th>
+                        <th><a href="#">Topics</a></th>
+
                         <th><a href="#">Messages</a></th>
 
                         <th><a href="#">Last sync</a></th>
@@ -79,11 +84,19 @@
                         <td>
                             {% if item.tasks %}
                                 <a href="{% url "pubsub-task" item.name item.pid cluster_id %}">{{ item.tasks }}</a>
+                                ({{ item.tasks_running }}/{{ item.tasks_stopped }})
                             {% else %}
                                 <span class='form_hint'>---</span>
                             {% endif %}
                         </td>
-                        <td>{{ item.messages }}</td>
+
+                        <td>{{ item.sub_keys }}</td>
+                        <td>{{ item.topics }}</td>
+
+                        <td>
+                            {{ item.messages }}
+                            ({{ item.messages_gd }}/{{ item.messages_non_gd }})
+                        </td>
 
                         <td style="min-width:170px">
                             {% if item.last_sync %}

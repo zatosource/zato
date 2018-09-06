@@ -970,6 +970,12 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
+    def get_delivery_tasks(self):
+        with self.lock:
+            return self.delivery_tasks.values()
+
+# ################################################################################################################################
+
     def delete_messages(self, sub_key, msg_list):
         """ Marks one or more to be deleted from the delivery task by the latter's sub_key.
         """

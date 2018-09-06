@@ -22,12 +22,10 @@
             '_selection',
 
             'sub_key',
-            'thread_id',
-            'object_id',
-
             '_topic',
             '_messages',
 
+            'thread_id',
             'last_sync',
             'last_delivery',
 
@@ -65,12 +63,11 @@
                         <th>&nbsp;</th>
 
                         <th><a href="#">Sub key</a></th>
-                        <th><a href="#">Thread</a></th>
-                        <th><a href="#">Object</a></th>
-
                         <th><a href="#">Queue</a></th>
+
                         <th><a href="#">Messages</a></th>
 
+                        <th><a href="#">Thread</a></th>
                         <th><a href="#">Last sync</a></th>
                         <th><a href="#">Last delivery</a></th>
 
@@ -92,8 +89,6 @@
                         <td>
                             <a href="#">{{ item.sub_key }}</a>
                         </td>
-                        <td>{{ item.thread_id }}</td>
-                        <td>{{ item.object_id }}</td>
 
                         <td>
                             <a href="#">{{ item.topic_name }}/customer/new/updates</a>
@@ -103,6 +98,7 @@
                             <a href="#">{{ item.messages }}</a>
                         </td>
 
+                        <td>{{ item.thread_id }}</td>
                         <td style="min-width:170px">
                             {% if item.last_sync %}
                                 <a
@@ -113,7 +109,6 @@
                                 <span class='form_hint'>---</span>
                             {% endif %}
                         </td>
-
                         <td style="min-width:170px">
                             {% if item.last_delivery %}
                                 <a
