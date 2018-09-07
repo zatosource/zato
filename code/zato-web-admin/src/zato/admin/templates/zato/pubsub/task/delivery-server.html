@@ -29,8 +29,8 @@
             '_topics',
             '_messages',
 
-            'last_sync',
-            'last_delivery',
+            '_last_gd_run',
+            '_last_task_run',
 
         ]
     }
@@ -67,8 +67,8 @@
 
                         <th><a href="#">Messages</a></th>
 
-                        <th><a href="#">Last sync</a></th>
-                        <th><a href="#">Last delivery</a></th>
+                        <th><a href="#">Last GD run</a></th>
+                        <th><a href="#">Last task run</a></th>
 
                 </thead>
 
@@ -98,22 +98,22 @@
                             ({{ item.messages_gd }}/{{ item.messages_non_gd }})
                         </td>
 
-                        <td style="min-width:170px">
-                            {% if item.last_sync %}
+                        <td style="min-width:164px">
+                            {% if item.last_gd_run %}
                                 <a
-                                    id="a_last_sync_{{ item.id }}"
-                                    href="javascript:$.fn.zato.toggle_time('last_sync_{{ item.id }}', '{{ item.last_sync }}', '{{ item.last_sync_utc }}')">{{ item.last_sync }}
+                                    id="a_last_gd_run_{{ item.id }}"
+                                    href="javascript:$.fn.zato.toggle_time('last_gd_run_{{ item.id }}', '{{ item.last_gd_run_utc }}', '{{ item.last_gd_run }}')">{{ item.last_gd_run_utc }}
                                 </a>
                             {% else %}
                                 <span class='form_hint'>---</span>
                             {% endif %}
                         </td>
 
-                        <td style="min-width:170px">
-                            {% if item.last_delivery %}
+                        <td style="min-width:164px">
+                            {% if item.last_task_run %}
                                 <a
-                                    id="a_last_delivery_{{ item.id }}"
-                                    href="javascript:$.fn.zato.toggle_time('last_delivery_{{ item.id }}', '{{ item.last_delivery }}', '{{ item.last_delivery_utc }}')">{{ item.last_delivery }}
+                                    id="a_last_task_run_{{ item.id }}"
+                                    href="javascript:$.fn.zato.toggle_time('last_task_run_{{ item.id }}', '{{ item.last_task_run_utc }}', '{{ item.last_task_run }}')">{{ item.last_task_run_utc }}
                                 </a>
                             {% else %}
                                 <span class='form_hint'>---</span>
