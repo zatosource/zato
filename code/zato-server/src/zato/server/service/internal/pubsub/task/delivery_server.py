@@ -17,13 +17,14 @@ from bunch import bunchify
 # Zato
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, Server, WebSocketClient, WebSocketClientPubSubKeys, \
      WebSocketSubscription
-from zato.server.service import AsIs
+from zato.common.util.time_ import datetime_from_ms
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
 _summary_delivery_server_sio = ('tasks', 'tasks_running', 'tasks_stopped', 'sub_keys', 'topics',
-    'messages', 'messages_gd', 'messages_non_gd', 'last_sync', 'last_delivery')
+    'messages', 'messages_gd', 'messages_non_gd', Int('msg_handler_counter'), 'last_gd_run', 'last_task_run')
 
 # ################################################################################################################################
 
@@ -63,17 +64,22 @@ class GetDeliveryServerDetailsNonWSX(AdminService):
         total_sub_keys = 0
         topics_seen = set()
 
-        max_last_sync = ''
-        max_last_delivery = ''
+        max_last_gd_run = 0
+        max_last_task_run = 0
 
         for item in self.pubsub.pubsub_tools:
+
             total_tasks += len(item.delivery_tasks)
             total_sub_keys += len(item.sub_keys)
 
+            max_last_gd_run = max(max_last_gd_run, max(item.last_gd_run.values()))
+
             for task in item.get_delivery_tasks():
+
+                max_last_task_run = max(max_last_task_run, task.last_run)
                 topics_seen.add(task.topic_name)
 
-                if task.keep_running:
+                if task.is_running():
                     tasks_running += 1
                 else:
                     tasks_stopped += 1
@@ -97,8 +103,14 @@ class GetDeliveryServerDetailsNonWSX(AdminService):
         self.response.payload.topics = len(topics_seen)
         self.response.payload.sub_keys = total_sub_keys
 
-        self.response.payload.last_sync = max_last_sync
-        self.response.payload.last_delivery = max_last_delivery
+        if max_last_gd_run:
+            max_last_gd_run = datetime_from_ms(max_last_gd_run * 1000)
+
+        if max_last_task_run:
+            max_last_task_run = datetime_from_ms(max_last_task_run * 1000)
+
+        self.response.payload.last_gd_run = max_last_gd_run
+        self.response.payload.last_task_run = max_last_task_run
 
 # ################################################################################################################################
 
@@ -140,6 +152,10 @@ class DeliveryServerGetList(AdminService):
 
                     pid_response = bunchify(self.servers[server_name].invoke(GetDeliveryServerDetailsNonWSX.name, pid=pid))
 
+                    print()
+                    print(111, pid_response)
+                    print()
+
                     # A summary of each PID's current pub/sub activities
                     pid_data = bunchify({
                         'name': server_name,
@@ -152,8 +168,9 @@ class DeliveryServerGetList(AdminService):
                         'messages': pid_response.messages,
                         'messages_gd': pid_response.messages_gd,
                         'messages_non_gd': pid_response.messages_non_gd,
-                        'last_sync': pid_response.last_sync,
-                        'last_delivery': pid_response.last_delivery,
+                        'msg_handler_counter': pid_response.msg_handler_counter,
+                        'last_gd_run': pid_response.last_gd_run,
+                        'last_task_run': pid_response.last_task_run,
                     })
 
                 # OK, we can append data about this PID now

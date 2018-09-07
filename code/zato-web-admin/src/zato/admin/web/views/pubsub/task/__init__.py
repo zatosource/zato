@@ -38,7 +38,7 @@ class DeliveryTask(object):
         self.topics = None
         self.messages = None
 
-        self.last_sync = None
+        self.last_gd_run = None
         self.last_sync_utc = None
 
         self.last_delivery = None
@@ -58,7 +58,7 @@ class Index(_Index):
         input_required = ('cluster_id',)
         output_required = ('id', 'server_name', 'server_pid', 'thread_id', 'object_id', 'sub_key', 'topic_id', 'topic_name',
             'messages', 'ext_client_id')
-        output_optional = ('last_sync', 'last_sync_utc', 'last_delivery', 'last_delivery_utc')
+        output_optional = ('last_gd_run', 'last_gd_run_utc', 'last_delivery', 'last_delivery_utc')
         output_repeated = True
 
     def handle_return_data(self, return_data):
@@ -67,9 +67,9 @@ class Index(_Index):
 
             item.id = fs_safe_name('{}-{}'.format(item.thread_id, item.object_id))
 
-            if item.last_sync:
-                item.last_sync_utc = item.last_sync
-                item.last_sync = from_utc_to_user(item.last_sync_utc + '+00:00', self.req.zato.user_profile)
+            if item.last_gd_run:
+                item.last_gd_run_utc = item.last_gd_run
+                item.last_gd_run = from_utc_to_user(item.last_gd_run_utc + '+00:00', self.req.zato.user_profile)
 
             if item.last_delivery:
                 item.last_delivery_utc = item.last_delivery

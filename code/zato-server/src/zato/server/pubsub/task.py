@@ -116,6 +116,11 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
+    def is_running(self):
+        return self.keep_running
+
+# ################################################################################################################################
+
     def _delete_messages(self, to_delete):
         """ Actually deletes messages - must be called with self.interrupt_lock held.
         """
