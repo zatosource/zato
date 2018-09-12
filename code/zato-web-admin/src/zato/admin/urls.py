@@ -1268,7 +1268,7 @@ urlpatterns += [
     url(r'^zato/pubsub/message/publish/cluster/(?P<cluster_id>.*)/topic/(?P<topic_id>.*)$',
         login_required(pubsub_message.publish), name='pubsub-message-publish'),
 
-    # Selivery servers
+    # Delivery servers
 
     url(r'^zato/pubsub/task/delivery-server/$',
         login_required(pubsub_task_delivery_server.Index()), name=pubsub_task_delivery_server.Index.url_name),
