@@ -55,11 +55,14 @@ class Index(_Index):
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
+        input_required = ('cluster_id', 'server_name', 'server_pid')
         output_required = ('id', 'server_name', 'server_pid', 'thread_id', 'object_id', 'sub_key', 'topic_id', 'topic_name',
             'messages', 'ext_client_id')
         output_optional = ('last_gd_run', 'last_gd_run_utc', 'last_delivery', 'last_delivery_utc')
         output_repeated = True
+
+    def get_initial_input(self):
+        return {'server_pid':self.input.server_pid}
 
     def handle_return_data(self, return_data):
 
