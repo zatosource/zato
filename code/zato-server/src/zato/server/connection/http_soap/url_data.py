@@ -433,16 +433,16 @@ class URLData(CyURLData, OAuthDataStore):
 
         # API key
         if _headers.TOKEN_VAULT in wsgi_environ:
-            return client.authenticate(_auth_method.TOKEN, wsgi_environ[_headers.TOKEN_VAULT])
+            return client.authenticate(_auth_method.TOKEN.id, wsgi_environ[_headers.TOKEN_VAULT])
 
         # Username/password
         elif _headers.USERNAME in wsgi_environ:
             return client.authenticate(
-                _auth_method.USERNAME_PASSWORD, wsgi_environ[_headers.USERNAME], wsgi_environ.get(_headers.PASSWORD))
+                _auth_method.USERNAME_PASSWORD.id, wsgi_environ[_headers.USERNAME], wsgi_environ.get(_headers.PASSWORD))
 
         # GitHub
         elif _headers.TOKEN_GH in wsgi_environ:
-            return client.authenticate(_auth_method.GITHUB, wsgi_environ[_headers.TOKEN_GH])
+            return client.authenticate(_auth_method.GITHUB.id, wsgi_environ[_headers.TOKEN_GH])
 
 # ################################################################################################################################
 
