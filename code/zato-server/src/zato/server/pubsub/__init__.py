@@ -1945,7 +1945,7 @@ class PubSub(object):
 
             # All set, we can carry on with other steps now
             sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
-            wsgi_environ = service.wsgi_environ
+            wsgi_environ = service.wsgi_environ or kwargs.get('wsgi_environ')
 
         # .. this is a subscription for any client that is not WebSockets-based
         else:
