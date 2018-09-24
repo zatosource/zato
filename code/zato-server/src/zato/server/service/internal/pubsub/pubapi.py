@@ -238,15 +238,19 @@ class SubscribeService(PubSubService):
                 sub_key, self.pubsub.get_endpoint_by_id(endpoint_id).name)
             raise Forbidden(self.cid)
         else:
+            # Raise an exception if current endpoint is not the one that created the subscription originally,
+            # but only if current endpoint is not the default internal one; in such a case we want to let
+            # the call succeed - this lets other services use self.invoke in order to unsubscribe.
             if sub.endpoint_id != endpoint_id:
-                sub_endpoint = self.pubsub.get_endpoint_by_id(sub.endpoint_id)
-                self_endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
-                self.logger.warn('Endpoint `%s` cannot unsubscribe sk:`%s` (%s) created by `%s`',
-                    self_endpoint.name, sub_key, self.pubsub.get_topic_by_sub_key(sub_key).name, sub_endpoint.name)
-                raise Forbidden(self.cid)
+                if endpoint_id != self.server.default_internal_pubsub_endpoint_id:
+                    sub_endpoint = self.pubsub.get_endpoint_by_id(sub.endpoint_id)
+                    self_endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
+                    self.logger.warn('Endpoint `%s` cannot unsubscribe sk:`%s` (%s) created by `%s`',
+                        self_endpoint.name, sub_key, self.pubsub.get_topic_by_sub_key(sub_key).name, sub_endpoint.name)
+                    raise Forbidden(self.cid)
 
         # We have all permissions checked now and can proceed to the actual call
-        self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
+        self.response.payload = self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
             'cluster_id': self.server.cluster_id,
             'sub_key': sub_key
         })
