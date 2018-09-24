@@ -8,6 +8,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Zato
+from zato.common import PUBSUB as COMMON_PUBSUB
+from zato.common.util.time_ import datetime_from_ms
+
 # ################################################################################################################################
 
 def make_short_msg_copy_from_dict(msg, data_prefix_len, data_prefix_short_len):
@@ -59,5 +63,13 @@ def make_short_msg_copy_from_msg(msg, data_prefix_len, data_prefix_short_len):
     out_msg['recv_time'] = msg.recv_time
     out_msg['sub_key'] = msg.sub_key
     return out_msg
+
+# ################################################################################################################################
+
+def get_last_pub_data(conn, cluster_id, topic_id, _topic_key=COMMON_PUBSUB.REDIS.META_TOPIC_LAST_KEY):
+    last_data = conn.hgetall(_topic_key % (cluster_id, topic_id))
+    if last_data:
+        last_data['pub_time'] = datetime_from_ms(float(last_data['pub_time']) * 1000)
+        return last_data
 
 # ################################################################################################################################
