@@ -12,12 +12,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 
 # Zato
-from zato.common import PUBSUB as COMMON_PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic, get_topics_by_sub_keys
 from zato.common.util import ensure_pubsub_hook_is_valid
+from zato.common.util.pubsub import get_last_pub_data
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Bool, Dict, Int, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -53,14 +53,6 @@ def broker_message_hook(self, input, instance, attrs, service_type):
             topic = pubsub_topic(session, input.cluster_id, instance.id)
             input.is_internal = topic.is_internal
             input.hook_service_name = topic.hook_service_name
-
-# ################################################################################################################################
-
-def get_last_pub_data(conn, cluster_id, topic_id, _topic_key=COMMON_PUBSUB.REDIS.META_TOPIC_LAST_KEY):
-    last_data = conn.hgetall(_topic_key % (cluster_id, topic_id))
-    if last_data:
-        last_data['pub_time'] = datetime_from_ms(float(last_data['pub_time']) * 1000)
-        return last_data
 
 # ################################################################################################################################
 
