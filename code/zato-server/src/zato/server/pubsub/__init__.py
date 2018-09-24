@@ -260,8 +260,10 @@ class Subscription(object):
     def __init__(self, config):
         self.config = config
         self.id = config.id
+        self.creation_time = config.creation_time * 1000.0
         self.sub_key = config.sub_key
         self.endpoint_id = config.endpoint_id
+        self.topic_id = config.topic_id
         self.topic_name = config.topic_name
         self.sub_pattern_matched = config.sub_pattern_matched
         self.task_delivery_interval = config.task_delivery_interval
