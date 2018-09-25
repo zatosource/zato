@@ -67,12 +67,12 @@ class CommonSubData:
     sms_twilio = ('sms_twilio_from', 'sms_twilio_to_list')
     smtp = (Bool('smtp_is_html'), 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body')
     soap = ('out_soap_http_soap_id', 'soap_delivery_endpoint')
-    websockets = ('ws_channel_id', 'ws_channel_name', AsIs('ws_pub_client_id'), 'sql_ws_client_id',
+    wsx = ('ws_channel_id', 'ws_channel_name', AsIs('ws_pub_client_id'), 'sql_ws_client_id', Bool('unsub_on_wsx_close'),
         Opaque('web_socket'))
 
 common_sub_data = CommonSubData.common + CommonSubData.amqp + CommonSubData.files + \
     CommonSubData.ftp + CommonSubData.rest + CommonSubData.service + \
-    CommonSubData.sms_twilio + CommonSubData.smtp + CommonSubData.soap + CommonSubData.websockets + CommonSubData.pubapi
+    CommonSubData.sms_twilio + CommonSubData.smtp + CommonSubData.soap + CommonSubData.wsx + CommonSubData.pubapi
 
 # ################################################################################################################################
 
