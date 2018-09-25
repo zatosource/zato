@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import datetime
 import logging
 from copy import deepcopy
 from traceback import format_exc
@@ -64,10 +65,13 @@ class ForceType(object):
         self.serialize_dispatch = {
             (False, DATA_FORMAT.JSON): self.from_json,
             (False, DATA_FORMAT.DICT): self.from_json,
+            (False, DATA_FORMAT.DICT): self.from_json,
+            (False, ''): self.from_json,
             (False, DATA_FORMAT.XML): self.from_xml,
 
             (True, DATA_FORMAT.JSON): self.to_json,
             (True, DATA_FORMAT.DICT): self.to_json,
+            (True, ''): self.to_json,
             (True, DATA_FORMAT.XML): self.to_xml,
         }
 
@@ -304,6 +308,38 @@ class UTC(ForceType):
     """
     def from_json(self, value, *ignored):
         return value.replace('+00:00', '')
+
+    from_xml = to_json = to_xml = from_json
+
+# ################################################################################################################################
+
+class Date(ForceType):
+    """ Serializes an object to a date string if it is not a string already.
+    """
+    def __init__(self, name, format='%Y-%m-%d', *args, **kwargs):
+        super(Date, self).__init__(name, format=format, *args, **kwargs)
+
+    def from_json(self, value, _stdlib_date=datetime.date, *ignored):
+        return value.strftime(self.kwargs['format']) if isinstance(value, _stdlib_date) else value
+
+    from_xml = to_json = to_xml = from_json
+
+# ################################################################################################################################
+
+class DateTime(ForceType):
+    """ Serializes an object to a datetime string if it is not a string already.
+    """
+    def __init__(self, name, format='iso', *args, **kwargs):
+        super(DateTime, self).__init__(name, format=format, *args, **kwargs)
+
+    def from_json(self, value, *ignored):
+        if isinstance(value, datetime.datetime):
+            if self.kwargs['format'] == 'iso':
+                return value.isoformat()
+            else:
+                return value.strftime(self.kwargs['format'])
+        else:
+            return value
 
     from_xml = to_json = to_xml = from_json
 
