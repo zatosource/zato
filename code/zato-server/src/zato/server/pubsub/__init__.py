@@ -267,6 +267,7 @@ class Subscription(object):
         self.topic_name = config.topic_name
         self.sub_pattern_matched = config.sub_pattern_matched
         self.task_delivery_interval = config.task_delivery_interval
+        self.unsub_on_wsx_close = config.get('unsub_on_wsx_close')
 
     def __repr__(self):
         return make_repr(self)
@@ -1948,6 +1949,7 @@ class PubSub(object):
             # All set, we can carry on with other steps now
             sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
             wsgi_environ = service.wsgi_environ or kwargs.get('wsgi_environ')
+            wsgi_environ['zato.request_ctx.pubsub.unsub_on_wsx_close'] = kwargs.get('unsub_on_wsx_close')
 
         # .. this is a subscription for any client that is not WebSockets-based
         else:
