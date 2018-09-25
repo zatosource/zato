@@ -317,7 +317,7 @@ class SimpleIOPayload(SIOConverter):
         if isinstance(attrs, _keyed):
             names = attrs.keys()
         elif self._is_sqlalchemy(attrs):
-            names = attrs._sa_class_manager.keys()
+            names = [elem[0] for elem in attrs._sa_class_manager._all_sqla_attributes()]
 
         if not names:
             raise Exception('Could not get keys out of attrs:`{}`'.format(attrs))
