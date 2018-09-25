@@ -205,6 +205,7 @@ class SubCtxWebSockets(SubCtx):
         self.ws_channel_name = None
         self.ws_pub_client_id = None
         self.sql_ws_client_id = None
+        self.unsub_on_wsx_close = None
         self.web_socket = None # type: WebSocket
 
 # ################################################################################################################################
@@ -357,6 +358,7 @@ class SubscribeServiceImpl(_Subscribe):
                 sub_config.task_delivery_interval = ctx.topic.task_delivery_interval
                 sub_config.endpoint_name = endpoint.name
                 sub_config.endpoint_type = self.endpoint_type
+                sub_config.unsub_on_wsx_close = ctx.unsub_on_wsx_close
 
                 for name in sub_broker_attrs:
                     sub_config[name] = getattr(ps_sub, name, None)
@@ -553,6 +555,7 @@ class CreateWSXSubscription(AdminService):
         topic_name = self.request.input.topic_name
         topic_name_list = set(self.request.input.topic_name_list)
         async_msg = self.wsgi_environ['zato.request_ctx.async_msg']
+        unsub_on_wsx_close = async_msg['wsgi_environ'].get('zato.request_ctx.pubsub.unsub_on_wsx_close')
 
         # This will exist if are being invoked directly ..
         environ = async_msg.get('environ')
@@ -593,6 +596,7 @@ class CreateWSXSubscription(AdminService):
                 'ws_pub_client_id': environ['pub_client_id'],
                 'ws_channel_name': environ['ws_channel_config']['name'],
                 'sql_ws_client_id': environ['sql_ws_client_id'],
+                'unsub_on_wsx_close': unsub_on_wsx_close,
                 'web_socket': environ['web_socket'],
             })['response']
 
