@@ -49,13 +49,15 @@ from zato.server.pubsub import PubSub
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request, Response, WebSphereMQRequestData
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
-from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, Float, ForceType, Integer, List, ListOfDicts, Nested, \
-     Opaque, Unicode, UTC
+from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Date, DateTime, Dict, Float, ForceType, Integer, List, \
+     ListOfDicts, Nested, Opaque, Unicode, UTC
 
 # So pyflakes doesn't complain about names being imported but not used
 AsIs = AsIs
 CSV = CSV
 Boolean = Boolean
+Date = Date
+DateTime = DateTime
 Dict = Dict
 Float = Float
 ForceType = ForceType
