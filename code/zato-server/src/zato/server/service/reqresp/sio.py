@@ -319,8 +319,8 @@ class Date(ForceType):
     def __init__(self, name, format='%Y-%m-%d', *args, **kwargs):
         super(Date, self).__init__(name, format=format, *args, **kwargs)
 
-    def from_json(self, value, _stdlib_date=datetime.date, *ignored):
-        return value.strftime(self.kwargs['format']) if isinstance(value, _stdlib_date) else value
+    def from_json(self, value, *ignored):
+        return value.strftime(self.kwargs['format']) if isinstance(value, datetime.date) else value
 
     from_xml = to_json = to_xml = from_json
 
