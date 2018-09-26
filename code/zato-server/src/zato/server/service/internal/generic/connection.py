@@ -107,7 +107,8 @@ class GetList(AdminService):
     _filter_by = GenericConnection.name,
 
     class SimpleIO(GetListAdminSIO):
-        input_required = ('cluster_id', 'type_')
+        input_required = ('cluster_id',)
+        input_optional = GetListAdminSIO.input_optional + ('type_',)
 
 # ################################################################################################################################
 
