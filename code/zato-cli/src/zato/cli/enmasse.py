@@ -939,7 +939,14 @@ class ObjectManager(object):
             return
 
         self.objects[service_info.name] = []
-        for item in map(Bunch, response.data):
+
+        # Generic connections' GetList includes metadata in responses so we need to dig into actual data
+        if '_meta' in response.data:
+            data = response.data['response']
+        else:
+            data = response.data
+
+        for item in map(Bunch, data):
             if any(getattr(item, key, None) == value
                    for key, value in service_info.export_filter.items()):
                 continue
