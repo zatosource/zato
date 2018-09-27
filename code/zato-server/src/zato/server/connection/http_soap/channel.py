@@ -370,30 +370,37 @@ class RequestHandler(object):
 
 # ################################################################################################################################
 
+    def _get_flattened(self, params):
+        """ Returns a QueryDict of parameters with single-element lists unwrapped to point to the sole element directly.
+        """
+        if params:
+            params = QueryDict(params, encoding='utf-8')
+            out = {}
+            for key, value in params.iterlists():
+                if len(value) > 1:
+                    out[key] = value
+                else:
+                    out[key] = value[0]
+        else:
+            out = {}
+
+        return out
+
+# ################################################################################################################################
+
     def create_channel_params(self, path_params, channel_item, wsgi_environ, raw_request, post_data=None, _has_debug=_has_debug):
         """ Collects parameters specific to this channel (HTTP) and updates wsgi_environ
         with HTTP-specific data.
         """
-        qs = wsgi_environ.get('QUERY_STRING')
-        if qs:
-            qs = QueryDict(qs, encoding='utf-8')
-            _qs = {}
-            for key, value in qs.iterlists():
-                if len(value) > 1:
-                    _qs[key] = value
-                else:
-                    _qs[key] = value[0]
-        else:
-            _qs = {}
+        _qs = self._get_flattened(wsgi_environ.get('QUERY_STRING'))
 
         # Whoever called us has already parsed POST for us so we just use it as is
         if post_data:
             post = post_data
         else:
-            if channel_item.data_format == DATA_FORMAT.POST:
-                post = QueryDict(raw_request, encoding='utf-8')
-            else:
-                post = QueryDict(None, encoding='utf-8')
+            # We cannot parse incoming data if we know for sure that an explicit
+            # data format was set for channel.
+            post = self._get_flattened(raw_request) if not channel_item.data_format else {}
 
         if channel_item.url_params_pri == URL_PARAMS_PRIORITY.QS_OVER_PATH:
             if _qs:
