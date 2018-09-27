@@ -250,18 +250,29 @@ user={}
 
     def __init__(self, *args, **kwargs):
         super(FCNTLLock, self).__init__(*args, **kwargs)
+        self.tmp_file_name = None
         self.tmp_file = None
 
-    def _acquire_impl(self, _flags=LOCK_EX | LOCK_NB, tmp_dir=gettempdir(), _utcnow=datetime.utcnow):
+    def _acquire_impl(self, _flags=LOCK_EX | LOCK_NB, tmp_dir=gettempdir(), _utcnow=datetime.utcnow, _has_debug=has_debug):
 
         current = current_thread()
 
-        self.tmp_file = open(os.path.join(tmp_dir, 'zato-lock-{}'.format(self.pub_id)), 'w+b')
-        self.tmp_file.write(
-            self.lock_template.format(
-                os.getpid(), current.name, current.ident, _utcnow().isoformat(), self.os_user_name,
-            ))
+        self.tmp_file_name = os.path.join(tmp_dir, 'zato-lock-{}'.format(self.pub_id))
+        self.tmp_file = open(self.tmp_file_name, 'w+b')
+
+        pid = os.getpid()
+        current_name = current.name
+        current_ident = current.ident
+
+        contents = self.lock_template.format(
+                pid, current_name, current_ident, _utcnow().isoformat(), self.os_user_name,
+            )
+
+        self.tmp_file.write(contents)
         self.tmp_file.flush()
+
+        if _has_debug:
+            logger.debug('Created lock file `%s` (%s %s %s)', self.tmp_file_name, pid, current_name, current_ident)
 
         try:
             lock(self.tmp_file, _flags)
@@ -271,20 +282,31 @@ user={}
             return True
 
     def release(self, _has_debug=has_debug):
-        unlock(self.tmp_file)
-        self.tmp_file.close()
 
-        try:
-            os.remove(self.tmp_file.name)
-        except OSError, e:
+        if not self.tmp_file.closed:
 
-            # ENOENT = No such file, this is fine, apparently another process beat us to that lock's deletion.
-            # But any other exception needs to be re-raised.
-            if e.errno != ENOENT:
-                raise
+            logger.debug('About to unlock file %s', self.tmp_file_name)
 
-        if _has_debug:
-            logger.debug('Unlocked `%s`', self.tmp_file)
+            unlock(self.tmp_file)
+            self.tmp_file.close()
+
+            if _has_debug:
+                logger.debug('Unlocked file %s', self.tmp_file_name)
+
+            try:
+                os.remove(self.tmp_file.name)
+            except OSError, e:
+
+                # ENOENT = No such file, this is fine, apparently another process beat us to that lock's deletion.
+                # But any other exception needs to be re-raised.
+                if e.errno != ENOENT:
+                    raise
+            else:
+                if _has_debug:
+                    logger.debug('Deleted lock file %s', self.tmp_file_name)
+
+            if _has_debug:
+                logger.debug('Unlocked `%s`', self.tmp_file)
 
 # ################################################################################################################################
 
