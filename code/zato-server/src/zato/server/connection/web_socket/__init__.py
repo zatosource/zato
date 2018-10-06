@@ -565,8 +565,8 @@ class WebSocket(_WebSocket):
     def run(self):
         try:
             super(WebSocket, self).run()
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn('Exception in WebSocket.run `%s`', format_exc())
 
 # ################################################################################################################################
 
