@@ -369,7 +369,18 @@ class Publish(AdminService):
 
         # Just so it is not overlooked, log information that no subscribers are found for this topic
         if not ctx.subscriptions_by_topic:
-            self.logger.warn('No subscribers found for topic `%s` (cid:%s, re-run:%s)', ctx.topic.name, self.cid, ctx.is_re_run)
+
+            log_msg = 'No subscribers found for topic `%s` (cid:%s, re-run:%s)'
+            log_msg_drop = 'Dropping messages. ' + log_msg
+            log_msg_args = ctx.topic.name, self.cid, ctx.is_re_run
+
+            # There are no subscribers and depending on configuration we are to drop messages
+            # for whom no one is waiting or continue and place them in the topic directly.
+            if ctx.topic.config.get('on_no_subs_pub') == PUBSUB.ON_NO_SUBS_PUB.DROP.id:
+                self.logger.info(log_msg_drop, *log_msg_args)
+                return
+            else:
+                self.logger.warn(log_msg, *log_msg_args)
 
         # Local aliases
         has_pubsub_audit_log = self.server.has_pubsub_audit_log

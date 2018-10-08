@@ -757,6 +757,10 @@ class PUBSUB:
             def __iter__(self):
                 return iter((self.PRIORITY, self.EXT_PUB_TIME, self.PUB_TIME))
 
+    class ON_NO_SUBS_PUB:
+        ACCEPT = NameId('Accept', 'accept')
+        DROP = NameId('Drop', 'drop')
+
     class DEFAULT:
         DATA_FORMAT = 'text'
         MIME_TYPE = 'text/plain'
@@ -773,6 +777,7 @@ class PUBSUB:
         WAIT_TIME_SOCKET_ERROR = 10
         WAIT_TIME_NON_SOCKET_ERROR = 30
         INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
+        ON_NO_SUBS_PUB = 'accept'
 
     class QUEUE_TYPE:
         STAGING = 'staging'
@@ -1064,10 +1069,10 @@ class SERVER_STARTUP:
         AFTER_STARTED = 'after-started'
 
 class GENERIC:
-    class CONNECTION:
 
-        # Under which SQL column all the opaque data is currently kept - may be changed across releases
-        ATTR_NAME = 'opaque1'
+    ATTR_NAME = 'opaque1'
+
+    class CONNECTION:
 
         class TYPE:
             OUTCONN_WSX = 'outconn-wsx'

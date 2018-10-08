@@ -85,7 +85,7 @@ class GenericConnection(object):
     def from_model(data):
         instance = GenericConnection()
 
-        opaque_value = getattr(data, GENERIC.CONNECTION.ATTR_NAME, None)
+        opaque_value = getattr(data, GENERIC.ATTR_NAME, None)
         if opaque_value:
             instance.opaque.update(loads(opaque_value))
 
@@ -108,7 +108,7 @@ class GenericConnection(object):
             if name != 'opaque':
                 out[name] = getattr(self, name)
             else:
-                out[GENERIC.CONNECTION.ATTR_NAME] = dumps(self.opaque)
+                out[GENERIC.ATTR_NAME] = dumps(self.opaque)
 
         return bunchify(out) if needs_bunch else out
 
