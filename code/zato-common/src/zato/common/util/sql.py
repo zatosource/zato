@@ -9,7 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from json import loads
 from logging import getLogger
+
+# Bunch
+from bunch import bunchify
 
 # gevent
 from gevent import sleep
@@ -18,7 +22,8 @@ from gevent import sleep
 from sqlalchemy.exc import InternalError as SAInternalError
 
 # Zato
-from zato.common import SEARCH
+from zato.common import GENERIC, SEARCH
+from zato.common.util.search import SearchResults
 
 # ################################################################################################################################
 
@@ -106,5 +111,51 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
 
                 # Push the counter
                 attempts += 1
+
+# ################################################################################################################################
+
+class _ElemsWithOpaqueMaker(object):
+    def __init__(self, elems):
+        self.elems = elems
+
+    def _set_opaque(self, elem):
+        opaque = elem.get(GENERIC.ATTR_NAME)
+        opaque = loads(opaque) if opaque else {}
+        elem.update(opaque)
+
+# ################################################################################################################################
+
+    def _process_elems(self, out, elems):
+        for elem in elems:
+            elem = bunchify(elem._asdict())
+            self._set_opaque(elem)
+            out.append(elem)
+        return out
+
+# ################################################################################################################################
+
+    def _elems_with_opaque_search(self):
+        """ Resolves all opaque elements in search results.
+        """
+        search_result = self.elems[0]
+        new_result = self._process_elems([], search_result.result)
+        search_result.result = new_result
+        return self.elems
+
+# ################################################################################################################################
+
+    def get(self):
+        if isinstance(self.elems, tuple) and isinstance(self.elems[0], SearchResults):
+            return self._elems_with_opaque_search()
+        else:
+            return self._process_elems([], self.elems)
+
+# ################################################################################################################################
+
+def elems_with_opaque(elems):
+    """ Turns a list of SQLAlchemy elements into a list of Bunch instances,
+    each possibly with its opaque elements already extracted to the level of each Bunch.
+    """
+    return _ElemsWithOpaqueMaker(elems).get()
 
 # ################################################################################################################################

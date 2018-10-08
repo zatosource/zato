@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.common import PUBSUB
-from zato.admin.web.forms import add_pubsub_services
+from zato.admin.web.forms import add_select, add_pubsub_services
 
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
@@ -22,6 +22,7 @@ class CreateForm(forms.Form):
     has_gd = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_api_sub_allowed = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     hook_service_id = forms.ChoiceField(widget=forms.Select())
+    on_no_subs_pub = forms.ChoiceField(widget=forms.Select())
 
     max_depth_gd = forms.CharField(widget=forms.TextInput(
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD)
@@ -42,6 +43,9 @@ class CreateForm(forms.Form):
 
     def __init__(self, req, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)
+        add_select(self, 'on_no_subs_pub', [
+            PUBSUB.ON_NO_SUBS_PUB.ACCEPT, PUBSUB.ON_NO_SUBS_PUB.DROP,
+        ], False)
         add_pubsub_services(self, req, by_id=True)
 
 class EditForm(CreateForm):
