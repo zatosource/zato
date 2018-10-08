@@ -11,6 +11,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from functools import wraps
+from json import loads
+
+# Bunch
+from bunch import bunchify
 
 # SQLAlchemy
 from sqlalchemy import func, not_
@@ -18,8 +22,8 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import case
 
 # Zato
-from zato.common import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
-     PUBSUB, URL_PARAMS_PRIORITY
+from zato.common import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, \
+     PARAMS_PRIORITY, PUBSUB, URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
      CassandraQuery, ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
      CronStyleJob, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \
@@ -39,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 _not_given = object()
 _no_page_limit = 2 ** 24 # ~16.7 million results, tops
+_gen_attr = GENERIC.ATTR_NAME
 
 # ################################################################################################################################
 
@@ -96,6 +101,26 @@ def query_wrapper(func):
             return result, result.columns
 
         return result
+
+    return inner
+
+# ################################################################################################################################
+
+def bunch_maker(func):
+    """ Turns SQLAlchemy rows into bunch instances, taking opaque elements into account.
+    """
+    @wraps(func)
+    def inner(*args, **kwargs):
+
+        result = func(*args, **kwargs)
+        out = bunchify(result._asdict())
+
+        opaque = out.pop(_gen_attr, None)
+        if opaque:
+            opaque = loads(opaque)
+            out.update(opaque)
+
+        return out
 
     return inner
 
@@ -878,6 +903,7 @@ def _pubsub_topic(session, cluster_id):
         PubSubTopic.pub_buffer_size_gd,
         PubSubTopic.task_sync_interval,
         PubSubTopic.task_delivery_interval,
+        PubSubTopic.opaque1,
         Service.name.label('hook_service_name'),
         ).\
         outerjoin(Service, Service.id==PubSubTopic.hook_service_id).\
@@ -885,6 +911,7 @@ def _pubsub_topic(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(PubSubTopic.name)
 
+@bunch_maker
 def pubsub_topic(session, cluster_id, id):
     """ A pub/sub topic.
     """

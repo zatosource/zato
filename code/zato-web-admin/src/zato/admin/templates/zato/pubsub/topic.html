@@ -48,6 +48,8 @@
             'hook_service_id',
             'task_sync_interval',
             'task_delivery_interval',
+
+            'on_no_subs_pub',
         ]
     }
     </script>
@@ -103,6 +105,9 @@
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -170,6 +175,8 @@
                         <td class='ignore'>{{ item.task_sync_interval }}</td>
                         <td class='ignore'>{{ item.task_delivery_interval }}</td>
 
+                        <td class='ignore'>{{ item.on_no_subs_pub }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -209,7 +216,13 @@
                             |
 
                             <label>
-                            API subscriptions allowed {{ create_form.is_api_sub_allowed }}
+                            API sub allowed {{ create_form.is_api_sub_allowed }}
+                            </label>
+
+                            |
+
+                            <label>
+                            On no sub {{ create_form.on_no_subs_pub }}
                             </label>
 
                             </td>
@@ -313,7 +326,13 @@
                             |
 
                             <label>
-                            API subscriptions allowed {{ edit_form.is_api_sub_allowed }}
+                            API sub allowed {{ edit_form.is_api_sub_allowed }}
+                            </label>
+
+                            |
+
+                            <label>
+                            On no sub {{ edit_form.on_no_subs_pub }}
                             </label>
 
                             </td>
