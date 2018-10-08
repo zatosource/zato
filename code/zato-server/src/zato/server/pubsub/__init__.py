@@ -802,6 +802,28 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def has_topic_by_name(self, topic_name):
+        with self.lock:
+            try:
+                self._get_topic_by_name(topic_name)
+            except KeyError:
+                return False
+            else:
+                return True
+
+# ################################################################################################################################
+
+    def has_topic_by_id(self, topic_id):
+        with self.lock:
+            try:
+                self.topics[topic_id]
+            except KeyError:
+                return False
+            else:
+                return True
+
+# ################################################################################################################################
+
     def get_endpoint_by_id(self, endpoint_id):
         with self.lock:
             return self.endpoints[endpoint_id]
