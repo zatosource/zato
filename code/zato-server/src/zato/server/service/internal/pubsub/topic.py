@@ -34,10 +34,10 @@ broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
 skip_input_params = ['is_internal', 'current_depth_gd', 'last_pub_time', 'last_pub_msg_id', 'last_endpoint_id',
     'last_endpoint_name']
-input_optional_extra = ['needs_details']
+input_optional_extra = ['needs_details', 'on_no_subs_pub']
 output_optional_extra = ['is_internal', Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time',
     'hook_service_name', 'last_pub_time', AsIs('last_pub_msg_id'), 'last_endpoint_id', 'last_endpoint_name',
-    Bool('last_pub_has_gd'), 'last_pub_server_pid', 'last_pub_server_name']
+    Bool('last_pub_has_gd'), 'last_pub_server_pid', 'last_pub_server_name', 'on_no_subs_pub']
 
 # ################################################################################################################################
 
@@ -117,11 +117,11 @@ class Get(AdminService):
         input_required = ('cluster_id', AsIs('id'))
         output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd',
             'current_depth_gd')
-        output_optional = ('last_pub_time',)
+        output_optional = ('last_pub_time', 'on_no_subs_pub')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            topic = pubsub_topic(session, self.request.input.cluster_id, self.request.input.id)._asdict()
+            topic = pubsub_topic(session, self.request.input.cluster_id, self.request.input.id)
             topic['current_depth_gd'] = get_gd_depth_topic(session, self.request.input.cluster_id, self.request.input.id)
 
         last_data = get_last_pub_data(self.kvdb.conn, self.server.cluster_id, self.request.input.id)
