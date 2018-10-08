@@ -44,6 +44,7 @@ from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
 from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
      parse_tls_channel_security_definition
+from zato.common.util.sql import elems_with_opaque
 
 # ################################################################################################################################
 
@@ -1275,7 +1276,8 @@ class ODBManager(SessionWrapper):
     def get_pubsub_topic_list(self, cluster_id, needs_columns=False):
         """ Returns a list of pub/sub topics defined in a cluster.
         """
-        return query.pubsub_topic_list(self._session, cluster_id, needs_columns)
+        return elems_with_opaque(query.pubsub_topic_list(self._session, cluster_id, needs_columns))
+        #return query.pubsub_topic_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
