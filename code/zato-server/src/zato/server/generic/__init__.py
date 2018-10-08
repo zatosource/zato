@@ -16,7 +16,7 @@ from zato.common.util import get_sa_model_columns
 columns_gen_conn = set(get_sa_model_columns(ModelGenericConn))
 
 attrs_gen_conn = set(columns_gen_conn)
-attrs_gen_conn.remove(GENERIC.CONNECTION.ATTR_NAME)
+attrs_gen_conn.remove(GENERIC.ATTR_NAME)
 attrs_gen_conn.add('opaque')
 attrs_gen_conn = tuple(attrs_gen_conn)
 
