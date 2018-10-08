@@ -143,7 +143,7 @@ class Publish(AdminService):
         ext_pub_time = input.get('ext_pub_time') or None
         if ext_pub_time:
             ext_pub_time = dt_parse(ext_pub_time)
-            ext_pub_time = datetime_to_ms(ext_pub_time)
+            ext_pub_time = datetime_to_ms(ext_pub_time) / 1000.0
 
         pub_correl_id = pub_correl_id.encode('utf8') if pub_correl_id else None
         in_reply_to = in_reply_to.encode('utf8') if in_reply_to else None
