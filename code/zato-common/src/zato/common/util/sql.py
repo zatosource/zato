@@ -127,7 +127,13 @@ class _ElemsWithOpaqueMaker(object):
 
     def _process_elems(self, out, elems):
         for elem in elems:
-            elem = bunchify(elem._asdict())
+            if hasattr(elem, '_sa_class_manager'):
+                data = {}
+                for (name, _) in elem._sa_class_manager._all_sqla_attributes():
+                    data[name] = getattr(elem, name)
+            else:
+                data = elem._asdict()
+            elem = bunchify(data)
             self._set_opaque(elem)
             out.append(elem)
         return out
