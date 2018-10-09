@@ -19,7 +19,7 @@ from traceback import format_exc
 from urlparse import urlparse
 
 # Bunch
-from bunch import bunchify
+from bunch import Bunch, bunchify
 
 # gevent
 from gevent import sleep, socket, spawn
@@ -95,6 +95,7 @@ class WebSocket(_WebSocket):
         self.pings_missed = 0
         self.pings_missed_threshold = self.config.get('pings_missed_threshold', 5)
         self.ping_last_response_time = None
+        self.user_data = Bunch() # Arbitrary user-defined data
 
         # For publish/subscribe over WSX
         self.pubsub_tool = PubSubTool(config.parallel_server.worker_store.pubsub, self, PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
