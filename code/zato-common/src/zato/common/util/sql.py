@@ -114,14 +114,21 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
 
 # ################################################################################################################################
 
-class _ElemsWithOpaqueMaker(object):
+class ElemsWithOpaqueMaker(object):
     def __init__(self, elems):
         self.elems = elems
 
-    def _set_opaque(self, elem):
+    @staticmethod
+    def _set_opaque(elem):
         opaque = elem.get(GENERIC.ATTR_NAME)
         opaque = loads(opaque) if opaque else {}
         elem.update(opaque)
+
+# ################################################################################################################################
+
+    @staticmethod
+    def process_config_dict(config):
+        ElemsWithOpaqueMaker._set_opaque(config)
 
 # ################################################################################################################################
 
@@ -134,7 +141,7 @@ class _ElemsWithOpaqueMaker(object):
             else:
                 data = elem._asdict()
             elem = bunchify(data)
-            self._set_opaque(elem)
+            ElemsWithOpaqueMaker._set_opaque(elem)
             out.append(elem)
         return out
 
@@ -162,6 +169,6 @@ def elems_with_opaque(elems):
     """ Turns a list of SQLAlchemy elements into a list of Bunch instances,
     each possibly with its opaque elements already extracted to the level of each Bunch.
     """
-    return _ElemsWithOpaqueMaker(elems).get()
+    return ElemsWithOpaqueMaker(elems).get()
 
 # ################################################################################################################################
