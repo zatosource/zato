@@ -528,7 +528,9 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
                     raise ParsingException(cid, msg)
             else:
                 # Not required and not provided on input either in msg or channel params
-                value = ''
+                # so we can use an empty string, but with Bool elements in particular,
+                # we want to use their optional default value so as not to assume anything about input data.
+                value = param.kwargs.get('default', '') if isinstance(param, ForceType) else ''
 
     else:
         if value is not None and not isinstance(param, COMPLEX_VALUE):
