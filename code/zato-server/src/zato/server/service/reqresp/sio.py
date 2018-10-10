@@ -320,7 +320,13 @@ class Date(ForceType):
         super(Date, self).__init__(name, format=format, *args, **kwargs)
 
     def from_json(self, value, *ignored):
-        return value.strftime(self.kwargs['format']) if isinstance(value, datetime.date) else value
+        if isinstance(value, datetime.date):
+            if value.year < 1900:
+                return value.isoformat()
+            else:
+                return value.strftime(self.kwargs['format'])
+        else:
+            return value
 
     from_xml = to_json = to_xml = from_json
 
@@ -337,7 +343,10 @@ class DateTime(ForceType):
             if self.kwargs['format'] == 'iso':
                 return value.isoformat()
             else:
-                return value.strftime(self.kwargs['format'])
+                if value.year < 1900:
+                    return value.isoformat()
+                else:
+                    return value.strftime(self.kwargs['format'])
         else:
             return value
 
