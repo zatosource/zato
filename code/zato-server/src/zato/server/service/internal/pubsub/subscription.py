@@ -359,6 +359,7 @@ class SubscribeServiceImpl(_Subscribe):
                 sub_config.endpoint_name = endpoint.name
                 sub_config.endpoint_type = self.endpoint_type
                 sub_config.unsub_on_wsx_close = ctx.unsub_on_wsx_close
+                sub_config.ext_client_id = ctx.ext_client_id
 
                 for name in sub_broker_attrs:
                     sub_config[name] = getattr(ps_sub, name, None)
