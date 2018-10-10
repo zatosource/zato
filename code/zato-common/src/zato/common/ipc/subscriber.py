@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from errno import ENOTSOCK
 from traceback import format_exc
 
 # ZeroMQ
@@ -25,7 +26,7 @@ Request = Request
 class Subscriber(IPCEndpoint):
     """ Listens for incoming IPC messages and invokes callbacks for each one received.
     """
-    socket_method = 'connect'
+    socket_method = 'bind'
     socket_type = 'sub'
 
     def __init__(self, on_message_callback, *args, **kwargs):
@@ -38,7 +39,11 @@ class Subscriber(IPCEndpoint):
         while self.keep_running:
             try:
                 self.on_message_callback(self.socket.recv_pyobj())
-            except Exception, e:
-                self.logger.warn('Error in IPC subscriber, e:`%s`', format_exc(e))
+            except zmq.ZMQError as e:
+                if e.errno == ENOTSOCK:
+                    self.logger.debug('Stopping IPC socket `%s` (ENOTSOCK)', self.name)
+                    self.keep_running = False
+            except Exception:
+                self.logger.warn('Error in IPC subscriber, e:`%s`', format_exc())
 
 # ################################################################################################################################
