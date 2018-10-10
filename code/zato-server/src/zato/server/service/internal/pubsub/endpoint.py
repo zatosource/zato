@@ -239,7 +239,8 @@ class _GetEndpointQueue(AdminService):
                 response = self.servers[sk_server.server_name].invoke(GetEndpointQueueNonGDDepth.get_name(), {
                     'sub_key': item.sub_key,
                 }, pid=sk_server.server_pid)
-                current_depth_non_gd = response['response']['current_depth_non_gd']
+                inner_response = response['response']
+                current_depth_non_gd = inner_response['current_depth_non_gd'] if inner_response else 0
 
         # No delivery server = there cannot be any non-GD messages waiting for that subscriber
         else:
