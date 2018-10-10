@@ -268,6 +268,7 @@ class Subscription(object):
         self.sub_pattern_matched = config.sub_pattern_matched
         self.task_delivery_interval = config.task_delivery_interval
         self.unsub_on_wsx_close = config.get('unsub_on_wsx_close')
+        self.ext_client_id = config.ext_client_id
 
     def __repr__(self):
         return make_repr(self)
@@ -792,6 +793,14 @@ class PubSub(object):
         with self.lock:
             for sub in self.subscriptions_by_sub_key.itervalues():
                 if sub.id == sub_id:
+                    return sub
+
+# ################################################################################################################################
+
+    def get_subscription_by_ext_client_id(self, ext_client_id):
+        with self.lock:
+            for sub in self.subscriptions_by_sub_key.itervalues():
+                if sub.ext_client_id == ext_client_id:
                     return sub
 
 # ################################################################################################################################
