@@ -46,7 +46,7 @@ from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
 from zato.common.zato_keyutils import KeyUtils
 from zato.common.pubsub import SkipDelivery
-from zato.common.util import absolutize, fs_safe_name, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
+from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
 from zato.common.util.posix_ipc_ import ServerStartupIPC
@@ -131,8 +131,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.zato_lock_manager = None
         self.pid = None
         self.sync_internal = None
-        self.ipc_api = IPCAPI(False)
-        self.ipc_forwarder = IPCAPI(True)
+        self.ipc_api = IPCAPI()
         self.wmq_ipc_tcp_port = None
         self.fifo_response_buffer_size = None # Will be in megabytes
         self.is_first_worker = None
@@ -485,14 +484,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             self.invoke_startup_services(is_first)
             spawn_greenlet(self.set_up_pickup)
 
-            # IPC
-            ipc_forwarder_name = '{}-{}'.format(self.cluster.name, self.name)
-            ipc_forwarder_name = fs_safe_name(ipc_forwarder_name)
-
-            self.ipc_forwarder.name = ipc_forwarder_name
-            self.ipc_forwarder.pid = self.pid
-            spawn_greenlet(self.ipc_forwarder.run)
-
             # Set up IBM MQ connections if that component is enabled
             if self.fs_server_config.component_enabled.ibm_mq:
 
@@ -510,7 +501,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             })
 
         # IPC
-        self.ipc_api.name = self.name
+        self.ipc_api.name = self.ipc_api.get_endpoint_name(self.cluster.name, self.name, self.pid)
         self.ipc_api.pid = self.pid
         self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
         spawn_greenlet(self.ipc_api.run)
@@ -677,7 +668,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def invoke_by_pid(self, service, request, target_pid, *args, **kwargs):
         """ Invokes a service in a worker process by the latter's PID.
         """
-        return self.ipc_api.invoke_by_pid(service, request, target_pid, self.fifo_response_buffer_size, *args, **kwargs)
+        return self.ipc_api.invoke_by_pid(service, request, self.cluster.name, self.name, target_pid,
+            self.fifo_response_buffer_size, *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -828,6 +820,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
             # Close all POSIX IPC structures
             self.server_startup_ipc.close()
+
+            # Close ZeroMQ-based IPC
+            self.ipc_api.close()
 
             self.invoke('zato.channel.web-socket.client.delete-by-server')
             self.invoke('zato.channel.web-socket.client.delete-by-server')

@@ -28,10 +28,9 @@ from rapidjson import loads
 
 # Zato
 from zato.common import IPC
-from zato.common.ipc.forwarder import Forwarder
 from zato.common.ipc.publisher import Publisher
 from zato.common.ipc.subscriber import Subscriber
-from zato.common.util import spawn_greenlet
+from zato.common.util import fs_safe_name, spawn_greenlet
 
 # ################################################################################################################################
 
@@ -50,23 +49,58 @@ _F_SETPIPE_SZ = 1031
 class IPCAPI(object):
     """ API through which IPC is performed.
     """
-    def __init__(self, is_forwarder, name=None, on_message_callback=None, pid=None):
-        self.is_forwarder = is_forwarder
+    def __init__(self, name=None, on_message_callback=None, pid=None):
         self.name = name
         self.on_message_callback = on_message_callback
         self.pid = pid
+        self.pid_publishers = {} # Target PID -> Publisher object connected to that target PID's subscriber socket
+        self.subscriber = None
+
+# ################################################################################################################################
+
+    @staticmethod
+    def get_endpoint_name(cluster_name, server_name, target_pid):
+        return fs_safe_name('{}-{}-{}'.format(cluster_name, server_name, target_pid))
+
+# ################################################################################################################################
 
     def run(self):
+        self.subscriber = Subscriber(self.on_message_callback, self.name, self.pid)
+        spawn_greenlet(self.subscriber.serve_forever)
 
-        if self.is_forwarder:
-            spawn_greenlet(Forwarder, self.name, self.pid)
-        else:
-            self.publisher = Publisher(self.name, self.pid)
-            self.subscriber = Subscriber(self.on_message_callback, self.name, self.pid)
-            spawn_greenlet(self.subscriber.serve_forever)
+# ################################################################################################################################
+
+    def close(self):
+        if self.subscriber:
+            self.subscriber.close()
+        for publisher in self.pid_publishers.values():
+            publisher.close()
+
+# ################################################################################################################################
 
     def publish(self, payload):
         self.publisher.publish(payload)
+
+# ################################################################################################################################
+
+    def _get_pid_publisher(self, cluster_name, server_name, target_pid):
+
+        # We do no have a publisher connected to that PID, so we need to create it ..
+        if target_pid not in self.pid_publishers:
+
+            # Create a publisher and sleep for a moment until it connects to the other socket
+            publisher = Publisher(self.get_endpoint_name(cluster_name, server_name, target_pid), self.pid)
+
+            # We can tolerate it because it happens only the very first time our PID invokes target_pid
+            sleep(0.1)
+
+            # We can now store it for later use
+            self.pid_publishers[target_pid] = publisher
+
+        # At this point we are sure we have a publisher for target PID
+        return self.pid_publishers[target_pid]
+
+# ################################################################################################################################
 
     def _get_response(self, fifo, buffer_size, fifo_ignore_err=fifo_ignore_err, empty=('', None)):
 
@@ -99,7 +133,10 @@ class IPCAPI(object):
             if e.errno not in fifo_ignore_err:
                 raise
 
-    def invoke_by_pid(self, service, payload, target_pid, fifo_response_buffer_size, timeout=90, is_async=False):
+# ################################################################################################################################
+
+    def invoke_by_pid(self, service, payload, cluster_name, server_name, target_pid,
+        fifo_response_buffer_size, timeout=90, is_async=False):
         """ Invokes a service through IPC, synchronously or in background. If target_pid is an exact PID then this one worker
         process will be invoked if it exists at all.
         """
@@ -108,7 +145,8 @@ class IPCAPI(object):
         os.mkfifo(fifo_path, fifo_create_mode)
 
         try:
-            self.publisher.publish(payload, service, target_pid, reply_to_fifo=fifo_path)
+            publisher = self._get_pid_publisher(cluster_name, server_name, target_pid)
+            publisher.publish(payload, service, target_pid, reply_to_fifo=fifo_path)
 
             # Async = we do not need to wait for any response
             if is_async:
