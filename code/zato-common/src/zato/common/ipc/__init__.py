@@ -89,8 +89,7 @@ class IPCEndpoint(IPCBase):
         super(IPCEndpoint, self).__init__(name, pid)
 
     def get_address(self, address):
-        ipc_socket_type = 'pub' if self.socket_type == 'sub' else 'sub'
-        return 'ipc://{}'.format(os.path.join(gettempdir(), 'zato-ipc-{}-{}'.format(address, ipc_socket_type)))
+        return 'ipc://{}'.format(os.path.join(gettempdir(), 'zato-ipc-{}'.format(address)))
 
     def set_up_sockets(self):
         self.socket = self.ctx.socket(getattr(zmq, self.socket_type.upper()))
@@ -98,7 +97,7 @@ class IPCEndpoint(IPCBase):
         getattr(self.socket, self.socket_method)(self.address)
 
     def log_connected(self):
-        self.logger.info('Established %s/%s to %s (pid: %s)', self.socket_type, self.socket_method, self.address, self.pid)
+        self.logger.info('Established %s/%s to %s (self.pid: %s)', self.socket_type, self.socket_method, self.address, self.pid)
 
     def close(self):
         self.keep_running = False

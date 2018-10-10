@@ -166,7 +166,7 @@ class ServerStartupIPC(SharedMemoryIPC):
     def set_pubsub_pid(self, pid):
         self.set_key(self.pubsub_pid, 'current', pid)
 
-    def get_pubsub_pid(self, timeout=10):
+    def get_pubsub_pid(self, timeout=60):
         return self.get_key(self.pubsub_pid, 'current', timeout)
 
 # ################################################################################################################################
