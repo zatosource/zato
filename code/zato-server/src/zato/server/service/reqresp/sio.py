@@ -530,7 +530,20 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
                 # Not required and not provided on input either in msg or channel params
                 # so we can use an empty string, but with Bool elements in particular,
                 # we want to use their optional default value so as not to assume anything about input data.
-                value = param.kwargs.get('default', '') if isinstance(param, ForceType) else ''
+                if isinstance(param, ForceType):
+
+                    # Use the per-element's default value ..
+                    value = param.default
+
+                    # .. but if it is missing ..
+                    if value == NO_DEFAULT_VALUE:
+
+                        # .. use the SimpleIO-level default value, but only if it is not missing either.
+                        value = default_value if default_value != NO_DEFAULT_VALUE else ''
+
+                # Not a ForceType wrapper, default to an empty string in this case.
+                else:
+                    value = ''
 
     else:
         if value is not None and not isinstance(param, COMPLEX_VALUE):
