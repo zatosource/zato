@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -58,9 +58,11 @@ class JSONAdapter(Service):
             self.outconn, self.method, self.params_to_qs, self.load_response, self.params, self.apply_params)
 
         # Only return what was received
-        if(self.request.payload or {}).pop('echo', False):
-            self.response.payload = self.request.payload
-            return
+        if self.request.payload:
+            if isinstance(self.request.payload, dict):
+                if self.request.payload.get('echo', False):
+                    self.response.payload = self.request.payload
+                    return
 
         # Parameters to invoke the remote resource with
         call_params = self.get_call_params()
