@@ -296,7 +296,7 @@ class ResumeWSXSubscription(AdminService):
                 for server_pid, pid_data_dict in server_data.items():
                     if not pid_data_dict['is_ok']:
                         self.logger.warn('Could not retrieve non-GD in-RAM messages from PID %s of %s (%s), details:`%s`',
-                            server_pid, server_name, server_data_dict['meta']['address'], pid_data_dict['error_info'])
+                            server_pid, server_name, server_data_dict['meta']['address'], pid_data_dict)
                     else:
                         messages = pid_data_dict['pid_data']['response']['messages']
                         for sub_key, sub_key_data in messages.items():
@@ -304,7 +304,7 @@ class ResumeWSXSubscription(AdminService):
                                 out[sub_key].append(msg)
             else:
                 self.logger.warn('Could not retrieve non-GD in-RAM messages from %s (%s), details:`%s`',
-                    server_name, server_data_dict['meta']['address'], server_data_dict['error_info'])
+                    server_name, server_data_dict['meta']['address'], server_data_dict)
 
         # Do not return empty lists unnecessarily - note that it may happen that all sub_keys
         # will be deleted in which cases only an empty dictionary remains.
