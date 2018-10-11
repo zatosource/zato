@@ -563,10 +563,16 @@ class SecurityList(object):
 
 def id_only_service(req, service, id, error_template='{}', initial=None):
     try:
-        request = {'id': id}
+        request = {}
+
+        if id:
+            request['id'] = id
+
         if initial:
             request.update(initial)
+
         result = req.zato.client.invoke(service, request)
+
         if not result.ok:
             raise Exception(result.details)
         else:

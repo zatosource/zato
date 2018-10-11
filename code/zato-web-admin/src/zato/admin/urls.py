@@ -49,6 +49,8 @@ from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import subscription as pubsub_subscription
+from zato.admin.web.views.pubsub import task as pubsub_task
+from zato.admin.web.views.pubsub.task import delivery_server as pubsub_task_delivery_server
 from zato.admin.web.views.pubsub import topic as pubsub_topic
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
@@ -1266,7 +1268,21 @@ urlpatterns += [
     url(r'^zato/pubsub/message/publish/cluster/(?P<cluster_id>.*)/topic/(?P<topic_id>.*)$',
         login_required(pubsub_message.publish), name='pubsub-message-publish'),
 
-    ]
+    # Delivery servers
+
+    url(r'^zato/pubsub/task/delivery-server/$',
+        login_required(pubsub_task_delivery_server.Index()), name=pubsub_task_delivery_server.Index.url_name),
+
+    # Delivery tasks
+
+    #url(r'^zato/pubsub/task/(?P<server_name>.*)/(?P<server_pid>.*)/cluster/(?P<cluster_id>.*)/$',
+    #    login_required(pubsub_task.Index()), name=pubsub_task.Index.url_name),
+    #url(r'^zato/pubsub/task/clear-messages/(?P<server_name>.*)/(?P<server_pid>.*)/(?P<task_id>.*)/cluster/(?P<cluster_id>.*)/$',
+    #    login_required(pubsub_task.clear_messages), name='pubsub.task.clear-messages'),
+    #url(r'^zato/pubsub/task/toggle-active/(?P<server_name>.*)/(?P<server_pid>.*)/(?P<task_id>.*)/cluster/(?P<cluster_id>.*)/$',
+    #    login_required(pubsub_task.toggle_active), name='pubsub.task.toggle-active'),
+    #
+]
 
 # ################################################################################################################################
 
