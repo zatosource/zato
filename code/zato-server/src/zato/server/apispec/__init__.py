@@ -146,6 +146,7 @@ class ServiceInfo(object):
                 for param_list_name in _sio_attrs:
                     _param_list = []
                     param_list = getattr(sio, param_list_name, [])
+                    param_list = param_list if isinstance(param_list, (tuple, list)) else [param_list]
 
                     for param in param_list:
                         param_name = param if isinstance(param, basestring) else param.name
