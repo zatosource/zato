@@ -528,7 +528,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
                     raise ParsingException(cid, msg)
             else:
                 # Not required and not provided on input either in msg or channel params
-                # so we can use an empty string, but with Bool elements in particular,
+                # so we can use an empty string, but with ForceType elements in particular,
                 # we want to use their optional default value so as not to assume anything about input data.
                 if isinstance(param, ForceType):
 
