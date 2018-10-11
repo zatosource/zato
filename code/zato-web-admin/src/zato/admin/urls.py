@@ -1275,14 +1275,14 @@ urlpatterns += [
 
     # Delivery tasks
 
-    url(r'^zato/pubsub/task/(?P<server_name>.*)/(?P<server_pid>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(pubsub_task.Index()), name=pubsub_task.Index.url_name),
-    url(r'^zato/pubsub/task/clear-messages/(?P<server_name>.*)/(?P<server_pid>.*)/(?P<task_id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(pubsub_task.clear_messages), name='pubsub.task.clear-messages'),
-    url(r'^zato/pubsub/task/toggle-active/(?P<server_name>.*)/(?P<server_pid>.*)/(?P<task_id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(pubsub_task.toggle_active), name='pubsub.task.toggle-active'),
-
-    ]
+    #url(r'^zato/pubsub/task/(?P<server_name>.*)/(?P<server_pid>.*)/cluster/(?P<cluster_id>.*)/$',
+    #    login_required(pubsub_task.Index()), name=pubsub_task.Index.url_name),
+    #url(r'^zato/pubsub/task/clear-messages/(?P<server_name>.*)/(?P<server_pid>.*)/(?P<task_id>.*)/cluster/(?P<cluster_id>.*)/$',
+    #    login_required(pubsub_task.clear_messages), name='pubsub.task.clear-messages'),
+    #url(r'^zato/pubsub/task/toggle-active/(?P<server_name>.*)/(?P<server_pid>.*)/(?P<task_id>.*)/cluster/(?P<cluster_id>.*)/$',
+    #    login_required(pubsub_task.toggle_active), name='pubsub.task.toggle-active'),
+    #
+]
 
 # ################################################################################################################################
 
