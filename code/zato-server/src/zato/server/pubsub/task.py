@@ -116,6 +116,11 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
+    def is_running(self):
+        return self.keep_running
+
+# ################################################################################################################################
+
     def _delete_messages(self, to_delete):
         """ Actually deletes messages - must be called with self.interrupt_lock held.
         """
@@ -967,6 +972,12 @@ class PubSubTool(object):
     def get_delivery_task(self, sub_key):
         with self.lock:
             return self.delivery_tasks[sub_key]
+
+# ################################################################################################################################
+
+    def get_delivery_tasks(self):
+        with self.lock:
+            return self.delivery_tasks.values()
 
 # ################################################################################################################################
 

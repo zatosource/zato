@@ -1,0 +1,140 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Pub/sub topics{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/task/delivery-server.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            'name',
+            'pid',
+
+            '_tasks',
+            '_sub_keys',
+            '_topics',
+            '_messages',
+
+            '_last_gd_run',
+            '_last_task_run',
+
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pub/sub delivery servers</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show delivery servers"%}
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:5%">&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Server name</a></th>
+                        <th><a href="#">Server PID</a></th>
+
+                        <th><a href="#">Tasks</a></th>
+                        <th><a href="#">Subscriptions</a></th>
+                        <th><a href="#">Topics</a></th>
+
+                        <th><a href="#">Messages</a></th>
+
+                        <th><a href="#">Last GD run</a></th>
+                        <th><a href="#">Last task run</a></th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.pid }}</td>
+
+                        <td>
+                            {% if item.tasks %}
+                                <a href="{% url "pubsub-task" item.name item.pid cluster_id %}">{{ item.tasks }}</a>
+                                ({{ item.tasks_running }}/{{ item.tasks_stopped }})
+                            {% else %}
+                                <span class='form_hint'>---</span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ item.sub_keys }}</td>
+                        <td>{{ item.topics }}</td>
+
+                        <td>
+                            {{ item.messages }}
+                            ({{ item.messages_gd }}/{{ item.messages_non_gd }})
+                        </td>
+
+                        <td style="min-width:164px">
+                            {% if item.last_gd_run %}
+                                <a
+                                    id="a_last_gd_run_{{ item.id }}"
+                                    href="javascript:$.fn.zato.toggle_time('last_gd_run_{{ item.id }}', '{{ item.last_gd_run_utc }}', '{{ item.last_gd_run }}')">{{ item.last_gd_run_utc }}
+                                </a>
+                            {% else %}
+                                <span class='form_hint'>---</span>
+                            {% endif %}
+                        </td>
+
+                        <td style="min-width:164px">
+                            {% if item.last_task_run %}
+                                <a
+                                    id="a_last_task_run_{{ item.id }}"
+                                    href="javascript:$.fn.zato.toggle_time('last_task_run_{{ item.id }}', '{{ item.last_task_run_utc }}', '{{ item.last_task_run }}')">{{ item.last_task_run_utc }}
+                                </a>
+                            {% else %}
+                                <span class='form_hint'>---</span>
+                            {% endif %}
+                        </td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='16'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
