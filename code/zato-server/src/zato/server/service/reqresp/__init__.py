@@ -147,7 +147,7 @@ class Request(SIOConverter):
 
 # ################################################################################################################################
 
-    def init_flat_sio(self, cid, sio, data_format, transport, wsgi_environ, required_list):
+    def init_flat_sio(self, cid, sio, data_format, transport, wsgi_environ, required_list, _sio_container=(tuple, list)):
         """ Initializes flat SIO requests, i.e. not list ones.
         """
         self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
@@ -156,7 +156,7 @@ class Request(SIOConverter):
         self._wsgi_environ = wsgi_environ
 
         optional_list = getattr(sio, 'input_optional', [])
-        optional_list = [optional_list] if isinstance(optional_list, basestring) else optional_list
+        optional_list = optional_list if isinstance(optional_list, _sio_container) else [optional_list]
 
         path_prefix = getattr(sio, 'request_elem', 'request')
         default_value = getattr(sio, 'default_value', NO_DEFAULT_VALUE)
@@ -175,6 +175,8 @@ class Request(SIOConverter):
         required_params = {}
 
         if required_list:
+
+            required_list = required_list if isinstance(required_list, _sio_container) else [required_list]
 
             # Needs to check for this exact default value to prevent a FutureWarning in 'if not self.payload'
             if self.payload == '' and not self.channel_params:
@@ -257,13 +259,18 @@ class SimpleIOPayload(SIOConverter):
     All of the attributes are prefixed with zato_ so that they don't conflict with non-Zato data..
     """
     def __init__(self, zato_cid, data_format, required_list, optional_list, simple_io_config, response_elem, namespace,
-            output_repeated, skip_empty, ignore_skip_empty, allow_empty_required):
+            output_repeated, skip_empty, ignore_skip_empty, allow_empty_required, _sio_container=(tuple, list)):
         self.zato_cid = zato_cid
         self.zato_data_format = data_format
         self.zato_is_xml = self.zato_data_format == SIMPLE_IO.FORMAT.XML
         self.zato_output = []
+
+        required_list = required_list if isinstance(required_list, _sio_container) else [required_list]
+        optional_list = optional_list if isinstance(optional_list, _sio_container) else [optional_list]
+
         self.zato_required = [(True, name) for name in required_list]
         self.zato_optional = [(False, name) for name in optional_list]
+
         self.zato_output_repeated = output_repeated
         self.zato_skip_empty_keys = skip_empty
         self.zato_force_empty_keys = ignore_skip_empty
