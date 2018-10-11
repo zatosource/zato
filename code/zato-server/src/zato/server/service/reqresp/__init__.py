@@ -30,7 +30,8 @@ from lxml.objectify import deannotate, Element, ElementMaker, ObjectifiedElement
 from sqlalchemy.util import KeyedTuple
 
 # Zato
-from zato.common import PARAMS_PRIORITY, ParsingException, SIMPLE_IO, simple_types, TRACE1, ZatoException, ZATO_OK
+from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, SIMPLE_IO, simple_types, TRACE1, ZatoException, \
+     ZATO_OK
 from zato.common.odb.api import WritableKeyedTuple
 from zato.common.util import make_repr
 from zato.server.service.reqresp.sio import AsIs, convert_param, ForceType, ServiceInput, SIOConverter
@@ -158,7 +159,7 @@ class Request(SIOConverter):
         optional_list = optional_list if isinstance(optional_list, _sio_container) else [optional_list]
 
         path_prefix = getattr(sio, 'request_elem', 'request')
-        sio_default_value = getattr(sio, 'default_value', '')
+        default_value = getattr(sio, 'default_value', NO_DEFAULT_VALUE)
         use_text = getattr(sio, 'use_text', True)
         use_channel_params_only = getattr(sio, 'use_channel_params_only', False)
         self.encrypt_secrets = getattr(sio, 'encrypt_secrets', True)
@@ -182,11 +183,11 @@ class Request(SIOConverter):
                 raise ZatoException(cid, 'Missing input')
 
             required_params.update(self.get_params(
-                required_list, use_channel_params_only, path_prefix, sio_default_value, use_text))
+                required_list, use_channel_params_only, path_prefix, default_value, use_text))
 
         if optional_list:
             optional_params = self.get_params(
-                optional_list, use_channel_params_only, path_prefix, sio_default_value, use_text, False)
+                optional_list, use_channel_params_only, path_prefix, default_value, use_text, False)
         else:
             optional_params = {}
 
@@ -199,7 +200,7 @@ class Request(SIOConverter):
 
 # ################################################################################################################################
 
-    def get_params(self, params_to_visit, use_channel_params_only, path_prefix='', sio_default_value='',
+    def get_params(self, params_to_visit, use_channel_params_only, path_prefix='', default_value=NO_DEFAULT_VALUE,
             use_text=True, is_required=True):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
@@ -209,7 +210,7 @@ class Request(SIOConverter):
             try:
                 param_name, value = convert_param(
                     self.cid, '' if use_channel_params_only else self.payload, param, self.data_format, is_required,
-                    sio_default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
+                    default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
                     self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes,
                     True, self.encrypt_func, self.encrypt_secrets, self.params_priority)
                 params[param_name] = value
@@ -265,13 +266,12 @@ class SimpleIOPayload(SIOConverter):
         self.zato_output = []
 
         required_list = required_list if isinstance(required_list, _sio_container) else [required_list]
-        self.zato_required = [(True, name) for name in required_list]
-
         optional_list = optional_list if isinstance(optional_list, _sio_container) else [optional_list]
+
+        self.zato_required = [(True, name) for name in required_list]
         self.zato_optional = [(False, name) for name in optional_list]
 
         self.zato_output_repeated = output_repeated
-        self.zato_sio_default_value = simple_io_config.get('default_value', '')
         self.zato_skip_empty_keys = skip_empty
         self.zato_force_empty_keys = ignore_skip_empty
         self.zato_allow_empty_required = allow_empty_required
@@ -340,8 +340,7 @@ class SimpleIOPayload(SIOConverter):
         self.zato_output.append(item)
         self.zato_output_repeated = True
 
-    def _getvalue(self, name, item, is_sa_namedtuple, is_required, leave_as_is, _DEBUG=logging.DEBUG, _TRACE1=TRACE1,
-        _no_default=''):
+    def _getvalue(self, name, item, is_sa_namedtuple, is_required, leave_as_is, _DEBUG=logging.DEBUG, _TRACE1=TRACE1):
         """ Returns an element's value if any has been provided while taking
         into account the differences between dictionaries and other formats
         as well as the type conversions.
@@ -349,12 +348,12 @@ class SimpleIOPayload(SIOConverter):
         lookup_name = name.name if isinstance(name, ForceType) else name
 
         if is_sa_namedtuple or self._is_sqlalchemy(item):
-            elem_value = getattr(item, lookup_name, None) or _no_default
+            elem_value = getattr(item, lookup_name, '')
         else:
-            elem_value = item.get(lookup_name) or _no_default
+            elem_value = item.get(lookup_name, '')
 
         if isinstance(elem_value, basestring) and not elem_value:
-            if elem_value == _no_default and self.zato_allow_empty_required:
+            if elem_value == '' and self.zato_allow_empty_required:
                 return ''
             msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
             if is_required:
@@ -363,9 +362,9 @@ class SimpleIOPayload(SIOConverter):
         if leave_as_is:
             return elem_value
         else:
-            return self.convert(self.zato_cid, name, lookup_name, elem_value, self.zato_sio_default_value,
-                True, self.zato_is_xml, self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes,
-                self.zato_skip_empty_keys, None, None, None, self.zato_data_format, True)
+            return self.convert(self.zato_cid, name, lookup_name, elem_value, True, self.zato_is_xml,
+                self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes, self.zato_skip_empty_keys,
+                None, None, None, self.zato_data_format, True)
 
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.
@@ -375,7 +374,7 @@ class SimpleIOPayload(SIOConverter):
         else:
             msg_item = item
         return '{} elem:[{}] not found in item:[{}]'.format(
-            'Expected' if is_required else 'Optional', name, repr(msg_item))
+            'Expected' if is_required else 'Optional', name, msg_item)
 
     def getvalue(self, serialize=True, _keyed_tuple=(WritableKeyedTuple, KeyedTuple)):
         """ Gets the actual payload's value converted to a string representing either XML or JSON.

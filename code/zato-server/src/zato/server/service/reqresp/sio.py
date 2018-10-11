@@ -390,51 +390,21 @@ def is_secret(param_name, _secrets_params=SECRETS.PARAMS):
 
 # ################################################################################################################################
 
-def resolve_default_value(param, sio_default_value, _force_type=ForceType, _no_default=NO_DEFAULT_VALUE):
-    """ Resolves an element's default value, taking its default configuration into account.
-    """
-    if isinstance(param, ForceType):
-
-        # Use the per-element's default value ..
-        value = param.default
-
-        # .. but if it is missing ..
-        if value == NO_DEFAULT_VALUE:
-
-            # .. use the SimpleIO-level default value, but only if it is not missing either.
-            value = sio_default_value if sio_default_value != NO_DEFAULT_VALUE else ''
-
-    # Not a ForceType wrapper, default to an empty string in this case.
-    else:
-        value = ''
-
-    return value
-
-# ################################################################################################################################
-
-def convert_sio(cid, param, param_name, value, sio_default_value, has_simple_io_config, is_xml, bool_parameter_prefixes,
-    int_parameters, int_parameter_suffixes, force_empty_keys, encrypt_func, encrypt_secrets, date_time_format=None,
-    data_format=ZATO_NONE, from_sio_to_external=False, special_values=(NO_DEFAULT_VALUE, ZATO_NONE, ZATO_SEC_USE_RBAC),
-    _empty_values=('',), _is_bool=is_bool, _is_int=is_int, _is_secret=is_secret):
+def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, bool_parameter_prefixes, int_parameters,
+    int_parameter_suffixes, force_empty_keys, encrypt_func, encrypt_secrets, date_time_format=None, data_format=ZATO_NONE,
+    from_sio_to_external=False, special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC), _is_bool=is_bool, _is_int=is_int,
+    _is_secret=is_secret):
     try:
+
+        if _is_bool(param, param_name, bool_parameter_prefixes):
+            if value == '' and force_empty_keys:
+                value = None
+            else:
+                value = asbool(value or None) # value can be an empty string and asbool chokes on that
 
         if value is not None:
             if isinstance(param, ForceType):
-
-                if _is_bool(param, param_name, bool_parameter_prefixes):
-                    if value in _empty_values:
-                        if force_empty_keys:
-                            value = None
-                        else:
-                            value = resolve_default_value(param, value, sio_default_value)
-                    else:
-                        value = asbool(value or None) # value can be an empty string and asbool chokes on that
-                else:
-                    if value in _empty_values:
-                        value = resolve_default_value(param, value, sio_default_value)
-                    else:
-                        value = param.convert(value, param_name, data_format, from_sio_to_external)
-
+                value = param.convert(value, param_name, data_format, from_sio_to_external)
             else:
                 # Empty string sent in lieu of integers are equivalent to None,
                 # as though they were never sent - this is needed for internal metaclasses
@@ -511,7 +481,7 @@ convert_impl = {
 
 # ################################################################################################################################
 
-def convert_param(cid, payload, param, data_format, is_required, sio_default_value, path_prefix, use_text, channel_params,
+def convert_param(cid, payload, param, data_format, is_required, default_value, path_prefix, use_text, channel_params,
     has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes, force_empty_keys, encrypt_func,
     encrypt_secrets, params_priority):
     """ Converts request parameters from any data format supported into Python objects.
@@ -527,9 +497,8 @@ def convert_param(cid, payload, param, data_format, is_required, sio_default_val
 
     # Convert it to a native Python data type
     if channel_value != ZATO_NONE:
-        channel_value = convert_sio(cid, param, param_name, channel_value, sio_default_value, has_simple_io_config, False,
-            bool_parameter_prefixes, int_parameters, int_parameter_suffixes, force_empty_keys, encrypt_func, encrypt_secrets,
-            None, data_format, False)
+        channel_value = convert_sio(cid, param, param_name, channel_value, has_simple_io_config, False, bool_parameter_prefixes,
+            int_parameters, int_parameter_suffixes, force_empty_keys, encrypt_func, encrypt_secrets, None, data_format, False)
 
     # Return the value immediately if we already know channel_params are of higer priority
     if params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG and channel_value != ZATO_NONE:
@@ -539,13 +508,13 @@ def convert_param(cid, payload, param, data_format, is_required, sio_default_val
 
     if payload is not None:
         value = convert_impl[data_format](payload, param_name, cid, is_required, isinstance(param, COMPLEX_VALUE),
-            sio_default_value, path_prefix, use_text)
+            default_value, path_prefix, use_text)
     else:
         value = NOT_GIVEN
 
     if (not isinstance(value, PubSubMessage)) and value == NOT_GIVEN:
-        if sio_default_value != NO_DEFAULT_VALUE:
-            value = sio_default_value
+        if default_value != NO_DEFAULT_VALUE:
+            value = default_value
         else:
             if is_required:
 
@@ -561,7 +530,20 @@ def convert_param(cid, payload, param, data_format, is_required, sio_default_val
                 # Not required and not provided on input either in msg or channel params
                 # so we can use an empty string, but with ForceType elements in particular,
                 # we want to use their optional default value so as not to assume anything about input data.
-                value = resolve_default_value(param, value, sio_default_value)
+                if isinstance(param, ForceType):
+
+                    # Use the per-element's default value ..
+                    value = param.default
+
+                    # .. but if it is missing ..
+                    if value == NO_DEFAULT_VALUE:
+
+                        # .. use the SimpleIO-level default value, but only if it is not missing either.
+                        value = default_value if default_value != NO_DEFAULT_VALUE else ''
+
+                # Not a ForceType wrapper, default to an empty string in this case.
+                else:
+                    value = ''
 
     else:
         if value is not None and not isinstance(param, COMPLEX_VALUE):
@@ -571,9 +553,9 @@ def convert_param(cid, payload, param, data_format, is_required, sio_default_val
                 value = unicode(value)
 
         if not isinstance(param, (AsIs, Opaque)):
-            return param_name, convert_sio(cid, param, param_name, value, sio_default_value, has_simple_io_config,
-                data_format==DATA_FORMAT.XML, bool_parameter_prefixes, int_parameters, int_parameter_suffixes,
-                force_empty_keys, encrypt_func, encrypt_secrets, None, data_format, False)
+            return param_name, convert_sio(cid, param, param_name, value, has_simple_io_config, data_format==DATA_FORMAT.XML,
+                bool_parameter_prefixes, int_parameters, int_parameter_suffixes, force_empty_keys, encrypt_func, encrypt_secrets,
+                None, data_format, False)
 
     return param_name, value
 
