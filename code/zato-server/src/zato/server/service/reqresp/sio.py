@@ -390,6 +390,31 @@ def is_secret(param_name, _secrets_params=SECRETS.PARAMS):
 
 # ################################################################################################################################
 
+def resolve_default_value(param, default_value):
+    if isinstance(param, ForceType):
+
+        # Use the per-element's default value ..
+        value = param.default
+
+        # .. but if it is missing ..
+        if value == NO_DEFAULT_VALUE:
+
+            # .. use the SimpleIO-level default value, but only if it is not missing either.
+            value = default_value if default_value != NO_DEFAULT_VALUE else ''
+
+    # Not a ForceType wrapper, default to an empty string in this case.
+    else:
+        value = ''
+
+    return value
+
+# ################################################################################################################################
+
+def _resolve_output_value(param, force_empty_keys):
+    return None if force_empty_keys else resolve_default_value(param, '')
+
+# ################################################################################################################################
+
 def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, bool_parameter_prefixes, int_parameters,
     int_parameter_suffixes, force_empty_keys, encrypt_func, encrypt_secrets, date_time_format=None, data_format=ZATO_NONE,
     from_sio_to_external=False, special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC), _is_bool=is_bool, _is_int=is_int,
@@ -397,14 +422,18 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
     try:
 
         if _is_bool(param, param_name, bool_parameter_prefixes):
-            if value == '' and force_empty_keys:
-                value = None
+            if value == '':
+                value = _resolve_output_value(param, force_empty_keys)
             else:
                 value = asbool(value or None) # value can be an empty string and asbool chokes on that
+            return value
 
         if value is not None:
             if isinstance(param, ForceType):
-                value = param.convert(value, param_name, data_format, from_sio_to_external)
+                if value == '':
+                    value = _resolve_output_value(param, force_empty_keys)
+                else:
+                    value = param.convert(value, param_name, data_format, from_sio_to_external)
             else:
                 # Empty string sent in lieu of integers are equivalent to None,
                 # as though they were never sent - this is needed for internal metaclasses
@@ -530,20 +559,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
                 # Not required and not provided on input either in msg or channel params
                 # so we can use an empty string, but with ForceType elements in particular,
                 # we want to use their optional default value so as not to assume anything about input data.
-                if isinstance(param, ForceType):
-
-                    # Use the per-element's default value ..
-                    value = param.default
-
-                    # .. but if it is missing ..
-                    if value == NO_DEFAULT_VALUE:
-
-                        # .. use the SimpleIO-level default value, but only if it is not missing either.
-                        value = default_value if default_value != NO_DEFAULT_VALUE else ''
-
-                # Not a ForceType wrapper, default to an empty string in this case.
-                else:
-                    value = ''
+                value = resolve_default_value(param, default_value)
 
     else:
         if value is not None and not isinstance(param, COMPLEX_VALUE):
