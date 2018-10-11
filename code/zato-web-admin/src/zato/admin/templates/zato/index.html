@@ -251,13 +251,6 @@
                         <li><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:'' }}">Topics</a></li>
                         <li><a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id|default:'' }}">Endpoints</a></li>
                         <li><a href="{% url "pubsub-subscription" %}?cluster={{ cluster_id|default:'' }}">Subscriptions</a></li>
-
-                        <li>
-                            <span class="like-a">Tasks &rarr;</span>
-                            <ul>
-                                <li><a href="{% url "pubsub-task-delivery-server" %}?cluster={{ cluster_id|default:'' }}">Delivery servers</a></li>
-                            </ul>
-                        </li>
                     </ul>
                 </li>
 
