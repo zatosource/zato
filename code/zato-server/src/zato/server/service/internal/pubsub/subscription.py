@@ -504,7 +504,10 @@ class Create(_Subscribe):
             ]
             for topic_name in topic_list:
                 try:
-                    self._is_subscription_allowed(topic_name, *check_input)
+                    # Assignment to sub_pattern_matched will need to be changed once
+                    # we support subscriptions to multiple topics at a time,
+                    # but for the time being, this is fine.
+                    self.request.raw_request.sub_pattern_matched = self._is_subscription_allowed(topic_name, *check_input)
                 except Forbidden:
                     self.logger.warn('Could not subscribe to `%r` using `%r`', topic_name, check_input)
                     raise
