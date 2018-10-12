@@ -96,6 +96,7 @@ class WebSocket(_WebSocket):
         self.pings_missed_threshold = self.config.get('pings_missed_threshold', 5)
         self.ping_last_response_time = None
         self.user_data = Bunch() # Arbitrary user-defined data
+        self._disconnect_requested = False # Have we been asked to disconnect this client?
 
         # For publish/subscribe over WSX
         self.pubsub_tool = PubSubTool(config.parallel_server.worker_store.pubsub, self, PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
@@ -598,6 +599,24 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
+    def _close_connection(self, verb, *_ignored_args, **_ignored_kwargs):
+        logger.info('{} %s (%s) to %s (%s %s %s)'.format(verb),
+            self._peer_address, self._peer_fqdn, self._local_address, self.ext_client_id, self.config.name, self.pub_client_id)
+
+        self.unregister_auth_client()
+        del self.container.clients[self.pub_client_id]
+
+# ################################################################################################################################
+
+    def disconnect_client(self, cid):
+        """ Disconnects the remote client, cleaning up internal resources along the way.
+        """
+        self._disconnect_requested = True
+        self._close_connection('Disconnecting client from')
+        self.close()
+
+# ################################################################################################################################
+
     def opened(self, _now=datetime.utcnow, _timedelta=timedelta):
         logger.info('New connection from %s (%s) to %s (%s)', self._peer_address, self._peer_fqdn,
             self._local_address, self.config.name)
@@ -607,11 +626,10 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def closed(self, _ignored_code=None, _ignored_reason=None):
-        logger.info('Closing connection from %s (%s) to %s (%s %s %s)',
-            self._peer_address, self._peer_fqdn, self._local_address, self.ext_client_id, self.config.name, self.pub_client_id)
 
-        self.unregister_auth_client()
-        del self.container.clients[self.pub_client_id]
+        # The diconnect requested already cleaned up everything
+        if not self._disconnect_requested:
+            self._close_connection('Closing connection from')
 
     on_socket_terminated = closed
 
@@ -656,6 +674,9 @@ class WebSocketContainer(WebSocketWSGIApplication):
     def invoke_client(self, cid, pub_client_id, request):
         return self.clients[pub_client_id].invoke_client(cid, request)
 
+    def disconnect_client(self, cid, pub_client_id):
+        return self.clients[pub_client_id].disconnect_client(cid)
+
     def notify_pubsub_message(self, cid, pub_client_id, request):
         return self.clients[pub_client_id].notify_pubsub_message(cid, request)
 
@@ -681,6 +702,9 @@ class WebSocketServer(WSGIServer):
 
     def invoke_client(self, cid, pub_client_id, request):
         return self.application.invoke_client(cid, pub_client_id, request)
+
+    def disconnect_client(self, cid, pub_client_id):
+        return self.application.disconnect_client(cid, pub_client_id)
 
     def notify_pubsub_message(self, cid, pub_client_id, request):
         return self.application.notify_pubsub_message(cid, pub_client_id, request)
@@ -711,6 +735,9 @@ class ChannelWebSocket(Connector):
 
     def invoke(self, cid, pub_client_id, request):
         return self.server.invoke_client(cid, pub_client_id, request)
+
+    def disconnect_client(self, cid, pub_client_id):
+        return self.server.disconnect_client(cid, pub_client_id)
 
     def notify_pubsub_message(self, cid, pub_client_id, request):
         return self.server.notify_pubsub_message(cid, pub_client_id, request)
