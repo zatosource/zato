@@ -1567,24 +1567,16 @@ def web_socket_clients_by_server_id(session, server_id):
 
 # ################################################################################################################################
 
-def _web_socket_client(session, cluster_id, is_by_ext_id=False, is_by_channel=False, pattern=None):
-    q = session.query(WebSocketClient, ChannelWebSocket.name.label('channel_name')).\
-        filter(WebSocketSubscription.is_by_ext_id==is_by_ext_id).\
-        filter(WebSocketSubscription.is_by_channel==is_by_channel).\
+def _web_socket_client(session, cluster_id):
+    return session.query(WebSocketClient).\
         filter(Server.cluster_id==cluster_id).\
-        outerjoin(ChannelWebSocket, ChannelWebSocket.id==WebSocketClient.channel_id).\
-        outerjoin(WebSocketSubscription, WebSocketSubscription.client_id==WebSocketClient.id).\
-        outerjoin(Server, Server.id==WebSocketClient.server_id)
+        outerjoin(WebSocketSubscription, WebSocketSubscription.ext_client_id==WebSocketClient.ext_client_id)
 
-    if pattern:
-        q = q.filter(WebSocketSubscription.pattern==pattern)
-
-    return q
-
-def web_socket_client_list(*args, **kwargs):
+@query_wrapper
+def web_socket_client_list(session, cluster_id, needs_columns=False):
     """ A list of subscriptions to a particular pattern.
     """
-    return _web_socket_client(*args, **kwargs)
+    return _web_socket_client(session, cluster_id)
 
 # ################################################################################################################################
 
