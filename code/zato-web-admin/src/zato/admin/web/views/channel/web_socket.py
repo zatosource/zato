@@ -118,7 +118,7 @@ class ConnectionList(_Index):
     method_allowed = 'GET'
     url_name = 'channel-web-socket-connection-list'
     template = 'zato/channel/web-socket-connection-list.html'
-    service_name = 'channel.web-socket.get-connection-list'
+    service_name = 'zato.channel.web-socket.get-connection-list'
     output_class = WSXConnection
     paginate = True
 
@@ -140,13 +140,13 @@ class ConnectionList(_Index):
 
 # ################################################################################################################################
 
-class ConnectionDelete(_Delete):
+class DisconnectionConnection(_Delete):
     url_name = 'channel-web-socket-connection-disconnect'
     error_message = 'Could not disconnect WebSocket connection'
-    service_name = 'channel.web-socket.disconnect'
+    service_name = 'zato.channel.web-socket.disconnect-connection'
 
     def get_input_dict(self):
-        out = super(ConnectionDelete, self).get_input_dict()
+        out = super(DisconnectionConnection, self).get_input_dict()
         out['pub_client_id'] = self.req.zato.args.pub_client_id.replace('-', '.')
         return out
 

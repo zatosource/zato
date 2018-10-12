@@ -600,8 +600,9 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def _close_connection(self, verb, *_ignored_args, **_ignored_kwargs):
-        logger.info('{} %s (%s) to %s (%s %s %s)'.format(verb),
-            self._peer_address, self._peer_fqdn, self._local_address, self.ext_client_id, self.config.name, self.pub_client_id)
+        logger.info('{} %s (%s) to %s (%s %s %s%s'.format(verb),
+            self._peer_address, self._peer_fqdn, self._local_address, self.config.name, self.ext_client_id,
+            self.pub_client_id, ' {})'.format(self.ext_client_name) if self.ext_client_name else ')')
 
         self.unregister_auth_client()
         del self.container.clients[self.pub_client_id]

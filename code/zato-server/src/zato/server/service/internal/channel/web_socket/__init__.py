@@ -13,11 +13,12 @@ from contextlib import closing
 
 # Zato
 from zato.common.broker_message import CHANNEL
-from zato.common.odb.model import ChannelWebSocket, Service as ServiceModel
-from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service
+from zato.common.odb.model import ChannelWebSocket, Service as ServiceModel, WebSocketClient
+from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \
+     web_socket_client_by_pub_id, web_socket_client_list
 from zato.common.util import is_port_taken
-from zato.server.service import Int, Service
-from zato.server.service.internal import AdminService
+from zato.server.service import AsIs, DateTime, Int, Service
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
@@ -115,5 +116,68 @@ class Start(Service):
             self.logger.warn('Cannot bind WebSocket channel `%s` to TCP port %s (already taken)', input.name, input.bind_port)
         else:
             self.server.worker_store.web_socket_channel_create(self.request.input)
+
+# ################################################################################################################################
+
+class GetConnectionList(AdminService):
+    """ Returns a list of WSX connections for a particular channel.
+    """
+    _filter_by = WebSocketClient.ext_client_id,
+
+    class SimpleIO(GetListAdminSIO):
+        input_required = 'id', 'cluster_id'
+        output_required = ('local_address', 'peer_address', 'peer_fqdn', AsIs('pub_client_id'), AsIs('ext_client_id'),
+            DateTime('connection_time'), 'server_name', 'server_proc_pid')
+        output_optional = 'ext_client_name', 'sub_count'
+        output_repeated = True
+
+    def get_data(self, session):
+        return self._search(web_socket_client_list, session, self.request.input.cluster_id, self.request.input.id, False)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload[:] = self.get_data(session)
+
+# ################################################################################################################################
+
+class _BaseDisconnect(AdminService):
+    class SimpleIO(AdminSIO):
+        input_required = 'cluster_id', 'id', AsIs('pub_client_id')
+
+    def _get_wsx_client(self, session):
+        client = web_socket_client(session, self.request.input.cluster_id, self.request.input.id,
+            self.request.input.pub_client_id)
+        if not client:
+            raise Exception('No such WebSocket connection `{}`'.format(self.request.input.toDict()))
+        else:
+            return client
+
+# ################################################################################################################################
+
+class DisconnectConnection(_BaseDisconnect):
+    """ Deletes an existing WSX connection.
+    """
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            client = self._get_wsx_client(session)
+            server_name = client.server_name
+
+        self.servers[server_name].invoke(
+            DisconnectConnectionServer.get_name(), self.request.input, pid=client.server_proc_pid)
+
+# ################################################################################################################################
+
+class DisconnectConnectionServer(_BaseDisconnect):
+    """ Low-level implementation of WSX connection deletion - must be invoked on the server where the connection exists.
+    """
+    def handle(self):
+        pub_client_id = self.request.input.pub_client_id
+
+        with closing(self.odb.session()) as session:
+            client = web_socket_client_by_pub_id(session, pub_client_id)
+            wsx_channel_name = client.channel_name
+
+        connector = self.server.worker_store.web_socket_api.connectors[wsx_channel_name]
+        connector.disconnect_client(self.cid, pub_client_id)
 
 # ################################################################################################################################
