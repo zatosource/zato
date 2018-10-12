@@ -847,7 +847,9 @@ urlpatterns += [
     url(r'^zato/channel/wsx/connection-list/(?P<id>.*)/$',
         login_required(channel_web_socket.ConnectionList()), name=channel_web_socket.ConnectionList.url_name),
 
-    ]
+    url(r'^zato/channel/wsx/connection/sub-key-data-list/(?P<pub_client_id>.*)/$',
+        login_required(channel_web_socket.SubKeyDataList()), name=channel_web_socket.SubKeyDataList.url_name),
+]
 
 # ################################################################################################################################
 
