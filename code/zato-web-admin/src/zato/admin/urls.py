@@ -842,7 +842,7 @@ urlpatterns += [
         login_required(channel_web_socket.Delete()), name=channel_web_socket.Delete.url_name),
 
     url(r'^zato/channel/wsx/connection-list/(?P<id>.*)/delete/(?P<pub_client_id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(channel_web_socket.ConnectionDelete()), name=channel_web_socket.ConnectionDelete.url_name),
+        login_required(channel_web_socket.DisconnectionConnection()), name=channel_web_socket.DisconnectionConnection.url_name),
 
     url(r'^zato/channel/wsx/connection-list/(?P<id>.*)/$',
         login_required(channel_web_socket.ConnectionList()), name=channel_web_socket.ConnectionList.url_name),
