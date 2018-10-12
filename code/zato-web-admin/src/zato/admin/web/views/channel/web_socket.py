@@ -12,12 +12,34 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.channel.web_socket import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common import ZATO_NONE
 from zato.common.odb.model import ChannelWebSocket
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+class WSXConnection(object):
+    def __init__(self):
+        self.id = None
+        self.local_address = None
+        self.peer_address = None
+        self.peer_fqdn = None
+        self.pub_client_id = None
+        self.ext_client_id = None
+        self.connection_time = None
+        self.connection_time_utc = None
+        self.server_name = None
+        self.server_proc_pid = None
+        self.ext_client_name = None
+        self.sub_count = 0
+
+# ################################################################################################################################
 
 class Index(_Index):
     method_allowed = 'GET'
@@ -51,6 +73,8 @@ class Index(_Index):
             'edit_form': EditForm(sec_list, prefix='edit', req=self.req),
         }
 
+# ################################################################################################################################
+
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
@@ -68,16 +92,50 @@ class _CreateEdit(CreateEdit):
     def success_message(self, item):
         return 'WebSocket channel `{}` successfully {}'.format(item.name, self.verb)
 
+# ################################################################################################################################
+
 class Create(_CreateEdit):
     url_name = 'channel-web-socket-create'
     service_name = 'zato.channel.web-socket.create'
+
+# ################################################################################################################################
 
 class Edit(_CreateEdit):
     url_name = 'channel-web-socket-edit'
     form_prefix = 'edit-'
     service_name = 'zato.channel.web-socket.edit'
 
+# ################################################################################################################################
+
 class Delete(_Delete):
     url_name = 'channel-web-socket-delete'
     error_message = 'Could not delete the WebSocket channel'
     service_name = 'zato.channel.web-socket.delete'
+
+# ################################################################################################################################
+
+class ConnectionList(_Index):
+    method_allowed = 'GET'
+    url_name = 'channel-web-socket-connection-list'
+    template = 'zato/channel/web-socket-connection-list.html'
+    service_name = 'channel.web-socket.get-connection-list'
+    output_class = WSXConnection
+    paginate = True
+
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id', 'id')
+        output_required = ('local_address', 'peer_address', 'peer_fqdn', 'pub_client_id', 'ext_client_id', 'connection_time',
+            'server_name', 'server_proc_pid')
+        output_optional = 'ext_client_name', 'sub_count'
+        output_repeated = True
+
+    def handle(self):
+        return {}
+
+    def on_before_append_item(self, item):
+        item.id = item.pub_client_id.replace('.', '')
+        item.connection_time_utc = item.connection_time
+        item.connection_time = from_utc_to_user(item.connection_time_utc + '+00:00', self.req.zato.user_profile)
+        return item
+
+# ################################################################################################################################
