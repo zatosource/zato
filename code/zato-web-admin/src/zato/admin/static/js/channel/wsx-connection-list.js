@@ -19,7 +19,7 @@ $(document).ready(function() {
 
 $.fn.zato.channel.wsx.connection_list.disconnect = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'WebSocket connection [{0}] disconnected',
+        'WebSocket client [{0}] disconnected',
         'Are you sure you want to disconnect WebSocket connection [{0}]?',
         true);
 }
