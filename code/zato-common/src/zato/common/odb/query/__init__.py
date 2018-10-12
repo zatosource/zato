@@ -1578,7 +1578,7 @@ def _web_socket_client(session, cluster_id, channel_id):
 def web_socket_client(session, cluster_id, channel_id, pub_client_id):
     return _web_socket_client(session, cluster_id, channel_id).\
            filter(WebSocketClient.pub_client_id==pub_client_id).\
-           one_or_none()
+           first()
 
 # ################################################################################################################################
 
