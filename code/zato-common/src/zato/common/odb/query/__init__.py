@@ -1570,7 +1570,8 @@ def web_socket_clients_by_server_id(session, server_id):
 def _web_socket_client(session, cluster_id, channel_id):
     return session.query(WebSocketClient).\
         filter(WebSocketClient.cluster_id==cluster_id).\
-        filter(WebSocketClient.channel_id==channel_id)
+        filter(WebSocketClient.channel_id==channel_id).\
+        order_by(WebSocketClient.connection_time.desc())
 
 # ################################################################################################################################
 
