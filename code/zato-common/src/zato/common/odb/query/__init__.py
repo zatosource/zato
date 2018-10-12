@@ -31,7 +31,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, Cac
      OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, \
      PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic, RBACClientRole, \
      RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, \
-     TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, \
+     TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketClientPubSubKeys, WebSocketSubscription, \
      WSSDefinition, VaultConnection, XPath, XPathSecurity, OutgoingSAP
 from zato.common.util.search import SearchResults as _SearchResults
 
@@ -1590,13 +1590,23 @@ def web_socket_client_list(session, cluster_id, channel_id, needs_columns=False)
 
 # ################################################################################################################################
 
-def _web_socket_sub(session, cluster_id):
-    return session.query(WebSocketSubscription).\
-        outerjoin(Server, Server.id==WebSocketSubscription.server_id).\
-        outerjoin(Cluster, Cluster.id==Server.cluster_id)
+def _web_socket_sub_key_data(session, cluster_id, pub_client_id):
+    return session.query(
+        WebSocketClientPubSubKeys.sub_key,
+        PubSubSubscription.topic_id,
+        PubSubSubscription.creation_time,
+        PubSubSubscription.endpoint_id,
+        PubSubTopic.name.label('topic_name')
+        ).\
+        filter(WebSocketClient.pub_client_id==pub_client_id).\
+        filter(WebSocketClient.id==WebSocketClientPubSubKeys.client_id).\
+        filter(WebSocketClientPubSubKeys.sub_key==WebSocketSubscription.sub_key).\
+        filter(WebSocketClientPubSubKeys.sub_key==PubSubSubscription.sub_key).\
+        filter(PubSubSubscription.topic_id==PubSubTopic.id)
 
-def web_socket_sub_list(session, cluster_id):
-    return _web_socket_sub(session, cluster_id)
+@query_wrapper
+def web_socket_sub_key_data_list(session, cluster_id, pub_client_id, needs_columns=False):
+    return _web_socket_sub_key_data(session, cluster_id, pub_client_id)
 
 # ################################################################################################################################
 

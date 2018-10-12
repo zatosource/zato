@@ -41,6 +41,15 @@ class WSXConnection(object):
 
 # ################################################################################################################################
 
+class WSXSubKeyData(object):
+    def __init__(self):
+        self.sub_key = None
+        self.creation_time = None
+        self.topic_id = None
+        self.topic_name = None
+
+# ################################################################################################################################
+
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'channel-web-socket'
@@ -151,3 +160,72 @@ class DisconnectionConnection(_Delete):
         return out
 
 # ################################################################################################################################
+
+class SubKeyDataList(_Index):
+    method_allowed = 'GET'
+    url_name = 'channel-web-socket-connection-sub-key-data-list'
+    template = 'zato/channel/web-socket-connection-sub-key-data-list.html'
+    service_name = 'channel.web-socket.get-sub-key-data-list'
+    output_class = WSXSubKeyData
+    paginate = True
+
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id', 'pub_client_id')
+        output_required = 'sub_key', 'creation_time', 'topic_id', 'topic_name'
+        output_repeated = True
+
+    def on_after_set_input(self):
+        self.input['pub_client_id'] = self.input['pub_client_id'].replace('-', '.')
+
+    def handle(self):
+        return {}
+
+    def on_before_append_item(self, item):
+        item.id = item.sub_key
+        item.creation_time_utc = item.creation_time
+        item.creation_time = from_utc_to_user(item.creation_time_utc + '+00:00', self.req.zato.user_profile)
+        return item
+
+# ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+from contextlib import closing
+from datetime import date, datetime
+
+# Zato
+from zato.common.util.time_ import datetime_from_ms
+from zato.common.odb.query import web_socket_sub_key_data_list
+from zato.server.service import AsIs, DateTime, Service
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
+# ################################################################################################################################
+
+class SubKeyDataList(AdminService):
+    """ Returns a list of pub/sub sub_key data for a particular WSX connection.
+    """
+    name = 'channel.web-socket.get-sub-key-data-list'
+    _filter_by = WebSocketClientPubSubKeys.sub_key,
+
+    class SimpleIO(GetListAdminSIO):
+        input_required = 'cluster_id', AsIs('pub_client_id')
+        output_required = 'sub_key', DateTime('creation_time'), 'topic_id', 'topic_name'
+        output_repeated = True
+
+    def get_data(self, session):
+        return self._search(web_socket_sub_key_data_list,
+            session, self.request.input.cluster_id, self.request.input.pub_client_id, False)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            data = self.get_data(session)
+            for item in data:
+                item.creation_time = datetime_from_ms(item.creation_time)
+            self.response.payload[:] = data
+
+# ################################################################################################################################
+'''

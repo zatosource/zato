@@ -41,7 +41,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">WebSocket connections</h2>
+<h2 class="zato">WebSocket pub/sub subscriptions</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -104,9 +104,7 @@
                                 href="javascript:$.fn.zato.toggle_time('connection_time_{{ item.id }}', '{{ item.connection_time }}', '{{ item.connection_time_utc }}')">{{ item.connection_time }}
                             </a>
                         </td>
-
-                        <td style="vertical-align:middle"><a href="{% url "channel-web-socket-connection-sub-key-data-list" item.id %}?cluster={{ cluster_id }}">Subscriptions</a></td>
-
+                        <td style="vertical-align:middle"><a href="javascript:$.fn.zato.channel.wsx.delete_('{{ item.id }}')">Subscriptions</a></td>
                         <td style="vertical-align:middle"><a href="javascript:$.fn.zato.channel.wsx.delete_('{{ item.id }}')">Invoke</a></td>
                         <td style="vertical-align:middle"><a href="javascript:$.fn.zato.channel.wsx.connection_list.disconnect('{{ item.id }}')">Disconnect</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
