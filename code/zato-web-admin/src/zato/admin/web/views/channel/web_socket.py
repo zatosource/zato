@@ -109,7 +109,7 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'channel-web-socket-delete'
-    error_message = 'Could not delete the WebSocket channel'
+    error_message = 'Could not delete WebSocket channel'
     service_name = 'zato.channel.web-socket.delete'
 
 # ################################################################################################################################
@@ -133,9 +133,21 @@ class ConnectionList(_Index):
         return {}
 
     def on_before_append_item(self, item):
-        item.id = item.pub_client_id.replace('.', '')
+        item.id = item.pub_client_id.replace('.', '-')
         item.connection_time_utc = item.connection_time
         item.connection_time = from_utc_to_user(item.connection_time_utc + '+00:00', self.req.zato.user_profile)
         return item
+
+# ################################################################################################################################
+
+class ConnectionDelete(_Delete):
+    url_name = 'channel-web-socket-connection-disconnect'
+    error_message = 'Could not disconnect WebSocket connection'
+    service_name = 'channel.web-socket.disconnect'
+
+    def get_input_dict(self):
+        out = super(ConnectionDelete, self).get_input_dict()
+        out['pub_client_id'] = self.req.zato.args.pub_client_id.replace('-', '.')
+        return out
 
 # ################################################################################################################################
