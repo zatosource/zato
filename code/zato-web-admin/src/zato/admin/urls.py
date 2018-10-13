@@ -841,6 +841,12 @@ urlpatterns += [
     url(r'^zato/channel/wsx/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_web_socket.Delete()), name=channel_web_socket.Delete.url_name),
 
+    url(r'^zato/channel/wsx/connection/invoke/action/(?P<pub_client_id>.*)/$',
+        login_required(channel_web_socket.invoke_action), name='channel-web-socket-invoke-action'),
+
+    url(r'^zato/channel/wsx/connection/invoke/(?P<conn_id>.*)/(?P<pub_client_id>.*)/(?P<ext_client_id>.*)/(?P<ext_client_name>.*)/(?P<channel_id>.*)/(?P<channel_name>.*)/$',
+        login_required(channel_web_socket.invoke), name='channel-web-socket-invoke'),
+
     url(r'^zato/channel/wsx/connection-list/(?P<id>.*)/delete/(?P<pub_client_id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_web_socket.DisconnectionConnection()), name=channel_web_socket.DisconnectionConnection.url_name),
 
