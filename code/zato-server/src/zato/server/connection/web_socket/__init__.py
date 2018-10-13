@@ -313,7 +313,7 @@ class WebSocket(_WebSocket):
                 # Ok, still connected
                 if self.stream:
                     try:
-                        response = self.invoke_client(new_cid(), None, False)
+                        response = self.invoke_client(new_cid(), None, use_send=False)
                     except RuntimeError:
                         logger.warn('Closing connection due to `%s`', format_exc())
                         self.on_socket_terminated()
@@ -585,7 +585,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def invoke_client(self, cid, request, use_send=True, _Class=ClientInvokeRequest):
+    def invoke_client(self, cid, request, timeout=5, use_send=True, _Class=ClientInvokeRequest):
         """ Invokes a remote WSX client with request given on input, returning its response,
         if any was produced in the expected time.
         """
@@ -593,7 +593,7 @@ class WebSocket(_WebSocket):
         (self.send if use_send else self.ping)(msg.serialize())
 
         if _Class is not PubSubClientInvokeRequest:
-            response = self._wait_for_client_response(msg.id)
+            response = self._wait_for_client_response(msg.id, timeout)
             if response:
                 return response if isinstance(response, bool) else response.data # It will be bool in pong responses
 
@@ -669,11 +669,11 @@ class WebSocketContainer(WebSocketWSGIApplication):
                 return [error_response[NOT_FOUND][self.config.data_format]]
 
             super(WebSocketContainer, self).__call__(environ, start_response)
-        except Exception, e:
-            logger.warn('Could not execute __call__, e:`%s`', format_exc(e))
+        except Exception:
+            logger.warn('Could not execute __call__, e:`%s`', format_exc())
 
-    def invoke_client(self, cid, pub_client_id, request):
-        return self.clients[pub_client_id].invoke_client(cid, request)
+    def invoke_client(self, cid, pub_client_id, request, timeout):
+        return self.clients[pub_client_id].invoke_client(cid, request, timeout)
 
     def disconnect_client(self, cid, pub_client_id):
         return self.clients[pub_client_id].disconnect_client(cid)
@@ -701,8 +701,8 @@ class WebSocketServer(WSGIServer):
 
         super(WebSocketServer, self).__init__((config.host, config.port), WebSocketContainer(config, handler_cls=WebSocket))
 
-    def invoke_client(self, cid, pub_client_id, request):
-        return self.application.invoke_client(cid, pub_client_id, request)
+    def invoke_client(self, cid, pub_client_id, request, timeout):
+        return self.application.invoke_client(cid, pub_client_id, request, timeout)
 
     def disconnect_client(self, cid, pub_client_id):
         return self.application.disconnect_client(cid, pub_client_id)
@@ -734,10 +734,10 @@ class ChannelWebSocket(Connector):
     def get_log_details(self):
         return self.config.address
 
-    def invoke(self, cid, pub_client_id, request):
-        return self.server.invoke_client(cid, pub_client_id, request)
+    def invoke(self, cid, pub_client_id, request, timeout=5):
+        return self.server.invoke_client(cid, pub_client_id, request, timeout)
 
-    def disconnect_client(self, cid, pub_client_id):
+    def disconnect_client(self, cid, pub_client_id, *ignored_args, **ignored_kwargs):
         return self.server.disconnect_client(cid, pub_client_id)
 
     def notify_pubsub_message(self, cid, pub_client_id, request):

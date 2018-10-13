@@ -224,7 +224,7 @@ def invoke(req, conn_id, pub_client_id, ext_client_id, ext_client_name, channel_
 # ################################################################################################################################
 
 @method_allowed('POST')
-def invoke_action(req, pub_client_id, send_attrs=('pub_client_id', 'request', 'timeout')):
+def invoke_action(req, pub_client_id, send_attrs=('id', 'pub_client_id', 'request_data', 'timeout')):
 
     try:
         request = {
@@ -234,7 +234,7 @@ def invoke_action(req, pub_client_id, send_attrs=('pub_client_id', 'request', 't
         for name in send_attrs:
             request[name] = req.POST.get(name, '')
 
-        response = req.zato.client.invoke('channel.web-socket.invoke-wsx', request)
+        response = req.zato.client.invoke('zato.channel.web-socket.invoke-wsx', request)
 
         if response.ok:
             return HttpResponse(dumps({'msg': response.data['response'] }), content_type='application/javascript')
