@@ -13,10 +13,11 @@ from contextlib import closing
 
 # Zato
 from zato.common.broker_message import CHANNEL
-from zato.common.odb.model import ChannelWebSocket, Service as ServiceModel, WebSocketClient
+from zato.common.odb.model import ChannelWebSocket, PubSubTopic, Service as ServiceModel, WebSocketClient
 from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \
-     web_socket_client_by_pub_id, web_socket_client_list
+     web_socket_client_by_pub_id, web_socket_client_list, web_socket_sub_key_data_list
 from zato.common.util import is_port_taken
+from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, DateTime, Int, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
@@ -87,16 +88,6 @@ class Edit(AdminService):
 
 class Delete(AdminService):
     __metaclass__ = DeleteMeta
-
-# ################################################################################################################################
-
-class GetToken(AdminService):
-    pass
-
-# ################################################################################################################################
-
-class InvalidateToken(AdminService):
-    pass
 
 # ################################################################################################################################
 
@@ -179,5 +170,29 @@ class DisconnectConnectionServer(_BaseDisconnect):
 
         connector = self.server.worker_store.web_socket_api.connectors[wsx_channel_name]
         connector.disconnect_client(self.cid, pub_client_id)
+
+# ################################################################################################################################
+
+class GetSubKeyDataList(AdminService):
+    """ Returns a list of pub/sub sub_key data for a particular WSX connection.
+    """
+    _filter_by = PubSubTopic.name,
+
+    class SimpleIO(GetListAdminSIO):
+        input_required = 'cluster_id', AsIs('pub_client_id')
+        output_required = ('sub_id', 'sub_key', DateTime('creation_time'), 'topic_id', 'topic_name', 'sub_pattern_matched',
+            AsIs('ext_client_id'), 'endpoint_id', 'endpoint_name')
+        output_repeated = True
+
+    def get_data(self, session):
+        return self._search(web_socket_sub_key_data_list,
+            session, self.request.input.cluster_id, self.request.input.pub_client_id, False)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            data = self.get_data(session)
+            for item in data:
+                item.creation_time = datetime_from_ms(item.creation_time * 1000)
+            self.response.payload[:] = data
 
 # ################################################################################################################################
