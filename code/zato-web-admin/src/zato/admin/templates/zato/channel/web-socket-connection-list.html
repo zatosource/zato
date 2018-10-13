@@ -41,7 +41,9 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">WebSocket connections</h2>
+<h2 class="zato">WebSocket connections to channel
+    <a href="{% url "channel-web-socket" %}?cluster={{ cluster_id }}&amp;highlight={{ channel_id }}">{{ channel_name }}</a>
+</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -105,7 +107,7 @@
                             </a>
                         </td>
 
-                        <td style="vertical-align:middle"><a href="{% url "channel-web-socket-connection-sub-key-data-list" item.id %}?cluster={{ cluster_id }}">Subscriptions</a></td>
+                        <td style="vertical-align:middle"><a href="{% url "channel-web-socket-connection-sub-key-data-list" item.id %}?cluster={{ cluster_id }}&amp;conn_id={{ conn_id }}&amp;channel_name={{ channel_name }}">Subscriptions</a></td>
 
                         <td style="vertical-align:middle"><a href="javascript:$.fn.zato.channel.wsx.delete_('{{ item.id }}')">Invoke</a></td>
                         <td style="vertical-align:middle"><a href="javascript:$.fn.zato.channel.wsx.connection_list.disconnect('{{ item.id }}')">Disconnect</a></td>

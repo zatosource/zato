@@ -25,15 +25,12 @@
         return [
             '_numbering',
             '_selection',
-            '_client',
-            '_remote',
-            '_local',
-            '_connection_time',
-            '_sub_count',
-            '_invoke',
-            '_delete',
+            '_creation_time',
+            'ext_client_id',
+            '_sub_key',
+            '_topic',
+            'sub_pattern_matched',
             'id',
-            'name',
         ]
     }
     </script>
@@ -41,7 +38,9 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">WebSocket pub/sub subscriptions</h2>
+<h2 class="zato">WebSocket pub/sub subscriptions by
+<a href="{% url "channel-web-socket-connection-list" conn_id %}?cluster={{ cluster_id }}&amp;channel_name={{ channel_name }}&amp;highlight={{ pub_client_id_html }}">{{ pub_client_id }}</a>
+</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -60,14 +59,12 @@
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th><a href="#">Client</a></th>
-                        <th><a href="#">Remote</a></th>
-                        <th><a href="#">Local</a></th>
-                        <th><a href="#">Connection time</a></th>
+                        <th><a href="#">Creation time</a></th>
+                        <th><a href="#">EXTCLI</a></th>
+                        <th><a href="#">Sub key</a></th>
+                        <th><a href="#">Topic</a></th>
+                        <th><a href="#">Pattern matched</a></th>
                         <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -75,40 +72,34 @@
                 {% if items %}
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
-                        <td class='numbering'>&nbsp;</td>
+                        <td class='numbering' style="width:10px">&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>
-                            {{ item.pub_client_id }}
-                            <br/>
-                            {{ item.ext_client_id }}
-                            {% if item.ext_client_name %}
-                                <br/>
-                                {{ item.ext_client_name }}
-                            {% endif %}
-                        </td>
-                        <td style="vertical-align:middle">
-                            {{ item.peer_address }}
-                            {% if item.peer_fqdn %}
-                                <br/>
-                                {{ item.peer_fqdn }}
-                            {% endif %}
-                        </td>
-                        <td style="vertical-align:middle">
-                            {{ item.local_address }}
-                            <br/>
-                            {{ item.server_name }}:{{ item.server_proc_pid }}
-                        </td>
-                        <td style="vertical-align:middle; min-width:120px">
+
+                        <td style="width:175px">
                             <a
-                                id="a_connection_time_{{ item.id }}"
-                                href="javascript:$.fn.zato.toggle_time('connection_time_{{ item.id }}', '{{ item.connection_time }}', '{{ item.connection_time_utc }}')">{{ item.connection_time }}
+                                id="a_creation_time_{{ item.id }}"
+                                href="javascript:$.fn.zato.toggle_time('creation_time_{{ item.id }}', '{{ item.creation_time }}', '{{ item.creation_time_utc }}')">{{ item.creation_time }}
                             </a>
                         </td>
-                        <td style="vertical-align:middle"><a href="javascript:$.fn.zato.channel.wsx.delete_('{{ item.id }}')">Subscriptions</a></td>
-                        <td style="vertical-align:middle"><a href="javascript:$.fn.zato.channel.wsx.delete_('{{ item.id }}')">Invoke</a></td>
-                        <td style="vertical-align:middle"><a href="javascript:$.fn.zato.channel.wsx.connection_list.disconnect('{{ item.id }}')">Disconnect</a></td>
+
+                        <td>
+                            {{ item.ext_client_id }}
+                        </td>
+
+                        <td style="width:270px">
+<a href="{% url "pubsub-endpoint-queues" cluster_id item.endpoint_id item.endpoint_name|slugify %}?cluster={{ cluster_id }}&amp;query={{ item.topic_name }}&amp;highlight={{ item.sub_id }}">{{ item.sub_key}} </a>
+                        </td>
+
+                        <td style="vertical-align:middle; text-align:left">
+                            <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.topic_name }}</a>
+
+                        </td>
+
+                        <td style="vertical-align:middle; text-align:left">
+                            {{ item.sub_pattern_matched }}
+                        </td>
+
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-                        <td class='ignore'>{{ item.ext_client_id }} - {{ item.pub_client_id }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}

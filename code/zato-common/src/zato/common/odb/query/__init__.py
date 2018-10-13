@@ -1594,15 +1594,20 @@ def _web_socket_sub_key_data(session, cluster_id, pub_client_id):
     return session.query(
         WebSocketClientPubSubKeys.sub_key,
         PubSubSubscription.topic_id,
+        PubSubSubscription.id.label('sub_id'),
         PubSubSubscription.creation_time,
         PubSubSubscription.endpoint_id,
+        PubSubSubscription.sub_pattern_matched,
+        PubSubSubscription.ext_client_id,
+        PubSubEndpoint.name.label('endpoint_name'),
         PubSubTopic.name.label('topic_name')
         ).\
         filter(WebSocketClient.pub_client_id==pub_client_id).\
         filter(WebSocketClient.id==WebSocketClientPubSubKeys.client_id).\
         filter(WebSocketClientPubSubKeys.sub_key==WebSocketSubscription.sub_key).\
         filter(WebSocketClientPubSubKeys.sub_key==PubSubSubscription.sub_key).\
-        filter(PubSubSubscription.topic_id==PubSubTopic.id)
+        filter(PubSubSubscription.topic_id==PubSubTopic.id).\
+        filter(PubSubSubscription.endpoint_id==PubSubEndpoint.id)
 
 @query_wrapper
 def web_socket_sub_key_data_list(session, cluster_id, pub_client_id, needs_columns=False):
