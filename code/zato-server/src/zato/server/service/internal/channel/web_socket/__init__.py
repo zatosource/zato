@@ -131,9 +131,15 @@ class GetConnectionList(AdminService):
 
 # ################################################################################################################################
 
-class _BaseDisconnect(AdminService):
+class _BaseCommand(AdminService):
+    server_service = None
+
     class SimpleIO(AdminSIO):
         input_required = 'cluster_id', 'id', AsIs('pub_client_id')
+        input_optional = 'request_data'
+        output_optional = 'response_data'
+
+# ################################################################################################################################
 
     def _get_wsx_client(self, session):
         client = web_socket_client(session, self.request.input.cluster_id, self.request.input.id,
@@ -145,22 +151,19 @@ class _BaseDisconnect(AdminService):
 
 # ################################################################################################################################
 
-class DisconnectConnection(_BaseDisconnect):
-    """ Deletes an existing WSX connection.
-    """
+class _BaseAPICommand(_BaseCommand):
+
     def handle(self):
         with closing(self.odb.session()) as session:
             client = self._get_wsx_client(session)
             server_name = client.server_name
-
-        self.servers[server_name].invoke(
-            DisconnectConnectionServer.get_name(), self.request.input, pid=client.server_proc_pid)
+        self.servers[server_name].invoke(self.server_service, self.request.input, pid=client.server_proc_pid)
 
 # ################################################################################################################################
 
-class DisconnectConnectionServer(_BaseDisconnect):
-    """ Low-level implementation of WSX connection deletion - must be invoked on the server where the connection exists.
-    """
+class _BaseServerCommand(_BaseCommand):
+    func_name = None
+
     def handle(self):
         pub_client_id = self.request.input.pub_client_id
 
@@ -169,7 +172,36 @@ class DisconnectConnectionServer(_BaseDisconnect):
             wsx_channel_name = client.channel_name
 
         connector = self.server.worker_store.web_socket_api.connectors[wsx_channel_name]
-        connector.disconnect_client(self.cid, pub_client_id)
+        func = getattr(connector, self.func_name)
+        func(self.cid, pub_client_id)
+
+# ################################################################################################################################
+
+class DisconnectConnection(_BaseAPICommand):
+    """ Deletes an existing WSX connection.
+    """
+    server_service = 'zato.channel.web-socket.disconnect-connection-server'
+
+# ################################################################################################################################
+
+class DisconnectConnectionServer(_BaseServerCommand):
+    """ Low-level implementation of WSX connection deletion - must be invoked on the server where the connection exists.
+    """
+    func_name = 'disconnect_client'
+
+# ################################################################################################################################
+
+class InvokeWSX(_BaseAPICommand):
+    """ Invokes an existing WSX connection.
+    """
+    server_service = 'zato.channel.web-socket.server-invoke-wsx'
+
+# ################################################################################################################################
+
+class ServerInvokeWSX(_BaseServerCommand):
+    """ Low-level implementation of WSX connection inovcations - must be invoked on the server where the connection exists.
+    """
+    func_name = 'invoke_client'
 
 # ################################################################################################################################
 

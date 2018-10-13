@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from json import dumps
 from traceback import format_exc
 
 # Django
@@ -223,7 +224,7 @@ def invoke(req, conn_id, pub_client_id, ext_client_id, ext_client_name, channel_
 # ################################################################################################################################
 
 @method_allowed('POST')
-def invoke_action(req, pub_client_id, send_attrs=('pub_client_id', 'request')):
+def invoke_action(req, pub_client_id, send_attrs=('pub_client_id', 'request', 'timeout')):
 
     try:
         request = {
@@ -233,10 +234,10 @@ def invoke_action(req, pub_client_id, send_attrs=('pub_client_id', 'request')):
         for name in send_attrs:
             request[name] = req.POST.get(name, '')
 
-        response = req.zato.client.invoke('zato.outgoing.jms-wmq.send-message', request)
+        response = req.zato.client.invoke('channel.web-socket.invoke-wsx', request)
 
         if response.ok:
-            return HttpResponse(dumps({'msg': 'OK, message sent successfully.'}), content_type='application/javascript')
+            return HttpResponse(dumps({'msg': response.data['response'] }), content_type='application/javascript')
         else:
             raise Exception(response.details)
     except Exception:
