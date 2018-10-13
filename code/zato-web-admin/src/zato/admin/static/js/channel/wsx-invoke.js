@@ -8,8 +8,14 @@ $(document).ready(function() {
 
     var _callback = function(data, status, xhr){
         var success = status == 'success';
-        var response = success ? data.msg.response : data.responseText;
-        $.fn.zato.user_message(success, response);
+        if(success) {
+            $.fn.zato.user_message(true, 'OK');
+            $('#response_data').text(data.msg.response || '(No response)');
+        }
+        else {
+            $.fn.zato.user_message(false, 'Invocation error');
+            $('#response_data').text(data.responseText);
+        }
     }
 
     var options = {
