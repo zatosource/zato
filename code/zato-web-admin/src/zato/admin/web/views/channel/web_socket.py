@@ -10,11 +10,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from traceback import format_exc
+
+# Django
+from django.http import HttpResponse, HttpResponseServerError
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.channel.web_socket import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index
+from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
 from zato.common import ZATO_NONE
 from zato.common.odb.model import ChannelWebSocket
 
@@ -184,7 +189,6 @@ class SubKeyDataList(_Index):
         self.input['pub_client_id'] = self.input['pub_client_id'].replace('-', '.')
 
     def handle(self):
-        print(111, self.input)
         return {
             'conn_id': self.input.conn_id,
             'pub_client_id': self.input.pub_client_id,
@@ -197,5 +201,47 @@ class SubKeyDataList(_Index):
         item.creation_time_utc = item.creation_time
         item.creation_time = from_utc_to_user(item.creation_time_utc + '+00:00', self.req.zato.user_profile)
         return item
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+def invoke(req, conn_id, pub_client_id, ext_client_id, ext_client_name, channel_id, channel_name):
+
+    return_data = {
+        'conn_id': conn_id,
+        'pub_client_id': pub_client_id,
+        'pub_client_id_html': pub_client_id.replace('.', '-'),
+        'ext_client_id': ext_client_id,
+        'ext_client_name': ext_client_name,
+        'channel_id': channel_id,
+        'channel_name': channel_name,
+        'cluster_id': req.zato.cluster_id,
+    }
+
+    return TemplateResponse(req, 'zato/channel/web-socket-invoke.html', return_data)
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def invoke_action(req, pub_client_id, send_attrs=('pub_client_id', 'request')):
+
+    try:
+        request = {
+            'cluster_id': req.zato.cluster_id
+        }
+
+        for name in send_attrs:
+            request[name] = req.POST.get(name, '')
+
+        response = req.zato.client.invoke('zato.outgoing.jms-wmq.send-message', request)
+
+        if response.ok:
+            return HttpResponse(dumps({'msg': 'OK, message sent successfully.'}), content_type='application/javascript')
+        else:
+            raise Exception(response.details)
+    except Exception:
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
+        logger.error(msg)
+        return HttpResponseServerError(msg)
 
 # ################################################################################################################################
