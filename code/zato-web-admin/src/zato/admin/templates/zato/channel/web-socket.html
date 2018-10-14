@@ -17,7 +17,7 @@
     <script type="text/javascript" src="/static/js/common.js"></script>
 
     {% comment %} HTTP Basic Auth {% endcomment %}
-    <script type="text/javascript" src="/static/js/channel/web_socket.js"></script>
+    <script type="text/javascript" src="/static/js/channel/wsx.js"></script>
 
 
     <script>
@@ -29,6 +29,7 @@
             '_is_active',
             'address',
             'service_name',
+            '_connections',
             '_edit',
             '_delete',
             'id',
@@ -73,6 +74,7 @@
                         <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -90,6 +92,7 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.address }}</td>
                         <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                        <td><a href="{% url "channel-web-socket-connection-list" item.id %}?cluster={{ cluster_id }}&amp;channel_name={{ item.name }}">Connections</a></td>
                         <td><a href="javascript:$.fn.zato.channel.wsx.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.wsx.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

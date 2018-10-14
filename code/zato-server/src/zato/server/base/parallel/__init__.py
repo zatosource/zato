@@ -824,7 +824,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             # Close ZeroMQ-based IPC
             self.ipc_api.close()
 
-            self.invoke('zato.channel.web-socket.client.delete-by-server')
+            # Delete persistent information about all clients currently connected
             self.invoke('zato.channel.web-socket.client.delete-by-server')
 
     # Convenience API
