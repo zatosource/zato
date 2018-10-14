@@ -228,7 +228,7 @@
                         </td>
 
                         <td>
-                            <a id="sub_key_{{ item.sub_id }}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key('{{ item.sub_id }}')">Show</a>
+                            {{ item.sub_key }}
                         </td>
                         <td>{{ item.ext_client_id|default:"<span class='form_hint'>---</span>" }}</td>
 
