@@ -1,0 +1,127 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}WebSocket channels{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} HTTP Basic Auth {% endcomment %}
+    <script type="text/javascript" src="/static/js/channel/wsx-connection-list.js"></script>
+
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            '_creation_time',
+            'ext_client_id',
+            '_sub_key',
+            '_topic',
+            'sub_pattern_matched',
+            'id',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">WebSocket pub/sub subscriptions by
+<a href="{% url "channel-web-socket-connection-list" conn_id %}?cluster={{ cluster_id }}&amp;channel_name={{ channel_name }}&amp;highlight={{ pub_client_id_html }}">{{ pub_client_id }}</a>
+</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show subscriptions"%}
+
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Creation time</a></th>
+                        <th><a href="#">EXTCLI</a></th>
+                        <th><a href="#">Sub key</a></th>
+                        <th><a href="#">Topic</a></th>
+                        <th><a href="#">Pattern matched</a></th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering' style="width:10px">&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        <td style="width:175px">
+                            <a
+                                id="a_creation_time_{{ item.id }}"
+                                href="javascript:$.fn.zato.toggle_time('creation_time_{{ item.id }}', '{{ item.creation_time }}', '{{ item.creation_time_utc }}')">{{ item.creation_time }}
+                            </a>
+                        </td>
+
+                        <td>
+                            {{ item.ext_client_id }}
+                        </td>
+
+                        <td style="width:270px">
+<a href="{% url "pubsub-endpoint-queues" cluster_id item.endpoint_id item.endpoint_name|slugify %}?cluster={{ cluster_id }}&amp;query={{ item.topic_name }}&amp;highlight={{ item.sub_id }}">{{ item.sub_key}} </a>
+                        </td>
+
+                        <td style="vertical-align:middle; text-align:left">
+                            <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.topic_name }}</a>
+
+                        </td>
+
+                        <td style="vertical-align:middle; text-align:left">
+                            {{ item.sub_pattern_matched }}
+                        </td>
+
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='9'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+        <form>
+            <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
+        </form>
+
+{% include "zato/paginate/action-panel.html" %}
+
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}WSX invoke{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/channel/wsx-invoke.js"></script>
+
+{% endblock %}
+
+{% block "content" %}
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div id="markup">
+    <table id="data-table">
+        <tr>
+            <td class='inline_header'>Invoke WebSocket connection from
+            {{ ext_client_id }}{% if ext_client_name %}, {{ ext_client_name }}{% endif %}
+            <a href="{% url "channel-web-socket-connection-list" conn_id %}?cluster={{ cluster_id }}&amp;channel_name={{ channel_name }}&amp;highlight={{ pub_client_id_html }}">{{ pub_client_id }}</a>
+            (<a href="{% url "channel-web-socket" %}?cluster={{ cluster_id }}&amp;highlight={{ channel_id }}">{{ channel_name }}</a>)
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <form id="send_message_form" action="{% url "channel-web-socket-invoke-action" pub_client_id %}?cluster={{ cluster_id }}" method="post">
+                {% csrf_token %}
+                    Request:
+                    <textarea style="width:100%; height:250px" id="request_data" name="request_data">Hello from Zato!</textarea>
+                    <br/><br/>
+                    Response:
+                    <textarea style="width:100%; height:250px" id="response_data" name="response_data"></textarea>
+
+                    <table style="width:100%">
+                        <tr>
+                            <td style="width:65px">
+                                Timeout (s):
+                            </td>
+                            <td style="width:5%">
+                                <input type="text" name="timeout" id="timeout" style="width:60px" value="5"/>
+                            </td>
+
+                            <td style="text-align:right">
+                                <input type="submit" value="Submit" />
+                            </td>
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="pub_client_id" name="pub_client_id" value="{{ pub_client_id }}" />
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id" name="id" value="{{ channel_id }}" />
+                    </div>
+
+                </form>
+            </td>
+        </tr>
+    </table>
+</div>
+
+
+{% endblock %}

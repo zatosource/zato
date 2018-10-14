@@ -58,6 +58,7 @@ $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.jms_wmq');
 $.namespace('zato.channel.stomp');
 $.namespace('zato.channel.wsx');
+$.namespace('zato.channel.wsx.connection_list');
 $.namespace('zato.channel.zmq');
 $.namespace('zato.cloud');
 $.namespace('zato.cloud.aws');

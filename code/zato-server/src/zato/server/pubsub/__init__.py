@@ -1822,6 +1822,7 @@ class PubSub(object):
         POST /zato/pubsub/topic/{topic_name}
         """
         data = kwargs.get('data') or ''
+        data_list = kwargs.get('data_list') or []
         msg_id = kwargs.get('msg_id') or ''
         has_gd = kwargs.get('has_gd')
         priority = kwargs.get('priority')
@@ -1836,6 +1837,7 @@ class PubSub(object):
         response = self.invoke_service('zato.pubsub.publish.publish', {
             'topic_name': topic_name,
             'data': data,
+            'data_list': data_list,
             'msg_id': msg_id,
             'has_gd': has_gd,
             'priority': priority,
