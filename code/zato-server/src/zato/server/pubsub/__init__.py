@@ -210,6 +210,8 @@ class Topic(object):
 # ################################################################################################################################
 
     def _set_hooks(self):
+        self.on_subscribed_invoker = self.config.get('on_subscribed_invoker')
+        self.on_unsubscribed_invoker = self.config.get('on_unsubscribed_invoker')
         self.before_publish_hook_service_invoker = self.config.get('before_publish_hook_service_invoker')
         self.before_delivery_hook_service_invoker = self.config.get('before_delivery_hook_service_invoker')
         self.on_outgoing_soap_invoke_invoker = self.config.get('on_outgoing_soap_invoke_invoker')
@@ -1097,6 +1099,14 @@ class PubSub(object):
     def _set_topic_config_hook_data(self, config):
         if config.hook_service_id:
 
+            # Invoked when a new subscription to topic is created
+            config.on_subscribed_invoker = self.get_hook_service_invoker(
+                config.hook_service_name, PUBSUB.HOOK_TYPE.ON_SUBSCRIBED)
+
+            # Invoked when an existing subscription to topic is deleted
+            config.on_unsubscribed_invoker = self.get_hook_service_invoker(
+                config.hook_service_name, PUBSUB.HOOK_TYPE.ON_SUBSCRIBED)
+
             # Invoked before messages are published
             config.before_publish_hook_service_invoker = self.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.BEFORE_PUBLISH)
@@ -1592,6 +1602,24 @@ class PubSub(object):
         with self.lock:
             sub = self.get_subscription_by_sub_key(sub_key)
             return self._get_topic_by_name(sub.topic_name).before_delivery_hook_service_invoker
+
+# ################################################################################################################################
+
+    def get_on_subscribed_hook(self, sub_key):
+        """ Returns a hook triggered when a new subscription is made to a particular topic.
+        """
+        with self.lock:
+            sub = self.get_subscription_by_sub_key(sub_key)
+            return self._get_topic_by_name(sub.topic_name).on_subscribed_service_invoker
+
+# ################################################################################################################################
+
+    def get_on_unsubscribed_hook(self, sub_key):
+        """ Returns a hook triggered when a client unsubscribes from a topic.
+        """
+        with self.lock:
+            sub = self.get_subscription_by_sub_key(sub_key)
+            return self._get_topic_by_name(sub.topic_name).on_unsubscribed_service_invoker
 
 # ################################################################################################################################
 
