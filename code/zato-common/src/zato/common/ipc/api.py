@@ -102,7 +102,7 @@ class IPCAPI(object):
 
 # ################################################################################################################################
 
-    def _get_response(self, fifo, buffer_size, fifo_ignore_err=fifo_ignore_err, empty=('', None)):
+    def _get_response(self, fifo, buffer_size, read_size=21, fifo_ignore_err=fifo_ignore_err, empty=('', None)):
 
         try:
             buff = StringIO()
@@ -110,10 +110,10 @@ class IPCAPI(object):
 
             # The most common use-case for IPC are publish/subscribe messages and the most
             # common response is this: 'zs;{"r": {"r": null}}'
-            # which is 21 bytes. For other messages, the buffer size makes no difference.
+            # which is 21 bytes.
 
             while data not in empty:
-                data = os.read(fifo, 21)
+                data = os.read(fifo, read_size)
                 buff.write(data)
 
             response = buff.getvalue()
@@ -152,7 +152,7 @@ class IPCAPI(object):
             if is_async:
                 return
 
-            response = None, None
+            response = None
 
             try:
 
@@ -166,7 +166,7 @@ class IPCAPI(object):
 
                 while now < until:
                     sleep(0.05)
-                    response = self._get_response(fifo_fd, fifo_response_buffer_size)
+                    is_success, response = self._get_response(fifo_fd, fifo_response_buffer_size)
                     if response:
                         break
                     else:
@@ -178,7 +178,7 @@ class IPCAPI(object):
             finally:
                 os.close(fifo_fd)
 
-            return response
+            return is_success, response
 
         except Exception, e:
             logger.warn(format_exc(e))

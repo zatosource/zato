@@ -589,11 +589,20 @@ class WebSocket(_WebSocket):
         """ Invokes a remote WSX client with request given on input, returning its response,
         if any was produced in the expected time.
         """
-        request = loads(request) if isinstance(request, basestring) else request
+        # If input request is a string, try to decode it from JSON, but leave as-is in case
+        # of an error or if it is not a string.
+        if isinstance(request, basestring):
+            try:
+                request = loads(request)
+            except ValueError:
+                pass
+
         msg = _Class(cid, request)
-        (self.send if use_send else self.ping)(msg.serialize())
+        serialized = msg.serialize()
+        (self.send if use_send else self.ping)(serialized)
 
         if _Class is not PubSubClientInvokeRequest:
+            logger_zato.info('Sending msg `%s`', serialized)
             response = self._wait_for_client_response(msg.id, timeout)
             if response:
                 return response if isinstance(response, bool) else response.data # It will be bool in pong responses
