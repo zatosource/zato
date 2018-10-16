@@ -238,7 +238,7 @@ def invoke_action(req, pub_client_id, send_attrs=('id', 'pub_client_id', 'reques
 
         if response.ok:
             response_data = response.data['response_data']
-            return HttpResponse(dumps({'msg': response_data}), content_type='application/javascript')
+            return HttpResponse(dumps(response_data.toDict()), content_type='application/javascript')
         else:
             raise Exception(response.details)
     except Exception:
