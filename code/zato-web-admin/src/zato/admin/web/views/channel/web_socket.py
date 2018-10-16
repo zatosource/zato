@@ -13,6 +13,9 @@ import logging
 from json import dumps
 from traceback import format_exc
 
+# Bunch
+from bunch import Bunch
+
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
@@ -238,7 +241,9 @@ def invoke_action(req, pub_client_id, send_attrs=('id', 'pub_client_id', 'reques
 
         if response.ok:
             response_data = response.data['response_data']
-            return HttpResponse(dumps(response_data.toDict()), content_type='application/javascript')
+            if isinstance(response_data, dict):
+                response_data = dict(response_data)
+            return HttpResponse(dumps(response_data), content_type='application/javascript')
         else:
             raise Exception(response.details)
     except Exception:
