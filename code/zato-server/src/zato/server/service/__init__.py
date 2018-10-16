@@ -968,11 +968,21 @@ class PubSubHook(Service):
         """
 
     def on_outgoing_soap_invoke(self, _zato_no_op_marker=zato_no_op_marker):
-        """ Invoke for each message that is to be sent through outgoing a SOAP Suds connection.
+        """ Invoked for each message that is to be sent through outgoing a SOAP Suds connection.
+        """
+
+    def on_subscribed(self, _zato_no_op_marker=zato_no_op_marker):
+        """ Invoked for each new topic subscription.
+        """
+
+    def on_unsubscribed(self, _zato_no_op_marker=zato_no_op_marker):
+        """ Invoked each time a client unsubscribes.
         """
 
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_PUBLISH] = 'before_publish'
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_DELIVERY] = 'before_delivery'
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE] = 'on_outgoing_soap_invoke'
+PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_SUBSCRIBED] = 'on_subscribed'
+PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED] = 'on_unsubscribed'
 
 # ################################################################################################################################
