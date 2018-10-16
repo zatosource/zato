@@ -24,6 +24,10 @@ from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
+_wsx_client_table = WebSocketClient.__table__
+
+# ################################################################################################################################
+
 class Create(AdminService):
     """ Stores in ODB information about an established connection of an authenticated WebSocket client.
     """
@@ -74,8 +78,8 @@ class DeleteByPubId(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            client, _ = web_socket_client_by_pub_id(session, self.request.input.pub_client_id)
-            session.delete(client)
+            client = web_socket_client_by_pub_id(session, self.request.input.pub_client_id)
+            session.execute(_wsx_client_table.delete().where(_wsx_client_table.c.id==client.id))
             session.commit()
 
 # ################################################################################################################################
