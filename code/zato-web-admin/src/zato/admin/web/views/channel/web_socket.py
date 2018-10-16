@@ -237,7 +237,8 @@ def invoke_action(req, pub_client_id, send_attrs=('id', 'pub_client_id', 'reques
         response = req.zato.client.invoke('zato.channel.web-socket.invoke-wsx', request)
 
         if response.ok:
-            return HttpResponse(dumps({'msg': response.data['response'] }), content_type='application/javascript')
+            response_data = response.data['response_data']
+            return HttpResponse(dumps({'msg': response_data}), content_type='application/javascript')
         else:
             raise Exception(response.details)
     except Exception:
