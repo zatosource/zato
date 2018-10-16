@@ -1068,6 +1068,18 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def _delete_subscription_by_sub_key(self, sub_key, ignore_missing=True, _invalid=object()):
+        """ Deletes a subscription from the list of subscription. By default, it is not an error to call
+        the method with an invalid sub_key. Must be invoked with self.lock held.
+        """
+        sub_key = self.subscriptions_by_sub_key.pop(sub_key, _invalid)
+        if sub_key is _invalid and (not ignore_missing):
+            raise KeyError('No such sub_key `%s`', sub_key)
+        else:
+            return True # Either valid or invalid but ignore_missing is True
+
+# ################################################################################################################################
+
     def _subscribe(self, config):
         """ Low-level implementation of self.subscribe. Must be called with self.lock held.
         """
@@ -1575,7 +1587,7 @@ class PubSub(object):
                 for sub_key in sub_keys:
 
                     # Remove mappings between sub_keys and sub objects
-                    del self.subscriptions_by_sub_key[sub_key]
+                    self._delete_subscription_by_sub_key(sub_key)
 
                     # Find and stop all delivery tasks if we are the server that handles them
                     sub_key_server = self.sub_key_servers.get(sub_key)
