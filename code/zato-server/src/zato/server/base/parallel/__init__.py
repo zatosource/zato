@@ -634,34 +634,38 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def invoke_all_pids(self, service, request, timeout=5, *args, **kwargs):
         """ Invokes a given service in each of processes current server has.
         """
-        # PID -> response from that process
-        out = {}
+        try:
+            # PID -> response from that process
+            out = {}
 
-        # Get all current PIDs
-        data = self.invoke('zato.info.get-worker-pids', serialize=False).getvalue(False)
-        pids = data['response']['pids']
+            # Get all current PIDs
+            data = self.invoke('zato.info.get-worker-pids', serialize=False).getvalue(False)
+            pids = data['response']['pids']
 
-        # Underlying IPC needs strings on input instead of None
-        request = request or ''
+            # Underlying IPC needs strings on input instead of None
+            request = request or ''
 
-        for pid in pids:
-            response = {
-                'is_ok': False,
-                'pid_data': None,
-                'error_info': None
-            }
+            for pid in pids:
+                response = {
+                    'is_ok': False,
+                    'pid_data': None,
+                    'error_info': None
+                }
 
-            try:
-                by_pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
-                is_ok, pid_data = by_pid_response
-                response['is_ok'] = is_ok
-                response['pid_data' if is_ok else 'error_info'] = pid_data
-            except Exception, e:
-                response['error_info'] = format_exc(e)
-            finally:
-                out[pid] = response
+                try:
+                    is_ok, pid_data = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
+                    response['is_ok'] = is_ok
+                    response['pid_data' if is_ok else 'error_info'] = pid_data
 
-        return out
+                except Exception:
+                    e = format_exc()
+                    response['error_info'] = e
+                finally:
+                    out[pid] = response
+        except Exception:
+            logger.warn('PID invocation error `%s`', format_exc())
+        finally:
+            return out
 
 # ################################################################################################################################
 
@@ -679,10 +683,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         target_pid = kwargs.pop('pid', None)
         if target_pid and target_pid != self.pid:
 
-            # We need it only in the other branch, not here.
-            kwargs.pop('data_format', None)
+            # This cannot be used by self.invoke_by_pid
+            data_format = kwargs.pop('data_format', None)
 
-            return self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
+            _, data = self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
+            return dumps(data) if data_format == DATA_FORMAT.JSON else data
         else:
             return self.worker_store.invoke(
                 service, request,
