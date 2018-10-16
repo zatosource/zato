@@ -165,8 +165,7 @@ class _BaseAPICommand(_BaseCommand):
 
         self.response.payload = server_response
         response_data = server_response.get('response_data') or {}
-        response = response_data.get('response')
-        self.response.payload.response_data = response
+        self.response.payload.response_data = response_data
 
 # ################################################################################################################################
 
