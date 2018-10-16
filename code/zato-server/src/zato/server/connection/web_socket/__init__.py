@@ -589,6 +589,7 @@ class WebSocket(_WebSocket):
         """ Invokes a remote WSX client with request given on input, returning its response,
         if any was produced in the expected time.
         """
+        request = loads(request) if isinstance(request, basestring) else request
         msg = _Class(cid, request)
         (self.send if use_send else self.ping)(msg.serialize())
 

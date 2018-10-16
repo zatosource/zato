@@ -46,6 +46,8 @@ hook_type_to_method = {
     PUBSUB.HOOK_TYPE.BEFORE_PUBLISH: 'before_publish',
     PUBSUB.HOOK_TYPE.BEFORE_DELIVERY: 'before_delivery',
     PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE: 'on_outgoing_soap_invoke',
+    PUBSUB.HOOK_TYPE.ON_SUBSCRIBED: 'on_subscribed',
+    PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED: 'on_unsubscribed',
 }
 
 # ################################################################################################################################
@@ -210,6 +212,8 @@ class Topic(object):
 # ################################################################################################################################
 
     def _set_hooks(self):
+        self.on_subscribed_service_invoker = self.config.get('on_subscribed_service_invoker')
+        self.on_unsubscribed_service_invoker = self.config.get('on_unsubscribed_service_invoker')
         self.before_publish_hook_service_invoker = self.config.get('before_publish_hook_service_invoker')
         self.before_delivery_hook_service_invoker = self.config.get('before_delivery_hook_service_invoker')
         self.on_outgoing_soap_invoke_invoker = self.config.get('on_outgoing_soap_invoke_invoker')
@@ -280,6 +284,7 @@ class HookCtx(object):
         self.hook_type = hook_type
         self.msg = msg
         self.topic = topic
+        self.sub = kwargs.get('sub')
         self.http_soap = kwargs.get('http_soap', {})
         self.outconn_name = self.http_soap.get('config', {}).get('name')
 
@@ -777,7 +782,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def _get_subscription_by_sub_key(self, sub_key):
-        """ Low-level implementation of self.get_subscription_by_sub_key.
+        """ Low-level implementation of self.get_subscription_by_sub_key, must be called with self.lock held.
         """
         return self.subscriptions_by_sub_key[sub_key]
 
@@ -808,6 +813,29 @@ class PubSub(object):
     def has_sub_key(self, sub_key):
         with self.lock:
             return sub_key in self.subscriptions_by_sub_key
+
+# ################################################################################################################################
+
+    def _len_subscribers(self, topic_name):
+        """ Low-level implementation of self.len_subscribers, must be called with self.lock held.
+        """
+        return len(self.subscriptions_by_topic[topic_name])
+
+# ################################################################################################################################
+
+    def len_subscribers(self, topic_name):
+        """ Returns the amount of subscribers for a given topic.
+        """
+        with self.lock:
+            return self._len_subscribers(topic_name)
+
+# ################################################################################################################################
+
+    def has_subscribers(self, topic_name):
+        """ Returns True if input topic has at least one subscriber.
+        """
+        with self.lock:
+            return self._len_subscribers(topic_name) > 0
 
 # ################################################################################################################################
 
@@ -899,9 +927,16 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def _get_topic_by_id(self, topic_id):
+        """ Low-level implementation of self.get_topic_by_id, must be called with self.lock held.
+        """
+        return self.topics[topic_id]
+
+# ################################################################################################################################
+
     def get_topic_by_id(self, topic_id):
         with self.lock:
-            return self.topics[topic_id]
+            return self._get_topic_by_id(topic_id)
 
 # ################################################################################################################################
 
@@ -1022,7 +1057,14 @@ class PubSub(object):
         """ Creates a Subscription object and an associated mapping of the subscription to input topic.
         """
         with self.lock:
+
+            # Creates a subscription ..
             self._add_subscription(config)
+
+            # .. triggers a relevant hook, if any is configured.
+            hook = self.get_on_subscribed_hook(config.sub_key)
+            if hook:
+                self.invoke_on_subscribed_hook(hook, config.topic_id, config.sub_key)
 
 # ################################################################################################################################
 
@@ -1084,7 +1126,7 @@ class PubSub(object):
         if not self._is_hook_overridden(service_name, hook_type):
             return
 
-        def _invoke_hook_service(topic, msg, *args, **kwargs):
+        def _invoke_hook_service(topic=None, msg=None, *args, **kwargs):
             """ A function to invoke pub/sub hook services.
             """
             ctx = HookCtx(hook_type, topic, msg, *args, **kwargs)
@@ -1096,6 +1138,14 @@ class PubSub(object):
 
     def _set_topic_config_hook_data(self, config):
         if config.hook_service_id:
+
+            # Invoked when a new subscription to topic is created
+            config.on_subscribed_service_invoker = self.get_hook_service_invoker(
+                config.hook_service_name, PUBSUB.HOOK_TYPE.ON_SUBSCRIBED)
+
+            # Invoked when an existing subscription to topic is deleted
+            config.on_unsubscribed_service_invoker = self.get_hook_service_invoker(
+                config.hook_service_name, PUBSUB.HOOK_TYPE.ON_SUBSCRIBED)
 
             # Invoked before messages are published
             config.before_publish_hook_service_invoker = self.get_hook_service_invoker(
@@ -1595,6 +1645,24 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_on_subscribed_hook(self, sub_key):
+        """ Returns a hook triggered when a new subscription is made to a particular topic.
+        """
+        with self.lock:
+            sub = self.get_subscription_by_sub_key(sub_key)
+            return self._get_topic_by_name(sub.topic_name).on_subscribed_service_invoker
+
+# ################################################################################################################################
+
+    def get_on_unsubscribed_hook(self, sub_key):
+        """ Returns a hook triggered when a client unsubscribes from a topic.
+        """
+        with self.lock:
+            sub = self.get_subscription_by_sub_key(sub_key)
+            return self._get_topic_by_name(sub.topic_name).on_unsubscribed_service_invoker
+
+# ################################################################################################################################
+
     def get_on_outgoing_soap_invoke_hook(self, sub_key):
         """ Returns a hook that sends outgoing SOAP Suds connections-based messages or None if there is no such hook
         for sub_key's topic.
@@ -1632,6 +1700,21 @@ class PubSub(object):
             service_class = service_info['service_class']
             service_name = service_class.get_name()
             raise Exception('Hook service `{}` does not implement `on_outgoing_soap_invoke` method'.format(service_name))
+
+# ################################################################################################################################
+
+    def _invoke_on_sub_unsub_hook(self, hook, topic_id, sub_key):
+        return hook(topic=self._get_topic_by_id(topic_id), sub=self._get_subscription_by_sub_key(sub_key))
+
+# ################################################################################################################################
+
+    def invoke_on_subscribed_hook(self, hook, topic_id, sub_key):
+        return self._invoke_on_sub_unsub_hook(hook, topic_id, sub_key)
+
+# ################################################################################################################################
+
+    def invoke_on_unsubscribed_hook(self, hook, topic_id, sub_key):
+        return self._invoke_on_sub_unsub_hook(hook, topic_id, sub_key)
 
 # ################################################################################################################################
 
