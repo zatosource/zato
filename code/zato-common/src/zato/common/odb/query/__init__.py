@@ -1553,7 +1553,7 @@ def web_socket_client_by_pub_id(session, pub_client_id):
     """ An individual WebSocket connection by its public ID.
     """
     return session.query(
-        WebSocketClient,
+        WebSocketClient.id,
         ChannelWebSocket.id.label('channel_id'),
         ChannelWebSocket.name.label('channel_name')
         ).\
