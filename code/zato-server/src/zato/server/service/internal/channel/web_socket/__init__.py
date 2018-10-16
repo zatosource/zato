@@ -13,6 +13,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
+from zato.common import DATA_FORMAT
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelWebSocket, PubSubTopic, Service as ServiceModel, WebSocketClient
 from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \
@@ -159,13 +160,17 @@ class _BaseAPICommand(_BaseCommand):
         with closing(self.odb.session()) as session:
             client = self._get_wsx_client(session)
             server_name = client.server_name
+            server_proc_pid = client.server_proc_pid
 
         server_response = self.servers[server_name].invoke(
-            self.server_service, self.request.input, pid=client.server_proc_pid)
+            self.server_service, self.request.input, pid=server_proc_pid, data_format=DATA_FORMAT.JSON)
 
-        self.response.payload = server_response
-        response_data = server_response.get('response_data') or {}
-        self.response.payload.response_data = response_data
+        if server_response:
+            response_data = server_response.get('response_data') or {}
+            self.response.payload.response_data = response_data
+        else:
+            self.logger.warn('No server response from %s:%s received to command `%s` (sr:%s)',
+                server_name, server_proc_pid, self.request.input, server_response)
 
 # ################################################################################################################################
 
