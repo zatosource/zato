@@ -738,6 +738,8 @@ class PUBSUB:
         BEFORE_PUBLISH = 'before_publish'
         BEFORE_DELIVERY = 'before_delivery'
         ON_OUTGOING_SOAP_INVOKE = 'on_topic_outgoing_soap_invoke'
+        ON_SUBSCRIBED = 'on_subscribed'
+        ON_UNSUBSCRIBED = 'on_unsubscribed'
 
     class HOOK_ACTION:
         SKIP = 'skip'
