@@ -10,7 +10,7 @@ $(document).ready(function() {
         var success = status == 'success';
         if(success) {
             $.fn.zato.user_message(true, 'OK, invoked successfully');
-            $('#response_data').text(data.msg || '(No response)');
+            $('#response_data').text(JSON.stringify(data) || '(No response)');
         }
         else {
             $.fn.zato.user_message(false, 'Invocation error');
