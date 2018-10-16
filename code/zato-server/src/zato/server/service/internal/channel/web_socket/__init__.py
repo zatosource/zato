@@ -139,6 +139,7 @@ class _BaseCommand(AdminService):
         input_required = 'cluster_id', 'id', AsIs('pub_client_id')
         input_optional = 'request_data', Int('timeout')
         output_optional = 'response_data'
+        response_elem = None
 
 # ################################################################################################################################
 
@@ -158,7 +159,14 @@ class _BaseAPICommand(_BaseCommand):
         with closing(self.odb.session()) as session:
             client = self._get_wsx_client(session)
             server_name = client.server_name
-        response = self.servers[server_name].invoke(self.server_service, self.request.input, pid=client.server_proc_pid)
+
+        server_response = self.servers[server_name].invoke(
+            self.server_service, self.request.input, pid=client.server_proc_pid)
+
+        self.response.payload = server_response
+        response_data = server_response.get('response_data') or {}
+        response = response_data.get('response')
+        self.response.payload.response_data = response
 
 # ################################################################################################################################
 
