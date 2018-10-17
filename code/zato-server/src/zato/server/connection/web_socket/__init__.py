@@ -167,12 +167,14 @@ class WebSocket(_WebSocket):
         # A list of messages is given on input so we need to serialize each of them individually
         if isinstance(msg, list):
             len_msg = len(msg)
-            data = [elem.to_external_dict() for elem in msg]
+            data = []
+            for elem in msg:
+                data.append(elem.serialized if elem.serialized else elem.to_external_dict())
 
         # A single message was given on input
         else:
             len_msg = 1
-            data = msg.to_external_dict()
+            data = msg.serialized if msg.serialized else msg.to_external_dict()
 
         cid = new_cid()
         logger.info('Delivering %d pub/sub message{} to sub_key `%s`'.format('s' if len_msg > 1 else ''), len_msg, sub_key)
