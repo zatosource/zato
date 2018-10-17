@@ -277,8 +277,7 @@ class ResumeWSXSubscription(AdminService):
                     session.commit()
 
         except Exception:
-            self.logger.warn('Error while restoring WSX pub/sub for keys `%s`, e:`%s`', self.request.input.sub_key_list,
-                format_exc())
+            self.logger.warn('Error while restoring WSX pub/sub for keys `%s`, e:`%s`', sub_key_list, format_exc())
         else:
             # No exception = all good and we can register this pubsub_tool with self.pubsub now
             for sub_key in sub_key_list:
