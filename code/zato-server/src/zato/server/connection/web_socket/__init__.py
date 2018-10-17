@@ -98,6 +98,14 @@ class WebSocket(_WebSocket):
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
 
+        print()
+        print()
+
+        print(111, self.config.hook_service)
+
+        print()
+        print()
+
         # For publish/subscribe over WSX
         self.pubsub_tool = PubSubTool(config.parallel_server.worker_store.pubsub, self, PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
             self.deliver_pubsub_msg)
@@ -351,7 +359,7 @@ class WebSocket(_WebSocket):
         """ Registers peer in ODB and sets up background pings to keep its connection alive.
         Called only if authentication succeeded.
         """
-        self.sql_ws_client_id = self.invoke_service(new_cid(), 'zato.channel.web-socket.client.create', {
+        self.sql_ws_client_id = self.invoke_service('zato.channel.web-socket.client.create', {
             'pub_client_id': self.pub_client_id,
             'ext_client_id': self.ext_client_id,
             'ext_client_name': self.ext_client_name,
@@ -374,14 +382,14 @@ class WebSocket(_WebSocket):
         if self.has_session_opened:
 
             # Deletes state from SQL
-            self.invoke_service(new_cid(), 'zato.channel.web-socket.client.delete-by-pub-id', {
+            self.invoke_service('zato.channel.web-socket.client.delete-by-pub-id', {
                 'pub_client_id': self.pub_client_id,
             })
 
             if self.pubsub_tool.sub_keys:
 
                 # Deletes across all workers the in-RAM pub/sub state about the client that is disconnecting
-                self.invoke_service(new_cid(), 'zato.channel.web-socket.client.unregister-ws-sub-key', {
+                self.invoke_service('zato.channel.web-socket.client.unregister-ws-sub-key', {
                     'sub_key_list': list(self.pubsub_tool.sub_keys),
                 })
 
@@ -406,11 +414,11 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def invoke_service(self, cid, service_name, data, needs_response=True, _channel=CHANNEL.WEB_SOCKET,
+    def invoke_service(self, service_name, data, cid=None, needs_response=True, _channel=CHANNEL.WEB_SOCKET,
             _data_format=DATA_FORMAT.DICT):
 
         return self.config.on_message_callback({
-            'cid': cid,
+            'cid': cid or new_cid(),
             'data_format': _data_format,
             'service': service_name,
             'payload': data,
@@ -445,7 +453,7 @@ class WebSocket(_WebSocket):
     def _handle_invoke_service(self, cid, msg):
 
         try:
-            service_response = self.invoke_service(cid, self.config.service_name, msg.data)
+            service_response = self.invoke_service(self.config.service_name, msg.data, cid=cid)
         except Exception, e:
 
             logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, e:`%s`',
