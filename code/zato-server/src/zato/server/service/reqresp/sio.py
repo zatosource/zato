@@ -32,7 +32,10 @@ from zato.common.pubsub import PubSubMessage
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+
 NOT_GIVEN = b'ZATO_NOT_GIVEN'
+_sio_list_like = (list, tuple)
 
 # ################################################################################################################################
 
@@ -52,8 +55,8 @@ class ForceType(object):
         self.name = name
         self.args = args
         self.kwargs = kwargs
-
         self.default = kwargs.get('default', NO_DEFAULT_VALUE)
+        self._list_like = kwargs.get('list_like') or _sio_list_like
 
         #
         # Key - bool/data_type,
@@ -212,7 +215,7 @@ class List(ForceType):
     """ Transformed into a list of items in JSON or a list of <item> elems in XML.
     """
     def from_json(self, value, *ignored):
-        return value
+        return value if isinstance(value, self._list_like) else [value]
 
     to_json = from_json
 
