@@ -102,6 +102,7 @@ class DeliveryTask(object):
         # If self.wrap_in_list is True, messages will be always wrapped in a list,
         # even if there is only one message to send. Note that self.wrap_in_list will be False
         # only if both batch_size is 1 and wrap_one_msg_in_list is True.
+
         if self.sub_config.delivery_batch_size == 1:
             if self.sub_config.wrap_one_msg_in_list:
                 self.wrap_in_list = True

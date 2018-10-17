@@ -90,11 +90,13 @@ class DeliverMessage(AdminService):
 
         # A list of messages is given on input so we need to serialize each of them individually
         if isinstance(msg, list):
-            return [elem.to_external_dict() for elem in msg]
-
+            out = []
+            for elem in msg:
+                out.append(elem.serialized if elem.serialized else elem.to_external_dict())
+            return out
         # A single message was given on input
         else:
-            return msg.to_external_dict()
+            return msg.serialized if msg.serialized else msg.to_external_dict()
 
 # ################################################################################################################################
 

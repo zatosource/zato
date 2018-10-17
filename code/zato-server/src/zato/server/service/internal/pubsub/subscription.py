@@ -28,7 +28,7 @@ from zato.common.util.time_ import utcnow_as_ms
 from zato.common.util import get_sa_model_columns
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic
-from zato.server.service import List
+from zato.server.service import Bool, Int, List
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
 
@@ -548,8 +548,8 @@ class DeleteAll(AdminService):
 class CreateWSXSubscription(AdminService):
 
     class SimpleIO:
-        input_optional = ('topic_name', List('topic_name_list'))
-        output_optional = ('sub_key', 'current_depth', 'sub_data')
+        input_optional = 'topic_name', List('topic_name_list'), Bool('wrap_one_msg_in_list'), Int('delivery_batch_size')
+        output_optional = 'sub_key', 'current_depth', 'sub_data'
         response_elem = None
         skip_empty_keys = True
 
@@ -593,7 +593,8 @@ class CreateWSXSubscription(AdminService):
         responses = {}
 
         for item in subscribe_to:
-            response = self.invoke('zato.pubsub.subscription.subscribe-websockets', {
+
+            request = {
                 'topic_name': item,
                 'ws_channel_id': ws_channel_id,
                 'ext_client_id': environ['ext_client_id'],
@@ -602,8 +603,12 @@ class CreateWSXSubscription(AdminService):
                 'sql_ws_client_id': environ['sql_ws_client_id'],
                 'unsub_on_wsx_close': unsub_on_wsx_close,
                 'web_socket': environ['web_socket'],
-            })['response']
+            }
 
+            for name in 'wrap_one_msg_in_list', 'delivery_batch_size':
+                request[name] = self.request.input.get(name)
+
+            response = self.invoke('zato.pubsub.subscription.subscribe-websockets', request)['response']
             responses[item] = response
 
         # There was only one topic on input ..
