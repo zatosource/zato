@@ -225,6 +225,9 @@ store_frequency=1
 max_history=100
 data_len=0
 
+[wsx]
+hook_service=
+
 [content_type]
 json = {JSON}
 plain_xml = {PLAIN_XML}
