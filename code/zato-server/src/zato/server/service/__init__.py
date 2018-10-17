@@ -964,7 +964,7 @@ class PubSubHook(Service):
         """
 
     def before_delivery(self, _zato_no_op_marker=zato_no_op_marker):
-        """ Invoked for each pub/sub message before it is delivered to an endpoint.
+        """ Invoked for each pub/sub message right before it is delivered to an endpoint.
         """
 
     def on_outgoing_soap_invoke(self, _zato_no_op_marker=zato_no_op_marker):
