@@ -2061,6 +2061,8 @@ class PubSub(object):
         # This is always needed to invoke the subscription service
         request = {
             'topic_name': topic_name,
+            'wrap_one_msg_in_list': kwargs.get('wrap_one_msg_in_list', True),
+            'delivery_batch_size': kwargs.get('delivery_batch_size', PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE)
         }
 
         # This is a subscription for a WebSocket client ..

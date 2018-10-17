@@ -86,6 +86,7 @@ class PubSubMessage(object):
         self.pub_time_iso = None
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None
+        self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
 
     def to_dict(self, skip=None, needs_utf8_encode=True, add_id_attrs=False, _data_keys=_data_keys):
         """ Returns a dict representation of self.
