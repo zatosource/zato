@@ -72,11 +72,14 @@ hook_type_to_method = {
 # ################################################################################################################################
 
 class HookCtx(object):
-    __slots__ = ('hook_type', 'wsx')
+    __slots__ = ('hook_type', 'config', 'pub_client_id', 'ext_client_id', 'ext_client_name', 'connection_time', 'user_data',
+        'forwarded_for', 'forwarded_for_fqdn', 'peer_address', 'peer_host', 'peer_fqdn', 'peer_conn_info_pretty')
 
-    def __init__(self, hook_type, wsx):
+    def __init__(self, hook_type, **kwargs):
         self.hook_type = hook_type
-        self.wsx = wsx
+        for name in self.__slots__:
+            if name != 'hook_type':
+                setattr(self, name, kwargs[name])
 
 # ################################################################################################################################
 
@@ -394,6 +397,21 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
+    def _get_hook_request(self):
+        out = {
+            'peer_address': self._peer_address,
+            'peer_host': self._peer_host,
+            'peer_fqdn': self._peer_fqdn,
+        }
+
+        for name in HookCtx.__slots__:
+            if name not in('hook_type', 'peer_address', 'peer_host', 'peer_fqdn'):
+                out[name] = getattr(self, name)
+
+        return out
+
+# ################################################################################################################################
+
     def register_auth_client(self):
         """ Registers peer in ODB and sets up background pings to keep its connection alive.
         Called only if authentication succeeded.
@@ -416,7 +434,7 @@ class WebSocket(_WebSocket):
         # Run the relevant on_connected hook, if any is available
         hook = self.get_on_connected_hook()
         if hook:
-            hook(self)
+            hook(**self._get_hook_request())
 
 # ################################################################################################################################
 
@@ -443,7 +461,7 @@ class WebSocket(_WebSocket):
         # Run the relevant on_connected hook, if any is available (even if the session was never opened)
         hook = self.get_on_disconnected_hook()
         if hook:
-            hook(self)
+            hook(**self._get_hook_request())
 
 # ################################################################################################################################
 
@@ -503,10 +521,10 @@ class WebSocket(_WebSocket):
 
         try:
             service_response = self.invoke_service(self.config.service_name, msg.data, cid=cid)
-        except Exception, e:
+        except Exception as e:
 
             logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, e:`%s`',
-                self.config.service_name, msg.id, cid, format_exc(e))
+                self.config.service_name, msg.id, cid, format_exc())
 
             # Errors known to map to HTTP ones
             if isinstance(e, Reportable):
@@ -532,7 +550,14 @@ class WebSocket(_WebSocket):
 
         logger.info('Sending response %s', serialized)
 
-        self.send(serialized)
+        try:
+            self.send(serialized)
+        except AttributeError as e:
+            if e.message == "'NoneType' object has no attribute 'text_message'":
+                _msg = 'Service response discarded (client disconnected), cid:`%s`, msg.meta:`%s`'
+                _meta = msg.get_meta()
+                logger.warn(_msg, _meta)
+                logger_zato.warn(_msg, _meta)
 
 # ################################################################################################################################
 
@@ -592,7 +617,15 @@ class WebSocket(_WebSocket):
                     return
 
                 # Ok, we can proceed
-                self.handle_client_message(cid, request) if not request.is_auth else self.handle_create_session(cid, request)
+                try:
+                    self.handle_client_message(cid, request) if not request.is_auth else self.handle_create_session(cid, request)
+                except RuntimeError as e:
+                    if e.message == 'Cannot send on a terminated websocket':
+                        msg = 'Ignoring message (client disconnected), cid:`%s`, request:`%s`'
+                        logger.info(msg, cid, request)
+                        logger_zato.info(msg, cid, request)
+                    else:
+                        raise
 
             # Unauthenticated - require credentials on input
             else:

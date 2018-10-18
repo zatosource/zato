@@ -318,11 +318,12 @@ class SubscribeServiceImpl(_Subscribe):
         """ Invoked by subclasses to subscribe callers using input pub/sub config context.
         """
         with self.lock('zato.pubsub.subscribe.%s' % (ctx.topic_name)):
-            with session.no_autoflush:
 
-                endpoint = self.pubsub.get_endpoint_by_id(ctx.endpoint_id)
+            endpoint = self.pubsub.get_endpoint_by_id(ctx.endpoint_id)
 
-                with closing(self.odb.session()) as session:
+            with closing(self.odb.session()) as session:
+
+                with session.no_autoflush:
 
                     # Non-WebSocket clients cannot subscribe to the same topic multiple times
                     if not ctx.ws_channel_id:
