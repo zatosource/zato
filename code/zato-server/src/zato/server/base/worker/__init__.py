@@ -689,7 +689,13 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Channels
         for name, data in self.worker_config.channel_web_socket.items():
 
-            self.web_socket_api.create(name, bunchify(data.config), self.on_message_invoke_service,
+            # Per-channel configuration ..
+            config = bunchify(data.config)
+
+            # .. append common hook service to the configuration.
+            config.hook_service = self.server.fs_server_config.get('wsx', {}).get('hook_service', '')
+
+            self.web_socket_api.create(name, config, self.on_message_invoke_service,
                 self.request_dispatcher.url_data.authenticate_web_socket)
 
         self.web_socket_api.start()
