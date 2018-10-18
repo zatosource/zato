@@ -1036,6 +1036,10 @@ class WEB_SOCKET:
         MESSAGE = 'message'
         CLOSE = 'close'
 
+    class HOOK_TYPE:
+        ON_CONNECTED = 'on_connected'
+        ON_DISCONNECTED = 'on_disconnected'
+
 class APISPEC:
     OPEN_API_V3 = 'openapi_v3'
     SOAP_12 = 'soap_12'
