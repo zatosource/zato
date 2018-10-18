@@ -281,6 +281,8 @@ class Subscription(object):
 # ################################################################################################################################
 
 class HookCtx(object):
+    __slots__ = ('hook_type', 'msg', 'topic', 'sub', 'http_soap', 'outconn_name')
+
     def __init__(self, hook_type, topic=None, msg=None, *args, **kwargs):
         self.hook_type = hook_type
         self.msg = msg
