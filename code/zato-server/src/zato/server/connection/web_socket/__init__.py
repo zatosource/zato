@@ -38,6 +38,7 @@ from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_
 from zato.common.exception import Reportable
 from zato.common.pubsub import HandleNewMessageCtx
 from zato.common.util import new_cid
+from zato.common.util.hook import HookTool
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientInvokeRequest, ClientMessage, copy_forbidden, \
      error_response, ErrorResponse, Forbidden, OKResponse, PubSubClientInvokeRequest
@@ -60,6 +61,22 @@ _wsgi_drop_keys = ('ws4py.socket', 'wsgi.errors', 'wsgi.input')
 # ################################################################################################################################
 
 VAULT_TOKEN_HEADER=VAULT.HEADERS.TOKEN_RESPONSE
+
+# ################################################################################################################################
+
+hook_type_to_method = {
+    WEB_SOCKET.HOOK_TYPE.ON_CONNECTED: 'on_connected',
+    WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED: 'on_disconnected',
+}
+
+# ################################################################################################################################
+
+class HookCtx(object):
+    __slots__ = ('hook_type', 'wsx')
+
+    def __init__(self, hook_type, wsx):
+        self.hook_type = hook_type
+        self.wsx = wsx
 
 # ################################################################################################################################
 
@@ -98,17 +115,23 @@ class WebSocket(_WebSocket):
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
 
-        print()
-        print()
+        # Manages access to service hooks
+        if self.config.hook_service:
 
-        print(111, self.config.hook_service)
+            self.hook_tool = HookTool(self.config.parallel_server, HookCtx, hook_type_to_method, self.invoke_service)
 
-        print()
-        print()
+            self.config.on_connected_service_invoker = self.hook_tool.get_hook_service_invoker(
+                config.hook_service, WEB_SOCKET.HOOK_TYPE.ON_CONNECTED)
+
+            self.config.on_disconnected_service_invoker = self.hook_tool.get_hook_service_invoker(
+                config.hook_service, WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED)
+
+        else:
+            self.hook_tool = None
 
         # For publish/subscribe over WSX
-        self.pubsub_tool = PubSubTool(config.parallel_server.worker_store.pubsub, self, PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
-            self.deliver_pubsub_msg)
+        self.pubsub_tool = PubSubTool(self.config.parallel_server.worker_store.pubsub, self,
+            PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id, self.deliver_pubsub_msg)
 
         # Active WebSocket client ID (WebSocketClient model, web_socket_client.id in SQL)
         self.sql_ws_client_id = None
@@ -209,6 +232,22 @@ class WebSocket(_WebSocket):
     def get_peer_info_pretty(self):
         return 'name:`{}` id:`{}` fwd_for:`{}` peer:`{}` pub:`{}`'.format(
             self.ext_client_name, self.ext_client_id, self.forwarded_for_fqdn, self._peer_fqdn, self.pub_client_id)
+
+# ################################################################################################################################
+
+    def get_on_connected_hook(self):
+        """ Returns a hook triggered when a new connection was made.
+        """
+        if self.hook_tool:
+            return self.config.on_connected_service_invoker
+
+# ################################################################################################################################
+
+    def get_on_disconnected_hook(self):
+        """ Returns a hook triggered when an existing connection was dropped.
+        """
+        if self.hook_tool:
+            return self.config.on_disconnected_service_invoker
 
 # ################################################################################################################################
 
@@ -374,6 +413,11 @@ class WebSocket(_WebSocket):
 
         spawn(self.send_background_pings)
 
+        # Run the relevant on_connected hook, if any is available
+        hook = self.get_on_connected_hook()
+        if hook:
+            hook(self)
+
 # ################################################################################################################################
 
     def unregister_auth_client(self):
@@ -396,6 +440,11 @@ class WebSocket(_WebSocket):
                 # Clears out our own delivery tasks
                 self.pubsub_tool.remove_all_sub_keys()
 
+        # Run the relevant on_connected hook, if any is available (even if the session was never opened)
+        hook = self.get_on_disconnected_hook()
+        if hook:
+            hook(self)
+
 # ################################################################################################################################
 
     def handle_create_session(self, cid, request):
@@ -415,7 +464,7 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def invoke_service(self, service_name, data, cid=None, needs_response=True, _channel=CHANNEL.WEB_SOCKET,
-            _data_format=DATA_FORMAT.DICT):
+            _data_format=DATA_FORMAT.DICT, serialize=False):
 
         return self.config.on_message_callback({
             'cid': cid or new_cid(),
@@ -441,7 +490,7 @@ class WebSocket(_WebSocket):
                 'forwarded_for_fqdn': self.forwarded_for_fqdn,
                 'initial_http_wsgi_environ': self.initial_http_wsgi_environ,
             },
-        }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=False)
+        }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=serialize)
 
 # ################################################################################################################################
 
