@@ -318,100 +318,101 @@ class SubscribeServiceImpl(_Subscribe):
         """ Invoked by subclasses to subscribe callers using input pub/sub config context.
         """
         with self.lock('zato.pubsub.subscribe.%s' % (ctx.topic_name)):
+            with session.no_autoflush:
 
-            endpoint = self.pubsub.get_endpoint_by_id(ctx.endpoint_id)
+                endpoint = self.pubsub.get_endpoint_by_id(ctx.endpoint_id)
 
-            with closing(self.odb.session()) as session:
+                with closing(self.odb.session()) as session:
 
-                # Non-WebSocket clients cannot subscribe to the same topic multiple times
-                if not ctx.ws_channel_id:
+                    # Non-WebSocket clients cannot subscribe to the same topic multiple times
+                    if not ctx.ws_channel_id:
 
-                    if has_subscription(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id):
-                        raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
-                            endpoint.name, ctx.topic.name))
+                        if has_subscription(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id):
+                            raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
+                                endpoint.name, ctx.topic.name))
 
-                # Is it a WebSockets client?
-                is_wsx = bool(ctx.ws_channel_id)
+                    # Is it a WebSockets client?
+                    is_wsx = bool(ctx.ws_channel_id)
 
-                ctx.creation_time = now = utcnow_as_ms()
-                ctx.sub_key = new_sub_key(self.endpoint_type)
+                    ctx.creation_time = now = utcnow_as_ms()
+                    ctx.sub_key = new_sub_key(self.endpoint_type)
 
-                # Create a new subscription object and flush the session because the subscription's ID
-                # may be needed for the WSX subscription
-                ps_sub = add_subscription(session, ctx.cluster_id, ctx)
-                session.flush()
+                    # Create a new subscription object and flush the session because the subscription's ID
+                    # may be needed for the WSX subscription
+                    ps_sub = add_subscription(session, ctx.cluster_id, ctx)
+                    session.flush()
 
-                # If we subscribe a WSX client, we need to create its accompanying SQL models
-                if is_wsx:
+                    # If we subscribe a WSX client, we need to create its accompanying SQL models
+                    if is_wsx:
 
-                    # This object persists across multiple WSX connections
-                    add_wsx_subscription(session, ctx.cluster_id, ctx.is_internal, ctx.sub_key,
-                        ctx.ext_client_id, ctx.ws_channel_id, ps_sub.id)
+                        # This object persists across multiple WSX connections
+                        add_wsx_subscription(session, ctx.cluster_id, ctx.is_internal, ctx.sub_key,
+                            ctx.ext_client_id, ctx.ws_channel_id, ps_sub.id)
 
-                    # This object will be transient - dropped each time a WSX client disconnects
-                    self.pubsub.add_ws_client_pubsub_keys(session, ctx.sql_ws_client_id, ctx.sub_key, ctx.ws_channel_name,
-                        ctx.ws_pub_client_id)
+                        # This object will be transient - dropped each time a WSX client disconnects
+                        self.pubsub.add_ws_client_pubsub_keys(session, ctx.sql_ws_client_id, ctx.sub_key, ctx.ws_channel_name,
+                            ctx.ws_pub_client_id)
 
-                # Common configuration for WSX and broker messages
-                sub_config = Bunch()
-                sub_config.topic_name = ctx.topic.name
-                sub_config.task_delivery_interval = ctx.topic.task_delivery_interval
-                sub_config.endpoint_name = endpoint.name
-                sub_config.endpoint_type = self.endpoint_type
-                sub_config.unsub_on_wsx_close = ctx.unsub_on_wsx_close
-                sub_config.ext_client_id = ctx.ext_client_id
+                    # Common configuration for WSX and broker messages
+                    sub_config = Bunch()
+                    sub_config.topic_name = ctx.topic.name
+                    sub_config.task_delivery_interval = ctx.topic.task_delivery_interval
+                    sub_config.endpoint_name = endpoint.name
+                    sub_config.endpoint_type = self.endpoint_type
+                    sub_config.unsub_on_wsx_close = ctx.unsub_on_wsx_close
+                    sub_config.ext_client_id = ctx.ext_client_id
 
-                for name in sub_broker_attrs:
-                    sub_config[name] = getattr(ps_sub, name, None)
+                    for name in sub_broker_attrs:
+                        sub_config[name] = getattr(ps_sub, name, None)
 
-                #
-                # At this point there may be several cases depending on whether there are already other subscriptions
-                # or messages in the topic.
-                #
-                # * If there are subscribers, then this method will not move any messages because the messages
-                #   will have been already moved to queues of other subscribers before we are called
-                #
-                # * If there are no subscribers but there are messages in the topic then this subscriber will become
-                #   the sole recipient of the messages (we don't have any intrinsic foreknowledge of when, if at all,
-                #   other subscribers can appear)
-                #
-                # * If there are no subscribers and no messages in the topic then this is a no-op
-                #
-                move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, ctx.sub_key, now)
+                    #
+                    # At this point there may be several cases depending on whether there are already other subscriptions
+                    # or messages in the topic.
+                    #
+                    # * If there are subscribers, then this method will not move any messages because the messages
+                    #   will have been already moved to queues of other subscribers before we are called
+                    #
+                    # * If there are no subscribers but there are messages in the topic then this subscriber will become
+                    #   the sole recipient of the messages (we don't have any intrinsic foreknowledge of when, if at all,
+                    #   other subscribers can appear)
+                    #
+                    # * If there are no subscribers and no messages in the topic then this is a no-op
+                    #
+                    move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, ctx.sub_key, now)
 
-                # Subscription's ID is available only now, after the session was flushed
-                sub_config.id = ps_sub.id
+                    # Subscription's ID is available only now, after the session was flushed
+                    sub_config.id = ps_sub.id
 
-                # Update current server's pub/sub config
-                self.pubsub.add_subscription(sub_config)
+                    # Update current server's pub/sub config
+                    self.pubsub.add_subscription(sub_config)
 
-                if is_wsx:
+                    if is_wsx:
 
-                    # Let the WebSocket connection object know that it should handle this particular sub_key
-                    ctx.web_socket.pubsub_tool.add_sub_key(ctx.sub_key)
+                        # Let the WebSocket connection object know that it should handle this particular sub_key
+                        ctx.web_socket.pubsub_tool.add_sub_key(ctx.sub_key)
 
-                # Commit all changes
-                session.commit()
+                    # Commit all changes
+                    session.commit()
 
-                # Produce response
-                self.response.payload.sub_key = ctx.sub_key
+                    # Produce response
+                    self.response.payload.sub_key = ctx.sub_key
 
-                if is_wsx:
+                    if is_wsx:
 
-                    # Let the pub/sub task know it can fetch any messages possibly enqueued for that subscriber,
-                    # note that since this is a new subscription, it is certain that only GD messages may be available,
-                    # never non-GD ones.
-                    ctx.web_socket.pubsub_tool.enqueue_gd_messages_by_sub_key(ctx.sub_key)
+                        # Let the pub/sub task know it can fetch any messages possibly enqueued for that subscriber,
+                        # note that since this is a new subscription, it is certain that only GD messages may be available,
+                        # never non-GD ones.
+                        ctx.web_socket.pubsub_tool.enqueue_gd_messages_by_sub_key(ctx.sub_key)
 
-                    gd_depth, non_gd_depth = ctx.web_socket.pubsub_tool.get_queue_depth(ctx.sub_key)
-                    self.response.payload.queue_depth = gd_depth + non_gd_depth
-                else:
+                        gd_depth, non_gd_depth = ctx.web_socket.pubsub_tool.get_queue_depth(ctx.sub_key)
+                        self.response.payload.queue_depth = gd_depth + non_gd_depth
+                    else:
 
-                    # TODO:
-                    # This should be read from that client's delivery task instead of SQL so as to include
-                    # non-GD messages too.
+                        # TODO:
+                        # This should be read from that client's delivery task instead of SQL so as to include
+                        # non-GD messages too.
 
-                    self.response.payload.queue_depth = get_queue_depth_by_sub_key(session, ctx.cluster_id, ctx.sub_key, now)
+                        self.response.payload.queue_depth = get_queue_depth_by_sub_key(session, ctx.cluster_id, ctx.sub_key, now)
 
                 # Notify workers of a new subscription
                 sub_config.action = BROKER_MSG_PUBSUB.SUBSCRIPTION_CREATE.value
