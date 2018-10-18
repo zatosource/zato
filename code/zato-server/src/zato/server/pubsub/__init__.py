@@ -1078,11 +1078,11 @@ class PubSub(object):
         """ Deletes a subscription from the list of subscription. By default, it is not an error to call
         the method with an invalid sub_key. Must be invoked with self.lock held.
         """
-        sub_key = self.subscriptions_by_sub_key.pop(sub_key, _invalid)
-        if sub_key is _invalid and (not ignore_missing):
+        sub = self.subscriptions_by_sub_key.pop(sub_key, _invalid)
+        if sub is _invalid and (not ignore_missing):
             raise KeyError('No such sub_key `%s`', sub_key)
         else:
-            return True # Either valid or invalid but ignore_missing is True
+            return sub # Either valid or invalid but ignore_missing is True
 
 # ################################################################################################################################
 
@@ -1136,7 +1136,7 @@ class PubSub(object):
 
             # Invoked when an existing subscription to topic is deleted
             config.on_unsubscribed_service_invoker = self.hook_tool.get_hook_service_invoker(
-                config.hook_service_name, PUBSUB.HOOK_TYPE.ON_SUBSCRIBED)
+                config.hook_service_name, PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED)
 
             # Invoked before messages are published
             config.before_publish_hook_service_invoker = self.hook_tool.get_hook_service_invoker(
@@ -1565,8 +1565,9 @@ class PubSub(object):
 
                 for sub_key in sub_keys:
 
-                    # Remove mappings between sub_keys and sub objects
-                    self._delete_subscription_by_sub_key(sub_key)
+                    # Remove mappings between sub_keys and sub objects but keep the subscription object around
+                    # because an unsubscribe hook may need it.
+                    deleted_sub = self._delete_subscription_by_sub_key(sub_key)
 
                     # Find and stop all delivery tasks if we are the server that handles them
                     sub_key_server = self.sub_key_servers.get(sub_key)
@@ -1590,8 +1591,13 @@ class PubSub(object):
                                     # .. stop the delivery task ..
                                     pubsub_tool.remove_sub_key(sub_key)
 
-                                    # .. and remove the mapping of sub_key -> pubsub_tool.
+                                    # and remove the mapping of sub_key -> pubsub_tool ..
                                     del self.pubsub_tool_by_sub_key[sub_key]
+
+                                    # .. and invoke the unsubscription hook, if any is given.
+                                    hook = self.get_on_unsubscribed_hook(sub=deleted_sub)
+                                    if hook:
+                                        self.invoke_on_unsubscribed_hook(hook, topic_id, deleted_sub)
 
                                     # No need to iterate further, there can be only one task for each sub_key
                                     break
@@ -1645,11 +1651,11 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_on_unsubscribed_hook(self, sub_key):
+    def get_on_unsubscribed_hook(self, sub_key=None, sub=None):
         """ Returns a hook triggered when a client unsubscribes from a topic.
         """
         with self.lock:
-            sub = self.get_subscription_by_sub_key(sub_key)
+            sub = sub or self.get_subscription_by_sub_key(sub_key)
             return self._get_topic_by_name(sub.topic_name).on_unsubscribed_service_invoker
 
 # ################################################################################################################################
@@ -1694,8 +1700,9 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _invoke_on_sub_unsub_hook(self, hook, topic_id, sub_key):
-        return hook(topic=self._get_topic_by_id(topic_id), sub=self._get_subscription_by_sub_key(sub_key))
+    def _invoke_on_sub_unsub_hook(self, hook, topic_id, sub_key=None, sub=None):
+        sub = sub if sub else self._get_subscription_by_sub_key(sub_key)
+        return hook(topic=self._get_topic_by_id(topic_id), sub=sub)
 
 # ################################################################################################################################
 
@@ -1704,8 +1711,8 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def invoke_on_unsubscribed_hook(self, hook, topic_id, sub_key):
-        return self._invoke_on_sub_unsub_hook(hook, topic_id, sub_key)
+    def invoke_on_unsubscribed_hook(self, hook, topic_id, sub):
+        return self._invoke_on_sub_unsub_hook(hook, topic_id, sub=sub)
 
 # ################################################################################################################################
 
