@@ -83,6 +83,12 @@ class ClientMessage(object):
     def __repr__(self):
         return make_repr(self)
 
+    def get_meta(self, attrs=('action', 'service', 'id', 'timestamp', 'cid', 'in_reply_to', 'ext_client_id', 'ext_client_name')):
+        out = {}
+        for name in attrs:
+            out[name] = getattr(self, name)
+        return out
+
 # ################################################################################################################################
 
 class ServerMessage(object):
