@@ -577,7 +577,7 @@ class InRAMSyncBacklog(object):
 
 # ################################################################################################################################
 
-    def unsubscribe(self, topic_id, topic_name, sub_keys, pattern='Unsubscribed `%s` from topic `%s`'):
+    def unsubscribe(self, topic_id, topic_name, sub_keys, pattern='Removing subscription info for `%s` from topic `%s`'):
         """ Unsubscribes all the sub_keys from the input topic.
         """
         # Always acquire a lock for this kind of operation
