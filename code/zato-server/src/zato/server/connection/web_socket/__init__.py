@@ -398,11 +398,11 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def _get_hook_request(self):
-        out = {
+        out = bunchify({
             'peer_address': self._peer_address,
             'peer_host': self._peer_host,
             'peer_fqdn': self._peer_fqdn,
-        }
+        })
 
         for name in HookCtx.__slots__:
             if name not in('hook_type', 'peer_address', 'peer_host', 'peer_fqdn'):
@@ -783,6 +783,9 @@ class WebSocketContainer(WebSocketWSGIApplication):
     def notify_pubsub_message(self, cid, pub_client_id, request):
         return self.clients[pub_client_id].notify_pubsub_message(cid, request)
 
+    def get_client_by_pub_id(self, pub_client_id):
+        return self.clients[pub_client_id]
+
 # ################################################################################################################################
 
 class WebSocketServer(WSGIServer):
@@ -811,6 +814,9 @@ class WebSocketServer(WSGIServer):
 
     def notify_pubsub_message(self, cid, pub_client_id, request):
         return self.application.notify_pubsub_message(cid, pub_client_id, request)
+
+    def get_client_by_pub_id(self, pub_client_id):
+        return self.application.get_client_by_pub_id(pub_client_id)
 
 # ################################################################################################################################
 
@@ -844,5 +850,8 @@ class ChannelWebSocket(Connector):
 
     def notify_pubsub_message(self, cid, pub_client_id, request):
         return self.server.notify_pubsub_message(cid, pub_client_id, request)
+
+    def get_client_by_pub_id(self, pub_client_id):
+        return self.server.get_client_by_pub_id(pub_client_id)
 
 # ################################################################################################################################
