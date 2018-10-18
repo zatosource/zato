@@ -1319,7 +1319,7 @@ class PubSub(object):
     def _set_sub_key_server(self, config):
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
-        config['wsx'] = config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+        config['wsx'] = int(config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
         sk_servers = []
