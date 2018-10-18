@@ -87,7 +87,14 @@ def response_hook(self, input, instance, attrs, service_type):
 
 # ################################################################################################################################
 
-instance_hook = ensure_pubsub_hook_is_valid
+def instance_hook(self, input, instance, attrs):
+
+    # Validate if broker hook actually exists
+    ensure_pubsub_hook_is_valid(self, input, instance, attrs)
+
+    # Populate a field that ODB requires even if it is reserved for future use
+    if attrs.is_create_edit:
+        instance.pub_buffer_size_gd = 0
 
 # ################################################################################################################################
 
