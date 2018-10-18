@@ -144,9 +144,11 @@ class ClearTopicNonGD(AdminService):
     """
     class SimpleIO:
         input_required = ('topic_id',)
+        output_optional = 'status'
 
     def handle(self):
         self.pubsub.sync_backlog.clear_topic(self.request.input.topic_id)
+        self.response.payload.status = 'ok.{}.{}'.format(self.server.name, self.server.pid)
 
 # ################################################################################################################################
 
@@ -171,27 +173,25 @@ class Clear(AdminService):
                 filter(PubSubTopic.id==topic_id).\
                 one()
 
-            with self.lock('zato.pubsub.publish.%s' % topic.name):
+            # Remove all GD messages
+            session.query(PubSubMessage).\
+                filter(PubSubMessage.cluster_id==cluster_id).\
+                filter(PubSubMessage.topic_id==topic_id).\
+                delete()
 
-                # Remove all GD messages
-                session.query(PubSubMessage).\
-                    filter(PubSubMessage.cluster_id==cluster_id).\
-                    filter(PubSubMessage.topic_id==topic_id).\
-                    delete()
+            # Remove all references to topic messages from target queues
+            session.query(PubSubEndpointEnqueuedMessage).\
+                filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id).\
+                filter(PubSubEndpointEnqueuedMessage.topic_id==topic_id).\
+                delete()
 
-                # Remove all references to topic messages from target queues
-                session.query(PubSubEndpointEnqueuedMessage).\
-                    filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id).\
-                    filter(PubSubEndpointEnqueuedMessage.topic_id==topic_id).\
-                    delete()
+            # Whatever happens with non-GD messsages we can at least delete the GD ones
+            session.commit()
 
-                # Whatever happens with non-GD messsages we can at least delete the GD ones
-                session.commit()
-
-                # Delete non-GD messages for that topic on all servers
-                self.servers.invoke_all(ClearTopicNonGD.get_name(), {
-                    'topic_id': topic_id,
-                }, timeout=90)
+        # Delete non-GD messages for that topic on all servers
+        self.servers.invoke_all(ClearTopicNonGD.get_name(), {
+            'topic_id': topic_id,
+        }, timeout=90)
 
 # ################################################################################################################################
 
