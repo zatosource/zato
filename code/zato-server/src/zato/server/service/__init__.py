@@ -30,7 +30,8 @@ from gevent import Timeout, spawn
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, PUBSUB, ZatoException, zato_no_op_marker
+from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
+     ZatoException, zato_no_op_marker
 from zato.common.broker_message import SERVICE
 from zato.common.exception import Reportable
 from zato.common.nav import DictNav, ListNav
@@ -945,19 +946,24 @@ class Service(object):
 
 # ################################################################################################################################
 
-class PubSubHook(Service):
-    """ Subclasses of this class may act as pub/sub hooks.
+class _Hook(Service):
+    """ Base class for all hook services.
     """
-    _hook_func_name = {}
-
     class SimpleIO:
         input_required = (Opaque('ctx'),)
         output_optional = ('hook_action',)
 
-    def handle(self, _pub=PUBSUB.HOOK_TYPE.BEFORE_PUBLISH):
+    def handle(self):
         func_name = self._hook_func_name[self.request.input.ctx.hook_type]
         func = getattr(self, func_name)
         func()
+
+# ################################################################################################################################
+
+class PubSubHook(_Hook):
+    """ Subclasses of this class may act as pub/sub hooks.
+    """
+    _hook_func_name = {}
 
     def before_publish(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked for each pub/sub message before it is published to a topic.
@@ -984,5 +990,23 @@ PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.BEFORE_DELIVERY] = 'before_delivery'
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE] = 'on_outgoing_soap_invoke'
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_SUBSCRIBED] = 'on_subscribed'
 PubSubHook._hook_func_name[PUBSUB.HOOK_TYPE.ON_UNSUBSCRIBED] = 'on_unsubscribed'
+
+# ################################################################################################################################
+
+class WSXHook(_Hook):
+    """ Subclasses of this class may act as WebSockets hooks.
+    """
+    _hook_func_name = {}
+
+    def on_connected(self, _zato_no_op_marker=zato_no_op_marker):
+        """ Invoked each time a new WSX connection is established.
+        """
+
+    def on_disconnected(self, _zato_no_op_marker=zato_no_op_marker):
+        """ Invoked each time an existing WSX connection is dropped.
+        """
+
+WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_CONNECTED] = 'on_connected'
+WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED] = 'on_disconnected'
 
 # ################################################################################################################################

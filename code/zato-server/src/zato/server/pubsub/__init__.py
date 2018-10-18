@@ -31,6 +31,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
 from zato.common.util import is_func_overridden, make_repr, new_cid, spawn_greenlet
+from zato.common.util.hook import HookTool
 from zato.common.util.pubsub import make_short_msg_copy_from_dict
 from zato.common.util.time_ import utcnow_as_ms
 
@@ -280,7 +281,9 @@ class Subscription(object):
 # ################################################################################################################################
 
 class HookCtx(object):
-    def __init__(self, hook_type, topic, msg, *args, **kwargs):
+    __slots__ = ('hook_type', 'msg', 'topic', 'sub', 'http_soap', 'outconn_name')
+
+    def __init__(self, hook_type, topic=None, msg=None, *args, **kwargs):
         self.hook_type = hook_type
         self.msg = msg
         self.topic = topic
@@ -751,6 +754,9 @@ class PubSub(object):
         self.data_prefix_len = server.fs_server_config.pubsub.data_prefix_len
         self.data_prefix_short_len = server.fs_server_config.pubsub.data_prefix_short_len
 
+        # Manages access to service hooks
+        self.hook_tool = HookTool(self.server, HookCtx, hook_type_to_method, self.invoke_service)
+
         spawn_greenlet(self.trigger_notify_pubsub_tasks)
 
 # ################################################################################################################################
@@ -1121,54 +1127,27 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _is_hook_overridden(self, service_name, hook_type):
-        impl_name = self.server.service_store.name_to_impl_name[service_name]
-        service_class = self.server.service_store.service_data(impl_name)['service_class']
-        func_name = hook_type_to_method[hook_type]
-        func = getattr(service_class, func_name)
-
-        return is_func_overridden(func)
-
-# ################################################################################################################################
-
-    def get_hook_service_invoker(self, service_name, hook_type):
-        """ Returns a function that will invoke pub/sub hooks or None if a given service does not implement input hook_type.
-        """
-        # Do not continue if we already know that user did not override the hook method
-        if not self._is_hook_overridden(service_name, hook_type):
-            return
-
-        def _invoke_hook_service(topic=None, msg=None, *args, **kwargs):
-            """ A function to invoke pub/sub hook services.
-            """
-            ctx = HookCtx(hook_type, topic, msg, *args, **kwargs)
-            return self.invoke_service(service_name, {'ctx':ctx}, serialize=False).getvalue(serialize=False)['response']
-
-        return _invoke_hook_service
-
-# ################################################################################################################################
-
     def _set_topic_config_hook_data(self, config):
         if config.hook_service_id:
 
             # Invoked when a new subscription to topic is created
-            config.on_subscribed_service_invoker = self.get_hook_service_invoker(
+            config.on_subscribed_service_invoker = self.hook_tool.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.ON_SUBSCRIBED)
 
             # Invoked when an existing subscription to topic is deleted
-            config.on_unsubscribed_service_invoker = self.get_hook_service_invoker(
+            config.on_unsubscribed_service_invoker = self.hook_tool.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.ON_SUBSCRIBED)
 
             # Invoked before messages are published
-            config.before_publish_hook_service_invoker = self.get_hook_service_invoker(
+            config.before_publish_hook_service_invoker = self.hook_tool.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.BEFORE_PUBLISH)
 
             # Invoked before messages are delivered
-            config.before_delivery_hook_service_invoker = self.get_hook_service_invoker(
+            config.before_delivery_hook_service_invoker = self.hook_tool.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.BEFORE_DELIVERY)
 
             # Invoked for outgoing SOAP connections
-            config.on_outgoing_soap_invoke_invoker = self.get_hook_service_invoker(
+            config.on_outgoing_soap_invoke_invoker = self.hook_tool.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.ON_OUTGOING_SOAP_INVOKE)
         else:
             config.hook_service_invoker = None
@@ -1340,7 +1319,7 @@ class PubSub(object):
     def _set_sub_key_server(self, config):
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
-        config['wsx'] = config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+        config['wsx'] = int(config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
         sk_servers = []
