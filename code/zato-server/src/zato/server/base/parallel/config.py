@@ -322,7 +322,7 @@ class ConfigLoader(object):
                 hs_item[key] = getattr(item, key)
 
             hs_item['match_target'] = '{}{}{}'.format(hs_item['soap_action'], MISC.SEPARATOR, hs_item['url_path'])
-            hs_item['match_target_compiled'] = Matcher(hs_item['match_target'])
+            hs_item['match_target_compiled'] = Matcher(hs_item['match_target'], hs_item['match_slash'])
 
             http_soap.append(hs_item)
 

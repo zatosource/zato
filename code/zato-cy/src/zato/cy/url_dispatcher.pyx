@@ -51,13 +51,18 @@ cdef class Matcher(object):
         object _brace_pattern
         object _elem_re_template
 
-    def __init__(self, pattern):
+    def __init__(self, pattern, match_slash=True):
+
+        # If True, we will include slashes in pattern matching,
+        # otherwise they will not be taken into account.
+        slash_pattern = '\/' if match_slash else ''
+
         self.group_names = []
         self.pattern = pattern
         self.matcher = None
         self.is_static = True
         self._brace_pattern = re_compile('\{[a-zA-Z0-9 _\$.\-|=~^\/]+\}')
-        self._elem_re_template = r'(?P<{}>[a-zA-Z0-9 _\$.\-|=~^\/]+)'
+        self._elem_re_template = r'(?P<{}>[a-zA-Z0-9 _\$.\-|=~^'+ slash_pattern +']+)'
         self._set_up_matcher(self.pattern)
 
 # ################################################################################################################################
@@ -210,4 +215,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-
