@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import loads
+from json import dumps, loads
 from logging import getLogger
 
 # Bunch
@@ -170,5 +170,37 @@ def elems_with_opaque(elems):
     each possibly with its opaque elements already extracted to the level of each Bunch.
     """
     return ElemsWithOpaqueMaker(elems).get()
+
+# ################################################################################################################################
+
+def set_instance_opaque_attrs(instance, input, _skip_attrs=set(['needs_details', 'paginate', 'cur_page', 'query'])):
+    """ Given an SQLAlchemy object instance and incoming SimpleIO-based input,
+    populates all opaque values of that instance.
+    """
+    instance_opaque_attrs = None
+    instance_attrs = set(instance.asdict())
+    input_attrs = set(input)
+
+    # Any extra input attributes will be treated as opaque ones
+    input_opaque_attrs = input_attrs - instance_attrs
+
+    # Skip attributes related to pagination
+    for name in _skip_attrs:
+        input_opaque_attrs.discard(name)
+
+    # Prepare generic attributes for instance
+    if GENERIC.ATTR_NAME in instance_attrs:
+        instance_opaque_attrs = getattr(instance, GENERIC.ATTR_NAME)
+        if instance_opaque_attrs:
+            instance_opaque_attrs = loads(instance_opaque_attrs)
+        else:
+            instance_opaque_attrs = {}
+
+        for name in input_opaque_attrs:
+            instance_opaque_attrs[name] = input[name]
+
+    # Set generic attributes for instance
+    if instance_opaque_attrs is not None:
+        setattr(instance, GENERIC.ATTR_NAME, dumps(instance_opaque_attrs))
 
 # ################################################################################################################################

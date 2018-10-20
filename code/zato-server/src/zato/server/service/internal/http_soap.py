@@ -20,6 +20,7 @@ from paste.util.converters import asbool
 from zato.common import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.util.sql import elems_with_opaque
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
@@ -117,9 +118,9 @@ class GetList(_BaseGet):
         output_repeated = True
 
     def get_data(self, session):
-        return self._search(http_soap_list, session, self.request.input.cluster_id,
+        return elems_with_opaque(self._search(http_soap_list, session, self.request.input.cluster_id,
             self.request.input.connection, self.request.input.transport,
-            asbool(self.server.fs_server_config.misc.return_internal_objects), False)
+            asbool(self.server.fs_server_config.misc.return_internal_objects), False))
 
     def handle(self):
         with closing(self.odb.session()) as session:
