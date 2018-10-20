@@ -1698,7 +1698,7 @@ def is_func_overridden(func):
     if func and ismethod(func):
         func_defaults = func.im_func.func_defaults
 
-        # Only internally defined methods will fullfil conditions that they have default arguments
+        # Only internally defined methods will fulfill conditions that they have default arguments
         # and one of them is our no-op marker, hence if we negate it and the result is True,
         # it means it must have been a user-defined method.
         if not (func_defaults and isinstance(func_defaults, tuple) and zato_no_op_marker in func_defaults):
