@@ -100,6 +100,11 @@ class WebSocket(_WebSocket):
     """ Encapsulates information about an individual connection from a WebSocket client.
     """
     def __init__(self, container, config, _unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs):
+
+        # Must be set here and then to True later on because our parent class may already want
+        # to accept connections, and we need to postpone their processing until we are initialized fully.
+        self._initialized = False
+
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
         self.container = container
         self.config = config
@@ -168,8 +173,8 @@ class WebSocket(_WebSocket):
         try:
             self._peer_host = socket.gethostbyaddr(_peer_address[0])[0]
             _peer_fqdn = socket.getfqdn(self._peer_host)
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
         finally:
             self._peer_fqdn = _peer_fqdn
 
@@ -179,6 +184,9 @@ class WebSocket(_WebSocket):
             DATA_FORMAT.JSON: self.parse_json,
             DATA_FORMAT.XML: self.parse_xml,
         }[self.config.data_format]
+
+        # All set, we can process connections now
+        self._initialized = True
 
     @property
     def token(self):
@@ -484,6 +492,12 @@ class WebSocket(_WebSocket):
     def invoke_service(self, service_name, data, cid=None, needs_response=True, _channel=CHANNEL.WEB_SOCKET,
             _data_format=DATA_FORMAT.DICT, serialize=False):
 
+        # It is possible that this method will be invoked before self.__init__ completes,
+        # because self's parent manages the underlying TCP stream, in which can self
+        # will not be fully initialized yet so we need to wait a bit until it is.
+        while not self._initialized:
+            sleep(0.1)
+
         return self.config.on_message_callback({
             'cid': cid or new_cid(),
             'data_format': _data_format,
@@ -756,12 +770,13 @@ class WebSocketContainer(WebSocketWSGIApplication):
 
     def make_websocket(self, sock, protocols, extensions, environ):
         try:
+            from zato.common.util import spawn_greenlet
             websocket = self.handler_cls(self, self.config, sock, protocols, extensions, environ.copy())
             self.clients[websocket.pub_client_id] = websocket
             environ['ws4py.websocket'] = websocket
             return websocket
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
     def __call__(self, environ, start_response):
 
