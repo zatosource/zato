@@ -770,7 +770,6 @@ class WebSocketContainer(WebSocketWSGIApplication):
 
     def make_websocket(self, sock, protocols, extensions, environ):
         try:
-            from zato.common.util import spawn_greenlet
             websocket = self.handler_cls(self, self.config, sock, protocols, extensions, environ.copy())
             self.clients[websocket.pub_client_id] = websocket
             environ['ws4py.websocket'] = websocket
