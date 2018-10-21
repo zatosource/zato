@@ -13,9 +13,6 @@ import logging
 from json import dumps
 from traceback import format_exc
 
-# Bunch
-from bunch import Bunch
-
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
@@ -23,7 +20,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.channel.web_socket import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common import ZATO_NONE
 from zato.common.odb.model import ChannelWebSocket
 

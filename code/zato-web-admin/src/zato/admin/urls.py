@@ -49,7 +49,6 @@ from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import subscription as pubsub_subscription
-from zato.admin.web.views.pubsub import task as pubsub_task
 from zato.admin.web.views.pubsub.task import delivery_server as pubsub_task_delivery_server
 from zato.admin.web.views.pubsub import topic as pubsub_topic
 from zato.admin.web.views.query import cassandra as query_cassandra
