@@ -1141,7 +1141,7 @@ class URLData(CyURLData, OAuthDataStore):
         for name in('connection', 'content_type', 'data_format', 'host', 'id', 'has_rbac', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac',
-            'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding'):
+            'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash'):
 
             channel_item[name] = msg[name]
 
@@ -1152,7 +1152,7 @@ class URLData(CyURLData, OAuthDataStore):
 
         channel_item['service_impl_name'] = msg['impl_name']
         channel_item['match_target'] = match_target
-        channel_item['match_target_compiled'] = Matcher(channel_item['match_target'])
+        channel_item['match_target_compiled'] = Matcher(channel_item['match_target'], channel_item['match_slash'])
 
         return channel_item
 
