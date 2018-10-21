@@ -20,6 +20,7 @@ from paste.util.converters import asbool
 from zato.common import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
@@ -84,7 +85,7 @@ class _BaseGet(AdminService):
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
             'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type',
-            'content_encoding')
+            'content_encoding', Boolean('match_slash'))
 
 # ################################################################################################################################
 
@@ -117,9 +118,9 @@ class GetList(_BaseGet):
         output_repeated = True
 
     def get_data(self, session):
-        return self._search(http_soap_list, session, self.request.input.cluster_id,
+        return elems_with_opaque(self._search(http_soap_list, session, self.request.input.cluster_id,
             self.request.input.connection, self.request.input.transport,
-            asbool(self.server.fs_server_config.misc.return_internal_objects), False)
+            asbool(self.server.fs_server_config.misc.return_internal_objects), False))
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -158,7 +159,7 @@ class Create(_CreateEdit):
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
-            'cache_id', Integer('cache_expiry'), 'content_encoding')
+            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'))
         output_required = ('id', 'name')
 
     def handle(self):
@@ -235,6 +236,9 @@ class Create(_CreateEdit):
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
 
+                # Opaque attributes
+                set_instance_opaque_attrs(item, input)
+
                 session.add(item)
                 session.commit()
 
@@ -285,7 +289,7 @@ class Edit(_CreateEdit):
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
-            'cache_id', Integer('cache_expiry'), 'content_encoding')
+            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'))
         output_required = ('id', 'name')
 
     def handle(self):
@@ -362,6 +366,9 @@ class Edit(_CreateEdit):
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
+
+                # Opaque attributes
+                set_instance_opaque_attrs(item, input)
 
                 session.add(item)
                 session.commit()

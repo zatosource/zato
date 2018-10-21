@@ -76,6 +76,7 @@
 
             'timeout',
             'sec_tls_ca_cert_id',
+            'match_slash',
 
             {% ifequal connection 'outgoing' %}
                 'ping_method',
@@ -182,9 +183,10 @@
                         <th class='ignore'>&nbsp;</th> {% comment %} has_rbac {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} data_format {% endcomment %}
 
-                        <!-- 22,23 -->
+                        <!-- 22,23a,23b -->
                         <th class='ignore'>&nbsp;</th> {% comment %} timeout {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} sec_tls_ca_cert_id {% endcomment %}
+                        <th class='ignore'>&nbsp;</th> {% comment %} match_slash {% endcomment %}
 
                         <!-- 24,25,26,27 -->
                         {% ifequal connection 'outgoing' %}
@@ -285,9 +287,10 @@
                         <td class='ignore'>{{ item.has_rbac }}</td>
                         <td class='ignore'>{{ item.data_format }}</td>
 
-                        <!-- 22,23 -->
+                        <!-- 22,23a,23b -->
                         <td class='ignore'>{{ item.timeout }}</td>
                         <td class='ignore'>{{ item.sec_tls_ca_cert_id }}</td>
+                        <td class='ignore'>{{ item.match_slash }}</td>
 
                         <!-- 24,25,26,27 -->
                         {% ifequal connection 'outgoing' %}
@@ -357,7 +360,15 @@
 
                         <tr>
                             <td style="vertical-align:middle">URL path</td>
-                            <td>{{ create_form.url_path }}</td>
+                            <td>
+                                {{ create_form.url_path }}
+                                {% ifequal connection 'channel' %}
+                                    |
+                                    <label>Match slash
+                                    {{ create_form.match_slash }}
+                                    </label>
+                                {% endifequal %}
+                            </td>
                         </tr>
 
                         {% ifequal connection 'channel' %}
@@ -524,7 +535,15 @@
 
                         <tr>
                             <td style="vertical-align:middle">URL path</td>
-                            <td>{{ edit_form.url_path }}</td>
+                            <td>
+                                {{ edit_form.url_path }}
+                                {% ifequal connection 'channel' %}
+                                    |
+                                    <label>Match slash
+                                    {{ edit_form.match_slash }}
+                                    </label>
+                                {% endifequal %}
+                            </td>
                         </tr>
 
                         {% ifequal connection 'channel' %}
