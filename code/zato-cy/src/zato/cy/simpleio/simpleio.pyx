@@ -10,8 +10,31 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # ################################################################################################################################
 
+cdef class Config(object):
+    cdef:
+        public set exact
+        public set prefixes
+        public set suffixes
+
+# ################################################################################################################################
+
+cdef class BoolConfig(Config):
+    pass
+
+# ################################################################################################################################
+
+cdef class IntConfig(Config):
+    pass
+
+# ################################################################################################################################
+
+cdef class SecretConfig(Config):
+    pass
+
+# ################################################################################################################################
+
 cdef class Elem(object):
-    """ An individual input or output element.
+    """ An individual input or output element. May be a ForceType instance or not.
     """
     cdef:
         public unicode name
@@ -31,6 +54,15 @@ cdef class SIODefinition(object):
         public list output_required
         public list output_optional
         public bint skip_empty_keys
+        public unicode response_elem
+
+# ################################################################################################################################
+
+cdef class SimpleIO(object):
+    cdef:
+        public BoolConfig bool_config
+        public IntConfig int_config
+        public SecretConfig secret_config
 
 # ################################################################################################################################
 
