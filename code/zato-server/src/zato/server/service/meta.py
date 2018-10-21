@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from inspect import getmodule, isclass
 from itertools import chain
-from json import dumps, loads
 from logging import getLogger
 from time import time
 from traceback import format_exc
@@ -24,9 +23,9 @@ from bunch import bunchify
 from sqlalchemy import Boolean, Integer
 
 # Zato
-from zato.common import GENERIC, ZATO_NOT_GIVEN
+from zato.common import ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
-from zato.common.util.sql import elems_with_opaque
+from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO, GetListAdminSIO
 
@@ -278,7 +277,7 @@ class CreateEditMeta(AdminServiceMeta):
 
     @staticmethod
     def handle(attrs):
-        def handle_impl(self, _skip_attrs=set(['needs_details', 'paginate', 'cur_page', 'query'])):
+        def handle_impl(self):
             input = self.request.input
             input.update(attrs.initial_input)
             verb = 'edit' if attrs.is_edit else 'create'
@@ -313,38 +312,14 @@ class CreateEditMeta(AdminServiceMeta):
                     else:
                         instance = self._new_zato_instance_with_cluster(attrs.model)
 
-                    instance_opaque_attrs = None
-
-                    instance_attrs = set(instance.asdict())
-                    input_attrs = set(input)
-
-                    # Any extra input attributes will be treated as opaque ones
-                    input_opaque_attrs = input_attrs - instance_attrs
-
-                    # Skip attributes related to pagination
-                    for name in _skip_attrs:
-                        input_opaque_attrs.discard(name)
-
-                    # Prepare generic attributes for instance
-                    if GENERIC.ATTR_NAME in instance_attrs:
-                        instance_opaque_attrs = getattr(instance, GENERIC.ATTR_NAME)
-                        if instance_opaque_attrs:
-                            instance_opaque_attrs = loads(instance_opaque_attrs)
-                        else:
-                            instance_opaque_attrs = {}
-
-                        for name in input_opaque_attrs:
-                            instance_opaque_attrs[name] = input[name]
-
                     # Update the instance with data received on input, however,
                     # note that this may overwrite some of existing attributes
                     # if they are empty on input. If it's not desired,
                     # set skip_input_params = ['...'] to ignore such input parameters.
                     instance.fromdict(input, exclude=['password'], allow_pk=True)
 
-                    # Set generic attributes for instance
-                    if instance_opaque_attrs is not None:
-                        setattr(instance, GENERIC.ATTR_NAME, dumps(instance_opaque_attrs))
+                    # Populate all the opaque attrs now
+                    set_instance_opaque_attrs(instance, input)
 
                     # Now that we have an instance which is known not to be a duplicate
                     # we can possibly invoke a customization function before we commit
