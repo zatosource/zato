@@ -31,7 +31,8 @@ class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     host = forms.CharField(initial='http://', widget=forms.TextInput(attrs={'style':'width:100%'}))
-    url_path = forms.CharField(initial='/', widget=forms.TextInput(attrs={'style':'width:100%'}))
+    url_path = forms.CharField(initial='/', widget=forms.TextInput(attrs={'style':'width:70%'}))
+    match_slash = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     merge_url_params_req = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     url_params_pri = forms.ChoiceField(widget=forms.Select())
     params_pri = forms.ChoiceField(widget=forms.Select())
@@ -91,6 +92,7 @@ class CreateForm(DataFormatForm):
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     merge_url_params_req = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    match_slash = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     has_rbac = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 class SearchForm(_ChooseClusterForm):
