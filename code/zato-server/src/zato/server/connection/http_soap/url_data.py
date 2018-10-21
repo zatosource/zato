@@ -1154,8 +1154,6 @@ class URLData(CyURLData, OAuthDataStore):
         channel_item['match_target'] = match_target
         channel_item['match_target_compiled'] = Matcher(channel_item['match_target'], channel_item['match_slash'])
 
-        print(111, channel_item['name'], channel_item['match_slash'])
-
         return channel_item
 
     def _sec_info_from_msg(self, msg):
