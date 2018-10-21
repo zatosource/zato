@@ -11,10 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from copy import deepcopy
 from datetime import datetime, timedelta
-from errno import EADDRINUSE
 from httplib import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import getLogger
-from socket import error as SocketError
 from traceback import format_exc
 from urlparse import urlparse
 
@@ -871,13 +869,7 @@ class ChannelWebSocket(Connector):
     def _start(self):
         self.server = WebSocketServer(self.config, self.auth_func, self.on_message_callback)
         self.is_connected = True
-        try:
-            self.server.serve_forever()
-        except SocketError, e:
-            if e.errno == EADDRINUSE:
-                logger.info('Ignoring EADDRINUSE for %s %s', self.config.address, e)
-            else:
-                raise
+        self.server.serve_forever()
 
     def _stop(self):
         self.server.stop(3)
