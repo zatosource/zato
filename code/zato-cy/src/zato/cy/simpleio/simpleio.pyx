@@ -8,13 +8,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# Cython
-from libcpp.string cimport string
-from libcpp.vector cimport vector
-from libcpp.map cimport map
+# ################################################################################################################################
 
-# Zato
-from sio_input_elem cimport SIOInputElem
+cdef class Elem(object):
+    """ An individual input or output element.
+    """
+    cdef:
+        public unicode name
+        public unicode type
+        public object default_value
+        public bint is_required
 
 # ################################################################################################################################
 
@@ -33,8 +36,7 @@ cdef class SIODefinition(object):
 
 def run():
     sio = SIODefinition()
-    #input_elem = SIOInputElem()
-    print(sio)#, input_elem)
+    print(sio)
 
 # ################################################################################################################################
 
