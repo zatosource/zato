@@ -30,7 +30,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.util import is_func_overridden, make_repr, new_cid, spawn_greenlet
+from zato.common.util import make_repr, new_cid, spawn_greenlet
 from zato.common.util.hook import HookTool
 from zato.common.util.pubsub import make_short_msg_copy_from_dict
 from zato.common.util.time_ import utcnow_as_ms
