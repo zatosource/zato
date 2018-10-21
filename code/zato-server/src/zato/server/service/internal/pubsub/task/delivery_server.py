@@ -151,10 +151,6 @@ class DeliveryServerGetList(AdminService):
 
                     pid_response = bunchify(self.servers[server_name].invoke(GetDeliveryServerDetailsNonWSX.name, pid=pid))
 
-                    print()
-                    print(111, pid_response)
-                    print()
-
                     # A summary of each PID's current pub/sub activities
                     pid_data = bunchify({
                         'name': server_name,
