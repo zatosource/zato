@@ -11,13 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
-# Django
-from django.http import HttpResponse, HttpResponseServerError
-
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.admin.web.forms.search.solr import CreateForm, EditForm
-from zato.admin.web.views import Delete as _Delete, id_only_service, Index as _Index, method_allowed
+from zato.admin.web.views import id_only_service, Index as _Index, method_allowed
 from zato.common.util import fs_safe_name
 
 # ################################################################################################################################
