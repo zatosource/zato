@@ -178,9 +178,10 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.has_rbac);
     row += String.format("<td class='ignore'>{0}</td>", item.data_format);
 
-    /* 22,23 */
+    /* 22,23a,23b */
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
     row += String.format("<td class='ignore'>{0}</td>", item.sec_tls_ca_cert_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.match_slash);
 
     /* 24,25,26,27 */
     if(is_outgoing) {
