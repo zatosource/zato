@@ -35,7 +35,7 @@ setup(
           Extension(name='zato.bunch', sources=['src/zato/cy/bunch.pyx']),
           Extension(name='zato.url_dispatcher', sources=['src/zato/cy/url_dispatcher.pyx']),
           Extension(name='zato.cache', sources=['src/zato/cy/cache.pyx']),
-          Extension(name='zato.simpleio', sources=['src/zato/cy/simpleio.pyx'], language='c++'),
+          Extension(name='zato.simpleio', sources=['src/zato/cy/simpleio/simpleio.pyx'], language='c++'),
         ], annotate=True),
 
       zip_safe = False,
