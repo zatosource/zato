@@ -168,11 +168,6 @@ class Clear(AdminService):
 
             self.logger.info('Clearing topic `%s` (id:%s)', self.pubsub.get_topic_by_id(topic_id).name, topic_id)
 
-            topic = session.query(PubSubTopic).\
-                filter(PubSubTopic.cluster_id==cluster_id).\
-                filter(PubSubTopic.id==topic_id).\
-                one()
-
             # Remove all GD messages
             session.query(PubSubMessage).\
                 filter(PubSubMessage.cluster_id==cluster_id).\
