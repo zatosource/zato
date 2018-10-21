@@ -820,6 +820,35 @@ class WebSocketServer(WSGIServer):
 
         super(WebSocketServer, self).__init__((config.host, config.port), WebSocketContainer(config, handler_cls=WebSocket))
 
+# ################################################################################################################################
+
+    # These two methods are reimplemented from gevent.server to make it possible to use SO_REUSEPORT.
+
+    @classmethod
+    def get_listener(self, address, backlog=None, family=None):
+        if backlog is None:
+            backlog = self.backlog
+        return WebSocketServer._make_socket(address, backlog=backlog, reuse_addr=self.reuse_addr, family=family)
+
+    @staticmethod
+    def _make_socket(address, backlog=50, reuse_addr=None, family=socket.AF_INET):
+        sock = socket.socket(family=family)
+        if reuse_addr is not None:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, reuse_addr)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        try:
+            sock.bind(address)
+        except socket.error as e:
+            strerror = getattr(e, 'strerror', None)
+            if strerror is not None:
+                e.strerror = strerror + ': ' + repr(address)
+            raise
+        sock.listen(backlog)
+        sock.setblocking(0)
+        return sock
+
+# ################################################################################################################################
+
     def invoke_client(self, cid, pub_client_id, request, timeout):
         return self.application.invoke_client(cid, pub_client_id, request, timeout)
 
