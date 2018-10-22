@@ -52,7 +52,7 @@ class TooManyRequests(Reportable):
         super(TooManyRequests, self).__init__(cid, msg, TOO_MANY_REQUESTS)
 
 class InternalServerError(Reportable):
-    def __init__(self, cid, msg):
+    def __init__(self, cid, msg='Internal server error'):
         super(InternalServerError, self).__init__(cid, msg, INTERNAL_SERVER_ERROR)
 
 class ServiceUnavailable(Reportable):
