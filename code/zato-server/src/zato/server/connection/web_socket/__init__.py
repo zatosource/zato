@@ -707,7 +707,7 @@ class WebSocket(_WebSocket):
 
         if _Class is not PubSubClientInvokeRequest:
             if use_send:
-                logger_zato.info('Sending msg `%s`', serialized)
+                logger.info('Sending msg `%s`', serialized)
             response = self._wait_for_client_response(msg.id, timeout)
             if response:
                 return response if isinstance(response, bool) else response.data # It will be bool in pong responses
