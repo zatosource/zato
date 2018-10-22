@@ -52,6 +52,9 @@ def broker_message_hook(self, input, instance, attrs, service_type):
         with closing(self.odb.session()) as session:
             topic = pubsub_topic(session, input.cluster_id, instance.id)
             input.is_internal = topic.is_internal
+            input.max_depth_gd = topic.max_depth_gd
+            input.max_depth_non_gd = topic.max_depth_non_gd
+            input.hook_service_id = topic.hook_service_id
             input.hook_service_name = topic.hook_service_name
 
 # ################################################################################################################################
