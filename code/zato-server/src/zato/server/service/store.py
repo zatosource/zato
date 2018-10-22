@@ -177,6 +177,12 @@ class ServiceStore(InitializingObject):
 
 # ################################################################################################################################
 
+    def get_service_id_by_name(self, service_name):
+        impl_name = self.name_to_impl_name[service_name]
+        return self.impl_name_to_id[impl_name]
+
+# ################################################################################################################################
+
     def get_service_name_by_id(self, service_id):
         return self.get_service_class_by_id(service_id)['name']
 
