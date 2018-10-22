@@ -101,8 +101,17 @@ cdef class SIODefinition(object):
         # A list of Elem items optional on output
         list _output_optional
 
-        # Whether non-NotGiven optional output elements should be produced on output or not
-        bint _skip_empty_keys
+        # Whether all non-NotGiven optional input elements should be skipped or not
+        bint _skip_all_empty_request_keys
+
+        # A list of non-NotGiven optional input elements to skip
+        list _skip_empty_request_keys
+
+        # Whether all non-NotGiven optional output elements should be skipped or not
+        bint _skip_all_empty_response_keys
+
+        # A list of non-NotGiven optional output elements to skip
+        list _skip_empty_response_keys
 
         # Name of the response element, or None if there should be no top-level one
         object _response_elem
