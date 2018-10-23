@@ -769,6 +769,7 @@ class PUBSUB:
         TOPIC_MAX_DEPTH_GD = 10000
         TOPIC_MAX_DEPTH_NON_GD = 1000
         DEPTH_CHECK_FREQ = 100
+        EXPIRATION = 2147483647 * 1000 # (2 ** 31 - 1) * 1000 milliseconds = around 70 years
         GET_BATCH_SIZE = 50
         DELIVERY_BATCH_SIZE = 15000
         DELIVERY_MAX_RETRY = 123456789
