@@ -705,9 +705,10 @@ class WebSocket(_WebSocket):
         serialized = msg.serialize()
         (self.send if use_send else self.ping)(serialized)
 
+        if use_send:
+            logger.info('Sending msg `%s`', serialized)
+
         if _Class is not PubSubClientInvokeRequest:
-            if use_send:
-                logger.info('Sending msg `%s`', serialized)
             response = self._wait_for_client_response(msg.id, timeout)
             if response:
                 return response if isinstance(response, bool) else response.data # It will be bool in pong responses
