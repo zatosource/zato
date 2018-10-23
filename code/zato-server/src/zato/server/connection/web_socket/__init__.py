@@ -34,7 +34,7 @@ from ws4py.server.wsgiutils import WebSocketWSGIApplication
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.exception import Reportable
-from zato.common.pubsub import HandleNewMessageCtx
+from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX
 from zato.common.util import new_cid
 from zato.common.util.hook import HookTool
 from zato.server.connection.connector import Connector
@@ -65,19 +65,20 @@ VAULT_TOKEN_HEADER=VAULT.HEADERS.TOKEN_RESPONSE
 hook_type_to_method = {
     WEB_SOCKET.HOOK_TYPE.ON_CONNECTED: 'on_connected',
     WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED: 'on_disconnected',
+    WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE: 'on_pubsub_response',
 }
 
 # ################################################################################################################################
 
 class HookCtx(object):
     __slots__ = ('hook_type', 'config', 'pub_client_id', 'ext_client_id', 'ext_client_name', 'connection_time', 'user_data',
-        'forwarded_for', 'forwarded_for_fqdn', 'peer_address', 'peer_host', 'peer_fqdn', 'peer_conn_info_pretty')
+        'forwarded_for', 'forwarded_for_fqdn', 'peer_address', 'peer_host', 'peer_fqdn', 'peer_conn_info_pretty', 'msg')
 
     def __init__(self, hook_type, **kwargs):
         self.hook_type = hook_type
         for name in self.__slots__:
             if name != 'hook_type':
-                setattr(self, name, kwargs[name])
+                setattr(self, name, kwargs.get(name))
 
 # ################################################################################################################################
 
@@ -131,6 +132,9 @@ class WebSocket(_WebSocket):
 
             self.config.on_disconnected_service_invoker = self.hook_tool.get_hook_service_invoker(
                 config.hook_service, WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED)
+
+            self.config.on_pubsub_response_service_invoker = self.hook_tool.get_hook_service_invoker(
+                config.hook_service, WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE)
 
         else:
             self.hook_tool = None
@@ -206,6 +210,7 @@ class WebSocket(_WebSocket):
         """
         # A list of messages is given on input so we need to serialize each of them individually
         if isinstance(msg, list):
+            cid = new_cid()
             len_msg = len(msg)
             data = []
             for elem in msg:
@@ -214,9 +219,9 @@ class WebSocket(_WebSocket):
         # A single message was given on input
         else:
             len_msg = 1
+            cid = msg.pub_msg_id
             data = msg.serialized if msg.serialized else msg.to_external_dict()
 
-        cid = new_cid()
         logger.info('Delivering %d pub/sub message{} to sub_key `%s`'.format('s' if len_msg > 1 else ''), len_msg, sub_key)
 
         self.invoke_client(cid, data, _Class=PubSubClientInvokeRequest)
@@ -257,6 +262,14 @@ class WebSocket(_WebSocket):
         """
         if self.hook_tool:
             return self.config.on_disconnected_service_invoker
+
+# ################################################################################################################################
+
+    def get_on_pubsub_hook(self):
+        """ Returns a hook triggered when a pub/sub response arrives from the connected client.
+        """
+        if self.hook_tool:
+            return self.config.on_pubsub_response_service_invoker
 
 # ################################################################################################################################
 
@@ -411,7 +424,7 @@ class WebSocket(_WebSocket):
         })
 
         for name in HookCtx.__slots__:
-            if name not in('hook_type', 'peer_address', 'peer_host', 'peer_fqdn'):
+            if name not in('hook_type', 'peer_address', 'peer_host', 'peer_fqdn', 'msg'):
                 out[name] = getattr(self, name)
 
         return out
@@ -589,8 +602,25 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def _handle_client_response(self, cid, msg):
-        self.responses_received[msg.in_reply_to] = msg
+    def _handle_client_response(self, cid, msg, _msg_id_prefix=MSG_PREFIX.MSG_ID):
+        """ Processes responses from WSX clients - either invokes callbacks for pub/sub responses
+        or adds the message to the list of received ones because someone is waiting for it.
+        """
+        # Pub/sub response
+        if msg.in_reply_to.startswith(_msg_id_prefix):
+            hook = self.get_on_pubsub_hook()
+            if not hook:
+                log_msg = 'Ignoring pub/sub response, on_pubsub_response hook not implemented for `%s`, conn:`%s`, msg:`%s`'
+                logger.warn(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
+                logger_zato.warn(log_msg, self.config.name, self.peer_conn_info_pretty, msg)
+            else:
+                request = self._get_hook_request()
+                request['msg'] = msg
+                hook(**request)
+
+        # Regular synchronous response, simply enqueue it and someone else will take care of it
+        else:
+            self.responses_received[msg.in_reply_to] = msg
 
     def _has_client_response(self, request_id):
         return self.responses_received.get(request_id)
@@ -701,13 +731,20 @@ class WebSocket(_WebSocket):
             except ValueError:
                 pass
 
+        # Serialize to string
         msg = _Class(cid, request)
         serialized = msg.serialize()
-        (self.send if use_send else self.ping)(serialized)
 
+        # Log what is about to be sent
         if use_send:
             logger.info('Sending msg `%s`', serialized)
 
+        # Actually send the message now
+        (self.send if use_send else self.ping)(serialized)
+
+        # Wait for response but only if it is not a pub/sub message,
+        # these are always asynchronous and that channel's WSX hook
+        # will process the response, if any arrives.
         if _Class is not PubSubClientInvokeRequest:
             response = self._wait_for_client_response(msg.id, timeout)
             if response:

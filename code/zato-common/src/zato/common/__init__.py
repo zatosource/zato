@@ -1039,6 +1039,7 @@ class WEB_SOCKET:
     class HOOK_TYPE:
         ON_CONNECTED = 'on_connected'
         ON_DISCONNECTED = 'on_disconnected'
+        ON_PUBSUB_RESPONSE = 'on_pubsub_response'
 
 class APISPEC:
     OPEN_API_V3 = 'openapi_v3'
