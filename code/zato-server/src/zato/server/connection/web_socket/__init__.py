@@ -416,8 +416,8 @@ class WebSocket(_WebSocket):
                 else:
                     return
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
 # ################################################################################################################################
 
@@ -453,12 +453,12 @@ class WebSocket(_WebSocket):
             'channel_name': self.config.name,
         }, needs_response=True).ws_client_id
 
-        spawn(self.send_background_pings)
-
         # Run the relevant on_connected hook, if any is available
         hook = self.get_on_connected_hook()
         if hook:
             hook(**self._get_hook_request())
+
+        spawn(self.send_background_pings)
 
 # ################################################################################################################################
 
