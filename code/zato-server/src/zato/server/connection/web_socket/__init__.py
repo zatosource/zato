@@ -100,6 +100,9 @@ class WebSocket(_WebSocket):
     """
     def __init__(self, container, config, _unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs):
 
+        # Assign a Python-level ID to this object for future use
+        self._python_id = hex(id(self))
+
         # Must be set here and then to True later on because our parent class may already want
         # to accept connections, and we need to postpone their processing until we are initialized fully.
         self._initialized = False
@@ -353,6 +356,8 @@ class WebSocket(_WebSocket):
                 self.has_session_opened = True
                 self.ext_client_id = request.ext_client_id
                 self.ext_client_name = request.ext_client_name
+
+                logger.info('Assigning WSX `%s` to `%s` `%s`', self._python_id, self.ext_client_id, self.pub_client_id)
 
                 # Update peer name pretty now that we have more details about it
                 self.peer_conn_info_pretty = self.get_peer_info_pretty()
@@ -682,8 +687,8 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def received_message(self, message):
-        logger.info('Received message %r from `%s` `%s` `%s` `%s`', message.data,
-            self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
+        logger.info('Received message %r to `%s` from `%s` `%s` `%s` `%s`', message.data,
+            self._python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
         try:
             spawn(self._received_message, deepcopy(message.data))
@@ -740,8 +745,8 @@ class WebSocket(_WebSocket):
 
         # Log what is about to be sent
         if use_send:
-            logger.info('Sending message `%s` to `%s` `%s` `%s` `%s`', serialized,
-                self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
+            logger.info('Sending message `%s` from `%s` to `%s` `%s` `%s` `%s`', serialized,
+                self._python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
         # Actually send the message now
         (self.send if use_send else self.ping)(serialized)
