@@ -681,7 +681,9 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def received_message(self, message):
-        logger.info('Received message %r', message.data)
+        logger.info('Received message %r from `%s` `%s` `%s` `%s`', message.data,
+            self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
+
         try:
             spawn(self._received_message, deepcopy(message.data))
         except Exception, e:
@@ -737,7 +739,8 @@ class WebSocket(_WebSocket):
 
         # Log what is about to be sent
         if use_send:
-            logger.info('Sending msg `%s`', serialized)
+            logger.info('Sending message `%s` to `%s` `%s` `%s` `%s`', serialized,
+                self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
         # Actually send the message now
         (self.send if use_send else self.ping)(serialized)
