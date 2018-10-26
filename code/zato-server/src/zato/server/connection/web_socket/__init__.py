@@ -117,6 +117,7 @@ class WebSocket(_WebSocket):
 
     def _init(self):
 
+        # Python-level ID contains all the core details, our own ID and that of the thread (greenlet) that creates us
         _current_thread = current_thread()
         python_id = '{}.{}.{}'.format(hex(id(self)), _current_thread.name, hex(_current_thread.ident))
 
@@ -127,8 +128,6 @@ class WebSocket(_WebSocket):
         # to accept connections, and we need to postpone their processing until we are initialized fully.
         self._initialized = False
 
-        #self.container = container
-        #self.config = config
         self.has_session_opened = False
         self._token = None
         self.update_lock = RLock()
@@ -230,14 +229,14 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
+    # This is a property so as to make it easier to add logging calls to observe what is getting and setting the value
+
     @property
     def sql_ws_client_id(self):
-        #logger_zato.warn('SWS GET %s %s\n%s', self.python_id, self._sql_ws_client_id, ''.join(format_stack()))
         return self._sql_ws_client_id
 
     @sql_ws_client_id.setter
     def sql_ws_client_id(self, value):
-        #logger_zato.error('SWS SET %s %s to %s', self.python_id, self._sql_ws_client_id, value)
         self._sql_ws_client_id = value
 
 # ################################################################################################################################
@@ -281,9 +280,9 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def get_peer_info_pretty(self):
-        return 'name:`{}` id:`{}` fwd_for:`{}` peer:`{}` pub:`{}`, py:`{}`, sock:`{}`, sws_id:`{}`, u:`{}`'.format(
+        return 'name:`{}` id:`{}` fwd_for:`{}` peer:`{}` pub:`{}`, py:`{}`, sock:`{}`, swc:`{}`'.format(
             self.ext_client_name, self.ext_client_id, self.forwarded_for_fqdn, self._peer_fqdn, self.pub_client_id,
-            self.python_id, getattr(self, 'sock', ''), self.sql_ws_client_id, self.user_data)
+            self.python_id, getattr(self, 'sock', ''), self.sql_ws_client_id)
 
 # ################################################################################################################################
 
@@ -392,7 +391,7 @@ class WebSocket(_WebSocket):
                 self.ext_client_id = request.ext_client_id
                 self.ext_client_name = request.ext_client_name
 
-                logger.info('Assigning WSX `%s` to `%s` `%s`', self.python_id, self.ext_client_id, self.pub_client_id)
+                logger.info('Assigning wsx py:`%s` to `%s` `%s`', self.python_id, self.ext_client_id, self.pub_client_id)
 
                 # Update peer name pretty now that we have more details about it
                 self.peer_conn_info_pretty = self.get_peer_info_pretty()
@@ -496,13 +495,9 @@ class WebSocket(_WebSocket):
 
         # Run the relevant on_connected hook, if any is available
         hook = self.get_on_connected_hook()
-        #logger_zato.warn('INVOKING CONN HOOK %s %s FOR `%s`', hex(id(self.hook_tool)), self.hook_tool.invoke_func,
-        #    self.get_peer_info_pretty())
 
         if hook:
             hook(**self._get_hook_request())
-            #self.hook_tool._invoke_hook_service(
-            #    WEB_SOCKET.HOOK_TYPE.ON_CONNECTED, self.config.hook_service, **self._get_hook_request())
 
         spawn(self.send_background_pings)
 
@@ -559,8 +554,6 @@ class WebSocket(_WebSocket):
         # will not be fully initialized yet so we need to wait a bit until it is.
         while not self._initialized:
             sleep(0.1)
-
-        #logger_zato.warn('INVOKE %s %s %s %s', self.python_id, self.sql_ws_client_id, service_name, data)
 
         return self.config.on_message_callback({
             'cid': cid or new_cid(),
@@ -692,7 +685,6 @@ class WebSocket(_WebSocket):
         # because self's parent manages the underlying TCP stream, in which can self
         # will not be fully initialized yet so we need to wait a bit until it is.
         while not self._initialized:
-            #logger_zato.warn('WAITING FOR `%s`', self.get_peer_info_pretty())
             sleep(0.1)
 
         try:
@@ -747,9 +739,7 @@ class WebSocket(_WebSocket):
 
         try:
             #spawn(self._received_message, deepcopy(message.data))
-            #logger_zato.warn('TYPE %s', type(message.data))
             self._received_message(message.data)
-            #self._received_message(deepcopy(message.data))
         except Exception:
             logger.warn(format_exc())
 
