@@ -280,7 +280,7 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def get_peer_info_pretty(self):
-        return 'name:`{}` id:`{}` fwd_for:`{}` peer:`{}` pub:`{}`, py:`{}`, sock:`{}`, swc:`{}`'.format(
+        return 'name:`{}` id:`{}` fwd_for:`{}` conn:`{}` pub:`{}`, py:`{}`, sock:`{}`, swc:`{}`'.format(
             self.ext_client_name, self.ext_client_id, self.forwarded_for_fqdn, self._peer_fqdn, self.pub_client_id,
             self.python_id, getattr(self, 'sock', ''), self.sql_ws_client_id)
 
@@ -391,10 +391,10 @@ class WebSocket(_WebSocket):
                 self.ext_client_id = request.ext_client_id
                 self.ext_client_name = request.ext_client_name
 
-                logger.info('Assigning wsx py:`%s` to `%s` `%s`', self.python_id, self.ext_client_id, self.pub_client_id)
-
                 # Update peer name pretty now that we have more details about it
                 self.peer_conn_info_pretty = self.get_peer_info_pretty()
+
+                logger.info('Assigning wsx py:`%s` to `%s`', self.python_id, self.peer_conn_info_pretty)
 
             return AuthenticateResponse(self.token.value, request.cid, request.id).serialize()
 
@@ -403,8 +403,8 @@ class WebSocket(_WebSocket):
     def on_forbidden(self, action, data=copy_forbidden):
         cid = new_cid()
         logger.warn(
-            'Peer %s (%s) %s, closing its connection to %s (%s), cid:`%s`', self._peer_address, self._peer_fqdn, action,
-            self._local_address, self.config.name, cid)
+            'Peer %s (%s) %s, closing its connection to %s (%s), cid:`%s` (%s)', self._peer_address, self._peer_fqdn, action,
+            self._local_address, self.config.name, cid, self.peer_conn_info_pretty)
         self.send(Forbidden(cid, data).serialize())
 
         self.server_terminated = True
@@ -414,7 +414,7 @@ class WebSocket(_WebSocket):
 
     def send_background_pings(self, ping_extend=30):
 
-        logger.info('Starting WSX background pings for `%s`', self.get_peer_info_pretty())
+        logger.info('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
 
         try:
             while self.stream:
@@ -441,8 +441,8 @@ class WebSocket(_WebSocket):
                             self.pings_missed += 1
                             if self.pings_missed < self.pings_missed_threshold:
                                 logger.warn(
-                                    'Peer %s (%s) missed %s/%s ping messages from %s (%s). Last response time: %s{}'.format(
-                                        ' UTC' if self.ping_last_response_time else ''),
+                                    'Peer %s (%s) missed %s/%s ping messages from %s (%s). Last response time: %s{} (%s)'.format(
+                                        ' UTC' if self.ping_last_response_time else '', self.peer_conn_info_pretty),
                                     self._peer_address, self._peer_fqdn, self.pings_missed, self.pings_missed_threshold,
                                     self._local_address, self.config.name, self.ping_last_response_time)
                             else:
@@ -538,7 +538,7 @@ class WebSocket(_WebSocket):
                 self.send(response)
                 logger.info(
                     'Client %s logged in successfully to %s (%s) (%s)', self.pub_client_id, self._local_address,
-                    self.config.name, self.get_peer_info_pretty())
+                    self.config.name, self.peer_conn_info_pretty)
             else:
                 self.on_forbidden('sent invalid credentials')
         else:
@@ -594,8 +594,8 @@ class WebSocket(_WebSocket):
             service_response = self.invoke_service(self.config.service_name, msg.data, cid=cid)
         except Exception as e:
 
-            logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, e:`%s`',
-                self.config.service_name, msg.id, cid, format_exc())
+            logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, conn:`%s`, e:`%s`',
+                self.config.service_name, msg.id, cid, self.peer_conn_info_pretty, format_exc())
 
             # Errors known to map to HTTP ones
             if isinstance(e, Reportable):
@@ -610,7 +610,8 @@ class WebSocket(_WebSocket):
             # Anything else
             else:
                 status = INTERNAL_SERVER_ERROR
-                error_message = 'Could not invoke service `{}`, id:`{}`, cid:`{}`'.format(self.config.service_name, msg.id, cid)
+                error_message = 'Could not invoke service `{}`, id:`{}`, conn:`%s`, cid:`{}`'.format(
+                    self.config.service_name, msg.id, self.peer_conn_info_pretty, cid)
 
             response = ErrorResponse(cid, msg.id, status, error_message)
 
@@ -716,9 +717,9 @@ class WebSocket(_WebSocket):
                     self.handle_client_message(cid, request) if not request.is_auth else self.handle_create_session(cid, request)
                 except RuntimeError as e:
                     if e.message == 'Cannot send on a terminated websocket':
-                        msg = 'Ignoring message (client disconnected), cid:`%s`, request:`%s`'
-                        logger.info(msg, cid, request)
-                        logger_zato.info(msg, cid, request)
+                        msg = 'Ignoring message (client disconnected), cid:`%s`, request:`%s` conn:`%s`'
+                        logger.info(msg, cid, request, self.peer_conn_info_pretty)
+                        logger_zato.info(msg, cid, request, self.peer_conn_info_pretty)
                     else:
                         raise
 
