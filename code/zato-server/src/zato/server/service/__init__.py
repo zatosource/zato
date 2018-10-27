@@ -1006,7 +1006,12 @@ class WSXHook(_Hook):
         """ Invoked each time an existing WSX connection is dropped.
         """
 
+    def on_pubsub_response(self, _zato_no_op_marker=zato_no_op_marker):
+        """ Invoked each time a response to a previous pub/sub message arrives.
+        """
+
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_CONNECTED] = 'on_connected'
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED] = 'on_disconnected'
+WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE] = 'on_pubsub_response'
 
 # ################################################################################################################################
