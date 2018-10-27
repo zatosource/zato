@@ -86,7 +86,13 @@
                         <td>
                             {% if item.tasks %}
                                 <a href="{% url "pubsub-task" item.name item.pid cluster_id %}">{{ item.tasks }}</a>
+
+                                <span title="
+                                {{ item.tasks_running }} task{% if item.tasks_running == 1%} {% else %}s {% endif %}running
+{{ item.tasks_stopped }} task{% if item.tasks_stopped == 1%} {% else %}s {% endif %}stopped">
                                 ({{ item.tasks_running }}/{{ item.tasks_stopped }})
+                                </span>
+
                             {% else %}
                                 <span class='form_hint'>---</span>
                             {% endif %}
@@ -97,6 +103,11 @@
 
                         <td>
                             {{ item.messages }}
+
+                                <span title="
+                                {{ item.messages_gd }} GD message{% if item.messages_gd == 1%} {% else %}s in progress{% endif %}
+{{ item.messages_non_gd }} non-GD message{% if item.messages_non_gd == 1%} {% else %}s in progress{% endif %}">
+
                             ({{ item.messages_gd }}/{{ item.messages_non_gd }})
                         </td>
 
