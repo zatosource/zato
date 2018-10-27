@@ -40,15 +40,15 @@ error_response = {
 
 # ################################################################################################################################
 
-class MSG_PREFIX:
+class MSG_TYPE:
     _COMMON = 'zwsx.{}'
 
-    REQ_TO_CLIENT = _COMMON.format('rqclient')
-    RESP_AUTH = _COMMON.format('rspauth')
+    REQ_TO_CLIENT = _COMMON.format('rqc')
+    RESP_AUTH = _COMMON.format('rspa')
     RESP_OK = _COMMON.format('rspok')
 
     # A message from server indicating an error, no response from client is expected
-    MSG_ERR = _COMMON.format('msgerr')
+    MSG_ERR = _COMMON.format('merr')
 
     # As above but in response to a previous request from client
     RESP_ERROR = _COMMON.format('rsperr')
@@ -123,21 +123,21 @@ class ServerMessage(object):
 
 class AuthenticateResponse(ServerMessage):
     def __init__(self, token, cid, *args, **kwargs):
-        super(AuthenticateResponse, self).__init__(MSG_PREFIX.RESP_AUTH, cid, *args, **kwargs)
+        super(AuthenticateResponse, self).__init__(MSG_TYPE.RESP_AUTH, cid, *args, **kwargs)
         self.data.token = token
 
 # ################################################################################################################################
 
 class OKResponse(ServerMessage):
     def __init__(self, cid, in_reply_to, data, *ignored_args, **ignored_kwargs):
-        super(OKResponse, self).__init__(MSG_PREFIX.RESP_OK, cid, in_reply_to)
+        super(OKResponse, self).__init__(MSG_TYPE.RESP_OK, cid, in_reply_to)
         self.data = data
 
 # ################################################################################################################################
 
 class ErrorResponse(ServerMessage):
     def __init__(self, cid, in_reply_to, status, error_message):
-        super(ErrorResponse, self).__init__(MSG_PREFIX.RESP_ERROR, cid, in_reply_to, status, error_message)
+        super(ErrorResponse, self).__init__(MSG_TYPE.RESP_ERROR, cid, in_reply_to, status, error_message)
         self.data = {'cid': cid}
 
 # ################################################################################################################################
@@ -145,12 +145,12 @@ class ErrorResponse(ServerMessage):
 class ClientInvokeRequest(ServerMessage):
     is_response = False
 
-    def __init__(self, cid, data, _msg_type=MSG_PREFIX.REQ_TO_CLIENT):
+    def __init__(self, cid, data, _msg_type=MSG_TYPE.REQ_TO_CLIENT):
         super(ClientInvokeRequest, self).__init__(_msg_type, cid)
         self.data = data
 
 class PubSubClientInvokeRequest(ClientInvokeRequest):
-    def __init__(self, cid, data, _msg_type=MSG_PREFIX.PUBSUB_REQ):
+    def __init__(self, cid, data, _msg_type=MSG_TYPE.PUBSUB_REQ):
         super(PubSubClientInvokeRequest, self).__init__(cid, data, _msg_type)
 
 # ################################################################################################################################
@@ -159,7 +159,7 @@ class Forbidden(ServerMessage):
     is_response = True
 
     def __init__(self, cid, data):
-        super(Forbidden, self).__init__(MSG_PREFIX.MSG_ERR, cid, status=FORBIDDEN)
+        super(Forbidden, self).__init__(MSG_TYPE.MSG_ERR, cid, status=FORBIDDEN)
         self.data = data
 
 # ################################################################################################################################
