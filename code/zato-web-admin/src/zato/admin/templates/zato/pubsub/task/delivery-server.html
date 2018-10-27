@@ -21,8 +21,7 @@
             '_numbering',
             '_selection',
 
-            'name',
-            'pid',
+            'server',
 
             '_tasks',
             '_sub_keys',
@@ -31,6 +30,8 @@
 
             '_last_gd_run',
             '_last_task_run',
+            'name',
+            'pid'
 
         ]
     }
@@ -58,8 +59,7 @@
                         <th style="width:5%">&nbsp;</th>
                         <th>&nbsp;</th>
 
-                        <th><a href="#">Server name</a></th>
-                        <th><a href="#">Server PID</a></th>
+                        <th><a href="#">Server</a></th>
 
                         <th><a href="#">Tasks</a></th>
                         <th><a href="#">Subscriptions</a></th>
@@ -70,6 +70,9 @@
                         <th><a href="#">Last GD run</a></th>
                         <th><a href="#">Last task run</a></th>
 
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -78,8 +81,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>{{ item.name }}</td>
-                        <td>{{ item.pid }}</td>
+                        <td>{{ item.name }}:{{ item.pid }}</td>
 
                         <td>
                             {% if item.tasks %}
@@ -102,7 +104,7 @@
                             {% if item.last_gd_run %}
                                 <a
                                     id="a_last_gd_run_{{ item.id }}"
-                                    href="javascript:$.fn.zato.toggle_time('last_gd_run_{{ item.id }}', '{{ item.last_gd_run_utc }}', '{{ item.last_gd_run }}')">{{ item.last_gd_run_utc }}
+                                    href="javascript:$.fn.zato.toggle_time('last_gd_run_{{ item.id }}', '{{ item.last_gd_run }}', '{{ item.last_gd_run_utc }}')">{{ item.last_gd_run }}
                                 </a>
                             {% else %}
                                 <span class='form_hint'>---</span>
@@ -113,12 +115,15 @@
                             {% if item.last_task_run %}
                                 <a
                                     id="a_last_task_run_{{ item.id }}"
-                                    href="javascript:$.fn.zato.toggle_time('last_task_run_{{ item.id }}', '{{ item.last_task_run_utc }}', '{{ item.last_task_run }}')">{{ item.last_task_run_utc }}
+                                    href="javascript:$.fn.zato.toggle_time('last_task_run_{{ item.id }}', '{{ item.last_task_run }}', '{{ item.last_task_run_utc }}')">{{ item.last_task_run }}
                                 </a>
                             {% else %}
                                 <span class='form_hint'>---</span>
                             {% endif %}
                         </td>
+
+                        <td class='ignore'>{{ item.name }}</td>
+                        <td class='ignore'>{{ item.pid }}</td>
 
                     </tr>
                 {% endfor %}
