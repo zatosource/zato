@@ -468,7 +468,7 @@ class ServiceStore(InitializingObject):
 
         except Exception, e:
             logger.error(
-                'Exception while visit mod:`%s`, is_internal:`%s`, fs_location:`%s`, e:`%s`',
+                'Exception while visiting mod:`%s`, is_internal:`%s`, fs_location:`%s`, e:`%s`',
                 mod, is_internal, fs_location, format_exc(e))
         finally:
             return deployed
