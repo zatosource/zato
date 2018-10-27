@@ -27,20 +27,25 @@ msg_pub_attrs = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to
     'recv_time', 'data_prefix_short', 'server_name', 'server_pid', 'pub_pattern_matched', 'sub_pattern_matched',
     'delivery_count')
 
-# ################################################################################################################################
-
-def new_msg_id(_new_cid=new_cid):
-    return 'zpsm%s' % _new_cid()
-
-# ################################################################################################################################
-
-def new_sub_key(endpoint_type, _new_cid=new_cid):
-    return 'zpsk.%s.%s' % (endpoint_type, _new_cid())
+class MSG_PREFIX:
+    GROUP_ID = 'zpsg'
+    MSG_ID = 'zpsm'
+    SUB_KEY = 'zpsk'
 
 # ################################################################################################################################
 
-def new_group_id(_new_cid=new_cid):
-    return 'zpsg%s' % _new_cid()
+def new_msg_id(_new_cid=new_cid, _prefix=MSG_PREFIX.MSG_ID):
+    return '%s%s' % (_prefix, _new_cid())
+
+# ################################################################################################################################
+
+def new_sub_key(endpoint_type, _new_cid=new_cid, _prefix=MSG_PREFIX.SUB_KEY):
+    return '%s.%s.%s' % (_prefix, endpoint_type, _new_cid())
+
+# ################################################################################################################################
+
+def new_group_id(_new_cid=new_cid, _prefix=MSG_PREFIX.GROUP_ID):
+    return '%s%s' % (_prefix, _new_cid())
 
 # ################################################################################################################################
 
