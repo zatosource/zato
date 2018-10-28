@@ -856,7 +856,9 @@ class PubSubTool(object):
 
         if self.last_gd_run:
             if len(sub_key_list) == 1:
-                # Use .get because it is possible we have not fetched messages for that sub_key before
+                # Use .get because it is possible we have not fetched messages for that particular sub_key before,
+                # i.e. self.last_gd_run may be non-empty because there are last GD runs for other keys,
+                # just not for this one.
                 min_last_gd_run = self.last_gd_run.get(sub_key_list[0])
             else:
                 min_last_gd_run = min(value for key, value in self.last_gd_run.iteritems() if key in sub_key_list)
