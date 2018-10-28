@@ -58,9 +58,6 @@ cdef class AsIs(Elem):
     def __cinit__(self):
         self._type = ElemType.as_is
 
-    def __init__(self):
-        pass
-
 # ################################################################################################################################
 
 cdef class Bool(Elem):
@@ -138,6 +135,10 @@ cdef class ConfigItem(object):
         set prefixes
         set suffixes
 
+    def __str__(self):
+        return '<{} at {} e:{}, p:{}, s:{}>'.format(self.__class__.__name__, hex(id(self)),
+            sorted(self.exact), sorted(self.prefixes), sorted(self.suffixes))
+
 # ################################################################################################################################
 
 cdef class BoolConfig(ConfigItem):
@@ -158,7 +159,7 @@ cdef class SecretConfig(ConfigItem):
 
 # ################################################################################################################################
 
-cdef class _SimpleIOConfig(object):
+cdef class _SIOServerConfig(object):
     """ Contains global SIO configuration. Each service's _simpleio attribute
     will refer to this object so as to have only one place where all the global configuration is kept.
     """
@@ -176,6 +177,22 @@ cdef class _SimpleIOConfig(object):
         public unicode default_input_value
         public unicode default_output_value
         public unicode response_elem
+
+        public unicode prefix_as_is     # a
+        public unicode prefix_bool      # b
+        public unicode prefix_csv       # c
+        public unicode prefix_date      # date
+        public unicode prefix_date_time # dt
+        public unicode prefix_dict      # d
+        public unicode prefix_dict_list # dl
+        public unicode prefix_float     # f
+        public unicode prefix_int       # i
+        public unicode prefix_list      # l
+        public unicode prefix_opaque    # o
+        public unicode prefix_text      # t
+        public unicode prefix_uuid      # u
+        public unicode prefix_required  # +
+        public unicode prefix_optional  # -
 
         # Global variables, can be always overridden on a per-declaration basis
         public object skip_empty_keys
@@ -247,7 +264,7 @@ cdef class SimpleIO(object):
     """
     cdef:
         # Server-wide configuration
-        _SimpleIOConfig server_config
+        _SIOServerConfig server_config
 
         # Current service's configuration, after parsing
         SIODefinition definition
@@ -257,7 +274,8 @@ cdef class SimpleIO(object):
 
 # ################################################################################################################################
 
-    def __cinit__(self, object declaration):
+    def __cinit__(self, _SIOServerConfig server_config, object declaration):
+        self.server_config = server_config
         self.definition = SIODefinition()
         self.declaration = declaration
 
@@ -267,18 +285,24 @@ cdef class SimpleIO(object):
         """ Parses a user-defined SimpleIO declaration (currently, a Python class)
         and populates all the internal structures as needed.
         """
+        self.build_input()
+        self.build_output()
 
 # ################################################################################################################################
 
-    cdef build_input_required(self):
-        """ Builds structures responsible for data that is required on input.
+    cdef build_input(self):
+        """ Builds structures responsible for data that is to be provided on input.
+        """
+
+    cdef build_output(self):
+        """ Builds structures responsible for data that is to be produced on output.
         """
 
 # ################################################################################################################################
 
 # Create server/process-wide singletons
 NotGiven = _NotGiven()
-SimpleIOConfig = _SimpleIOConfig()
+SIOServerConfig = _SIOServerConfig()
 
 # ################################################################################################################################
 
@@ -321,6 +345,22 @@ def run():
     server_config.default.skip_empty_request_keys = False
     server_config.default.skip_empty_response_keys = False
 
+    server_config.default.prefix_as_is = 'a'
+    server_config.default.prefix_bool = 'b'
+    server_config.default.prefix_csv = 'c'
+    server_config.default.prefix_date = 'date'
+    server_config.default.prefix_date_time = 'dt'
+    server_config.default.prefix_dict = 'd'
+    server_config.default.prefix_dict_list = 'dl'
+    server_config.default.prefix_float = 'f'
+    server_config.default.prefix_int = 'i'
+    server_config.default.prefix_list = 'l'
+    server_config.default.prefix_opaque = 'o'
+    server_config.default.prefix_text = 't'
+    server_config.default.prefix_uuid = 'u'
+    server_config.default.prefix_required = '+'
+    server_config.default.prefix_optional = '-'
+
     bool_config = BoolConfig()
     bool_config.exact = server_config.bool.exact
     bool_config.prefixes = server_config.bool.prefix
@@ -338,31 +378,77 @@ def run():
 
 # ################################################################################################################################
 
-    SimpleIOConfig.bool_config = bool_config
-    SimpleIOConfig.int_config = int_config
-    SimpleIOConfig.secret_config = secret_config
+    SIOServerConfig.bool_config = bool_config
+    SIOServerConfig.int_config = int_config
+    SIOServerConfig.secret_config = secret_config
 
-    SimpleIOConfig.input_required_name = server_config.default.input_required_name
-    SimpleIOConfig.input_optional_name = server_config.default.input_optional_name
-    SimpleIOConfig.output_required_name = server_config.default.output_required_name
-    SimpleIOConfig.output_optional_name = server_config.default.output_optional_name
-    SimpleIOConfig.default_value = server_config.default.default_value
-    SimpleIOConfig.default_input_value = server_config.default.default_input_value
-    SimpleIOConfig.default_output_value = server_config.default.default_output_value
+    SIOServerConfig.input_required_name = server_config.default.input_required_name
+    SIOServerConfig.input_optional_name = server_config.default.input_optional_name
+    SIOServerConfig.output_required_name = server_config.default.output_required_name
+    SIOServerConfig.output_optional_name = server_config.default.output_optional_name
+    SIOServerConfig.default_value = server_config.default.default_value
+    SIOServerConfig.default_input_value = server_config.default.default_input_value
+    SIOServerConfig.default_output_value = server_config.default.default_output_value
 
-    SimpleIOConfig.response_elem = server_config.default.response_elem
+    SIOServerConfig.response_elem = server_config.default.response_elem
 
-    SimpleIOConfig.skip_empty_keys = server_config.default.skip_empty_keys
-    SimpleIOConfig.skip_empty_request_keys = server_config.default.skip_empty_request_keys
-    SimpleIOConfig.skip_empty_response_keys = server_config.default.skip_empty_response_keys
+    SIOServerConfig.skip_empty_keys = server_config.default.skip_empty_keys
+    SIOServerConfig.skip_empty_request_keys = server_config.default.skip_empty_request_keys
+    SIOServerConfig.skip_empty_response_keys = server_config.default.skip_empty_response_keys
+
+    SIOServerConfig.prefix_as_is = server_config.default.prefix_as_is
+    SIOServerConfig.prefix_bool = server_config.default.prefix_bool
+    SIOServerConfig.prefix_csv = server_config.default.prefix_csv
+    SIOServerConfig.prefix_date = server_config.default.prefix_date
+    SIOServerConfig.prefix_date_time = server_config.default.prefix_date_time
+    SIOServerConfig.prefix_dict = server_config.default.prefix_dict
+    SIOServerConfig.prefix_dict_list = server_config.default.prefix_dict_list
+    SIOServerConfig.prefix_float = server_config.default.prefix_float
+    SIOServerConfig.prefix_int = server_config.default.prefix_int
+    SIOServerConfig.prefix_list = server_config.default.prefix_list
+    SIOServerConfig.prefix_opaque = server_config.default.prefix_opaque
+    SIOServerConfig.prefix_text = server_config.default.prefix_text
+    SIOServerConfig.prefix_uuid = server_config.default.prefix_uuid
+    SIOServerConfig.prefix_required = server_config.default.prefix_required
+    SIOServerConfig.prefix_optional = server_config.default.prefix_optional
+
+    # Dummy SQLAlchemy classes
+    class SA:
+        def __init__(self, *ignored):
+            pass
+
+        def __add__(self, other):
+            print(222, other)
+
+        __radd__ = __add__
+
+        def __sub__(self, other):
+            print(333, other)
+
+        __rsub__ = __sub__
+
+    class MyUser:
+        pass
 
     class MySimpleIO:
         input_required = 'abc'
 
-    sio = SimpleIO(MySimpleIO)
+    class MySimpleIO2:
+        input = 'a:user_id', '-i:user_type', '-user_name', '+user_profile', Int('-abc'), AsIs('cust_id')
+        output = '-d:last_visited', 'i:duration', Float('qqq'), Dict('rrr')
+
+    class MySimpleIO3:
+        input = 'a:user_id', '-is_active'
+        output = 'd:last_visited', 'i:duration'
+
+    class MySimpleIO4:
+        input = SA(MyUser) + ('user_id', 'user_type'), 'is_admin', '-is_staff'
+        output = SA(MyUser) - ('is_active', 'is_new'), 'i:user_category'
+
+    sio = SimpleIO(SIOServerConfig, MySimpleIO)
     sio.build()
 
-    print(111, sio.definition)
+    print(111, SIOServerConfig.bool_config)
 
 # ################################################################################################################################
 
