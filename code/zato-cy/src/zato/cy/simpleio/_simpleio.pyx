@@ -19,8 +19,6 @@ cdef class _NotGiven(object):
     def __bool__(self):
         return False # Always evaluates to a boolean False
 
-NotGiven = _NotGiven()
-
 # ################################################################################################################################
 
 cdef enum ElemType:
@@ -59,6 +57,9 @@ cdef class Elem(object):
 cdef class AsIs(Elem):
     def __cinit__(self):
         self._type = ElemType.as_is
+
+    def __init__(self):
+        pass
 
 # ################################################################################################################################
 
@@ -128,7 +129,10 @@ cdef class UUID(Elem):
 
 # ################################################################################################################################
 
-cdef class Config(object):
+cdef class ConfigItem(object):
+    """ An individual instance of server-wide SimpleIO configuration. Each subclass covers
+    a particular set of exact values, prefixes or suffixes.
+    """
     cdef:
         set exact
         set prefixes
@@ -136,18 +140,59 @@ cdef class Config(object):
 
 # ################################################################################################################################
 
-cdef class BoolConfig(Config):
-    pass
+cdef class BoolConfig(ConfigItem):
+    """ SIO configuration for boolean values.
+    """
 
 # ################################################################################################################################
 
-cdef class IntConfig(Config):
-    pass
+cdef class IntConfig(ConfigItem):
+    """ SIO configuration for integer values.
+    """
 
 # ################################################################################################################################
 
-cdef class SecretConfig(Config):
-    pass
+cdef class SecretConfig(ConfigItem):
+    """ SIO configuration for secret values, passwords, tokens, API keys etc.
+    """
+
+# ################################################################################################################################
+
+cdef class _SimpleIOConfig(object):
+    """ Contains global SIO configuration. Each service's _simpleio attribute
+    will refer to this object so as to have only one place where all the global configuration is kept.
+    """
+    cdef:
+        public BoolConfig bool_config
+        public IntConfig int_config
+        public SecretConfig secret_config
+
+        # Names in SimpleIO declarations that can be overridden by users
+        public unicode input_required_name
+        public unicode input_optional_name
+        public unicode output_required_name
+        public unicode output_optional_name
+        public unicode default_value
+        public unicode default_input_value
+        public unicode default_output_value
+        public unicode response_elem
+
+        # Global variables, can be always overridden on a per-declaration basis
+        public object skip_empty_keys
+        public object skip_empty_request_keys
+        public object skip_empty_response_keys
+
+    cdef bint is_int(self, name):
+        """ Returns True if input name should be treated like ElemType.int.
+        """
+
+    cdef bint is_bool(self, name):
+        """ Returns True if input name should be treated like ElemType.bool.
+        """
+
+    cdef bint is_secret(self, name):
+        """ Returns True if input name should be treated like ElemType.secret.
+        """
 
 # ################################################################################################################################
 
@@ -197,37 +242,127 @@ cdef class SIODefinition(object):
 # ################################################################################################################################
 
 cdef class SimpleIO(object):
+    """ If a service uses SimpleIO then, during deployment, its class will receive an attribute called _simpleio
+    based on the service's SimpleIO attribute. The _simpleio one will be an instance of this Cython class.
+    """
     cdef:
-        BoolConfig bool_config
-        IntConfig int_config
-        SecretConfig secret_config
+        # Server-wide configuration
+        _SimpleIOConfig server_config
 
-    cdef bint is_int(self, name):
-        pass
+        # Current service's configuration, after parsing
+        SIODefinition definition
 
-    cdef bint is_bool(self, name):
-        pass
+        # User-provided SimpleIO declaration, before parsing. This is parsed into self.definition.
+        object declaration
 
-    cdef bint is_secret(self, name):
-        pass
+# ################################################################################################################################
 
-    cdef SIODefinition create_definition(self, dict data):
-        pass
+    def __cinit__(self, object declaration):
+        self.definition = SIODefinition()
+        self.declaration = declaration
+
+# ################################################################################################################################
+
+    cpdef build(self):
+        """ Parses a user-defined SimpleIO declaration (currently, a Python class)
+        and populates all the internal structures as needed.
+        """
+
+# ################################################################################################################################
+
+    cdef build_input_required(self):
+        """ Builds structures responsible for data that is required on input.
+        """
+
+# ################################################################################################################################
+
+# Create server/process-wide singletons
+NotGiven = _NotGiven()
+SimpleIOConfig = _SimpleIOConfig()
 
 # ################################################################################################################################
 
 def run():
 
-    data = {
-    }
+    # Bunch
+    from bunch import Bunch, bunchify
 
-    sio = SimpleIO()
-    definition = sio.create_definition(data)
-    #print(111, definition)
-    #print(333, ElemType.as_is, ElemType.as_is==1, type(ElemType.as_is))
+    server_config = Bunch()
 
-    elem = Elem()
-    print(222, elem)
+    server_config.bool = Bunch()
+    server_config.bool.exact  = set()
+    server_config.bool.prefix = set(['by_', 'has_', 'is_', 'may_', 'needs_', 'should_'])
+    server_config.bool.suffix = set()
+
+    server_config.int = Bunch()
+    server_config.int.exact  = set(['id'])
+    server_config.int.prefix = set()
+    server_config.int.suffix = set(['_count', '_id', '_size', '_timeout'])
+
+    server_config.secret = Bunch()
+    server_config.secret.exact  = set(['id'])
+    server_config.secret.prefix = set(['auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'token'])
+    server_config.secret.suffix = set()
+
+    server_config.default = Bunch()
+
+    server_config.default.default_value = None
+    server_config.default.default_input_value = None
+    server_config.default.default_output_value = None
+
+    server_config.default.response_elem = None
+
+    server_config.default.input_required_name = 'input_required'
+    server_config.default.input_optional_name = 'input_optional'
+    server_config.default.output_required_name = 'output_required'
+    server_config.default.output_optional_name = 'output_optional'
+
+    server_config.default.skip_empty_keys = False
+    server_config.default.skip_empty_request_keys = False
+    server_config.default.skip_empty_response_keys = False
+
+    bool_config = BoolConfig()
+    bool_config.exact = server_config.bool.exact
+    bool_config.prefixes = server_config.bool.prefix
+    bool_config.suffixes = server_config.bool.suffix
+
+    int_config = IntConfig()
+    int_config.exact = server_config.int.exact
+    int_config.prefixes = server_config.int.prefix
+    int_config.suffixes = server_config.int.suffix
+
+    secret_config = SecretConfig()
+    secret_config.exact = server_config.secret.exact
+    secret_config.prefixes = server_config.secret.prefix
+    secret_config.suffixes = server_config.secret.suffix
+
+# ################################################################################################################################
+
+    SimpleIOConfig.bool_config = bool_config
+    SimpleIOConfig.int_config = int_config
+    SimpleIOConfig.secret_config = secret_config
+
+    SimpleIOConfig.input_required_name = server_config.default.input_required_name
+    SimpleIOConfig.input_optional_name = server_config.default.input_optional_name
+    SimpleIOConfig.output_required_name = server_config.default.output_required_name
+    SimpleIOConfig.output_optional_name = server_config.default.output_optional_name
+    SimpleIOConfig.default_value = server_config.default.default_value
+    SimpleIOConfig.default_input_value = server_config.default.default_input_value
+    SimpleIOConfig.default_output_value = server_config.default.default_output_value
+
+    SimpleIOConfig.response_elem = server_config.default.response_elem
+
+    SimpleIOConfig.skip_empty_keys = server_config.default.skip_empty_keys
+    SimpleIOConfig.skip_empty_request_keys = server_config.default.skip_empty_request_keys
+    SimpleIOConfig.skip_empty_response_keys = server_config.default.skip_empty_response_keys
+
+    class MySimpleIO:
+        input_required = 'abc'
+
+    sio = SimpleIO(MySimpleIO)
+    sio.build()
+
+    print(111, sio.definition)
 
 # ################################################################################################################################
 

@@ -10,5 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato import simpleio as sio
+from zato.simpleio import AsIs
 
-print(222, sio, dir(sio))
+sio.run()
