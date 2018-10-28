@@ -34,7 +34,7 @@ PubSub = PubSub
 
 # ################################################################################################################################
 
-logger = getLogger('zato_pubsub')
+logger = getLogger('zato_pubsub.task')
 logger_zato = getLogger('zato')
 
 # ################################################################################################################################
@@ -630,7 +630,7 @@ class PubSubTool(object):
         # A pub/sub delivery task for each sub_key
         self.delivery_tasks = {}
 
-        self.last_gd_run = None
+        self.last_gd_run = {}
 
         # Register with this server's pubsub
         self.register_pubsub_tool()
@@ -696,7 +696,6 @@ class PubSubTool(object):
         # that are currently being delivered by tasks, so in other words, the database will never give us duplicates
         # that have been already delivered or are about to be.
         #
-        self.last_gd_run = {}
 
         delivery_list = SortedList()
         delivery_lock = RLock()
@@ -853,9 +852,12 @@ class PubSubTool(object):
         for sub_key in sub_key_list:
             ignore_list.update([msg.endp_msg_queue_id for msg in self.delivery_lists[sub_key] if msg.has_gd])
 
+        logger.info('Fetching GD messages by sk_list:`%s`, ignore:`%s`', sub_key_list, ignore_list)
+
         if self.last_gd_run:
             if len(sub_key_list) == 1:
-                min_last_gd_run = self.last_gd_run[sub_key_list[0]]
+                # Use .get because it is possible we have not fetched messages for that sub_key before
+                min_last_gd_run = self.last_gd_run.get(sub_key_list[0])
             else:
                 min_last_gd_run = min(value for key, value in self.last_gd_run.iteritems() if key in sub_key_list)
         else:
