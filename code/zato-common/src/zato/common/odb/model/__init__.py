@@ -2119,8 +2119,10 @@ class WebSocketSubscription(Base):
 
     id = Column(Integer, Sequence('web_socket_sub_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False)
-    sub_key = Column(String(200), nullable=False)
     ext_client_id = Column(String(200), nullable=False)
+
+    # Each transient, per-connection, web_socket_cli_ps_keys.sub_key will refer to this column
+    sub_key = Column(String(200), nullable=False)
 
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)

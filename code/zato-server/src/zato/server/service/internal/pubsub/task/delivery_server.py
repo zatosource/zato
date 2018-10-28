@@ -14,8 +14,11 @@ from contextlib import closing
 # Bunch
 from bunch import bunchify
 
+# SQLAlchemy
+from sqlalchemy import inspect
+
 # Zato
-from zato.common.odb.model import PubSubSubscription, Server
+from zato.common.odb.model import PubSubSubscription, Server, WebSocketClient, WebSocketClientPubSubKeys, WebSocketSubscription
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, GetListAdminSIO
@@ -27,24 +30,40 @@ _summary_delivery_server_sio = ('tasks', 'tasks_running', 'tasks_stopped', 'sub_
 
 # ################################################################################################################################
 
-def delivery_server_list_non_wsx(session, cluster_id):
+def delivery_server_list(session, cluster_id):
     """ Returns a list of all servers (without PIDs) that are known to be delivery ones.
     """
-    return session.query(
+    # WSX subscriptions first
+    q_wsx = session.query(
+        Server.id,
+        Server.name,
+        PubSubSubscription.sub_key
+        ).\
+        filter(PubSubSubscription.sub_key==WebSocketClientPubSubKeys.sub_key).\
+        filter(WebSocketSubscription.sub_key==WebSocketClientPubSubKeys.sub_key).\
+        filter(WebSocketClientPubSubKeys.client_id==WebSocketClient.id).\
+        filter(WebSocketClient.server_id==Server.id).\
+        filter(Server.cluster_id==cluster_id)
+
+    # Non-WSX subscriptions now
+    q_non_wsx = session.query(
         Server.id,
         Server.name,
         PubSubSubscription.sub_key
         ).\
         filter(Server.id==PubSubSubscription.server_id).\
-        filter(Server.cluster_id==cluster_id).\
-        all()
+        filter(Server.cluster_id==cluster_id)
+
+    # Return a union of WSX and non-WSX related subscription servers
+    return q_wsx.union(q_non_wsx).\
+           all()
 
 # ################################################################################################################################
 
-class GetDeliveryServerDetailsNonWSX(AdminService):
+class GetDeliveryServerDetails(AdminService):
     """ Returns a summary of current activity for all delivery tasks on current PID (non-WSX clients only).
     """
-    name = 'pubsub.task.get-delivery-server-details-non-wsx'
+    name = 'pubsub.task.get-delivery-server-details'
 
     class SimpleIO:
         output_optional = _summary_delivery_server_sio
@@ -71,7 +90,10 @@ class GetDeliveryServerDetailsNonWSX(AdminService):
             total_tasks += len(item.delivery_tasks)
             total_sub_keys += len(item.sub_keys)
 
-            max_last_gd_run = max(max_last_gd_run, max(item.last_gd_run.values()))
+            item_last_gd_run = item.last_gd_run
+            item_last_gd_run_values = item_last_gd_run.values() if item_last_gd_run else []
+            max_item_last_gd_run = max(item_last_gd_run_values) if item_last_gd_run_values else 0
+            max_last_gd_run = max(max_last_gd_run, max_item_last_gd_run)
 
             for task in item.get_delivery_tasks():
 
@@ -136,42 +158,43 @@ class DeliveryServerGetList(AdminService):
         with closing(self.odb.session()) as session:
 
             # Iterate over all servers and their sub_keys as they are known in ODB
-            for server_id, server_name, sub_key in delivery_server_list_non_wsx(session, self.request.input.cluster_id):
+            for server_id, server_name, sub_key in delivery_server_list(session, self.request.input.cluster_id):
 
                 # All PIDs of current server
                 pids = server_pids.setdefault(server_name, set())
 
                 # Add a PID found for that server
-                pids.add(self.pubsub.get_sub_key_server(sub_key).server_pid)
+                sk_server = self.pubsub.get_sub_key_server(sub_key)
+                pids.add(sk_server.server_pid)
 
-            # We can now iterate over the PIDs found and append an output row for each one.
-            for server_name, pids in server_pids.items():
+        # We can now iterate over the PIDs found and append an output row for each one.
+        for server_name, pids in server_pids.items():
 
-                for pid in pids:
+            for pid in pids:
 
-                    pid_response = bunchify(self.servers[server_name].invoke(GetDeliveryServerDetailsNonWSX.name, pid=pid))
+                pid_response = bunchify(self.servers[server_name].invoke(GetDeliveryServerDetails.name, pid=pid))
 
-                    # A summary of each PID's current pub/sub activities
-                    pid_data = bunchify({
-                        'name': server_name,
-                        'pid': pid,
-                        'tasks': pid_response.tasks,
-                        'tasks_running': pid_response.tasks_running,
-                        'tasks_stopped': pid_response.tasks_stopped,
-                        'sub_keys': pid_response.sub_keys,
-                        'topics': pid_response.topics,
-                        'messages': pid_response.messages,
-                        'messages_gd': pid_response.messages_gd,
-                        'messages_non_gd': pid_response.messages_non_gd,
-                        'msg_handler_counter': pid_response.msg_handler_counter,
-                        'last_gd_run': pid_response.last_gd_run,
-                        'last_task_run': pid_response.last_task_run,
-                    })
+                # A summary of each PID's current pub/sub activities
+                pid_data = bunchify({
+                    'name': server_name,
+                    'pid': pid,
+                    'tasks': pid_response.tasks,
+                    'tasks_running': pid_response.tasks_running,
+                    'tasks_stopped': pid_response.tasks_stopped,
+                    'sub_keys': pid_response.sub_keys,
+                    'topics': pid_response.topics,
+                    'messages': pid_response.messages,
+                    'messages_gd': pid_response.messages_gd,
+                    'messages_non_gd': pid_response.messages_non_gd,
+                    'msg_handler_counter': pid_response.msg_handler_counter,
+                    'last_gd_run': pid_response.last_gd_run,
+                    'last_task_run': pid_response.last_task_run,
+                })
 
-                # OK, we can append data about this PID now
-                out.append(pid_data)
+            # OK, we can append data about this PID now
+            out.append(pid_data)
 
-            return out
+        return out
 
     def handle(self):
         self.response.payload[:] = self.get_data()
