@@ -24,19 +24,107 @@ NotGiven = _NotGiven()
 # ################################################################################################################################
 
 cdef enum ElemType:
-    as_is         = 1000
-    bool          = 2000
-    csv           = 3000
-    date          = 3500
-    date_time     = 3750
-    dict_         = 4000
-    dict_list     = 4500
-    float         = 5000
-    int           = 6000
-    list_         = 7000
-    opaque        = 8000
-    text          = 9000
+    as_is         =  1
+    bool          =  2
+    csv           =  3
+    date          =  4
+    date_time     =  5
+    dict_         =  6
+    dict_list     =  7
+    float         =  8
+    int           =  9
+    list_         = 10
+    opaque        = 11
+    text          = 12
+    uuid          = 13
     user_defined  = 1_000_000
+
+# ################################################################################################################################
+
+cdef class Elem(object):
+    """ An individual input or output element. May be a ForceType instance or not.
+    """
+    cdef:
+        ElemType _type
+        unicode _name
+        object _default
+        bint _is_required
+
+    def __str__(self):
+        return '<{} at {} {}:{} d:{} r:{}>'.format(self.__class__.__name__, hex(id(self)), self._name, self._type,
+            self._default, self._is_required)
+
+# ################################################################################################################################
+
+cdef class AsIs(Elem):
+    def __cinit__(self):
+        self._type = ElemType.as_is
+
+# ################################################################################################################################
+
+cdef class Bool(Elem):
+    def __cinit__(self):
+        self._type = ElemType.bool
+
+# ################################################################################################################################
+
+cdef class CSV(Elem):
+    def __cinit__(self):
+        self._type = ElemType.csv
+
+# ################################################################################################################################
+
+cdef class Date(Elem):
+    def __cinit__(self):
+        self._type = ElemType.date
+
+# ################################################################################################################################
+
+cdef class DateTime(Elem):
+    def __cinit__(self):
+        self._type = ElemType.date_time
+
+# ################################################################################################################################
+
+cdef class Dict(Elem):
+    def __cinit__(self):
+        self._type = ElemType.dict_
+
+# ################################################################################################################################
+
+cdef class DictList(Elem):
+    def __cinit__(self):
+        self._type = ElemType.dict_list
+
+# ################################################################################################################################
+
+cdef class Float(Elem):
+    def __cinit__(self):
+        self._type = ElemType.float
+
+# ################################################################################################################################
+
+cdef class Int(Elem):
+    def __cinit__(self):
+        self._type = ElemType.int
+
+# ################################################################################################################################
+
+cdef class List(Elem):
+    def __cinit__(self):
+        self._type = ElemType.list_
+
+# ################################################################################################################################
+
+cdef class Opaque(Elem):
+    def __cinit__(self):
+        self._type = ElemType.opaque
+
+# ################################################################################################################################
+
+cdef class UUID(Elem):
+    def __cinit__(self):
+        self._type = ElemType.uuid
 
 # ################################################################################################################################
 
@@ -60,24 +148,6 @@ cdef class IntConfig(Config):
 
 cdef class SecretConfig(Config):
     pass
-
-# ################################################################################################################################
-
-cdef class Elem(object):
-    """ An individual input or output element. May be a ForceType instance or not.
-    """
-    cdef:
-        ElemType _type
-        unicode _name
-        object _default_value
-        bint _is_required
-
-    def __str__(self):
-        return '<{} at {} {}:{} d:{} r:{}>'.format(self.__class__.__name__, hex(id(self)), 1, 2, 3, 4)
-
-cdef class AsIs(Elem):
-    def __cinit__(self):
-        self._type = ElemType.as_is
 
 # ################################################################################################################################
 
@@ -153,8 +223,11 @@ def run():
 
     sio = SimpleIO()
     definition = sio.create_definition(data)
-    print(definition)
-    #print(ElemType.integer)
+    #print(111, definition)
+    #print(333, ElemType.as_is, ElemType.as_is==1, type(ElemType.as_is))
+
+    elem = Elem()
+    print(222, elem)
 
 # ################################################################################################################################
 
