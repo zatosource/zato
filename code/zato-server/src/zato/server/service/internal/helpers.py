@@ -21,6 +21,7 @@ from django.template import Context, Template
 # Zato
 from zato.common.exception import Forbidden
 from zato.server.service import AsIs, Service
+from zato.server.service.internal.service import Invoke
 
 # Configure Django settings when the module is picked up
 if not settings.configured:
@@ -147,3 +148,8 @@ class WebSocketsPubSubGateway(Service):
                 wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
+
+class ServiceGateway(Invoke):
+    """ Service to invoke other services through.
+    """
+    name = 'helpers.service-gateway'
