@@ -85,7 +85,10 @@
 
                         <td>
                             {% if item.tasks %}
-                                <a href="{% url "pubsub-task" item.name item.pid cluster_id %}">{{ item.tasks }}</a>
+                                <!--
+                                <a href="{% url "pubsub-task" item.name item.pid cluster_id %}"></a>
+                                -->
+                                {{ item.tasks }}
 
                                 <span title="
                                 {{ item.tasks_running }} task{% if item.tasks_running == 1%} {% else %}s {% endif %}running
