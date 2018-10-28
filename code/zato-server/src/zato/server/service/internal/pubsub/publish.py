@@ -37,7 +37,7 @@ from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
-logger_pubsub = getLogger('zato_pubsub')
+logger_pubsub = getLogger('zato_pubsub.srv')
 logger_audit = getLogger('zato_pubsub_audit')
 
 # ################################################################################################################################

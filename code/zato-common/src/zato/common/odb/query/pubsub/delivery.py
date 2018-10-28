@@ -19,7 +19,7 @@ from zato.common import PUBSUB
 from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubEndpointEnqueuedMessage, PubSubSubscription, Server, \
      WebSocketClient, WebSocketClientPubSubKeys
 
-logger = getLogger('zato_pubsub')
+logger = getLogger('zato_pubsub.sql')
 
 # ################################################################################################################################
 
