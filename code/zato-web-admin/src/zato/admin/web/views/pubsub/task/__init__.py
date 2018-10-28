@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 class DeliveryTask(object):
     def __init__(self):
         self.id = None
+        self.is_active = None
         self.server_name = None
         self.server_pid = None
         self.task_id = None
@@ -53,7 +54,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'server_name', 'server_pid')
         output_required = ('id', 'server_name', 'server_pid', 'thread_id', 'object_id', 'sub_key', 'topic_id', 'topic_name',
-            'messages', 'ext_client_id')
+            'messages', 'ext_client_id', 'is_active')
         output_optional = ('last_gd_run', 'last_gd_run_utc', 'last_delivery', 'last_delivery_utc')
         output_repeated = True
 
@@ -63,6 +64,8 @@ class Index(_Index):
     def handle_return_data(self, return_data):
 
         for item in return_data['items']:
+
+            print(333, item.id, item.is_active, item.sub_key)
 
             item.id = fs_safe_name('{}-{}'.format(item.thread_id, item.object_id))
 
