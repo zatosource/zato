@@ -34,7 +34,7 @@ PubSub = PubSub
 
 # ################################################################################################################################
 
-logger = getLogger('zato_pubsub')
+logger = getLogger('zato_pubsub.task')
 logger_zato = getLogger('zato')
 
 # ################################################################################################################################
@@ -70,7 +70,7 @@ class SortedList(_SortedList):
 class DeliveryTask(object):
     """ Runs a greenlet responsible for delivery of messages for a given sub_key.
     """
-    def __init__(self, pubsub_tool, pubsub, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg_cb,
+    def __init__(self, pubsub_tool, pubsub, sub_key, delivery_lock, delivery_list, deliver_pubsub_msg,
             confirm_pubsub_msg_delivered_cb, sub_config):
         self.keep_running = True
         self.pubsub_tool = pubsub_tool
@@ -78,7 +78,7 @@ class DeliveryTask(object):
         self.sub_key = sub_key
         self.delivery_lock = delivery_lock
         self.delivery_list = delivery_list
-        self.deliver_pubsub_msg_cb = deliver_pubsub_msg_cb
+        self.deliver_pubsub_msg = deliver_pubsub_msg
         self.confirm_pubsub_msg_delivered_cb = confirm_pubsub_msg_delivered_cb
         self.sub_config = sub_config
         self.topic_name = sub_config.topic_name
@@ -220,7 +220,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-    def run_delivery(self, deliver_pubsub_msg_cb=None, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
+    def run_delivery(self, deliver_pubsub_msg=None, _run_deliv_status=PUBSUB.RUN_DELIVERY_STATUS):
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
@@ -230,7 +230,7 @@ class DeliveryTask(object):
 
             # For pull-type deliveries, this will be given on input. For notify-type deliveries,
             # we use the callback assigned to self.
-            deliver_pubsub_msg_cb = deliver_pubsub_msg_cb if deliver_pubsub_msg_cb else self.deliver_pubsub_msg_cb
+            deliver_pubsub_msg = deliver_pubsub_msg if deliver_pubsub_msg else self.deliver_pubsub_msg
 
             # Deliver up to that many messages in one batch
             current_batch = self.delivery_list[:self.sub_config.delivery_batch_size]
@@ -282,7 +282,7 @@ class DeliveryTask(object):
                 logger.info('Skipping messages `%s`', to_skip)
 
             # This is the call that actually delivers messages
-            deliver_pubsub_msg_cb(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
+            deliver_pubsub_msg(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
 
         except Exception as e:
             # Do not attempt to deliver any other message in case of an error. Our parent will sleep for a small amount of
@@ -630,7 +630,7 @@ class PubSubTool(object):
         # A pub/sub delivery task for each sub_key
         self.delivery_tasks = {}
 
-        self.last_gd_run = None
+        self.last_gd_run = {}
 
         # Register with this server's pubsub
         self.register_pubsub_tool()
@@ -696,7 +696,6 @@ class PubSubTool(object):
         # that are currently being delivered by tasks, so in other words, the database will never give us duplicates
         # that have been already delivered or are about to be.
         #
-        self.last_gd_run = {}
 
         delivery_list = SortedList()
         delivery_lock = RLock()
@@ -853,9 +852,14 @@ class PubSubTool(object):
         for sub_key in sub_key_list:
             ignore_list.update([msg.endp_msg_queue_id for msg in self.delivery_lists[sub_key] if msg.has_gd])
 
+        logger.info('Fetching GD messages by sk_list:`%s`, ignore:`%s`', sub_key_list, ignore_list)
+
         if self.last_gd_run:
             if len(sub_key_list) == 1:
-                min_last_gd_run = self.last_gd_run[sub_key_list[0]]
+                # Use .get because it is possible we have not fetched messages for that particular sub_key before,
+                # i.e. self.last_gd_run may be non-empty because there are last GD runs for other keys,
+                # just not for this one.
+                min_last_gd_run = self.last_gd_run.get(sub_key_list[0])
             else:
                 min_last_gd_run = min(value for key, value in self.last_gd_run.iteritems() if key in sub_key_list)
         else:

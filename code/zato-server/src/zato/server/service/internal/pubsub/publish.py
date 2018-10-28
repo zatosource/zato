@@ -37,7 +37,7 @@ from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
-logger_pubsub = getLogger('zato_pubsub')
+logger_pubsub = getLogger('zato_pubsub.srv')
 logger_audit = getLogger('zato_pubsub_audit')
 
 # ################################################################################################################################
@@ -331,7 +331,7 @@ class Publish(AdminService):
                     sorted(self.pubsub.sub_key_servers.keys()))
                 has_wsx_no_server = True # We have found at least one WSX subscriber that has no server = it is not connected
 
-        logger_pubsub.info('Found subscriptions for topic `%s` `%s`', topic.name, _subs_found)
+        logger_pubsub.info('Subscriptions for topic `%s` `%s`', topic.name, _subs_found)
 
         # If input.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other input parameters describe it.
