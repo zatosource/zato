@@ -9,12 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from copy import deepcopy
 from datetime import datetime, timedelta
 from httplib import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import getLogger
 from threading import current_thread
-from traceback import format_exc, format_stack
+from traceback import format_exc
 from urlparse import urlparse
 
 # Bunch
@@ -740,7 +739,6 @@ class WebSocket(_WebSocket):
             self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
         try:
-            #spawn(self._received_message, deepcopy(message.data))
             self._received_message(message.data)
         except Exception:
             logger.warn(format_exc())

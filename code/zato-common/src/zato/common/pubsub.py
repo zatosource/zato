@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
+from zato.common import GENERIC
 from zato.common.util import new_cid
 from zato.common.util.time_ import utcnow_as_ms
 
@@ -92,6 +93,7 @@ class PubSubMessage(object):
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None
         self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
+        setattr(self, GENERIC.ATTR_NAME, None) # To make this class look more like an SQLAlchemy one
 
     def to_dict(self, skip=None, needs_utf8_encode=True, add_id_attrs=False, _data_keys=_data_keys):
         """ Returns a dict representation of self.
@@ -112,6 +114,18 @@ class PubSubMessage(object):
             if self.pub_correl_id:
                 out['correl_id'] = self.pub_correl_id
 
+        # Append the generic opaque attribute to make the output look as though it was produced from an SQLAlchemy object
+        # but do it only if there is any value, otherwise skip it.
+        opaque_value = getattr(self, GENERIC.ATTR_NAME)
+        if opaque_value:
+            out[GENERIC.ATTR_NAME] = opaque_value
+
+        return out
+
+    # For compatibility with code that already expects dictalchemy objects with their .asdict method
+    def asdict(self):
+        out = self.to_dict()
+        out[GENERIC.ATTR_NAME] = getattr(self, GENERIC.ATTR_NAME)
         return out
 
     def to_external_dict(self, skip=skip_to_external, needs_utf8_encode=False):

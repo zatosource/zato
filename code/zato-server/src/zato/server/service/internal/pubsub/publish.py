@@ -30,6 +30,7 @@ from zato.common.odb.query.pubsub.publish import sql_publish_with_retry
 from zato.common.odb.query.pubsub.topic import get_gd_depth_topic
 from zato.common.pubsub import PubSubMessage
 from zato.common.pubsub import new_msg_id
+from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
 from zato.server.service import AsIs, Int, List
@@ -63,7 +64,8 @@ class PubCtx(object):
     """ A container for information describing a single publication.
     """
     __slots__ = ('cluster_id', 'pubsub', 'topic', 'endpoint_id', 'endpoint_name', 'subscriptions_by_topic', 'msg_id_list',
-        'gd_msg_list', 'non_gd_msg_list', 'pub_pattern_matched', 'ext_client_id', 'is_re_run', 'now', 'current_depth', 'last_msg')
+        'gd_msg_list', 'non_gd_msg_list', 'pub_pattern_matched', 'ext_client_id', 'is_re_run', 'now', 'current_depth',
+        'last_msg')
 
     def __init__(self, cluster_id, pubsub, topic, endpoint_id, endpoint_name, subscriptions_by_topic, msg_id_list, gd_msg_list,
             non_gd_msg_list, pub_pattern_matched, ext_client_id, is_re_run, now):
@@ -93,7 +95,7 @@ class Publish(AdminService):
         input_optional = (AsIs('data'), List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'),
             'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time', 'pub_pattern_matched',
             'security_id', 'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
-            Int('position_in_group'), 'endpoint_id')
+            Int('position_in_group'), 'endpoint_id', List('reply_to_sk'))
         output_optional = (AsIs('msg_id'), List('msg_id_list'))
 
 # ################################################################################################################################
@@ -107,7 +109,8 @@ class Publish(AdminService):
 # ################################################################################################################################
 
     def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, has_wsx_no_server,
-        _initialized=_initialized, _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT):
+        _initialized=_initialized, _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT,
+        _opaque_only=('reply_to_sk',)):
 
         priority = get_priority(self.cid, input)
 
@@ -174,6 +177,11 @@ class Publish(AdminService):
         ps_msg.position_in_group = input.get('position_in_group') or None
         ps_msg.is_in_sub_queue = bool(subscriptions_by_topic)
 
+        # Opaque attributes - we only need reply to sub_keys to be placed in there
+        # but we do not do it unless we known that any such sub key was actually requested.
+        if input.get('reply_to_sk'):
+            set_instance_opaque_attrs(ps_msg, input, only=_opaque_only)
+
         # If there are any subscriptions for the topic this message was published to, we want to establish
         # based on what subscription pattern each subscriber will receive the message.
         for sub in subscriptions_by_topic:
@@ -206,7 +214,7 @@ class Publish(AdminService):
 # ################################################################################################################################
 
     def _get_messages_from_data(self, topic, data_list, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
-        has_wsx_no_server):
+        has_wsx_no_server, reply_to_sk):
 
         # List of messages with GD enabled
         gd_msg_list = []
@@ -340,7 +348,7 @@ class Publish(AdminService):
         # Input messages may contain a mix of GD and non-GD messages, and we need to extract them separately.
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
             topic, data_list, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
-            has_wsx_no_server)
+            has_wsx_no_server, input.get('reply_to_sk', None))
 
         # Create a wrapper object for all the input data and metadata
         ctx = PubCtx(self.server.cluster_id, pubsub, topic, endpoint_id, pubsub.get_endpoint_by_id(endpoint_id).name,
