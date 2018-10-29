@@ -15,9 +15,11 @@ from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 
+sk_lists = ('reply_to_sk', 'deliver_to_sk')
+
 skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pub_pattern_matched', 'sub_pattern_matched',
     'published_by_id', 'data_prefix', 'data_prefix_short', 'pub_time', 'expiration_time', 'recv_time',
-    'pub_msg_id', 'pub_correl_id')
+    'pub_msg_id', 'pub_correl_id') + sk_lists
 
 _data_keys=('data', 'data_prefix', 'data_prefix_short')
 
@@ -55,7 +57,7 @@ class PubSubMessage(object):
     """
     # We are not using __slots__ because they can't be inherited by subclasses
     # and this class, as well as its subclasses, will be rewritten in Cython anyway.
-    pub_attrs = msg_pub_attrs + ('reply_to_sk', 'deliver_to_sk')
+    pub_attrs = msg_pub_attrs + sk_lists
 
     def __init__(self):
         self.recv_time = utcnow_as_ms()
@@ -135,7 +137,19 @@ class PubSubMessage(object):
         """ Returns a dict representation of self ready to be delivered to external systems,
         i.e. without internal attributes on output.
         """
-        return self.to_dict(skip, needs_utf8_encode, True)
+        out = self.to_dict(skip, needs_utf8_encode, True)
+        print()
+        print()
+
+        print(111, self.reply_to_sk)
+
+        print()
+        print()
+        if self.reply_to_sk:
+            out['ctx'] = {
+                'reply_to_sk': self.reply_to_sk
+            }
+        return out
 
 # ################################################################################################################################
 

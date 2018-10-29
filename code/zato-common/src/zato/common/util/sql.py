@@ -190,17 +190,49 @@ def set_instance_opaque_attrs(instance, input, skip=None, only=None, _zato_skip=
     instance_opaque_attrs = None
     instance_attrs = set(instance.asdict())
 
+    print()
+    print()
+
+    print(111, instance.asdict())
+    print()
+
+    print(222, instance_attrs)
+    print()
+
+    print('333a', input)
+
     input_attrs = set(input)
+
+    print(333, input_attrs)
+    print()
+
+    print(444, only)
+    print()
+
     if only:
         input_attrs = set([elem for elem in input_attrs if elem in only])
         instance_attrs = set([elem for elem in instance_attrs if elem not in only])
 
+    print(555, input_attrs)
+    print()
+
+    print(666, instance_attrs)
+    print()
+
     # Any extra input attributes will be treated as opaque ones
     input_opaque_attrs = input_attrs - instance_attrs
+
+    print(777, input_opaque_attrs)
+    print()
 
     # Skip attributes related to pagination
     for name in chain(skip or [], _zato_skip):
         input_opaque_attrs.discard(name)
+
+    print(888, input_opaque_attrs)
+
+    print()
+    print()
 
     # Prepare generic attributes for instance
     if GENERIC.ATTR_NAME in instance_attrs:
