@@ -1919,6 +1919,7 @@ class PubSub(object):
         ext_client_id = kwargs.get('ext_client_id')
         ext_pub_time = kwargs.get('ext_pub_time')
         endpoint_id = kwargs.get('endpoint_id')
+        reply_to_sk = kwargs.get('reply_to_sk')
 
         response = self.invoke_service('zato.pubsub.publish.publish', {
             'topic_name': topic_name,
@@ -1934,6 +1935,7 @@ class PubSub(object):
             'ext_client_id': ext_client_id,
             'ext_pub_time': ext_pub_time,
             'endpoint_id': endpoint_id or self.server.default_internal_pubsub_endpoint_id,
+            'reply_to_sk': reply_to_sk,
         }, serialize=False)
 
         return response.response['msg_id']

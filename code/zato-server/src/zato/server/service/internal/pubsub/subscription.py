@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from logging import getLogger
 
 # Bunch
 from bunch import Bunch
@@ -38,6 +39,10 @@ from zato.server.service.internal.pubsub import common_sub_data
 PubSub = PubSub
 Topic = Topic
 WebSocket = WebSocket
+
+# ################################################################################################################################
+
+logger_pubsub = getLogger('zato_pubsub.srv')
 
 # ################################################################################################################################
 
@@ -423,6 +428,8 @@ class SubscribeServiceImpl(_Subscribe):
                 sub_config.server_receiving_subscription_id = self.server.id
                 sub_config.server_receiving_subscription_pid = self.server.pid
                 sub_config.is_api_call = True
+
+                logger_pubsub.info('Subscription created `%s`', sub_config)
 
                 self.broker_client.publish(sub_config)
 
