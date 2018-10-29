@@ -775,8 +775,12 @@ class PubSubTool(object):
                 session = self.pubsub.server.odb.session()
             else:
                 if not ctx.non_gd_msg_list:
-                    raise ValueError('No messages received ({}) for cid:`{}`, has_gd:`{}` and sub_key_list:`{}`'.format(
+                    # This is an unusual situation but not an erroneous one because it is possible
+                    # that we were triggered to deliver messages that have already expired in the meantime,
+                    # in which case we just log on info level rather than warn.
+                    logger.info('No messages received ({}) for cid:`{}`, has_gd:`{}` and sub_key_list:`{}`'.format(
                         ctx.non_gd_msg_list, ctx.cid, ctx.has_gd, ctx.sub_key_list))
+                    return
 
             logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
                 ctx.cid, int(ctx.has_gd), ctx.sub_key_list, len(ctx.non_gd_msg_list), ctx.is_bg_call)
