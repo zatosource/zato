@@ -95,7 +95,7 @@ class Publish(AdminService):
         input_optional = (AsIs('data'), List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'),
             'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time', 'pub_pattern_matched',
             'security_id', 'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
-            Int('position_in_group'), 'endpoint_id', List('reply_to_sk'))
+            Int('position_in_group'), 'endpoint_id', List('reply_to_sk'), List('deliver_to_sk'))
         output_optional = (AsIs('msg_id'), List('msg_id_list'))
 
 # ################################################################################################################################
@@ -110,7 +110,7 @@ class Publish(AdminService):
 
     def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, has_wsx_no_server,
         _initialized=_initialized, _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT,
-        _opaque_only=('reply_to_sk',)):
+        _opaque_only=('deliver_to_sk', 'reply_to_sk')):
 
         priority = get_priority(self.cid, input)
 
@@ -152,6 +152,8 @@ class Publish(AdminService):
         in_reply_to = in_reply_to.encode('utf8') if in_reply_to else None
         ext_client_id = ext_client_id.encode('utf8') if ext_client_id else None
         mime_type = mime_type.encode('utf8') if mime_type else None
+        reply_to_sk = input.get('reply_to_sk') or []
+        deliver_to_sk = input.get('deliver_to_sk') or []
 
         ps_msg = PubSubMessage()
         ps_msg.topic = topic
@@ -176,10 +178,12 @@ class Publish(AdminService):
         ps_msg.group_id = input.get('group_id') or None
         ps_msg.position_in_group = input.get('position_in_group') or None
         ps_msg.is_in_sub_queue = bool(subscriptions_by_topic)
+        ps_msg.reply_to_sk = reply_to_sk
+        ps_msg.deliver_to_sk = deliver_to_sk
 
         # Opaque attributes - we only need reply to sub_keys to be placed in there
         # but we do not do it unless we known that any such sub key was actually requested.
-        if input.get('reply_to_sk'):
+        if reply_to_sk or deliver_to_sk:
             set_instance_opaque_attrs(ps_msg, input, only=_opaque_only)
 
         # If there are any subscriptions for the topic this message was published to, we want to establish
