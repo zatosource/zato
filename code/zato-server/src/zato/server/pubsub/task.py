@@ -23,9 +23,10 @@ from gevent.lock import RLock
 from sortedcontainers import SortedList as _SortedList
 
 # Zato
-from zato.common import PUBSUB
+from zato.common import GENERIC, PUBSUB
 from zato.common.pubsub import PubSubMessage
 from zato.common.util import grouper, spawn_greenlet
+from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub import PubSub
 
@@ -530,7 +531,7 @@ class GDMessage(Message):
     """
     is_gd_message = True
 
-    def __init__(self, sub_key, topic_name, msg):
+    def __init__(self, sub_key, topic_name, msg, _sk_opaque=PUBSUB.DEFAULT.SK_OPAQUE, _gen_attr=GENERIC.ATTR_NAME):
         super(GDMessage, self).__init__()
         self.endp_msg_queue_id = msg.endp_msg_queue_id
         self.sub_key = sub_key
@@ -551,6 +552,10 @@ class GDMessage(Message):
         self.topic_name = topic_name
         self.size = msg.size
         self.sub_pattern_matched = msg.sub_pattern_matched
+
+        # Extract opaque attributes, if there are any
+        #if msg.
+        set_instance_opaque_attrs(self, msg.asdict(), only=_sk_opaque) # _elem is the actual SQLAlchemy object
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
@@ -586,6 +591,8 @@ class NonGDMessage(Message):
         self.size = msg['size']
         self.published_by_id = msg['published_by_id']
         self.pub_pattern_matched = msg['pub_pattern_matched']
+        self.reply_to_sk = msg['reply_to_sk']
+        self.deliver_to_sk = msg['deliver_to_sk']
 
         # msg.sub_pattern_matched is a shared dictionary of patterns for each subscriber - we .pop from it
         # so as not to keep this dictionary's contents for no particular reason. Since there can be only

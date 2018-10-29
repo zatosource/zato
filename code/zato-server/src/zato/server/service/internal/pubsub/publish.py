@@ -110,7 +110,7 @@ class Publish(AdminService):
 
     def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, has_wsx_no_server,
         _initialized=_initialized, _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT,
-        _opaque_only=('deliver_to_sk', 'reply_to_sk')):
+        _opaque_only=PUBSUB.DEFAULT.SK_OPAQUE):
 
         priority = get_priority(self.cid, input)
 
@@ -152,7 +152,7 @@ class Publish(AdminService):
         in_reply_to = in_reply_to.encode('utf8') if in_reply_to else None
         ext_client_id = ext_client_id.encode('utf8') if ext_client_id else None
         mime_type = mime_type.encode('utf8') if mime_type else None
-        reply_to_sk = input.get('reply_to_sk') or []
+        reply_to_sk = input.get('reply_to_sk') or ['aaa']
         deliver_to_sk = input.get('deliver_to_sk') or []
 
         ps_msg = PubSubMessage()

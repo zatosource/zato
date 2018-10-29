@@ -781,6 +781,7 @@ class PUBSUB:
         WAIT_TIME_NON_SOCKET_ERROR = 30
         INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
         ON_NO_SUBS_PUB = 'accept'
+        SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
 
     class QUEUE_TYPE:
         STAGING = 'staging'
