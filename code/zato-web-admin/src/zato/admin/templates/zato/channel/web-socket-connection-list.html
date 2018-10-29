@@ -79,7 +79,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>
+                        <td style="vertical-align:middle">
                             {{ item.pub_client_id }}
                             <br/>
                             {{ item.ext_client_id }}
@@ -94,6 +94,12 @@
                                 <br/>
                                 {{ item.peer_fqdn }}
                             {% endif %}
+                            {% if item.peer_forwarded_for %}
+                                <br/>
+                                {{ item.peer_forwarded_for }}
+                                <br/>
+                                {{ item.peer_forwarded_for_fqdn }}
+                            {% endif %}
                         </td>
                         <td style="vertical-align:middle">
                             {{ item.local_address }}
@@ -107,10 +113,10 @@
                             </a>
                         </td>
 
-                        <td style="vertical-align:middle"><a href="{% url "channel-web-socket-connection-sub-key-data-list" item.id %}?cluster={{ cluster_id }}&amp;conn_id={{ conn_id }}&amp;channel_name={{ channel_name }}">Subscriptions</a></td>
+                        <td style="vertical-align:middle"><a href="{% url "channel-web-socket-connection-sub-key-data-list" item.id %}?cluster={{ cluster_id }}&amp;conn_id={{ conn_id }}&amp;channel_name={{ channel_name }}">Pub/sub</a></td>
 
                         <td style="vertical-align:middle"><a href="{% url "channel-web-socket-invoke" conn_id item.pub_client_id item.ext_client_id item.ext_client_name channel_id channel_name %}?cluster={{ cluster_id }}">Invoke</a></td>
-                        <td style="vertical-align:middle"><a href="javascript:$.fn.zato.channel.wsx.connection_list.disconnect('{{ item.id }}')">Disconnect</a></td>
+                        <td style="vertical-align:middle"><a href="javascript:$.fn.zato.channel.wsx.connection_list.disconnect('{{ item.id }}')">Close</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.ext_client_id }} - {{ item.pub_client_id }}</td>
                     </tr>

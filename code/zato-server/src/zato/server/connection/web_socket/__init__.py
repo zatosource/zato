@@ -190,9 +190,9 @@ class WebSocket(_WebSocket):
         if self.forwarded_for:
             self.forwarded_for_fqdn = socket.getfqdn(self.forwarded_for)
         else:
-            self.forwarded_for_fqdn = '(Unknown)'
+            self.forwarded_for_fqdn = WEB_SOCKET.DEFAULT.FQDN_UNKNOWN
 
-        _peer_fqdn = '(Unknown)'
+        _peer_fqdn = WEB_SOCKET.DEFAULT.FQDN_UNKNOWN
 
         try:
             self._peer_host = socket.gethostbyaddr(_peer_address[0])[0]
@@ -488,6 +488,8 @@ class WebSocket(_WebSocket):
             'connection_time': self.connection_time,
             'last_seen': self.last_seen,
             'channel_name': self.config.name,
+            'peer_forwarded_for': self.forwarded_for,
+            'peer_forwarded_for_fqdn': self.forwarded_for_fqdn,
         }, needs_response=True).ws_client_id
 
         logger.info(
