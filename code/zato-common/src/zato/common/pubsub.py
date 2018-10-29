@@ -55,7 +55,7 @@ class PubSubMessage(object):
     """
     # We are not using __slots__ because they can't be inherited by subclasses
     # and this class, as well as its subclasses, will be rewritten in Cython anyway.
-    pub_attrs = msg_pub_attrs
+    pub_attrs = msg_pub_attrs + ('reply_to_sk', 'deliver_to_sk')
 
     def __init__(self):
         self.recv_time = utcnow_as_ms()
@@ -92,6 +92,8 @@ class PubSubMessage(object):
         self.pub_time_iso = None
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None
+        self.reply_to_sk = []
+        self.deliver_to_sk = []
         self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
         setattr(self, GENERIC.ATTR_NAME, None) # To make this class look more like an SQLAlchemy one
 
@@ -100,6 +102,7 @@ class PubSubMessage(object):
         """
         skip = skip or []
         out = {}
+
         for key in sorted(PubSubMessage.pub_attrs):
             if key != 'topic' and key not in skip:
                 value = getattr(self, key)
