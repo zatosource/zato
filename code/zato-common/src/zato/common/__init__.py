@@ -1020,6 +1020,7 @@ class WEB_SOCKET:
     class DEFAULT:
         NEW_TOKEN_TIMEOUT = 5
         TOKEN_TTL = 3600
+        FQDN_UNKNOWN = '(Unknown)'
 
     class PATTERN:
         BY_EXT_ID = 'zato.by-ext-id.{}'

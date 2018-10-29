@@ -140,7 +140,7 @@ class ConnectionList(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'id', 'channel_name')
         output_required = ('local_address', 'peer_address', 'peer_fqdn', 'pub_client_id', 'ext_client_id', 'connection_time',
-            'server_name', 'server_proc_pid')
+            'server_name', 'server_proc_pid', 'peer_forwarded_for', 'peer_forwarded_for_fqdn')
         output_optional = 'ext_client_name', 'sub_count'
         output_repeated = True
 

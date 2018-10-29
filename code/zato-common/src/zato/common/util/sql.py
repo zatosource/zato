@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from itertools import chain
 from json import dumps, loads
 from logging import getLogger
 
@@ -23,6 +24,7 @@ from sqlalchemy.exc import InternalError as SAInternalError
 
 # Zato
 from zato.common import GENERIC, SEARCH
+from zato.common.odb.model import Base
 from zato.common.util.search import SearchResults
 
 # ################################################################################################################################
@@ -38,6 +40,8 @@ _max_page_size = _default_page_size * 5
 # In MySQL, 1213 = 'Deadlock found when trying to get lock; try restarting transaction'
 # but the underlying PyMySQL library returns only a string rather than an integer code.
 _deadlock_code = 'Deadlock found when trying to get lock'
+
+_zato_opaque_skip_attrs=set(['needs_details', 'paginate', 'cur_page', 'query'])
 
 # ################################################################################################################################
 
@@ -132,12 +136,17 @@ class ElemsWithOpaqueMaker(object):
 
 # ################################################################################################################################
 
-    def _process_elems(self, out, elems):
+    def _process_elems(self, out, elems, _skip_class=(Base, list)):
         for elem in elems:
             if hasattr(elem, '_sa_class_manager'):
                 data = {}
                 for (name, _) in elem._sa_class_manager._all_sqla_attributes():
-                    data[name] = getattr(elem, name)
+                    value = getattr(elem, name)
+                    if name.startswith('__'):
+                        continue
+                    if isinstance(value, _skip_class):
+                        continue
+                    data[name] = value
             else:
                 data = elem._asdict()
             elem = bunchify(data)
@@ -173,7 +182,7 @@ def elems_with_opaque(elems):
 
 # ################################################################################################################################
 
-def set_instance_opaque_attrs(instance, input, _skip_attrs=set(['needs_details', 'paginate', 'cur_page', 'query'])):
+def set_instance_opaque_attrs(instance, input, skip=None, _zato_skip=_zato_opaque_skip_attrs):
     """ Given an SQLAlchemy object instance and incoming SimpleIO-based input,
     populates all opaque values of that instance.
     """
@@ -185,7 +194,7 @@ def set_instance_opaque_attrs(instance, input, _skip_attrs=set(['needs_details',
     input_opaque_attrs = input_attrs - instance_attrs
 
     # Skip attributes related to pagination
-    for name in _skip_attrs:
+    for name in chain(skip or [], _zato_skip):
         input_opaque_attrs.discard(name)
 
     # Prepare generic attributes for instance
