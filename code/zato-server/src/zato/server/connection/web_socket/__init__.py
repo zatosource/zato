@@ -612,8 +612,7 @@ class WebSocket(_WebSocket):
             # Anything else
             else:
                 status = INTERNAL_SERVER_ERROR
-                error_message = 'Could not invoke service `{}`, id:`{}`, conn:`%s`, cid:`{}`'.format(
-                    self.config.service_name, msg.id, self.peer_conn_info_pretty, cid)
+                error_message = 'Internal server error'
 
             response = ErrorResponse(cid, msg.id, status, error_message)
 

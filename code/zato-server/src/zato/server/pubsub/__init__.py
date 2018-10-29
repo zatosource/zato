@@ -798,7 +798,10 @@ class PubSub(object):
 
     def get_subscription_by_sub_key(self, sub_key):
         with self.lock:
-            return self._get_subscription_by_sub_key(sub_key)
+            try:
+                return self._get_subscription_by_sub_key(sub_key)
+            except KeyError:
+                return None
 
 # ################################################################################################################################
 
