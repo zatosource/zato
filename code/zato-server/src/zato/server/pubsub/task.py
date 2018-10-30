@@ -747,6 +747,12 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
+    def has_sub_key(self, sub_key):
+        with self.lock:
+            return sub_key in self.sub_keys
+
+# ################################################################################################################################
+
     def remove_all_sub_keys(self):
         sub_keys = deepcopy(self.sub_keys)
         for sub_key in sub_keys:

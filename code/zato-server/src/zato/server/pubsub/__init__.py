@@ -34,6 +34,7 @@ from zato.common.util import make_repr, new_cid, spawn_greenlet
 from zato.common.util.hook import HookTool
 from zato.common.util.pubsub import make_short_msg_copy_from_dict
 from zato.common.util.time_ import utcnow_as_ms
+from zato.common.util.wsx import find_wsx_environ
 
 # ################################################################################################################################
 
@@ -2048,7 +2049,7 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def subscribe(self, topic_name, **kwargs):
+    def subscribe(self, topic_name, _find_wsx_environ=find_wsx_environ, **kwargs):
 
         # Are we going to subscribe a WSX client?
         use_current_wsx = kwargs.get('use_current_wsx')
@@ -2069,7 +2070,7 @@ class PubSub(object):
 
             # If the caller wants to subscribe a WebSocket, make sure the WebSocket's metadata
             # is given to us on input - the call below will raise an exception if it was not.
-            self._find_wsx_environ(service)
+            _find_wsx_environ(service)
 
             # All set, we can carry on with other steps now
             sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
@@ -2098,10 +2099,10 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def resume_wsx_subscription(self, sub_key, service):
+    def resume_wsx_subscription(self, sub_key, service, _find_wsx_environ=find_wsx_environ):
         """ Invoked by WSX clients that want to resume deliveries of their messages after they reconnect.
         """
-        wsx_environ = self._find_wsx_environ(service)
+        wsx_environ = _find_wsx_environ(service)
 
         self.invoke_service('zato.pubsub.resume-wsx-subscription', {
             'sql_ws_client_id': wsx_environ['sql_ws_client_id'],
