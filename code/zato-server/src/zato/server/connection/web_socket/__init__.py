@@ -34,12 +34,12 @@ from ws4py.server.wsgiutils import WebSocketWSGIApplication
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.exception import Reportable
-from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX
+from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.util import new_cid
 from zato.common.util.hook import HookTool
 from zato.server.connection.connector import Connector
-from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientInvokeRequest, ClientMessage, copy_forbidden, \
-     error_response, ErrorResponse, Forbidden, OKResponse, PubSubClientInvokeRequest
+from zato.server.connection.web_socket.msg import AuthenticateResponse, InvokeClientRequest, ClientMessage, copy_forbidden, \
+     error_response, ErrorResponse, Forbidden, OKResponse, InvokeClientPubSubRequest
 from zato.server.pubsub.task import PubSubTool
 from zato.vault.client import VAULT
 
@@ -243,23 +243,35 @@ class WebSocket(_WebSocket):
     def deliver_pubsub_msg(self, sub_key, msg):
         """ Delivers one or more pub/sub messages to the connected WSX client.
         """
+        ctx = {}
+
+        if isinstance(msg, PubSubMessage):
+            len_msg = 1
+        else:
+            len_msg = len(msg)
+            msg = msg[0] if len_msg == 1 else msg
+
         # A list of messages is given on input so we need to serialize each of them individually
         if isinstance(msg, list):
             cid = new_cid()
-            len_msg = len(msg)
             data = []
             for elem in msg:
                 data.append(elem.serialized if elem.serialized else elem.to_external_dict())
+                if elem.reply_to_sk:
+                    ctx_reply_to_sk = ctx.setdefault('', [])
+                    ctx_reply_to_sk.append(elem.reply_to_sk)
 
         # A single message was given on input
         else:
-            len_msg = 1
             cid = msg.pub_msg_id
             data = msg.serialized if msg.serialized else msg.to_external_dict()
+            if msg.reply_to_sk:
+                ctx['reply_to_sk'] = msg.reply_to_sk
 
-        logger.info('Delivering %d pub/sub message{} to sub_key `%s`'.format('s' if len_msg > 1 else ''), len_msg, sub_key)
+        logger.info('Delivering %d pub/sub message{} to sub_key `%s` (ctx:%s)'.format('s' if len_msg > 1 else ''),
+            len_msg, sub_key, ctx)
 
-        self.invoke_client(cid, data, _Class=PubSubClientInvokeRequest)
+        self.invoke_client(cid, data, ctx=ctx, _Class=InvokeClientPubSubRequest)
 
 # ################################################################################################################################
 
@@ -776,7 +788,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def invoke_client(self, cid, request, timeout=5, use_send=True, _Class=ClientInvokeRequest):
+    def invoke_client(self, cid, request, timeout=5, ctx=None, use_send=True, _Class=InvokeClientRequest):
         """ Invokes a remote WSX client with request given on input, returning its response,
         if any was produced in the expected time.
         """
@@ -789,7 +801,7 @@ class WebSocket(_WebSocket):
                 pass
 
         # Serialize to string
-        msg = _Class(cid, request)
+        msg = _Class(cid, request, ctx)
         serialized = msg.serialize()
 
         # Log what is about to be sent
@@ -803,7 +815,7 @@ class WebSocket(_WebSocket):
         # Wait for response but only if it is not a pub/sub message,
         # these are always asynchronous and that channel's WSX hook
         # will process the response, if any arrives.
-        if _Class is not PubSubClientInvokeRequest:
+        if _Class is not InvokeClientPubSubRequest:
             response = self._wait_for_client_response(msg.id, timeout)
             if response:
                 return response if isinstance(response, bool) else response.data # It will be bool in pong responses
