@@ -138,13 +138,6 @@ class PubSubMessage(object):
         i.e. without internal attributes on output.
         """
         out = self.to_dict(skip, needs_utf8_encode, True)
-        print()
-        print()
-
-        print(111, self.reply_to_sk)
-
-        print()
-        print()
         if self.reply_to_sk:
             out['ctx'] = {
                 'reply_to_sk': self.reply_to_sk
