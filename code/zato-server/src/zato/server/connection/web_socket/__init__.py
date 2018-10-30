@@ -359,6 +359,11 @@ class WebSocket(_WebSocket):
                 msg.in_reply_to = meta.get('in_reply_to')
                 msg.is_auth = False
 
+                ctx = meta.get('ctx')
+                if ctx:
+                    msg.reply_to_sk = ctx.get('reply_to_sk')
+                    msg.deliver_to_sk = ctx.get('deliver_to_sk')
+
         msg.data = parsed.get('data', {})
 
         return msg
