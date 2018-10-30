@@ -152,7 +152,7 @@ class Publish(AdminService):
         in_reply_to = in_reply_to.encode('utf8') if in_reply_to else None
         ext_client_id = ext_client_id.encode('utf8') if ext_client_id else None
         mime_type = mime_type.encode('utf8') if mime_type else None
-        reply_to_sk = input.get('reply_to_sk') or ['aaa']
+        reply_to_sk = input.get('reply_to_sk') or []
         deliver_to_sk = input.get('deliver_to_sk') or []
 
         ps_msg = PubSubMessage()
