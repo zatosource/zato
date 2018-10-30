@@ -322,7 +322,25 @@ class Publish(AdminService):
         now = utcnow_as_ms()
 
         # Get all subscribers for that topic from local worker store
-        subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic.name)
+        all_subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic.name)
+        len_all_sub = len(all_subscriptions_by_topic)
+
+        # If we are to deliver the message(s) to only selected subscribers only,
+        # filter out any unwated ones first.
+        if input.deliver_to_sk:
+
+            has_all = False
+            subscriptions_by_topic = []
+
+            # Get any matching subscriptions out of the whole set
+            for sub in all_subscriptions_by_topic:
+                if sub.sub_key in input.deliver_to_sk:
+                    subscriptions_by_topic.append(sub)
+
+        else:
+            # We deliver this message to all of the topic's subscribers
+            has_all = True
+            subscriptions_by_topic = all_subscriptions_by_topic
 
         # This is only for logging purposes
         _subs_found = []
@@ -343,7 +361,8 @@ class Publish(AdminService):
                     sorted(self.pubsub.sub_key_servers.keys()))
                 has_wsx_no_server = True # We have found at least one WSX subscriber that has no server = it is not connected
 
-        logger_pubsub.info('Subscriptions for topic `%s` `%s`', topic.name, _subs_found)
+        logger_pubsub.info('Subscriptions for topic `%s` `%s` (a:%d, %d/%d, cid:%s)',
+            topic.name, _subs_found, has_all, len(subscriptions_by_topic), len_all_sub, self.cid)
 
         # If input.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other input parameters describe it.
@@ -382,17 +401,19 @@ class Publish(AdminService):
         # Just so it is not overlooked, log information that no subscribers are found for this topic
         if not ctx.subscriptions_by_topic:
 
-            log_msg = 'No subscribers found for topic `%s` (cid:%s, re-run:%s)'
-            log_msg_drop = 'Dropping messages. ' + log_msg
+            log_msg = 'No matching subscribers found for topic `%s` (cid:%s, rr:%d)'
             log_msg_args = ctx.topic.name, self.cid, ctx.is_re_run
 
             # There are no subscribers and depending on configuration we are to drop messages
             # for whom no one is waiting or continue and place them in the topic directly.
             if ctx.topic.config.get('on_no_subs_pub') == PUBSUB.ON_NO_SUBS_PUB.DROP.id:
+                log_msg_drop = 'Dropping messages. ' + log_msg
                 self.logger.info(log_msg_drop, *log_msg_args)
+                logger_pubsub.info(log_msg_drop, *log_msg_args)
                 return
             else:
-                self.logger.warn(log_msg, *log_msg_args)
+                self.logger.info(log_msg, *log_msg_args)
+                logger_pubsub.info(log_msg, *log_msg_args)
 
         # Local aliases
         has_pubsub_audit_log = self.server.has_pubsub_audit_log

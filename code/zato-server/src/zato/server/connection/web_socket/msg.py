@@ -79,6 +79,8 @@ class ClientMessage(object):
         self.token = None
         self.ext_client_name = None
         self.ext_client_id = None
+        self.reply_to_sk = None
+        self.deliver_to_sk = None
 
     def __repr__(self):
         return make_repr(self)
