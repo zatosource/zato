@@ -155,6 +155,11 @@ class ConnectionList(_Index):
         item.id = item.pub_client_id.replace('.', '-')
         item.connection_time_utc = item.connection_time
         item.connection_time = from_utc_to_user(item.connection_time_utc + '+00:00', self.req.zato.user_profile)
+
+        if item.ext_client_name:
+            item.ext_client_name = [elem.strip() for elem in item.ext_client_name.split(';')]
+            item.ext_client_name = '\n'.join(item.ext_client_name)
+
         return item
 
 # ################################################################################################################################

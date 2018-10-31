@@ -85,7 +85,7 @@
                             {{ item.ext_client_id }}
                             {% if item.ext_client_name %}
                                 <br/>
-                                {{ item.ext_client_name }}
+                                {{ item.ext_client_name|linebreaksbr }}
                             {% endif %}
                         </td>
                         <td style="vertical-align:middle">
@@ -115,7 +115,7 @@
 
                         <td style="vertical-align:middle"><a href="{% url "channel-web-socket-connection-sub-key-data-list" item.id %}?cluster={{ cluster_id }}&amp;conn_id={{ conn_id }}&amp;channel_name={{ channel_name }}">Pub/sub</a></td>
 
-                        <td style="vertical-align:middle"><a href="{% url "channel-web-socket-invoke" conn_id item.pub_client_id item.ext_client_id item.ext_client_name channel_id channel_name %}?cluster={{ cluster_id }}">Invoke</a></td>
+                        <td style="vertical-align:middle"><a href="{% url "channel-web-socket-invoke" conn_id item.pub_client_id item.ext_client_id item.ext_client_name|slugify channel_id channel_name %}?cluster={{ cluster_id }}">Invoke</a></td>
                         <td style="vertical-align:middle"><a href="javascript:$.fn.zato.channel.wsx.connection_list.disconnect('{{ item.id }}')">Close</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.ext_client_id }} - {{ item.pub_client_id }}</td>
