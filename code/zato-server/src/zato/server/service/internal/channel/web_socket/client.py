@@ -53,7 +53,7 @@ class Create(AdminService):
             client.is_internal = req.is_internal
             client.pub_client_id = req.pub_client_id
             client.ext_client_id = req.ext_client_id
-            client.ext_client_name = req.get('ext_client_name')
+            client.ext_client_name = req.get('ext_client_name', '').encode('utf8')
             client.local_address = req.local_address
             client.peer_address = req.peer_address
             client.peer_fqdn = req.peer_fqdn

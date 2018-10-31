@@ -292,8 +292,8 @@ class WebSocket(_WebSocket):
 
     def get_peer_info_pretty(self):
         return 'name:`{}` id:`{}` fwd_for:`{}` conn:`{}` pub:`{}`, py:`{}`, sock:`{}`, swc:`{}`'.format(
-            self.ext_client_name, self.ext_client_id, self.forwarded_for_fqdn, self._peer_fqdn, self.pub_client_id,
-            self.python_id, getattr(self, 'sock', ''), self.sql_ws_client_id)
+            self.ext_client_name, self.ext_client_id, self.forwarded_for_fqdn, self._peer_fqdn,
+            self.pub_client_id, self.python_id, getattr(self, 'sock', ''), self.sql_ws_client_id)
 
 # ################################################################################################################################
 
@@ -342,11 +342,16 @@ class WebSocket(_WebSocket):
             if meta.get('client_id'):
                 self.ext_client_id = meta.client_id
 
-            if meta.get('client_name'):
-                self.ext_client_name = meta.client_name
+            ext_client_name = meta.get('client_name')
+            if ext_client_name:
+                if isinstance(ext_client_name, dict):
+                    _ext_client_name = []
+                    for key, value in sorted(ext_client_name.items()):
+                        _ext_client_name.append('{}: {}'.format(key, value))
+                    ext_client_name = '; '.join(_ext_client_name)
 
+            msg.ext_client_name = ext_client_name
             msg.ext_client_id = self.ext_client_id
-            msg.ext_client_name = self.ext_client_name
 
             if msg.action == _create_session:
                 msg.username = meta.get('username')
