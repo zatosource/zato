@@ -128,11 +128,6 @@ class GetConnectionList(AdminService):
 
     def get_data(self, session):
         result = self._search(web_socket_client_list, session, self.request.input.cluster_id, self.request.input.id, False)
-
-        #self.logger.warn('111 %r', result)
-        #self.logger.warn('222 %r', elems_with_opaque(result))
-
-        #return result
         return elems_with_opaque(result)
 
     def handle(self):
