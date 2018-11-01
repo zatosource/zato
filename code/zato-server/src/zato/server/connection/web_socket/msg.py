@@ -79,6 +79,8 @@ class ClientMessage(object):
         self.token = None
         self.ext_client_name = None
         self.ext_client_id = None
+        self.reply_to_sk = None
+        self.deliver_to_sk = None
 
     def __repr__(self):
         return make_repr(self)
@@ -96,11 +98,14 @@ class ServerMessage(object):
     """
     is_response = True
 
-    def __init__(self, msg_type, cid, in_reply_to=None, status=OK, error_message='', _now=datetime.utcnow):
+    def __init__(self, msg_type, cid, in_reply_to=None, status=OK, error_message='', ctx=None, _now=datetime.utcnow):
         self.id = cid
         self.in_reply_to = in_reply_to
-        self.meta = Bunch(id=self.id, timestamp=_now().isoformat(), msg_type=msg_type)
         self.data = Bunch()
+
+        self.meta = Bunch(id=self.id, timestamp=_now().isoformat(), msg_type=msg_type)
+        if ctx:
+            self.meta.ctx = ctx
 
         if self.is_response:
             self.meta.status = status
@@ -142,16 +147,16 @@ class ErrorResponse(ServerMessage):
 
 # ################################################################################################################################
 
-class ClientInvokeRequest(ServerMessage):
+class InvokeClientRequest(ServerMessage):
     is_response = False
 
-    def __init__(self, cid, data, _msg_type=MSG_TYPE.REQ_TO_CLIENT):
-        super(ClientInvokeRequest, self).__init__(_msg_type, cid)
+    def __init__(self, cid, data, ctx, _msg_type=MSG_TYPE.REQ_TO_CLIENT):
+        super(InvokeClientRequest, self).__init__(_msg_type, cid, ctx=ctx)
         self.data = data
 
-class PubSubClientInvokeRequest(ClientInvokeRequest):
-    def __init__(self, cid, data, _msg_type=MSG_TYPE.PUBSUB_REQ):
-        super(PubSubClientInvokeRequest, self).__init__(cid, data, _msg_type)
+class InvokeClientPubSubRequest(InvokeClientRequest):
+    def __init__(self, cid, data, ctx, _msg_type=MSG_TYPE.PUBSUB_REQ):
+        super(InvokeClientPubSubRequest, self).__init__(cid, data, ctx, _msg_type)
 
 # ################################################################################################################################
 

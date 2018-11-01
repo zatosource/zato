@@ -90,13 +90,22 @@
 
             </tr>
             <tr>
-                <td class='inline_header' style="width:80px">In reply to</td>
+                <td class='inline_header' style="width:80px">In reply to msg ID</td>
                 <td style="width:120px">
                     {{ form.in_reply_to }}
                 </td>
 
-                <td class='inline_header' style="width:90px"></td>
-                <td style="width:170px"></td>
+                <td class='inline_header' style="width:90px">
+                    Reply to sub key
+                    <br/>
+                    <br/>
+                    Deliver to sub key
+                </td>
+                <td style="width:30%">
+                    {{ form.reply_to_sk }}
+                    <br/>
+                    {{ form.deliver_to_sk }}
+                </td>
 
                 <td style="width:90px">
                     {% ifequal object_type "queue" %}

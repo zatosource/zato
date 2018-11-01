@@ -140,7 +140,7 @@ class ConnectionList(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'id', 'channel_name')
         output_required = ('local_address', 'peer_address', 'peer_fqdn', 'pub_client_id', 'ext_client_id', 'connection_time',
-            'server_name', 'server_proc_pid')
+            'server_name', 'server_proc_pid', 'peer_forwarded_for', 'peer_forwarded_for_fqdn')
         output_optional = 'ext_client_name', 'sub_count'
         output_repeated = True
 
@@ -155,6 +155,11 @@ class ConnectionList(_Index):
         item.id = item.pub_client_id.replace('.', '-')
         item.connection_time_utc = item.connection_time
         item.connection_time = from_utc_to_user(item.connection_time_utc + '+00:00', self.req.zato.user_profile)
+
+        if item.ext_client_name:
+            item.ext_client_name = [elem.strip() for elem in item.ext_client_name.split(';')]
+            item.ext_client_name = '\n'.join(item.ext_client_name)
+
         return item
 
 # ################################################################################################################################
