@@ -317,10 +317,13 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    base_dir = sys.argv[1]
-    if not os.path.isabs(base_dir):
-        base_dir = os.path.abspath(os.path.join(os.getcwd(), base_dir))
 
-    run(base_dir, options=parse_cmd_line_options(sys.argv[2]))
+    server_base_dir = sys.argv[1]
+    cmd_line_options = sys.argv[2]
+
+    if not os.path.isabs(server_base_dir):
+        server_base_dir = os.path.abspath(os.path.join(os.getcwd(), server_base_dir))
+
+    run(server_base_dir, options=parse_cmd_line_options(cmd_line_options))
 
 # ################################################################################################################################
