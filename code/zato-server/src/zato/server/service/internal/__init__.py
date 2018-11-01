@@ -86,7 +86,7 @@ class AdminService(Service):
                 if 'password' in k:
                     request[k] = SECRET_SHADOW
 
-            logger.info('cid:[%s], name:[%s], SIO request:[%s]', self.cid, self.name, request)
+            logger.info('cid:`%s`, name:`%s`, request:`%s`', self.cid, self.name, request)
 
 # ################################################################################################################################
 
@@ -114,7 +114,7 @@ class AdminService(Service):
             payload.zato_meta = self._search_tool.output_meta
 
         logger.info(
-            'cid:`%s`, name:`%s`, response:`%s`', self.cid, self.name, replace_private_key(get_response_value(self.response)))
+            'cid:`%s`, name:`%s`, response:`%r`', self.cid, self.name, replace_private_key(get_response_value(self.response)))
 
 # ################################################################################################################################
 
