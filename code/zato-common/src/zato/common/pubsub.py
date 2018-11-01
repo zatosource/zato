@@ -9,14 +9,17 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
+from zato.common import GENERIC
 from zato.common.util import new_cid
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################
 
+sk_lists = ('reply_to_sk', 'deliver_to_sk')
+
 skip_to_external=('delivery_status', 'topic_id', 'cluster_id', 'pub_pattern_matched', 'sub_pattern_matched',
     'published_by_id', 'data_prefix', 'data_prefix_short', 'pub_time', 'expiration_time', 'recv_time',
-    'pub_msg_id', 'pub_correl_id')
+    'pub_msg_id', 'pub_correl_id') + sk_lists
 
 _data_keys=('data', 'data_prefix', 'data_prefix_short')
 
@@ -54,7 +57,7 @@ class PubSubMessage(object):
     """
     # We are not using __slots__ because they can't be inherited by subclasses
     # and this class, as well as its subclasses, will be rewritten in Cython anyway.
-    pub_attrs = msg_pub_attrs
+    pub_attrs = msg_pub_attrs + sk_lists
 
     def __init__(self):
         self.recv_time = utcnow_as_ms()
@@ -91,13 +94,17 @@ class PubSubMessage(object):
         self.pub_time_iso = None
         self.ext_pub_time_iso = None
         self.expiration_time_iso = None
+        self.reply_to_sk = []
+        self.deliver_to_sk = []
         self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
+        setattr(self, GENERIC.ATTR_NAME, None) # To make this class look more like an SQLAlchemy one
 
     def to_dict(self, skip=None, needs_utf8_encode=True, add_id_attrs=False, _data_keys=_data_keys):
         """ Returns a dict representation of self.
         """
         skip = skip or []
         out = {}
+
         for key in sorted(PubSubMessage.pub_attrs):
             if key != 'topic' and key not in skip:
                 value = getattr(self, key)
@@ -112,13 +119,30 @@ class PubSubMessage(object):
             if self.pub_correl_id:
                 out['correl_id'] = self.pub_correl_id
 
+        # Append the generic opaque attribute to make the output look as though it was produced from an SQLAlchemy object
+        # but do it only if there is any value, otherwise skip it.
+        opaque_value = getattr(self, GENERIC.ATTR_NAME)
+        if opaque_value:
+            out[GENERIC.ATTR_NAME] = opaque_value
+
+        return out
+
+    # For compatibility with code that already expects dictalchemy objects with their .asdict method
+    def asdict(self):
+        out = self.to_dict()
+        out[GENERIC.ATTR_NAME] = getattr(self, GENERIC.ATTR_NAME)
         return out
 
     def to_external_dict(self, skip=skip_to_external, needs_utf8_encode=False):
         """ Returns a dict representation of self ready to be delivered to external systems,
         i.e. without internal attributes on output.
         """
-        return self.to_dict(skip, needs_utf8_encode, True)
+        out = self.to_dict(skip, needs_utf8_encode, True)
+        if self.reply_to_sk:
+            out['ctx'] = {
+                'reply_to_sk': self.reply_to_sk
+            }
+        return out
 
 # ################################################################################################################################
 

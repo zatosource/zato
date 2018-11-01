@@ -14,9 +14,6 @@ from contextlib import closing
 # Bunch
 from bunch import bunchify
 
-# SQLAlchemy
-from sqlalchemy import inspect
-
 # Zato
 from zato.common.odb.model import PubSubSubscription, Server, WebSocketClient, WebSocketClientPubSubKeys, WebSocketSubscription
 from zato.common.util.time_ import datetime_from_ms
