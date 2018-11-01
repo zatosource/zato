@@ -311,6 +311,13 @@ def publish_action(req):
             'endpoint_id': req.POST['publisher_id'],
         }
 
+        for name in('reply_to_sk', 'deliver_to_sk'):
+            value = req.POST.get(name, '')
+            if value:
+                value = value.split(',')
+                value = [elem.strip() for elem in value]
+                service_input[name] = value
+
         for name in('cluster_id', 'topic_name', 'data'):
             service_input[name] = req.POST[name]
 

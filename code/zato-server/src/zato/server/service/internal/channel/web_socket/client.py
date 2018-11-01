@@ -19,6 +19,7 @@ from dateutil.parser import parse
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import ChannelWebSocket, Cluster, WebSocketClient
 from zato.common.odb.query import web_socket_client_by_pub_id, web_socket_clients_by_server_id
+from zato.common.util.sql import set_instance_opaque_attrs
 from zato.server.service import AsIs, List
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -34,7 +35,7 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         input_required = (AsIs('pub_client_id'), AsIs('ext_client_id'), 'is_internal', 'local_address', 'peer_address',
             'peer_fqdn', 'connection_time', 'last_seen', 'channel_name')
-        input_optional = ('ext_client_name',)
+        input_optional = ('ext_client_name', 'peer_forwarded_for', 'peer_forwarded_for_fqdn')
         output_optional = ('ws_client_id',)
 
     def handle(self):
@@ -52,7 +53,7 @@ class Create(AdminService):
             client.is_internal = req.is_internal
             client.pub_client_id = req.pub_client_id
             client.ext_client_id = req.ext_client_id
-            client.ext_client_name = req.get('ext_client_name')
+            client.ext_client_name = req.get('ext_client_name', '').encode('utf8')
             client.local_address = req.local_address
             client.peer_address = req.peer_address
             client.peer_fqdn = req.peer_fqdn
@@ -62,6 +63,9 @@ class Create(AdminService):
             client.channel_id = channel.id
             client.server_id = self.server.id
             client.server_name = self.server.name
+
+            # Opaque attributes
+            set_instance_opaque_attrs(client, req, ['channel_name'])
 
             session.add(client)
             session.commit()
