@@ -77,7 +77,16 @@ def start_python_process(run_in_fg, py_path, name, program_dir, on_keyboard_inte
 
     try:
         _stderr = _StdErr(stderr_path, stderr_sleep_fg if run_in_fg else stderr_sleep_bg)
-        sarge_run(program, async=False if run_in_fg else True, input=stdin_data)
+
+        run_kwargs = {
+            'async': False if run_in_fg else True,
+        }
+
+        # Do not send input if it does not really exist because it prevents pdb from attaching to a service's stdin
+        if stdin_data:
+            run_kwargs['input'] = stdin_data
+
+        sarge_run(program, **run_kwargs)
 
         # Wait a moment for any potential errors
         _err = _stderr.wait_for_error()
