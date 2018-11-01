@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from bisect import bisect_left
 from copy import deepcopy
+from json import loads
 from logging import getLogger
 from socket import error as SocketError
 from traceback import format_exc
@@ -23,7 +24,7 @@ from gevent.lock import RLock
 from sortedcontainers import SortedList as _SortedList
 
 # Zato
-from zato.common import PUBSUB
+from zato.common import GENERIC, PUBSUB
 from zato.common.pubsub import PubSubMessage
 from zato.common.util import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
@@ -530,7 +531,8 @@ class GDMessage(Message):
     """
     is_gd_message = True
 
-    def __init__(self, sub_key, topic_name, msg):
+    def __init__(self, sub_key, topic_name, msg, _sk_opaque=PUBSUB.DEFAULT.SK_OPAQUE, _gen_attr=GENERIC.ATTR_NAME,
+        _loads=loads):
         super(GDMessage, self).__init__()
         self.endp_msg_queue_id = msg.endp_msg_queue_id
         self.sub_key = sub_key
@@ -551,6 +553,13 @@ class GDMessage(Message):
         self.topic_name = topic_name
         self.size = msg.size
         self.sub_pattern_matched = msg.sub_pattern_matched
+
+        # Load opaque attributes, if any were provided on input
+        opaque = getattr(msg, _gen_attr, None)
+        if opaque:
+            opaque = _loads(opaque)
+            for key, value in opaque.items():
+                setattr(self, key, value)
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
@@ -586,6 +595,8 @@ class NonGDMessage(Message):
         self.size = msg['size']
         self.published_by_id = msg['published_by_id']
         self.pub_pattern_matched = msg['pub_pattern_matched']
+        self.reply_to_sk = msg['reply_to_sk']
+        self.deliver_to_sk = msg['deliver_to_sk']
 
         # msg.sub_pattern_matched is a shared dictionary of patterns for each subscriber - we .pop from it
         # so as not to keep this dictionary's contents for no particular reason. Since there can be only
@@ -736,6 +747,12 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
+    def has_sub_key(self, sub_key):
+        with self.lock:
+            return sub_key in self.sub_keys
+
+# ################################################################################################################################
+
     def remove_all_sub_keys(self):
         sub_keys = deepcopy(self.sub_keys)
         for sub_key in sub_keys:
@@ -775,8 +792,12 @@ class PubSubTool(object):
                 session = self.pubsub.server.odb.session()
             else:
                 if not ctx.non_gd_msg_list:
-                    raise ValueError('No messages received ({}) for cid:`{}`, has_gd:`{}` and sub_key_list:`{}`'.format(
+                    # This is an unusual situation but not an erroneous one because it is possible
+                    # that we were triggered to deliver messages that have already expired in the meantime,
+                    # in which case we just log on info level rather than warn.
+                    logger.info('No messages received ({}) for cid:`{}`, has_gd:`{}` and sub_key_list:`{}`'.format(
                         ctx.non_gd_msg_list, ctx.cid, ctx.has_gd, ctx.sub_key_list))
+                    return
 
             logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
                 ctx.cid, int(ctx.has_gd), ctx.sub_key_list, len(ctx.non_gd_msg_list), ctx.is_bg_call)

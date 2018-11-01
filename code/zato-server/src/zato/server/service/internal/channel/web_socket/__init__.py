@@ -19,6 +19,7 @@ from zato.common.odb.model import ChannelWebSocket, PubSubTopic, Service as Serv
 from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \
      web_socket_client_by_pub_id, web_socket_client_list, web_socket_sub_key_data_list
 from zato.common.util import is_port_taken
+from zato.common.util.sql import elems_with_opaque
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, DateTime, Int, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -122,11 +123,12 @@ class GetConnectionList(AdminService):
         input_required = 'id', 'cluster_id'
         output_required = ('local_address', 'peer_address', 'peer_fqdn', AsIs('pub_client_id'), AsIs('ext_client_id'),
             DateTime('connection_time'), 'server_name', 'server_proc_pid')
-        output_optional = 'ext_client_name', 'sub_count'
+        output_optional = 'ext_client_name', 'sub_count', 'peer_forwarded_for', 'peer_forwarded_for_fqdn'
         output_repeated = True
 
     def get_data(self, session):
-        return self._search(web_socket_client_list, session, self.request.input.cluster_id, self.request.input.id, False)
+        result = self._search(web_socket_client_list, session, self.request.input.cluster_id, self.request.input.id, False)
+        return elems_with_opaque(result)
 
     def handle(self):
         with closing(self.odb.session()) as session:

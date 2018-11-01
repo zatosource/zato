@@ -420,7 +420,7 @@ def _resolve_output_value(param, force_empty_keys):
 
 def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, bool_parameter_prefixes, int_parameters,
     int_parameter_suffixes, force_empty_keys, encrypt_func, encrypt_secrets, date_time_format=None, data_format=ZATO_NONE,
-    from_sio_to_external=False, special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC), _is_bool=is_bool, _is_int=is_int,
+    from_sio_to_external=False, special_values=(str(ZATO_NONE), str(ZATO_SEC_USE_RBAC)), _is_bool=is_bool, _is_int=is_int,
     _is_secret=is_secret):
     try:
 
@@ -440,16 +440,18 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
             else:
                 # Empty string sent in lieu of integers are equivalent to None,
                 # as though they were never sent - this is needed for internal metaclasses
-                if value == '' and _is_int(param_name, int_parameters, int_parameter_suffixes):
-                    value = None
-
-                if value and (value not in special_values) and has_simple_io_config:
+                if value == b'':
                     if _is_int(param_name, int_parameters, int_parameter_suffixes):
-                        value = int(value)
-                    elif encrypt_secrets and _is_secret(param_name):
-                        # It will be None in SIO responses
-                        if encrypt_func:
-                            value = encrypt_func(value)
+                        value = None
+
+                if value:
+                    if (value not in special_values) and has_simple_io_config:
+                        if _is_int(param_name, int_parameters, int_parameter_suffixes):
+                            value = int(value)
+                        elif encrypt_secrets and _is_secret(param_name):
+                            # It will be None in SIO responses
+                            if encrypt_func:
+                                value = encrypt_func(value)
 
         return value
 
