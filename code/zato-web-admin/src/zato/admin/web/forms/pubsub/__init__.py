@@ -36,6 +36,8 @@ class MsgPublishForm(MsgForm):
     msg_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     position_in_group = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%'}))
     select_changer_source = forms.CharField(widget=forms.Textarea(attrs={'style':'display:none'}))
+    reply_to_sk = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%;margin-bottom:4px'}))
+    deliver_to_sk = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     def __init__(self, req, select_changer_data, initial_topic_name, topic_list, initial_hook_service_name, publisher_list,
             *args, **kwargs):

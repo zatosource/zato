@@ -9,12 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from copy import deepcopy
 from datetime import datetime, timedelta
 from httplib import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import getLogger
 from threading import current_thread
-from traceback import format_exc, format_stack
+from traceback import format_exc
 from urlparse import urlparse
 
 # Bunch
@@ -35,12 +34,12 @@ from ws4py.server.wsgiutils import WebSocketWSGIApplication
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.exception import Reportable
-from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX
+from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.util import new_cid
 from zato.common.util.hook import HookTool
 from zato.server.connection.connector import Connector
-from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientInvokeRequest, ClientMessage, copy_forbidden, \
-     error_response, ErrorResponse, Forbidden, OKResponse, PubSubClientInvokeRequest
+from zato.server.connection.web_socket.msg import AuthenticateResponse, InvokeClientRequest, ClientMessage, copy_forbidden, \
+     error_response, ErrorResponse, Forbidden, OKResponse, InvokeClientPubSubRequest
 from zato.server.pubsub.task import PubSubTool
 from zato.vault.client import VAULT
 
@@ -190,9 +189,9 @@ class WebSocket(_WebSocket):
         if self.forwarded_for:
             self.forwarded_for_fqdn = socket.getfqdn(self.forwarded_for)
         else:
-            self.forwarded_for_fqdn = '(Unknown)'
+            self.forwarded_for_fqdn = WEB_SOCKET.DEFAULT.FQDN_UNKNOWN
 
-        _peer_fqdn = '(Unknown)'
+        _peer_fqdn = WEB_SOCKET.DEFAULT.FQDN_UNKNOWN
 
         try:
             self._peer_host = socket.gethostbyaddr(_peer_address[0])[0]
@@ -244,23 +243,35 @@ class WebSocket(_WebSocket):
     def deliver_pubsub_msg(self, sub_key, msg):
         """ Delivers one or more pub/sub messages to the connected WSX client.
         """
+        ctx = {}
+
+        if isinstance(msg, PubSubMessage):
+            len_msg = 1
+        else:
+            len_msg = len(msg)
+            msg = msg[0] if len_msg == 1 else msg
+
         # A list of messages is given on input so we need to serialize each of them individually
         if isinstance(msg, list):
             cid = new_cid()
-            len_msg = len(msg)
             data = []
             for elem in msg:
                 data.append(elem.serialized if elem.serialized else elem.to_external_dict())
+                if elem.reply_to_sk:
+                    ctx_reply_to_sk = ctx.setdefault('', [])
+                    ctx_reply_to_sk.append(elem.reply_to_sk)
 
         # A single message was given on input
         else:
-            len_msg = 1
             cid = msg.pub_msg_id
             data = msg.serialized if msg.serialized else msg.to_external_dict()
+            if msg.reply_to_sk:
+                ctx['reply_to_sk'] = msg.reply_to_sk
 
-        logger.info('Delivering %d pub/sub message{} to sub_key `%s`'.format('s' if len_msg > 1 else ''), len_msg, sub_key)
+        logger.info('Delivering %d pub/sub message{} to sub_key `%s` (ctx:%s)'.format('s' if len_msg > 1 else ''),
+            len_msg, sub_key, ctx)
 
-        self.invoke_client(cid, data, _Class=PubSubClientInvokeRequest)
+        self.invoke_client(cid, data, ctx=ctx, _Class=InvokeClientPubSubRequest)
 
 # ################################################################################################################################
 
@@ -281,8 +292,8 @@ class WebSocket(_WebSocket):
 
     def get_peer_info_pretty(self):
         return 'name:`{}` id:`{}` fwd_for:`{}` conn:`{}` pub:`{}`, py:`{}`, sock:`{}`, swc:`{}`'.format(
-            self.ext_client_name, self.ext_client_id, self.forwarded_for_fqdn, self._peer_fqdn, self.pub_client_id,
-            self.python_id, getattr(self, 'sock', ''), self.sql_ws_client_id)
+            self.ext_client_name, self.ext_client_id, self.forwarded_for_fqdn, self._peer_fqdn,
+            self.pub_client_id, self.python_id, getattr(self, 'sock', ''), self.sql_ws_client_id)
 
 # ################################################################################################################################
 
@@ -331,11 +342,16 @@ class WebSocket(_WebSocket):
             if meta.get('client_id'):
                 self.ext_client_id = meta.client_id
 
-            if meta.get('client_name'):
-                self.ext_client_name = meta.client_name
+            ext_client_name = meta.get('client_name')
+            if ext_client_name:
+                if isinstance(ext_client_name, dict):
+                    _ext_client_name = []
+                    for key, value in sorted(ext_client_name.items()):
+                        _ext_client_name.append('{}: {}'.format(key, value))
+                    ext_client_name = '; '.join(_ext_client_name)
 
+            msg.ext_client_name = ext_client_name
             msg.ext_client_id = self.ext_client_id
-            msg.ext_client_name = self.ext_client_name
 
             if msg.action == _create_session:
                 msg.username = meta.get('username')
@@ -347,6 +363,11 @@ class WebSocket(_WebSocket):
             else:
                 msg.in_reply_to = meta.get('in_reply_to')
                 msg.is_auth = False
+
+                ctx = meta.get('ctx')
+                if ctx:
+                    msg.reply_to_sk = ctx.get('reply_to_sk')
+                    msg.deliver_to_sk = ctx.get('deliver_to_sk')
 
         msg.data = parsed.get('data', {})
 
@@ -488,6 +509,8 @@ class WebSocket(_WebSocket):
             'connection_time': self.connection_time,
             'last_seen': self.last_seen,
             'channel_name': self.config.name,
+            'peer_forwarded_for': self.forwarded_for,
+            'peer_forwarded_for_fqdn': self.forwarded_for_fqdn,
         }, needs_response=True).ws_client_id
 
         logger.info(
@@ -610,8 +633,7 @@ class WebSocket(_WebSocket):
             # Anything else
             else:
                 status = INTERNAL_SERVER_ERROR
-                error_message = 'Could not invoke service `{}`, id:`{}`, conn:`%s`, cid:`{}`'.format(
-                    self.config.service_name, msg.id, self.peer_conn_info_pretty, cid)
+                error_message = 'Internal server error'
 
             response = ErrorResponse(cid, msg.id, status, error_message)
 
@@ -739,7 +761,6 @@ class WebSocket(_WebSocket):
             self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
         try:
-            #spawn(self._received_message, deepcopy(message.data))
             self._received_message(message.data)
         except Exception:
             logger.warn(format_exc())
@@ -777,7 +798,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def invoke_client(self, cid, request, timeout=5, use_send=True, _Class=ClientInvokeRequest):
+    def invoke_client(self, cid, request, timeout=5, ctx=None, use_send=True, _Class=InvokeClientRequest):
         """ Invokes a remote WSX client with request given on input, returning its response,
         if any was produced in the expected time.
         """
@@ -790,7 +811,7 @@ class WebSocket(_WebSocket):
                 pass
 
         # Serialize to string
-        msg = _Class(cid, request)
+        msg = _Class(cid, request, ctx)
         serialized = msg.serialize()
 
         # Log what is about to be sent
@@ -804,7 +825,7 @@ class WebSocket(_WebSocket):
         # Wait for response but only if it is not a pub/sub message,
         # these are always asynchronous and that channel's WSX hook
         # will process the response, if any arrives.
-        if _Class is not PubSubClientInvokeRequest:
+        if _Class is not InvokeClientPubSubRequest:
             response = self._wait_for_client_response(msg.id, timeout)
             if response:
                 return response if isinstance(response, bool) else response.data # It will be bool in pong responses
