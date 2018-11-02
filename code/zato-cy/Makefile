@@ -1,7 +1,8 @@
 
 .PHONY: build
 
-default: clean
+default: simpleio
+PY_DIR=$(CURDIR)/../bin
 
 build:
 	py $(CURDIR)/setup.py develop
@@ -14,4 +15,9 @@ clean:
 	find $(CURDIR) -name '*.egg-info' -exec rm -rf {} +
 
 simpleio:
-	py $(CURDIR)/setup.py develop && py $(CURDIR)/src/zato/cy/run_sio.py
+	$(MAKE) build
+	py $(CURDIR)/src/zato/cy/run_sio.py
+
+simpleio-test:
+	$(MAKE) build
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/test_simpleio.py -s

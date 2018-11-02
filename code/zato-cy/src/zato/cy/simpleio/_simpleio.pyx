@@ -131,9 +131,9 @@ cdef class ConfigItem(object):
     a particular set of exact values, prefixes or suffixes.
     """
     cdef:
-        set exact
-        set prefixes
-        set suffixes
+        public set exact
+        public set prefixes
+        public set suffixes
 
     def __str__(self):
         return '<{} at {} e:{}, p:{}, s:{}>'.format(self.__class__.__name__, hex(id(self)),
@@ -181,8 +181,8 @@ cdef class _SIOServerConfig(object):
         public unicode prefix_as_is     # a
         public unicode prefix_bool      # b
         public unicode prefix_csv       # c
-        public unicode prefix_date      # date
-        public unicode prefix_date_time # dt
+        public unicode prefix_date      # dt
+        public unicode prefix_date_time # dtm
         public unicode prefix_dict      # d
         public unicode prefix_dict_list # dl
         public unicode prefix_float     # f
@@ -302,7 +302,6 @@ cdef class SimpleIO(object):
 
 # Create server/process-wide singletons
 NotGiven = _NotGiven()
-SIOServerConfig = _SIOServerConfig()
 
 # ################################################################################################################################
 
@@ -310,107 +309,6 @@ def run():
 
     # Bunch
     from bunch import Bunch, bunchify
-
-    server_config = Bunch()
-
-    server_config.bool = Bunch()
-    server_config.bool.exact  = set()
-    server_config.bool.prefix = set(['by_', 'has_', 'is_', 'may_', 'needs_', 'should_'])
-    server_config.bool.suffix = set()
-
-    server_config.int = Bunch()
-    server_config.int.exact  = set(['id'])
-    server_config.int.prefix = set()
-    server_config.int.suffix = set(['_count', '_id', '_size', '_timeout'])
-
-    server_config.secret = Bunch()
-    server_config.secret.exact  = set(['id'])
-    server_config.secret.prefix = set(['auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'token'])
-    server_config.secret.suffix = set()
-
-    server_config.default = Bunch()
-
-    server_config.default.default_value = None
-    server_config.default.default_input_value = None
-    server_config.default.default_output_value = None
-
-    server_config.default.response_elem = None
-
-    server_config.default.input_required_name = 'input_required'
-    server_config.default.input_optional_name = 'input_optional'
-    server_config.default.output_required_name = 'output_required'
-    server_config.default.output_optional_name = 'output_optional'
-
-    server_config.default.skip_empty_keys = False
-    server_config.default.skip_empty_request_keys = False
-    server_config.default.skip_empty_response_keys = False
-
-    server_config.default.prefix_as_is = 'a'
-    server_config.default.prefix_bool = 'b'
-    server_config.default.prefix_csv = 'c'
-    server_config.default.prefix_date = 'date'
-    server_config.default.prefix_date_time = 'dt'
-    server_config.default.prefix_dict = 'd'
-    server_config.default.prefix_dict_list = 'dl'
-    server_config.default.prefix_float = 'f'
-    server_config.default.prefix_int = 'i'
-    server_config.default.prefix_list = 'l'
-    server_config.default.prefix_opaque = 'o'
-    server_config.default.prefix_text = 't'
-    server_config.default.prefix_uuid = 'u'
-    server_config.default.prefix_required = '+'
-    server_config.default.prefix_optional = '-'
-
-    bool_config = BoolConfig()
-    bool_config.exact = server_config.bool.exact
-    bool_config.prefixes = server_config.bool.prefix
-    bool_config.suffixes = server_config.bool.suffix
-
-    int_config = IntConfig()
-    int_config.exact = server_config.int.exact
-    int_config.prefixes = server_config.int.prefix
-    int_config.suffixes = server_config.int.suffix
-
-    secret_config = SecretConfig()
-    secret_config.exact = server_config.secret.exact
-    secret_config.prefixes = server_config.secret.prefix
-    secret_config.suffixes = server_config.secret.suffix
-
-# ################################################################################################################################
-
-    SIOServerConfig.bool_config = bool_config
-    SIOServerConfig.int_config = int_config
-    SIOServerConfig.secret_config = secret_config
-
-    SIOServerConfig.input_required_name = server_config.default.input_required_name
-    SIOServerConfig.input_optional_name = server_config.default.input_optional_name
-    SIOServerConfig.output_required_name = server_config.default.output_required_name
-    SIOServerConfig.output_optional_name = server_config.default.output_optional_name
-    SIOServerConfig.default_value = server_config.default.default_value
-    SIOServerConfig.default_input_value = server_config.default.default_input_value
-    SIOServerConfig.default_output_value = server_config.default.default_output_value
-
-    SIOServerConfig.response_elem = server_config.default.response_elem
-
-    SIOServerConfig.skip_empty_keys = server_config.default.skip_empty_keys
-    SIOServerConfig.skip_empty_request_keys = server_config.default.skip_empty_request_keys
-    SIOServerConfig.skip_empty_response_keys = server_config.default.skip_empty_response_keys
-
-    SIOServerConfig.prefix_as_is = server_config.default.prefix_as_is
-    SIOServerConfig.prefix_bool = server_config.default.prefix_bool
-    SIOServerConfig.prefix_csv = server_config.default.prefix_csv
-    SIOServerConfig.prefix_date = server_config.default.prefix_date
-    SIOServerConfig.prefix_date_time = server_config.default.prefix_date_time
-    SIOServerConfig.prefix_dict = server_config.default.prefix_dict
-    SIOServerConfig.prefix_dict_list = server_config.default.prefix_dict_list
-    SIOServerConfig.prefix_float = server_config.default.prefix_float
-    SIOServerConfig.prefix_int = server_config.default.prefix_int
-    SIOServerConfig.prefix_list = server_config.default.prefix_list
-    SIOServerConfig.prefix_opaque = server_config.default.prefix_opaque
-    SIOServerConfig.prefix_text = server_config.default.prefix_text
-    SIOServerConfig.prefix_uuid = server_config.default.prefix_uuid
-    SIOServerConfig.prefix_required = server_config.default.prefix_required
-    SIOServerConfig.prefix_optional = server_config.default.prefix_optional
 
     # Dummy SQLAlchemy classes
     class SA:
@@ -430,29 +328,46 @@ def run():
     class MyUser:
         pass
 
+# ################################################################################################################################
+
     class MySimpleIO:
         input_required = 'abc'
 
-    class MySimpleIO2:
-        input = 'a:user_id', '-i:user_type', '-user_name', '+user_profile', Int('-abc'), AsIs('cust_id')
-        output = '-d:last_visited', 'i:duration', Float('qqq'), Dict('rrr')
+    class MySimpleIO:
+        input_optional = 'abc'
 
-    class MySimpleIO3:
-        input = 'a:user_id', '-is_active'
-        output = 'd:last_visited', 'i:duration'
+    class MySimpleIO:
+        output_required = 'abc'
 
-    class MySimpleIO4:
-        input = SA(MyUser) + ('user_id', 'user_type'), 'is_admin', '-is_staff'
-        output = SA(MyUser) - ('is_active', 'is_new'), 'i:user_category'
-
-    sio = SimpleIO(SIOServerConfig, MySimpleIO)
-    sio.build()
-
-    print(111, SIOServerConfig.bool_config)
+    class MySimpleIO:
+        output_optional = 'abc'
 
 # ################################################################################################################################
 
-if __name__ == '__main__':
-    run()
+    class MySimpleIO:
+        input_required = 'abc', 'zxc'
+
+    class MySimpleIO:
+        input_optional = 'abc', 'zxc'
+
+    class MySimpleIO:
+        output_required = 'abc', 'zxc'
+
+    class MySimpleIO:
+        output_optional = 'abc', 'zxc'
+
+# ################################################################################################################################
+
+    class MySimpleIO:
+        input = 'a:user_id', '-i:user_type', '-user_name', '+user_profile', Int('-abc'), AsIs('cust_id')
+        output = '-d:last_visited', 'i:duration', Float('qqq'), Dict('rrr')
+
+    class MySimpleIO:
+        input = 'a:user_id', '-is_active'
+        output = 'd:last_visited', 'i:duration'
+
+    class MySimpleIO:
+        input = SA(MyUser) + ('user_id', 'user_type'), 'is_admin', '-is_staff'
+        output = SA(MyUser) - ('is_active', 'is_new'), 'i:user_category'
 
 # ################################################################################################################################
