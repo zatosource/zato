@@ -18,6 +18,7 @@ from bunch import Bunch, bunchify
 from zato.simpleio import BoolConfig, IntConfig, NotGiven, SecretConfig, SimpleIO, _SIOServerConfig
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class _Base(TestCase):
     def get_sio(self, declaration):
@@ -129,14 +130,137 @@ class _Base(TestCase):
         return sio
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class InputOutputSyntaxParsing(_Base):
+class InputOutputSyntaxParsingValidation(object):
 
-    def test_input_output_only(self):
+    def test_no_input_output(self):
 
         class SimpleIO:
             pass
 
-        sio = self.get_sio(SimpleIO)
+        # Providing such a bare declaration should not raise an exceptions
+        self.get_sio(SimpleIO)
 
+# ################################################################################################################################
+
+    def test_input_and_input_required_error(self):
+
+        class SimpleIO:
+            input = 'qwerty'
+            input_required = 'aaa', 'bbb'
+
+        # Cannot have both input and input_required on input
+        with self.assertRaises(ValueError) as ctx:
+            self.get_sio(SimpleIO)
+
+        expected = "Cannot provide input_required if input is given, input:`qwerty`, " \
+            "input_required:`(u'aaa', u'bbb')`, input_optional:`None`"
+
+        self.assertEquals(ctx.exception.message, expected)
+
+# ################################################################################################################################
+
+    def test_input_and_input_optional_error(self):
+
+        class SimpleIO:
+            input = 'qwerty'
+            input_optional = 'aaa', 'bbb'
+
+        # Cannot have both input and input_required on input
+        with self.assertRaises(ValueError) as ctx:
+            self.get_sio(SimpleIO)
+
+        expected = "Cannot provide input_optional if input is given, input:`qwerty`, " \
+            "input_required:`None`, input_optional:`(u'aaa', u'bbb')`"
+
+        self.assertEquals(ctx.exception.message, expected)
+
+# ################################################################################################################################
+
+    def test_input_and_input_required_optional_error(self):
+
+        class SimpleIO:
+            input = 'qwerty'
+            input_required = '123', '456'
+            input_optional = 'aaa', 'bbb'
+
+        # Cannot have both input and input_required on input
+        with self.assertRaises(ValueError) as ctx:
+            self.get_sio(SimpleIO)
+
+        expected = "Cannot provide input_required/input_optional if input is given, input:`qwerty`, " \
+            "input_required:`(u'123', u'456')`, input_optional:`(u'aaa', u'bbb')`"
+
+        self.assertEquals(ctx.exception.message, expected)
+
+# ################################################################################################################################
+
+    def test_output_and_output_required_error(self):
+
+        class SimpleIO:
+            output = 'qwerty'
+            output_required = 'aaa', 'bbb'
+
+        # Cannot have both output and output_required on output
+        with self.assertRaises(ValueError) as ctx:
+            self.get_sio(SimpleIO)
+
+        expected = "Cannot provide output_required if output is given, output:`qwerty`, " \
+            "output_required:`(u'aaa', u'bbb')`, output_optional:`None`"
+
+        self.assertEquals(ctx.exception.message, expected)
+
+# ################################################################################################################################
+
+    def test_output_and_output_optional_error(self):
+
+        class SimpleIO:
+            output = 'qwerty'
+            output_optional = 'aaa', 'bbb'
+
+        # Cannot have both output and output_required on output
+        with self.assertRaises(ValueError) as ctx:
+            self.get_sio(SimpleIO)
+
+        expected = "Cannot provide output_optional if output is given, output:`qwerty`, " \
+            "output_required:`None`, output_optional:`(u'aaa', u'bbb')`"
+
+        self.assertEquals(ctx.exception.message, expected)
+
+# ################################################################################################################################
+
+    def test_output_and_output_required_optional_error(self):
+
+        class SimpleIO:
+            output = 'qwerty'
+            output_required = '123', '456'
+            output_optional = 'aaa', 'bbb'
+
+        # Cannot have both output and output_required on output
+        with self.assertRaises(ValueError) as ctx:
+            self.get_sio(SimpleIO)
+
+        expected = "Cannot provide output_required/output_optional if output is given, output:`qwerty`, " \
+            "output_required:`(u'123', u'456')`, output_optional:`(u'aaa', u'bbb')`"
+
+        self.assertEquals(ctx.exception.message, expected)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class InputPlainParsing(_Base):
+
+    def test_input_plain_list_single(self):
+
+        class SimpleIO:
+            input_required = 'abc'
+            input_optional = 'abc'
+
+        sio = self.get_sio(SimpleIO)
+        print()
+        print(sio.definition)
+        print()
+
+# ################################################################################################################################
 # ################################################################################################################################
