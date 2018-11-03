@@ -52,6 +52,21 @@ cdef class Elem(object):
         return '<{} at {} {}:{} d:{} r:{}>'.format(self.__class__.__name__, hex(id(self)), self._name, self._type,
             self._default, self._is_required)
 
+    @property
+    def pretty(self):
+        out = ''
+
+        if not self._is_required:
+            out += '-'
+
+        if self._type != ElemType.text:
+            out += 'q'
+            out += ':'
+
+        out += self._name
+
+        return out
+
 # ################################################################################################################################
 
 cdef class AsIs(Elem):
@@ -213,6 +228,20 @@ cdef class _SIOServerConfig(object):
 
 # ################################################################################################################################
 
+cdef class SIOList(object):
+    """ Represents one of input/output required/optional.
+    """
+    cdef:
+        list elems
+
+    def __cinit__(self):
+        self.elems = []
+
+    def __iter__(self):
+        return iter(self.elems)
+
+# ################################################################################################################################
+
 cdef class SIODefinition(object):
     """ A single SimpleIO definition attached to a service.
     """
@@ -222,16 +251,16 @@ cdef class SIODefinition(object):
         unicode _service_name
 
         # A list of Elem items required on input
-        list _input_required
+        SIOList _input_required
 
         # A list of Elem items optional on input
-        list _input_optional
+        SIOList _input_optional
 
         # A list of Elem items required on output
-        list _output_required
+        SIOList _output_required
 
         # A list of Elem items optional on output
-        list _output_optional
+        SIOList _output_optional
 
         # Whether all non-NotGiven optional input elements should be skipped or not
         bint _skip_all_empty_request_keys
@@ -256,6 +285,33 @@ cdef class SIODefinition(object):
 
         object _default_value # Preserved for backward-compatibility, the same as _default_output_value
 
+    def __cinit__(self):
+        self._input_required = SIOList()
+        self._input_optional = SIOList()
+        self._output_required = SIOList()
+        self._output_optional = SIOList()
+
+    cdef list get_input_pretty(self):
+        cdef list required = []
+        cdef list optional = []
+        cdef list out = []
+
+        for item in self._input_required:
+            print(item)
+
+        return out
+
+    cdef list get_output_pretty(self):
+        cdef list required = []
+        cdef list optional = []
+        cdef list out = []
+
+        return out
+
+    def __str__(self):
+        return '<{} at {}, input:`{}`, output:`{}`>'.format(self.__class__.__name__, hex(id(self)),
+            self.get_input_pretty(), self.get_output_pretty())
+
 # ################################################################################################################################
 
 cdef class SimpleIO(object):
@@ -267,17 +323,17 @@ cdef class SimpleIO(object):
         _SIOServerConfig server_config
 
         # Current service's configuration, after parsing
-        SIODefinition definition
+        public SIODefinition definition
 
         # User-provided SimpleIO declaration, before parsing. This is parsed into self.definition.
-        object declaration
+        object user_declaration
 
 # ################################################################################################################################
 
-    def __cinit__(self, _SIOServerConfig server_config, object declaration):
+    def __cinit__(self, _SIOServerConfig server_config, object user_declaration):
         self.server_config = server_config
         self.definition = SIODefinition()
-        self.declaration = declaration
+        self.user_declaration = user_declaration
 
 # ################################################################################################################################
 
@@ -285,18 +341,71 @@ cdef class SimpleIO(object):
         """ Parses a user-defined SimpleIO declaration (currently, a Python class)
         and populates all the internal structures as needed.
         """
-        self.build_input()
-        self.build_output()
+        self._build_io_elems('input')
+        self._build_io_elems('output')
 
 # ################################################################################################################################
 
-    cdef build_input(self):
-        """ Builds structures responsible for data that is to be provided on input.
+    cdef _build_io_elems(self, name):
+        """ Returns I/O elems, e.g. input or input_required but first ensures that only correct elements are given in SimpleIO,
+        e.g. if input is on input then input_required or input_optional cannot be.
         """
+        required_name = '{}_required'.format(name)
+        optional_name = '{}_optional'.format(name)
 
-    cdef build_output(self):
-        """ Builds structures responsible for data that is to be produced on output.
-        """
+        plain = getattr(self.user_declaration, name, [])
+        required = getattr(self.user_declaration, required_name, [])
+        optional = getattr(self.user_declaration, optional_name, [])
+
+        # If the plain element alone is given, we cannot have required or optional lists.
+        if plain and (required or optional):
+            if required and optional:
+                details = '{}_required/{}_optional'.format(name, name)
+            elif required:
+                details = '{}_required'.format(name)
+            elif optional:
+                details = '{}_optional'.format(name)
+
+            msg = 'Cannot provide {details} if {name} is given'
+            msg += ', {name}:`{plain}`, {name}_required:`{required}`, {name}_optional:`{optional}`'
+
+            raise ValueError(msg.format(**{
+                'details': details,
+                'name': name,
+                'plain': plain,
+                'required': required,
+                'optional': optional
+            }))
+
+        # It is possible that nothing is to be given on input or produced, which is fine, we do not reject it
+        # but there is nothing to contine for either.
+        if not (plain or required or optional):
+            return
+
+        # Listify all the elements provided
+        if isinstance(plain, basestring):
+            plain = [plain]
+
+        if isinstance(required, basestring):
+            required = [required]
+
+        if isinstance(optional, basestring):
+            optional = [optional]
+
+        # Confirm that required elements do not overlap with optional ones
+
+        if plain:
+            elems = plain
+        else:
+            elems = required + optional
+
+        print()
+        print()
+
+        print(111, elems)
+
+        print()
+        print()
 
 # ################################################################################################################################
 
