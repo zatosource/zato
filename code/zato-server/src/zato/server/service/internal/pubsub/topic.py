@@ -212,7 +212,7 @@ class GetPublisherList(AdminService):
             last_data = pubsub_publishers_for_topic(session, self.request.input.cluster_id, self.request.input.topic_id).all()
 
             for item in last_data:
-                item.last_seen = datetime_from_ms(item.last_pub_time)
+                item.last_seen = datetime_from_ms(item.last_seen)
                 item.last_pub_time = datetime_from_ms(item.last_pub_time)
                 response.append(item)
 

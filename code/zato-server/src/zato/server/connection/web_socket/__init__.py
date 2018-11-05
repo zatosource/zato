@@ -136,9 +136,43 @@ class WebSocket(_WebSocket):
         self.sec_type = self.config.sec_type
         self.pings_missed = 0
         self.pings_missed_threshold = self.config.get('pings_missed_threshold', 5)
-        self.ping_last_response_time = None
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
+
+        # Last the we received a ping response (pong) from our peer
+        self.ping_last_response_time = None
+
+        #
+        # If the peer ever subscribes to a pub/sub topic we will periodically
+        # store in the ODB information about the last time the peer either sent
+        # or received anything from us. Note that we store it if:
+        #
+        # * The peer has at least one subscription, and
+        # * At least self.pubsub_interact_interval seconds elapsed since the last update
+        #
+        # And:
+        #
+        # * The peer received a pub/sub message, or
+        # * The peer sent a pub/sub message
+        #
+        # Or:
+        #
+        # * The peer did not send or receive anything, but
+        # * The peer correctly responds to ping messages
+        #
+        # Such a logic ensures that we do not overwhelm the database with frequent updates
+        # if the peer uses pub/sub heavily - it is costly to do it for each message.
+        #
+        # At the same time, if the peer does not receive or send anything but it is still connected
+        # (because it responds to ping) we set its SQL status too.
+        #
+        # All of this lets background processes clean up WSX clients that subscribe at one
+        # point but they are never seen again, which may (theoretically) happen if a peer disconnects
+        # in a way that does not allow for Zato to clean up its subscription status in the ODB.
+        #
+        self.pubsub_interact_interval = PUBSUB.DEFAULT.WSX_INTERACT_UPDATE_INTERVAL
+        self.pubsub_interact_last_seen = None
+        self.pubsub_interact_source = None
 
         # Manages access to service hooks
         if self.config.hook_service:
@@ -240,6 +274,16 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
+    def update_pubsub_state(self, source, _now=datetime.utcnow):
+        """ Updates metadata regarding pub/sub about this WSX connection.
+        """
+        with self.update_lock:
+            # Update last interaction metadata time for our peer
+            self.pubsub_interact_last_seen = _now()
+            self.pubsub_interact_source = source
+
+# ################################################################################################################################
+
     def deliver_pubsub_msg(self, sub_key, msg):
         """ Delivers one or more pub/sub messages to the connected WSX client.
         """
@@ -271,7 +315,11 @@ class WebSocket(_WebSocket):
         logger.info('Delivering %d pub/sub message{} to sub_key `%s` (ctx:%s)'.format('s' if len_msg > 1 else ''),
             len_msg, sub_key, ctx)
 
+        # Actually deliver messages
         self.invoke_client(cid, data, ctx=ctx, _Class=InvokeClientPubSubRequest)
+
+        # We get here if there was no exception = we can update pub/sub metadata
+        self.update_pubsub_state('deliver_pubsub_msg')
 
 # ################################################################################################################################
 
