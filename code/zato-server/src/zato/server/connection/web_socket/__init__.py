@@ -282,6 +282,11 @@ class WebSocket(_WebSocket):
 
             # Local aliases
             now = _now()
+            sub_keys = self.pubsub_tool.get_sub_keys()
+
+            # Do not run update anything if the WSX is not subscribed to any topic
+            if not sub_keys:
+                return
 
             # Update last interaction metadata time for our peer
             self.pubsub_interact_source = source
