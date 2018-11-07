@@ -286,7 +286,7 @@ class CleanupWSXPubSub(AdminService):
                 max_allowed = now - max_delta
 
                 # Delete old connections for that channel
-                session.query(PubSubSubscription).\
+                session.query(PubSubSubscription, ChannelWebSocket.id.label('wsx_id')).\
                     filter(PubSubSubscription.ws_channel_id==ChannelWebSocket.id).\
                     filter(ChannelWebSocket.name==channel_name).\
                     filter(PubSubSubscription.last_interaction_time < max_allowed).\
