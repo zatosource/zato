@@ -4,6 +4,13 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+
+    <style type="text/css">
+        #data-table td {
+            vertical-align:middle
+        }
+    </style>
+
 {% endblock %}
 
 {% block "extra_js" %}
@@ -120,7 +127,7 @@
     {% if cluster_id %}
 
         <div id="markup">
-            <table id="data-table">
+            <table id="data-table" style="vertical-align:middle">
                 <thead>
                     <tr class='ignore'>
                         <th style="width:2%">&nbsp;</th>
@@ -131,7 +138,7 @@
 
                         <th><a href="#">Current depth GD / RAM</a></th>
 
-                        <th><a href="#">Creation time</a></th>
+                        <th><a href="#">Creation / State update</a></th>
                         <th style="min-width:260px"><a href="#">Sub key</a></th>
                         <th><a href="#">EXTCLI</a></th>
 
@@ -225,6 +232,13 @@
                                 id="a_creation_time_{{ item.sub_id }}"
                                 href="javascript:$.fn.zato.toggle_time('creation_time_{{ item.sub_id }}', '{{ item.creation_time }}', '{{ item.creation_time_utc }}')">{{ item.creation_time }}
                             </a>
+                            {% if item.last_interaction_time %}
+                                <br/>
+                                <a
+                                    id="a_last_interaction_time_{{ item.sub_id }}"
+                                    href="javascript:$.fn.zato.toggle_time('last_interaction_time_{{ item.sub_id }}', '{{ item.last_interaction_time }}', '{{ item.last_interaction_time_utc }}')">{{ item.last_interaction_time }}
+                                </a>
+                            {% endif %}
                         </td>
 
                         <td>
