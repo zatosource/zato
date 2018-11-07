@@ -171,8 +171,9 @@ class WebSocket(_WebSocket):
         # in a way that does not allow for Zato to clean up its subscription status in the ODB.
         #
         self.pubsub_interact_interval = PUBSUB.DEFAULT.WSX_INTERACT_UPDATE_INTERVAL
-        self.pubsub_interact_last_seen = None
+        self.pubsub_interact_last_updated = None
         self.pubsub_interact_source = None
+        self.pubsub_interact_last_set = None
 
         # Manages access to service hooks
         if self.config.hook_service:
@@ -274,22 +275,43 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def update_pubsub_state(self, source, _now=datetime.utcnow):
+    def update_pubsub_state(self, source, _now=datetime.utcnow, _interval=PUBSUB.DEFAULT.WSX_INTERACT_UPDATE_INTERVAL):
         """ Updates metadata regarding pub/sub about this WSX connection.
         """
         with self.update_lock:
 
+            # Local aliases
+            now = _now()
+
             # Update last interaction metadata time for our peer
-            self.pubsub_interact_last_seen = _now()
             self.pubsub_interact_source = source
 
-            # If it is time to do it, commit the information to the database
-            self.invoke_service('zzz.my-service', {
-                'sub_key': self.pubsub_tool.get_sub_keys(),
-                'last_interaction_time': self.pubsub_interact_last_seen,
-                'last_interaction_type': self.pubsub_interact_source,
-                'last_interaction_details': self.get_peer_info_pretty(),
-            })
+            # It is possible that we set the metadata the first time,
+            # in which case we will always invoke the service, having first stored now for later use.
+            if not self.pubsub_interact_last_set:
+                self.pubsub_interact_last_set = now
+                needs_service = True
+            else:
+
+                # We must have been already called before, in which case we execute the service only
+                # if it is our time to do it.
+                needs_service = True if self.pubsub_interact_last_updated + timedelta(minutes=_interval) < now else False
+
+            # Are we to invoke the service this time?
+            if needs_service:
+
+                request = {
+                    'sub_key': self.pubsub_tool.get_sub_keys(),
+                    'last_interaction_time': now.isoformat(),
+                    'last_interaction_type': self.pubsub_interact_source,
+                    'last_interaction_details': self.get_peer_info_pretty(),
+                }
+
+                logger.info('Setting pub/sub interaction metadata `%s`', request)
+                self.invoke_service('zato.pubsub.subscription.update-interaction-metadata', request)
+
+                # Finally, store it for the future use
+                self.pubsub_interact_last_updated = now
 
 # ################################################################################################################################
 
@@ -933,6 +955,10 @@ class WebSocket(_WebSocket):
         # TODO: Use lxml for XML eventually but for now we are always using JSON
         self.responses_received[_loads(msg.data)['meta']['id']] = True
 
+        # Since we received a pong response, it means that the peer is connected,
+        # in which case we update its pub/sub metadata.
+        self.update_pubsub_state('wsx.ponged')
+
 # ################################################################################################################################
 
 class WebSocketContainer(WebSocketWSGIApplication):
@@ -952,8 +978,6 @@ class WebSocketContainer(WebSocketWSGIApplication):
             logger.warn(format_exc())
 
     def __call__(self, environ, start_response):
-
-        #logger_zato.warn('111 WSGI START_RESPONSE %s', start_response)
 
         try:
             if environ['PATH_INFO'] != self.config.path:
