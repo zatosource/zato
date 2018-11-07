@@ -373,7 +373,7 @@ class SimpleIOPayload(SIOConverter):
             msg_item = (item.keys(), item)
         else:
             msg_item = item
-        return '{} elem:[{}] not found in item:[{}]'.format(
+        return '{} elem:`{}` not found in item:`{!r}`'.format(
             'Expected' if is_required else 'Optional', name, msg_item)
 
     def getvalue(self, serialize=True, _keyed_tuple=(WritableKeyedTuple, KeyedTuple)):

@@ -230,14 +230,12 @@
                         <td style="width:20%">
                             <a
                                 id="a_creation_time_{{ item.sub_id }}"
-                                href="javascript:$.fn.zato.toggle_time('creation_time_{{ item.sub_id }}', '{{ item.creation_time }}', '{{ item.creation_time_utc }}')">{{ item.creation_time }}
-                            </a>
+                                href="javascript:$.fn.zato.toggle_time('creation_time_{{ item.sub_id }}', '{{ item.creation_time }}', '{{ item.creation_time_utc }}')">{{ item.creation_time }}</a>
                             {% if item.last_interaction_time %}
                                 <br/>
                                 <a
                                     id="a_last_interaction_time_{{ item.sub_id }}"
-                                    href="javascript:$.fn.zato.toggle_time('last_interaction_time_{{ item.sub_id }}', '{{ item.last_interaction_time }}', '{{ item.last_interaction_time_utc }}')">{{ item.last_interaction_time }}
-                                </a>
+                                    href="javascript:$.fn.zato.toggle_time('last_interaction_time_{{ item.sub_id }}', '{{ item.last_interaction_time }}', '{{ item.last_interaction_time_utc }}')">{{ item.last_interaction_time }}</a>
                             {% endif %}
                         </td>
 

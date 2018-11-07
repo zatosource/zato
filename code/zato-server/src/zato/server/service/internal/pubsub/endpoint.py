@@ -292,6 +292,9 @@ class GetEndpointQueueList(_GetEndpointQueue):
                 if item.last_interaction_time:
                     item.last_interaction_time = datetime_from_ms(item.last_interaction_time * 1000.0)
 
+                if item.last_interaction_details:
+                    item.last_interaction_details = item.last_interaction_details.decode('utf8')
+
                 response.append(item)
 
         self.response.payload[:] = response
