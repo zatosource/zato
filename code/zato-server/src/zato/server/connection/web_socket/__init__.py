@@ -278,9 +278,18 @@ class WebSocket(_WebSocket):
         """ Updates metadata regarding pub/sub about this WSX connection.
         """
         with self.update_lock:
+
             # Update last interaction metadata time for our peer
             self.pubsub_interact_last_seen = _now()
             self.pubsub_interact_source = source
+
+            # If it is time to do it, commit the information to the database
+            self.invoke_service('zzz.my-service', {
+                'sub_key': self.pubsub_tool.get_sub_keys(),
+                'last_interaction_time': self.pubsub_interact_last_seen,
+                'last_interaction_type': self.pubsub_interact_source,
+                'last_interaction_details': self.get_peer_info_pretty(),
+            })
 
 # ################################################################################################################################
 
@@ -319,7 +328,7 @@ class WebSocket(_WebSocket):
         self.invoke_client(cid, data, ctx=ctx, _Class=InvokeClientPubSubRequest)
 
         # We get here if there was no exception = we can update pub/sub metadata
-        self.update_pubsub_state('deliver_pubsub_msg')
+        self.update_pubsub_state('pubsub.deliver_pubsub_msg')
 
 # ################################################################################################################################
 

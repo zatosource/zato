@@ -2100,7 +2100,7 @@ class PubSub(object):
 
         # If this was a WebSocket caller, we can now update its pub/sub metadata
         if use_current_wsx:
-            wsx.update_pubsub_state('subscribe')
+            wsx.update_pubsub_state('pubsub.subscribe')
 
         return response.sub_key
 
@@ -2124,7 +2124,7 @@ class PubSub(object):
         }, wsgi_environ=service.wsgi_environ)
 
         # If we get here, it means the service succeeded so we can update that WebSocket's pub/sub metadata
-        wsx.update_pubsub_state('resume_wsx_subscription')
+        wsx.update_pubsub_state('wsx.resume_wsx_subscription')
 
 # ################################################################################################################################
 # ################################################################################################################################

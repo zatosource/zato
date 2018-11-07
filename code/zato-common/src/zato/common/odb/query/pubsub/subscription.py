@@ -87,7 +87,7 @@ def _pubsub_subscription(session, cluster_id):
         filter(PubSubEndpoint.id==PubSubSubscription.endpoint_id).\
         filter(Cluster.id==PubSubSubscription.cluster_id).\
         filter(Cluster.id==cluster_id).\
-        order_by(PubSubSubscription.id)
+        order_by(PubSubSubscription.id.desc())
 
 # ################################################################################################################################
 
