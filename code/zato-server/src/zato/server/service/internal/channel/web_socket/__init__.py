@@ -39,6 +39,12 @@ output_optional_extra = ['service_name', 'sec_type']
 
 # ################################################################################################################################
 
+SubscriptionTable = PubSubSubscription.__table__
+WSXChannelTable = ChannelWebSocket.__table__
+SubscriptionDelete = SubscriptionTable.delete
+
+# ################################################################################################################################
+
 def broker_message_hook(self, input, instance, attrs, service_type):
     input.source_server = self.server.get_full_name()
     input.config_cid = 'channel.web_socket.{}.{}.{}'.format(service_type, input.source_server, self.cid)
@@ -286,14 +292,14 @@ class CleanupWSXPubSub(AdminService):
                 max_allowed = now - max_delta
 
                 # Delete old connections for that channel
-                session.query(PubSubSubscription, ChannelWebSocket.id.label('wsx_id')).\
-                    filter(PubSubSubscription.ws_channel_id==ChannelWebSocket.id).\
-                    filter(ChannelWebSocket.name==channel_name).\
-                    filter(PubSubSubscription.last_interaction_time < max_allowed).\
-                    delete(synchronize_session=False)
+                session.execute(
+                    SubscriptionDelete().\
+                    where(SubscriptionTable.c.ws_channel_id==WSXChannelTable.c.id).\
+                    where(WSXChannelTable.c.name==channel_name).\
+                    where(SubscriptionTable.c.last_interaction_time < max_allowed)
+                )
 
             # Commit all deletions
             session.commit()
-
 
 # ################################################################################################################################
