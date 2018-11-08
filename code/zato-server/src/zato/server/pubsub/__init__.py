@@ -83,6 +83,9 @@ _PRIORITY=PUBSUB.PRIORITY
 _JSON=DATA_FORMAT.JSON
 _page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
 
+class msg:
+    wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
+
 # ################################################################################################################################
 
 def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pri_def=_PRIORITY.DEFAULT):
@@ -2125,6 +2128,12 @@ class PubSub(object):
 
         # If we get here, it means the service succeeded so we can update that WebSocket's pub/sub metadata
         wsx.update_pubsub_state('wsx.resume_wsx_subscription')
+
+        # All done, we can store a new entry in logs now
+        peer_info = wsx.get_peer_info_pretty()
+
+        logger.info(msg.wsx_sub_resumed, sub_key, peer_info)
+        logger_zato.info(msg.wsx_sub_resumed, sub_key, peer_info)
 
 # ################################################################################################################################
 # ################################################################################################################################
