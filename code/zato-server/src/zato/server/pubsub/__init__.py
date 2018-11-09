@@ -266,6 +266,9 @@ class Topic(object):
 # ################################################################################################################################
 
 class Subscription(object):
+    """ Describes an existing subscription object.
+    Note that, for WSX clients, it may exist even if the WebSocket is not currently connected.
+    """
     def __init__(self, config):
         self.config = config
         self.id = config.id
@@ -278,6 +281,10 @@ class Subscription(object):
         self.task_delivery_interval = config.task_delivery_interval
         self.unsub_on_wsx_close = config.get('unsub_on_wsx_close')
         self.ext_client_id = config.ext_client_id
+
+        # Object ws_channel_id is an ID of a WSX channel this subscription potentially belongs to,
+        # otherwise it is None.
+        self.is_wsx = bool(self.config.ws_channel_id)
 
     def __repr__(self):
         return make_repr(self)
@@ -901,6 +908,13 @@ class PubSub(object):
     def get_endpoint_id_by_ws_channel_id(self, ws_channel_id):
         with self.lock:
             return self.ws_channel_id_to_endpoint_id[ws_channel_id]
+
+# ################################################################################################################################
+
+    def get_endpoint_by_ws_channel_id(self, ws_channel_id):
+        with self.lock:
+            endpoint_id = self.ws_channel_id_to_endpoint_id[ws_channel_id]
+            return self.endpoints[endpoint_id]
 
 # ################################################################################################################################
 
