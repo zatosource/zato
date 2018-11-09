@@ -222,7 +222,7 @@ class ResumeWSXSubscription(AdminService):
 
         # Need to confirm that our WebSocket previously created all the input sub_keys
         wsx_channel_id = environ['ws_channel_config'].id
-        wsx_endpoint_id = self.pubsub.get_endpoint_id_by_ws_channel_id(wsx_channel_id)
+        wsx_endpoint = self.pubsub.get_endpoint_by_ws_channel_id(wsx_channel_id)
 
         # First off, make sure that input sub_key(s) were previously created by current WebSocket
         for sub_key in sub_key_list:
@@ -233,13 +233,10 @@ class ResumeWSXSubscription(AdminService):
                     sub_key, sub.config.endpoint_type, _expected_endpoint_type)
                 raise Forbidden(self.cid)
 
-            if wsx_endpoint_id != sub.config.endpoint_id:
-
-                wsx_endpoint = self.pubsub.get_endpoint_by_id(wsx_endpoint_id)
+            if wsx_endpoint.name != sub.config.endpoint_name:
                 expected_endpoint = self.pubsub.get_endpoint_by_id(sub.config.endpoint_id)
-
-                self.logger.warn('Current WSX endpoint did not match sub_key `%s` endpoint, %s (%s) vs. %s (%s)',
-                    sub_key, wsx_endpoint.id, wsx_endpoint.name, expected_endpoint.id, expected_endpoint.name)
+                self.logger.warn('Current WSX endpoint did not match sub_key `%s` endpoint, current:%s (%s) vs. expected:%s (%s)',
+                    sub_key, wsx_endpoint.name, wsx_endpoint.id, expected_endpoint.name, expected_endpoint.id)
 
                 raise Forbidden(self.cid)
 
