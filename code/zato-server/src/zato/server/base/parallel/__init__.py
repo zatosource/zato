@@ -40,7 +40,8 @@ from springpython.context import DisposableObject
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common import DATA_FORMAT, KVDB, SECRETS, SERVER_STARTUP, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common import DATA_FORMAT, default_internal_modules, KVDB, SECRETS, SERVER_STARTUP, SERVER_UP_STATUS, \
+     ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
@@ -86,7 +87,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.soap12_content_type = None
         self.plain_xml_content_type = None
         self.json_content_type = None
-        self.internal_service_modules = None # Zato's own internal services
         self.service_modules = None # Set programmatically in Spring
         self.service_sources = None # Set in a config file
         self.base_dir = None
@@ -235,11 +235,22 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         and will skip the deployment altogether.
         """
         def import_initial_services_jobs(is_first):
-            # (re-)deploy the services from a clear state
+
+            # All non-internal services that we have deployed
             locally_deployed = []
 
+            # Internal modules with that are potentially to be deployed
+            internal_service_modules = []
+
+            # This was added between 3.0 and 3.1, which is why it is optional
+            deploy_internal = self.fs_server_config.get('deploy_internal', default_internal_modules)
+
+            for module_name, is_enabled in deploy_internal.items():
+                if is_enabled:
+                    internal_service_modules.append(module_name)
+
             locally_deployed.extend(self.service_store.import_internal_services(
-                self.internal_service_modules, self.base_dir, self.sync_internal, is_first))
+                internal_service_modules, self.base_dir, self.sync_internal, is_first))
 
             locally_deployed.extend(self.service_store.import_services_from_anywhere(
                 self.service_modules + self.service_sources, self.base_dir))
