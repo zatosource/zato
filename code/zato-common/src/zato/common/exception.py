@@ -23,7 +23,7 @@ class Reportable(HTTPException):
 ClientHTTPError = Reportable
 
 class BadRequest(Reportable):
-    def __init__(self, cid, msg):
+    def __init__(self, cid, msg='Received a bad request'):
         super(BadRequest, self).__init__(cid, msg, BAD_REQUEST)
 
 class Conflict(Reportable):

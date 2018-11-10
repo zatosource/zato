@@ -777,10 +777,20 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
                 continue
 
             try:
-                extra = item.get('extra', '').encode('utf-8')
+                extra = item.get('extra', '')
+                if isinstance(extra, basestring):
+                    extra = extra.encode('utf-8')
+                else:
+                    if item.get('is_extra_list'):
+                        extra = '\n'.join(extra)
+                    else:
+                        extra = dumps(extra)
+
+                if extra:
+                    extra = extra.encode('utf8')
 
                 service = session.query(Service).\
-                    filter(Service.name==item['name']).\
+                    filter(Service.name==item['service']).\
                     filter(Cluster.id==cluster_id).\
                     one()
 
