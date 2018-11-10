@@ -535,7 +535,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cdef object _set(self, object key, value, expiry, dict meta_ref, _getsizeof=getsizeof, _key_types=key_types,
+    cdef object _set(self, object key, value, expiry, bint details, dict meta_ref, _getsizeof=getsizeof, _key_types=key_types,
         _len_values=len_values):
 
         cdef object out = None
@@ -617,17 +617,17 @@ cdef class Cache(object):
         if meta_ref is not None:
             meta_ref['expires_at'] = entry.expires_at
 
-        return out
+        return entry if details else out
 
 # ################################################################################################################################
 
-    cpdef object set(self, object key, value, double expiry, dict meta_ref):
+    cpdef object set(self, object key, value, double expiry, bint details, dict meta_ref):
         with self._lock:
-            return self._set(key, value, expiry, meta_ref)
+            return self._set(key, value, expiry, details, meta_ref)
 
 # ################################################################################################################################
 
-    cpdef dict set_by_prefix(self, object data, value, double expiry, bint return_found):
+    cpdef dict set_by_prefix(self, object data, value, double expiry, bint return_found, bint details):
         """ Sets a given value for all keys matching the input prefix. Non-string-like keys are ignored. Optionally,
         returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -644,14 +644,14 @@ cdef class Cache(object):
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
-                        out[key] = entry.value
-                    self._set(key, value, expiry, None)
+                        out[key] = entry if details else entry.value
+                    self._set(key, value, expiry, False, None)
 
         return out
 
 # ################################################################################################################################
 
-    cpdef dict set_by_suffix(self, object data, value, double expiry, bint return_found):
+    cpdef dict set_by_suffix(self, object data, value, double expiry, bint return_found, bint details):
         """ Sets a given value for all keys matching the input suffix. Non-string-like keys are ignored. Optionally,
         returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -668,14 +668,14 @@ cdef class Cache(object):
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
-                        out[key] = entry.value
-                    self._set(key, value, expiry, None)
+                        out[key] = entry if details else entry.value
+                    self._set(key, value, expiry, False, None)
 
         return out
 
 # ################################################################################################################################
 
-    cpdef dict set_by_regex(self, object data, value, double expiry, bint return_found):
+    cpdef dict set_by_regex(self, object data, value, double expiry, bint return_found, bint details):
         """ Sets a given value for all keys matching the input regex pattern. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -693,14 +693,14 @@ cdef class Cache(object):
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
-                        out[key] = entry.value
-                    self._set(key, value, expiry, None)
+                        out[key] = entry if details else entry.value
+                    self._set(key, value, expiry, False, None)
 
         return out
 
 # ################################################################################################################################
 
-    cpdef dict set_contains(self, object data, value, double expiry, bint return_found):
+    cpdef dict set_contains(self, object data, value, double expiry, bint return_found, bint details):
         """ Sets a given value for all keys if the key contains the input pattern. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -717,14 +717,14 @@ cdef class Cache(object):
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
-                        out[key] = entry.value
-                    self._set(key, value, expiry, None)
+                        out[key] = entry if details else entry.value
+                    self._set(key, value, expiry, False, None)
 
         return out
 
 # ################################################################################################################################
 
-    cpdef dict set_not_contains(self, object data, value, double expiry, bint return_found):
+    cpdef dict set_not_contains(self, object data, value, double expiry, bint return_found, bint details):
         """ Sets a given value for all keys if the key doesn't contain the input pattern. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -741,14 +741,14 @@ cdef class Cache(object):
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
-                        out[key] = entry.value
-                    self._set(key, value, expiry, None)
+                        out[key] = entry if details else entry.value
+                    self._set(key, value, expiry, False, None)
 
         return out
 
 # ################################################################################################################################
 
-    cpdef dict set_contains_all(self, list data, value, double expiry, bint return_found):
+    cpdef dict set_contains_all(self, list data, value, double expiry, bint return_found, bint details):
         """ Sets a given value for all keys if the key contains all of input substrings. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -773,14 +773,14 @@ cdef class Cache(object):
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
-                        out[key] = entry.value
-                    self._set(key, value, expiry, None)
+                        out[key] = entry if details else entry.value
+                    self._set(key, value, expiry, False, None)
 
         return out
 
 # ################################################################################################################################
 
-    cpdef dict set_contains_any(self, list data, value, double expiry, bint return_found):
+    cpdef dict set_contains_any(self, list data, value, double expiry, bint return_found, bint details):
         """ Sets a given value for all keys if the key contains any of input substrings. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -805,8 +805,8 @@ cdef class Cache(object):
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
-                        out[key] = entry.value
-                    self._set(key, value, expiry, None)
+                        out[key] = entry if details else entry.value
+                    self._set(key, value, expiry, False, None)
 
         return out
 
@@ -1039,7 +1039,7 @@ cdef class Cache(object):
     cdef inline _expire(self, object key, double expiry, dict meta_ref):
         """ A low-level method to expire a key after 'expiry' seconds. Must be called with self._lock held.
         """
-        self._set(key, self._get(key, self.default_get, False), expiry, meta_ref)
+        self._set(key, self._get(key, self.default_get, False), expiry, False, meta_ref)
 
 # ################################################################################################################################
 
