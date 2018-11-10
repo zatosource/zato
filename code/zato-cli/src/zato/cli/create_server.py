@@ -23,10 +23,21 @@ from sqlalchemy.exc import IntegrityError
 # Zato
 from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
 from zato.cli._apispec_default import apispec_files
-from zato.common import CONTENT_TYPE, SERVER_JOIN_STATUS
+from zato.common import CONTENT_TYPE, default_internal_modules, SERVER_JOIN_STATUS
 from zato.common.crypto import well_known_data
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
+
+
+server_conf_dict = deepcopy(CONTENT_TYPE)
+server_conf_dict.deploy_internal = {}
+
+deploy_internal = []
+
+for key, value in default_internal_modules.items():
+    deploy_internal.append('{}={}'.format(key, value))
+
+server_conf_dict.deploy_internal = '\n'.join(deploy_internal)
 
 server_conf_template = """[main]
 gunicorn_bind=0.0.0.0:{{port}}
@@ -258,7 +269,12 @@ size=0.1 # In MB
 
 [os_environ]
 sample_key=sample_value
-""".format(**CONTENT_TYPE).encode('utf-8')
+
+[deploy_internal]
+{deploy_internal}
+
+""".format(**server_conf_dict).encode('utf-8')
+
 
 pickup_conf = """[json]
 pickup_from=./pickup/incoming/json
