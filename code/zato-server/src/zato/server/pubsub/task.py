@@ -659,6 +659,14 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
+    def get_sub_keys(self):
+        """ Returns all sub keys this task handles, as a list.
+        """
+        with self.lock:
+            return list(self.sub_keys)
+
+# ################################################################################################################################
+
     def add_sub_key_no_lock(self, sub_key):
         """ Adds metadata about a given sub_key - must be called with self.lock held.
         """

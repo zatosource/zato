@@ -10,11 +10,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # ################################################################################################################################
 
-def find_wsx_environ(service):
+def find_wsx_environ(service, raise_if_not_found=True):
     wsx_environ = service.wsgi_environ.get('zato.request_ctx.async_msg', {}).get('environ')
     if not wsx_environ:
-        raise Exception('Could not find `[\'zato.request_ctx.async_msg\'][\'environ\']` in WSGI environ `{}`'.format(
-            service.wsgi_environ))
+        if raise_if_not_found:
+            raise Exception('Could not find `[\'zato.request_ctx.async_msg\'][\'environ\']` in WSGI environ `{}`'.format(
+                service.wsgi_environ))
     else:
         return wsx_environ
 

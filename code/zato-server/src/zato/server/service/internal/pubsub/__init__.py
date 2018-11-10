@@ -17,7 +17,7 @@ from traceback import format_exc
 from zato.common import PUBSUB
 from zato.common.exception import Forbidden
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
-from zato.server.service import AsIs, Bool, Int, Opaque
+from zato.server.service import AsIs, Bool, DateTime, Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -55,7 +55,8 @@ class CommonSubData:
     common = ('is_internal', 'topic_name', 'active_status', 'endpoint_type', 'endpoint_id', 'endpoint_name', 'delivery_method',
         'delivery_data_format', 'delivery_batch_size', Bool('wrap_one_msg_in_list'), 'delivery_max_retry',
         Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id', 'out_http_method',
-        'out_http_method', 'creation_time', 'last_interaction_time', Int('total_depth'), Int('current_depth_gd'),
+        'out_http_method', 'creation_time', DateTime('last_interaction_time'), 'last_interaction_type',
+        'last_interaction_details', Int('total_depth'), Int('current_depth_gd'),
         Int('current_depth_non_gd'), 'sub_key', 'has_gd', 'is_staging_enabled', 'sub_id', 'name', AsIs('ws_ext_client_id'),
         AsIs('ext_client_id'), 'topic_id')
     amqp = ('out_amqp_id', 'amqp_exchange', 'amqp_routing_key')
@@ -221,7 +222,7 @@ class ResumeWSXSubscription(AdminService):
 
         # Need to confirm that our WebSocket previously created all the input sub_keys
         wsx_channel_id = environ['ws_channel_config'].id
-        wsx_endpoint_id = self.pubsub.get_endpoint_id_by_ws_channel_id(wsx_channel_id)
+        wsx_endpoint = self.pubsub.get_endpoint_by_ws_channel_id(wsx_channel_id)
 
         # First off, make sure that input sub_key(s) were previously created by current WebSocket
         for sub_key in sub_key_list:
@@ -232,13 +233,10 @@ class ResumeWSXSubscription(AdminService):
                     sub_key, sub.config.endpoint_type, _expected_endpoint_type)
                 raise Forbidden(self.cid)
 
-            if wsx_endpoint_id != sub.config.endpoint_id:
-
-                wsx_endpoint = self.pubsub.get_endpoint_by_id(wsx_endpoint_id)
+            if wsx_endpoint.name != sub.config.endpoint_name:
                 expected_endpoint = self.pubsub.get_endpoint_by_id(sub.config.endpoint_id)
-
-                self.logger.warn('Current WSX endpoint did not match sub_key `%s` endpoint, %s (%s) vs. %s (%s)',
-                    sub_key, wsx_endpoint.id, wsx_endpoint.name, expected_endpoint.id, expected_endpoint.name)
+                self.logger.warn('Current WSX endpoint did not match sub_key `%s` endpoint, current:%s (%s) vs. expected:%s (%s)',
+                    sub_key, wsx_endpoint.name, wsx_endpoint.id, expected_endpoint.name, expected_endpoint.id)
 
                 raise Forbidden(self.cid)
 
