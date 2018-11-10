@@ -165,12 +165,12 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def set(self, key, value, expiry=0.0, _OP=CACHE.STATE_CHANGED.SET):
+    def set(self, key, value, expiry=0.0, details=False, _OP=CACHE.STATE_CHANGED.SET):
         """ Sets key to a given value. Key must be string/unicode. Value must be an integer or string/unicode.
         Expiry is in seconds (or a fraction of).
         """
         meta_ref = {'key':key, 'value':value, 'expiry':expiry} if self.needs_sync else None
-        value = self.impl.set(key, value, expiry, meta_ref)
+        value = self.impl.set(key, value, expiry, details, meta_ref)
         if self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, meta_ref)
 
@@ -178,12 +178,12 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def set_by_prefix(self, key, value, expiry=0.0, return_found=False, _OP=CACHE.STATE_CHANGED.SET_BY_PREFIX):
+    def set_by_prefix(self, key, value, expiry=0.0, return_found=False, details=False, _OP=CACHE.STATE_CHANGED.SET_BY_PREFIX):
         """ Sets keys matching the prefix of a given value - non-string-like keys are ignored. Prefix must be string/unicode.
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_by_prefix(key, value, expiry, return_found)
+        out = self.impl.set_by_prefix(key, value, expiry, return_found, details=False)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
 
@@ -191,12 +191,12 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def set_by_suffix(self, key, value, expiry=0.0, return_found=False, _OP=CACHE.STATE_CHANGED.SET_BY_SUFFIX):
+    def set_by_suffix(self, key, value, expiry=0.0, return_found=False, details=False, _OP=CACHE.STATE_CHANGED.SET_BY_SUFFIX):
         """ Sets keys matching the suffix to a given value - non-string-like keys are ignored. Suffix must be string/unicode.
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_by_suffix(key, value, expiry, return_found)
+        out = self.impl.set_by_suffix(key, value, expiry, return_found, details=False)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
 
@@ -204,12 +204,12 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def set_by_regex(self, key, value, expiry=0.0, return_found=False, _OP=CACHE.STATE_CHANGED.SET_BY_REGEX):
+    def set_by_regex(self, key, value, expiry=0.0, return_found=False, details=False, _OP=CACHE.STATE_CHANGED.SET_BY_REGEX):
         """ Sets value for keys matching the input regular expresion - non-string-like keys are ignored.
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_by_regex(key, value, expiry, return_found)
+        out = self.impl.set_by_regex(key, value, expiry, return_found, details=False)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
 
@@ -217,12 +217,12 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def set_contains(self, key, value, expiry=0.0, return_found=False, _OP=CACHE.STATE_CHANGED.SET_CONTAINS):
+    def set_contains(self, key, value, expiry=0.0, return_found=False, details=False, _OP=CACHE.STATE_CHANGED.SET_CONTAINS):
         """ Sets value for keys containing the input string - non-string-like keys are ignored.
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_contains(key, value, expiry, return_found)
+        out = self.impl.set_contains(key, value, expiry, return_found, details=False)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
 
@@ -230,12 +230,12 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def set_not_contains(self, key, value, expiry=0.0, return_found=False, _OP=CACHE.STATE_CHANGED.SET_NOT_CONTAINS):
+    def set_not_contains(self, key, value, expiry=0.0, return_found=False, details=False, _OP=CACHE.STATE_CHANGED.SET_NOT_CONTAINS):
         """ Sets value for keys that don't contain the input string - non-string-like keys are ignored.
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_not_contains(key, value, expiry, return_found)
+        out = self.impl.set_not_contains(key, value, expiry, return_found, details=False)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
 
@@ -243,12 +243,12 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def set_contains_all(self, key, value, expiry=0.0, return_found=False, _OP=CACHE.STATE_CHANGED.SET_CONTAINS_ALL):
+    def set_contains_all(self, key, value, expiry=0.0, return_found=False, details=False, _OP=CACHE.STATE_CHANGED.SET_CONTAINS_ALL):
         """ Sets value for keys that contain all elements from the input list - non-string-like keys are ignored.
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_contains_all(key, value, expiry, return_found)
+        out = self.impl.set_contains_all(key, value, expiry, return_found, details=False)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
 
@@ -256,12 +256,12 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def set_contains_any(self, key, value, expiry=0.0, return_found=False, _OP=CACHE.STATE_CHANGED.SET_CONTAINS_ANY):
+    def set_contains_any(self, key, value, expiry=0.0, return_found=False, details=False, _OP=CACHE.STATE_CHANGED.SET_CONTAINS_ANY):
         """ Sets value for keys that contain at least one of elements from the input list - non-string-like keys are ignored.
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_contains_any(key, value, expiry, return_found)
+        out = self.impl.set_contains_any(key, value, expiry, return_found, details=False)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
 
