@@ -254,9 +254,15 @@ class EndpointQueues(_EndpointObjects):
         output_optional = sub_attrs
 
     def on_before_append_item(self, item):
+
+        item.name_slug = slugify(item.name)
+
         item.creation_time_utc = item.creation_time
         item.creation_time = from_utc_to_user(item.creation_time+'+00:00', self.req.zato.user_profile)
-        item.name_slug = slugify(item.name)
+
+        if item.last_interaction_time:
+            item.last_interaction_time_utc = item.last_interaction_time
+            item.last_interaction_time = from_utc_to_user(item.last_interaction_time+'+00:00', self.req.zato.user_profile)
 
         return item
 
