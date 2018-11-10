@@ -83,6 +83,9 @@ _PRIORITY=PUBSUB.PRIORITY
 _JSON=DATA_FORMAT.JSON
 _page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
 
+class msg:
+    wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
+
 # ################################################################################################################################
 
 def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pri_def=_PRIORITY.DEFAULT):
@@ -263,6 +266,9 @@ class Topic(object):
 # ################################################################################################################################
 
 class Subscription(object):
+    """ Describes an existing subscription object.
+    Note that, for WSX clients, it may exist even if the WebSocket is not currently connected.
+    """
     def __init__(self, config):
         self.config = config
         self.id = config.id
@@ -275,6 +281,10 @@ class Subscription(object):
         self.task_delivery_interval = config.task_delivery_interval
         self.unsub_on_wsx_close = config.get('unsub_on_wsx_close')
         self.ext_client_id = config.ext_client_id
+
+        # Object ws_channel_id is an ID of a WSX channel this subscription potentially belongs to,
+        # otherwise it is None.
+        self.is_wsx = bool(self.config.ws_channel_id)
 
     def __repr__(self):
         return make_repr(self)
@@ -898,6 +908,13 @@ class PubSub(object):
     def get_endpoint_id_by_ws_channel_id(self, ws_channel_id):
         with self.lock:
             return self.ws_channel_id_to_endpoint_id[ws_channel_id]
+
+# ################################################################################################################################
+
+    def get_endpoint_by_ws_channel_id(self, ws_channel_id):
+        with self.lock:
+            endpoint_id = self.ws_channel_id_to_endpoint_id[ws_channel_id]
+            return self.endpoints[endpoint_id]
 
 # ################################################################################################################################
 
@@ -2069,8 +2086,10 @@ class PubSub(object):
                 raise Exception('Parameter `service` is required if `use_current_wsx` is True')
 
             # If the caller wants to subscribe a WebSocket, make sure the WebSocket's metadata
-            # is given to us on input - the call below will raise an exception if it was not.
-            _find_wsx_environ(service)
+            # is given to us on input - the call below will raise an exception if it was not,
+            # otherwise it will return WSX metadata out which we can extract our WebSocket object.
+            wsx_environ = _find_wsx_environ(service)
+            wsx = wsx_environ['web_socket']
 
             # All set, we can carry on with other steps now
             sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
@@ -2093,7 +2112,13 @@ class PubSub(object):
             sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(endpoint.endpoint_type)
             wsgi_environ = {}
 
+        # Actually subscribe the caller
         response = self.invoke_service(sub_service_name, request, wsgi_environ=wsgi_environ, serialize=False)
+
+        # If this was a WebSocket caller, we can now update its pub/sub metadata
+        if use_current_wsx:
+            wsx.update_pubsub_state('pubsub.subscribe')
+
         return response.sub_key
 
 # ################################################################################################################################
@@ -2102,15 +2127,27 @@ class PubSub(object):
     def resume_wsx_subscription(self, sub_key, service, _find_wsx_environ=find_wsx_environ):
         """ Invoked by WSX clients that want to resume deliveries of their messages after they reconnect.
         """
+        # Get metadata and the WebSocket itself
         wsx_environ = _find_wsx_environ(service)
+        wsx = wsx_environ['web_socket']
 
+        # Actual resume subscription
         self.invoke_service('zato.pubsub.resume-wsx-subscription', {
             'sql_ws_client_id': wsx_environ['sql_ws_client_id'],
             'channel_name': wsx_environ['ws_channel_config']['name'],
             'pub_client_id': wsx_environ['pub_client_id'],
-            'web_socket': wsx_environ['web_socket'],
+            'web_socket': wsx,
             'sub_key': sub_key
         }, wsgi_environ=service.wsgi_environ)
+
+        # If we get here, it means the service succeeded so we can update that WebSocket's pub/sub metadata
+        wsx.update_pubsub_state('wsx.resume_wsx_subscription')
+
+        # All done, we can store a new entry in logs now
+        peer_info = wsx.get_peer_info_pretty()
+
+        logger.info(msg.wsx_sub_resumed, sub_key, peer_info)
+        logger_zato.info(msg.wsx_sub_resumed, sub_key, peer_info)
 
 # ################################################################################################################################
 # ################################################################################################################################

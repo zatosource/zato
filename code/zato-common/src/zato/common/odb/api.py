@@ -86,7 +86,7 @@ class WritableKeyedTuple(object):
     def __repr__(self):
         inner = [(key, getattr(self._elem, key)) for key in self._elem.keys()]
         outer = [(key, getattr(self, key)) for key in dir(self) if not key.startswith('_')]
-        return 'WritableKeyedTuple(%s)' % (', '.join('%s=%s' % (key, value) for (key, value) in inner + outer))
+        return 'WritableKeyedTuple(%s)' % (', '.join('%r=%r' % (key, value) for (key, value) in inner + outer))
 
 # ################################################################################################################################
 
@@ -1277,7 +1277,6 @@ class ODBManager(SessionWrapper):
         """ Returns a list of pub/sub topics defined in a cluster.
         """
         return elems_with_opaque(query.pubsub_topic_list(self._session, cluster_id, needs_columns))
-        #return query.pubsub_topic_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 

@@ -119,6 +119,12 @@ service=zato.stats.summary.create-summary-by-year
 [zato.outgoing.sql.auto-ping]
 minutes=3
 service=zato.outgoing.sql.auto-ping
+
+[zato.wsx.cleanup.pub-sub]
+days=1
+service=pub.zato.channel.web-socket.cleanup-wsx-pub-sub
+extra=
+is_extra_list=True
 """
 
 # ################################################################################################################################

@@ -32,6 +32,9 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.is_internal,
         PubSubSubscription.is_staging_enabled,
         PubSubSubscription.creation_time,
+        PubSubSubscription.last_interaction_time,
+        PubSubSubscription.last_interaction_type,
+        PubSubSubscription.last_interaction_details,
         PubSubSubscription.sub_key,
         PubSubSubscription.is_durable,
         PubSubSubscription.has_gd,
@@ -84,7 +87,7 @@ def _pubsub_subscription(session, cluster_id):
         filter(PubSubEndpoint.id==PubSubSubscription.endpoint_id).\
         filter(Cluster.id==PubSubSubscription.cluster_id).\
         filter(Cluster.id==cluster_id).\
-        order_by(PubSubSubscription.id)
+        order_by(PubSubSubscription.id.desc())
 
 # ################################################################################################################################
 

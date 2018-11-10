@@ -2402,7 +2402,12 @@ class PubSubSubscription(Base):
     delivery_data_format = Column(String(200), nullable=False, default=DATA_FORMAT.JSON)
     delivery_endpoint = Column(Text, nullable=True)
 
+    # This is updated only periodically, e.g. once an hour, rather than each time the subscriber is seen,
+    # so the value is not an exact time of the last interaction with the subscriber but a time,
+    # within a certain range (default=60 minutes), when any action was last time carried out with the subscriber.
+    # For WSX subscribers, this value will never be less than their ping timeout.
     last_interaction_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
+
     last_interaction_type = Column(String(200), nullable=True)
     last_interaction_details = Column(Text, nullable=True)
 
