@@ -782,7 +782,6 @@ class PUBSUB:
         INTERNAL_ENDPOINT_NAME = 'zato.pubsub.default.internal.endpoint'
         ON_NO_SUBS_PUB = 'accept'
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
-        WSX_INTERACT_UPDATE_INTERVAL = 60 # 60 minutes = 1 hour
 
     class QUEUE_TYPE:
         STAGING = 'staging'
@@ -1023,6 +1022,7 @@ class WEB_SOCKET:
         NEW_TOKEN_TIMEOUT = 5
         TOKEN_TTL = 3600
         FQDN_UNKNOWN = '(Unknown)'
+        INTERACT_UPDATE_INTERVAL = 60 # 60 minutes = 1 hour
 
     class PATTERN:
         BY_EXT_ID = 'zato.by-ext-id.{}'
