@@ -226,6 +226,13 @@ class ServiceStore(InitializingObject):
 
 # ################################################################################################################################
 
+    def is_deployed(self, name):
+        """ Returns True if input service by name is deployed, False otherwise.
+        """
+        return name in self.name_to_impl_name
+
+# ################################################################################################################################
+
     def import_internal_services(self, items, base_dir, sync_internal, is_first):
         """ Imports and optionally caches locally internal services.
         """
