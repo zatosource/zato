@@ -841,7 +841,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             self.ipc_api.close()
 
             # Delete persistent information about all clients currently connected
-            self.invoke('zato.channel.web-socket.client.delete-by-server')
+            wsx_service = 'zato.channel.web-socket.client.delete-by-server'
+            if self.service_store.is_deployed(wsx_service):
+                self.invoke(wsx_service)
 
     # Convenience API
     stop = destroy
