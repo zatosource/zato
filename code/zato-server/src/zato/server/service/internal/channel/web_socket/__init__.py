@@ -303,3 +303,9 @@ class CleanupWSXPubSub(AdminService):
             session.commit()
 
 # ################################################################################################################################
+
+class CleanupWSX(AdminService):
+    """ Deletes WSX clients that exceeded their ping timeouts. Executed when a server starts. Also invoked through the scheduler.
+    """
+
+# ################################################################################################################################

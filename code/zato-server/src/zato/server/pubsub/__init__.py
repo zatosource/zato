@@ -2117,7 +2117,7 @@ class PubSub(object):
 
         # If this was a WebSocket caller, we can now update its pub/sub metadata
         if use_current_wsx:
-            wsx.update_pubsub_state('pubsub.subscribe')
+            wsx.set_last_interaction_data('pubsub.subscribe')
 
         return response.sub_key
 
@@ -2141,7 +2141,7 @@ class PubSub(object):
         }, wsgi_environ=service.wsgi_environ)
 
         # If we get here, it means the service succeeded so we can update that WebSocket's pub/sub metadata
-        wsx.update_pubsub_state('wsx.resume_wsx_subscription')
+        wsx.set_last_interaction_data('wsx.resume_wsx_subscription')
 
         # All done, we can store a new entry in logs now
         peer_info = wsx.get_peer_info_pretty()
