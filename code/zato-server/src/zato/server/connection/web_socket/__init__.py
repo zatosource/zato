@@ -36,7 +36,6 @@ from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_
 from zato.common.exception import Reportable
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.util import new_cid
-from zato.common.util.time_ import datetime_to_ms
 from zato.common.util.hook import HookTool
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, InvokeClientRequest, ClientMessage, copy_forbidden, \

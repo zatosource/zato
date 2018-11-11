@@ -10,10 +10,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from datetime import datetime, timedelta
+from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common import DATA_FORMAT, WEB_SOCKET
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, PubSubTopic, Service as ServiceModel, WebSocketClient
 from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \
@@ -40,8 +42,16 @@ output_optional_extra = ['service_name', 'sec_type']
 # ################################################################################################################################
 
 SubscriptionTable = PubSubSubscription.__table__
-WSXChannelTable = ChannelWebSocket.__table__
 SubscriptionDelete = SubscriptionTable.delete
+
+WSXChannelTable = ChannelWebSocket.__table__
+
+WSXClientTable = WebSocketClient.__table__
+WSXClientDelete = WSXClientTable.delete
+
+# ################################################################################################################################
+
+logger_pubsub = getLogger('zato_pubsub.srv')
 
 # ################################################################################################################################
 
@@ -271,7 +281,7 @@ class CleanupWSXPubSub(AdminService):
     """
     name = 'pub.zato.channel.web-socket.cleanup-wsx-pub-sub'
 
-    def handle(self):
+    def handle(self, _msg='Cleaning up WSX pub/sub, channel:`%s`, now:`%s`, md:`%s`, ma:`%s`'):
 
         # We receive a multi-line list of WSX channel name -> max timeout accepted on input
         config = parse_extra_into_dict(self.request.raw_request)
@@ -291,6 +301,12 @@ class CleanupWSXPubSub(AdminService):
                 # Laster interaction time for each connection must not be older than that many seconds ago
                 max_allowed = now - max_delta
 
+                now_as_iso = datetime_from_ms(now)
+                max_allowed_as_iso = datetime_from_ms(max_allowed)
+
+                self.logger.info(_msg, channel_name, now_as_iso, max_delta, max_allowed_as_iso)
+                logger_pubsub.info(_msg, channel_name, now_as_iso, max_delta, max_allowed_as_iso)
+
                 # Delete old connections for that channel
                 session.execute(
                     SubscriptionDelete().\
@@ -307,5 +323,40 @@ class CleanupWSXPubSub(AdminService):
 class CleanupWSX(AdminService):
     """ Deletes WSX clients that exceeded their ping timeouts. Executed when a server starts. Also invoked through the scheduler.
     """
+    name = 'pub.zato.channel.web-socket.cleanup-wsx'
+
+    def handle(self, _msg='Cleaning up WSX old connections now:`%s`, md:`%s`, ma:`%s`'):
+        with closing(self.odb.session()) as session:
+
+            # Stale connections are ones that are is older than 2 * interval in which each WebSocket's last_seen time is updated.
+            # This is generous enough, because WSX send background pings once in 30 seconds. After 5 pings missed their connections
+            # are closed. Then, the default interval is 60 minutes, so 2 * 60 = 2 hours. This means that when a connection is broken
+            # but we somehow do not delete its relevant entry in SQL (e.g. because our process was abruptly shut down),
+            # after these 2 hours the row will be considered ready to be deleted from the database. Note that this service
+            # is invoked from the scheduler, by default, once in 30 minutes.
+
+            # This is in minutes ..
+            max_delta = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL * 2
+
+            # .. but timedelta expects seconds.
+            max_delta = max_delta * 60 # = * 1 hour
+
+            now = datetime.utcnow()
+            max_allowed = now - timedelta(seconds=max_delta)
+
+            now_as_iso = now.isoformat()
+
+            self.logger.info(_msg, now_as_iso, max_delta, max_allowed)
+            logger_pubsub.info(_msg, now_as_iso, max_delta, max_allowed)
+
+            # Delete old WSX connections now ..
+            session.execute(
+                WSXClientDelete().\
+                where(WSXClientTable.c.last_seen < max_allowed)
+            )
+
+            # .. and commit changes.
+            session.commit()
+
 
 # ################################################################################################################################

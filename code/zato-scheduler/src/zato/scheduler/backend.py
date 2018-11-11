@@ -434,7 +434,7 @@ class Scheduler(object):
         self.job_greenlets[job.name] = self._spawn(job.run)
 
     def add_startup_jobs(self):
-        sleep(40) # To make sure that at least one server is running if the environment was started from quickstart scripts
+        sleep(1) # To make sure that at least one server is running if the environment was started from quickstart scripts
         cluster_conf = self.config.main.cluster
         add_startup_jobs(cluster_conf.id, self.odb, self.startup_jobs, asbool(cluster_conf.stats_enabled))
 

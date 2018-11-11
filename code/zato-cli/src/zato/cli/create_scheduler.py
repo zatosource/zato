@@ -121,10 +121,14 @@ minutes=3
 service=zato.outgoing.sql.auto-ping
 
 [zato.wsx.cleanup.pub-sub]
-days=1
+minutes=30
 service=pub.zato.channel.web-socket.cleanup-wsx-pub-sub
 extra=
 is_extra_list=True
+
+[zato.wsx.cleanup]
+minutes=30
+service=pub.zato.channel.web-socket.cleanup-wsx
 """
 
 # ################################################################################################################################
