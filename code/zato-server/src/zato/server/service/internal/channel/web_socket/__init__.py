@@ -325,7 +325,7 @@ class CleanupWSX(AdminService):
     """
     name = 'pub.zato.channel.web-socket.cleanup-wsx'
 
-    def handle(self, _msg='Cleaning up WSX old connections now:`%s`, md:`%s`, ma:`%s`'):
+    def handle(self, _msg='Cleaning up old WSX connections now:`%s`, md:`%s`, ma:`%s`'):
         with closing(self.odb.session()) as session:
 
             # Stale connections are ones that are is older than 2 * interval in which each WebSocket's last_seen time is updated.
