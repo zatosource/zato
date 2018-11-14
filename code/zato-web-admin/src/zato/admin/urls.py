@@ -28,6 +28,7 @@ from zato.admin.web.views.channel import web_socket as channel_web_socket
 from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
+from zato.admin.web.views import config_file
 from zato.admin.web.views.definition import amqp_ as def_amqp
 from zato.admin.web.views.definition import cassandra as def_cassandra
 from zato.admin.web.views.definition import jms_wmq as def_wmq
@@ -543,6 +544,22 @@ urlpatterns += [
     url(r'^zato/scheduler/get-definition/(?P<start_date>.*)/(?P<repeat>.*)/'
         '(?P<weeks>.*)/(?P<days>.*)/(?P<hours>.*)/(?P<minutes>.*)/(?P<seconds>.*)/$',
         login_required(scheduler.get_definition), name='scheduler-job-get-definition'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Config files
+
+    url(r'^zato/config-file/$',
+        login_required(config_file.Index()), name=config_file.Index.url_name),
+    url(r'^zato/config-file/create/$',
+        login_required(config_file.Create()), name=config_file.Create.url_name),
+    url(r'^zato/config-file/edit/$',
+        login_required(config_file.Edit()), name=config_file.Edit.url_name),
+    url(r'^zato/config-file/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(config_file.Delete()), name=config_file.Delete.url_name),
     ]
 
 # ################################################################################################################################
