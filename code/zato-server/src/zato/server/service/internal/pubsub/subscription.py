@@ -347,7 +347,7 @@ class SubscribeServiceImpl(_Subscribe):
                     is_wsx = bool(ctx.ws_channel_id)
 
                     ctx.creation_time = now = utcnow_as_ms()
-                    ctx.sub_key = new_sub_key(self.endpoint_type)
+                    ctx.sub_key = new_sub_key(self.endpoint_type, ctx.ext_client_id)
 
                     # Create a new subscription object and flush the session because the subscription's ID
                     # may be needed for the WSX subscription
