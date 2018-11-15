@@ -281,7 +281,7 @@ class CleanupWSXPubSub(AdminService):
     """
     name = 'pub.zato.channel.web-socket.cleanup-wsx-pub-sub'
 
-    def handle(self, _msg='Cleaning up WSX pub/sub, channel:`%s`, now:`%s`, md:`%s`, ma:`%s`'):
+    def handle(self, _msg='Cleaning up WSX pub/sub, channel:`%s`, now:`%s (%s)`, md:`%s`, ma:`%s` (%s)'):
 
         # We receive a multi-line list of WSX channel name -> max timeout accepted on input
         config = parse_extra_into_dict(self.request.raw_request)
@@ -295,17 +295,19 @@ class CleanupWSXPubSub(AdminService):
                 # so we convert the minutes to seconds, as expected by the database.
                 max_delta = max_delta * 60
 
+
+
                 # We compare everything using seconds
                 now = utcnow_as_ms()
 
                 # Laster interaction time for each connection must not be older than that many seconds ago
                 max_allowed = now - max_delta
 
-                now_as_iso = datetime_from_ms(now)
-                max_allowed_as_iso = datetime_from_ms(max_allowed)
+                now_as_iso = datetime_from_ms(now * 1000)
+                max_allowed_as_iso = datetime_from_ms(max_allowed * 1000)
 
-                self.logger.info(_msg, channel_name, now_as_iso, max_delta, max_allowed_as_iso)
-                logger_pubsub.info(_msg, channel_name, now_as_iso, max_delta, max_allowed_as_iso)
+                self.logger.info(_msg, channel_name, now_as_iso, now, max_delta, max_allowed_as_iso, max_allowed)
+                logger_pubsub.info(_msg, channel_name, now_as_iso, now, max_delta, max_allowed_as_iso, max_allowed)
 
                 # Delete old connections for that channel
                 session.execute(
