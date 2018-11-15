@@ -433,8 +433,7 @@ class ServiceStore(InitializingObject):
 
 # ################################################################################################################################
 
-    def _visit_class(self, mod, deployed, class_, fs_location, is_internal, service_info=None, is_active=None,
-        slow_threshold=None, _utcnow=datetime.utcnow):
+    def _visit_class(self, mod, deployed, class_, fs_location, is_internal, service_info=None, _utcnow=datetime.utcnow):
 
         now = _utcnow()
         depl_info = dumps(deployment_info('service-store', str(class_), now.isoformat(), fs_location))
