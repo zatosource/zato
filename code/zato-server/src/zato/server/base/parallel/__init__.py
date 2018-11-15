@@ -229,7 +229,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
     def maybe_on_first_worker(self, server, redis_conn):
         """ This method will execute code with a distibuted lock held. We need a lock because we can have multiple worker
-        processes fighting over the right to redeploy services. The first worker to grab the lock will actually perform
+        processes fighting over the right to redeploy services. The first worker to obtain the lock will actually perform
         the redeployment and set a flag meaning that for this particular deployment key (and remember that each server restart
         means a new deployment key) the services have been already deployed. Further workers will check that the flag exists
         and will skip the deployment altogether.
@@ -267,7 +267,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             if redis_conn.get(already_deployed_flag):
                 # There has been already the first worker who's done everything there is to be done so we may just return.
                 is_first = False
-                logger.debug('Not attempting to grab the lock_name:`%s`', lock_name)
+                logger.debug('Not attempting to obtain the lock_name:`%s`', lock_name)
 
                 # Simply deploy services, including any missing ones, the first worker has already cleared out the ODB
                 locally_deployed = import_initial_services_jobs(is_first)

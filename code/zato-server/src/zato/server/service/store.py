@@ -238,6 +238,10 @@ class ServiceStore(InitializingObject):
         """
         cache_file_path = os.path.join(base_dir, 'config', 'repo', 'internal-cache.dat')
 
+        sql_services = {}
+        for item in self.odb.get_sql_internal_service_list(self.server.cluster_id):
+            sql_services[item.impl_name] = item.id
+
         # sync_internal may be False but if the cache does not exist (which is the case if a server starts up the first time),
         # we need to create it anyway and sync_internal becomes True then. However, the should be created only by the very first
         # worker in a group of workers - the rest can simply assume that the cache is ready to read.
@@ -279,13 +283,24 @@ class ServiceStore(InitializingObject):
         else:
             deployed = []
 
+            logger.warn('QQQ %s %s', sync_internal, datetime.utcnow())
+
             f = open(cache_file_path, 'rb')
             items = bunchify(dill_load(f))
             f.close()
 
-            for item in items.service_info:
+            logger.warn('EEE %s %s', sync_internal, datetime.utcnow())
+
+            len_si = len(items.service_info)
+
+            for idx, item in enumerate(items.service_info, 1):
+
+                #logger.warn('WWW %d/%d %r %s', idx, len_si, item, datetime.utcnow())
+
                 self._visit_class(item.mod, deployed, item.class_, item.fs_location, True,
                     item.service_id, item.is_active, item.slow_threshold)
+
+            logger.warn('ZZZ %s %s', sync_internal, datetime.utcnow())
 
             return deployed
 
@@ -326,9 +341,9 @@ class ServiceStore(InitializingObject):
 
         try:
             mod_info = import_module_from_path(file_name, base_dir)
-        except Exception, e:
+        except Exception:
             msg = 'Could not load source, file_name:`%s`, e:`%s`'
-            logger.error(msg, file_name, format_exc(e))
+            logger.error(msg, file_name, format_exc())
         else:
             deployed.extend(self._visit_module(mod_info.module, is_internal, mod_info.file_name))
         finally:
@@ -433,7 +448,7 @@ class ServiceStore(InitializingObject):
         si = self._get_source_code_info(mod)
 
         service_id, is_active, slow_threshold = self.odb.add_service(
-            name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
+            name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si, service_id)
 
         deployed.append(class_)
 
@@ -473,10 +488,10 @@ class ServiceStore(InitializingObject):
                         else:
                             logger.info('Skipping `%s` from `%s`', item, fs_location)
 
-        except Exception, e:
+        except Exception:
             logger.error(
                 'Exception while visiting mod:`%s`, is_internal:`%s`, fs_location:`%s`, e:`%s`',
-                mod, is_internal, fs_location, format_exc(e))
+                mod, is_internal, fs_location, format_exc())
         finally:
             return deployed
 
