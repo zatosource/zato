@@ -240,7 +240,12 @@ class ServiceStore(InitializingObject):
 
         sql_services = {}
         for item in self.odb.get_sql_internal_service_list(self.server.cluster_id):
-            sql_services[item.impl_name] = item.id
+            sql_services[item.impl_name] = {
+                'id': item.id,
+                'impl_name': item.impl_name,
+                'is_active': item.is_active,
+                'slow_threshold': item.slow_threshold,
+            }
 
         # sync_internal may be False but if the cache does not exist (which is the case if a server starts up the first time),
         # we need to create it anyway and sync_internal becomes True then. However, the should be created only by the very first
@@ -283,8 +288,6 @@ class ServiceStore(InitializingObject):
         else:
             deployed = []
 
-            logger.warn('QQQ %s %s', sync_internal, datetime.utcnow())
-
             f = open(cache_file_path, 'rb')
             items = bunchify(dill_load(f))
             f.close()
@@ -297,8 +300,7 @@ class ServiceStore(InitializingObject):
 
                 #logger.warn('WWW %d/%d %r %s', idx, len_si, item, datetime.utcnow())
 
-                self._visit_class(item.mod, deployed, item.class_, item.fs_location, True,
-                    item.service_id, item.is_active, item.slow_threshold)
+                self._visit_class(item.mod, deployed, item.class_, item.fs_location, True, sql_services.get(item.impl_name))
 
             logger.warn('ZZZ %s %s', sync_internal, datetime.utcnow())
 
@@ -431,9 +433,11 @@ class ServiceStore(InitializingObject):
 
 # ################################################################################################################################
 
-    def _visit_class(self, mod, deployed, class_, fs_location, is_internal, service_id=None, is_active=None, slow_threshold=None):
-        timestamp = datetime.utcnow()
-        depl_info = dumps(deployment_info('service-store', str(class_), timestamp.isoformat(), fs_location))
+    def _visit_class(self, mod, deployed, class_, fs_location, is_internal, service_info=None, is_active=None,
+        slow_threshold=None, _utcnow=datetime.utcnow):
+
+        now = _utcnow()
+        depl_info = dumps(deployment_info('service-store', str(class_), now.isoformat(), fs_location))
 
         name = class_.get_name()
         impl_name = class_.get_impl_name()
@@ -447,8 +451,16 @@ class ServiceStore(InitializingObject):
 
         si = self._get_source_code_info(mod)
 
-        service_id, is_active, slow_threshold = self.odb.add_service(
-            name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si, service_id)
+        if service_info:
+            service_id = service_info['id']
+            is_active = service_info['is_active']
+            slow_threshold = service_info['slow_threshold']
+
+            self.odb.add_service(name, impl_name, is_internal, now, dumps(str(depl_info)), si, service_info)
+
+        else:
+            service_id, is_active, slow_threshold = self.odb.add_service(
+                name, impl_name, is_internal, now, dumps(str(depl_info)), si, service_info)
 
         deployed.append(class_)
 
