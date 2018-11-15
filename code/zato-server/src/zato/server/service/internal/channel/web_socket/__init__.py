@@ -295,8 +295,6 @@ class CleanupWSXPubSub(AdminService):
                 # so we convert the minutes to seconds, as expected by the database.
                 max_delta = max_delta * 60
 
-
-
                 # We compare everything using seconds
                 now = utcnow_as_ms()
 
