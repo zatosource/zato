@@ -11,6 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from contextlib import closing
+from datetime import datetime
+from operator import attrgetter
 from traceback import format_exc
 
 # gevent
@@ -19,6 +21,9 @@ from gevent.lock import RLock
 
 # globre
 from globre import compile as globre_compile
+
+# Texttable
+from texttable import Texttable
 
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, SEARCH
@@ -76,6 +81,7 @@ _update_attrs = ('data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_
 # ################################################################################################################################
 
 _default_expiration = PUBSUB.DEFAULT.EXPIRATION
+default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 
 # ################################################################################################################################
 
@@ -307,7 +313,7 @@ class HookCtx(object):
 class SubKeyServer(object):
     """ Holds information about which server has subscribers to an individual sub_key.
     """
-    def __init__(self, config):
+    def __init__(self, config, _utcnow=datetime.utcnow):
         self.sub_key = config['sub_key']
         self.cluster_id = config['cluster_id']
         self.server_name = config['server_name']
@@ -317,6 +323,10 @@ class SubKeyServer(object):
         # Attributes below are only for WebSockets
         self.channel_name = config.get('channel_name', '')
         self.pub_client_id = config.get('pub_client_id', '')
+        self.ext_client_id = config.get('ext_client_id', '')
+
+        # When this object was created - we have both
+        self.creation_time = _utcnow()
 
     def __repr__(self):
         return make_repr(self)
@@ -720,6 +730,8 @@ class PubSub(object):
         self.broker_client = broker_client
         self.lock = RLock()
         self.keep_running = True
+        self.sk_server_table_columns = self.server.fs_server_config.pubsub.get('sk_server_table_columns') or \
+            default_sk_server_table_columns
 
         self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
@@ -1339,19 +1351,49 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def format_sk_servers(self, default='---'):
+
+        # Prepare the table
+        table = Texttable()
+        table.set_cols_width(self.sk_server_table_columns)
+        table.set_cols_dtype(['i', 't', 't', 't', 't', 't'])
+        table.set_cols_align(['c', 'c', 'c', 'c', 'c', 'c'])
+
+        # Add headers
+        rows = [['#', 'created', 'name', 'pid', 'channel_name', 'sub_key']]
+
+        servers = self.sub_key_servers.values()
+        servers.sort(key=attrgetter('creation_time', 'channel_name', 'sub_key'), reverse=True)
+
+        for idx, item in enumerate(servers, 1):
+            rows.append([
+                idx,
+                item.creation_time,
+                item.server_name,
+                item.server_pid,
+                item.channel_name or default,
+                item.sub_key,
+            ])
+
+
+        # Add all rows to the table
+        table.add_rows(rows)
+
+        # And return already formatted output
+        return table.draw()
+
+# ################################################################################################################################
+
     def _set_sub_key_server(self, config):
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
         config['wsx'] = int(config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
-        sk_servers = []
-        for sk_server in self.sub_key_servers.values():
-            sk_server_str = 'sk={s.sub_key},chan:{s.channel_name},pubid:{s.pub_client_id}'
-            sk_servers.append(sk_server_str.format(s=sk_server))
+        sks_table = self.format_sk_servers()
+        msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s`, '\
+            'current servers:\n{}'.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
 
-        msg = 'Set info about delivery server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s`, '\
-            'sks:`{}`'.format(' ' if config['server_pid'] else ' (no PID) ', '; '.join(sk_servers))
         logger.info(msg, config)
         logger_zato.info(msg, config)
 

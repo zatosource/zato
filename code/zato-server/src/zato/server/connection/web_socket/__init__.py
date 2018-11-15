@@ -988,7 +988,7 @@ class WebSocket(_WebSocket):
             self.server_terminated = True
             try:
                 self._write(self.stream.close(code=code, reason=reason).single(mask=self.stream.always_mask))
-            except Exception as e:
+            except Exception:
 
                 peer_info = self.get_peer_info_pretty()
                 exc = format_exc()
