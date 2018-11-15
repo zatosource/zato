@@ -161,9 +161,11 @@ zato.notif.init-notifiers=
 zato.kvdb.log-connection-info=
 zato.sso.cleanup.cleanup=300
 zato.updates.check-updates=
+pub.zato.channel.web-socket.cleanup-wsx=
 
 [startup_services_any_worker]
 zato.helpers.input-logger=Sample payload for a startup service (any worker)
+pub.zato.channel.web-socket.cleanup-wsx=
 
 [profiler]
 enabled=False

@@ -329,11 +329,11 @@ class CleanupWSX(AdminService):
         with closing(self.odb.session()) as session:
 
             # Stale connections are ones that are is older than 2 * interval in which each WebSocket's last_seen time is updated.
-            # This is generous enough, because WSX send background pings once in 30 seconds. After 5 pings missed their connections
-            # are closed. Then, the default interval is 60 minutes, so 2 * 60 = 2 hours. This means that when a connection is broken
-            # but we somehow do not delete its relevant entry in SQL (e.g. because our process was abruptly shut down),
-            # after these 2 hours the row will be considered ready to be deleted from the database. Note that this service
-            # is invoked from the scheduler, by default, once in 30 minutes.
+            # This is generous enough, because WSX send background pings once in 30 seconds. After 5 pings missed their
+            # connections are closed. Then, the default interval is 60 minutes, so 2 * 60 = 2 hours. This means
+            # that when a connection is broken but we somehow do not delete its relevant entry in SQL (e.g. because our
+            # process was abruptly shut down), after these 2 hours the row will be considered ready to be deleted from
+            # the database. Note that this service is invoked from the scheduler, by default, once in 30 minutes.
 
             # This is in minutes ..
             max_delta = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL * 2
@@ -357,6 +357,5 @@ class CleanupWSX(AdminService):
 
             # .. and commit changes.
             session.commit()
-
 
 # ################################################################################################################################
