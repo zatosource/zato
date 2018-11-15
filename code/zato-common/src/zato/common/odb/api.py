@@ -36,10 +36,10 @@ from bunch import Bunch
 # Zato
 from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, \
      ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
      WSSDefinition, VaultConnection
-from zato.common.odb import get_ping_query, query
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
 from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
@@ -619,30 +619,42 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def add_service(self, name, impl_name, is_internal, deployment_time, details, source_info):
+    def get_sql_internal_service_list(self, cluster_id):
+        """ Returns a list of service name and IDs for input cluster ID. It represents what is currently found in the ODB
+        and is used during server startup to decide if any new services should be added from what is found in the filesystem.
+        """
+        with closing(self.session()) as session:
+            return session.query(Service.id, Service.impl_name).\
+                filter(Service.cluster_id==cluster_id).\
+                all()
+
+# ################################################################################################################################
+
+    def add_service(self, name, impl_name, is_internal, deployment_time, details, source_info, service_id=None):
         """ Adds information about the server's service into the ODB.
         """
         try:
-            service = Service(None, name, True, impl_name, is_internal, self.cluster)
-            self._session.add(service)
-            try:
-                self._session.commit()
-            except(IntegrityError, ProgrammingError), e:
-                logger.log(TRACE1, 'IntegrityError (Service), e:[%s]', format_exc(e).decode('utf-8'))
-                self._session.rollback()
+            if not service_id:
+                service = Service(None, name, True, impl_name, is_internal, self.cluster)
+                self._session.add(service)
+                try:
+                    self._session.commit()
+                except(IntegrityError, ProgrammingError):
+                    logger.log(TRACE1, 'IntegrityError (Service), e:`%s`', format_exc().decode('utf-8'))
+                    self._session.rollback()
 
-                service = self._session.query(Service).\
-                    join(Cluster, Service.cluster_id==Cluster.id).\
-                    filter(Service.name==name).\
-                    filter(Cluster.id==self.cluster.id).\
-                    one()
+                    service_id = self._session.query(Service).\
+                        join(Cluster, Service.cluster_id==Cluster.id).\
+                        filter(Service.name==name).\
+                        filter(Cluster.id==self.cluster.id).\
+                        one().id
 
-            self.add_deployed_service(deployment_time, details, service, source_info)
+            self.add_deployed_service(deployment_time, details, service_id, source_info)
 
-            return service.id, service.is_active, service.slow_threshold
+            return service_id, True, 99999 #service.is_active, service.slow_threshold
 
-        except Exception, e:
-            logger.error('Could not add service, name:[%s], e:[%s]', name, format_exc(e).decode('utf-8'))
+        except Exception:
+            logger.error('Could not add service, name:`%s`, e:`%s`', name, format_exc().decode('utf-8'))
             self._session.rollback()
 
 # ################################################################################################################################
@@ -658,22 +670,22 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def add_deployed_service(self, deployment_time, details, service, source_info):
+    def add_deployed_service(self, deployment_time, details, service_id, source_info):
         """ Adds information about the server's deployed service into the ODB.
         """
         try:
-            ds = DeployedService(deployment_time, details, self.server.id, service,
+            ds = DeployedService(deployment_time, details, self.server.id, service_id,
                 source_info.source, source_info.path, source_info.hash, source_info.hash_method)
             self._session.add(ds)
             try:
                 self._session.commit()
             except(IntegrityError, ProgrammingError), e:
 
-                logger.log(TRACE1, 'IntegrityError (DeployedService), e:[%s]', format_exc(e).decode('utf-8'))
+                logger.log(TRACE1, 'IntegrityError (DeployedService), e:`%s`', format_exc().decode('utf-8'))
                 self._session.rollback()
 
                 ds = self._session.query(DeployedService).\
-                    filter(DeployedService.service_id==service.id).\
+                    filter(DeployedService.service_id==service_id).\
                     filter(DeployedService.server_id==self.server.id).\
                     one()
 
@@ -687,8 +699,8 @@ class ODBManager(SessionWrapper):
                 self._session.add(ds)
                 self._session.commit()
 
-        except Exception, e:
-            msg = 'Could not add the DeployedService, e:[{e}]'.format(e=format_exc(e))
+        except Exception:
+            msg = 'Could not add DeployedService, e:`{}`'.format(format_exc().decode('utf-8'))
             logger.error(msg)
             self._session.rollback()
 
