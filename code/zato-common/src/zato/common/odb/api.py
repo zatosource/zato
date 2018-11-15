@@ -624,17 +624,25 @@ class ODBManager(SessionWrapper):
         and is used during server startup to decide if any new services should be added from what is found in the filesystem.
         """
         with closing(self.session()) as session:
-            return session.query(Service.id, Service.impl_name).\
+            return session.query(
+                Service.id,
+                Service.impl_name,
+                Service.is_active,
+                Service.slow_threshold,
+                ).\
                 filter(Service.cluster_id==cluster_id).\
                 all()
 
 # ################################################################################################################################
 
-    def add_service(self, name, impl_name, is_internal, deployment_time, details, source_info, service_id=None):
+    def add_service(self, name, impl_name, is_internal, deployment_time, details, source_info, service_info=None):
         """ Adds information about the server's service into the ODB.
         """
         try:
-            if not service_id:
+            if service_info:
+                service_id = service_info['id']
+
+            else:
                 service = Service(None, name, True, impl_name, is_internal, self.cluster)
                 self._session.add(service)
                 try:
@@ -651,7 +659,8 @@ class ODBManager(SessionWrapper):
 
             self.add_deployed_service(deployment_time, details, service_id, source_info)
 
-            return service_id, True, 99999 #service.is_active, service.slow_threshold
+            if not service_info:
+                return service.id, service.is_active, service.slow_threshold
 
         except Exception:
             logger.error('Could not add service, name:`%s`, e:`%s`', name, format_exc().decode('utf-8'))
