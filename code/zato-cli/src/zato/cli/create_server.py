@@ -219,6 +219,7 @@ log_if_deliv_server_not_found=True
 log_if_wsx_deliv_server_not_found=False
 data_prefix_len=2048
 data_prefix_short_len=64
+sk_server_table_columns=6, 15, 8, 6, 17, 80
 
 [pubsub_meta_topic]
 enabled=True
