@@ -930,7 +930,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def disconnect_client(self, cid):
+    def disconnect_client(self, _ignored_cid=None):
         """ Disconnects the remote client, cleaning up internal resources along the way.
         """
         self._disconnect_requested = True
@@ -949,7 +949,7 @@ class WebSocket(_WebSocket):
 
     def closed(self, _ignored_code=None, _ignored_reason=None):
 
-        # The diconnect requested already cleaned up everything
+        # Our self.disconnect_client must have cleaned up everything already
         if not self._disconnect_requested:
             self._close_connection('Closing connection from')
 
@@ -967,6 +967,34 @@ class WebSocket(_WebSocket):
         # Since we received a pong response, it means that the peer is connected,
         # in which case we update its pub/sub metadata.
         self.set_last_interaction_data('wsx.ponged')
+
+# ################################################################################################################################
+
+    def unhandled_error(self, e, _msg='Low-level exception caught, about to close connection from `%s`, e:`%s`'):
+        """ Called by the underlying WSX library when a low-level TCP/OS exception occurs.
+        """
+        peer_info = self.get_peer_info_pretty()
+        exc = format_exc()
+
+        logger.info(_msg, peer_info, exc)
+        logger_zato.info(_msg, peer_info, exc)
+
+        self.disconnect_client()
+
+    def close(self, code=1000, reason='', _msg='Error while closing connection from `%s`, e:`%s`'):
+        """ Re-implemented from the base class to be able to catch exceptions in self._write when closing connections.
+        """
+        if not self.server_terminated:
+            self.server_terminated = True
+            try:
+                self._write(self.stream.close(code=code, reason=reason).single(mask=self.stream.always_mask))
+            except Exception as e:
+
+                peer_info = self.get_peer_info_pretty()
+                exc = format_exc()
+
+                logger.info(_msg, peer_info, exc)
+                logger_zato.info(_msg, peer_info, exc)
 
 # ################################################################################################################################
 
