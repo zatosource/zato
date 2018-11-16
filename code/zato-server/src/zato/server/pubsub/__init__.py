@@ -1406,7 +1406,7 @@ class PubSub(object):
 
         sks_table = self.format_sk_servers()
         msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s`, '\
-            'current servers:\n{}'.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
+            'current sk_servers:\n{}'.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
 
         logger.info(msg, config)
         logger_zato.info(msg, config)
