@@ -8,10 +8,18 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from logging import getLogger
+
 # Zato
 from zato.common import GENERIC
 from zato.common.util import new_cid
 from zato.common.util.time_ import utcnow_as_ms
+
+# ################################################################################################################################
+
+logger = getLogger('zato_pubsub.msg')
+logger_zato = getLogger('zato')
 
 # ################################################################################################################################
 
@@ -98,6 +106,8 @@ class PubSubMessage(object):
         self.deliver_to_sk = []
         self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
         setattr(self, GENERIC.ATTR_NAME, None) # To make this class look more like an SQLAlchemy one
+
+        logger_zato.info('Creating msg `%s`', self.to_dict(add_id_attrs=True))
 
     def to_dict(self, skip=None, needs_utf8_encode=True, add_id_attrs=False, _data_keys=_data_keys):
         """ Returns a dict representation of self.
