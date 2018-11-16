@@ -708,13 +708,23 @@ class Service(object):
         # Sample requests/responses
         #
 
-        if self._req_resp_freq and self.usage % self._req_resp_freq == 0:
+        slow_response_enabled = self.server.component_enabled.slow_response
+        needs_usage = self._req_resp_freq and self.usage % self._req_resp_freq == 0
+
+        if slow_response_enabled or needs_usage:
+            raw_request = self.request.raw_request
+            if not raw_request:
+                req = ''
+            else:
+                req = raw_request if isinstance(raw_request, basestring) else repr(raw_request)
+
+        if needs_usage:
 
             data = {
                 'cid': self.cid,
                 'req_ts': self.invocation_time.isoformat(),
                 'resp_ts': self.handle_return_time.isoformat(),
-                'req': self.request.raw_request or '',
+                'req': req,
                 'resp':_get_response_value(self.response), # TODO: Don't parse it here and a moment later below
             }
             self.kvdb.conn.hmset(key, data)
@@ -722,9 +732,15 @@ class Service(object):
         #
         # Slow responses
         #
-        if self.server.component_enabled.slow_response:
+        if slow_response_enabled:
 
             if self.processing_time > self.slow_threshold:
+
+                raw_request = self.request.raw_request
+                if not raw_request:
+                    req = ''
+                else:
+                    req = raw_request if isinstance(raw_request, basestring) else repr(raw_request)
 
                 data = {
                     'cid': self.cid,
@@ -732,7 +748,7 @@ class Service(object):
                     'slow_threshold': self.slow_threshold,
                     'req_ts': self.invocation_time.isoformat(),
                     'resp_ts': self.handle_return_time.isoformat(),
-                    'req': self.request.raw_request or '',
+                    'req': req,
                     'resp':_get_response_value(self.response), # TODO: Don't parse it here and a moment earlier above
                 }
                 slow_response.store(self.kvdb, self.name, **data)

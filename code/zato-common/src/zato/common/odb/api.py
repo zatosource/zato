@@ -36,10 +36,10 @@ from bunch import Bunch
 # Zato
 from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, \
      ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
      WSSDefinition, VaultConnection
-from zato.common.odb import get_ping_query, query
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
 from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
@@ -448,7 +448,7 @@ class ODBManager(SessionWrapper):
                 self.cluster_id = server.cluster.id
                 return self.server
             except Exception:
-                msg = 'Could not find the server in the ODB, token:[{0}]'.format(
+                msg = 'Could not find server in ODB, token:`{}`'.format(
                     self.token)
                 logger.error(msg)
                 raise
@@ -619,30 +619,51 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def add_service(self, name, impl_name, is_internal, deployment_time, details, source_info):
+    def get_sql_internal_service_list(self, cluster_id):
+        """ Returns a list of service name and IDs for input cluster ID. It represents what is currently found in the ODB
+        and is used during server startup to decide if any new services should be added from what is found in the filesystem.
+        """
+        with closing(self.session()) as session:
+            return session.query(
+                Service.id,
+                Service.impl_name,
+                Service.is_active,
+                Service.slow_threshold,
+                ).\
+                filter(Service.cluster_id==cluster_id).\
+                all()
+
+# ################################################################################################################################
+
+    def add_service(self, name, impl_name, is_internal, deployment_time, details, source_info, service_info=None):
         """ Adds information about the server's service into the ODB.
         """
         try:
-            service = Service(None, name, True, impl_name, is_internal, self.cluster)
-            self._session.add(service)
-            try:
-                self._session.commit()
-            except(IntegrityError, ProgrammingError), e:
-                logger.log(TRACE1, 'IntegrityError (Service), e:[%s]', format_exc(e).decode('utf-8'))
-                self._session.rollback()
+            if service_info:
+                service_id = service_info['id']
 
-                service = self._session.query(Service).\
-                    join(Cluster, Service.cluster_id==Cluster.id).\
-                    filter(Service.name==name).\
-                    filter(Cluster.id==self.cluster.id).\
-                    one()
+            else:
+                service = Service(None, name, True, impl_name, is_internal, self.cluster)
+                self._session.add(service)
+                try:
+                    self._session.commit()
+                except(IntegrityError, ProgrammingError):
+                    logger.log(TRACE1, 'IntegrityError (Service), e:`%s`', format_exc().decode('utf-8'))
+                    self._session.rollback()
 
-            self.add_deployed_service(deployment_time, details, service, source_info)
+                    service_id = self._session.query(Service).\
+                        join(Cluster, Service.cluster_id==Cluster.id).\
+                        filter(Service.name==name).\
+                        filter(Cluster.id==self.cluster.id).\
+                        one().id
 
-            return service.id, service.is_active, service.slow_threshold
+            self.add_deployed_service(deployment_time, details, service_id, source_info)
 
-        except Exception, e:
-            logger.error('Could not add service, name:[%s], e:[%s]', name, format_exc(e).decode('utf-8'))
+            if not service_info:
+                return service.id, service.is_active, service.slow_threshold
+
+        except Exception:
+            logger.error('Could not add service, name:`%s`, e:`%s`', name, format_exc().decode('utf-8'))
             self._session.rollback()
 
 # ################################################################################################################################
@@ -658,22 +679,22 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def add_deployed_service(self, deployment_time, details, service, source_info):
+    def add_deployed_service(self, deployment_time, details, service_id, source_info):
         """ Adds information about the server's deployed service into the ODB.
         """
         try:
-            ds = DeployedService(deployment_time, details, self.server.id, service,
+            ds = DeployedService(deployment_time, details, self.server.id, service_id,
                 source_info.source, source_info.path, source_info.hash, source_info.hash_method)
             self._session.add(ds)
             try:
                 self._session.commit()
             except(IntegrityError, ProgrammingError), e:
 
-                logger.log(TRACE1, 'IntegrityError (DeployedService), e:[%s]', format_exc(e).decode('utf-8'))
+                logger.log(TRACE1, 'IntegrityError (DeployedService), e:`%s`', format_exc().decode('utf-8'))
                 self._session.rollback()
 
                 ds = self._session.query(DeployedService).\
-                    filter(DeployedService.service_id==service.id).\
+                    filter(DeployedService.service_id==service_id).\
                     filter(DeployedService.server_id==self.server.id).\
                     one()
 
@@ -687,8 +708,8 @@ class ODBManager(SessionWrapper):
                 self._session.add(ds)
                 self._session.commit()
 
-        except Exception, e:
-            msg = 'Could not add the DeployedService, e:[{e}]'.format(e=format_exc(e))
+        except Exception:
+            msg = 'Could not add DeployedService, e:`{}`'.format(format_exc().decode('utf-8'))
             logger.error(msg)
             self._session.rollback()
 
@@ -738,84 +759,6 @@ class ODBManager(SessionWrapper):
             session.commit()
 
             return dp.id
-
-# ################################################################################################################################
-
-    def _become_cluster_wide(self, cluster, session):
-        """ Update all the Cluster's attributes that are related to connector servers.
-        """
-        cluster.cw_srv_id = self.server.id
-        cluster.cw_srv_keep_alive_dt = datetime.utcnow()
-
-        session.add(cluster)
-        session.commit()
-
-        msg = 'Server id:[{}], name:[{}] is now a connector server for cluster id:[{}], name:[{}]'.format(
-            self.server.id, self.server.name, cluster.id, cluster.name)
-        logger.info(msg)
-
-        return True
-
-# ################################################################################################################################
-
-    def conn_server_past_grace_time(self, cluster, grace_time):
-        """ Whether it's already past the grace time the connector server had
-        for updating its keep-alive timestamp.
-        """
-        last_keep_alive = cluster.cw_srv_keep_alive_dt
-        max_allowed = last_keep_alive + timedelta(seconds=grace_time)
-        now = datetime.utcnow()
-
-        msg = 'last_keep_alive:[{}], grace_time:[{}], max_allowed:[{}], now:[{}]'.format(
-            last_keep_alive, grace_time, max_allowed, now)
-        logger.info(msg)
-
-        # Return True if 'now' is past what it's allowed
-        return now > max_allowed
-
-# ################################################################################################################################
-
-    def become_cluster_wide(self, grace_time):
-        """ Makes an attempt for the server to become a connector one, that is,
-        the server to start all the connectors.
-        """
-        with closing(self.session()) as session:
-            cluster = session.query(Cluster).\
-                with_lockmode('update').\
-                filter(Cluster.id == self.server.cluster_id).\
-                one()
-
-            # No cluster-wide singleton server at all so we made it first
-            if not cluster.cw_srv_id:
-                return self._become_cluster_wide(cluster, session)
-            elif self.conn_server_past_grace_time(cluster, grace_time):
-                return self._become_cluster_wide(cluster, session)
-            else:
-                session.rollback()
-                msg = ('Server id:[{}], name:[{}] will not be a connector server for '
-                'cluster id:[{}], name:[{}], cluster.cw_srv_id:[{}], cluster.cw_srv_keep_alive_dt:[{}]').format(
-                    self.server.id, self.server.name, cluster.id, cluster.name, cluster.cw_srv_id, cluster.cw_srv_keep_alive_dt)
-                logger.debug(msg)
-
-# ################################################################################################################################
-
-    def clear_cluster_wide(self):
-        """ Invoked when the cluster-wide singleton server is making a clean shutdown, sets
-        all the relevant data to NULL in the ODB.
-        """
-        with closing(self.session()) as session:
-            cluster = session.query(Cluster).\
-                with_lockmode('update').\
-                filter(Cluster.id == self.server.cluster_id).\
-                one()
-
-            cluster.cw_srv_id = None
-            cluster.cw_srv_keep_alive_dt = None
-
-            session.add(cluster)
-            session.commit()
-
-            self.logger.info('({}) Cleared cluster-wide singleton server flag'.format(self.server.name))
 
 # ################################################################################################################################
 

@@ -1,0 +1,114 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Config files{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/config_file/index.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            '_name',
+            '_size',
+            '_created',
+            '_last_modified',
+            '_delete',
+            'id',
+            'name',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Config files</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show files"%}
+
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Size</a></th>
+                        <th><a href="#">Created</a></th>
+                        <th><a href="#">Last modified</a></th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td style="vertical-align:middle">
+                            {{ item.name }}
+                        </td>
+
+                        <td style="vertical-align:middle; min-width:120px">
+                            <a
+                                id="a_connection_time_{{ item.id }}"
+                                href="javascript:$.fn.zato.toggle_time('connection_time_{{ item.id }}', '{{ item.connection_time }}', '{{ item.connection_time_utc }}')">{{ item.connection_time }}
+                            </a>
+                        </td>
+
+                        <td style="vertical-align:middle; min-width:120px">
+                            <a
+                                id="a_connection_time_{{ item.id }}"
+                                href="javascript:$.fn.zato.toggle_time('connection_time_{{ item.id }}', '{{ item.connection_time }}', '{{ item.connection_time_utc }}')">{{ item.connection_time }}
+                            </a>
+                        </td>
+
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.name }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='8'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+        <form>
+            <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
+        </form>
+
+{% include "zato/paginate/action-panel.html" %}
+
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

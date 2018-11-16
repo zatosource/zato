@@ -238,6 +238,15 @@ class ServiceStore(InitializingObject):
         """
         cache_file_path = os.path.join(base_dir, 'config', 'repo', 'internal-cache.dat')
 
+        sql_services = {}
+        for item in self.odb.get_sql_internal_service_list(self.server.cluster_id):
+            sql_services[item.impl_name] = {
+                'id': item.id,
+                'impl_name': item.impl_name,
+                'is_active': item.is_active,
+                'slow_threshold': item.slow_threshold,
+            }
+
         # sync_internal may be False but if the cache does not exist (which is the case if a server starts up the first time),
         # we need to create it anyway and sync_internal becomes True then. However, the should be created only by the very first
         # worker in a group of workers - the rest can simply assume that the cache is ready to read.
@@ -254,6 +263,7 @@ class ServiceStore(InitializingObject):
                 'service_info': service_info
             }
 
+            logger.info('Deploying and caching internal services (%s)', self.server.name)
             deployed = self.import_services_from_anywhere(items, base_dir)
 
             for class_ in deployed:
@@ -274,6 +284,8 @@ class ServiceStore(InitializingObject):
             f.write(dill_dumps(internal_cache))
             f.close()
 
+            logger.info('Deployed and cached %d internal services (%s)', len(deployed), self.server.name)
+
             return deployed
 
         else:
@@ -283,9 +295,14 @@ class ServiceStore(InitializingObject):
             items = bunchify(dill_load(f))
             f.close()
 
-            for item in items.service_info:
-                self._visit_class(item.mod, deployed, item.class_, item.fs_location, True,
-                    item.service_id, item.is_active, item.slow_threshold)
+            len_si = len(items.service_info)
+
+            logger.info('Deploying %d cached internal services (%s)', len_si, self.server.name)
+
+            for idx, item in enumerate(items.service_info, 1):
+                self._visit_class(item.mod, deployed, item.class_, item.fs_location, True, sql_services.get(item.impl_name))
+
+            logger.info('Deployed %d cached internal services (%s)', len_si, self.server.name)
 
             return deployed
 
@@ -326,9 +343,9 @@ class ServiceStore(InitializingObject):
 
         try:
             mod_info = import_module_from_path(file_name, base_dir)
-        except Exception, e:
+        except Exception:
             msg = 'Could not load source, file_name:`%s`, e:`%s`'
-            logger.error(msg, file_name, format_exc(e))
+            logger.error(msg, file_name, format_exc())
         else:
             deployed.extend(self._visit_module(mod_info.module, is_internal, mod_info.file_name))
         finally:
@@ -416,9 +433,10 @@ class ServiceStore(InitializingObject):
 
 # ################################################################################################################################
 
-    def _visit_class(self, mod, deployed, class_, fs_location, is_internal, service_id=None, is_active=None, slow_threshold=None):
-        timestamp = datetime.utcnow()
-        depl_info = dumps(deployment_info('service-store', str(class_), timestamp.isoformat(), fs_location))
+    def _visit_class(self, mod, deployed, class_, fs_location, is_internal, service_info=None, _utcnow=datetime.utcnow):
+
+        now = _utcnow()
+        depl_info = dumps(deployment_info('service-store', str(class_), now.isoformat(), fs_location))
 
         name = class_.get_name()
         impl_name = class_.get_impl_name()
@@ -432,8 +450,16 @@ class ServiceStore(InitializingObject):
 
         si = self._get_source_code_info(mod)
 
-        service_id, is_active, slow_threshold = self.odb.add_service(
-            name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
+        if service_info:
+            service_id = service_info['id']
+            is_active = service_info['is_active']
+            slow_threshold = service_info['slow_threshold']
+
+            self.odb.add_service(name, impl_name, is_internal, now, dumps(str(depl_info)), si, service_info)
+
+        else:
+            service_id, is_active, slow_threshold = self.odb.add_service(
+                name, impl_name, is_internal, now, dumps(str(depl_info)), si, service_info)
 
         deployed.append(class_)
 
@@ -473,10 +499,10 @@ class ServiceStore(InitializingObject):
                         else:
                             logger.info('Skipping `%s` from `%s`', item, fs_location)
 
-        except Exception, e:
+        except Exception:
             logger.error(
                 'Exception while visiting mod:`%s`, is_internal:`%s`, fs_location:`%s`, e:`%s`',
-                mod, is_internal, fs_location, format_exc(e))
+                mod, is_internal, fs_location, format_exc())
         finally:
             return deployed
 

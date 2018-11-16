@@ -256,6 +256,7 @@
                 </li>
 
                 <li><a href="{% url "scheduler" %}?cluster={{ cluster_id|default:'' }}">Scheduler</a></li>
+
                 <li><a href="#">Statistics &darr;</a>
                     <ul>
 
@@ -288,6 +289,9 @@
                         </li>
                     </ul>
                 </li>
+
+                <!-- <li><a href="{% url "config-file" %}?cluster={{ cluster_id|default:'' }}">Config files</a></li> -->
+
                 <!--<li><span class="like-a">Import/export &darr;</span>
                     <ul>
                         <li><a href="#">Import from file</a></li>
