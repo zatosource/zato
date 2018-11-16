@@ -1080,13 +1080,14 @@ class SERVER_STARTUP:
         AFTER_STARTED = 'after-started'
 
 class GENERIC:
-
     ATTR_NAME = 'opaque1'
 
     class CONNECTION:
-
         class TYPE:
             OUTCONN_WSX = 'outconn-wsx'
+
+class CONFIG_FILE:
+    USER_DEFINED = 'user-defined'
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
@@ -1373,6 +1374,7 @@ default_internal_modules = {
     'zato.server.service.internal.channel.zmq': True,
     'zato.server.service.internal.cloud.aws.s3': True,
     'zato.server.service.internal.cloud.openstack.swift': True,
+    'zato.server.service.internal.config_file': True,
     'zato.server.service.internal.connector.amqp_': True,
     'zato.server.service.internal.crypto': True,
     'zato.server.service.internal.definition.amqp_': True,
