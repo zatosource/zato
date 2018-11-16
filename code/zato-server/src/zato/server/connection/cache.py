@@ -539,45 +539,45 @@ class Cache(object):
     def sync_after_set(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set operation in another worker process.
         """
-        self.impl.set(data.key, data.value, data.expiry, False, None)
+        self.impl.set(data.key, data.value, data.expiry, False, False)
 
     def sync_after_set_by_prefix(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_by_prefix operation in another worker process.
         """
-        self.impl.set_by_prefix(data.key, data.value, data.expiry, False, None)
+        self.impl.set_by_prefix(data.key, data.value, data.expiry, False, False)
 
     def sync_after_set_by_suffix(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_by_suffix operation in another worker process.
         """
-        self.impl.set_by_suffix(data.key, data.value, data.expiry, False, None)
+        self.impl.set_by_suffix(data.key, data.value, data.expiry, False, False)
 
     def sync_after_set_by_regex(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_by_regex operation in another worker process.
         """
-        self.impl.set_by_regex(data.key, data.value, data.expiry, False, None)
+        self.impl.set_by_regex(data.key, data.value, data.expiry, False, False)
 
     def sync_after_set_contains(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_contains operation in another worker process.
         """
-        self.impl.set_contains(data.key, data.value, data.expiry, False, None)
+        self.impl.set_contains(data.key, data.value, data.expiry, False, False)
 
     def sync_after_set_not_contains(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_not_contains operation
         in another worker process.
         """
-        self.impl.set_not_contains(data.key, data.value, data.expiry, False, None)
+        self.impl.set_not_contains(data.key, data.value, data.expiry, False, False)
 
     def sync_after_set_contains_all(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_contains_all operation
         in another worker process.
         """
-        self.impl.set_contains_all(data.key, data.value, data.expiry, False, None)
+        self.impl.set_contains_all(data.key, data.value, data.expiry, False, False)
 
     def sync_after_set_contains_any(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_contains_any operation
         in another worker process.
         """
-        self.impl.set_contains_any(data.key, data.value, data.expiry, False, None)
+        self.impl.set_contains_any(data.key, data.value, data.expiry, False, False)
 
 # ################################################################################################################################
 
