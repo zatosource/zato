@@ -647,6 +647,7 @@ class ODBManager(SessionWrapper):
                 self._session.add(service)
                 try:
                     self._session.commit()
+                    service_id = service.id
                 except(IntegrityError, ProgrammingError):
                     logger.log(TRACE1, 'IntegrityError (Service), e:`%s`', format_exc().decode('utf-8'))
                     self._session.rollback()
