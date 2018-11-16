@@ -378,6 +378,20 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
+    def get_peer_info_dict(self):
+        return {
+            'name': self.ext_client_name,
+            'ext_client_id': self.ext_client_id,
+            'forwarded_for_fqdn': self.forwarded_for_fqdn,
+            'peer_fqdn': self._peer_fqdn,
+            'pub_client_id': self.pub_client_id,
+            'python_id': self.python_id,
+            'sock': str(getattr(self, 'sock', '')),
+            'swc': self.sql_ws_client_id,
+        }
+
+# ################################################################################################################################
+
     def get_peer_info_pretty(self):
         return 'name:`{}` id:`{}` fwd_for:`{}` conn:`{}` pub:`{}`, py:`{}`, sock:`{}`, swc:`{}`'.format(
             self.ext_client_name, self.ext_client_id, self.forwarded_for_fqdn, self._peer_fqdn,

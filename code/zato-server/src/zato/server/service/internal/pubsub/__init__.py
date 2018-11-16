@@ -218,7 +218,8 @@ class ResumeWSXSubscription(AdminService):
             environ = _async_msg['environ']
 
         # We now have environ in one way or another
-        pubsub_tool = environ['web_socket'].pubsub_tool
+        wsx = environ['web_socket']
+        pubsub_tool = wsx.pubsub_tool
 
         # Need to confirm that our WebSocket previously created all the input sub_keys
         wsx_channel_id = environ['ws_channel_config'].id
@@ -265,7 +266,8 @@ class ResumeWSXSubscription(AdminService):
 
                         # .. add relevant SQL objects ..
                         self.pubsub.add_ws_client_pubsub_keys(session, environ['sql_ws_client_id'], sub_key,
-                            environ['ws_channel_config']['name'], environ['pub_client_id'])
+                            environ['ws_channel_config']['name'], environ['pub_client_id'],
+                                environ['web_socket'].get_peer_info_dict())
 
                         # .. update state of that WebSocket's pubsub tool that keeps track of message delivery
                         pubsub_tool.add_sub_key_no_lock(sub_key)
