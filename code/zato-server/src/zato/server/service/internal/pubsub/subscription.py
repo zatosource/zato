@@ -347,7 +347,7 @@ class SubscribeServiceImpl(_Subscribe):
                     is_wsx = bool(ctx.ws_channel_id)
 
                     ctx.creation_time = now = utcnow_as_ms()
-                    ctx.sub_key = new_sub_key(self.endpoint_type)
+                    ctx.sub_key = new_sub_key(self.endpoint_type, ctx.ext_client_id)
 
                     # Create a new subscription object and flush the session because the subscription's ID
                     # may be needed for the WSX subscription
@@ -363,7 +363,7 @@ class SubscribeServiceImpl(_Subscribe):
 
                         # This object will be transient - dropped each time a WSX client disconnects
                         self.pubsub.add_ws_client_pubsub_keys(session, ctx.sql_ws_client_id, ctx.sub_key, ctx.ws_channel_name,
-                            ctx.ws_pub_client_id)
+                            ctx.ws_pub_client_id, ctx.web_socket.get_peer_info_dict())
 
                     # Common configuration for WSX and broker messages
                     sub_config = Bunch()

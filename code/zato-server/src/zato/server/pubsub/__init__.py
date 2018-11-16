@@ -11,6 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from contextlib import closing
+from datetime import datetime
+from operator import attrgetter
 from traceback import format_exc
 
 # gevent
@@ -19,6 +21,9 @@ from gevent.lock import RLock
 
 # globre
 from globre import compile as globre_compile
+
+# Texttable
+from texttable import Texttable
 
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, SEARCH
@@ -76,6 +81,7 @@ _update_attrs = ('data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_
 # ################################################################################################################################
 
 _default_expiration = PUBSUB.DEFAULT.EXPIRATION
+default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 
 # ################################################################################################################################
 
@@ -307,7 +313,8 @@ class HookCtx(object):
 class SubKeyServer(object):
     """ Holds information about which server has subscribers to an individual sub_key.
     """
-    def __init__(self, config):
+    def __init__(self, config, _utcnow=datetime.utcnow):
+        self.config = config
         self.sub_key = config['sub_key']
         self.cluster_id = config['cluster_id']
         self.server_name = config['server_name']
@@ -317,6 +324,11 @@ class SubKeyServer(object):
         # Attributes below are only for WebSockets
         self.channel_name = config.get('channel_name', '')
         self.pub_client_id = config.get('pub_client_id', '')
+        self.ext_client_id = config.get('ext_client_id', '')
+        self.wsx_info = config.get('wsx_info')
+
+        # When this object was created - we have both
+        self.creation_time = _utcnow()
 
     def __repr__(self):
         return make_repr(self)
@@ -720,6 +732,8 @@ class PubSub(object):
         self.broker_client = broker_client
         self.lock = RLock()
         self.keep_running = True
+        self.sk_server_table_columns = self.server.fs_server_config.pubsub.get('sk_server_table_columns') or \
+            default_sk_server_table_columns
 
         self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
@@ -1314,7 +1328,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def add_ws_client_pubsub_keys(self, session, sql_ws_client_id, sub_key, channel_name, pub_client_id):
+    def add_ws_client_pubsub_keys(self, session, sql_ws_client_id, sub_key, channel_name, pub_client_id, wsx_info):
         """ Adds to SQL information that a given WSX client handles messages for sub_key.
         This information is transient - it will be dropped each time a WSX client disconnects
         """
@@ -1334,8 +1348,53 @@ class PubSub(object):
             'sub_key': sub_key,
             'channel_name': channel_name,
             'pub_client_id': pub_client_id,
-            'endpoint_type': PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+            'endpoint_type': PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
+            'wsx_info': wsx_info
         })
+
+# ################################################################################################################################
+
+    def format_sk_servers(self, default='---'):
+
+        # Prepare the table
+        len_columns = len(self.sk_server_table_columns)
+
+        table = Texttable()
+        table.set_cols_width(self.sk_server_table_columns)
+        table.set_cols_dtype(['t'] * len_columns)
+        table.set_cols_align(['c'] * len_columns)
+        table.set_cols_valign(['m'] * len_columns)
+
+        # Add headers
+        rows = [['#', 'created', 'name', 'pid', 'channel_name', 'sub_key']]
+
+        servers = self.sub_key_servers.values()
+        servers.sort(key=attrgetter('creation_time', 'channel_name', 'sub_key'), reverse=True)
+
+        for idx, item in enumerate(servers, 1):
+
+            sub_key_info = item.sub_key
+
+            if item.wsx_info:
+                for name in ('swc', 'name', 'pub_client_id', 'peer_fqdn', 'forwarded_for_fqdn', 'python_id', 'sock'):
+                    sub_key_info += '\n'
+                    sub_key_info += '{}: {}'.format(name, item.wsx_info[name])
+
+            rows.append([
+                idx,
+                item.creation_time,
+                item.server_name,
+                item.server_pid,
+                item.channel_name or default,
+                sub_key_info.encode('utf8'),
+            ])
+
+
+        # Add all rows to the table
+        table.add_rows(rows)
+
+        # And return already formatted output
+        return table.draw()
 
 # ################################################################################################################################
 
@@ -1345,13 +1404,10 @@ class PubSub(object):
         config['wsx'] = int(config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
-        sk_servers = []
-        for sk_server in self.sub_key_servers.values():
-            sk_server_str = 'sk={s.sub_key},chan:{s.channel_name},pubid:{s.pub_client_id}'
-            sk_servers.append(sk_server_str.format(s=sk_server))
+        sks_table = self.format_sk_servers()
+        msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s`, '\
+            'current servers:\n{}'.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
 
-        msg = 'Set info about delivery server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s`, '\
-            'sks:`{}`'.format(' ' if config['server_pid'] else ' (no PID) ', '; '.join(sk_servers))
         logger.info(msg, config)
         logger_zato.info(msg, config)
 
@@ -2117,7 +2173,7 @@ class PubSub(object):
 
         # If this was a WebSocket caller, we can now update its pub/sub metadata
         if use_current_wsx:
-            wsx.update_pubsub_state('pubsub.subscribe')
+            wsx.set_last_interaction_data('pubsub.subscribe')
 
         return response.sub_key
 
@@ -2141,7 +2197,7 @@ class PubSub(object):
         }, wsgi_environ=service.wsgi_environ)
 
         # If we get here, it means the service succeeded so we can update that WebSocket's pub/sub metadata
-        wsx.update_pubsub_state('wsx.resume_wsx_subscription')
+        wsx.set_last_interaction_data('wsx.resume_wsx_subscription')
 
         # All done, we can store a new entry in logs now
         peer_info = wsx.get_peer_info_pretty()
