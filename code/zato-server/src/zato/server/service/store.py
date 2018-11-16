@@ -263,7 +263,7 @@ class ServiceStore(InitializingObject):
                 'service_info': service_info
             }
 
-            logger.info('Deploying and caching internal services')
+            logger.info('Deploying and caching internal services (%s)', self.server.name)
             deployed = self.import_services_from_anywhere(items, base_dir)
 
             for class_ in deployed:
@@ -284,7 +284,7 @@ class ServiceStore(InitializingObject):
             f.write(dill_dumps(internal_cache))
             f.close()
 
-            logger.info('Deployed and cached %d internal services', len(deployed))
+            logger.info('Deployed and cached %d internal services (%s)', len(deployed), self.server.name)
 
             return deployed
 
