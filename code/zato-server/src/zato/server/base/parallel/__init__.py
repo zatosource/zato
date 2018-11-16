@@ -258,8 +258,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
                 self.service_modules + self.service_sources, self.base_dir)
 
             locally_deployed.extend(user_defined_deployed)
+            len_user_defined_deployed = len(user_defined_deployed)
 
-            logger.info('Deployed %d user-defined services (%s)', len(user_defined_deployed), self.name)
+            suffix = ' ' if len_user_defined_deployed == 1 else 's '
+
+            logger.info('Deployed %d user-defined service%s (%s)', len_user_defined_deployed, suffix, self.name)
 
             return set(locally_deployed)
 
