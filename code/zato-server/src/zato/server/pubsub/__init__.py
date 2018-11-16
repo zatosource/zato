@@ -314,6 +314,7 @@ class SubKeyServer(object):
     """ Holds information about which server has subscribers to an individual sub_key.
     """
     def __init__(self, config, _utcnow=datetime.utcnow):
+        self.config = config
         self.sub_key = config['sub_key']
         self.cluster_id = config['cluster_id']
         self.server_name = config['server_name']
@@ -324,6 +325,7 @@ class SubKeyServer(object):
         self.channel_name = config.get('channel_name', '')
         self.pub_client_id = config.get('pub_client_id', '')
         self.ext_client_id = config.get('ext_client_id', '')
+        self.wsx_info = config.get('wsx_info')
 
         # When this object was created - we have both
         self.creation_time = _utcnow()
@@ -1326,7 +1328,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def add_ws_client_pubsub_keys(self, session, sql_ws_client_id, sub_key, channel_name, pub_client_id):
+    def add_ws_client_pubsub_keys(self, session, sql_ws_client_id, sub_key, channel_name, pub_client_id, wsx_info):
         """ Adds to SQL information that a given WSX client handles messages for sub_key.
         This information is transient - it will be dropped each time a WSX client disconnects
         """
@@ -1346,7 +1348,8 @@ class PubSub(object):
             'sub_key': sub_key,
             'channel_name': channel_name,
             'pub_client_id': pub_client_id,
-            'endpoint_type': PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+            'endpoint_type': PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
+            'wsx_info': wsx_info
         })
 
 # ################################################################################################################################
@@ -1354,10 +1357,13 @@ class PubSub(object):
     def format_sk_servers(self, default='---'):
 
         # Prepare the table
+        len_columns = len(self.sk_server_table_columns)
+
         table = Texttable()
         table.set_cols_width(self.sk_server_table_columns)
-        table.set_cols_dtype(['i', 't', 't', 't', 't', 't'])
-        table.set_cols_align(['c', 'c', 'c', 'c', 'c', 'c'])
+        table.set_cols_dtype(['t'] * len_columns)
+        table.set_cols_align(['c'] * len_columns)
+        table.set_cols_valign(['m'] * len_columns)
 
         # Add headers
         rows = [['#', 'created', 'name', 'pid', 'channel_name', 'sub_key']]
@@ -1366,13 +1372,21 @@ class PubSub(object):
         servers.sort(key=attrgetter('creation_time', 'channel_name', 'sub_key'), reverse=True)
 
         for idx, item in enumerate(servers, 1):
+
+            sub_key_info = item.sub_key
+
+            if item.wsx_info:
+                for name in ('swc', 'name', 'pub_client_id', 'peer_fqdn', 'forwarded_for_fqdn', 'python_id', 'sock'):
+                    sub_key_info += '\n'
+                    sub_key_info += '{}: {}'.format(name, item.wsx_info[name])
+
             rows.append([
                 idx,
                 item.creation_time,
                 item.server_name,
                 item.server_pid,
                 item.channel_name or default,
-                item.sub_key,
+                sub_key_info.encode('utf8'),
             ])
 
 
