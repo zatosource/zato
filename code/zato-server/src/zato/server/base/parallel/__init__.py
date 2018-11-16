@@ -252,8 +252,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             locally_deployed.extend(self.service_store.import_internal_services(
                 internal_service_modules, self.base_dir, self.sync_internal, is_first))
 
-            locally_deployed.extend(self.service_store.import_services_from_anywhere(
-                self.service_modules + self.service_sources, self.base_dir))
+            logger.info('Deploying user-defined services (%s)', self.name)
+
+            user_defined_deployed = self.service_store.import_services_from_anywhere(
+                self.service_modules + self.service_sources, self.base_dir)
+
+            locally_deployed.extend(user_defined_deployed)
+
+            logger.info('Deployed %d user-defined services (%s)', len(user_defined_deployed), self.name)
 
             return set(locally_deployed)
 

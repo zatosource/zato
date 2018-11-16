@@ -297,12 +297,12 @@ class ServiceStore(InitializingObject):
 
             len_si = len(items.service_info)
 
-            logger.info('Deploying %d cached internal services', len_si)
+            logger.info('Deploying %d cached internal services (%s)', len_si, self.server.name)
 
             for idx, item in enumerate(items.service_info, 1):
                 self._visit_class(item.mod, deployed, item.class_, item.fs_location, True, sql_services.get(item.impl_name))
 
-            logger.info('Deployed %d cached internal services', len_si)
+            logger.info('Deployed %d cached internal services (%s)', len_si, self.server.name)
 
             return deployed
 
