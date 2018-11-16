@@ -170,10 +170,10 @@ class WebSocket(_WebSocket):
         # point but they are never seen again, which may (theoretically) happen if a peer disconnects
         # in a way that does not allow for Zato to clean up its subscription status in the ODB.
         #
-        self.pubsub_interact_interval = PUBSUB.DEFAULT.WSX_INTERACT_UPDATE_INTERVAL
-        self.pubsub_interact_last_updated = None
-        self.pubsub_interact_source = None
-        self.pubsub_interact_last_set = None
+        self.pubsub_interact_interval = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL
+        self.interact_last_updated = None
+        self.last_interact_source = None
+        self.interact_last_set = None
 
         # Manages access to service hooks
         if self.config.hook_service:
@@ -275,48 +275,52 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def update_pubsub_state(self, source, _now=datetime.utcnow, _interval=PUBSUB.DEFAULT.WSX_INTERACT_UPDATE_INTERVAL):
+    def set_last_interaction_data(self, source, _now=datetime.utcnow, _interval=WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL):
         """ Updates metadata regarding pub/sub about this WSX connection.
         """
         with self.update_lock:
 
             # Local aliases
             now = _now()
-            sub_keys = self.pubsub_tool.get_sub_keys()
-
-            # Do not run update anything if the WSX is not subscribed to any topic
-            if not sub_keys:
-                return
 
             # Update last interaction metadata time for our peer
-            self.pubsub_interact_source = source
+            self.last_interact_source = source
 
             # It is possible that we set the metadata the first time,
-            # in which case we will always invoke the service, having first stored now for later use.
-            if not self.pubsub_interact_last_set:
-                self.pubsub_interact_last_set = now
-                needs_service = True
+            # in which case we will always invoke the service, having first stored current timestamp for later use.
+            if not self.interact_last_set:
+                self.interact_last_set = now
+                needs_services = True
             else:
 
-                # We must have been already called before, in which case we execute the service only
-                # if it is our time to do it.
-                needs_service = True if self.pubsub_interact_last_updated + timedelta(minutes=_interval) < now else False
+                # We must have been already called before, in which case we execute services only if it is our time to do it.
+                needs_services = True if self.interact_last_updated + timedelta(minutes=_interval) < now else False
 
-            # Are we to invoke the service this time?
-            if needs_service:
+            # Are we to invoke the services this time?
+            if needs_services:
 
-                request = {
+                now_formatted = now.isoformat()
+
+                pub_sub_request = {
                     'sub_key': self.pubsub_tool.get_sub_keys(),
-                    'last_interaction_time': now.isoformat(),
-                    'last_interaction_type': self.pubsub_interact_source,
+                    'last_interaction_time': now_formatted,
+                    'last_interaction_type': self.last_interact_source,
                     'last_interaction_details': self.get_peer_info_pretty(),
                 }
 
-                logger.info('Setting pub/sub interaction metadata `%s`', request)
-                self.invoke_service('zato.pubsub.subscription.update-interaction-metadata', request)
+                wsx_request = {
+                    'id': self.sql_ws_client_id,
+                    'last_seen': now_formatted,
+                }
+
+                logger.info('Setting pub/sub interaction metadata `%s`', pub_sub_request)
+                self.invoke_service('zato.pubsub.subscription.update-interaction-metadata', pub_sub_request)
+
+                logger.info('Setting WSX last seen `%s`', wsx_request)
+                self.invoke_service('zato.channel.web-socket.client.set-last-seen', wsx_request)
 
                 # Finally, store it for the future use
-                self.pubsub_interact_last_updated = now
+                self.interact_last_updated = now
 
 # ################################################################################################################################
 
@@ -355,7 +359,7 @@ class WebSocket(_WebSocket):
         self.invoke_client(cid, data, ctx=ctx, _Class=InvokeClientPubSubRequest)
 
         # We get here if there was no exception = we can update pub/sub metadata
-        self.update_pubsub_state('pubsub.deliver_pubsub_msg')
+        self.set_last_interaction_data('pubsub.deliver_pubsub_msg')
 
 # ################################################################################################################################
 
@@ -371,6 +375,20 @@ class WebSocket(_WebSocket):
 
     def add_pubsub_message(self, sub_key, message):
         self.pubsub_tool.add_message(sub_key, message)
+
+# ################################################################################################################################
+
+    def get_peer_info_dict(self):
+        return {
+            'name': self.ext_client_name,
+            'ext_client_id': self.ext_client_id,
+            'forwarded_for_fqdn': self.forwarded_for_fqdn,
+            'peer_fqdn': self._peer_fqdn,
+            'pub_client_id': self.pub_client_id,
+            'python_id': self.python_id,
+            'sock': str(getattr(self, 'sock', '')),
+            'swc': self.sql_ws_client_id,
+        }
 
 # ################################################################################################################################
 
@@ -926,7 +944,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def disconnect_client(self, cid):
+    def disconnect_client(self, _ignored_cid=None):
         """ Disconnects the remote client, cleaning up internal resources along the way.
         """
         self._disconnect_requested = True
@@ -945,7 +963,7 @@ class WebSocket(_WebSocket):
 
     def closed(self, _ignored_code=None, _ignored_reason=None):
 
-        # The diconnect requested already cleaned up everything
+        # Our self.disconnect_client must have cleaned up everything already
         if not self._disconnect_requested:
             self._close_connection('Closing connection from')
 
@@ -962,7 +980,35 @@ class WebSocket(_WebSocket):
 
         # Since we received a pong response, it means that the peer is connected,
         # in which case we update its pub/sub metadata.
-        self.update_pubsub_state('wsx.ponged')
+        self.set_last_interaction_data('wsx.ponged')
+
+# ################################################################################################################################
+
+    def unhandled_error(self, e, _msg='Low-level exception caught, about to close connection from `%s`, e:`%s`'):
+        """ Called by the underlying WSX library when a low-level TCP/OS exception occurs.
+        """
+        peer_info = self.get_peer_info_pretty()
+        exc = format_exc()
+
+        logger.info(_msg, peer_info, exc)
+        logger_zato.info(_msg, peer_info, exc)
+
+        self.disconnect_client()
+
+    def close(self, code=1000, reason='', _msg='Error while closing connection from `%s`, e:`%s`'):
+        """ Re-implemented from the base class to be able to catch exceptions in self._write when closing connections.
+        """
+        if not self.server_terminated:
+            self.server_terminated = True
+            try:
+                self._write(self.stream.close(code=code, reason=reason).single(mask=self.stream.always_mask))
+            except Exception:
+
+                peer_info = self.get_peer_info_pretty()
+                exc = format_exc()
+
+                logger.info(_msg, peer_info, exc)
+                logger_zato.info(_msg, peer_info, exc)
 
 # ################################################################################################################################
 
