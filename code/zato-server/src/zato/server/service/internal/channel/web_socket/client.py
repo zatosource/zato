@@ -143,3 +143,21 @@ class NotifyPubSubMessage(AdminService):
             raise
 
 # ################################################################################################################################
+
+class SetLastSeen(AdminService):
+    """ Sets last_seen for input WSX client.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = 'id', 'last_seen'
+
+    def handle(self):
+
+        with closing(self.odb.session()) as session:
+            session.execute(
+                _wsx_client_table.update().\
+                values(last_seen=self.request.input.last_seen).\
+                where(_wsx_client_table.c.id==self.request.input.id))
+
+            session.commit()
+
+# ################################################################################################################################
