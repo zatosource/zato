@@ -263,6 +263,7 @@ class ServiceStore(InitializingObject):
                 'service_info': service_info
             }
 
+            logger.info('Deploying and caching internal services')
             deployed = self.import_services_from_anywhere(items, base_dir)
 
             for class_ in deployed:
@@ -283,6 +284,8 @@ class ServiceStore(InitializingObject):
             f.write(dill_dumps(internal_cache))
             f.close()
 
+            logger.info('Deployed and cached %d internal services', len(deployed))
+
             return deployed
 
         else:
@@ -292,17 +295,14 @@ class ServiceStore(InitializingObject):
             items = bunchify(dill_load(f))
             f.close()
 
-            logger.warn('EEE %s %s', sync_internal, datetime.utcnow())
-
             len_si = len(items.service_info)
 
+            logger.info('Deploying %d cached internal services', len_si)
+
             for idx, item in enumerate(items.service_info, 1):
-
-                #logger.warn('WWW %d/%d %r %s', idx, len_si, item, datetime.utcnow())
-
                 self._visit_class(item.mod, deployed, item.class_, item.fs_location, True, sql_services.get(item.impl_name))
 
-            logger.warn('ZZZ %s %s', sync_internal, datetime.utcnow())
+            logger.info('Deployed %d cached internal services', len_si)
 
             return deployed
 
