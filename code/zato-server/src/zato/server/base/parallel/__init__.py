@@ -229,7 +229,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
     def maybe_on_first_worker(self, server, redis_conn):
         """ This method will execute code with a distibuted lock held. We need a lock because we can have multiple worker
-        processes fighting over the right to redeploy services. The first worker to grab the lock will actually perform
+        processes fighting over the right to redeploy services. The first worker to obtain the lock will actually perform
         the redeployment and set a flag meaning that for this particular deployment key (and remember that each server restart
         means a new deployment key) the services have been already deployed. Further workers will check that the flag exists
         and will skip the deployment altogether.
@@ -252,8 +252,17 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             locally_deployed.extend(self.service_store.import_internal_services(
                 internal_service_modules, self.base_dir, self.sync_internal, is_first))
 
-            locally_deployed.extend(self.service_store.import_services_from_anywhere(
-                self.service_modules + self.service_sources, self.base_dir))
+            logger.info('Deploying user-defined services (%s)', self.name)
+
+            user_defined_deployed = self.service_store.import_services_from_anywhere(
+                self.service_modules + self.service_sources, self.base_dir)
+
+            locally_deployed.extend(user_defined_deployed)
+            len_user_defined_deployed = len(user_defined_deployed)
+
+            suffix = ' ' if len_user_defined_deployed == 1 else 's '
+
+            logger.info('Deployed %d user-defined service%s (%s)', len_user_defined_deployed, suffix, self.name)
 
             return set(locally_deployed)
 
@@ -267,7 +276,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             if redis_conn.get(already_deployed_flag):
                 # There has been already the first worker who's done everything there is to be done so we may just return.
                 is_first = False
-                logger.debug('Not attempting to grab the lock_name:`%s`', lock_name)
+                logger.debug('Not attempting to obtain the lock_name:`%s`', lock_name)
 
                 # Simply deploy services, including any missing ones, the first worker has already cleared out the ODB
                 locally_deployed = import_initial_services_jobs(is_first)
@@ -553,7 +562,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
     def invoke_startup_services(self, is_first):
         _invoke_startup_services('Parallel', 'startup_services_first_worker' if is_first else 'startup_services_any_worker',
-                                 self.fs_server_config, self.repo_location, self.broker_client, 'zato.notif.init-notifiers',
+            self.fs_server_config, self.repo_location, self.broker_client, 'zato.notif.init-notifiers',
             is_sso_enabled=self.is_sso_enabled)
 
 # ################################################################################################################################

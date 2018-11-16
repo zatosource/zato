@@ -36,6 +36,10 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
+initial_sleep = 30
+
+# ################################################################################################################################
+
 class Interval(object):
     def __init__(self, days=0, hours=0, minutes=0, seconds=0, in_seconds=0):
         self.days = days
@@ -433,22 +437,23 @@ class Scheduler(object):
         job.on_max_repeats_reached_cb = self.on_max_repeats_reached
         self.job_greenlets[job.name] = self._spawn(job.run)
 
-    def add_startup_jobs(self):
-        sleep(40) # To make sure that at least one server is running if the environment was started from quickstart scripts
+    def init_jobs(self):
+        sleep(initial_sleep) # To make sure that at least one server is running if the environment was started from quickstart scripts
         cluster_conf = self.config.main.cluster
         add_startup_jobs(cluster_conf.id, self.odb, self.startup_jobs, asbool(cluster_conf.stats_enabled))
+
+        # Actually start jobs now, including any added above
+        if self._add_scheduler_jobs:
+            add_scheduler_jobs(self.api, self.odb, self.config.main.cluster.id, spawn=False)
 
     def run(self):
 
         try:
 
-            # Add the statistics-related scheduler jobs to the ODB
-            if self._add_startup_jobs:
-                spawn_greenlet(self.add_startup_jobs)
+            logger.info('Scheduler will start to execute jobs in %d seconds', initial_sleep)
 
-            # All other jobs
-            if self._add_scheduler_jobs:
-                add_scheduler_jobs(self.api, self.odb, self.config.main.cluster.id, spawn=False)
+            # Add default jobs to the ODB and start all of them, the default and user-defined ones
+            self.init_jobs()
 
             _sleep = self.sleep
             _sleep_time = self.sleep_time
