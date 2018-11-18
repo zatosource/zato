@@ -1010,6 +1010,15 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_topic_list_by_sub_key_list(self, sk_list):
+        out = {}
+        with self.lock:
+            for sub_key in sk_list:
+                out[sub_key] = self._get_topic_by_sub_key(sub_key)
+        return out
+
+# ################################################################################################################################
+
     def _create_endpoint(self, config):
         self.endpoints[config.id] = Endpoint(config)
 
