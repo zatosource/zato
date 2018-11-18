@@ -735,11 +735,11 @@ class PUBSUB:
                 return iter((self.CSV, self.DICT, self.JSON, self.POST, self.SOAP, self.XML))
 
     class HOOK_TYPE:
-        BEFORE_PUBLISH = 'before_publish'
-        BEFORE_DELIVERY = 'before_delivery'
-        ON_OUTGOING_SOAP_INVOKE = 'on_topic_outgoing_soap_invoke'
-        ON_SUBSCRIBED = 'on_subscribed'
-        ON_UNSUBSCRIBED = 'on_unsubscribed'
+        BEFORE_PUBLISH = 'pubsub_before_publish'
+        BEFORE_DELIVERY = 'pubsub_before_delivery'
+        ON_OUTGOING_SOAP_INVOKE = 'pubsub_on_topic_outgoing_soap_invoke'
+        ON_SUBSCRIBED = 'pubsub_on_subscribed'
+        ON_UNSUBSCRIBED = 'pubsub_on_unsubscribed'
 
     class HOOK_ACTION:
         SKIP = 'skip'
@@ -1041,9 +1041,9 @@ class WEB_SOCKET:
         CLOSE = 'close'
 
     class HOOK_TYPE:
-        ON_CONNECTED = 'on_connected'
-        ON_DISCONNECTED = 'on_disconnected'
-        ON_PUBSUB_RESPONSE = 'on_pubsub_response'
+        ON_CONNECTED = 'wsx_on_connected'
+        ON_DISCONNECTED = 'wsx_on_disconnected'
+        ON_PUBSUB_RESPONSE = 'wsx_on_pubsub_response'
 
 class APISPEC:
     OPEN_API_V3 = 'openapi_v3'
