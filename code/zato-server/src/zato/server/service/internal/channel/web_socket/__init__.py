@@ -358,4 +358,195 @@ class CleanupWSX(AdminService):
             # .. and commit changes.
             session.commit()
 
+'''
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+#import os
+from contextlib import closing
+from datetime import datetime, timedelta
+#from glob import glob
+from logging import getLogger
+
+# Zato
+#from zato.common import CONFIG_FILE
+from zato.common import WEB_SOCKET
+from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, WebSocketClient, WebSocketClientPubSubKeys
+from zato.common.util.time_ import datetime_from_ms
+from zato.server.service.internal import AdminService, AdminSIO
+
+# ################################################################################################################################
+
+logger_pubsub = getLogger('zato_pubsub.srv')
+
+# ################################################################################################################################
+
+SubscriptionTable = PubSubSubscription.__table__
+SubscriptionDelete = SubscriptionTable.delete
+
+WSXChannelTable = ChannelWebSocket.__table__
+
+WSXClientTable = WebSocketClient.__table__
+WSXClientDelete = WSXClientTable.delete
+WSXClientSelect = WSXClientTable.select
+
+# ################################################################################################################################
+
+class _msg:
+    initial = 'Cleaning up old WSX connections; now:`%s`, md:`%s`, ma:`%s`'
+    not_found = 'Did not find any WSX connections to clean up'
+    found = 'Found %d WSX connection%s to clean up'
+    cleaning = 'Cleaning up WSX connection %d/%d; %s'
+    cleaned_up = 'Cleaned up WSX connection %d/%d; %s'
+
+# ################################################################################################################################
+
+class _CleanupWSX(object):
+    """ A container for WSX connections that are about to be cleaned up, along with their subscriptions.
+    """
+    __slots__ = 'pub_client_id', 'sk_dict'
+
+    def __init__(self):
+        self.pub_client_id = None
+        self.sk_dict = None
+
+    def __repr__(self):
+        return '<{} at {}, pci:{}, sk_dict:{}>'.format(self.__class__.__name__, hex(id(self)), self.pub_client_id, self.sk_dict)
+
+    def to_dict(self):
+        return {
+            'pub_client_id': self.pub_client_id,
+            'sk_dict': self.sk_dict,
+        }
+
+# ################################################################################################################################
+
+class CleanupWSX(AdminService):
+    """ Deletes WSX clients that exceeded their ping timeouts. Executed when a server starts. Also invoked through the scheduler.
+    """
+    name = 'cleanup-wsx'
+
+    class SimpleIO(AdminSIO):
+        """ This empty definition is needed in case the service should be invoked through REST.
+        """
+
+# ################################################################################################################################
+
+    def _issue_log_msg(self, msg, *args):
+        self.logger.info(msg, *args)
+        logger_pubsub.info(msg, *args)
+
+# ################################################################################################################################
+
+    def _get_max_allowed(self):
+
+        # Stale connections are ones that are older than 2 * interval in which each WebSocket's last_seen time is updated.
+        # This is generous enough, because WSX send background pings once in 30 seconds. After 5 pings missed their
+        # connections are closed. Then, the default interval is 60 minutes, so 2 * 60 = 2 hours. This means
+        # that when a connection is broken but we somehow do not delete its relevant entry in SQL (e.g. because our
+        # process was abruptly shut down), after these 2 hours the row will be considered ready to be deleted from
+        # the database. Note that this service is invoked from the scheduler, by default, once in 30 minutes.
+
+        # This is in minutes ..
+        max_delta = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL * 2
+
+        # .. but timedelta expects seconds.
+        max_delta = 1#max_delta * 60 # = * 1 hour
+
+        now = datetime.utcnow()
+        max_allowed = now - timedelta(seconds=max_delta)
+        now_as_iso = now.isoformat()
+
+        self._issue_log_msg(_msg.initial, now_as_iso, max_delta, max_allowed)
+
+        return max_allowed
+
+# ################################################################################################################################
+
+    def _find_old_wsx_connections(self, session, max_allowed):
+
+        # Note that we always pull all the data possible to sort it out in Python code
+        return session.query(
+            WebSocketClient.id,
+            WebSocketClient.pub_client_id,
+            WebSocketClient.last_seen,
+            WebSocketClientPubSubKeys.sub_key
+            ).\
+            filter(WebSocketClient.last_seen < max_allowed).\
+            filter(WebSocketClient.id == WebSocketClientPubSubKeys.client_id).\
+            all()
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        # How far back are we to reach out to find old connections
+        max_allowed = self._get_max_allowed()
+
+        # Maps all sub_keys found, if any, to their underlying topics
+        sub_key_to_topic = {}
+
+        with closing(self.odb.session()) as session:
+
+            # Find the old connections now
+            result = self._find_old_wsx_connections(session, max_allowed)
+
+        # Nothing to do, log the message and we can return
+        if not result:
+            self._issue_log_msg(_msg.not_found)
+            return
+
+        # At least one old connection was found
+
+        wsx_clients = {} # Maps pub_client_id -> _CleanupWSX object
+        wsx_sub_key = {} # Maps pub_client_id -> a list of its sub_keys
+
+        for item in result:
+            wsx = wsx_clients.setdefault(item.pub_client_id, _CleanupWSX())
+            wsx.pub_client_id = item.pub_client_id
+
+            sk_list = wsx_sub_key.setdefault(item.pub_client_id, [])
+            sk_list.append(item.sub_key)
+
+        len_found = len(wsx_clients)
+
+        suffix = '' if len_found == 1 else 's'
+        self._issue_log_msg(_msg.found, len_found, suffix)
+
+        for idx, (pub_client_id, wsx) in enumerate(wsx_clients.iteritems(), 1):
+
+            # All subscription keys for that WSX, we are adding it here
+            # for logging purposes only, so that in a moment we are able to say
+            # what subscriptions are being actually deleted.
+            wsx.sk_dict = {}.fromkeys(wsx_sub_key[pub_client_id])
+
+            # For each subscription of that WSX, add its details to the sk_dict
+            for sub_key in wsx.sk_dict:
+                sub = self.pubsub.get_subscription_by_sub_key(sub_key)
+                if sub:
+                    wsx.sk_dict[sub_key] = {
+                        'creation_time': datetime_from_ms(sub.creation_time),
+                        'topic_id': sub.topic_id,
+                        'topic_name': sub.topic_name,
+                        'ext_client_id': sub.ext_client_id,
+                        'endpoint_type': sub.config['endpoint_type'],
+                        'sub_pattern_matched': sub.sub_pattern_matched,
+                    }
+
+            # Log what we are about to do
+            self._issue_log_msg(_msg.cleaning, idx, len_found, wsx.to_dict())
+
+            # Log information that this particular connection is done with
+            # (note that for clarity, this part does not reiterate the subscription's details)
+            self._issue_log_msg(_msg.cleaned_up, idx, len_found, wsx.pub_client_id)
+'''
+
 # ################################################################################################################################
