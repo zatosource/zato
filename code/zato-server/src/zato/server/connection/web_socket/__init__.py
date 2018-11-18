@@ -37,6 +37,7 @@ from zato.common.exception import Reportable
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.util import new_cid
 from zato.common.util.hook import HookTool
+from zato.common.util.wsx import cleanup_wsx_client
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, InvokeClientRequest, ClientMessage, copy_forbidden, \
      error_response, ErrorResponse, Forbidden, OKResponse, InvokeClientPubSubRequest
@@ -631,6 +632,7 @@ class WebSocket(_WebSocket):
     def unregister_auth_client(self):
         """ Unregisters an already registered peer in ODB.
         """
+        '''
         if self.has_session_opened:
 
             # Deletes state from SQL
@@ -652,6 +654,7 @@ class WebSocket(_WebSocket):
         hook = self.get_on_disconnected_hook()
         if hook:
             hook(WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED, self.config.hook_service, **self._get_hook_request())
+            '''
 
 # ################################################################################################################################
 
