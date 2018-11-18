@@ -8,8 +8,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from logging import getLogger
+from traceback import format_exc
+
 # Zato
 from zato.common import WEB_SOCKET
+
+# ################################################################################################################################
+
+logger = getLogger('zato_web_socket')
 
 # ################################################################################################################################
 
@@ -28,31 +36,38 @@ def find_wsx_environ(service, raise_if_not_found=True):
 
 # ################################################################################################################################
 
-def cleanup_wsx_client(service_invoker, sub_keys, hook, hook_service, hook_request, _on_disconnected=_on_disconnected):
+def cleanup_wsx_client(wsx_cleanup_required, service_invoker, pub_client_id, sub_keys, hook, hook_service, hook_request,
+    opaque_func_list=None):
     """ Cleans up information about a WSX client that has disconnected.
     """
-    '''
-    if self.has_session_opened:
+    try:
+        # Sometime it will not be needed at all, e.g. when we clean up a half-opened connection that never
+        # succesfully authenticated.
+        if wsx_cleanup_required:
 
-        # Deletes state from SQL
-        self.invoke_service('zato.channel.web-socket.client.delete-by-pub-id', {
-            'pub_client_id': self.pub_client_id,
-        })
-
-        if self.pubsub_tool.sub_keys:
-
-            # Deletes across all workers the in-RAM pub/sub state about the client that is disconnecting
-            self.invoke_service('zato.channel.web-socket.client.unregister-ws-sub-key', {
-                'sub_key_list': list(self.pubsub_tool.sub_keys),
+            # Deletes state from SQL
+            service_invoker('zato.channel.web-socket.client.delete-by-pub-id', {
+                'pub_client_id': pub_client_id,
             })
 
-            # Clears out our own delivery tasks
-            self.pubsub_tool.remove_all_sub_keys()
+            if sub_keys:
 
-    # Run the relevant on_connected hook, if any is available (even if the session was never opened)
-    hook = self.get_on_disconnected_hook()
-    if hook:
-        hook(WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED, self.config.hook_service, **self._get_hook_request())
-        '''
+                # Deletes across all workers the in-RAM pub/sub state about the client that is disconnecting
+                service_invoker('zato.channel.web-socket.client.unregister-ws-sub-key', {
+                    'sub_key_list': sub_keys,
+                })
+
+                # An opaque list of functions to invoke - each caller may decide what else should carried out here
+                for func in opaque_func_list or []:
+                    func()
+
+        # Run the relevant on_disconnected hook, if any is available (even if the session was never opened)
+        if hook:
+            hook(_on_disconnected, hook_service, **hook_request)
+
+    except Exception:
+        logger.warn('WSX cleanup error, wcr:`%d`, si:`%s`, pci:`%s`, sk_list:`%s`, h:`%s`, hs:`%s`, hr:`%s`, ofl:`%s`, e:`%s`',
+            wsx_cleanup_required, service_invoker, pub_client_id, sub_keys, hook, hook_service, hook_request, opaque_func_list,
+            format_exc())
 
 # ################################################################################################################################
