@@ -1410,7 +1410,6 @@ default_internal_modules = {
     'zato.server.service.internal.pickup': True,
     'zato.server.service.internal.pattern.invoke_retry': True,
     'zato.server.service.internal.pubsub': True,
-    'zato.server.service.internal.pubsub.cleanup': True,
     'zato.server.service.internal.pubsub.delivery': True,
     'zato.server.service.internal.pubsub.endpoint': True,
     'zato.server.service.internal.pubsub.hook': True,
