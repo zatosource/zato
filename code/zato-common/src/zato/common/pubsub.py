@@ -107,8 +107,6 @@ class PubSubMessage(object):
         self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
         setattr(self, GENERIC.ATTR_NAME, None) # To make this class look more like an SQLAlchemy one
 
-        logger_zato.info('Creating msg `%s`', self.to_dict(add_id_attrs=True))
-
     def to_dict(self, skip=None, needs_utf8_encode=True, add_id_attrs=False, _data_keys=_data_keys):
         """ Returns a dict representation of self.
         """
