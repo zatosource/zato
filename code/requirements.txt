@@ -22,7 +22,7 @@ convertdate==2.0.3.1
 coverage==3.7.1
 crontab==0.20
 cryptography==2.2.2
-Cython==0.27.3
+Cython==0.29
 cytoolz==0.8.2
 datadiff==1.1.5
 dateparser==0.5.1
