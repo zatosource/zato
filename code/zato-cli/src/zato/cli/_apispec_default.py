@@ -483,7 +483,14 @@ API documentation
 
    ./*
 
+Downloads
+---------
+
 .. include:: ./intro.rst
+
+
+Services
+--------
 
 .. include:: ./services.rst
 """.lstrip()
@@ -491,5 +498,5 @@ API documentation
 
 # Default include files
 apispec_files['intro.rst'] = """
-Download: :download:`OpenAPI/Swagger <./download/openapi.yaml>`, :download:`WSDL <./download/api.wsdl>`
+:download:`OpenAPI <./download/openapi.yaml>`, :download:`WSDL <./download/api.wsdl>`
 """
