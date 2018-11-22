@@ -250,6 +250,7 @@ class GetSphinx(Service):
         else:
             buff.write('(None)')
             buff.write('\n')
+            buff.write('\n')
 
         # Output
         buff.write(output_title)
