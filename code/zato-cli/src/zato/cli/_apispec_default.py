@@ -483,9 +483,6 @@ API documentation
 
    ./*
 
-Downloads
----------
-
 .. include:: ./intro.rst
 
 
@@ -498,5 +495,8 @@ Services
 
 # Default include files
 apispec_files['intro.rst'] = """
+Downloads
+---------
+
 :download:`OpenAPI <./download/openapi.yaml>`, :download:`WSDL <./download/api.wsdl>`
 """
