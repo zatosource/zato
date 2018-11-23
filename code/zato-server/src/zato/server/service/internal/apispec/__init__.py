@@ -271,6 +271,10 @@ class GetSphinx(Service):
     def add_services(self, data, files):
 
         buff = StringIO()
+
+        buff.write('Services\n')
+        buff.write('--------\n\n')
+
         lines = []
 
         longest_ns = 2    # len('NS')
