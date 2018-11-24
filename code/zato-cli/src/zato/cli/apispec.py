@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
+from shutil import rmtree
 
 # Zato
 from zato.cli import ZatoCommand
@@ -38,6 +39,8 @@ class APISpec(ZatoCommand):
         {'name':'--with-internal', 'help':'Whether internal services should be included on output', 'action':'store_true'},
         {'name':'--exclude', 'help':'A comma-separated list of patterns to exclude services by',
             'default':','.join(internal_patterns)},
+        {'name':'--dir', 'help':'Directory to save the output to', 'default':''},
+        {'name':'--delete-dir', 'help':'If given, --dir will be deleted before the output is saved', 'action':'store_true'},
     ]
 
 # ################################################################################################################################
@@ -61,13 +64,26 @@ class APISpec(ZatoCommand):
             'exclude': ','.join(exclude),
         }
 
+        if not args.dir:
+            now = fs_safe_now()
+            out_dir = '{}.{}'.format('apispec', now)
+        else:
+            out_dir = args.dir
+
+        out_dir = os.path.abspath(out_dir)
+
+        if os.path.exists(out_dir):
+            if args.delete_dir:
+                self.logger.info('Deleting %s', out_dir)
+                rmtree(out_dir)
+            else:
+                self.logger.warn('Output directory %s already exists and --delete-dir was not provided', out_dir)
+                return
+
+        os.mkdir(out_dir)
+
         response = client.invoke('zato.apispec.get-api-spec', request)
         data = response.data['response']['data']
-
-        now = fs_safe_now()
-        out_dir = '{}.{}'.format('apispec', now)
-        out_dir = os.path.abspath(out_dir)
-        os.mkdir(out_dir)
 
         for file_path, contents in data.items():
             full_file_path = os.path.join(out_dir, file_path)
@@ -83,3 +99,4 @@ class APISpec(ZatoCommand):
                     f.close()
 
         self.logger.info('Output saved to %s', out_dir)
+        self.logger.info('To build the documentation, run:\ncd %s\nmake html', out_dir)
