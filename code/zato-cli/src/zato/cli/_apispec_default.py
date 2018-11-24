@@ -17,6 +17,10 @@ apispec_files['_static/custom.css'] = """
   font-size:0.99em;
 }
 
+body {
+  background-color:#111;
+}
+
 code {
   font-size:1.2em
 }
@@ -30,8 +34,52 @@ html {
     min-height: 100% !important;
 }
 
+h1, h2 {
+  color:#111 !important;
+  background-color:#fff !important;
+}
+
+span.doc{
+  color:#000 !important;
+}
+
+a.reference {
+  text-decoration:underline;
+  padding:3px;
+}
+
+a.reference:hover {
+  background-color:#fcff35;
+  text-decoration:none;
+}
+
+h4, p.topless a, .nav-item, .nav-item a, li.right a {
+  color:#fcdf1d !important;
+}
+
+table.docutils td {
+  padding-top:3px;
+  padding-bottom:3px;
+  padding-left:0px;
+  padding-right:0px;
+  border-bottom:1px solid #e3e3e3;
+}
+
+table.docutils th.head {
+  background-color:#eec;
+  text-align:left;
+  padding-left:0px;
+}
+
 div.documentwrapper {
   min-height: 300px;
+  background-color:#222;
+}
+
+div.related {
+  background-color:#000;
+  border-top:1px solid #111;
+  border-bottom:1px solid #111;
 }
 
 .footer {
@@ -41,6 +89,7 @@ div.documentwrapper {
     overflow: hidden !important;
     padding-top:8px !important;
     padding-bottom:18px !important;
+    background-color:#111;
 }
 """.lstrip()
 
