@@ -119,12 +119,12 @@ class GetSphinx(Service):
 
 # ################################################################################################################################
 
-    def get_service_table_line(self, ns, name, docs, sio):
+    def get_service_table_line(self, idx, name, docs, sio):
         name_fs_safe = 'service_{}'.format(fs_safe_name(name))
         file_name = '{}.rst'.format(name_fs_safe)
 
         return bunchify({
-            'ns': ns or no_value,
+            'ns': str(idx),
             'orig_name': name,
             'sphinx_name': name.replace('_', '\_'), # Needed for Sphinx to ignore undescores
             'name': name_fs_safe,
@@ -281,13 +281,13 @@ class GetSphinx(Service):
         longest_name = 4  # len('Name')
         longest_desc = 11 # len('Description')
 
-        for elem in data.services:
+        for idx, elem in enumerate(data.services, 1):
             name = elem.name
             ns = elem.namespace_name
             docs = elem.docs
             sio = elem.simple_io
 
-            service_line = self.get_service_table_line(ns, name, docs, sio)
+            service_line = self.get_service_table_line(idx, name, docs, sio)
             lines.append(service_line)
 
             longest_ns = max(longest_ns, len(service_line.ns))
@@ -303,7 +303,7 @@ class GetSphinx(Service):
 
         self.write_separators(buff, ns_border, name_border, desc_border)
 
-        buff.write('NS'.ljust(longest_ns))
+        buff.write('#'.ljust(longest_ns))
         buff.write(col_sep)
 
         buff.write('Name'.ljust(longest_name))

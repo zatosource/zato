@@ -91,6 +91,19 @@ div.related {
     padding-bottom:18px !important;
     background-color:#111;
 }
+
+table.docutils thead tr th:first-child {
+  text-align:center;
+}
+
+table.docutils tbody tr td {
+  vertical-align:middle;
+}
+
+table.docutils tbody tr td:first-child {
+  padding:2px;
+  padding-right:7px
+}
 """.lstrip()
 
 # Custom HTML layout
