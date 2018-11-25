@@ -112,7 +112,7 @@ class TLSLogger(Service):
 # ################################################################################################################################
 
 class WebSocketsGateway(Service):
-    """ Dispatches incoming requests to target services.
+    """ Dispatches incoming WebSocket requests to target services.
     """
     name = 'helpers.web-sockets-gateway'
 
@@ -128,7 +128,7 @@ class WebSocketsGateway(Service):
 # ################################################################################################################################
 
 class WebSocketsPubSubGateway(Service):
-    """ Dispatches incoming requests to target services.
+    """ Dispatches incoming WebSocket publish/subscribe requests to target services.
     """
     name = 'helpers.web-sockets-pub-sub-gateway'
 
