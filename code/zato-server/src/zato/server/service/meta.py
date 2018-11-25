@@ -151,6 +151,7 @@ def update_attrs(cls, name, attrs):
     attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
     attrs.request_as_is = getattr(mod, 'request_as_is', [])
     attrs.sio_default_value = getattr(mod, 'sio_default_value', None)
+    attrs.get_list_docs = getattr(mod, 'get_list_docs', None)
     attrs._meta_session = None
 
     attrs.is_create = False
@@ -243,6 +244,7 @@ class GetListMeta(AdminServiceMeta):
     """
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
+        cls.__doc__ = attrs.get_list_docs
         cls.SimpleIO = GetListMeta.get_sio(attrs, name, is_list=True)
         cls.handle = GetListMeta.handle(attrs)
         cls.get_data = GetListMeta.get_data(attrs.get_data_func)

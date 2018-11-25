@@ -321,7 +321,7 @@ class CleanupWSXPubSub(AdminService):
 # ################################################################################################################################
 
 class CleanupWSX(AdminService):
-    """ Deletes WSX clients that exceeded their ping timeouts. Executed when a server starts. Also invoked through the scheduler.
+    """ Deletes WSX clients that exceeded their ping timeouts. Invoked when a server starts and through the scheduler.
     """
     name = 'pub.zato.channel.web-socket.cleanup-wsx'
 

@@ -21,6 +21,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'cache_builtin'
 model = CacheMemcached
 label = 'a Memcached cache definition'
+get_list_docs = 'Memcached cache definitions'
 broker_message = CACHE
 broker_message_prefix = 'MEMCACHED_'
 list_func = cache_memcached_list
@@ -63,16 +64,22 @@ class GetList(AdminService):
 # ################################################################################################################################
 
 class Create(AdminService):
+    """ Creates a new Memcached cache definition.
+    """
     __metaclass__ = CreateEditMeta
 
 # ################################################################################################################################
 
 class Edit(AdminService):
+    """ Updates an existing Memcached cache definition.
+    """
     __metaclass__ = CreateEditMeta
 
 # ################################################################################################################################
 
 class Delete(AdminService):
+    """ Deletes a Memcached cache definition.
+    """
     __metaclass__ = DeleteMeta
 
 # ################################################################################################################################
