@@ -93,8 +93,8 @@ div.related {
     background-color:#111;
 }
 
-table.docutils thead tr th:first-child {
-  color:transparent;
+table.docutils thead tr th {
+  border-bottom:1px solid #ccb !important;
 }
 
 table.docutils tbody tr td {
@@ -104,6 +104,10 @@ table.docutils tbody tr td {
 table.docutils tbody tr td:first-child {
   padding:2px;
   padding-right:7px
+}
+
+#services table.docutils thead tr th:first-child {
+  color:transparent;
 }
 
 #services table.docutils tbody tr td:first-child {
