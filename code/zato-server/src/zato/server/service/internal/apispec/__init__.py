@@ -303,7 +303,7 @@ class GetSphinx(Service):
 
         self.write_separators(buff, ns_border, name_border, desc_border)
 
-        buff.write('#'.ljust(longest_ns))
+        buff.write('---'.ljust(longest_ns))
         buff.write(col_sep)
 
         buff.write('Name'.ljust(longest_name))
