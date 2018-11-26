@@ -37,6 +37,7 @@ html {
 h1, h2 {
   color:#111 !important;
   background-color:#fff !important;
+  border-bottom:none !important;
 }
 
 span.doc{
@@ -58,11 +59,11 @@ h4, p.topless a, .nav-item, .nav-item a, li.right a {
 }
 
 table.docutils td {
-  padding-top:3px;
-  padding-bottom:3px;
+  padding-top:2px;
+  padding-bottom:2px;
   padding-left:0px;
   padding-right:0px;
-  border-bottom:1px solid #e3e3e3;
+  border-bottom:1px solid #f3f3e3;
 }
 
 table.docutils th.head {
@@ -93,7 +94,7 @@ div.related {
 }
 
 table.docutils thead tr th:first-child {
-  text-align:center;
+  color:transparent;
 }
 
 table.docutils tbody tr td {
@@ -103,6 +104,12 @@ table.docutils tbody tr td {
 table.docutils tbody tr td:first-child {
   padding:2px;
   padding-right:7px
+}
+
+#services table.docutils tbody tr td:first-child {
+  font-size:12px;
+  text-align: center;
+  color:#331;
 }
 """.lstrip()
 
