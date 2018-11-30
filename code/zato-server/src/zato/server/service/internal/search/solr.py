@@ -38,6 +38,8 @@ class Delete(AdminService):
     __metaclass__ = DeleteMeta
 
 class Ping(AdminService):
+    """ Pings a Solr connection to check if it is alive.
+    """
     __metaclass__ = PingMeta
 
     def ping(self, instance):

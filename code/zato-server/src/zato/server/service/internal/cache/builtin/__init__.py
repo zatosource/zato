@@ -54,7 +54,8 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 # ################################################################################################################################
 
 class Get(AdminService):
-
+    """ Returns configuration of a cache definition.
+    """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'cache_id')
         output_required = ('name', 'is_active', 'is_default', 'cache_type', Int('max_size'), Int('max_item_size'),
@@ -91,7 +92,8 @@ class Delete(AdminService):
 # ################################################################################################################################
 
 class Clear(AdminService):
-
+    """ Clears out a cache by its ID - deletes all keys and values.
+    """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'cache_id')
 

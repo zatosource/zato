@@ -77,7 +77,8 @@ class ChangePassword(ChangePasswordBase):
 # ################################################################################################################################
 
 class Ping(AdminService):
-
+    """ Pings an SMTP connection to check its configuration.
+    """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_email_smtp_ping_request'
         response_elem = 'zato_email_smtp_ping_response'

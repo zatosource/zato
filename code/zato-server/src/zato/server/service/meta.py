@@ -245,7 +245,6 @@ class GetListMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
         cls.__doc__ = 'Returns a list of {}.'.format(attrs.get_list_docs)
-        print(111, cls, cls.__doc__)
         cls.SimpleIO = GetListMeta.get_sio(attrs, name, is_list=True)
         cls.handle = GetListMeta.handle(attrs)
         cls.get_data = GetListMeta.get_data(attrs.get_data_func)
