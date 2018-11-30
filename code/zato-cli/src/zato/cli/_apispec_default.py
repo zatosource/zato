@@ -36,6 +36,15 @@ html {
 
 h1, h2 {
   color:#111 !important;
+}
+
+h1 {
+  background-color:#eee !important;
+  border-bottom:2px solid #ddd !important;
+  padding:12px !important;
+}
+
+h2 {
   background-color:#fff !important;
   border-bottom:none !important;
 }
@@ -94,7 +103,10 @@ div.related {
 }
 
 table.docutils thead tr th {
-  border-bottom:1px solid #ccb !important;
+  background-color:#eee !important;
+  border-bottom:1px solid #e0e0e0 !important;
+  padding-top:7px;
+  padding-bottom:7px;
 }
 
 table.docutils tbody tr td {
@@ -114,6 +126,12 @@ table.docutils tbody tr td:first-child {
   font-size:12px;
   text-align: center;
   color:#331;
+}
+
+div.last_updated {
+  font-size:smaller;
+  color:#fcdf1d;
+  padding-top:10px
 }
 """.lstrip()
 
@@ -335,7 +353,11 @@ apispec_files['_templates/zato_sidebar.html'] = """
   <a href="_downloads/openapi.yaml" title="Download OpenAPI specification">OpenAPI</a>
   <br/>
   <a href="_downloads/api.wsdl" title="Download WSDL specification">WSDL</a>
-</p
+</p>
+
+<div class="last_updated">
+Last update: {{ last_updated }}
+</div>
 
 """
 
@@ -488,6 +510,8 @@ pygments_style = 'sphinx'
 
 
 # -- Options for HTML output -------------------------------------------------
+
+html_last_updated_fmt = '%b %d, %Y'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
