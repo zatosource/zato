@@ -64,22 +64,16 @@ class GetList(AdminService):
 # ################################################################################################################################
 
 class Create(AdminService):
-    """ Creates a new Memcached cache definition.
-    """
     __metaclass__ = CreateEditMeta
 
 # ################################################################################################################################
 
 class Edit(AdminService):
-    """ Updates an existing Memcached cache definition.
-    """
     __metaclass__ = CreateEditMeta
 
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes a Memcached cache definition.
-    """
     __metaclass__ = DeleteMeta
 
 # ################################################################################################################################

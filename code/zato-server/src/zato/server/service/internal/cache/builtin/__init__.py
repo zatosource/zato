@@ -24,6 +24,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'cache_builtin'
 model = CacheBuiltin
 label = 'a built-in cache definition'
+get_list_docs = 'built-in cache definitions'
 broker_message = CACHE
 broker_message_prefix = 'BUILTIN_'
 list_func = cache_builtin_list

@@ -29,6 +29,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'pubsub_topic'
 model = PubSubTopic
 label = 'a pub/sub topic'
+get_list_docs = 'pub/sub topics'
 broker_message = BROKER_MSG_PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list

@@ -24,6 +24,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'email_imap'
 model = IMAP
 label = 'an IMAP connection'
+get_list_docs = 'IMAP connections'
 broker_message = EMAIL
 broker_message_prefix = 'IMAP_'
 list_func = email_imap_list

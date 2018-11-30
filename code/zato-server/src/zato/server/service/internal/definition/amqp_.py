@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -24,6 +24,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'definition_amqp'
 model = ConnDefAMQP
 label = 'an AMQP definition'
+get_list_docs = 'AMQP definitions'
 broker_message = DEFINITION
 broker_message_prefix = 'AMQP_'
 list_func = definition_amqp_list

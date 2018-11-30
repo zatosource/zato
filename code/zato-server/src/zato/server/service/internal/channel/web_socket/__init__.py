@@ -32,6 +32,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'channel_web_socket'
 model = ChannelWebSocket
 label = 'a WebSocket channel'
+get_list_docs = 'WebSocket channels'
 broker_message = CHANNEL
 broker_message_prefix = 'WEB_SOCKET_'
 list_func = channel_web_socket_list
