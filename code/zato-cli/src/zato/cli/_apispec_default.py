@@ -65,6 +65,7 @@ a.reference:hover {
 
 h4, p.topless a, .nav-item, .nav-item a, li.right a {
   color:#fcdf1d !important;
+  text-shadow: 1px 1px 1px #222;
 }
 
 table.docutils td {
@@ -131,7 +132,8 @@ table.docutils tbody tr td:first-child {
 div.last_updated {
   font-size:smaller;
   color:#fcdf1d;
-  padding-top:10px
+  padding-top:10px;
+  text-shadow: 2px 2px 1px #222;
 }
 """.lstrip()
 
