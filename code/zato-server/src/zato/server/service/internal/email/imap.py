@@ -76,7 +76,8 @@ class ChangePassword(ChangePasswordBase):
 # ################################################################################################################################
 
 class Ping(AdminService):
-
+    """ Pings an IMAP connection to check its configuration.
+    """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_email_imap_ping_request'
         response_elem = 'zato_email_imap_ping_response'

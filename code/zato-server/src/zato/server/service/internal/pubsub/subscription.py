@@ -561,7 +561,8 @@ class DeleteAll(AdminService):
 # ################################################################################################################################
 
 class CreateWSXSubscription(AdminService):
-
+    """ Creates a new pub/sub subscription for current WebSocket connection.
+    """
     class SimpleIO:
         input_optional = 'topic_name', List('topic_name_list'), Bool('wrap_one_msg_in_list'), Int('delivery_batch_size')
         output_optional = 'sub_key', 'current_depth', 'sub_data'

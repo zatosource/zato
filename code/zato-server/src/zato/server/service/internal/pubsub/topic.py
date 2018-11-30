@@ -124,6 +124,8 @@ class Delete(AdminService):
 # ################################################################################################################################
 
 class Get(AdminService):
+    """ Returns a pub/sub topic by its ID.
+    """
     class SimpleIO:
         input_required = ('cluster_id', AsIs('id'))
         output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd',

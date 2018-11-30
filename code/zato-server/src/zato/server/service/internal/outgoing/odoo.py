@@ -86,7 +86,8 @@ class ChangePassword(ChangePasswordBase):
 # ################################################################################################################################
 
 class Ping(AdminService):
-
+    """ Pings an Odoo connection to check its configuration.
+    """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_odoo_ping_request'
         response_elem = 'zato_outgoing_odoo_ping_response'

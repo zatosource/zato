@@ -68,7 +68,8 @@ class ChangePassword(ChangePasswordBase):
             publish_instance_attrs=['host', 'sysnr', 'client', 'sysid', 'user', 'password', 'router', 'pool_size'])
 
 class Ping(AdminService):
-
+    """ Pings a SAP connection to check its configuration.
+    """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_sap_ping_request'
         response_elem = 'zato_outgoing_sap_ping_response'
