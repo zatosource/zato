@@ -26,6 +26,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'email_imap'
 model = OutgoingOdoo
 label = 'an Odoo connection'
+get_list_docs = 'Odoo connections'
 broker_message = OUTGOING
 broker_message_prefix = 'ODOO_'
 list_func = out_odoo_list

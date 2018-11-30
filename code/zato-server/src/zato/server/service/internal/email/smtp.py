@@ -25,6 +25,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'email_smtp'
 model = SMTP
 label = 'an SMTP connection'
+get_list_docs = 'SMTP connections'
 broker_message = EMAIL
 broker_message_prefix = 'SMTP_'
 list_func = email_smtp_list

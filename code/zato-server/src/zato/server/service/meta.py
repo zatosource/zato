@@ -53,7 +53,7 @@ def get_columns_to_visit(columns, is_required):
     out = []
 
     # Models with inheritance may have multiple attributes of the same name,
-    # e.g. VaultConnection.id will have SecBase.id and we need to make sure only one of the is returned.
+    # e.g. VaultConnection.id will have SecBase.id and we need to make sure only one of them is returned.
     names_seen = set()
 
     for elem in columns:
@@ -244,7 +244,8 @@ class GetListMeta(AdminServiceMeta):
     """
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
-        cls.__doc__ = attrs.get_list_docs
+        cls.__doc__ = 'Returns a list of {}.'.format(attrs.get_list_docs)
+        print(111, cls, cls.__doc__)
         cls.SimpleIO = GetListMeta.get_sio(attrs, name, is_list=True)
         cls.handle = GetListMeta.handle(attrs)
         cls.get_data = GetListMeta.get_data(attrs.get_data_func)
@@ -273,6 +274,8 @@ class CreateEditMeta(AdminServiceMeta):
 
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
+        verb = 'Creates' if cls.is_create else 'Updates'
+        cls.__doc__ = '{} {}.'.format(verb, attrs.label)
         cls.SimpleIO = CreateEditMeta.get_sio(attrs, name)
         cls.handle = CreateEditMeta.handle(attrs)
         return super(CreateEditMeta, cls).__init__(cls)
@@ -368,6 +371,7 @@ class CreateEditMeta(AdminServiceMeta):
 class DeleteMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
+        cls.__doc__ = 'Deletes {}.'.format(attrs.label)
         cls.SimpleIO = DeleteMeta.get_sio(attrs, name, ['id'], [])
         cls.handle = DeleteMeta.handle(attrs)
         return super(DeleteMeta, cls).__init__(cls)

@@ -35,6 +35,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'pubsub_endpoint'
 model = PubSubEndpoint
 label = 'a pub/sub endpoint'
+get_list_docs = 'pub/sub endpoints'
 broker_message = PUBSUB
 broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
