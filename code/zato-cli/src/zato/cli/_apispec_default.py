@@ -459,9 +459,11 @@ apispec_files['conf.py'] = """
 
 # -- Project information -----------------------------------------------------
 
-project = u'API'
-copyright = u'Zato Source s.r.o. (https://zato.io)'
+project = u'API documentation'
+copyright = u''
 author = u'Zato Source s.r.o. (https://zato.io)'
+
+rst_epilog = '.. |index_title| replace:: {}'.format(project)
 
 # The short X.Y version
 version = u''
@@ -512,6 +514,8 @@ pygments_style = 'sphinx'
 
 
 # -- Options for HTML output -------------------------------------------------
+
+html_title = project
 
 html_last_updated_fmt = '%b %d, %Y'
 
@@ -608,7 +612,7 @@ def setup(app):
 
 # Main file
 apispec_files['index.rst'] = """
-API documentation
+|index_title|
 =================
 
 .. toctree::
