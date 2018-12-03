@@ -1311,6 +1311,7 @@ class ChannelAMQP(Base):
     pool_size = Column(Integer, nullable=False)
     ack_mode = Column(String(20), nullable=False)
     prefetch_count = Column(Integer, nullable=False)
+    queue_priority = Column(Integer, nullable=False)
     data_format = Column(String(20), nullable=True)
 
     # JSON data is here
