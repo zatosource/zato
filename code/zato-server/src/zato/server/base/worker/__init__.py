@@ -285,9 +285,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_cloud()
         self.init_notifiers()
 
-        # WebSocket
-        self.init_web_socket()
-
         # AMQP
         self.init_amqp()
 
@@ -314,6 +311,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Pub/sub requires broker client
         self.init_pubsub()
+
+        # WebSocket connections may depend on pub/sub so we create them only after pub/sub is initialized
+        self.init_web_socket()
 
 # ################################################################################################################################
 

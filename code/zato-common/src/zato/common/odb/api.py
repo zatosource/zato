@@ -13,7 +13,7 @@ import logging
 from contextlib import closing
 from copy import deepcopy
 from cStringIO import StringIO
-from datetime import datetime, timedelta
+from datetime import datetime
 from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
@@ -689,7 +689,7 @@ class ODBManager(SessionWrapper):
             self._session.add(ds)
             try:
                 self._session.commit()
-            except(IntegrityError, ProgrammingError), e:
+            except(IntegrityError, ProgrammingError):
 
                 logger.log(TRACE1, 'IntegrityError (DeployedService), e:`%s`', format_exc().decode('utf-8'))
                 self._session.rollback()
