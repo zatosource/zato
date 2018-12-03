@@ -148,7 +148,7 @@ class CleanupWSX(AdminService):
         max_delta = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL * 2
 
         # .. but timedelta expects seconds.
-        max_delta = 1#max_delta * 60 # = * 1 hour
+        max_delta = max_delta * 60 # = * 1 hour
 
         now = datetime.utcnow()
         max_allowed = now - timedelta(seconds=max_delta)
