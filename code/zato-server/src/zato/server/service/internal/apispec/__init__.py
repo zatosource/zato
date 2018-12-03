@@ -283,7 +283,6 @@ class GetSphinx(Service):
 
         for idx, elem in enumerate(data.services, 1):
             name = elem.name
-            ns = elem.namespace_name
             docs = elem.docs
             sio = elem.simple_io
 

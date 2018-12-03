@@ -19,7 +19,8 @@ from logging import getLogger
 #from zato.common import CONFIG_FILE
 from zato.common import WEB_SOCKET
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, WebSocketClient, WebSocketClientPubSubKeys
-from zato.common.util.time_ import datetime_from_ms
+from zato.common.util import parse_extra_into_dict
+from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -178,9 +179,6 @@ class CleanupWSX(AdminService):
 
         # How far back are we to reach out to find old connections
         max_allowed = self._get_max_allowed()
-
-        # Maps all sub_keys found, if any, to their underlying topics
-        sub_key_to_topic = {}
 
         with closing(self.odb.session()) as session:
 
