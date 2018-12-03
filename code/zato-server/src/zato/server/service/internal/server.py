@@ -24,6 +24,7 @@ from zato.server.service.meta import GetListMeta
 elem = 'server'
 model = Server
 label = 'a Zato server'
+get_list_docs = 'Zato servers'
 list_func = server_list
 skip_output_params = ['token']
 

@@ -134,7 +134,7 @@ loggers:
         propagate: false
     zato_pubsub:
         level: INFO
-        handlers: [pubsub]
+        handlers: [stdout, pubsub]
         qualname: zato_pubsub
         propagate: false
     zato_pubsub_overflow:

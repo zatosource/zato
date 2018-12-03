@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -41,6 +41,8 @@ class _Base(AdminService):
 # ################################################################################################################################
 
 class GetList(_Base):
+    """ Returns a list of entries from the cache given on input.
+    """
     _filter_by = ('name',)
 
     class SimpleIO(GetListAdminSIO):
@@ -215,11 +217,15 @@ class _CreateEdit(_Base):
 # ################################################################################################################################
 
 class Create(_CreateEdit):
+    """ Creates a new entry in the cache given on input.
+    """ 
     old_key_elem = 'key'
 
 # ################################################################################################################################
 
 class Update(_CreateEdit):
+    """ Updates an existing entry in the cache given on input.
+    """ 
     old_key_elem = 'old_key'
 
     class SimpleIO(_CreateEdit.SimpleIO):
@@ -237,7 +243,8 @@ class Update(_CreateEdit):
 # ################################################################################################################################
 
 class Get(_Base):
-
+    """ Returns an individual entry from the cache given on input.
+    """ 
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'cache_id', 'key')
         output_required = (Bool('key_found'),)
@@ -263,7 +270,8 @@ class Get(_Base):
 # ################################################################################################################################
 
 class Delete(_Base):
-
+    """ Deletes an entry from the cache given on input.
+    """ 
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'cache_id', 'key')
         output_required = (Bool('key_found'),)

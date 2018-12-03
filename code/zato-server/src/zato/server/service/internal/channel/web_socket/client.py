@@ -92,14 +92,15 @@ class UnregisterWSSubKey(AdminService):
     """ Notifies all workers about sub keys that will not longer be accessible because current WSX client disconnects.
     """
     class SimpleIO(AdminSIO):
-        input_required = (List('sub_key_list'),)
+        input_required = List('sub_key_list')
+        input_optional = 'needs_wsx_close'
 
     def handle(self):
 
         # If configured to, delete the WebSocket's persistent subscription
         for sub_key in self.request.input.sub_key_list:
             sub = self.pubsub.get_subscription_by_sub_key(sub_key)
-            if sub.unsub_on_wsx_close:
+            if self.request.input.needs_wsx_close or sub.unsub_on_wsx_close:
                 self.invoke('zato.pubsub.pubapi.unsubscribe',{
                     'sub_key': sub.sub_key,
                     'topic_name': sub.topic_name,
