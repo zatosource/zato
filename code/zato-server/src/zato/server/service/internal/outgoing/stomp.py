@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,6 +23,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'stomp'
 model = OutgoingSTOMP
 label = 'a STOMP connection'
+get_list_docs = 'STOMP connections'
 broker_message = OUTGOING
 broker_message_prefix = 'STOMP_'
 list_func = out_stomp_list

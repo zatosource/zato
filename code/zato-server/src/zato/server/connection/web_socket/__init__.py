@@ -37,6 +37,7 @@ from zato.common.exception import Reportable
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
 from zato.common.util import new_cid
 from zato.common.util.hook import HookTool
+from zato.common.util.wsx import cleanup_wsx_client
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, InvokeClientRequest, ClientMessage, copy_forbidden, \
      error_response, ErrorResponse, Forbidden, OKResponse, InvokeClientPubSubRequest
@@ -540,14 +541,14 @@ class WebSocket(_WebSocket):
         logger.info('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
 
         try:
-            while self.stream:
+            while self.stream and (not self.server_terminated):
 
                 # Sleep for N seconds before sending a ping but check if we are connected upfront because
                 # we could have disconnected in between while and sleep calls.
                 sleep(ping_extend)
 
                 # Ok, still connected
-                if self.stream:
+                if self.stream and (not self.server_terminated):
                     try:
                         response = self.invoke_client(new_cid(), None, use_send=False)
                     except RuntimeError:
@@ -572,7 +573,7 @@ class WebSocket(_WebSocket):
                                 self.on_forbidden('missed {}/{} ping messages'.format(
                                     self.pings_missed, self.pings_missed_threshold))
 
-                # No stream = already disconnected, we can quit
+                # No stream or server already = we can quit
                 else:
                     return
 
@@ -631,27 +632,14 @@ class WebSocket(_WebSocket):
     def unregister_auth_client(self):
         """ Unregisters an already registered peer in ODB.
         """
-        if self.has_session_opened:
-
-            # Deletes state from SQL
-            self.invoke_service('zato.channel.web-socket.client.delete-by-pub-id', {
-                'pub_client_id': self.pub_client_id,
-            })
-
-            if self.pubsub_tool.sub_keys:
-
-                # Deletes across all workers the in-RAM pub/sub state about the client that is disconnecting
-                self.invoke_service('zato.channel.web-socket.client.unregister-ws-sub-key', {
-                    'sub_key_list': list(self.pubsub_tool.sub_keys),
-                })
-
-                # Clears out our own delivery tasks
-                self.pubsub_tool.remove_all_sub_keys()
-
-        # Run the relevant on_connected hook, if any is available (even if the session was never opened)
         hook = self.get_on_disconnected_hook()
-        if hook:
-            hook(WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED, self.config.hook_service, **self._get_hook_request())
+        hook_request = self._get_hook_request() if hook else None
+
+        # To clear out our own delivery tasks
+        opaque_func_list = [self.pubsub_tool.remove_all_sub_keys]
+
+        cleanup_wsx_client(self.has_session_opened, self.invoke_service, self.pub_client_id, list(self.pubsub_tool.sub_keys),
+            self.get_on_disconnected_hook(), self.config.hook_service, hook_request, opaque_func_list)
 
 # ################################################################################################################################
 

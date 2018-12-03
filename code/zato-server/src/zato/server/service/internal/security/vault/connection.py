@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -25,6 +25,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'security_vault_connection'
 model = VaultConnection
 label = 'a Vault connection'
+get_list_docs = 'Vault connections'
 broker_message = VAULT
 broker_message_prefix = 'CONNECTION_'
 list_func = vault_connection_list

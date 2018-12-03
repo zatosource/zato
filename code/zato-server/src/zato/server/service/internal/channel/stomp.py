@@ -22,6 +22,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta, Pi
 elem = 'stomp_channel'
 model = ChannelSTOMP
 label = 'a STOMP channel'
+get_list_docs = 'STOMP channels'
 broker_message = CHANNEL
 broker_message_prefix = 'STOMP_'
 output_optional_extra = ['service_name']
