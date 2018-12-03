@@ -151,6 +151,8 @@ class GetListAdminSIO(object):
 # ################################################################################################################################
 
 class Ping(AdminService):
+    """ A ping service, useful for API testing.
+    """
     class SimpleIO(AdminSIO):
         output_required = ('pong',)
         response_elem = 'zato_ping_response'
@@ -170,6 +172,8 @@ class Ping(AdminService):
 # ################################################################################################################################
 
 class Ping2(Ping):
+    """ Works exactly the same as zato.ping, added to have another service for API testing.
+    """
     class SimpleIO(Ping.SimpleIO):
         response_elem = 'zato_ping2_response'
 
