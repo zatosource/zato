@@ -36,8 +36,6 @@
             '_creation_time',
             '_sub_key',
 
-            '_extcli',
-
             '_clear',
             '_edit',
             '_delete',
@@ -140,7 +138,6 @@
 
                         <th><a href="#">Creation / State update</a></th>
                         <th style="min-width:260px"><a href="#">Sub key</a></th>
-                        <th><a href="#">EXTCLI</a></th>
 
                         <th style="width:5%">&nbsp;</th>
                         <th style="width:5%">&nbsp;</th>
@@ -242,7 +239,6 @@
                         <td>
                             {{ item.sub_key }}
                         </td>
-                        <td>{{ item.ext_client_id|default:"<span class='form_hint'>---</span>" }}</td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.clear('{{ item.sub_id }}', '{{ cluster_id }}')">Clear</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.edit('{{ item.sub_id }}')">Edit</a></td>

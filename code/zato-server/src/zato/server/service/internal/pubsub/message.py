@@ -383,6 +383,8 @@ class UpdateNonGD(_Update):
 # ################################################################################################################################
 
 class GetFromQueueGD(AdminService):
+    """ Returns a GD pub/sub topic message by its ID.
+    """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'))
         output_optional = (AsIs('msg_id'), 'recv_time', 'data', Int('delivery_count'), 'last_delivery_time',

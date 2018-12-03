@@ -689,7 +689,7 @@ class InRAMSyncBacklog(object):
                 suffix = 's' if (len_expired==0 or len_expired > 1) else ''
                 len_messages = len(self.msg_id_to_msg)
                 if len_expired or len_messages:
-                    logger.info('In-RAM. Deleted %s pub/sub message%s. Left:%s' % (len_expired, suffix, len_messages))
+                    logger.info('In-RAM. Deleted %s pub/sub message%s. Left:%s' % (len_expired, suffix, self.msg_id_to_msg))
 
                 # Sleep for a moment before checking again but don't do it with self.lock held.
                 _sleep(2)
@@ -1007,6 +1007,15 @@ class PubSub(object):
     def get_topic_by_sub_key(self, sub_key):
         with self.lock:
             return self._get_topic_by_sub_key(sub_key)
+
+# ################################################################################################################################
+
+    def get_topic_list_by_sub_key_list(self, sk_list):
+        out = {}
+        with self.lock:
+            for sub_key in sk_list:
+                out[sub_key] = self._get_topic_by_sub_key(sub_key)
+        return out
 
 # ################################################################################################################################
 
