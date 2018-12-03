@@ -55,6 +55,7 @@ span.doc{
 
 a.reference {
   text-decoration:underline;
+  text-decoration-color:#000;
   padding:3px;
 }
 
