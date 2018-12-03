@@ -10,19 +10,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from datetime import datetime, timedelta
 from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common import DATA_FORMAT, WEB_SOCKET
+from zato.common import DATA_FORMAT
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, PubSubTopic, Service as ServiceModel, WebSocketClient
 from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \
      web_socket_client_by_pub_id, web_socket_client_list, web_socket_sub_key_data_list
-from zato.common.util import is_port_taken, parse_extra_into_dict
+from zato.common.util import is_port_taken
 from zato.common.util.sql import elems_with_opaque
-from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
+from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, DateTime, Int, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
@@ -32,6 +31,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'channel_web_socket'
 model = ChannelWebSocket
 label = 'a WebSocket channel'
+get_list_docs = 'WebSocket channels'
 broker_message = CHANNEL
 broker_message_prefix = 'WEB_SOCKET_'
 list_func = channel_web_socket_list
@@ -273,89 +273,5 @@ class GetSubKeyDataList(AdminService):
             for item in data:
                 item.creation_time = datetime_from_ms(item.creation_time * 1000)
             self.response.payload[:] = data
-
-# ################################################################################################################################
-
-class CleanupWSXPubSub(AdminService):
-    """ Deletes all old WSX clients and their subscriptions.
-    """
-    name = 'pub.zato.channel.web-socket.cleanup-wsx-pub-sub'
-
-    def handle(self, _msg='Cleaning up WSX pub/sub, channel:`%s`, now:`%s (%s)`, md:`%s`, ma:`%s` (%s)'):
-
-        # We receive a multi-line list of WSX channel name -> max timeout accepted on input
-        config = parse_extra_into_dict(self.request.raw_request)
-
-        with closing(self.odb.session()) as session:
-
-            # Delete stale connections for each subscriber
-            for channel_name, max_delta in config.items():
-
-                # Input timeout is in minutes but timestamps in ODB are in seconds
-                # so we convert the minutes to seconds, as expected by the database.
-                max_delta = max_delta * 60
-
-                # We compare everything using seconds
-                now = utcnow_as_ms()
-
-                # Laster interaction time for each connection must not be older than that many seconds ago
-                max_allowed = now - max_delta
-
-                now_as_iso = datetime_from_ms(now * 1000)
-                max_allowed_as_iso = datetime_from_ms(max_allowed * 1000)
-
-                self.logger.info(_msg, channel_name, now_as_iso, now, max_delta, max_allowed_as_iso, max_allowed)
-                logger_pubsub.info(_msg, channel_name, now_as_iso, now, max_delta, max_allowed_as_iso, max_allowed)
-
-                # Delete old connections for that channel
-                session.execute(
-                    SubscriptionDelete().\
-                    where(SubscriptionTable.c.ws_channel_id==WSXChannelTable.c.id).\
-                    where(WSXChannelTable.c.name==channel_name).\
-                    where(SubscriptionTable.c.last_interaction_time < max_allowed)
-                )
-
-            # Commit all deletions
-            session.commit()
-
-# ################################################################################################################################
-
-class CleanupWSX(AdminService):
-    """ Deletes WSX clients that exceeded their ping timeouts. Executed when a server starts. Also invoked through the scheduler.
-    """
-    name = 'pub.zato.channel.web-socket.cleanup-wsx'
-
-    def handle(self, _msg='Cleaning up old WSX connections now:`%s`, md:`%s`, ma:`%s`'):
-        with closing(self.odb.session()) as session:
-
-            # Stale connections are ones that are is older than 2 * interval in which each WebSocket's last_seen time is updated.
-            # This is generous enough, because WSX send background pings once in 30 seconds. After 5 pings missed their
-            # connections are closed. Then, the default interval is 60 minutes, so 2 * 60 = 2 hours. This means
-            # that when a connection is broken but we somehow do not delete its relevant entry in SQL (e.g. because our
-            # process was abruptly shut down), after these 2 hours the row will be considered ready to be deleted from
-            # the database. Note that this service is invoked from the scheduler, by default, once in 30 minutes.
-
-            # This is in minutes ..
-            max_delta = WEB_SOCKET.DEFAULT.INTERACT_UPDATE_INTERVAL * 2
-
-            # .. but timedelta expects seconds.
-            max_delta = max_delta * 60 # = * 1 hour
-
-            now = datetime.utcnow()
-            max_allowed = now - timedelta(seconds=max_delta)
-
-            now_as_iso = now.isoformat()
-
-            self.logger.info(_msg, now_as_iso, max_delta, max_allowed)
-            logger_pubsub.info(_msg, now_as_iso, max_delta, max_allowed)
-
-            # Delete old WSX connections now ..
-            session.execute(
-                WSXClientDelete().\
-                where(WSXClientTable.c.last_seen < max_allowed)
-            )
-
-            # .. and commit changes.
-            session.commit()
 
 # ################################################################################################################################

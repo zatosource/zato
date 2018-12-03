@@ -25,7 +25,7 @@ from zato.server.service.meta import DeleteMeta
 
 elem = 'generic_connection'
 model = ModelGenericConn
-label = 'a connection'
+label = 'a generic connection'
 broker_message = GENERIC
 broker_message_prefix = 'CONNECTION_'
 list_func = None
@@ -87,22 +87,28 @@ class _CreateEdit(_BaseService):
 # ################################################################################################################################
 
 class Create(_CreateEdit):
+    """ Creates a new generic connection.
+    """
     is_edit = False
 
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
+    """ Updates an existing generic connection.
+    """
     is_edit = True
 
 # ################################################################################################################################
 
 class Delete(AdminService):
+    """ Deletes a generic connection.
+    """
     __metaclass__ = DeleteMeta
 
 # ################################################################################################################################
 
 class GetList(AdminService):
-    """ Returns a list of generic connections by their type. Includes pagination.
+    """ Returns a list of generic connections by their type; includes pagination.
     """
     _filter_by = GenericConnection.name,
 

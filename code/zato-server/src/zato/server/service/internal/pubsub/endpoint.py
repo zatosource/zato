@@ -35,6 +35,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'pubsub_endpoint'
 model = PubSubEndpoint
 label = 'a pub/sub endpoint'
+get_list_docs = 'pub/sub endpoints'
 broker_message = PUBSUB
 broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
@@ -108,6 +109,8 @@ class GetList(AdminService):
 # ################################################################################################################################
 
 class Create(AdminService):
+    """ Creates a new pub/sub endpoint.
+    """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'name', 'role', 'is_active', 'is_internal', 'endpoint_type')
         input_optional = ('topic_patterns', 'security_id', 'service_id', 'ws_channel_id')
@@ -163,6 +166,8 @@ class Delete(AdminService):
 # ################################################################################################################################
 
 class Get(AdminService):
+    """ Returns details of a pub/sub endpoint.
+    """
     class SimpleIO:
         input_required = ('cluster_id', AsIs('id'))
         output_required = ('id', 'name', 'is_active', 'is_internal', 'role', 'endpoint_type')
@@ -251,6 +256,8 @@ class _GetEndpointQueue(AdminService):
 # ################################################################################################################################
 
 class GetEndpointQueue(_GetEndpointQueue):
+    """ Returns information describing an individual endpoint queue.
+    """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'id')
         output_optional = common_sub_data

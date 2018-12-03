@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,6 +19,7 @@ elem = 'query_cassandra'
 model = CassandraQuery
 output_optional_extra = ['def_name']
 label = 'a Cassandra query'
+get_list_docs = 'Cassandra queries'
 broker_message = QUERY
 broker_message_prefix = 'CASSANDRA_'
 list_func = cassandra_query_list

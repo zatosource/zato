@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,6 +23,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'sms_twilio'
 model = SMSTwilio
 label = 'a Twilio connection'
+get_list_docs = 'Twilio connections'
 broker_message = SMS
 broker_message_prefix = 'TWILIO_'
 list_func = sms_twilio_list

@@ -24,6 +24,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'cache_builtin'
 model = CacheBuiltin
 label = 'a built-in cache definition'
+get_list_docs = 'built-in cache definitions'
 broker_message = CACHE
 broker_message_prefix = 'BUILTIN_'
 list_func = cache_builtin_list
@@ -53,7 +54,8 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 # ################################################################################################################################
 
 class Get(AdminService):
-
+    """ Returns configuration of a cache definition.
+    """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'cache_id')
         output_required = ('name', 'is_active', 'is_default', 'cache_type', Int('max_size'), Int('max_item_size'),
@@ -90,7 +92,8 @@ class Delete(AdminService):
 # ################################################################################################################################
 
 class Clear(AdminService):
-
+    """ Clears out a cache by its ID - deletes all keys and values.
+    """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'cache_id')
 

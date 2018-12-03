@@ -55,7 +55,7 @@ class SubSIO(BaseSIO):
 
 # ################################################################################################################################
 
-class PubSubService(Service):
+class _PubSubService(Service):
 
     def _pubsub_check_credentials(self, _invoke_channels=(CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC)):
 
@@ -100,7 +100,7 @@ class PubSubService(Service):
 
 # ################################################################################################################################
 
-class TopicService(PubSubService):
+class TopicService(_PubSubService):
     """ Main service responsible for publications to and deliveries from a given topic. Handles security and distribution
     of messages to target queues or recipients.
     """
@@ -166,7 +166,7 @@ class TopicService(PubSubService):
 
 # ################################################################################################################################
 
-class SubscribeService(PubSubService):
+class SubscribeService(_PubSubService):
     """ Service through which REST clients subscribe to or unsubscribe from topics.
     """
     SimpleIO = SubSIO
@@ -258,6 +258,8 @@ class SubscribeService(PubSubService):
 # ################################################################################################################################
 
 class PublishMessage(Service):
+    """ Lets one publish messages to a topic.
+    """
     SimpleIO = TopicSIO
 
     def handle(self):
@@ -267,6 +269,8 @@ class PublishMessage(Service):
 # ################################################################################################################################
 
 class GetMessages(Service):
+    """ Used to return outstanding messages from a topic.
+    """
     SimpleIO = TopicSIO
 
     def handle(self):
@@ -276,6 +280,8 @@ class GetMessages(Service):
 # ################################################################################################################################
 
 class Subscribe(Service):
+    """ Lets callers subscribe to topics.
+    """
     SimpleIO = SubSIO
 
     def handle(self):
@@ -286,11 +292,15 @@ class Subscribe(Service):
 
 # Added for completness so as to make WSX clients use services from this module only
 class SubscribeWSX(CreateWSXSubscription):
+    """ An alias to CreateWSXSubscription, added for API completeness.
+    """
     name = 'zato.pubsub.pubapi.subscribe-wsx'
 
 # ################################################################################################################################
 
 class Unsubscribe(Service):
+    """ Lets one unsubscribe from a topic.
+    """
     SimpleIO = SubSIO
 
     def handle(self):

@@ -533,6 +533,9 @@ class GDMessage(Message):
 
     def __init__(self, sub_key, topic_name, msg, _sk_opaque=PUBSUB.DEFAULT.SK_OPAQUE, _gen_attr=GENERIC.ATTR_NAME,
         _loads=loads):
+
+        logger.info('Building task message (gd) from `%s`', msg)
+
         super(GDMessage, self).__init__()
         self.endp_msg_queue_id = msg.endp_msg_queue_id
         self.sub_key = sub_key
@@ -564,6 +567,8 @@ class GDMessage(Message):
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
 
+        logger.info('Built task message (gd) `%s`', self.to_dict(add_id_attrs=True))
+
 # ################################################################################################################################
 
 class NonGDMessage(Message):
@@ -573,6 +578,9 @@ class NonGDMessage(Message):
 
     def __init__(self, sub_key, server_name, server_pid, msg, _def_priority=PUBSUB.PRIORITY.DEFAULT,
             _def_mime_type=PUBSUB.DEFAULT.MIME_TYPE):
+
+        logger.info('Building task message (ngd) from `%s`', msg)
+
         super(NonGDMessage, self).__init__()
         self.sub_key = sub_key
         self.server_name = server_name
@@ -605,6 +613,8 @@ class NonGDMessage(Message):
 
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
+
+        logger.info('Built task message (ngd) `%s`', self.to_dict(add_id_attrs=True))
 
 # ################################################################################################################################
 
