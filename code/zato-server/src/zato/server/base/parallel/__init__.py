@@ -245,6 +245,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             # This was added between 3.0 and 3.1, which is why it is optional
             deploy_internal = self.fs_server_config.get('deploy_internal', default_internal_modules)
 
+            # Above, we potentially got the list of internal modules to be deployed as they were defined in server.conf.
+            # However, if someone creates an environment and then we add a new module, this module will not neccessarily
+            # exist in server.conf. This is why we need to add any such missing ones explicitly below.
+            for internal_module, is_enabled in default_internal_modules.items():
+                if internal_module not in deploy_internal:
+                    deploy_internal[internal_module] = is_enabled
+
+            # All internal modules were found, now we can build a list of what is to be enabled.
             for module_name, is_enabled in deploy_internal.items():
                 if is_enabled:
                     internal_service_modules.append(module_name)
