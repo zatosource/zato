@@ -107,7 +107,7 @@ class APIClient(object):
         func = getattr(self.session, verb)
         url_path = self.path.format(service_name)
         full_address = '{}{}'.format(self.address, url_path)
-        response = func(full_address, verify=self.tls_verify)
+        response = func(full_address, verify=self.tls_verify, data=dumps(request))
 
         return _Response(response)
 
