@@ -11,11 +11,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging, os
 from datetime import datetime
+from httplib import OK
 from inspect import getargspec
+from json import dumps, loads
 from traceback import format_exc
 
 # anyjson
-from anyjson import dumps as anyjson_dumps, loads
+from anyjson import dumps as anyjson_dumps
 
 # Bunch
 from bunch import bunchify
@@ -42,6 +44,9 @@ DEFAULT_MAX_CID_REPR = 5
 
 mod_logger = logging.getLogger(__name__)
 
+# For pyflakes
+dumps = dumps
+
 # Work around https://bitbucket.org/runeh/anyjson/pull-request/4/
 if getargspec(anyjson_dumps).keywords:
     dumps = anyjson_dumps
@@ -53,15 +58,78 @@ else:
 # Version
 # ################################################################################################################################
 
-try:
-    curdir = os.path.dirname(os.path.abspath(__file__))
-    _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
-    _locals = {}
-    execfile(_version_py, _locals)
-    version = _locals['version']
-except IOError:
-    version = '2.0.3.4'
+version = '3.0.1'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _APIResponse(object):
+    """ A class to represent data returned by API services.
+    """
+    def __init__(self, inner, _OK=OK):
+        self.inner = inner
+        self.is_ok = self.inner.status_code == _OK
+        self.cid = self.inner.headers.get('x-zato-cid', '(None)')
+
+        if self.is_ok:
+            self.data = loads(self.inner.text)
+            self.details = None
+        else:
+            self.data = ''
+            self.details = self.inner.text
+
+# ################################################################################################################################
+
+class APIClient(object):
+    def __init__(self, address, username, password, path='/zato/api/invoke/{}', tls_verify=None, tls_cert=None,
+        pool_connections=300, pool_maxsize=500):
+        self.address = address
+        self.username = username
+        self.password = password
+        self.path = path
+
+        self.tls_verify = tls_verify
+        self.tls_cert = tls_cert
+
+        self.session = requests.Session(pool_connections=pool_connections, pool_maxsize=pool_maxsize)
+        self.session.auth = (self.username, self.password)
+        self.session.verify = self.tls_verify
+        self.session.cert = self.tls_cert
+
+    def _invoke(self, verb, service_name, request=None):
+        func = getattr(self.session, verb)
+        url_path = self.path.format(service_name)
+        full_address = '{}{}'.format(self.address, url_path)
+        response = func(full_address, verify=self.tls_verify, data=dumps(request))
+
+        return _APIResponse(response)
+
+    def invoke(self, *args, **kwargs):
+        return self._invoke('post', *args, **kwargs)
+
+    def get(self, *args, **kwargs):
+        return self._invoke('get', *args, **kwargs)
+
+    def post(self, *args, **kwargs):
+        return self._invoke('post', *args, **kwargs)
+
+    def patch(self, *args, **kwargs):
+        return self._invoke('patch', *args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        return self._invoke('put', *args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        return self._invoke('delete', *args, **kwargs)
+
+    def by_verb(self, verb, *args, **kwargs):
+        return self._invoke(verb, *args, **kwargs)
+
+# ################################################################################################################################
+
+# Clients below are preserved only for compatibility with pre-3.0 environments and will be removed at one point
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _Response(object):
@@ -471,4 +539,5 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
 
     return client
 
+# ################################################################################################################################
 # ################################################################################################################################

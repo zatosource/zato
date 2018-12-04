@@ -41,6 +41,11 @@ class APISpec(ZatoCommand):
             'default':','.join(internal_patterns)},
         {'name':'--dir', 'help':'Directory to save the output to', 'default':''},
         {'name':'--delete-dir', 'help':'If given, --dir will be deleted before the output is saved', 'action':'store_true'},
+        {'name':'--with-api-invoke', 'help':'If given, OpenAPI spec for --api-invoke-path endpoints will be generated',
+         'action':'store_true'},
+        {'name':'--with-rest-channels', 'help':'If given, OpenAPI spec for individual REST endpoints will be generated',
+         'action':'store_true'},
+        {'name':'--api-invoke-path', 'help':'A comma-separated list of URL paths to invoke API services through'},
     ]
 
 # ################################################################################################################################
@@ -58,10 +63,16 @@ class APISpec(ZatoCommand):
                 except ValueError:
                     pass
 
+        if args.with_api_invoke:
+            api_invoke_path = args.api_invoke_path if args.api_invoke_path else '/zato/api/invoke/{service_name}'
+
         request = {
             'return_internal': args.with_internal,
             'include': args.include,
             'exclude': ','.join(exclude),
+            'needs_api_invoke': args.with_api_invoke,
+            'needs_rest_channels': args.with_rest_channels,
+            'api_invoke_path': api_invoke_path
         }
 
         if not args.dir:
