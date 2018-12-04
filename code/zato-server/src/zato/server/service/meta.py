@@ -273,7 +273,7 @@ class CreateEditMeta(AdminServiceMeta):
 
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
-        verb = 'Creates' if cls.is_create else 'Updates'
+        verb = 'Creates' if attrs.is_create else 'Updates'
         cls.__doc__ = '{} {}.'.format(verb, attrs.label)
         cls.SimpleIO = CreateEditMeta.get_sio(attrs, name)
         cls.handle = CreateEditMeta.handle(attrs)

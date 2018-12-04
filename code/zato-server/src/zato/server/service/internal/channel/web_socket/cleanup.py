@@ -21,7 +21,7 @@ from zato.common import WEB_SOCKET
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, WebSocketClient, WebSocketClientPubSubKeys
 from zato.common.util import parse_extra_into_dict
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -122,10 +122,6 @@ class CleanupWSX(AdminService):
     """ Deletes WSX clients that exceeded their ping timeouts. Executed when a server starts. Also invoked through the scheduler.
     """
     name = 'pub.zato.channel.web-socket.cleanup-wsx'
-
-    class SimpleIO(AdminSIO):
-        """ This empty definition is needed in case the service should be invoked through REST.
-        """
 
 # ################################################################################################################################
 

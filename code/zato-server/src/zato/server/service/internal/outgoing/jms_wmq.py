@@ -218,7 +218,7 @@ class Delete(AdminService):
 # ################################################################################################################################
 
 class SendMessage(AdminService):
-    """ Sends a message to an IBM MQ MQ queue.
+    """ Sends a message to an IBM MQ queue.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_send_message_request'

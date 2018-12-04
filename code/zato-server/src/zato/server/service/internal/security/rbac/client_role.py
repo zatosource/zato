@@ -66,8 +66,7 @@ class Delete(AdminService):
     __metaclass__ = DeleteMeta
 
 class GetClientDefList(AdminService):
-    """ Returns a list of client definitions - both these that use Zato's built-in security mechanisms
-    as well as custom ones, as defined by users.
+    """ Returns a list of client definitions - Zato's built-in security mechanisms as well as custom ones, as defined by users.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_rbac_client_role_get_client_def_list_request'
