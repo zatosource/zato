@@ -500,8 +500,7 @@ class ReloadWSDL(AdminService, _HTTPSOAPService):
 # ################################################################################################################################
 
 class GetURLSecurity(AdminService):
-    """ Returns a JSON document describing the security configuration of all
-    Zato channels.
+    """ Returns a JSON document describing the security configuration of all Zato channels.
     """
     def handle(self):
         response = {}

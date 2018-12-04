@@ -182,7 +182,7 @@ class Edit(AdminService):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes a service
+    """ Deletes a service.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_delete_request'
@@ -221,8 +221,7 @@ class Delete(AdminService):
 # ################################################################################################################################
 
 class GetChannelList(AdminService):
-    """ Returns a list of channels of a given type through which the service
-    is being exposed.
+    """ Returns a list of channels of a given type through which the service is exposed.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_channel_list_request'
@@ -256,7 +255,7 @@ class GetChannelList(AdminService):
 # ################################################################################################################################
 
 class Invoke(AdminService):
-    """ Invokes the service directly, as though it was exposed through some channel defined in web-admin.
+    """ Invokes the service directly, as though it was exposed through a channel defined in web-admin.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_invoke_request'
@@ -317,8 +316,7 @@ class Invoke(AdminService):
 # ################################################################################################################################
 
 class GetDeploymentInfoList(AdminService):
-    """ Returns detailed information regarding the service's deployment status
-    on each of the servers it's been deployed to.
+    """ Returns detailed information regarding the service's deployment status on each of the servers it's been deployed to.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_deployment_info_list_request'
@@ -379,8 +377,7 @@ class GetSourceInfo(AdminService):
 # ################################################################################################################################
 
 class GetWSDL(AdminService):
-    """ Returns a WSDL for the given service. Either uses a user-uploaded one,
-    or, optionally generates one on fly if the service uses SimpleIO.
+    """ Returns a WSDL for the given service. Either uses a user-uploaded one, or, optionally generates one on fly if the service uses SimpleIO.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_wsdl_request'
@@ -485,8 +482,7 @@ class HasWSDL(AdminService):
 # ################################################################################################################################
 
 class GetRequestResponse(AdminService):
-    """ Returns a sample request/response along with information on how often
-    the pairs should be stored in the DB.
+    """ Returns a sample request/response along with information on how often the pairs should be stored in the DB.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_request_response_request'
@@ -534,7 +530,7 @@ class ConfigureRequestResponse(AdminService):
 # ################################################################################################################################
 
 class UploadPackage(AdminService):
-    """ Returns a boolean flag indicating whether the server has a WSDL attached.
+    """ Uploads a package with service(s) to be hot-deployed.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_upload_package_request'

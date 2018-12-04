@@ -23,7 +23,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 elem = 'email_imap'
 model = OutgoingSAP
-label = 'an SAP RFC connection'
+label = 'a SAP RFC connection'
 get_list_docs = 'SAP RFC connections'
 broker_message = OUTGOING
 broker_message_prefix = 'SAP_'
