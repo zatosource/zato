@@ -186,8 +186,7 @@ class GetValueList(_DictionaryEntryService):
         self.response.payload[:] = ({'name':elem} for elem in sorted(set(self.get_data(False, self.request.input.system, self.request.input.key))))
 
 class GetLastID(AdminService):
-    """ Returns the value of the last dictionary's ID or nothing at all if the key
-    for holding its value doesn't exist.
+    """ Returns the value of the last dictionary's ID or nothing at all if the key for holding its value doesn't exist.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_data_dict_dictionary_get_last_id_request'

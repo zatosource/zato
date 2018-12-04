@@ -123,10 +123,6 @@ class CleanupWSX(AdminService):
     """
     name = 'pub.zato.channel.web-socket.cleanup-wsx'
 
-    class SimpleIO(AdminSIO):
-        """ This empty definition is needed in case the service should be invoked through REST.
-        """
-
 # ################################################################################################################################
 
     def _issue_log_msg(self, msg, *args):
