@@ -26,9 +26,12 @@ from zato.common.util import fs_safe_name
 class OpenAPIGenerator(object):
     """ Generates OpenAPI specifications.
     """
-    def __init__(self, data, channel_data):
+    def __init__(self, data, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path):
         self.data = data
         self.channel_data = channel_data
+        self.needs_api_invoke = needs_api_invoke
+        self.needs_rest_channels = needs_rest_channels
+        self.api_invoke_path = api_invoke_path or []
 
 # ################################################################################################################################
 
@@ -122,9 +125,22 @@ class OpenAPIGenerator(object):
         schemas = self._get_response_schemas(self.data)
 
         for item in self.data.services:
-            rest_channel = self.get_rest_channel(item.name)
-            if rest_channel:
 
+            # Container for all the URL paths found for this item (service)
+            url_paths = []
+
+            # Generic API invoker, e.g. /zato/api/invoke/{service_name}
+            if self.needs_api_invoke and self.api_invoke_path:
+                for path in self.api_invoke_path:
+                    url_paths.append(path.format(service_name=item.name).encode('utf8'))
+
+            # Per-service specific REST channel
+            if self.needs_rest_channels:
+                rest_channel = self.get_rest_channel(item.name)
+                if rest_channel:
+                    url_paths.append(rest_channel.url_path)
+
+            for url_path in url_paths:
                 channel_params = []
                 response_name = self._get_response_name(item.name)
                 path_operation = self.get_path_operation(item.name)
@@ -136,7 +152,7 @@ class OpenAPIGenerator(object):
 
                     for sio_elem in chain(input_required, input_optional):
 
-                        is_in_path = self.has_path_elem(rest_channel.url_path, sio_elem.name)
+                        is_in_path = self.has_path_elem(url_path, sio_elem.name)
                         is_required = True if is_in_path else sio_elem.is_required
 
                         channel_params.append({
@@ -150,10 +166,10 @@ class OpenAPIGenerator(object):
                             }
                         })
 
-                out.paths[rest_channel.url_path] = {}
-                out.paths[rest_channel.url_path][path_operation] = {}
-                out.paths[rest_channel.url_path][path_operation][b'parameters'] = channel_params
-                out.paths[rest_channel.url_path][path_operation][b'responses'] = {
+                out.paths[url_path] = {}
+                out.paths[url_path][path_operation] = {}
+                out.paths[url_path][path_operation][b'parameters'] = channel_params
+                out.paths[url_path][path_operation][b'responses'] = {
                     b'200': {
                         b'description': b'',
                         b'content': {
