@@ -19,7 +19,7 @@ try:
 except IOError:
     version = '3.0.0'
 
-long_description = description = 'Convenience Python client for Zato ESB and backend application server (https://zato.io)'
+long_description = description = 'Python API client for Zato - ESB, SOA, REST, APIs and Cloud Integrations in Python (https://zato.io)'
 
 def parse_requirements(requirements):
     ignored = ['#', 'setuptools', '-e']
