@@ -58,19 +58,12 @@ else:
 # Version
 # ################################################################################################################################
 
-try:
-    curdir = os.path.dirname(os.path.abspath(__file__))
-    _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
-    _locals = {}
-    execfile(_version_py, _locals)
-    version = _locals['version']
-except IOError:
-    version = '3.0.0'
+version = '3.0.1'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _Response(object):
+class _APIResponse(object):
     """ A class to represent data returned by API services.
     """
     def __init__(self, inner, _OK=OK):
@@ -109,7 +102,7 @@ class APIClient(object):
         full_address = '{}{}'.format(self.address, url_path)
         response = func(full_address, verify=self.tls_verify, data=dumps(request))
 
-        return _Response(response)
+        return _APIResponse(response)
 
     def invoke(self, *args, **kwargs):
         return self._invoke('post', *args, **kwargs)
@@ -137,6 +130,43 @@ class APIClient(object):
 # Clients below are preserved only for compatibility with pre-3.0 environments and will be removed at one point
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class _Response(object):
+    """ A base class for all specific response types client may return.
+    """
+    def __init__(self, inner, to_bunch, max_response_repr, max_cid_repr, logger, output_repeated=False):
+        self.inner = inner # Acutal response from the requests module
+        self.to_bunch = to_bunch
+        self.max_response_repr = max_response_repr
+        self.max_cid_repr = max_cid_repr
+        self.logger = logger
+        self.sio_result = None
+        self.ok = False
+        self.has_data = False
+        self.output_repeated = output_repeated
+        self.data = [] if self.output_repeated else None
+        self.meta = {}
+        self.cid = self.inner.headers.get('x-zato-cid', '(None)')
+        self.details = None
+        self.init()
+
+    def __repr__(self):
+        if self.max_cid_repr >= CID_NO_CLIP:
+            cid = '[{}]'.format(self.cid)
+        else:
+            cid = '[{}..{}]'.format(self.cid[:self.max_cid_repr], self.cid[-self.max_cid_repr:])
+
+        return '<{} at {} ok:[{}] inner.status_code:[{}] cid:{}, inner.text:[{}]>'.format(
+            self.__class__.__name__, hex(id(self)), self.ok, self.inner.status_code,
+            cid, self.inner.text[:self.max_response_repr])
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def init(self):
+        raise NotImplementedError('Must be defined by subclasses')
+
 # ################################################################################################################################
 
 class _StructuredResponse(_Response):
