@@ -18,7 +18,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta, Pi
 
 elem = 'search_solr'
 model = Solr
-label = 'an Solr connection'
+label = 'a Solr connection'
 get_list_docs = 'Solr connections'
 broker_message = SEARCH
 broker_message_prefix = 'SOLR_'

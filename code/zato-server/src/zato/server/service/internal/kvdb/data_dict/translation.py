@@ -176,8 +176,7 @@ class Translate(AdminService):
             self.response.payload.sha256 = sha256(result).hexdigest()
 
 class GetLastID(AdminService):
-    """ Returns the value of the last dictionary's ID or nothing at all if the key
-    for holding its value doesn't exist.
+    """ Returns the value of the last dictionary's ID or nothing at all if the key for holding its value doesn't exist.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_data_dict_translation_get_last_id_request'
