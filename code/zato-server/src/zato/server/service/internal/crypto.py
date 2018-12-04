@@ -62,7 +62,7 @@ class GenerateSecret(Service):
 # ################################################################################################################################
 
 class GeneratePassword(Service):
-    """ Generates a new secret of input bits strength.
+    """ Generates a new password of input bits strength.
     """
     class SimpleIO:
         input_required = (Integer('bits'),)
