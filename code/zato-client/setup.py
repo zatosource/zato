@@ -17,9 +17,9 @@ try:
     execfile(_version_py, _locals)
     version = _locals['version']
 except IOError:
-    version = '2.0.3.4'
+    version = '3.0.0'
 
-long_description = description = 'Convenience Python client for Zato ESB and app server (https://zato.io)'
+long_description = description = 'Convenience Python client for Zato ESB and backend application server (https://zato.io)'
 
 def parse_requirements(requirements):
     ignored = ['#', 'setuptools', '-e']
