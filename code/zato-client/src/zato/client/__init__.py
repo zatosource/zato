@@ -60,8 +60,9 @@ try:
     execfile(_version_py, _locals)
     version = _locals['version']
 except IOError:
-    version = '2.0.3.4'
+    version = '3.0.0'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _Response(object):
@@ -99,6 +100,58 @@ class _Response(object):
     def init(self):
         raise NotImplementedError('Must be defined by subclasses')
 
+# ################################################################################################################################
+
+class APIClient(object):
+    def __init__(self, address, username, password, path='/zato/api/invoke', tls_verify=None, tls_cert=None,
+        pool_connections=300, pool_maxsize=500):
+        self.address = address
+        self.username = username
+        self.password = password
+        self.path = '{}/{{}}'.format(path)
+
+        self.tls_verify = tls_verify
+        self.tls_cert = tls_cert
+
+        self.session = requests.Session(pool_connections=pool_connections, pool_maxsize=pool_maxsize)
+        self.session.auth = (self.username, self.password)
+        self.session.verify = self.tls_verify
+        self.session.cert = self.tls_cert
+
+    def _invoke(self, verb, service_name, request=None):
+        func = getattr(self.session, verb)
+        url_path = self.path.format(service_name)
+        full_address = '{}{}'.format(self.address, url_path)
+        response = func(full_address, verify=self.tls_verify)
+
+        return response
+
+    def invoke(self, *args, **kwargs):
+        return self._invoke('post', *args, **kwargs)
+
+    def get(self, *args, **kwargs):
+        return self._invoke('get', *args, **kwargs)
+
+    def post(self, *args, **kwargs):
+        return self._invoke('post', *args, **kwargs)
+
+    def patch(self, *args, **kwargs):
+        return self._invoke('patch', *args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        return self._invoke('put', *args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        return self._invoke('delete', *args, **kwargs)
+
+    def by_verb(self, verb, *args, **kwargs):
+        return self._invoke(verb, *args, **kwargs)
+
+# ################################################################################################################################
+
+# Clients below are preserved only for compatibility with pre-3.0 environments and will be removed at one point
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _StructuredResponse(_Response):
@@ -471,4 +524,5 @@ def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, s
 
     return client
 
+# ################################################################################################################################
 # ################################################################################################################################
