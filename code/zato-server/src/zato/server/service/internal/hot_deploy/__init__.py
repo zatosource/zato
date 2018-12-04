@@ -31,9 +31,7 @@ MAX_BACKUPS = 1000
 _first_prefix = '0' * (len(str(MAX_BACKUPS)) - 1) # So it runs from, e.g.,  000 to 999
 
 class Create(AdminService):
-    """ Creates all the needed filesystem directories and files out of a deployment
-    package stored in the ODB and starts all the services contained within the
-    package.
+    """ Creates all the filesystem directories and files out of a deployment package stored in the ODB.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_hot_deploy_create_request'
