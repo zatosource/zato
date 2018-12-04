@@ -613,3 +613,41 @@ class GetSlowResponse(_SlowResponseService):
             self.response.payload = data[0]
 
 # ################################################################################################################################
+
+class ServiceInvoker(AdminService):
+    """ A proxy service to invoke other services through via REST.
+    """
+    name = 'pub.zato.service.service-invoker'
+
+    def handle(self, _internal=('zato', 'pub.zato')):
+
+        # Service name is given in URL path
+        service_name = self.request.http.params.service_name
+
+        # Make sure the service exists
+        if self.server.service_store.has_service(service_name):
+
+            # Depending on HTTP verb used, we may need to look up input in different places
+            if self.request.http.method == 'GET':
+                payload = self.request.http.GET
+            else:
+                payload = self.request.raw_request
+                payload = loads(payload) if payload else None
+
+            # Invoke the service now
+            response = self.invoke(service_name, payload)
+
+            # All internal services wrap their responses in top-level elements that we need to shed here.
+            if service_name.startswith(_internal):
+                if response:
+                    top_level = response.keys()[0]
+                    response = response[top_level]
+
+        # No such service as given on input
+        else:
+            response = {'cid':self.cid, 'result':'error', 'msg': 'No such service `{}`'.format(service_name)}
+
+        # Assign response to outgoing payload
+        self.response.payload = dumps(response)
+
+# ################################################################################################################################
