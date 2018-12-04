@@ -128,7 +128,7 @@ class Create(AdminService):
                 self.response.payload.name = definition.name
 
             except Exception:
-                self.logger.error('Could not create an IBM MQ MQ definition, e:`%s`', format_exc())
+                self.logger.error('Could not create an IBM MQ definition, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -136,7 +136,7 @@ class Create(AdminService):
 # ################################################################################################################################
 
 class Edit(AdminService):
-    """ Updates a WMQ definition.
+    """ Updates an IBM MQ definition.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_definition_jms_wmq_edit_request'
@@ -201,7 +201,7 @@ class Edit(AdminService):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes an IBM MQ MQ definition.
+    """ Deletes an IBM MQ definition.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_definition_jms_wmq_delete_request'
@@ -230,7 +230,7 @@ class Delete(AdminService):
 # ################################################################################################################################
 
 class ChangePassword(ChangePasswordBase):
-    """ Changes the password of an IBM MQ MQ connection definition.
+    """ Changes the password of an IBM MQ connection definition.
     """
     password_required = False
 

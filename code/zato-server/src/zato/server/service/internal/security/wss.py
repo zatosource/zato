@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -95,7 +95,7 @@ class Create(AdminService):
             self.response.payload.name = input.name
 
 class Edit(AdminService):
-    """ Updates a WS-S definition.
+    """ Updates a WS-Security definition.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_wss_edit_request'

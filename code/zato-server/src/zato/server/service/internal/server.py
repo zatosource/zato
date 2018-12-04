@@ -116,7 +116,7 @@ class GetByID(AdminService):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes a server.
+    """ Deletes a server's definition from ODB (not from the filesystem).
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_server_delete_request'
