@@ -21,7 +21,7 @@ from bunch import bunchify
 # Zato
 from zato.server.apispec.openapi import OpenAPIGenerator
 from zato.server.apispec.wsdl import WSDLGenerator
-from zato.server.service import Opaque, Service
+from zato.server.service import List, Opaque, Service
 
 # Zato
 from zato.common.util import aslist, fs_safe_name
@@ -40,7 +40,8 @@ class GetAPISpec(Service):
     """ Returns API specifications for all services.
     """
     class SimpleIO:
-        input_optional = ('cluster_id', 'query', Bool('return_internal'), 'include', 'exclude', 'needs_sphinx')
+        input_optional = ('cluster_id', 'query', Bool('return_internal'), 'include', 'exclude', 'needs_sphinx',
+            'needs_api_invoke', 'needs_rest_channels', 'api_invoke_path')
 
     def handle(self):
         cluster_id = self.request.input.get('cluster_id')
@@ -50,6 +51,9 @@ class GetAPISpec(Service):
 
         include = [elem for elem in include if elem]
         exclude = [elem for elem in exclude if elem]
+
+        api_invoke_path = aslist(self.request.input.api_invoke_path, ',')
+        api_invoke_path = [elem for elem in api_invoke_path if elem]
 
         if not self.request.input.get('return_internal'):
             if 'zato.*' not in exclude:
@@ -68,7 +72,12 @@ class GetAPISpec(Service):
             include, exclude, self.request.input.query).get_info()
 
         if needs_sphinx:
-            out = self.invoke(GetSphinx.get_name(), {'data': data})
+            out = self.invoke(GetSphinx.get_name(), {
+                'data': data,
+                'needs_api_invoke': self.request.input.needs_api_invoke,
+                'needs_rest_channels': self.request.input.needs_rest_channels,
+                'api_invoke_path':api_invoke_path
+            })
         else:
             out = data
 
@@ -80,8 +89,9 @@ class GetSphinx(Service):
     """ Generates API docs in Sphinx.
     """
     class SimpleIO:
-        input_required = Opaque('data'),
-        output_required = Opaque('data'),
+        input_required = Opaque('data')
+        input_optional = 'needs_api_invoke', 'needs_rest_channels', List('api_invoke_path')
+        output_required = Opaque('data')
 
 # ################################################################################################################################
 
@@ -113,9 +123,11 @@ class GetSphinx(Service):
 
 # ################################################################################################################################
 
-    def get_openapi_spec(self, data):
+    def get_openapi_spec(self, data, needs_api_invoke, needs_rest_channels, api_invoke_path):
         data = bunchify(data)
-        return OpenAPIGenerator(data, self.server.worker_store.request_dispatcher.url_data.channel_data).generate()
+        channel_data = self.server.worker_store.request_dispatcher.url_data.channel_data
+        generator = OpenAPIGenerator(data, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
+        return generator.generate()
 
 # ################################################################################################################################
 
@@ -340,14 +352,16 @@ class GetSphinx(Service):
 # ################################################################################################################################
 
     def handle(self):
-        data = bunchify(self.request.input.data)
+        req = self.request.input
+        data = bunchify(req.data)
         files = {}
 
         self.add_default_files(files)
         self.add_services(data, files)
 
         files['download/api.wsdl'] = self.get_wsdl_spec(data)
-        files['download/openapi.yaml'] = self.get_openapi_spec(data)
+        files['download/openapi.yaml'] = self.get_openapi_spec(
+            data, req.needs_api_invoke, req.needs_rest_channels, req.api_invoke_path)
 
         self.response.payload.data = files
 
