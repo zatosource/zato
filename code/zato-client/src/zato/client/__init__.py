@@ -11,11 +11,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging, os
 from datetime import datetime
+from httplib import OK
 from inspect import getargspec
+from json import dumps, loads
 from traceback import format_exc
 
 # anyjson
-from anyjson import dumps as anyjson_dumps, loads
+from anyjson import dumps as anyjson_dumps
 
 # Bunch
 from bunch import bunchify
@@ -42,6 +44,9 @@ DEFAULT_MAX_CID_REPR = 5
 
 mod_logger = logging.getLogger(__name__)
 
+# For pyflakes
+dumps = dumps
+
 # Work around https://bitbucket.org/runeh/anyjson/pull-request/4/
 if getargspec(anyjson_dumps).keywords:
     dumps = anyjson_dumps
@@ -66,49 +71,29 @@ except IOError:
 # ################################################################################################################################
 
 class _Response(object):
-    """ A base class for all specific response types client may return.
+    """ A class to represent data returned by API services.
     """
-    def __init__(self, inner, to_bunch, max_response_repr, max_cid_repr, logger, output_repeated=False):
-        self.inner = inner # Acutal response from the requests module
-        self.to_bunch = to_bunch
-        self.max_response_repr = max_response_repr
-        self.max_cid_repr = max_cid_repr
-        self.logger = logger
-        self.sio_result = None
-        self.ok = False
-        self.has_data = False
-        self.output_repeated = output_repeated
-        self.data = [] if self.output_repeated else None
-        self.meta = {}
+    def __init__(self, inner, _OK=OK):
+        self.inner = inner
+        self.is_ok = self.inner.status_code == _OK
         self.cid = self.inner.headers.get('x-zato-cid', '(None)')
-        self.details = None
-        self.init()
 
-    def __repr__(self):
-        if self.max_cid_repr >= CID_NO_CLIP:
-            cid = '[{}]'.format(self.cid)
+        if self.is_ok:
+            self.data = loads(self.inner.text)
+            self.details = None
         else:
-            cid = '[{}..{}]'.format(self.cid[:self.max_cid_repr], self.cid[-self.max_cid_repr:])
-
-        return '<{} at {} ok:[{}] inner.status_code:[{}] cid:{}, inner.text:[{}]>'.format(
-            self.__class__.__name__, hex(id(self)), self.ok, self.inner.status_code,
-            cid, self.inner.text[:self.max_response_repr])
-
-    def __iter__(self):
-        return iter(self.data)
-
-    def init(self):
-        raise NotImplementedError('Must be defined by subclasses')
+            self.data = ''
+            self.details = self.inner.text
 
 # ################################################################################################################################
 
 class APIClient(object):
-    def __init__(self, address, username, password, path='/zato/api/invoke', tls_verify=None, tls_cert=None,
+    def __init__(self, address, username, password, path='/zato/api/invoke/{}', tls_verify=None, tls_cert=None,
         pool_connections=300, pool_maxsize=500):
         self.address = address
         self.username = username
         self.password = password
-        self.path = '{}/{{}}'.format(path)
+        self.path = path
 
         self.tls_verify = tls_verify
         self.tls_cert = tls_cert
@@ -124,7 +109,7 @@ class APIClient(object):
         full_address = '{}{}'.format(self.address, url_path)
         response = func(full_address, verify=self.tls_verify)
 
-        return response
+        return _Response(response)
 
     def invoke(self, *args, **kwargs):
         return self._invoke('post', *args, **kwargs)

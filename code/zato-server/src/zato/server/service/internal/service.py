@@ -24,6 +24,7 @@ from validate import is_boolean
 # Zato
 from zato.common import BROKER, KVDB, ZatoException
 from zato.common.broker_message import SERVICE
+from zato.common.exception import BadRequest
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.util import hot_deploy, payload_from_request
@@ -643,11 +644,13 @@ class ServiceInvoker(AdminService):
                     top_level = response.keys()[0]
                     response = response[top_level]
 
+            # Assign response to outgoing payload
+            self.response.payload = dumps(response)
+            self.response.data_format = 'application/json'
+
         # No such service as given on input
         else:
-            response = {'cid':self.cid, 'result':'error', 'msg': 'No such service `{}`'.format(service_name)}
-
-        # Assign response to outgoing payload
-        self.response.payload = dumps(response)
+            self.response.data_format = 'text/plain'
+            raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))
 
 # ################################################################################################################################
