@@ -18,8 +18,7 @@ from zato.server.service.internal import AdminSIO
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
 class Import(DataDictService):
-    """ Imports a bz2-compressed JSON document containing data dictionaries replacing
-    any other existing ones.
+    """ Imports a bz2-compressed JSON document containing data dictionaries replacing any other existing ones.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_data_dict_impexp_import_request'
