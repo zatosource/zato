@@ -78,7 +78,7 @@ common_sub_data = CommonSubData.common + CommonSubData.amqp + CommonSubData.file
 # ################################################################################################################################
 
 class AfterPublish(AdminService):
-    """ A hook service invoked after each publication, sends messages from current server to delivery tasks. 
+    """ A hook service invoked after each publication, sends messages from current server to delivery tasks.
     """
     class SimpleIO(AdminSIO):
         input_required = ('cid', AsIs('topic_id'), 'topic_name', 'is_bg_call', Opaque('pub_time_max'))
@@ -230,6 +230,14 @@ class ResumeWSXSubscription(AdminService):
         # First off, make sure that input sub_key(s) were previously created by current WebSocket
         for sub_key in sub_key_list:
             sub = self.pubsub.get_subscription_by_sub_key(sub_key)
+
+            print()
+            print()
+
+            print(444, sub)
+
+            print()
+            print()
 
             if sub.config.endpoint_type != _expected_endpoint_type:
                 self.logger.warn('Subscription `%s` endpoint_type:`%s` did not match `%s`',

@@ -288,6 +288,14 @@ class Subscription(object):
         self.unsub_on_wsx_close = config.get('unsub_on_wsx_close')
         self.ext_client_id = config.ext_client_id
 
+        print()
+        print()
+
+        print(444, self.unsub_on_wsx_close)
+
+        print()
+        print()
+
         # Object ws_channel_id is an ID of a WSX channel this subscription potentially belongs to,
         # otherwise it is None.
         self.is_wsx = bool(self.config.ws_channel_id)
@@ -2176,6 +2184,16 @@ class PubSub(object):
 
             sub_service_name = PUBSUB.SUBSCRIBE_CLASS.get(endpoint.endpoint_type)
             wsgi_environ = {}
+
+        print()
+        print()
+
+        print(222, sub_service_name)
+        print(222, request)
+        print(222, wsgi_environ)
+
+        print()
+        print()
 
         # Actually subscribe the caller
         response = self.invoke_service(sub_service_name, request, wsgi_environ=wsgi_environ, serialize=False)
