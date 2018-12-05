@@ -636,7 +636,7 @@ class ServiceInvoker(AdminService):
                 payload = loads(payload) if payload else None
 
             # Invoke the service now
-            response = self.invoke(service_name, payload)
+            response = self.invoke(service_name, payload, wsgi_environ={'HTTP_METHOD':self.request.http.method})
 
             # All internal services wrap their responses in top-level elements that we need to shed here.
             if service_name.startswith(_internal):
