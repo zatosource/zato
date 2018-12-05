@@ -57,7 +57,7 @@ def cleanup_wsx_client(wsx_cleanup_required, service_invoker, pub_client_id, sub
                     'sub_key_list': sub_keys,
                 })
 
-                # An opaque list of functions to invoke - each caller may decide what else should carried out here
+                # An opaque list of functions to invoke - each caller may decide what else should be carried out here
                 for func in opaque_func_list or []:
                     func()
 
