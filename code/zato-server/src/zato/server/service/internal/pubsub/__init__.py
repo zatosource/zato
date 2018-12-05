@@ -231,14 +231,6 @@ class ResumeWSXSubscription(AdminService):
         for sub_key in sub_key_list:
             sub = self.pubsub.get_subscription_by_sub_key(sub_key)
 
-            print()
-            print()
-
-            print(444, sub)
-
-            print()
-            print()
-
             if sub.config.endpoint_type != _expected_endpoint_type:
                 self.logger.warn('Subscription `%s` endpoint_type:`%s` did not match `%s`',
                     sub_key, sub.config.endpoint_type, _expected_endpoint_type)
