@@ -172,7 +172,8 @@ def index(req):
             'connection': connection,
             'transport': transport,
             'paginate': True,
-            'cur_page': req.GET.get('cur_page', 1)
+            'cur_page': req.GET.get('cur_page', 1),
+            'query': req.GET.get('query', ''),
         }
 
         data, meta = parse_response_data(req.zato.client.invoke('zato.http-soap.get-list', input_dict))
