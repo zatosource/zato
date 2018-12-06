@@ -512,7 +512,10 @@ class InRAMSyncBacklog(object):
                     msg_seen.add(msg_id)
 
                     # Filter out expired messages
-                    msg = self.msg_id_to_msg[msg_id]
+                    msg = self.msg_id_to_msg.get(msg_id)
+                    if not msg:
+                        logger.warn('Msg `%s` not found in self.msg_id_to_msg', msg_id)
+                        continue
                     if now >= msg['expiration_time']:
                         continue
                     else:
@@ -528,7 +531,7 @@ class InRAMSyncBacklog(object):
         for msg_id in to_delete_msg:
 
             # .. first, direct mappings ..
-            del self.msg_id_to_msg[msg_id]
+            self.msg_id_to_msg.pop(msg_id, None)
 
             logger.info('Deleting msg from mapping dict `%s`', msg_id)
 
