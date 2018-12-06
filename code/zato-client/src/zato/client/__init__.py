@@ -58,7 +58,7 @@ else:
 # Version
 # ################################################################################################################################
 
-version = '3.0.1'
+version = '3.0.2'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -81,8 +81,7 @@ class _APIResponse(object):
 # ################################################################################################################################
 
 class APIClient(object):
-    def __init__(self, address, username, password, path='/zato/api/invoke/{}', tls_verify=None, tls_cert=None,
-        pool_connections=300, pool_maxsize=500):
+    def __init__(self, address, username, password, path='/zato/api/invoke/{}', tls_verify=None, tls_cert=None):
         self.address = address
         self.username = username
         self.password = password
@@ -91,7 +90,7 @@ class APIClient(object):
         self.tls_verify = tls_verify
         self.tls_cert = tls_cert
 
-        self.session = requests.Session(pool_connections=pool_connections, pool_maxsize=pool_maxsize)
+        self.session = requests.Session()
         self.session.auth = (self.username, self.password)
         self.session.verify = self.tls_verify
         self.session.cert = self.tls_cert
