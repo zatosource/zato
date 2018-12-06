@@ -338,7 +338,7 @@ class RequestDispatcher(object):
 
                 return response
 
-        # This is 404, no such URL path and SOAP action is known.
+        # This is 404, no such URL path and SOAP action is not known either.
         else:
             response = response_404.format(cid, path_info, soap_action)
             wsgi_environ['zato.http.response.status'] = _status_not_found
