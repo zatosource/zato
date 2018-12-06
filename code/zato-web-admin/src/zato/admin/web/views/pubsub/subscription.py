@@ -70,7 +70,7 @@ class Index(_Index):
 
             for item in self.items:
                 targets = select_data_target[item.endpoint_type]
-                targets.append({b'id':item.id, b'name':item.endpoint_name})
+                targets.append({b'id':item.id, b'name':item.endpoint_name.encode('utf8')})
 
             # Security definitions
             data_list.security_list = self.get_sec_def_list('basic_auth').def_items

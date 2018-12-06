@@ -78,7 +78,7 @@ common_sub_data = CommonSubData.common + CommonSubData.amqp + CommonSubData.file
 # ################################################################################################################################
 
 class AfterPublish(AdminService):
-    """ A hook service invoked after each publication, sends messages from current server to delivery tasks. 
+    """ A hook service invoked after each publication, sends messages from current server to delivery tasks.
     """
     class SimpleIO(AdminSIO):
         input_required = ('cid', AsIs('topic_id'), 'topic_name', 'is_bg_call', Opaque('pub_time_max'))
