@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from copy import deepcopy
 from datetime import datetime
+from json import dumps
 from traceback import format_exc
 from uuid import uuid4
 
@@ -939,25 +940,33 @@ class Create(ZatoCommand):
         service_msg = Service(None, 'zato.pubsub.pubapi.message-service', True, impl_name3, True, cluster)
         service_demo = Service(None, 'zato.pubsub.helpers.json-raw-request-logger', True, impl_demo, True, cluster)
 
+        # Opaque data that lets clients use topic contain slash characters
+        opaque = dumps({'match_slash':True})
+
         chan_topic = HTTPSOAP(None, 'zato.pubsub.topic.topic_name', True, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, '/zato/pubsub/topic/{topic_name}',
-            None, '', None, DATA_FORMAT.JSON, security=None, service=service_topic, cluster=cluster)
+            None, '', None, DATA_FORMAT.JSON, security=None, service=service_topic, opaque=opaque,
+            cluster=cluster)
 
         chan_sub = HTTPSOAP(None, 'zato.pubsub.subscribe.topic.topic_name', True, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, '/zato/pubsub/subscribe/topic/{topic_name}',
-            None, '', None, DATA_FORMAT.JSON, security=None, service=service_sub, cluster=cluster)
+            None, '', None, DATA_FORMAT.JSON, security=None, service=service_sub, opaque=opaque,
+            cluster=cluster)
 
         chan_msg = HTTPSOAP(None, 'zato.pubsub.msg.msg_id', True, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, '/zato/pubsub/msg/{msg_id}',
-            None, '', None, DATA_FORMAT.JSON, security=None, service=service_msg, cluster=cluster)
+            None, '', None, DATA_FORMAT.JSON, security=None, service=service_msg, opaque=opaque,
+            cluster=cluster)
 
         chan_demo = HTTPSOAP(None, 'pubsub.demo.sample.channel', True, True, CONNECTION.CHANNEL,
             URL_TYPE.PLAIN_HTTP, None, '/zato/pubsub/zato.demo.sample',
-            None, '', None, DATA_FORMAT.JSON, security=sec_demo, service=service_demo, cluster=cluster)
+            None, '', None, DATA_FORMAT.JSON, security=sec_demo, service=service_demo, opaque=opaque,
+            cluster=cluster)
 
         outconn_demo = HTTPSOAP(None, 'pubsub.demo.sample.outconn', True, True, CONNECTION.OUTGOING,
             URL_TYPE.PLAIN_HTTP, 'http://localhost:11223', '/zato/pubsub/zato.demo.sample',
-            None, '', None, DATA_FORMAT.JSON, security=sec_demo, cluster=cluster)
+            None, '', None, DATA_FORMAT.JSON, security=sec_demo, opaque=opaque,
+            cluster=cluster)
 
         endpoint_default_internal = PubSubEndpoint()
         endpoint_default_internal.name = PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME
