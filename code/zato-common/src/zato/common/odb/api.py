@@ -153,7 +153,9 @@ class SQLConnectionPool(object):
         # Safe for printing out to logs, any sensitive data has been shadowed
         self.config_no_sensitive = config_no_sensitive
 
-        _extra = {}
+        _extra = {
+            'pool_pre_ping': True # Make sure SQLAlchemy 1.2+ can refresh connections on transient errors
+        }
 
         # MySQL only
         if self.engine_name.startswith('mysql'):
