@@ -378,7 +378,7 @@ cdef class SimpleIO(object):
             }))
 
         # It is possible that nothing is to be given on input or produced, which is fine, we do not reject it
-        # but there is nothing to contine for either.
+        # but there is no reason to continue either.
         if not (plain or required or optional):
             return
 
@@ -392,20 +392,28 @@ cdef class SimpleIO(object):
         if isinstance(optional, basestring):
             optional = [optional]
 
-        # Confirm that required elements do not overlap with optional ones
-
+        # At this point we have either a list of plain elements or input_required/input_optional, but not both.
+        # In the former case, we need to build required and optional lists manually by extracting
+        # all the elements from the plain list.
         if plain:
-            elems = plain
-        else:
-            elems = required + optional
 
-        print()
-        print()
+            prefix_optional = self.server_config.prefix_optional
 
-        print(111, elems)
+            for elem in plain:
+                if elem.startswith(prefix_optional):
+                    optional.append(elem.replace(prefix_optional, ''))
+                else:
+                    required.append(elem)
 
-        print()
-        print()
+        # Confirm that required elements do not overlap with optional ones
+        shared_elems = set(required) & set(optional)
+        if shared_elems:
+            raise ValueError('Elements in input_required and input_optional cannot be shared, found:`{}`'.format(
+                sorted(elem.encode('utf8') for elem in shared_elems)))
+
+        # So that in runtime elements are always checked in the same order
+        required = sorted(required)
+        optional = sorted(optional)
 
 # ################################################################################################################################
 

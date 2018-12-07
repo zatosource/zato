@@ -132,7 +132,7 @@ class _Base(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InputOutputSyntaxParsingValidation(object):
+class InputOutputParsing(_Base):
 
     def test_no_input_output(self):
 
@@ -155,7 +155,7 @@ class InputOutputSyntaxParsingValidation(object):
             self.get_sio(SimpleIO)
 
         expected = "Cannot provide input_required if input is given, input:`qwerty`, " \
-            "input_required:`(u'aaa', u'bbb')`, input_optional:`None`"
+            "input_required:`(u'aaa', u'bbb')`, input_optional:`[]`"
 
         self.assertEquals(ctx.exception.message, expected)
 
@@ -172,7 +172,7 @@ class InputOutputSyntaxParsingValidation(object):
             self.get_sio(SimpleIO)
 
         expected = "Cannot provide input_optional if input is given, input:`qwerty`, " \
-            "input_required:`None`, input_optional:`(u'aaa', u'bbb')`"
+            "input_required:`[]`, input_optional:`(u'aaa', u'bbb')`"
 
         self.assertEquals(ctx.exception.message, expected)
 
@@ -207,7 +207,7 @@ class InputOutputSyntaxParsingValidation(object):
             self.get_sio(SimpleIO)
 
         expected = "Cannot provide output_required if output is given, output:`qwerty`, " \
-            "output_required:`(u'aaa', u'bbb')`, output_optional:`None`"
+            "output_required:`(u'aaa', u'bbb')`, output_optional:`[]`"
 
         self.assertEquals(ctx.exception.message, expected)
 
@@ -224,7 +224,7 @@ class InputOutputSyntaxParsingValidation(object):
             self.get_sio(SimpleIO)
 
         expected = "Cannot provide output_optional if output is given, output:`qwerty`, " \
-            "output_required:`None`, output_optional:`(u'aaa', u'bbb')`"
+            "output_required:`[]`, output_optional:`(u'aaa', u'bbb')`"
 
         self.assertEquals(ctx.exception.message, expected)
 
@@ -247,20 +247,43 @@ class InputOutputSyntaxParsingValidation(object):
         self.assertEquals(ctx.exception.message, expected)
 
 # ################################################################################################################################
+
+    def test_elem_sharing_not_allowed(self):
+
+        class SimpleIO:
+            input_required = 'abc', 'zxc', 'qwe'
+            input_optional = 'zxc', 'abc', 'rty'
+
+        with self.assertRaises(ValueError) as ctx:
+            self.get_sio(SimpleIO)
+
+        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']`"
+        self.assertEquals(ctx.exception.message, expected)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class InputPlainParsing(_Base):
 
-    def test_input_plain_list_single(self):
+    def test_convert_plain_into_required_optional(self):
 
         class SimpleIO:
-            input_required = 'abc'
-            input_optional = 'abc'
+            input = 'abc', 'zxc', 'ghj', '-eee'
 
         sio = self.get_sio(SimpleIO)
-        print()
-        print(sio.definition)
-        print()
+        #self.assertEquals(sio.input_required, ['abc', 'ghj', 'zxc'])
+
+    def test_elem_sharing_not_allowed_plain(self):
+
+        class SimpleIO:
+            input_required = 'abc', 'zxc', 'qwe', '-zxc', '-abc', '-rty'
+            input_optional = 'zxc', 'abc', 'rty'
+
+        with self.assertRaises(ValueError) as ctx:
+            self.get_sio(SimpleIO)
+
+        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']`"
+        self.assertEquals(ctx.exception.message, expected)
 
 # ################################################################################################################################
 # ################################################################################################################################
