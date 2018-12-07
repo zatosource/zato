@@ -43,8 +43,8 @@ cdef class Elem(object):
     """ An individual input or output element. May be a ForceType instance or not.
     """
     cdef:
+        public unicode _name
         ElemType _type
-        unicode _name
         object _default
         bint _is_required
 
@@ -52,16 +52,20 @@ cdef class Elem(object):
         return '<{} at {} {}:{} d:{} r:{}>'.format(self.__class__.__name__, hex(id(self)), self._name, self._type,
             self._default, self._is_required)
 
+    __repr__ = __str__
+
+    def __cmp__(self, other):
+        return self._name == other._name
+
+    def __hash__(self):
+        return hash(self._name) # Names are always unique
+
     @property
     def pretty(self):
         out = ''
 
         if not self._is_required:
             out += '-'
-
-        if self._type != ElemType.text:
-            out += 'q'
-            out += ':'
 
         out += self._name
 
@@ -132,6 +136,12 @@ cdef class List(Elem):
 cdef class Opaque(Elem):
     def __cinit__(self):
         self._type = ElemType.opaque
+
+# ################################################################################################################################
+
+cdef class Text(Elem):
+    def __cinit__(self):
+        self._type = ElemType.text
 
 # ################################################################################################################################
 
@@ -240,6 +250,9 @@ cdef class SIOList(object):
     def __iter__(self):
         return iter(self.elems)
 
+    def set_elems(self, elems):
+        self.elems[:] = elems
+
 # ################################################################################################################################
 
 cdef class SIODefinition(object):
@@ -247,21 +260,20 @@ cdef class SIODefinition(object):
     """
     cdef:
 
-        # Name of the service this definition is for
-        unicode _service_name
-
         # A list of Elem items required on input
-        SIOList _input_required
+        public SIOList _input_required
 
         # A list of Elem items optional on input
-        SIOList _input_optional
+        public SIOList _input_optional
 
         # A list of Elem items required on output
-        SIOList _output_required
+        public SIOList _output_required
 
         # A list of Elem items optional on output
-        SIOList _output_optional
+        public SIOList _output_optional
 
+        # Name of the service this definition is for
+        unicode _service_name
         # Whether all non-NotGiven optional input elements should be skipped or not
         bint _skip_all_empty_request_keys
 
@@ -346,32 +358,44 @@ cdef class SimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef _build_io_elems(self, name):
+    cdef Elem _convert_to_elem_instance(self, elem, is_required):
+        cdef Text _elem # For now, we always return Text instances
+
+        _elem = Text()
+        _elem._name = elem
+        _elem._default = 'QQQ'
+        _elem._is_required = is_required
+
+        return _elem
+
+# ################################################################################################################################
+
+    cdef _build_io_elems(self, container):
         """ Returns I/O elems, e.g. input or input_required but first ensures that only correct elements are given in SimpleIO,
         e.g. if input is on input then input_required or input_optional cannot be.
         """
-        required_name = '{}_required'.format(name)
-        optional_name = '{}_optional'.format(name)
+        required_name = '{}_required'.format(container)
+        optional_name = '{}_optional'.format(container)
 
-        plain = getattr(self.user_declaration, name, [])
+        plain = getattr(self.user_declaration, container, [])
         required = getattr(self.user_declaration, required_name, [])
         optional = getattr(self.user_declaration, optional_name, [])
 
         # If the plain element alone is given, we cannot have required or optional lists.
         if plain and (required or optional):
             if required and optional:
-                details = '{}_required/{}_optional'.format(name, name)
+                details = '{}_required/{}_optional'.format(container, container)
             elif required:
-                details = '{}_required'.format(name)
+                details = '{}_required'.format(container)
             elif optional:
-                details = '{}_optional'.format(name)
+                details = '{}_optional'.format(container)
 
-            msg = 'Cannot provide {details} if {name} is given'
-            msg += ', {name}:`{plain}`, {name}_required:`{required}`, {name}_optional:`{optional}`'
+            msg = 'Cannot provide {details} if {container} is given'
+            msg += ', {container}:`{plain}`, {container}_required:`{required}`, {container}_optional:`{optional}`'
 
             raise ValueError(msg.format(**{
                 'details': details,
-                'name': name,
+                'container': container,
                 'plain': plain,
                 'required': required,
                 'optional': optional
@@ -405,15 +429,47 @@ cdef class SimpleIO(object):
                 else:
                     required.append(elem)
 
+        # So that in runtime elements are always checked in the same order
+        required = sorted(required)
+        optional = sorted(optional)
+
+        # Now, convert all elements to Elem instances
+        _required = []
+        _optional = []
+
+        elems = (
+            (required, True),
+            (optional, False),
+        )
+
+        for elem_list, is_required in elems:
+            for elem in elem_list:
+                if not isinstance(elem, Elem):
+                    elem = self._convert_to_elem_instance(elem, is_required)
+                    if is_required:
+                        _required.append(elem)
+                    else:
+                        _optional.append(elem)
+
+        required = _required
+        optional = _optional
+
         # Confirm that required elements do not overlap with optional ones
-        shared_elems = set(required) & set(optional)
+        shared_elems = set(elem._name for elem in required) & set(elem._name for elem in optional)
+
         if shared_elems:
             raise ValueError('Elements in input_required and input_optional cannot be shared, found:`{}`'.format(
                 sorted(elem.encode('utf8') for elem in shared_elems)))
 
-        # So that in runtime elements are always checked in the same order
-        required = sorted(required)
-        optional = sorted(optional)
+        # Everything is validated, we can actually set the lists of elements now
+
+        container_req_name = '_{}_required'.format(container)
+        container_required = getattr(self.definition, container_req_name)
+        container_required.set_elems(required)
+
+        container_opt_name = '_{}_optional'.format(container)
+        container_optional = getattr(self.definition, container_opt_name)
+        container_optional.set_elems(optional)
 
 # ################################################################################################################################
 

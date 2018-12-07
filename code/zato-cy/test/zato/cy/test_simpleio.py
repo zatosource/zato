@@ -271,7 +271,7 @@ class InputPlainParsing(_Base):
             input = 'abc', 'zxc', 'ghj', '-eee'
 
         sio = self.get_sio(SimpleIO)
-        #self.assertEquals(sio.input_required, ['abc', 'ghj', 'zxc'])
+        self.assertEquals(sio.input_required, ['abc', 'ghj', 'zxc'])
 
     def test_elem_sharing_not_allowed_plain(self):
 
