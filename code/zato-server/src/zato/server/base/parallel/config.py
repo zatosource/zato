@@ -18,6 +18,7 @@ from paste.util.converters import asbool
 # Zato
 from zato.bunch import Bunch
 from zato.common import MISC, SECRETS
+from zato.common.util.sql import elems_with_opaque
 from zato.server.config import ConfigDict
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
@@ -315,7 +316,7 @@ class ConfigLoader(object):
         # All the HTTP/SOAP channels.
         http_soap = []
 
-        for item in self.odb.get_http_soap_list(server.cluster.id, 'channel'):
+        for item in elems_with_opaque(self.odb.get_http_soap_list(server.cluster.id, 'channel')):
 
             hs_item = {}
             for key in item.keys():
