@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,7 +18,8 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta, Pi
 
 elem = 'search_solr'
 model = Solr
-label = 'an Solr connection'
+label = 'a Solr connection'
+get_list_docs = 'Solr connections'
 broker_message = SEARCH
 broker_message_prefix = 'SOLR_'
 list_func = search_solr_list
@@ -37,6 +38,8 @@ class Delete(AdminService):
     __metaclass__ = DeleteMeta
 
 class Ping(AdminService):
+    """ Pings a Solr connection to check if it is alive.
+    """
     __metaclass__ = PingMeta
 
     def ping(self, instance):

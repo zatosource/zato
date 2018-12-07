@@ -541,14 +541,14 @@ class WebSocket(_WebSocket):
         logger.info('Starting WSX background pings for `%s`', self.peer_conn_info_pretty)
 
         try:
-            while self.stream:
+            while self.stream and (not self.server_terminated):
 
                 # Sleep for N seconds before sending a ping but check if we are connected upfront because
                 # we could have disconnected in between while and sleep calls.
                 sleep(ping_extend)
 
                 # Ok, still connected
-                if self.stream:
+                if self.stream and (not self.server_terminated):
                     try:
                         response = self.invoke_client(new_cid(), None, use_send=False)
                     except RuntimeError:
@@ -573,7 +573,7 @@ class WebSocket(_WebSocket):
                                 self.on_forbidden('missed {}/{} ping messages'.format(
                                     self.pings_missed, self.pings_missed_threshold))
 
-                # No stream = already disconnected, we can quit
+                # No stream or server already = we can quit
                 else:
                     return
 

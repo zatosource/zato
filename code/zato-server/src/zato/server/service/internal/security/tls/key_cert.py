@@ -20,6 +20,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'security_tls_key_cert'
 model = TLSKeyCertSecurity
 label = 'a TLS key/cert pair'
+get_list_docs = 'TLS key/cert pairs'
 broker_message = SECURITY
 broker_message_prefix = 'TLS_KEY_CERT_'
 list_func = tls_key_cert_list

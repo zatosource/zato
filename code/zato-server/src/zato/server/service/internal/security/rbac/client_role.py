@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,6 +21,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'security_rbac_client_role'
 model = RBACClientRole
 label = 'an RBAC client role'
+get_list_docs = 'RBAC client roles'
 broker_message = RBAC
 broker_message_prefix = 'CLIENT_ROLE_'
 list_func = rbac_client_role_list
@@ -65,8 +66,7 @@ class Delete(AdminService):
     __metaclass__ = DeleteMeta
 
 class GetClientDefList(AdminService):
-    """ Returns a list of client definitions - both these that use Zato's built-in security mechanisms
-    as well as custom ones, as defined by users.
+    """ Returns a list of client definitions - Zato's built-in security mechanisms as well as custom ones, as defined by users.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_rbac_client_role_get_client_def_list_request'

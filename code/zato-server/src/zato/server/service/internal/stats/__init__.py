@@ -184,6 +184,8 @@ class BaseAggregatingService(AdminService):
 # ##############################################################################
 
 class ProcessRawTimes(BaseAggregatingService):
+    """ A low-level services that periodically process raw data collected for statistics.
+    """
     def handle(self):
 
         if not self.stats_enabled():

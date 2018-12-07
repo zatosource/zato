@@ -241,17 +241,3 @@ class LogOut(AdminService):
             self.response.payload.result = 'Token could not be deleted'
 
 # ################################################################################################################################
-
-class CreateToken(AdminService):
-    """ Creates token on behalf of a given user without requiring that user to provide a password. Useful when another application
-    obtains the token in lieu of the user directly.
-    """
-    class SimpleIO(AdminSIO):
-        input_required = ('username',)
-        response_elem = 'zato_security_jwt_create_token_response'
-        output_optional = ('token',)
-
-    def handle(self):
-        pass
-
-# ################################################################################################################################

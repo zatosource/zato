@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -156,6 +156,8 @@ class Delete(_DeletingService):
         self.delete(self.request.input.id)
 
 class Translate(AdminService):
+    """ Translates keys and values between systems.
+    """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_data_dict_translation_translate_request'
         response_elem = 'zato_kvdb_data_dict_translation_translate_response'
@@ -174,8 +176,7 @@ class Translate(AdminService):
             self.response.payload.sha256 = sha256(result).hexdigest()
 
 class GetLastID(AdminService):
-    """ Returns the value of the last dictionary's ID or nothing at all if the key
-    for holding its value doesn't exist.
+    """ Returns the value of the last dictionary's ID or nothing at all if the key for holding its value doesn't exist.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_data_dict_translation_get_last_id_request'

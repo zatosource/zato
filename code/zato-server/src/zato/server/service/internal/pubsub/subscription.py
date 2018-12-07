@@ -561,7 +561,8 @@ class DeleteAll(AdminService):
 # ################################################################################################################################
 
 class CreateWSXSubscription(AdminService):
-
+    """ Creates a new pub/sub subscription for current WebSocket connection.
+    """
     class SimpleIO:
         input_optional = 'topic_name', List('topic_name_list'), Bool('wrap_one_msg_in_list'), Int('delivery_batch_size')
         output_optional = 'sub_key', 'current_depth', 'sub_data'
@@ -576,7 +577,7 @@ class CreateWSXSubscription(AdminService):
         async_msg = self.wsgi_environ['zato.request_ctx.async_msg']
         unsub_on_wsx_close = async_msg['wsgi_environ'].get('zato.request_ctx.pubsub.unsub_on_wsx_close')
 
-        # This will exist if are being invoked directly ..
+        # This will exist if we are being invoked directly ..
         environ = async_msg.get('environ')
 
         # .. however, if there is a service on whose behalf we are invoked, the 'environ' key will be further nested.

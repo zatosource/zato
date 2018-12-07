@@ -26,6 +26,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'email_imap'
 model = OutgoingOdoo
 label = 'an Odoo connection'
+get_list_docs = 'Odoo connections'
 broker_message = OUTGOING
 broker_message_prefix = 'ODOO_'
 list_func = out_odoo_list
@@ -85,7 +86,8 @@ class ChangePassword(ChangePasswordBase):
 # ################################################################################################################################
 
 class Ping(AdminService):
-
+    """ Pings an Odoo connection to check its configuration.
+    """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_odoo_ping_request'
         response_elem = 'zato_outgoing_odoo_ping_response'
