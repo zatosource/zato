@@ -74,7 +74,7 @@ class CreateDefault(AdminService):
         for pattern, is_by_ext_id, is_by_channel in patterns:
             self.invoke(Create.get_name(), {
                 'ext_client_id': req.ext_client_id,
-                'client_id': req.client_id,
+                'client_id.': req.client_id,
                 'channel_id': req.channel_id,
                 'channel_name': req.channel_name,
                 'pattern': pattern,
@@ -88,6 +88,8 @@ class CreateDefault(AdminService):
 # ################################################################################################################################
 
 class Delete(AdminService):
+    """ Deletes a pub/sub subscription previously created or resumed by current WebSocket.
+    """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_web_socket_subscription_delete_request'
         response_elem = 'zato_channel_web_socket_subscription_delete_response'

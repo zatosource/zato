@@ -52,10 +52,25 @@ class SearchTool(object):
 
 # ################################################################################################################################
 
+class AdminSIO(object):
+    namespace = zato_namespace
+
+# ################################################################################################################################
+
+class GetListAdminSIO(object):
+    namespace = zato_namespace
+    input_optional = (Int('cur_page'), Bool('paginate'), 'query')
+
+# ################################################################################################################################
+
 class AdminService(Service):
     """ A Zato admin service, part of the Zato public API.
     """
     output_optional = ('_meta',)
+
+    class SimpleIO(AdminSIO):
+        """ This empty definition is needed in case the service should be invoked through REST.
+        """
 
     def __init__(self):
         super(AdminService, self).__init__()
@@ -139,18 +154,9 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-class AdminSIO(object):
-    namespace = zato_namespace
-
-# ################################################################################################################################
-
-class GetListAdminSIO(object):
-    namespace = zato_namespace
-    input_optional = (Int('cur_page'), Bool('paginate'), 'query')
-
-# ################################################################################################################################
-
 class Ping(AdminService):
+    """ A ping service, useful for API testing.
+    """
     class SimpleIO(AdminSIO):
         output_required = ('pong',)
         response_elem = 'zato_ping_response'
@@ -170,6 +176,8 @@ class Ping(AdminService):
 # ################################################################################################################################
 
 class Ping2(Ping):
+    """ Works exactly the same as zato.ping, added to have another service for API testing.
+    """
     class SimpleIO(Ping.SimpleIO):
         response_elem = 'zato_ping2_response'
 

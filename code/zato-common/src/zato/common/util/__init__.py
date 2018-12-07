@@ -132,6 +132,15 @@ cid_base = len(cid_symbols)
 # This reseeds the current process only and each parallel server does it for each subprocess too.
 numpy_seed()
 
+
+# ################################################################################################################################
+
+# We can initialize it once per process here
+_hostname = socket.gethostname()
+_fqdn = socket.getfqdn()
+_current_host = '{}/{}'.format(_hostname, _fqdn)
+_current_user = getpwuid(getuid()).pw_name
+
 # ################################################################################################################################
 
 TLS_KEY_TYPE = {
@@ -195,7 +204,7 @@ def absolutize(path, base=''):
 # ################################################################################################################################
 
 def current_host():
-    return socket.gethostname() + '/' + socket.getfqdn()
+    return _current_host
 
 # ################################################################################################################################
 
@@ -414,7 +423,7 @@ def get_app_context(config):
 # ################################################################################################################################
 
 def get_current_user():
-    return getpwuid(getuid()).pw_name
+    return _current_user
 
 # ################################################################################################################################
 

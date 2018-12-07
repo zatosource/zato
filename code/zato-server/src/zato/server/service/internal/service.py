@@ -24,6 +24,7 @@ from validate import is_boolean
 # Zato
 from zato.common import BROKER, KVDB, ZatoException
 from zato.common.broker_message import SERVICE
+from zato.common.exception import BadRequest
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.util import hot_deploy, payload_from_request
@@ -182,7 +183,7 @@ class Edit(AdminService):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes a service
+    """ Deletes a service.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_delete_request'
@@ -221,8 +222,7 @@ class Delete(AdminService):
 # ################################################################################################################################
 
 class GetChannelList(AdminService):
-    """ Returns a list of channels of a given type through which the service
-    is being exposed.
+    """ Returns a list of channels of a given type through which the service is exposed.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_channel_list_request'
@@ -256,7 +256,7 @@ class GetChannelList(AdminService):
 # ################################################################################################################################
 
 class Invoke(AdminService):
-    """ Invokes the service directly, as though it was exposed through some channel defined in web-admin.
+    """ Invokes the service directly, as though it was exposed through a channel defined in web-admin.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_invoke_request'
@@ -317,8 +317,7 @@ class Invoke(AdminService):
 # ################################################################################################################################
 
 class GetDeploymentInfoList(AdminService):
-    """ Returns detailed information regarding the service's deployment status
-    on each of the servers it's been deployed to.
+    """ Returns detailed information regarding the service's deployment status on each of the servers it's been deployed to.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_deployment_info_list_request'
@@ -379,8 +378,7 @@ class GetSourceInfo(AdminService):
 # ################################################################################################################################
 
 class GetWSDL(AdminService):
-    """ Returns a WSDL for the given service. Either uses a user-uploaded one,
-    or, optionally generates one on fly if the service uses SimpleIO.
+    """ Returns a WSDL for the given service. Either uses a user-uploaded one, or, optionally generates one on fly if the service uses SimpleIO.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_wsdl_request'
@@ -485,8 +483,7 @@ class HasWSDL(AdminService):
 # ################################################################################################################################
 
 class GetRequestResponse(AdminService):
-    """ Returns a sample request/response along with information on how often
-    the pairs should be stored in the DB.
+    """ Returns a sample request/response along with information on how often the pairs should be stored in the DB.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_request_response_request'
@@ -534,7 +531,7 @@ class ConfigureRequestResponse(AdminService):
 # ################################################################################################################################
 
 class UploadPackage(AdminService):
-    """ Returns a boolean flag indicating whether the server has a WSDL attached.
+    """ Uploads a package with service(s) to be hot-deployed.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_upload_package_request'
@@ -615,5 +612,45 @@ class GetSlowResponse(_SlowResponseService):
         data = self.get_data()
         if data:
             self.response.payload = data[0]
+
+# ################################################################################################################################
+
+class ServiceInvoker(AdminService):
+    """ A proxy service to invoke other services through via REST.
+    """
+    name = 'pub.zato.service.service-invoker'
+
+    def handle(self, _internal=('zato', 'pub.zato')):
+
+        # Service name is given in URL path
+        service_name = self.request.http.params.service_name
+
+        # Make sure the service exists
+        if self.server.service_store.has_service(service_name):
+
+            # Depending on HTTP verb used, we may need to look up input in different places
+            if self.request.http.method == 'GET':
+                payload = self.request.http.GET
+            else:
+                payload = self.request.raw_request
+                payload = loads(payload) if payload else None
+
+            # Invoke the service now
+            response = self.invoke(service_name, payload, wsgi_environ={'HTTP_METHOD':self.request.http.method})
+
+            # All internal services wrap their responses in top-level elements that we need to shed here.
+            if service_name.startswith(_internal):
+                if response:
+                    top_level = response.keys()[0]
+                    response = response[top_level]
+
+            # Assign response to outgoing payload
+            self.response.payload = dumps(response)
+            self.response.data_format = 'application/json'
+
+        # No such service as given on input
+        else:
+            self.response.data_format = 'text/plain'
+            raise BadRequest(self.cid, 'No such service `{}`'.format(service_name))
 
 # ################################################################################################################################

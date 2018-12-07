@@ -29,6 +29,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'pubsub_topic'
 model = PubSubTopic
 label = 'a pub/sub topic'
+get_list_docs = 'pub/sub topics'
 broker_message = BROKER_MSG_PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
@@ -123,6 +124,8 @@ class Delete(AdminService):
 # ################################################################################################################################
 
 class Get(AdminService):
+    """ Returns a pub/sub topic by its ID.
+    """
     class SimpleIO:
         input_required = ('cluster_id', AsIs('id'))
         output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd',

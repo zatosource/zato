@@ -20,6 +20,9 @@ class Encrypt(Service):
         input_required = ('clear_text',)
         output_required = ('encrypted',)
 
+    def handle(self):
+        self.response.payload.encrypted = self.crypto.encrypt(self.request.input.clear_text.encode('utf8'))
+
 # ################################################################################################################################
 
 class Decrypt(Service):
@@ -62,7 +65,7 @@ class GenerateSecret(Service):
 # ################################################################################################################################
 
 class GeneratePassword(Service):
-    """ Generates a new secret of input bits strength.
+    """ Generates a new password of input bits strength.
     """
     class SimpleIO:
         input_required = (Integer('bits'),)

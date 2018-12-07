@@ -21,7 +21,7 @@ from bunch import bunchify
 # Zato
 from zato.server.apispec.openapi import OpenAPIGenerator
 from zato.server.apispec.wsdl import WSDLGenerator
-from zato.server.service import Opaque, Service
+from zato.server.service import List, Opaque, Service
 
 # Zato
 from zato.common.util import aslist, fs_safe_name
@@ -40,7 +40,8 @@ class GetAPISpec(Service):
     """ Returns API specifications for all services.
     """
     class SimpleIO:
-        input_optional = ('cluster_id', 'query', Bool('return_internal'), 'include', 'exclude', 'needs_sphinx')
+        input_optional = ('cluster_id', 'query', Bool('return_internal'), 'include', 'exclude', 'needs_sphinx',
+            'needs_api_invoke', 'needs_rest_channels', 'api_invoke_path')
 
     def handle(self):
         cluster_id = self.request.input.get('cluster_id')
@@ -50,6 +51,9 @@ class GetAPISpec(Service):
 
         include = [elem for elem in include if elem]
         exclude = [elem for elem in exclude if elem]
+
+        api_invoke_path = aslist(self.request.input.api_invoke_path, ',')
+        api_invoke_path = [elem for elem in api_invoke_path if elem]
 
         if not self.request.input.get('return_internal'):
             if 'zato.*' not in exclude:
@@ -68,7 +72,12 @@ class GetAPISpec(Service):
             include, exclude, self.request.input.query).get_info()
 
         if needs_sphinx:
-            out = self.invoke(GetSphinx.get_name(), {'data': data})
+            out = self.invoke(GetSphinx.get_name(), {
+                'data': data,
+                'needs_api_invoke': self.request.input.needs_api_invoke,
+                'needs_rest_channels': self.request.input.needs_rest_channels,
+                'api_invoke_path':api_invoke_path
+            })
         else:
             out = data
 
@@ -80,8 +89,9 @@ class GetSphinx(Service):
     """ Generates API docs in Sphinx.
     """
     class SimpleIO:
-        input_required = Opaque('data'),
-        output_required = Opaque('data'),
+        input_required = Opaque('data')
+        input_optional = 'needs_api_invoke', 'needs_rest_channels', List('api_invoke_path')
+        output_required = Opaque('data')
 
 # ################################################################################################################################
 
@@ -113,18 +123,20 @@ class GetSphinx(Service):
 
 # ################################################################################################################################
 
-    def get_openapi_spec(self, data):
+    def get_openapi_spec(self, data, needs_api_invoke, needs_rest_channels, api_invoke_path):
         data = bunchify(data)
-        return OpenAPIGenerator(data, self.server.worker_store.request_dispatcher.url_data.channel_data).generate()
+        channel_data = self.server.worker_store.request_dispatcher.url_data.channel_data
+        generator = OpenAPIGenerator(data, channel_data, needs_api_invoke, needs_rest_channels, api_invoke_path)
+        return generator.generate()
 
 # ################################################################################################################################
 
-    def get_service_table_line(self, ns, name, docs, sio):
+    def get_service_table_line(self, idx, name, docs, sio):
         name_fs_safe = 'service_{}'.format(fs_safe_name(name))
         file_name = '{}.rst'.format(name_fs_safe)
 
         return bunchify({
-            'ns': ns or no_value,
+            'ns': str(idx),
             'orig_name': name,
             'sphinx_name': name.replace('_', '\_'), # Needed for Sphinx to ignore undescores
             'name': name_fs_safe,
@@ -250,6 +262,7 @@ class GetSphinx(Service):
         else:
             buff.write('(None)')
             buff.write('\n')
+            buff.write('\n')
 
         # Output
         buff.write(output_title)
@@ -270,19 +283,22 @@ class GetSphinx(Service):
     def add_services(self, data, files):
 
         buff = StringIO()
+
+        buff.write('Services\n')
+        buff.write('--------\n\n')
+
         lines = []
 
         longest_ns = 2    # len('NS')
         longest_name = 4  # len('Name')
         longest_desc = 11 # len('Description')
 
-        for elem in data.services:
+        for idx, elem in enumerate(data.services, 1):
             name = elem.name
-            ns = elem.namespace_name
             docs = elem.docs
             sio = elem.simple_io
 
-            service_line = self.get_service_table_line(ns, name, docs, sio)
+            service_line = self.get_service_table_line(idx, name, docs, sio)
             lines.append(service_line)
 
             longest_ns = max(longest_ns, len(service_line.ns))
@@ -298,7 +314,7 @@ class GetSphinx(Service):
 
         self.write_separators(buff, ns_border, name_border, desc_border)
 
-        buff.write('NS'.ljust(longest_ns))
+        buff.write('---'.ljust(longest_ns))
         buff.write(col_sep)
 
         buff.write('Name'.ljust(longest_name))
@@ -336,14 +352,16 @@ class GetSphinx(Service):
 # ################################################################################################################################
 
     def handle(self):
-        data = bunchify(self.request.input.data)
+        req = self.request.input
+        data = bunchify(req.data)
         files = {}
 
         self.add_default_files(files)
         self.add_services(data, files)
 
         files['download/api.wsdl'] = self.get_wsdl_spec(data)
-        files['download/openapi.yaml'] = self.get_openapi_spec(data)
+        files['download/openapi.yaml'] = self.get_openapi_spec(
+            data, req.needs_api_invoke, req.needs_rest_channels, req.api_invoke_path)
 
         self.response.payload.data = files
 

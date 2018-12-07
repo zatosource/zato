@@ -206,8 +206,7 @@ class Delete(AdminService, _SQLService):
                 raise
 
 class ChangePassword(ChangePasswordBase):
-    """ Changes the password of an outgoing SQL connection. The underlying implementation
-    will actually stop and recreate the connection using the new password.
+    """ Changes the password of an outgoing SQL connection.
     """
     class SimpleIO(ChangePasswordBase.SimpleIO):
         request_elem = 'zato_outgoing_sql_change_password_request'

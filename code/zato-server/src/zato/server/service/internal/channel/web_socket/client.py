@@ -20,7 +20,7 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import ChannelWebSocket, Cluster, WebSocketClient
 from zato.common.odb.query import web_socket_client_by_pub_id, web_socket_clients_by_server_id
 from zato.common.util.sql import set_instance_opaque_attrs
-from zato.server.service import AsIs, Bool, List
+from zato.server.service import AsIs, List
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -100,6 +100,7 @@ class UnregisterWSSubKey(AdminService):
         # If configured to, delete the WebSocket's persistent subscription
         for sub_key in self.request.input.sub_key_list:
             sub = self.pubsub.get_subscription_by_sub_key(sub_key)
+
             if self.request.input.needs_wsx_close or sub.unsub_on_wsx_close:
                 self.invoke('zato.pubsub.pubapi.unsubscribe',{
                     'sub_key': sub.sub_key,

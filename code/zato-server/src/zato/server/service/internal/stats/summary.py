@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2018, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -216,14 +216,20 @@ class CreateSummaryByDay(BaseSummarizingService):
         self.create_summary('by-day', 'hour', 'minute')
 
 class CreateSummaryByWeek(BaseSummarizingService):
+    """ Creates a summary for the selected week.
+    """
     def handle(self):
         self.create_summary('by-week', 'day', 'hour', 'minute')
 
 class CreateSummaryByMonth(BaseSummarizingService):
+    """ Creates a summary for the selected month.
+    """
     def handle(self):
         self.create_summary('by-month', 'day', 'hour', 'minute')
 
 class CreateSummaryByYear(BaseSummarizingService):
+    """ Creates a summary for the selected year.
+    """
     def handle(self):
         self.create_summary('by-year', 'month', 'day', 'hour', 'minute')
 
@@ -255,6 +261,8 @@ class GetSummaryBase(StatsReturningService):
             n=self.request.input.n, n_type=self.request.input.n_type, needs_trends=False))
 
 class GetSummaryByDay(GetSummaryBase):
+    """ Returns a summary for the selected day.
+    """
     class SimpleIO(GetSummaryBase.SimpleIO):
         request_elem = 'zato_stats_get_summary_by_day_request'
         response_elem = 'zato_stats_get_summary_by_day_response'
@@ -269,6 +277,8 @@ class GetSummaryByDay(GetSummaryBase):
             return '{}T23:59:59'.format(start)
 
 class GetSummaryByWeek(GetSummaryBase):
+    """ Returns a summary for the selected week.
+    """
     class SimpleIO(GetSummaryBase.SimpleIO):
         request_elem = 'zato_stats_get_summary_by_week_request'
         response_elem = 'zato_stats_get_summary_by_week_response'
@@ -294,6 +304,8 @@ class GetSummaryByWeek(GetSummaryBase):
             return (start + relativedelta(weekday=SU(+1))).strftime('%Y-%m-%d 23:59:59')
 
 class GetSummaryByMonth(GetSummaryBase):
+    """ Returns a summary for the selected month.
+    """
     class SimpleIO(GetSummaryBase.SimpleIO):
         request_elem = 'zato_stats_get_summary_by_month_request'
         response_elem = 'zato_stats_get_summary_by_month_response'
@@ -309,6 +321,8 @@ class GetSummaryByMonth(GetSummaryBase):
             return '{0}-{1:0>2}-{2}T23:59:59'.format(start.year, start.month, monthrange(start.year, start.month)[1])
 
 class GetSummaryByYear(GetSummaryBase):
+    """ Returns a summary for the selected year.
+    """
     class SimpleIO(GetSummaryBase.SimpleIO):
         request_elem = 'zato_stats_get_summary_by_year_request'
         response_elem = 'zato_stats_get_summary_by_year_response'

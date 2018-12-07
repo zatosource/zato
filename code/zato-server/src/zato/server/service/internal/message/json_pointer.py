@@ -99,7 +99,7 @@ class Create(_CreateEdit):
             self.response.payload.name = definition.name
 
 class Edit(_CreateEdit):
-    """ Updates an JSON Pointer.
+    """ Updates a JSON Pointer.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_message_json_pointer_edit_request'
@@ -149,7 +149,7 @@ class Edit(_CreateEdit):
                 self.response.payload.name = definition.name
 
 class Delete(AdminService):
-    """ Deletes an JSON Pointer.
+    """ Deletes a JSON Pointer.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_message_json_pointer_delete_request'
