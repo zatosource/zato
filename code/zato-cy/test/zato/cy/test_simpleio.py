@@ -268,10 +268,16 @@ class InputPlainParsing(_Base):
     def test_convert_plain_into_required_optional(self):
 
         class SimpleIO:
-            input = 'abc', 'zxc', 'ghj', '-eee'
+            input = 'abc', 'zxc', 'ghj', '-rrr', '-eee'
+            output = 'abc2', 'zxc2', 'ghj2', '-rrr2', '-eee2'
 
         sio = self.get_sio(SimpleIO)
+
         self.assertEquals(sio.input_required, ['abc', 'ghj', 'zxc'])
+        self.assertEquals(sio.input_optional, ['eee', 'rrr'])
+
+        self.assertEquals(sio.output_required, ['abc2', 'ghj2', 'zxc2'])
+        self.assertEquals(sio.output_optional, ['eee2', 'rrr2'])
 
     def test_elem_sharing_not_allowed_plain(self):
 
