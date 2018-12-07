@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Zato
+from zato.common import DATA_FORMAT
+
 # ################################################################################################################################
 
 cdef class _NotGiven(object):
@@ -48,17 +51,43 @@ cdef class Elem(object):
         object _default
         bint _is_required
 
+        public dict parse_from # From external formats to Python objects
+        public dict parse_to   # From Python objects to external formats
+
+# ################################################################################################################################
+
+    def __cinit__(self):
+        self._type = ElemType.as_is
+        self.parse_from = {}
+        self.parse_to = {}
+
+        self.parse_from[DATA_FORMAT.JSON] = self.from_json
+        self.parse_from[DATA_FORMAT.XML] = self.from_xml
+        self.parse_from[DATA_FORMAT.CSV] = self.from_csv
+
+        self.parse_to[DATA_FORMAT.JSON] = self.to_json
+        self.parse_to[DATA_FORMAT.XML] = self.to_xml
+        self.parse_to[DATA_FORMAT.CSV] = self.to_csv
+
+# ################################################################################################################################
+
     def __str__(self):
         return '<{} at {} {}:{} d:{} r:{}>'.format(self.__class__.__name__, hex(id(self)), self._name, self._type,
             self._default, self._is_required)
+
+# ################################################################################################################################
 
     __repr__ = __str__
 
     def __cmp__(self, other):
         return self._name == other._name
 
+# ################################################################################################################################
+
     def __hash__(self):
         return hash(self._name) # Names are always unique
+
+# ################################################################################################################################
 
     @property
     def pretty(self):
@@ -70,6 +99,21 @@ cdef class Elem(object):
         out += self._name
 
         return out
+
+# ################################################################################################################################
+
+    @staticmethod
+    def _not_implemented():
+        raise NotImplementedError()
+
+    from_json = _not_implemented
+    to_json   = _not_implemented
+
+    from_xml  = _not_implemented
+    to_xml    = _not_implemented
+
+    from_csv  = _not_implemented
+    to_csv    = _not_implemented
 
 # ################################################################################################################################
 
