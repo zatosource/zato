@@ -203,6 +203,9 @@ class Service(object):
     _before_job_hooks = []
     _after_job_hooks = []
 
+    # Cython based SimpleIO definition created by service store when the class is deployed
+    _sio = None
+
     # User management and SSO
     sso = None
 
