@@ -340,6 +340,12 @@ cdef class SimpleIO(object):
         # User-provided SimpleIO declaration, before parsing. This is parsed into self.definition.
         object user_declaration
 
+        # For compatibility with Zato < 3.0, will point to objects in self.definition
+        public list input_required
+        public list input_optional
+        public list output_required
+        public list output_optional
+
 # ################################################################################################################################
 
     def __cinit__(self, _SIOServerConfig server_config, object user_declaration):
@@ -470,6 +476,24 @@ cdef class SimpleIO(object):
         container_opt_name = '_{}_optional'.format(container)
         container_optional = getattr(self.definition, container_opt_name)
         container_optional.set_elems(optional)
+
+        # This is needed for backward compatiblity with Zato < 3.0
+
+        self.input_required = []
+        for elem in self.definition._input_required:
+            self.input_required.append(elem._name)
+
+        self.input_optional = []
+        for elem in self.definition._input_optional:
+            self.input_optional.append(elem._name)
+
+        self.output_required = []
+        for elem in self.definition._output_required:
+            self.output_required.append(elem._name)
+
+        self.output_optional = []
+        for elem in self.definition._output_optional:
+            self.output_optional.append(elem._name)
 
 # ################################################################################################################################
 
