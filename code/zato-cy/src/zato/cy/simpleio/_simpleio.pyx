@@ -185,7 +185,7 @@ cdef class SecretConfig(ConfigItem):
 # ################################################################################################################################
 
 cdef class _SIOServerConfig(object):
-    """ Contains global SIO configuration. Each service's _simpleio attribute
+    """ Contains global SIO configuration. Each service's _sio attribute
     will refer to this object so as to have only one place where all the global configuration is kept.
     """
     cdef:
@@ -252,6 +252,9 @@ cdef class SIOList(object):
 
     def set_elems(self, elems):
         self.elems[:] = elems
+
+    def get_elem_names(self):
+        return sorted(elem._name for elem in self.elems)
 
 # ################################################################################################################################
 
@@ -326,9 +329,9 @@ cdef class SIODefinition(object):
 
 # ################################################################################################################################
 
-cdef class SimpleIO(object):
-    """ If a service uses SimpleIO then, during deployment, its class will receive an attribute called _simpleio
-    based on the service's SimpleIO attribute. The _simpleio one will be an instance of this Cython class.
+cdef class CySimpleIO(object):
+    """ If a service uses SimpleIO then, during deployment, its class will receive an attribute called _sio
+    based on the service's SimpleIO attribute. The _sio one will be an instance of this Cython class.
     """
     cdef:
         # Server-wide configuration
@@ -339,12 +342,6 @@ cdef class SimpleIO(object):
 
         # User-provided SimpleIO declaration, before parsing. This is parsed into self.definition.
         object user_declaration
-
-        # For compatibility with Zato < 3.0, will point to objects in self.definition
-        public list input_required
-        public list input_optional
-        public list output_required
-        public list output_optional
 
 # ################################################################################################################################
 
@@ -364,12 +361,12 @@ cdef class SimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef Elem _convert_to_elem_instance(self, elem, is_required):
+    cdef Elem _convert_to_elem_instance(self, elem, container, is_required):
         cdef Text _elem # For now, we always return Text instances
 
         _elem = Text()
         _elem._name = elem
-        _elem._default = 'QQQ'
+        _elem._default = self.definition._default_input_value if container == 'input' else self.definition._default_output_value
         _elem._is_required = is_required
 
         return _elem
@@ -451,7 +448,7 @@ cdef class SimpleIO(object):
         for elem_list, is_required in elems:
             for elem in elem_list:
                 if not isinstance(elem, Elem):
-                    elem = self._convert_to_elem_instance(elem, is_required)
+                    elem = self._convert_to_elem_instance(elem, container, is_required)
                     if is_required:
                         _required.append(elem)
                     else:
@@ -477,94 +474,36 @@ cdef class SimpleIO(object):
         container_optional = getattr(self.definition, container_opt_name)
         container_optional.set_elems(optional)
 
-        # This is needed for backward compatiblity with Zato < 3.0
+# ################################################################################################################################
 
-        self.input_required = []
-        for elem in self.definition._input_required:
-            self.input_required.append(elem._name)
+    @staticmethod
+    def attach_sio(server_config, class_):
+        """ Given a service class, the method extracts its user-defined SimpleIO definition
+        and attaches the Cython-based one to the class's _sio attribute.
+        """
+        print()
+        print()
 
-        self.input_optional = []
-        for elem in self.definition._input_optional:
-            self.input_optional.append(elem._name)
+        print(111, class_)
 
-        self.output_required = []
-        for elem in self.definition._output_required:
-            self.output_required.append(elem._name)
+        print()
+        print()
 
-        self.output_optional = []
-        for elem in self.definition._output_optional:
-            self.output_optional.append(elem._name)
+        # Get the user-defined SimpleIO definition
+        user_sio = getattr(class_, 'SimpleIO', None)
+
+        # This class does not use SIO so we can just return immediately
+        if not user_sio:
+            return
+
+        # Attach the Cython object representing the parsed user definition
+        cy_simple_io = CySimpleIO(server_config, user_sio)
+        cy_simple_io.build()
+        class_._sio = cy_simple_io
 
 # ################################################################################################################################
 
 # Create server/process-wide singletons
 NotGiven = _NotGiven()
-
-# ################################################################################################################################
-
-def run():
-
-    # Bunch
-    from bunch import Bunch, bunchify
-
-    # Dummy SQLAlchemy classes
-    class SA:
-        def __init__(self, *ignored):
-            pass
-
-        def __add__(self, other):
-            print(222, other)
-
-        __radd__ = __add__
-
-        def __sub__(self, other):
-            print(333, other)
-
-        __rsub__ = __sub__
-
-    class MyUser:
-        pass
-
-# ################################################################################################################################
-
-    class MySimpleIO:
-        input_required = 'abc'
-
-    class MySimpleIO:
-        input_optional = 'abc'
-
-    class MySimpleIO:
-        output_required = 'abc'
-
-    class MySimpleIO:
-        output_optional = 'abc'
-
-# ################################################################################################################################
-
-    class MySimpleIO:
-        input_required = 'abc', 'zxc'
-
-    class MySimpleIO:
-        input_optional = 'abc', 'zxc'
-
-    class MySimpleIO:
-        output_required = 'abc', 'zxc'
-
-    class MySimpleIO:
-        output_optional = 'abc', 'zxc'
-
-# ################################################################################################################################
-
-    class MySimpleIO:
-        input = 'a:user_id', '-i:user_type', '-user_name', '+user_profile', Int('-abc'), AsIs('cust_id')
-        output = '-d:last_visited', 'i:duration', Float('qqq'), Dict('rrr')
-
-    class MySimpleIO:
-        input = 'a:user_id', '-is_active'
-        output = 'd:last_visited', 'i:duration'
-
-    class MySimpleIO:
-        input = SA(MyUser) + ('user_id', 'user_type'), 'is_admin', '-is_staff'
-        output = SA(MyUser) - ('is_active', 'is_new'), 'i:user_category'
 
 # ################################################################################################################################

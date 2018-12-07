@@ -15,13 +15,15 @@ from unittest import TestCase
 from bunch import Bunch, bunchify
 
 # Zato
-from zato.simpleio import BoolConfig, IntConfig, NotGiven, SecretConfig, SimpleIO, _SIOServerConfig
+from zato.server.service import Service
+from zato.simpleio import BoolConfig, IntConfig, NotGiven, SecretConfig, CySimpleIO, _SIOServerConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class _Base(TestCase):
-    def get_sio(self, declaration):
+
+    def get_server_config(self):
 
         SIOServerConfig = _SIOServerConfig()
         server_config = Bunch()
@@ -124,7 +126,11 @@ class _Base(TestCase):
         SIOServerConfig.prefix_required = server_config.default.prefix_required
         SIOServerConfig.prefix_optional = server_config.default.prefix_optional
 
-        sio = SimpleIO(SIOServerConfig, declaration)
+        return SIOServerConfig
+
+    def get_sio(self, declaration):
+
+        sio = CySimpleIO(self.get_server_config(), declaration)
         sio.build()
 
         return sio
@@ -261,6 +267,20 @@ class InputOutputParsing(_Base):
         self.assertEquals(ctx.exception.message, expected)
 
 # ################################################################################################################################
+
+    def test_default_input_value(self):
+
+        class SimpleIO:
+            input_required = 'abc', 'zxc', 'qwe'
+            input_optional = 'zxc', 'abc', 'rty'
+
+        with self.assertRaises(ValueError) as ctx:
+            self.get_sio(SimpleIO)
+
+        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']`"
+        self.assertEquals(ctx.exception.message, expected)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class InputPlainParsing(_Base):
@@ -273,11 +293,13 @@ class InputPlainParsing(_Base):
 
         sio = self.get_sio(SimpleIO)
 
-        self.assertEquals(sio.input_required, ['abc', 'ghj', 'zxc'])
-        self.assertEquals(sio.input_optional, ['eee', 'rrr'])
+        self.assertEquals(sio.definition._input_required.get_elem_names(), ['abc', 'ghj', 'zxc'])
+        self.assertEquals(sio.definition._input_optional.get_elem_names(), ['eee', 'rrr'])
 
-        self.assertEquals(sio.output_required, ['abc2', 'ghj2', 'zxc2'])
-        self.assertEquals(sio.output_optional, ['eee2', 'rrr2'])
+        self.assertEquals(sio.definition._output_required.get_elem_names(), ['abc2', 'ghj2', 'zxc2'])
+        self.assertEquals(sio.definition._output_optional.get_elem_names(), ['eee2', 'rrr2'])
+
+# ################################################################################################################################
 
     def test_elem_sharing_not_allowed_plain(self):
 
@@ -290,6 +312,24 @@ class InputPlainParsing(_Base):
 
         expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']`"
         self.assertEquals(ctx.exception.message, expected)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class AttachSIO(_Base):
+    def test_attach_sio(self):
+        class MyService(Service):
+            class SimpleIO:
+                input = 'aaa', 'bbb', 'ccc', '-ddd', '-eee'
+                output = 'qqq', 'www', '-eee', '-fff'
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        self.assertEquals(MyService._sio.definition._input_required.get_elem_names(), ['aaa', 'bbb', 'ccc'])
+        self.assertEquals(MyService._sio.definition._input_optional.get_elem_names(), ['ddd', 'eee'])
+
+        self.assertEquals(MyService._sio.definition._output_required.get_elem_names(), ['qqq', 'www'])
+        self.assertEquals(MyService._sio.definition._output_optional.get_elem_names(), ['eee', 'fff'])
 
 # ################################################################################################################################
 # ################################################################################################################################
