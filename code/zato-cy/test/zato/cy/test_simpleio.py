@@ -16,7 +16,8 @@ from bunch import Bunch, bunchify
 
 # Zato
 from zato.server.service import Service
-from zato.simpleio import BoolConfig, IntConfig, NotGiven, SecretConfig, CySimpleIO, _SIOServerConfig
+from zato.simpleio import AsIs, Bool, BoolConfig, CSV, CySimpleIO, Date, DateTime, Dict, DictList, Float, Int, IntConfig, \
+     List, NotGiven, Opaque, SecretConfig, _SIOServerConfig, Text, UUID
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -330,6 +331,14 @@ class AttachSIO(_Base):
 
         self.assertEquals(MyService._sio.definition._output_required.get_elem_names(), ['qqq', 'www'])
         self.assertEquals(MyService._sio.definition._output_optional.get_elem_names(), ['eee', 'fff'])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ElemInputDeserialization(_Base):
+
+    def test_as_is(self):
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
