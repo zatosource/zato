@@ -477,6 +477,12 @@ class InRAMSyncBacklog(object):
 
 # ################################################################################################################################
 
+    def has_messages_by_sub_key(self, sub_key):
+        with self.lock:
+            return len(self.sub_key_to_msg_id.get(sub_key, [])) > 0
+
+# ################################################################################################################################
+
     def clear_topic(self, topic_id):
         logger.info('Clearing topic `%s` (id:%s)', self.pubsub.get_topic_by_id(topic_id).name, topic_id)
 
@@ -818,9 +824,17 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_subscriptions_by_topic(self, topic_name):
+    def get_subscriptions_by_topic(self, topic_name, require_backlog_messages=False):
         with self.lock:
-            return self.subscriptions_by_topic.get(topic_name, [])
+            subs = self.subscriptions_by_topic.get(topic_name, [])
+            if require_backlog_messages:
+                out = []
+                for item in subs:
+                    if self.sync_backlog.has_messages_by_sub_key(item.sub_key):
+                        out.append(item)
+                return out
+            else:
+                return subs
 
 # ################################################################################################################################
 
@@ -859,6 +873,12 @@ class PubSub(object):
     def has_sub_key(self, sub_key):
         with self.lock:
             return sub_key in self.subscriptions_by_sub_key
+
+# ################################################################################################################################
+
+    def has_messages_in_backlog(self, sub_key):
+        with self.lock:
+            return self.sync_backlog.has_messages_by_sub_key(sub_key)
 
 # ################################################################################################################################
 
@@ -1913,7 +1933,7 @@ class PubSub(object):
                         continue
 
                     # If it does, get subscriptions for it ..
-                    subs = self.get_subscriptions_by_topic(_topic.name)
+                    subs = self.get_subscriptions_by_topic(_topic.name, require_backlog_messages=True)
 
                     # .. if there are any subscriptions at all, we store that information for later use.
                     if subs:
@@ -1953,8 +1973,8 @@ class PubSub(object):
                                 else:
                                     pub_time_max = topic.gd_pub_time_max
 
-                                logger.info('Syncing messages for `%s` ngd-list:%s cid:%s' % (
-                                    topic_name, [elem['pub_msg_id'] for elem in non_gd_msg_list], cid))
+                                logger.info('Syncing messages for `%s` ngd-list:%s (sk_list:%s) cid:%s' % (
+                                    topic_name, [elem['pub_msg_id'] for elem in non_gd_msg_list], sub_keys, cid))
 
                                 request = {
                                     'cid': cid,
