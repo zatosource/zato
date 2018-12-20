@@ -306,9 +306,10 @@ services=zato.pickup.log-csv
 topics=
 
 [user_conf]
-pickup_from=./config/repo/user-conf
+pickup_from=./pickup/incoming/user-conf
 patterns=*.conf
 parse_on_pickup=False
+delete_after_pickup=False
 services=zato.pickup.update-user-conf
 topics=
 
@@ -316,6 +317,7 @@ topics=
 pickup_from=./pickup/incoming/static
 patterns=*
 parse_on_pickup=False
+delete_after_pickup=False
 services=zato.pickup.update-static
 topics=
 """
