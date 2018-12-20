@@ -481,7 +481,16 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
             # New in 2.0
             if name == 'delete_after_pickup':
-                value = asbool(self.fs_server_config.hot_deploy.get(name, True))
+
+                # For backward compatibility, we need to support both names
+                old_name = 'delete_after_pick_up'
+
+                if old_name in self.fs_server_config.hot_deploy:
+                    _name = old_name
+                else:
+                    _name = name
+
+                value = asbool(self.fs_server_config.hot_deploy.get(_name, True))
                 self.hot_deploy_config[name] = value
             else:
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
