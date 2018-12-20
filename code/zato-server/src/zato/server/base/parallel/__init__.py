@@ -477,10 +477,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         salt_size = self.sso_config.hash_secret.salt_size
         self.crypto_manager.add_hash_scheme('zato.default', self.sso_config.hash_secret.rounds, salt_size)
 
-        for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pick_up'):
+        for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pickup'):
 
             # New in 2.0
-            if name == 'delete_after_pick_up':
+            if name == 'delete_after_pickup':
                 value = asbool(self.fs_server_config.hot_deploy.get(name, True))
                 self.hot_deploy_config[name] = value
             else:
@@ -589,7 +589,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
             stanza_config.read_on_pickup = asbool(stanza_config.get('read_on_pickup', True))
             stanza_config.parse_on_pickup = asbool(stanza_config.get('parse_on_pickup', True))
-            stanza_config.delete_after_pick_up = asbool(stanza_config.get('delete_after_pick_up', True))
+            stanza_config.delete_after_pickup = asbool(stanza_config.get('delete_after_pickup', True))
             stanza_config.case_insensitive = asbool(stanza_config.get('case_insensitive', True))
             stanza_config.pickup_from = absolutize(stanza_config.pickup_from, self.base_dir)
             stanza_config.is_service_hot_deploy = False
@@ -627,7 +627,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             'patterns': [globre.compile('*.py', globre.EXACT | IGNORECASE)],
             'read_on_pickup': False,
             'parse_on_pickup': False,
-            'delete_after_pick_up': self.hot_deploy_config.delete_after_pick_up,
+            'delete_after_pickup': self.hot_deploy_config.delete_after_pickup,
             'is_service_hot_deploy': True,
         })
 
