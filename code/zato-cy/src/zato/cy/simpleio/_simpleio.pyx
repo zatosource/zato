@@ -148,8 +148,44 @@ cdef class DateTime(Elem):
 # ################################################################################################################################
 
 cdef class Dict(Elem):
+
+    cdef:
+        public set _keys_required
+        public set _keys_optional
+
     def __cinit__(self):
         self._type = ElemType.dict_
+        self._keys_required = set()
+        self._keys_optional = set()
+
+    def __init__(self, name, *args):
+        self._name = name
+        for key in args:
+            self._keys_optional.add(key[1:]) if key.startswith('-') else self._keys_required.add(key)
+
+    def from_json(self, data):
+        if self._keys_required or self._keys_optional:
+
+            # Output we will return
+            out = {}
+
+            # All the required keys
+            for key in self._keys_required:
+                value = data.get(key)
+                if not value:
+                    raise ValueError('Key `{}` not found in `{}`'.format(key, data))
+                out[key] = value
+
+            # All the optional keys
+            for key in self._keys_optional:
+                value = data.get(key)
+                if value:
+                    out[key] = value
+
+            return out
+
+        else:
+            return data
 
 # ################################################################################################################################
 
