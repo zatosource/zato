@@ -9,12 +9,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from json import dumps, loads
 from unittest import TestCase
 
 # Bunch
 from bunch import Bunch, bunchify
 
 # Zato
+from zato.common import DATA_FORMAT
 from zato.server.service import Service
 from zato.simpleio import AsIs, Bool, BoolConfig, CSV, CySimpleIO, Date, DateTime, Dict, DictList, Float, Int, IntConfig, \
      List, NotGiven, Opaque, SecretConfig, _SIOServerConfig, Text, UUID
@@ -22,7 +24,7 @@ from zato.simpleio import AsIs, Bool, BoolConfig, CSV, CySimpleIO, Date, DateTim
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _Base(TestCase):
+class _BaseTestCase(TestCase):
 
     def get_server_config(self):
 
@@ -139,7 +141,7 @@ class _Base(TestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InputOutputParsing(_Base):
+class InputOutputParsingTestCase(_BaseTestCase):
 
     def test_no_input_output(self):
 
@@ -284,7 +286,7 @@ class InputOutputParsing(_Base):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InputPlainParsing(_Base):
+class InputPlainParsingTestCase(_BaseTestCase):
 
     def test_convert_plain_into_required_optional(self):
 
@@ -331,7 +333,7 @@ class InputPlainParsing(_Base):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class AttachSIO(_Base):
+class AttachSIOTestCase(_BaseTestCase):
     def test_attach_sio(self):
 
         class MyService(Service):
@@ -350,10 +352,47 @@ class AttachSIO(_Base):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ElemInputDeserialization(_Base):
+class DictTestCase(_BaseTestCase):
 
-    def test_as_is(self):
-        pass
+    def test_from_json_without_key_names(self):
+
+        dict = Dict('mykey')
+
+        # Note that the dict will not expect any keys in particular on input because it has only a name and nothing else
+        data = {
+            'aaa': 'aaa-111',
+            'bbb': 'bbb-111',
+            'ccc': 'ccc-111',
+            'ddd': 'ddd-111',
+            'fff': 'fff-111'
+        }
+
+        parsed = dict.parse_from[DATA_FORMAT.JSON](data)
+        self.assertDictEqual(parsed, data)
+
+# ################################################################################################################################
+
+    def test_from_json_with_key_names(self):
+
+        dict = Dict('mykey', 'aaa', 'bbb', 'ccc', '-ddd', '-eee')
+
+        # Note that 'eee' is optional hence it may be omitted and that 'fff' is not part of the dict's I/O definition
+        data = {
+            'aaa': 'aaa-111',
+            'bbb': 'bbb-111',
+            'ccc': 'ccc-111',
+            'ddd': 'ddd-111',
+            'fff': 'fff-111'
+        }
+
+        parsed = dict.parse_from[DATA_FORMAT.JSON](data)
+
+        self.assertDictEqual(parsed, {
+            'aaa': 'aaa-111',
+            'bbb': 'bbb-111',
+            'ccc': 'ccc-111',
+            'ddd': 'ddd-111',
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################
