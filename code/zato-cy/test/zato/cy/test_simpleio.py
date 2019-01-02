@@ -315,10 +315,25 @@ class InputPlainParsing(_Base):
         self.assertEquals(ctx.exception.message, expected)
 
 # ################################################################################################################################
+
+    def test_elem_required_minus_is_insignificant(self):
+
+        class MyService(Service):
+            class SimpleIO:
+                input_required = 'aaa', 'bbb', 'ccc', '-ddd', '-eee'
+                output_required = 'qqq', 'www', '-eee', '-fff'
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        self.assertEquals(MyService._sio.definition._input_required.get_elem_names(), ['-ddd', '-eee', 'aaa', 'bbb', 'ccc'])
+        self.assertEquals(MyService._sio.definition._output_required.get_elem_names(), ['-eee', '-fff', 'qqq', 'www'])
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class AttachSIO(_Base):
     def test_attach_sio(self):
+
         class MyService(Service):
             class SimpleIO:
                 input = 'aaa', 'bbb', 'ccc', '-ddd', '-eee'

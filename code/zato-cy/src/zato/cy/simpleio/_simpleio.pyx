@@ -525,13 +525,6 @@ cdef class CySimpleIO(object):
         """ Given a service class, the method extracts its user-defined SimpleIO definition
         and attaches the Cython-based one to the class's _sio attribute.
         """
-        print()
-        print()
-
-        print(111, class_)
-
-        print()
-        print()
 
         # Get the user-defined SimpleIO definition
         user_sio = getattr(class_, 'SimpleIO', None)
