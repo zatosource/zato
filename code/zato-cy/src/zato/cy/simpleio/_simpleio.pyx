@@ -8,8 +8,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# datetutil
+from dateutil.parser import parse as dt_parse
+
 # Zato
 from zato.common import DATA_FORMAT
+from zato.util_convert import to_bool
 
 # ################################################################################################################################
 
@@ -121,11 +125,21 @@ cdef class AsIs(Elem):
     def __cinit__(self):
         self._type = ElemType.as_is
 
+    def from_json(self, data):
+        return data
+
+    to_json = from_json
+
 # ################################################################################################################################
 
 cdef class Bool(Elem):
     def __cinit__(self):
         self._type = ElemType.bool
+
+    def from_json(self, value):
+        return to_bool(value)
+
+    from_xml = to_json = to_xml = from_json
 
 # ################################################################################################################################
 
@@ -133,15 +147,33 @@ cdef class CSV(Elem):
     def __cinit__(self):
         self._type = ElemType.csv
 
+    def from_json(self, value, *ignored):
+        return value.split(',')
+
+    from_xml = from_json
+
+    def to_json(self, value, *ignored):
+        return ','.join(value) if isinstance(value, (list, tuple)) else value
+
+    to_xml = to_json
+
 # ################################################################################################################################
 
 cdef class Date(Elem):
+
     def __cinit__(self):
         self._type = ElemType.date
 
+    def from_json(self, value):
+        try:
+            return dt_parse(value)
+        except ValueError as e:
+            # This is the only way to learn about what kind of exception we caught
+            raise ValueError('Could not parse `{}` as a {} object ({})'.format(value, self.__class__.__name__, e.message))
+
 # ################################################################################################################################
 
-cdef class DateTime(Elem):
+cdef class DateTime(Date):
     def __cinit__(self):
         self._type = ElemType.date_time
 
