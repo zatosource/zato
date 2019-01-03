@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from datetime import datetime
 from json import dumps, loads
 from unittest import TestCase
 
@@ -20,6 +21,9 @@ from zato.common import DATA_FORMAT
 from zato.server.service import Service
 from zato.simpleio import AsIs, Bool, BoolConfig, CSV, CySimpleIO, Date, DateTime, Dict, DictList, Float, Int, IntConfig, \
      List, NotGiven, Opaque, SecretConfig, _SIOServerConfig, Text, UUID
+
+# Zato - Cython
+from zato.util_convert import false_values, to_bool, true_values
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -352,11 +356,83 @@ class AttachSIOTestCase(_BaseTestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class DictTestCase(_BaseTestCase):
+class FromJSONTestCase(_BaseTestCase):
 
-    def test_from_json_without_key_names(self):
+# ################################################################################################################################
 
-        dict = Dict('mykey')
+    def _parse(self, sio_elem, data):
+        return sio_elem.parse_from[DATA_FORMAT.JSON](data)
+
+# ################################################################################################################################
+
+    def test_as_is(self):
+        sio = AsIs('myname')
+        data = object()
+        parsed = self._parse(sio, data)
+
+        self.assertIs(data, parsed)
+
+# ################################################################################################################################
+
+    def test_bool_true(self):
+        sio = AsIs('myname')
+
+        for data in true_values + tuple(elem.upper() for elem in true_values) + (True, 1, -1):
+            parsed = self._parse(sio, data)
+            self.assertTrue(parsed)
+
+# ################################################################################################################################
+
+    def test_bool_false(self):
+        sio = Bool('myname')
+
+        for data in false_values + tuple(elem.upper() for elem in false_values) + (False, 0):
+            parsed = self._parse(sio, data)
+            self.assertFalse(parsed)
+
+# ################################################################################################################################
+
+    def test_csv(self):
+        sio = CSV('myname')
+        data = 'q,w,e,r,t,Y,U,I,O,P'
+        parsed = self._parse(sio, data)
+        self.assertListEqual(parsed, data.split(','))
+
+# ################################################################################################################################
+
+    def test_date_valid(self):
+        sio = Date('myname')
+        year = 1999
+        month = 12
+        day = 31
+        data = '{}-{}-{}'.format(day, month, year)
+        parsed = self._parse(sio, data)
+
+        self.assertIsInstance(parsed, datetime)
+        self.assertEquals(parsed.day, day)
+        self.assertEquals(parsed.month, month)
+        self.assertEquals(parsed.year, year)
+
+# ################################################################################################################################
+
+    def test_date_invalid(self):
+        sio = Date('myname')
+        year = 1999
+        month = 77
+        day = 31
+        data = '{}-{}-{}'.format(day, month, year)
+
+        with self.assertRaises(ValueError) as ctx:
+            self._parse(sio, data)
+
+        expected = 'Could not parse `31-77-1999` as a Date object (month must be in 1..12)'
+        self.assertEquals(ctx.exception.message, expected)
+
+# ################################################################################################################################
+
+    def test_dict_without_key_names(self):
+
+        sio = Dict('mykey')
 
         # Note that the dict will not expect any keys in particular on input because it has only a name and nothing else
         data = {
@@ -366,15 +442,15 @@ class DictTestCase(_BaseTestCase):
             'ddd': 'ddd-111',
             'fff': 'fff-111'
         }
+        parsed = self._parse(sio, data)
 
-        parsed = dict.parse_from[DATA_FORMAT.JSON](data)
         self.assertDictEqual(parsed, data)
 
 # ################################################################################################################################
 
-    def test_from_json_with_key_names(self):
+    def test_dict_with_key_names(self):
 
-        dict = Dict('mykey', 'aaa', 'bbb', 'ccc', '-ddd', '-eee')
+        sio = Dict('mykey', 'aaa', 'bbb', 'ccc', '-ddd', '-eee')
 
         # Note that 'eee' is optional hence it may be omitted and that 'fff' is not part of the dict's I/O definition
         data = {
@@ -384,8 +460,7 @@ class DictTestCase(_BaseTestCase):
             'ddd': 'ddd-111',
             'fff': 'fff-111'
         }
-
-        parsed = dict.parse_from[DATA_FORMAT.JSON](data)
+        parsed = self._parse(sio, data)
 
         self.assertDictEqual(parsed, {
             'aaa': 'aaa-111',
