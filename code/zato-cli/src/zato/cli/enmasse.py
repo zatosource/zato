@@ -1189,7 +1189,7 @@ class EnMasse(ManageCommand):
         #
 
         # Get client and issue a sanity check as quickly as possible
-        self.client = get_client_from_server_conf(self.args.path)
+        self.client = get_client_from_server_conf(self.component_dir)
         self.object_mgr = ObjectManager(self.client, self.logger)
         self.client.invoke('zato.ping')
         populate_services_from_apispec(self.client, self.logger)
