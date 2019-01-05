@@ -525,4 +525,112 @@ class FromJSONTestCase(_BaseTestCase):
         })
 
 # ################################################################################################################################
+
+    def test_dict_list_without_key_names(self):
+
+        sio = DictList('mykey')
+
+        data1 = {
+            'aaa': 'aaa-111',
+            'bbb': 'bbb-111',
+            'ccc': 'ccc-111',
+            'ddd': 'ddd-111',
+            'fff': 'fff-111'
+        }
+
+        data2 = {
+            'aaa': 'aaa-222',
+            'bbb': 'bbb-222',
+            'ccc': 'ccc-222',
+            'ddd': 'ddd-222',
+            'fff': 'fff-222'
+        }
+
+        data = [data1, data2]
+        parsed = self._parse(sio, data)
+
+        self.assertDictEqual(parsed[0], data1)
+        self.assertDictEqual(parsed[1], data2)
+
+# ################################################################################################################################
+
+    def test_dict_list_without_key_names(self):
+
+        sio = DictList('mykey', 'aaa', 'bbb', 'ccc', '-ddd', '-eee')
+
+        data1 = {
+            'aaa': 'aaa-111',
+            'bbb': 'bbb-111',
+            'ccc': 'ccc-111',
+            'ddd': 'ddd-111',
+            'fff': 'fff-111'
+        }
+
+        data2 = {
+            'aaa': 'aaa-222',
+            'bbb': 'bbb-222',
+            'ccc': 'ccc-222',
+            'ddd': 'ddd-222',
+            'fff': 'fff-222'
+        }
+
+        expected1 = {
+            'aaa': 'aaa-111',
+            'bbb': 'bbb-111',
+            'ccc': 'ccc-111',
+            'ddd': 'ddd-111',
+        }
+
+        expected2 = {
+            'aaa': 'aaa-222',
+            'bbb': 'bbb-222',
+            'ccc': 'ccc-222',
+            'ddd': 'ddd-222',
+        }
+
+        data = [data1, data2]
+        parsed = self._parse(sio, data)
+
+        self.assertDictEqual(parsed[0], expected1)
+        self.assertDictEqual(parsed[1], expected2)
+
+# ################################################################################################################################
+
+    def test_list_from_list(self):
+        sio = List('myname')
+        data = ['q,w,e,r,t,Y,U,I,O,P']
+        parsed = self._parse(sio, data)
+        self.assertListEqual(parsed, data)
+
+# ################################################################################################################################
+
+    def test_list_from_tuple(self):
+        sio = List('myname')
+        data = tuple(['q,w,e,r,t,Y,U,I,O,P'])
+        parsed = self._parse(sio, data)
+
+        self.assertIsInstance(parsed, tuple)
+        self.assertEquals(parsed, data)
+
+# ################################################################################################################################
+
+    def test_list_from_string(self):
+        sio = List('myname')
+        data = 'abcdef'
+        parsed = self._parse(sio, data)
+
+        self.assertIsInstance(parsed, list)
+        self.assertEquals(parsed, [data])
+
+# ################################################################################################################################
+
+    def test_list_from_int(self):
+        sio = List('myname')
+        data = 123
+        parsed = self._parse(sio, data)
+
+        self.assertIsInstance(parsed, list)
+        self.assertEquals(parsed, [data])
+
+# ################################################################################################################################
 # ################################################################################################################################

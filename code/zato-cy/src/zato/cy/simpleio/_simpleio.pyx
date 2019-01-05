@@ -20,6 +20,12 @@ from zato.util_convert import to_bool
 
 # ################################################################################################################################
 
+_builtin_float = float
+_builtin_int = int
+_list_like = (list, tuple)
+
+# ################################################################################################################################
+
 cdef class _NotGiven(object):
     """ Indicates that a particular value was not provided on input or output.
     """
@@ -208,21 +214,24 @@ cdef class Dict(Elem):
         for key in args:
             self._keys_optional.add(key[1:]) if key.startswith('-') else self._keys_required.add(key)
 
-    def from_json(self, data):
-        if self._keys_required or self._keys_optional:
+# ################################################################################################################################
+
+    @staticmethod
+    def from_json_static(data, keys_required, keys_optional):
+        if keys_required or keys_optional:
 
             # Output we will return
             out = {}
 
             # All the required keys
-            for key in self._keys_required:
+            for key in keys_required:
                 value = data.get(key)
                 if not value:
                     raise ValueError('Key `{}` not found in `{}`'.format(key, data))
                 out[key] = value
 
             # All the optional keys
-            for key in self._keys_optional:
+            for key in keys_optional:
                 value = data.get(key)
                 if value:
                     out[key] = value
@@ -234,9 +243,22 @@ cdef class Dict(Elem):
 
 # ################################################################################################################################
 
-cdef class DictList(Elem):
+    def from_json(self, data):
+        return Dict.from_json_static(data, self._keys_required, self._keys_optional)
+
+# ################################################################################################################################
+
+cdef class DictList(Dict):
     def __cinit__(self):
         self._type = ElemType.dict_list
+
+    def from_json(self, value):
+        out = []
+
+        for elem in value:
+            out.append(Dict.from_json_static(elem, self._keys_required, self._keys_optional))
+
+        return out
 
 # ################################################################################################################################
 
@@ -244,17 +266,26 @@ cdef class Float(Elem):
     def __cinit__(self):
         self._type = ElemType.float
 
+    def from_json(self, value):
+        return _builtin_float(value)
+
 # ################################################################################################################################
 
 cdef class Int(Elem):
     def __cinit__(self):
         self._type = ElemType.int
 
+    def from_json(self, value):
+        return _builtin_int(value)
+
 # ################################################################################################################################
 
 cdef class List(Elem):
     def __cinit__(self):
         self._type = ElemType.list_
+
+    def from_json(self, value):
+        return value if isinstance(value, _list_like) else [value]
 
 # ################################################################################################################################
 
