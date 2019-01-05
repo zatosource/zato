@@ -604,6 +604,26 @@ class FromJSONTestCase(_BaseTestCase):
 
 # ################################################################################################################################
 
+    def test_float(self):
+        sio = Float('myname')
+        data = '1.23'
+        parsed = self._parse(sio, data)
+
+        self.assertIsInstance(parsed, float)
+        self.assertEquals(parsed, 1.23)
+
+# ################################################################################################################################
+
+    def test_int(self):
+        sio = Int('myname')
+        data = '12345678901234567890'
+        parsed = self._parse(sio, data)
+
+        self.assertIsInstance(parsed, (int, long))
+        self.assertEquals(parsed, int(data))
+
+# ################################################################################################################################
+
     def test_list_from_tuple(self):
         sio = List('myname')
         data = tuple(['q,w,e,r,t,Y,U,I,O,P'])
