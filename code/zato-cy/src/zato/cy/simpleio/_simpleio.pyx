@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import types
 from decimal import Decimal as decimal_Decimal
 
 # datetutil
@@ -20,8 +21,8 @@ from zato.util_convert import to_bool
 
 # ################################################################################################################################
 
-_builtin_float = float
-_builtin_int = int
+_builtin_float = types.FloatType
+_builtin_int = types.LongType
 _list_like = (list, tuple)
 
 # ################################################################################################################################
@@ -293,9 +294,14 @@ cdef class Opaque(Elem):
     def __cinit__(self):
         self._type = ElemType.opaque
 
+    def from_json(self, value):
+        return value
+
+    from_xml = to_xml = from_json
+
 # ################################################################################################################################
 
-cdef class Text(Elem):
+cdef class Text(Opaque):
     def __cinit__(self):
         self._type = ElemType.text
 
