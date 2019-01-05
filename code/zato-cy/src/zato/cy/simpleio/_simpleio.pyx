@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from decimal import Decimal as decimal_Decimal
+
 # datetutil
 from dateutil.parser import parse as dt_parse
 
@@ -183,6 +186,9 @@ cdef class DateTime(Date):
 cdef class Decimal(Elem):
     def __cinit__(self):
         self._type = ElemType.decimal
+
+    def from_json(self, value):
+        return decimal_Decimal(value)
 
 # ################################################################################################################################
 
