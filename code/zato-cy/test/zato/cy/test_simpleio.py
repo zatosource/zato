@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime
+from decimal import Decimal as decimal_Decimal, getcontext
 from json import dumps, loads
 from unittest import TestCase
 
@@ -466,6 +467,21 @@ class FromJSONTestCase(_BaseTestCase):
 
         expected = 'Could not parse `31-12-1999T11:22:99.000Z` as a DateTime object (second must be in 0..59)'
         self.assertEquals(ctx.exception.message, expected)
+
+# ################################################################################################################################
+
+    def test_decimal(self):
+
+        sio = Decimal('mykey')
+
+        exponent = '123456789' * 30
+        data = '0.' + exponent
+        getcontext().prec = 37
+
+        parsed = self._parse(sio, data)
+
+        self.assertIsInstance(parsed, decimal_Decimal)
+        self.assertEquals(str(parsed), data)
 
 # ################################################################################################################################
 
