@@ -19,8 +19,8 @@ from bunch import Bunch, bunchify
 # Zato
 from zato.common import DATA_FORMAT
 from zato.server.service import Service
-from zato.simpleio import AsIs, Bool, BoolConfig, CSV, CySimpleIO, Date, DateTime, Dict, DictList, Float, Int, IntConfig, \
-     List, NotGiven, Opaque, SecretConfig, _SIOServerConfig, Text, UUID
+from zato.simpleio import AsIs, Bool, BoolConfig, CSV, CySimpleIO, Date, DateTime, Decimal, Dict, DictList, Float, Int, \
+     IntConfig, List, NotGiven, Opaque, SecretConfig, _SIOServerConfig, Text, UUID
 
 # Zato - Cython
 from zato.util_convert import false_values, to_bool, true_values
@@ -409,9 +409,9 @@ class FromJSONTestCase(_BaseTestCase):
         parsed = self._parse(sio, data)
 
         self.assertIsInstance(parsed, datetime)
-        self.assertEquals(parsed.day, day)
-        self.assertEquals(parsed.month, month)
         self.assertEquals(parsed.year, year)
+        self.assertEquals(parsed.month, month)
+        self.assertEquals(parsed.day, day)
 
 # ################################################################################################################################
 
@@ -426,6 +426,45 @@ class FromJSONTestCase(_BaseTestCase):
             self._parse(sio, data)
 
         expected = 'Could not parse `31-77-1999` as a Date object (month must be in 1..12)'
+        self.assertEquals(ctx.exception.message, expected)
+
+# ################################################################################################################################
+
+    def test_date_time_valid(self):
+        sio = DateTime('myname')
+        year = 1999
+        month = 12
+        day = 31
+        hour = 11
+        minute = 22
+        second = 33
+        data = '{}-{}-{}T{}:{}:{}.000Z'.format(day, month, year, hour, minute, second)
+        parsed = self._parse(sio, data)
+
+        self.assertIsInstance(parsed, datetime)
+        self.assertEquals(parsed.year, year)
+        self.assertEquals(parsed.month, month)
+        self.assertEquals(parsed.day, day)
+        self.assertEquals(parsed.hour, hour)
+        self.assertEquals(parsed.minute, minute)
+        self.assertEquals(parsed.second, second)
+
+# ################################################################################################################################
+
+    def test_date_time_invalid(self):
+        sio = DateTime('myname')
+        year = 1999
+        month = 12
+        day = 31
+        hour = 11
+        minute = 22
+        second = 99
+        data = '{}-{}-{}T{}:{}:{}.000Z'.format(day, month, year, hour, minute, second)
+
+        with self.assertRaises(ValueError) as ctx:
+            self._parse(sio, data)
+
+        expected = 'Could not parse `31-12-1999T11:22:99.000Z` as a DateTime object (second must be in 0..59)'
         self.assertEquals(ctx.exception.message, expected)
 
 # ################################################################################################################################
