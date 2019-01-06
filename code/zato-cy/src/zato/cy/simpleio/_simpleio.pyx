@@ -11,6 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import types
 from decimal import Decimal as decimal_Decimal
+from itertools import chain
+from uuid import UUID as uuid_UUID
 
 # datetutil
 from dateutil.parser import parse as dt_parse
@@ -19,10 +21,13 @@ from dateutil.parser import parse as dt_parse
 from zato.common import DATA_FORMAT
 from zato.util_convert import to_bool
 
+# Zato - Cython
+from zato.bunch import Bunch, bunchify
+
 # ################################################################################################################################
 
 _builtin_float = types.FloatType
-_builtin_int = types.LongType
+_builtin_int = types.IntType
 _list_like = (list, tuple)
 
 # ################################################################################################################################
@@ -35,6 +40,11 @@ cdef class _NotGiven(object):
 
     def __bool__(self):
         return False # Always evaluates to a boolean False
+
+# ################################################################################################################################
+
+cdef class ParsingError(Exception):
+    pass
 
 # ################################################################################################################################
 
@@ -61,10 +71,10 @@ cdef class Elem(object):
     """ An individual input or output element. May be a ForceType instance or not.
     """
     cdef:
-        public unicode _name
+        public unicode name
         ElemType _type
         object _default
-        bint _is_required
+        public bint is_required
 
         public dict parse_from # From external formats to Python objects
         public dict parse_to   # From Python objects to external formats
@@ -86,21 +96,26 @@ cdef class Elem(object):
 
 # ################################################################################################################################
 
+    def __init__(self, name):
+        self.name = name
+
+# ################################################################################################################################
+
     def __str__(self):
-        return '<{} at {} {}:{} d:{} r:{}>'.format(self.__class__.__name__, hex(id(self)), self._name, self._type,
-            self._default, self._is_required)
+        return '<{} at {} {}:{} d:{} r:{}>'.format(self.__class__.__name__, hex(id(self)), self.name, self._type,
+            self._default, self.is_required)
 
 # ################################################################################################################################
 
     __repr__ = __str__
 
     def __cmp__(self, other):
-        return self._name == other._name
+        return self.name == other.name
 
 # ################################################################################################################################
 
     def __hash__(self):
-        return hash(self._name) # Names are always unique
+        return hash(self.name) # Names are always unique
 
 # ################################################################################################################################
 
@@ -108,10 +123,10 @@ cdef class Elem(object):
     def pretty(self):
         out = ''
 
-        if not self._is_required:
+        if not self.is_required:
             out += '-'
 
-        out += self._name
+        out += self.name
 
         return out
 
@@ -211,7 +226,7 @@ cdef class Dict(Elem):
         self._keys_optional = set()
 
     def __init__(self, name, *args):
-        self._name = name
+        self.name = name
         for key in args:
             self._keys_optional.add(key[1:]) if key.startswith('-') else self._keys_required.add(key)
 
@@ -301,15 +316,29 @@ cdef class Opaque(Elem):
 
 # ################################################################################################################################
 
-cdef class Text(Opaque):
+cdef class Text(Elem):
+
+    cdef:
+        public str encoding
+
     def __cinit__(self):
         self._type = ElemType.text
+
+    def __init__(self, name, **kwargs):
+        self.encoding = kwargs.get('encoding', 'utf8')
+
+    def from_json(self, value):
+        return value if isinstance(value, basestring) else str(value).decode(self.encoding)
 
 # ################################################################################################################################
 
 cdef class UUID(Elem):
+
     def __cinit__(self):
         self._type = ElemType.uuid
+
+    def from_json(self, value):
+        return uuid_UUID(value)
 
 # ################################################################################################################################
 
@@ -416,7 +445,7 @@ cdef class SIOList(object):
         self.elems[:] = elems
 
     def get_elem_names(self):
-        return sorted(elem._name for elem in self.elems)
+        return sorted(elem.name for elem in self.elems)
 
 # ################################################################################################################################
 
@@ -524,12 +553,14 @@ cdef class CySimpleIO(object):
 # ################################################################################################################################
 
     cdef Elem _convert_to_elem_instance(self, elem, container, is_required):
-        cdef Text _elem # For now, we always return Text instances
 
-        _elem = Text()
-        _elem._name = elem
+        # By default, we always return Text instances for elements that do not specify an SIO type
+        cdef Text _elem
+
+        _elem = Text(elem)
+        _elem.name = elem
         _elem._default = self.definition._default_input_value if container == 'input' else self.definition._default_output_value
-        _elem._is_required = is_required
+        _elem.is_required = is_required
 
         return _elem
 
@@ -589,10 +620,17 @@ cdef class CySimpleIO(object):
             prefix_optional = self.server_config.prefix_optional
 
             for elem in plain:
-                if elem.startswith(prefix_optional):
-                    optional.append(elem.replace(prefix_optional, ''))
+
+                is_sio_elem = isinstance(elem, Elem)
+                elem_name = elem.name if is_sio_elem else elem
+
+                if elem_name.startswith(prefix_optional):
+                    elem_name_no_prefix = elem_name.replace(prefix_optional, '')
+                    if is_sio_elem:
+                        elem.name = elem_name_no_prefix
+                    optional.append(elem if is_sio_elem else elem_name_no_prefix)
                 else:
-                    required.append(elem)
+                    required.append(elem if is_sio_elem else elem_name)
 
         # So that in runtime elements are always checked in the same order
         required = sorted(required)
@@ -611,16 +649,16 @@ cdef class CySimpleIO(object):
             for elem in elem_list:
                 if not isinstance(elem, Elem):
                     elem = self._convert_to_elem_instance(elem, container, is_required)
-                    if is_required:
-                        _required.append(elem)
-                    else:
-                        _optional.append(elem)
+                if is_required:
+                    _required.append(elem)
+                else:
+                    _optional.append(elem)
 
         required = _required
         optional = _optional
 
         # Confirm that required elements do not overlap with optional ones
-        shared_elems = set(elem._name for elem in required) & set(elem._name for elem in optional)
+        shared_elems = set(elem.name for elem in required) & set(elem.name for elem in optional)
 
         if shared_elems:
             raise ValueError('Elements in input_required and input_optional cannot be shared, found:`{}`'.format(
@@ -655,6 +693,39 @@ cdef class CySimpleIO(object):
         cy_simple_io = CySimpleIO(server_config, user_sio)
         cy_simple_io.build()
         class_._sio = cy_simple_io
+
+# ################################################################################################################################
+
+    cdef dict _parse_input_elem(self, dict elem, unicode data_format, object _default=object()):
+
+        cdef dict out = {}
+
+        for sio_item in chain(self.definition._input_required, self.definition._input_optional):
+            input_value = elem.get(sio_item.name, _default)
+
+            # We do not have such a key on input so an exception needs to be raised if this is a require one
+            if input_value is _default:
+                if sio_item.is_required:
+                    raise ValueError('No such key `{}` among `{}` in `{}`'.format(sio_item.name, elem.keys(), elem))
+                else:
+                    value = 'ZZZ'
+            else:
+                parse_func = sio_item.parse_from[data_format]
+                value = parse_func(input_value)
+
+            out[sio_item.name] = value
+
+        return out
+
+# ################################################################################################################################
+
+    cpdef parse_input(self, data, data_format):
+
+        if isinstance(data, list):
+            raise ValueError('zzz')
+        else:
+            out = self._parse_input_elem(data, data_format)
+            return bunchify(out)
 
 # ################################################################################################################################
 
