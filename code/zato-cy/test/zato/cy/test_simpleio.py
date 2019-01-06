@@ -13,9 +13,7 @@ from datetime import datetime
 from decimal import Decimal as decimal_Decimal, getcontext
 from json import dumps, loads
 from unittest import TestCase
-
-# Bunch
-from bunch import Bunch, bunchify
+from uuid import UUID as uuid_UUID
 
 # Zato
 from zato.common import DATA_FORMAT
@@ -25,6 +23,7 @@ from zato.simpleio import AsIs, Bool, BoolConfig, CSV, CySimpleIO, Date, DateTim
 
 # Zato - Cython
 from zato.util_convert import false_values, to_bool, true_values
+from zato.bunch import Bunch, bunchify
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -357,7 +356,7 @@ class AttachSIOTestCase(_BaseTestCase):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FromJSONTestCase(_BaseTestCase):
+class ElemsFromJSONTestCase(_BaseTestCase):
 
 # ################################################################################################################################
 
@@ -651,6 +650,78 @@ class FromJSONTestCase(_BaseTestCase):
 
         self.assertIsInstance(parsed, list)
         self.assertEquals(parsed, [data])
+
+# ################################################################################################################################
+
+    def test_opaque(self):
+
+        class MyClass:
+            pass
+
+        sio = Opaque('myname')
+        data = MyClass()
+        parsed = self._parse(sio, data)
+
+        self.assertIsInstance(parsed, MyClass)
+        self.assertIs(parsed, data)
+
+# ################################################################################################################################
+
+    def test_text(self):
+
+        sio = Text('myname')
+        data = 123
+        parsed = self._parse(sio, data)
+
+        self.assertIsInstance(parsed, basestring)
+        self.assertEquals(parsed, unicode(data))
+
+# ################################################################################################################################
+
+    def test_uuid(self):
+
+        sio = UUID('myname')
+        data = 'e9c56bde-fab4-4adb-96c1-479c8246f308'
+        parsed = self._parse(sio, data)
+
+        self.assertIsInstance(parsed, uuid_UUID)
+        self.assertEquals(str(parsed), data)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class JSONInputParsing(_BaseTestCase):
+
+    def test_parse_request(self):
+
+        class MyService(Service):
+            class SimpleIO:
+                input = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
+                output = 'qqq', 'www', '-eee', '-fff'
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        aaa = 'aaa-111'
+        bbb = '222'
+        ccc = object()
+        eee = 'eee-111'
+
+        # Note that 'ddd' is optional and we are free to skip it
+        data = {
+            'aaa': aaa,
+            'bbb': bbb,
+            'ccc': ccc,
+            'eee': eee,
+        }
+
+        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+
+        self.assertIsInstance(input, Bunch)
+        self.assertEquals(input.aaa, aaa)
+        self.assertEquals(input.bbb, int(bbb))
+        self.assertEquals(input.ccc, ccc)
+        self.assertEquals(input.ddd, 'ZZZ')
+        self.assertEquals(input.eee, eee)
 
 # ################################################################################################################################
 # ################################################################################################################################
