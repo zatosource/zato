@@ -794,4 +794,130 @@ class JSONInputParsing(_BaseTestCase):
         self.assertEquals(input.fff.day, 29)
 
 # ################################################################################################################################
+
+    def test_parse_all_elem_types_list(self):
+
+        # AsIs, Bool, CSV, Date, DateTime, Decimal, Dict, DictList, Float, Int, List, Opaque, Text, UUID
+
+        class MyService(Service):
+            class SimpleIO:
+                input = 'aaa', AsIs('bbb'), Bool('ccc'), CSV('ddd'), Date('eee'), DateTime('fff'), Decimal('ggg'), \
+                    Dict('hhh', 'a', 'b', 'c'), DictList('iii', 'd', 'e', 'f'), Float('jjj'), Int('mmm'), List('nnn'), \
+                    Opaque('ooo'), Text('ppp'), UUID('qqq')
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        aaa = 'aaa-111'
+        bbb = object()
+        ccc = True
+        ddd = '1,2,3,4'
+        eee = '1999-12-31'
+        fff = '1988-01-29T11:22:33.0000Z'
+        ggg = '123.456'
+        hhh = {'a':1, 'b':2, 'c':3}
+        iii = [{'d':4, 'e':5, 'f':6}, {'d':44, 'e':55, 'f':66}]
+        jjj = '111.222'
+        mmm = '9090'
+        nnn = [1, 2, 3, 4]
+        ooo = object()
+        ppp = 'mytext'
+        qqq = 'd011d054-db4b-4320-9e24-7f4c217af673'
+
+        aaa2 = 'aaa-222'
+        bbb2 = object()
+        ccc2 = False
+        ddd2 = '5,6,7,8'
+        eee2 = '1999-12-25'
+        fff2 = '1977-01-29T11:22:33.0000Z'
+        ggg2 = '999.777'
+        hhh2 = {'a':12, 'b':22, 'c':32}
+        iii2 = [{'d':42, 'e':52, 'f':62}, {'d':442, 'e':552, 'f':662}]
+        jjj2 = '333.444'
+        mmm2 = '7171'
+        nnn2 = [5, 6, 7, 8]
+        ooo2 = object()
+        ppp2 = 'mytext2'
+        qqq2 = 'd011d054-db4b-4320-9e24-7f4c217af672'
+
+        # Note that 'ddd' is optional and we are free to skip it
+        data = [{
+            'aaa': aaa,
+            'bbb': bbb,
+            'ccc': ccc,
+            'ddd': ddd,
+            'eee': eee,
+            'fff': fff,
+            'ggg': ggg,
+            'hhh': hhh,
+            'iii': iii,
+            'jjj': jjj,
+            'mmm': mmm,
+            'nnn': nnn,
+            'ooo': ooo,
+            'ppp': ppp,
+            'qqq': qqq,
+        },
+        {
+            'aaa': aaa2,
+            'bbb': bbb2,
+            'ccc': ccc2,
+            'ddd': ddd2,
+            'eee': eee2,
+            'fff': fff2,
+            'ggg': ggg2,
+            'hhh': hhh2,
+            'iii': iii2,
+            'jjj': jjj2,
+            'mmm': mmm2,
+            'nnn': nnn2,
+            'ooo': ooo2,
+            'ppp': ppp2,
+            'qqq': qqq2,
+        }]
+
+        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+
+        self.assertIsInstance(input, list)
+        self.assertEquals(len(input), 2)
+
+        input1 = input[0]
+        input2 = input[1]
+
+        self.assertEquals(input1.aaa, aaa)
+        self.assertIs(input1.bbb, bbb)
+        self.assertTrue(input1.ccc)
+        self.assertListEqual(input1.ddd, ['1', '2', '3', '4'])
+
+        self.assertIsInstance(input1.eee, datetime)
+        self.assertEquals(input1.eee.year, 1999)
+        self.assertEquals(input1.eee.month, 12)
+        self.assertEquals(input1.eee.day, 31)
+
+        self.assertIsInstance(input1.fff, datetime)
+        self.assertEquals(input1.fff.year, 1988)
+        self.assertEquals(input1.fff.month, 01)
+        self.assertEquals(input1.fff.day, 29)
+        self.assertEquals(input1.fff.hour, 11)
+        self.assertEquals(input1.fff.minute, 22)
+        self.assertEquals(input1.fff.second, 33)
+
+        self.assertEquals(input2.aaa, aaa2)
+        self.assertIs(input2.bbb, bbb2)
+        self.assertFalse(input2.ccc)
+        self.assertListEqual(input2.ddd, ['5', '6', '7', '8'])
+
+        self.assertIsInstance(input2.eee, datetime)
+        self.assertEquals(input2.eee.year, 1999)
+        self.assertEquals(input2.eee.month, 12)
+        self.assertEquals(input2.eee.day, 25)
+
+        self.assertIsInstance(input2.fff, datetime)
+        self.assertEquals(input2.fff.year, 1977)
+        self.assertEquals(input2.fff.month, 01)
+        self.assertEquals(input2.fff.day, 29)
+        self.assertEquals(input2.fff.hour, 11)
+        self.assertEquals(input2.fff.minute, 22)
+        self.assertEquals(input2.fff.second, 33)
+
+# ################################################################################################################################
 # ################################################################################################################################
