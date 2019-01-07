@@ -29,7 +29,10 @@ from zato.bunch import Bunch, bunchify
 _builtin_float = types.FloatType
 _builtin_int = types.IntType
 _list_like = (list, tuple)
-_not_given = object()
+
+# Default value added for backward-compatibility with SimpleIO definitions
+# created before the rewrite in Cython.
+_backward_compat_default_value = ''
 
 # ################################################################################################################################
 
@@ -41,6 +44,25 @@ cdef class _NotGiven(object):
 
     def __bool__(self):
         return False # Always evaluates to a boolean False
+
+# ################################################################################################################################
+
+cdef class SIODefault(object):
+
+    cdef:
+        public input_value
+        public output_value
+
+    def __init__(self, input_value, output_value, _default_value):
+
+        if input_value is NotGiven:
+            input_value = _backward_compat_default_value if _default_value is NotGiven else _default_value
+
+        if output_value is NotGiven:
+            output_value = _backward_compat_default_value if output_value is NotGiven else _default_value
+
+        self.input_value = input_value
+        self.output_value = output_value
 
 # ################################################################################################################################
 
@@ -98,7 +120,12 @@ cdef class Elem(object):
 # ################################################################################################################################
 
     def __init__(self, name, **kwargs):
+
+        default_value = kwargs.get('default', NotGiven)
+        default_value = _backward_compat_default_value if default_value is NotGiven else default_value
+
         self.name = name
+        self.default_value = default_value
 
 # ################################################################################################################################
 
@@ -466,8 +493,12 @@ cdef class SIODefinition(object):
         # A list of Elem items optional on output
         public SIOList _output_optional
 
+        # Default values to use for optional elements, unless overridden on a per-element basis
+        public SIODefault sio_default
+
         # Name of the service this definition is for
         unicode _service_name
+
         # Whether all non-NotGiven optional input elements should be skipped or not
         bint _skip_all_empty_request_keys
 
@@ -483,19 +514,14 @@ cdef class SIODefinition(object):
         # Name of the response element, or None if there should be no top-level one
         object _response_elem
 
-        # Default value to use for optional input elements, unless overridden on a per-element basis
-        object default_input_value
-
-        # Default value to use for optional output elements, unless overridden on a per-element basis
-        object default_output_value
-
-        object default_value # Preserved for backward-compatibility, the same as default_output_value
-
     def __cinit__(self):
         self._input_required = SIOList()
         self._input_optional = SIOList()
         self._output_required = SIOList()
         self._output_optional = SIOList()
+
+    def __init__(self, SIODefault sio_default):
+        self.sio_default = sio_default
 
     cdef list get_input_pretty(self):
         cdef list required = []
@@ -537,8 +563,15 @@ cdef class CySimpleIO(object):
 # ################################################################################################################################
 
     def __cinit__(self, _SIOServerConfig server_config, object user_declaration):
+
+        input_value = getattr(user_declaration, 'default_input_value', NotGiven)
+        output_value = getattr(user_declaration, 'default_output_value', NotGiven)
+        _default_value = getattr(user_declaration, 'default_value', NotGiven)
+
+        cpdef SIODefault sio_default = SIODefault(input_value, output_value, _default_value)
+
+        self.definition = SIODefinition(sio_default)
         self.server_config = server_config
-        self.definition = SIODefinition()
         self.user_declaration = user_declaration
 
 # ################################################################################################################################
@@ -556,7 +589,9 @@ cdef class CySimpleIO(object):
 
         # By default, we always return Text instances for elements that do not specify an SIO type
         cdef Text _elem
-        default_value = self.definition.default_input_value if container == 'input' else self.definition.default_output_value
+
+        default_value = self.definition.sio_default.input_value if container == 'input' else \
+            self.definition.sio_default.output_value
 
         _elem = Text(elem)
         _elem.name = elem
@@ -702,10 +737,10 @@ cdef class CySimpleIO(object):
         cdef dict out = {}
 
         for sio_item in chain(self.definition._input_required, self.definition._input_optional):
-            input_value = elem.get(sio_item.name, _not_given)
+            input_value = elem.get(sio_item.name, NotGiven)
 
             # We do not have such a key on input so an exception needs to be raised if this is a require one
-            if input_value is _not_given:
+            if input_value is NotGiven:
                 if sio_item.is_required:
                     raise ValueError('No such key `{}` among `{}` in `{}`'.format(sio_item.name, elem.keys(), elem))
                 else:
