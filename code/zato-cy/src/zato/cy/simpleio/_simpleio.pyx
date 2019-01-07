@@ -29,6 +29,7 @@ from zato.bunch import Bunch, bunchify
 _builtin_float = types.FloatType
 _builtin_int = types.IntType
 _list_like = (list, tuple)
+_not_given = object()
 
 # ################################################################################################################################
 
@@ -71,9 +72,9 @@ cdef class Elem(object):
     """ An individual input or output element. May be a ForceType instance or not.
     """
     cdef:
-        public unicode name
         ElemType _type
-        object _default
+        public unicode name
+        public object default_value
         public bint is_required
 
         public dict parse_from # From external formats to Python objects
@@ -96,14 +97,14 @@ cdef class Elem(object):
 
 # ################################################################################################################################
 
-    def __init__(self, name):
+    def __init__(self, name, **kwargs):
         self.name = name
 
 # ################################################################################################################################
 
     def __str__(self):
         return '<{} at {} {}:{} d:{} r:{}>'.format(self.__class__.__name__, hex(id(self)), self.name, self._type,
-            self._default, self.is_required)
+            self.default_value, self.is_required)
 
 # ################################################################################################################################
 
@@ -225,8 +226,8 @@ cdef class Dict(Elem):
         self._keys_required = set()
         self._keys_optional = set()
 
-    def __init__(self, name, *args):
-        self.name = name
+    def __init__(self, name, *args, **kwargs):
+        super(Dict, self).__init__(name, **kwargs)
         for key in args:
             self._keys_optional.add(key[1:]) if key.startswith('-') else self._keys_required.add(key)
 
@@ -270,10 +271,8 @@ cdef class DictList(Dict):
 
     def from_json(self, value):
         out = []
-
         for elem in value:
             out.append(Dict.from_json_static(elem, self._keys_required, self._keys_optional))
-
         return out
 
 # ################################################################################################################################
@@ -325,7 +324,7 @@ cdef class Text(Elem):
         self._type = ElemType.text
 
     def __init__(self, name, **kwargs):
-        super(Text, self).__init__(name)
+        super(Text, self).__init__(name, **kwargs)
         self.encoding = kwargs.get('encoding', 'utf8')
 
     def from_json(self, value):
@@ -485,12 +484,12 @@ cdef class SIODefinition(object):
         object _response_elem
 
         # Default value to use for optional input elements, unless overridden on a per-element basis
-        object _default_input_value
+        object default_input_value
 
         # Default value to use for optional output elements, unless overridden on a per-element basis
-        object _default_output_value
+        object default_output_value
 
-        object _default_value # Preserved for backward-compatibility, the same as _default_output_value
+        object default_value # Preserved for backward-compatibility, the same as default_output_value
 
     def __cinit__(self):
         self._input_required = SIOList()
@@ -557,10 +556,11 @@ cdef class CySimpleIO(object):
 
         # By default, we always return Text instances for elements that do not specify an SIO type
         cdef Text _elem
+        default_value = self.definition.default_input_value if container == 'input' else self.definition.default_output_value
 
         _elem = Text(elem)
         _elem.name = elem
-        _elem._default = self.definition._default_input_value if container == 'input' else self.definition._default_output_value
+        _elem.default_value = default_value
         _elem.is_required = is_required
 
         return _elem
@@ -697,19 +697,19 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef dict _parse_input_elem(self, dict elem, unicode data_format, object _default=object()):
+    cdef dict _parse_input_elem(self, dict elem, unicode data_format):
 
         cdef dict out = {}
 
         for sio_item in chain(self.definition._input_required, self.definition._input_optional):
-            input_value = elem.get(sio_item.name, _default)
+            input_value = elem.get(sio_item.name, _not_given)
 
             # We do not have such a key on input so an exception needs to be raised if this is a require one
-            if input_value is _default:
+            if input_value is _not_given:
                 if sio_item.is_required:
                     raise ValueError('No such key `{}` among `{}` in `{}`'.format(sio_item.name, elem.keys(), elem))
                 else:
-                    value = 'ZZZ'
+                    value = sio_item.default_value
             else:
                 parse_func = sio_item.parse_from[data_format]
                 value = parse_func(input_value)

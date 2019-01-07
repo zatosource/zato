@@ -722,7 +722,7 @@ class JSONInputParsing(_BaseTestCase):
         self.assertEquals(input.aaa, aaa)
         self.assertEquals(input.bbb, int(bbb))
         self.assertIs(input.ccc, ccc)
-        self.assertEquals(input.ddd, 'ZZZ')
+        self.assertEquals(input.ddd, None)
         self.assertEquals(input.eee, eee)
 
 # ################################################################################################################################
