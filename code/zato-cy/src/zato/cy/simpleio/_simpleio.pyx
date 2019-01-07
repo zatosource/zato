@@ -34,6 +34,8 @@ _list_like = (list, tuple)
 # created before the rewrite in Cython.
 _backward_compat_default_value = ''
 
+prefix_optional = '-'
+
 # ################################################################################################################################
 
 cdef class _NotGiven(object):
@@ -124,7 +126,15 @@ cdef class Elem(object):
         default_value = kwargs.get('default', NotGiven)
         default_value = _backward_compat_default_value if default_value is NotGiven else default_value
 
+        if name.startswith(prefix_optional):
+            name = name[1:]
+            is_required = False
+        else:
+            is_required = True
+
         self.name = name
+        self.is_required = is_required
+
         self.default_value = default_value
 
 # ################################################################################################################################
@@ -256,7 +266,7 @@ cdef class Dict(Elem):
     def __init__(self, name, *args, **kwargs):
         super(Dict, self).__init__(name, **kwargs)
         for key in args:
-            self._keys_optional.add(key[1:]) if key.startswith('-') else self._keys_required.add(key)
+            self._keys_optional.add(key[1:]) if key.startswith(prefix_optional) else self._keys_required.add(key)
 
 # ################################################################################################################################
 
@@ -434,8 +444,6 @@ cdef class _SIOServerConfig(object):
         public unicode prefix_opaque    # o
         public unicode prefix_text      # t
         public unicode prefix_uuid      # u
-        public unicode prefix_required  # +
-        public unicode prefix_optional  # -
 
         # Global variables, can be always overridden on a per-declaration basis
         public object skip_empty_keys
@@ -527,10 +535,6 @@ cdef class SIODefinition(object):
         cdef list required = []
         cdef list optional = []
         cdef list out = []
-
-        for item in self._input_required:
-            print(item)
-
         return out
 
     cdef list get_output_pretty(self):
@@ -653,8 +657,6 @@ cdef class CySimpleIO(object):
         # all the elements from the plain list.
         if plain:
 
-            prefix_optional = self.server_config.prefix_optional
-
             for elem in plain:
 
                 is_sio_elem = isinstance(elem, Elem)
@@ -662,8 +664,6 @@ cdef class CySimpleIO(object):
 
                 if elem_name.startswith(prefix_optional):
                     elem_name_no_prefix = elem_name.replace(prefix_optional, '')
-                    if is_sio_elem:
-                        elem.name = elem_name_no_prefix
                     optional.append(elem if is_sio_elem else elem_name_no_prefix)
                 else:
                     required.append(elem if is_sio_elem else elem_name)
@@ -683,8 +683,10 @@ cdef class CySimpleIO(object):
 
         for elem_list, is_required in elems:
             for elem in elem_list:
+
                 if not isinstance(elem, Elem):
                     elem = self._convert_to_elem_instance(elem, container, is_required)
+
                 if is_required:
                     _required.append(elem)
                 else:

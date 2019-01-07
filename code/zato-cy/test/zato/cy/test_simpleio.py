@@ -13,7 +13,7 @@ from datetime import datetime
 from decimal import Decimal as decimal_Decimal, getcontext
 from json import dumps, loads
 from unittest import TestCase
-from uuid import UUID as uuid_UUID
+from uuid import UUID as uuid_UUID, uuid4
 
 # Zato
 from zato.common import DATA_FORMAT
@@ -81,8 +81,6 @@ class _BaseTestCase(TestCase):
         server_config.default.prefix_opaque = 'o'
         server_config.default.prefix_text = 't'
         server_config.default.prefix_uuid = 'u'
-        server_config.default.prefix_required = '+'
-        server_config.default.prefix_optional = '-'
 
         bool_config = BoolConfig()
         bool_config.exact = server_config.bool.exact
@@ -130,8 +128,6 @@ class _BaseTestCase(TestCase):
         SIOServerConfig.prefix_opaque = server_config.default.prefix_opaque
         SIOServerConfig.prefix_text = server_config.default.prefix_text
         SIOServerConfig.prefix_uuid = server_config.default.prefix_uuid
-        SIOServerConfig.prefix_required = server_config.default.prefix_required
-        SIOServerConfig.prefix_optional = server_config.default.prefix_optional
 
         return SIOServerConfig
 
@@ -729,8 +725,6 @@ class JSONInputParsing(_BaseTestCase):
 
     def test_parse_all_elem_types_non_list(self):
 
-        # AsIs, Bool, CSV, Date, DateTime, Decimal, Dict, DictList, Float, Int, List, Opaque, Text, UUID
-
         class MyService(Service):
             class SimpleIO:
                 input = 'aaa', AsIs('bbb'), Bool('ccc'), CSV('ddd'), Date('eee'), DateTime('fff'), Decimal('ggg'), \
@@ -796,8 +790,6 @@ class JSONInputParsing(_BaseTestCase):
 # ################################################################################################################################
 
     def test_parse_all_elem_types_list(self):
-
-        # AsIs, Bool, CSV, Date, DateTime, Decimal, Dict, DictList, Float, Int, List, Opaque, Text, UUID
 
         class MyService(Service):
             class SimpleIO:
@@ -1031,6 +1023,42 @@ class JSONInputParsing(_BaseTestCase):
         self.assertEquals(input.ddd, _default_input_value)
         self.assertEquals(input.eee, eee)
         self.assertEquals(input.fff, _default_fff)
+
+# ################################################################################################################################
+
+    def test_parse_default_all_elem_types(self):
+
+        _default_bbb = object()
+        _default_ccc = False
+        _default_ddd = [1, 2, 3, 4]
+        _default_eee = datetime(year=1990, month=1, day=29)
+        _default_fff = datetime(year=1990, month=1, day=29, hour=1, minute=2, second=3)
+        _default_ggg = decimal_Decimal('12.34')
+        _default_hhh = {'a':1, 'b':2, 'c':3}
+        _default_iii = [{'a':1, 'b':2, 'c':3}, {'a':11, 'b':22, 'c':33}]
+        _default_jjj = 99.77
+        _default_mmm = 123
+        _default_nnn = ['a', 'b', 'c']
+        _default_ooo = object()
+        _default_ppp = 'mytext'
+        _default_qqq = uuid4().hex
+
+        class MyService(Service):
+            class SimpleIO:
+                input = '-aaa', AsIs('-bbb', default=_default_bbb), Bool('-ccc', default=_default_ccc), \
+                    CSV('-ddd', default=_default_ddd), Date('-eee', default=_default_eee), \
+                    DateTime('-fff', default=_default_fff), Decimal('-ggg', default=_default_ggg), \
+                    Dict('-hhh', 'a', 'b', 'c', default=_default_hhh), DictList('-iii', 'd', 'e', 'f', default=_default_iii), \
+                    Float('-jjj', default=_default_jjj), Int('-mmm', default=_default_mmm), \
+                    List('-nnn', default=_default_nnn), Opaque('-ooo', default=_default_ooo), \
+                    Text('-ppp', default=_default_ppp), \
+                    UUID('-qqq', default=_default_qqq)
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        input = MyService._sio.parse_input({}, DATA_FORMAT.JSON)
+
+        print('QQQ', input)
 
 # ################################################################################################################################
 # ################################################################################################################################
