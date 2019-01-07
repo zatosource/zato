@@ -30,8 +30,7 @@ _builtin_float = types.FloatType
 _builtin_int = types.IntType
 _list_like = (list, tuple)
 
-# Default value added for backward-compatibility with SimpleIO definitions
-# created before the rewrite in Cython.
+# Default value added for backward-compatibility with SimpleIO definitions created before the rewrite in Cython.
 backward_compat_default_value = ''
 
 prefix_optional = '-'
@@ -134,7 +133,6 @@ cdef class Elem(object):
 
         self.name = name
         self.is_required = is_required
-
         self.default_value = default_value
 
 # ################################################################################################################################
@@ -282,11 +280,12 @@ cdef class Dict(Elem):
 # ################################################################################################################################
 
     @staticmethod
-    def from_json_static(data, keys_required, keys_optional):
+    def from_json_static(data, keys_required, keys_optional, default_value):
 
         if not isinstance(data, dict):
             raise ValueError('Expected a dict instead of `{!r}` ({})'.format(data, type(data).__name__))
 
+        # Do we have any keys required or optional to check?
         if keys_required or keys_optional:
 
             # Output we will return
@@ -295,38 +294,43 @@ cdef class Dict(Elem):
             # All the required and optional keys
             for elem in chain(keys_required, keys_optional):
 
-                print(111, elem)
-                #continue
-
                 is_required = elem is keys_required
                 is_elem = isinstance(elem, Elem)
-                if is_elem:
-                    key = elem.name
-                else:
-                    key = elem
 
-                value = data.get(key)
+                key = elem.name if is_elem else elem
+                value = data.get(key, NotGiven)
 
-                if not value:
+                # If we did not have such a key on input ..
+                if value is NotGiven:
+
+                    # .. raise an exception if it was one one of required ones ..
                     if is_required:
                         raise ValueError('Key `{}` not found in `{}`'.format(key, data))
-                    else:
-                        value = elem.default_input_value if is_elem else backward_compat_default_value
 
-                if is_elem:
-                    out[key] = elem.from_json_static(value, elem._keys_required, elem._keys_optional)
+                    # .. but if it was an optional key, provide a default value in lieu of it.
+                    else:
+                        out[key] = elem.default_value if is_elem else default_value
+
+                # Right, we found this key on input, what to do next ..
                 else:
-                    out[key] = value
+                    # .. enter into the nested element if it is a SimpleIO one ..
+                    if is_elem:
+                        out[key] = elem.from_json_static(value, elem._keys_required, elem._keys_optional, elem.default_value)
+
+                    # .. otherwise, simply assign the value to key.
+                    else:
+                        out[key] = value
 
             return out
 
+        # No keys required nor optional found, we return data as is
         else:
             return data
 
 # ################################################################################################################################
 
     def from_json(self, data):
-        return Dict.from_json_static(data, self._keys_required, self._keys_optional)
+        return Dict.from_json_static(data, self._keys_required, self._keys_optional, self.default_value)
 
 # ################################################################################################################################
 
@@ -337,7 +341,7 @@ cdef class DictList(Dict):
     def from_json(self, value):
         out = []
         for elem in value:
-            out.append(Dict.from_json_static(elem, self._keys_required, self._keys_optional))
+            out.append(Dict.from_json_static(elem, self._keys_required, self._keys_optional, self.default_value))
         return out
 
 # ################################################################################################################################
