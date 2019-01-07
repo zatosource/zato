@@ -135,6 +135,9 @@ cdef class Elem(object):
 
     def set_default_value(self, sio_default_value):
 
+        print('WWW', self.user_default_value)
+        print('EEE', sio_default_value)
+
         # If user did not provide a default value, we will use the one that is default for the SimpleIO class ..
         if self.user_default_value is NotGiven:
             self.default_value = sio_default_value
@@ -142,6 +145,8 @@ cdef class Elem(object):
         # .. otherwise, user-defined default has priority.
         else:
             self.default_value = self.user_default_value
+
+        print('RRR', self.default_value)
 
 # ################################################################################################################################
 
@@ -287,6 +292,15 @@ cdef class Dict(Elem):
 
 # ################################################################################################################################
 
+    def set_default_value(self, sio_default_value):
+        super(Dict, self).set_default_value(sio_default_value)
+
+        for key in chain(self._keys_required, self._keys_optional):
+            if isinstance(key, Elem):
+                key.set_default_value(sio_default_value)
+
+# ################################################################################################################################
+
     @staticmethod
     def from_json_static(data, keys_required, keys_optional, default_value):
 
@@ -317,12 +331,14 @@ cdef class Dict(Elem):
 
                     # .. but if it was an optional key, provide a default value in lieu of it.
                     else:
+                        print('YYY', elem, is_elem, default_value)
                         out[key] = elem.default_value if is_elem else default_value
 
                 # Right, we found this key on input, what to do next ..
                 else:
                     # .. enter into the nested element if it is a SimpleIO one ..
                     if is_elem:
+                        print('UUU', elem, elem.default_value)
                         out[key] = elem.from_json_static(value, elem._keys_required, elem._keys_optional, elem.default_value)
 
                     # .. otherwise, simply assign the value to key.
@@ -338,6 +354,7 @@ cdef class Dict(Elem):
 # ################################################################################################################################
 
     def from_json(self, data):
+        print('TTT', self, self.default_value)
         return Dict.from_json_static(data, self._keys_required, self._keys_optional, self.default_value)
 
 # ################################################################################################################################
@@ -727,6 +744,10 @@ cdef class CySimpleIO(object):
                 # Make sure all elements have a default value, either a user-defined one or the SimpleIO-level configured one
                 sio_default_value = self.definition.sio_default.input_value if container == 'input' else \
                     self.definition.sio_default.output_value
+
+                print(111, `self.definition.sio_default.input_value`, `self.definition.sio_default.output_value`)
+                print(222, sio_default_value)
+
                 elem.set_default_value(sio_default_value)
 
                 if is_required:
