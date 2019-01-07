@@ -517,12 +517,12 @@ class ElemsFromJSONTestCase(_BaseTestCase):
             'bbb': 'bbb-111',
             'ccc': 'ccc-111',
             'ddd': 'ddd-111',
-            'eee': backward_compat_default_value,
+            'eee': NotGiven,
         })
 
 # ################################################################################################################################
 
-    def test_dict_list_without_key_names(self):
+    def test_dict_list_with_key_names(self):
 
         sio = DictList('mykey')
 
@@ -552,38 +552,28 @@ class ElemsFromJSONTestCase(_BaseTestCase):
 
     def test_dict_list_without_key_names(self):
 
-        sio = DictList('mykey', 'aaa', 'bbb', 'ccc', '-ddd', '-eee')
+        sio = DictList('mykey', 'aaa', '-bbb', '-ccc')
 
         data1 = {
             'aaa': 'aaa-111',
             'bbb': 'bbb-111',
-            'ccc': 'ccc-111',
-            'ddd': 'ddd-111',
-            'fff': 'fff-111'
         }
 
         data2 = {
             'aaa': 'aaa-222',
             'bbb': 'bbb-222',
-            'ccc': 'ccc-222',
-            'ddd': 'ddd-222',
-            'fff': 'fff-222'
         }
 
         expected1 = {
             'aaa': 'aaa-111',
             'bbb': 'bbb-111',
-            'ccc': 'ccc-111',
-            'ddd': 'ddd-111',
-            'eee': backward_compat_default_value,
+            'ccc': NotGiven,
         }
 
         expected2 = {
             'aaa': 'aaa-222',
             'bbb': 'bbb-222',
-            'ccc': 'ccc-222',
-            'ddd': 'ddd-222',
-            'eee': backward_compat_default_value,
+            'ccc': NotGiven,
         }
 
         data = [data1, data2]
@@ -1105,7 +1095,7 @@ class JSONInputParsing(_BaseTestCase):
         input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
         self.assertIsInstance(input, Bunch)
 
-        print(111, input)
+        print('QQQ', input)
 
         self.assertEquals(input.aaa.bbb, 'bbb-111')
         self.assertEquals(input.aaa.ccc.ddd, 'ddd-111')
