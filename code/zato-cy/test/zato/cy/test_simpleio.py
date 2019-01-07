@@ -18,8 +18,8 @@ from uuid import UUID as uuid_UUID
 # Zato
 from zato.common import DATA_FORMAT
 from zato.server.service import Service
-from zato.simpleio import AsIs, Bool, BoolConfig, CSV, CySimpleIO, Date, DateTime, Decimal, Dict, DictList, Float, Int, \
-     IntConfig, List, NotGiven, Opaque, SecretConfig, _SIOServerConfig, Text, UUID
+from zato.simpleio import _backward_compat_default_value, AsIs, Bool, BoolConfig, CSV, CySimpleIO, Date, DateTime, Decimal, \
+     Dict, DictList, Float, Int, IntConfig, List, NotGiven, Opaque, SecretConfig, _SIOServerConfig, Text, UUID
 
 # Zato - Cython
 from zato.util_convert import false_values, to_bool, true_values
@@ -722,7 +722,7 @@ class JSONInputParsing(_BaseTestCase):
         self.assertEquals(input.aaa, aaa)
         self.assertEquals(input.bbb, int(bbb))
         self.assertIs(input.ccc, ccc)
-        self.assertEquals(input.ddd, None)
+        self.assertEquals(input.ddd, _backward_compat_default_value)
         self.assertEquals(input.eee, eee)
 
 # ################################################################################################################################
@@ -918,6 +918,119 @@ class JSONInputParsing(_BaseTestCase):
         self.assertEquals(input2.fff.hour, 11)
         self.assertEquals(input2.fff.minute, 22)
         self.assertEquals(input2.fff.second, 33)
+
+# ################################################################################################################################
+
+    def test_parse_default_with_default_input_value(self):
+
+        _default_bbb = 112233
+        _default_fff = object()
+        _default_input_value = object()
+
+        class MyService(Service):
+            class SimpleIO:
+                input = 'aaa', Int('-bbb', default=_default_bbb), Opaque('ccc'), '-ddd', Text('-eee'), \
+                    Text('-fff', default=_default_fff)
+                default_input_value = _default_input_value
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        aaa = 'aaa-111'
+        ccc = object()
+        eee = 'eee-111'
+
+        # Note that 'ddd' is optional and we are free to skip it
+        data = {
+            'aaa': aaa,
+            'ccc': ccc,
+            'eee': eee,
+        }
+
+        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+
+        self.assertIsInstance(input, Bunch)
+
+        self.assertEquals(input.aaa, aaa)
+        self.assertEquals(input.bbb, _default_bbb)
+        self.assertIs(input.ccc, ccc)
+        self.assertEquals(input.ddd, _default_input_value)
+        self.assertEquals(input.eee, eee)
+        self.assertEquals(input.fff, _default_fff)
+
+# ################################################################################################################################
+
+    def test_parse_default_no_default_input_value(self):
+
+        _default_bbb = 112233
+        _default_fff = object()
+        _default_input_value = object()
+
+        class MyService(Service):
+            class SimpleIO:
+                input = 'aaa', Int('-bbb', default=_default_bbb), Opaque('ccc'), '-ddd', Text('-eee'), \
+                    Text('-fff', default=_default_fff)
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        aaa = 'aaa-111'
+        ccc = object()
+        eee = 'eee-111'
+
+        # Note that 'ddd' is optional and we are free to skip it
+        data = {
+            'aaa': aaa,
+            'ccc': ccc,
+            'eee': eee,
+        }
+
+        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+
+        self.assertIsInstance(input, Bunch)
+
+        self.assertEquals(input.aaa, aaa)
+        self.assertEquals(input.bbb, _default_bbb)
+        self.assertIs(input.ccc, ccc)
+        self.assertEquals(input.ddd, _backward_compat_default_value)
+        self.assertEquals(input.eee, eee)
+        self.assertEquals(input.fff, _default_fff)
+
+# ################################################################################################################################
+
+    def test_parse_default_backward_compat_default_input_value(self):
+
+        _default_bbb = 112233
+        _default_fff = object()
+        _default_input_value = object()
+
+        class MyService(Service):
+            class SimpleIO:
+                input = 'aaa', Int('-bbb', default=_default_bbb), Opaque('ccc'), '-ddd', Text('-eee'), \
+                    Text('-fff', default=_default_fff)
+                default_value = _default_input_value
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        aaa = 'aaa-111'
+        ccc = object()
+        eee = 'eee-111'
+
+        # Note that 'ddd' is optional and we are free to skip it
+        data = {
+            'aaa': aaa,
+            'ccc': ccc,
+            'eee': eee,
+        }
+
+        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+
+        self.assertIsInstance(input, Bunch)
+
+        self.assertEquals(input.aaa, aaa)
+        self.assertEquals(input.bbb, _default_bbb)
+        self.assertIs(input.ccc, ccc)
+        self.assertEquals(input.ddd, _default_input_value)
+        self.assertEquals(input.eee, eee)
+        self.assertEquals(input.fff, _default_fff)
 
 # ################################################################################################################################
 # ################################################################################################################################
