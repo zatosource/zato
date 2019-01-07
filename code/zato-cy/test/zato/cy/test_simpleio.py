@@ -692,12 +692,13 @@ class ElemsFromJSONTestCase(_BaseTestCase):
 
 class JSONInputParsing(_BaseTestCase):
 
-    def test_parse_request(self):
+# ################################################################################################################################
+
+    def test_parse_basic_request(self):
 
         class MyService(Service):
             class SimpleIO:
                 input = 'aaa', Int('bbb'), Opaque('ccc'), '-ddd', '-eee'
-                output = 'qqq', 'www', '-eee', '-fff'
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
@@ -717,11 +718,80 @@ class JSONInputParsing(_BaseTestCase):
         input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
 
         self.assertIsInstance(input, Bunch)
+
         self.assertEquals(input.aaa, aaa)
         self.assertEquals(input.bbb, int(bbb))
-        self.assertEquals(input.ccc, ccc)
+        self.assertIs(input.ccc, ccc)
         self.assertEquals(input.ddd, 'ZZZ')
         self.assertEquals(input.eee, eee)
+
+# ################################################################################################################################
+
+    def test_parse_all_elem_types_non_list(self):
+
+        # AsIs, Bool, CSV, Date, DateTime, Decimal, Dict, DictList, Float, Int, List, Opaque, Text, UUID
+
+        class MyService(Service):
+            class SimpleIO:
+                input = 'aaa', AsIs('bbb'), Bool('ccc'), CSV('ddd'), Date('eee'), DateTime('fff'), Decimal('ggg'), \
+                    Dict('hhh', 'a', 'b', 'c'), DictList('iii', 'd', 'e', 'f'), Float('jjj'), Int('mmm'), List('nnn'), \
+                    Opaque('ooo'), Text('ppp'), UUID('qqq')
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        aaa = 'aaa-111'
+        bbb = object()
+        ccc = True
+        ddd = '1,2,3,4'
+        eee = '1999-12-31'
+        fff = '1988-01-29T11:22:33.0000Z'
+        ggg = '123.456'
+        hhh = {'a':1, 'b':2, 'c':3}
+        iii = [{'d':4, 'e':5, 'f':6}, {'d':44, 'e':55, 'f':66}]
+        jjj = '111.222'
+        mmm = '9090'
+        nnn = [1, 2, 3, 4]
+        ooo = object()
+        ppp = 'mytext'
+        qqq = 'd011d054-db4b-4320-9e24-7f4c217af673'
+
+        # Note that 'ddd' is optional and we are free to skip it
+        data = {
+            'aaa': aaa,
+            'bbb': bbb,
+            'ccc': ccc,
+            'ddd': ddd,
+            'eee': eee,
+            'fff': fff,
+            'ggg': ggg,
+            'hhh': hhh,
+            'iii': iii,
+            'jjj': jjj,
+            'mmm': mmm,
+            'nnn': nnn,
+            'ooo': ooo,
+            'ppp': ppp,
+            'qqq': qqq,
+        }
+
+        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+
+        self.assertIsInstance(input, Bunch)
+
+        self.assertEquals(input.aaa, aaa)
+        self.assertIs(input.bbb, bbb)
+        self.assertTrue(input.ccc)
+        self.assertListEqual(input.ddd, ['1', '2', '3', '4'])
+
+        self.assertIsInstance(input.eee, datetime)
+        self.assertEquals(input.eee.year, 1999)
+        self.assertEquals(input.eee.month, 12)
+        self.assertEquals(input.eee.day, 31)
+
+        self.assertIsInstance(input.fff, datetime)
+        self.assertEquals(input.fff.year, 1988)
+        self.assertEquals(input.fff.month, 01)
+        self.assertEquals(input.fff.day, 29)
 
 # ################################################################################################################################
 # ################################################################################################################################
