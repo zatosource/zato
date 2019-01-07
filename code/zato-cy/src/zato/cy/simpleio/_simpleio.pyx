@@ -723,7 +723,11 @@ cdef class CySimpleIO(object):
     cpdef parse_input(self, data, data_format):
 
         if isinstance(data, list):
-            raise ValueError('zzz')
+            out = []
+            for elem in data:
+                converted = self._parse_input_elem(elem, data_format)
+                out.append(bunchify(converted))
+            return out
         else:
             out = self._parse_input_elem(data, data_format)
             return bunchify(out)
