@@ -265,29 +265,57 @@ cdef class Dict(Elem):
 
     def __init__(self, name, *args, **kwargs):
         super(Dict, self).__init__(name, **kwargs)
-        for key in args:
-            self._keys_optional.add(key[1:]) if key.startswith(prefix_optional) else self._keys_required.add(key)
+
+        for arg in args:
+            if isinstance(arg, Elem):
+                is_required = arg.is_required
+                to_add = arg
+            else:
+                is_required = not arg.startswith(prefix_optional)
+                to_add = arg if is_required else arg[1:]
+
+            if is_required:
+                self._keys_required.add(to_add)
+            else:
+                self._keys_optional.add(to_add)
 
 # ################################################################################################################################
 
     @staticmethod
     def from_json_static(data, keys_required, keys_optional):
+
+        if not isinstance(data, dict):
+            raise ValueError('Expected a dict instead of `{!r}` ({})'.format(data, type(data).__name__))
+
         if keys_required or keys_optional:
 
             # Output we will return
             out = {}
 
-            # All the required keys
-            for key in keys_required:
-                value = data.get(key)
-                if not value:
-                    raise ValueError('Key `{}` not found in `{}`'.format(key, data))
-                out[key] = value
+            # All the required and optional keys
+            for elem in chain(keys_required, keys_optional):
 
-            # All the optional keys
-            for key in keys_optional:
+                print(111, elem)
+                #continue
+
+                is_required = elem is keys_required
+                is_elem = isinstance(elem, Elem)
+                if is_elem:
+                    key = elem.name
+                else:
+                    key = elem
+
                 value = data.get(key)
-                if value:
+
+                if not value:
+                    if is_required:
+                        raise ValueError('Key `{}` not found in `{}`'.format(key, data))
+                    else:
+                        value = elem.default_input_value if is_elem else backward_compat_default_value
+
+                if is_elem:
+                    out[key] = elem.from_json_static(value, elem._keys_required, elem._keys_optional)
+                else:
                     out[key] = value
 
             return out
@@ -643,13 +671,13 @@ cdef class CySimpleIO(object):
             return
 
         # Listify all the elements provided
-        if isinstance(plain, basestring):
+        if isinstance(plain, (basestring, Elem)):
             plain = [plain]
 
-        if isinstance(required, basestring):
+        if isinstance(required, (basestring, Elem)):
             required = [required]
 
-        if isinstance(optional, basestring):
+        if isinstance(optional, (basestring, Elem)):
             optional = [optional]
 
         # At this point we have either a list of plain elements or input_required/input_optional, but not both.
