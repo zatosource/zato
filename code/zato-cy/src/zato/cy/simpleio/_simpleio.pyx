@@ -325,6 +325,7 @@ cdef class Text(Elem):
         self._type = ElemType.text
 
     def __init__(self, name, **kwargs):
+        super(Text, self).__init__(name)
         self.encoding = kwargs.get('encoding', 'utf8')
 
     def from_json(self, value):
