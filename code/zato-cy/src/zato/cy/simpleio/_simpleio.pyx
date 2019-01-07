@@ -32,7 +32,7 @@ _list_like = (list, tuple)
 
 # Default value added for backward-compatibility with SimpleIO definitions
 # created before the rewrite in Cython.
-_backward_compat_default_value = ''
+backward_compat_default_value = ''
 
 prefix_optional = '-'
 
@@ -58,10 +58,10 @@ cdef class SIODefault(object):
     def __init__(self, input_value, output_value, _default_value):
 
         if input_value is NotGiven:
-            input_value = _backward_compat_default_value if _default_value is NotGiven else _default_value
+            input_value = backward_compat_default_value if _default_value is NotGiven else _default_value
 
         if output_value is NotGiven:
-            output_value = _backward_compat_default_value if output_value is NotGiven else _default_value
+            output_value = backward_compat_default_value if output_value is NotGiven else _default_value
 
         self.input_value = input_value
         self.output_value = output_value
@@ -124,7 +124,7 @@ cdef class Elem(object):
     def __init__(self, name, **kwargs):
 
         default_value = kwargs.get('default', NotGiven)
-        default_value = _backward_compat_default_value if default_value is NotGiven else default_value
+        default_value = backward_compat_default_value if default_value is NotGiven else default_value
 
         if name.startswith(prefix_optional):
             name = name[1:]

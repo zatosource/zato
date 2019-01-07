@@ -18,7 +18,7 @@ from uuid import UUID as uuid_UUID, uuid4
 # Zato
 from zato.common import DATA_FORMAT
 from zato.server.service import Service
-from zato.simpleio import _backward_compat_default_value, AsIs, Bool, BoolConfig, CSV, CySimpleIO, Date, DateTime, Decimal, \
+from zato.simpleio import backward_compat_default_value, AsIs, Bool, BoolConfig, CSV, CySimpleIO, Date, DateTime, Decimal, \
      Dict, DictList, Float, Int, IntConfig, List, NotGiven, Opaque, SecretConfig, _SIOServerConfig, Text, UUID
 
 # Zato - Cython
@@ -718,7 +718,7 @@ class JSONInputParsing(_BaseTestCase):
         self.assertEquals(input.aaa, aaa)
         self.assertEquals(input.bbb, int(bbb))
         self.assertIs(input.ccc, ccc)
-        self.assertEquals(input.ddd, _backward_compat_default_value)
+        self.assertEquals(input.ddd, backward_compat_default_value)
         self.assertEquals(input.eee, eee)
 
 # ################################################################################################################################
@@ -769,7 +769,6 @@ class JSONInputParsing(_BaseTestCase):
         }
 
         input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
-
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.aaa, aaa)
@@ -939,7 +938,6 @@ class JSONInputParsing(_BaseTestCase):
         }
 
         input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
-
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.aaa, aaa)
@@ -976,13 +974,12 @@ class JSONInputParsing(_BaseTestCase):
         }
 
         input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
-
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.aaa, aaa)
         self.assertEquals(input.bbb, _default_bbb)
         self.assertIs(input.ccc, ccc)
-        self.assertEquals(input.ddd, _backward_compat_default_value)
+        self.assertEquals(input.ddd, backward_compat_default_value)
         self.assertEquals(input.eee, eee)
         self.assertEquals(input.fff, _default_fff)
 
@@ -1014,7 +1011,6 @@ class JSONInputParsing(_BaseTestCase):
         }
 
         input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
-
         self.assertIsInstance(input, Bunch)
 
         self.assertEquals(input.aaa, aaa)
@@ -1028,37 +1024,50 @@ class JSONInputParsing(_BaseTestCase):
 
     def test_parse_default_all_elem_types(self):
 
-        _default_bbb = object()
-        _default_ccc = False
-        _default_ddd = [1, 2, 3, 4]
-        _default_eee = datetime(year=1990, month=1, day=29)
-        _default_fff = datetime(year=1990, month=1, day=29, hour=1, minute=2, second=3)
-        _default_ggg = decimal_Decimal('12.34')
-        _default_hhh = {'a':1, 'b':2, 'c':3}
-        _default_iii = [{'a':1, 'b':2, 'c':3}, {'a':11, 'b':22, 'c':33}]
-        _default_jjj = 99.77
-        _default_mmm = 123
-        _default_nnn = ['a', 'b', 'c']
-        _default_ooo = object()
-        _default_ppp = 'mytext'
-        _default_qqq = uuid4().hex
+        bbb = object()
+        ccc = False
+        ddd = [1, 2, 3, 4]
+        eee = datetime(year=1990, month=1, day=29)
+        fff = datetime(year=1990, month=1, day=29, hour=1, minute=2, second=3)
+        ggg = decimal_Decimal('12.34')
+        hhh = {'a':1, 'b':2, 'c':3}
+        iii = [{'a':1, 'b':2, 'c':3}, {'a':11, 'b':22, 'c':33}]
+        jjj = 99.77
+        mmm = 123
+        nnn = ['a', 'b', 'c']
+        ooo = object()
+        ppp = 'mytext'
+        qqq = uuid4().hex
 
         class MyService(Service):
             class SimpleIO:
-                input = '-aaa', AsIs('-bbb', default=_default_bbb), Bool('-ccc', default=_default_ccc), \
-                    CSV('-ddd', default=_default_ddd), Date('-eee', default=_default_eee), \
-                    DateTime('-fff', default=_default_fff), Decimal('-ggg', default=_default_ggg), \
-                    Dict('-hhh', 'a', 'b', 'c', default=_default_hhh), DictList('-iii', 'd', 'e', 'f', default=_default_iii), \
-                    Float('-jjj', default=_default_jjj), Int('-mmm', default=_default_mmm), \
-                    List('-nnn', default=_default_nnn), Opaque('-ooo', default=_default_ooo), \
-                    Text('-ppp', default=_default_ppp), \
-                    UUID('-qqq', default=_default_qqq)
+                input = '-aaa', AsIs('-bbb', default=bbb), Bool('-ccc', default=ccc), CSV('-ddd', default=ddd), \
+                    Date('-eee', default=eee), DateTime('-fff', default=fff), Decimal('-ggg', default=ggg), \
+                    Dict('-hhh', 'a', 'b', 'c', default=hhh), DictList('-iii', 'd', 'e', 'f', default=iii), \
+                    Float('-jjj', default=jjj), Int('-mmm', default=mmm), List('-nnn', default=nnn), \
+                    Opaque('-ooo', default=ooo), Text('-ppp', default=ppp), UUID('-qqq', default=qqq)
 
         CySimpleIO.attach_sio(self.get_server_config(), MyService)
 
+        # Note that the input document is empty
         input = MyService._sio.parse_input({}, DATA_FORMAT.JSON)
+        self.assertIsInstance(input, Bunch)
 
-        print('QQQ', input)
+        self.assertEquals(input.aaa, backward_compat_default_value)
+        self.assertEquals(input.bbb, bbb)
+        self.assertEquals(input.ccc, ccc)
+        self.assertEquals(input.ddd, ddd)
+        self.assertEquals(input.eee, eee)
+        self.assertEquals(input.fff, fff)
+        self.assertEquals(input.ggg, ggg)
+        self.assertEquals(input.hhh, hhh)
+        self.assertEquals(input.iii, iii)
+        self.assertEquals(input.jjj, jjj)
+        self.assertEquals(input.mmm, mmm)
+        self.assertEquals(input.nnn, nnn)
+        self.assertEquals(input.ooo, ooo)
+        self.assertEquals(input.ppp, ppp)
+        self.assertEquals(input.qqq, qqq)
 
 # ################################################################################################################################
 # ################################################################################################################################
