@@ -97,6 +97,7 @@ cdef class Elem(object):
     cdef:
         ElemType _type
         public unicode name
+        public object user_default_value
         public object default_value
         public bint is_required
 
@@ -122,9 +123,6 @@ cdef class Elem(object):
 
     def __init__(self, name, **kwargs):
 
-        default_value = kwargs.get('default', NotGiven)
-        default_value = backward_compat_default_value if default_value is NotGiven else default_value
-
         if name.startswith(prefix_optional):
             name = name[1:]
             is_required = False
@@ -133,7 +131,17 @@ cdef class Elem(object):
 
         self.name = name
         self.is_required = is_required
-        self.default_value = default_value
+        self.user_default_value = self.default_value = kwargs.get('default', NotGiven)
+
+    def set_default_value(self, sio_default_value):
+
+        # If user did not provide a default value, we will use the one that is default for the SimpleIO class ..
+        if self.user_default_value is NotGiven:
+            self.default_value = sio_default_value
+
+        # .. otherwise, user-defined default has priority.
+        else:
+            self.default_value = self.user_default_value
 
 # ################################################################################################################################
 
@@ -626,12 +634,8 @@ cdef class CySimpleIO(object):
         # By default, we always return Text instances for elements that do not specify an SIO type
         cdef Text _elem
 
-        default_value = self.definition.sio_default.input_value if container == 'input' else \
-            self.definition.sio_default.output_value
-
         _elem = Text(elem)
         _elem.name = elem
-        _elem.default_value = default_value
         _elem.is_required = is_required
 
         return _elem
@@ -716,8 +720,14 @@ cdef class CySimpleIO(object):
         for elem_list, is_required in elems:
             for elem in elem_list:
 
+                # All of our elements are always SimpleIO objects
                 if not isinstance(elem, Elem):
                     elem = self._convert_to_elem_instance(elem, container, is_required)
+
+                # Make sure all elements have a default value, either a user-defined one or the SimpleIO-level configured one
+                sio_default_value = self.definition.sio_default.input_value if container == 'input' else \
+                    self.definition.sio_default.output_value
+                elem.set_default_value(sio_default_value)
 
                 if is_required:
                     _required.append(elem)
