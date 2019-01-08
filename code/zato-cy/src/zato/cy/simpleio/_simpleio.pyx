@@ -31,7 +31,7 @@ _builtin_int = types.IntType
 _list_like = (list, tuple)
 
 # Default value added for backward-compatibility with SimpleIO definitions created before the rewrite in Cython.
-backward_compat_default_value = ''
+backward_compat_default_value = '222'
 
 prefix_optional = '-'
 
@@ -329,41 +329,39 @@ cdef class Dict(Elem):
             out = {}
 
             # All the required and optional keys
-            for elem in chain(keys_required, keys_optional):
+            for keys, is_required in ((keys_required, True), (keys_optional, False)):
+                for elem in keys:
+                    is_elem = isinstance(elem, Elem)
+                    key = elem.name if is_elem else elem
+                    value = data.get(key, NotGiven)
 
-                is_required = elem is keys_required
-                is_elem = isinstance(elem, Elem)
+                    # If we did not have such a key on input ..
+                    if value is NotGiven:
 
-                key = elem.name if is_elem else elem
-                value = data.get(key, NotGiven)
+                        # .. raise an exception if it was one one of required ones ..
+                        if is_required:
+                            raise ValueError('Key `{}` not found in `{}`'.format(key, data))
 
-                # If we did not have such a key on input ..
-                if value is NotGiven:
+                        # .. but if it was an optional key, provide a default value in lieu of it.
+                        else:
+                            out[key] = default_value
 
-                    # .. raise an exception if it was one one of required ones ..
-                    if is_required:
-                        raise ValueError('Key `{}` not found in `{}`'.format(key, data))
-
-                    # .. but if it was an optional key, provide a default value in lieu of it.
+                    # Right, we found this key on input, what to do next ..
                     else:
-                        out[key] = elem.default_value if is_elem else default_value
+                        # .. enter into the nested element if it is a SimpleIO one ..
+                        if is_elem:
 
-                # Right, we found this key on input, what to do next ..
-                else:
-                    # .. enter into the nested element if it is a SimpleIO one ..
-                    if is_elem:
+                            # Various Elem subclasses will required various parameters on input to from_json_static
+                            args = []
+                            dict_keys = [elem._keys_required, elem._keys_optional] if isinstance(elem, Dict) else [None, None]
+                            args.extend(dict_keys)
+                            args.append(elem.default_value)
 
-                        # Various Elem subclasses will required various parameters on input to from_json_static
-                        args = []
-                        dict_keys = [elem._keys_required, elem._keys_optional] if isinstance(elem, Dict) else [None, None]
-                        args.extend(dict_keys)
-                        args.append(elem.default_value)
+                            out[key] = elem.from_json_static(value, *args, class_name=elem.__class__.__name__)
 
-                        out[key] = elem.from_json_static(value, *args, class_name=elem.__class__.__name__)
-
-                    # .. otherwise, simply assign the value to key.
-                    else:
-                        out[key] = value
+                        # .. otherwise, simply assign the value to key.
+                        else:
+                            out[key] = value
 
             return out
 
