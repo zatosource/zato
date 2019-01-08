@@ -1064,7 +1064,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def test_parse_nested_dict_only_default_sio_level(self):
+    def xtest_parse_nested_dict_only_default_sio_level(self):
 
         _default_input_value = 'default-input-value'
 
@@ -1095,8 +1095,6 @@ class JSONInputParsing(_BaseTestCase):
         input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
         self.assertIsInstance(input, Bunch)
 
-        print('QQQ', input)
-
         self.assertEquals(input.aaa.bbb, 'bbb-111')
         self.assertEquals(input.aaa.ccc.ddd, 'ddd-111')
         self.assertEquals(input.aaa.ccc.eee, 'eee-111')
@@ -1104,6 +1102,43 @@ class JSONInputParsing(_BaseTestCase):
         self.assertEquals(input.aaa.ccc.eee, 'eee-111')
         self.assertEquals(input.aaa.ggg.hhh, _default_input_value)
         self.assertEquals(input.aaa.ggg.sss, _default_input_value)
+
+# ################################################################################################################################
+
+    def test_parse_nested_dict_customer_no_defaults(self):
+
+        locality = Dict('locality', 'type', 'name')
+        address = Dict('address', locality, 'street')
+        email = Dict('email', 'personal', 'business')
+        customer = Dict('customer', 'name', email, address)
+
+        class MyService(Service):
+            class SimpleIO:
+                input = customer
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        data = Bunch()
+        data.customer = Bunch()
+        data.customer.name = 'my-name'
+        data.customer.email = Bunch()
+        data.customer.email.personal = 'my-personal-email'
+        data.customer.email.business = 'my-business-email'
+        data.customer.address = Bunch()
+        data.customer.address.street = 'my-street'
+        data.customer.address.locality = Bunch()
+        data.customer.address.locality.type = 'my-type'
+        data.customer.address.locality.name = 'my-name'
+
+        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        self.assertIsInstance(input, Bunch)
+
+        self.assertEquals(input.customer.name, data.customer.name)
+        self.assertEquals(input.customer.email.personal, data.customer.email.personal)
+        self.assertEquals(input.customer.email.business, data.customer.email.business)
+        self.assertEquals(input.customer.address.street, data.customer.address.street)
+        self.assertEquals(input.customer.address.locality.type, data.customer.address.locality.type)
+        self.assertEquals(input.customer.address.locality.name, data.customer.address.locality.name)
 
 # ################################################################################################################################
 # ################################################################################################################################

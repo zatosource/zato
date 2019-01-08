@@ -135,8 +135,8 @@ cdef class Elem(object):
 
     def set_default_value(self, sio_default_value):
 
-        print('WWW', self.user_default_value)
-        print('EEE', sio_default_value)
+        #print('WWW', self.user_default_value)
+        #fprint('EEE', sio_default_value)
 
         # If user did not provide a default value, we will use the one that is default for the SimpleIO class ..
         if self.user_default_value is NotGiven:
@@ -146,7 +146,7 @@ cdef class Elem(object):
         else:
             self.default_value = self.user_default_value
 
-        print('RRR', self.default_value)
+        #print('RRR', self.default_value)
 
 # ################################################################################################################################
 
@@ -338,7 +338,7 @@ cdef class Dict(Elem):
                 else:
                     # .. enter into the nested element if it is a SimpleIO one ..
                     if is_elem:
-                        print('UUU', elem, elem.default_value)
+                        #print('UUU', elem, elem.default_value)
                         out[key] = elem.from_json_static(value, elem._keys_required, elem._keys_optional, elem.default_value)
 
                     # .. otherwise, simply assign the value to key.
@@ -354,7 +354,7 @@ cdef class Dict(Elem):
 # ################################################################################################################################
 
     def from_json(self, data):
-        print('TTT', self, self.default_value)
+        #print('TTT', self, self.default_value)
         return Dict.from_json_static(data, self._keys_required, self._keys_optional, self.default_value)
 
 # ################################################################################################################################
@@ -745,8 +745,8 @@ cdef class CySimpleIO(object):
                 sio_default_value = self.definition.sio_default.input_value if container == 'input' else \
                     self.definition.sio_default.output_value
 
-                print(111, `self.definition.sio_default.input_value`, `self.definition.sio_default.output_value`)
-                print(222, sio_default_value)
+                #print(111, `self.definition.sio_default.input_value`, `self.definition.sio_default.output_value`)
+                #print(222, sio_default_value)
 
                 elem.set_default_value(sio_default_value)
 
@@ -797,7 +797,10 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef dict _parse_input_elem(self, dict elem, unicode data_format):
+    cdef dict _parse_input_elem(self, elem, unicode data_format):
+
+        if not isinstance(elem, dict):
+            raise ValueError('Expected a dict instead of `{!r}` ({})'.format(elem, type(elem).__name__))
 
         cdef dict out = {}
 
