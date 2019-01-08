@@ -15,6 +15,9 @@ from json import dumps, loads
 from unittest import TestCase
 from uuid import UUID as uuid_UUID, uuid4
 
+# dateutil
+from dateutil.parser import parse as dt_parse
+
 # Zato
 from zato.common import DATA_FORMAT
 from zato.server.service import Service
@@ -1219,6 +1222,60 @@ class JSONInputParsing(_BaseTestCase):
         self.assertEquals(input.customer.address.street, _default_input_value)
         self.assertEquals(input.customer.address.locality.type, locality_default)
         self.assertEquals(input.customer.address.locality.name, locality_default)
+
+# ################################################################################################################################
+
+    def test_parse_nested_dict_all_sio_elems(self):
+
+        locality = Dict('locality', Int('type'), Text('name'), AsIs('coords'), Decimal('geo_skip'), Float('geo_diff'))
+        address = Dict('address', locality, UUID('street_id'), CSV('prefs'), DateTime('since'), List('types'), Opaque('opaque1'))
+        email = Dict('email', Text('value'), Bool('is_business'), Date('join_date'), DictList('preferred_order', 'name', 'pos'))
+        customer = Dict('customer', 'name', email, address)
+
+        class MyService(Service):
+            class SimpleIO:
+                input = customer
+
+        CySimpleIO.attach_sio(self.get_server_config(), MyService)
+
+        data = Bunch()
+        data.customer = Bunch()
+        data.customer.name = 'my-name'
+        data.customer.email = Bunch()
+        data.customer.email.value = 'my-email'
+        data.customer.email.is_business = True
+        data.customer.email.join_date = '1999-12-31'
+        data.customer.email.preferred_order = [{'name':'address2', 'pos':'2'}, {'name':'address1', 'pos':'1'}]
+        data.customer.address = Bunch()
+        data.customer.address.locality = Bunch()
+        data.customer.address.locality.type = '111'
+        data.customer.address.locality.name = 'my-locality'
+        data.customer.address.locality.coords = object()
+        data.customer.address.locality.geo_skip = '123.456'
+        data.customer.address.locality.geo_diff = '999.777'
+        data.customer.address.street_id = uuid4().hex
+        data.customer.address.prefs = '1,2,3,4'
+        data.customer.address.since = '27-11-1988T11:22:33'
+        data.customer.address.types = ['a', 'b', 'c', 'd']
+        data.customer.address.opaque1 = object()
+
+        input = MyService._sio.parse_input(data, DATA_FORMAT.JSON)
+        self.assertIsInstance(input, Bunch)
+
+        self.assertEquals(input.customer.name, data.customer.name)
+        self.assertEquals(input.customer.email.value, data.customer.email.value)
+        self.assertEquals(input.customer.email.is_business, data.customer.email.is_business)
+        self.assertEquals(input.customer.email.join_date, dt_parse(data.customer.email.join_date))
+        self.assertListEqual(input.customer.email.preferred_order, data.customer.email.preferred_order)
+        self.assertEquals(input.customer.address.locality.type, int(data.customer.address.locality.type))
+        self.assertEquals(input.customer.address.locality.name, data.customer.address.locality.name)
+        self.assertIs(input.customer.address.locality.coords, data.customer.address.locality.coords)
+        self.assertEquals(input.customer.address.locality.geo_skip, decimal_Decimal(data.customer.address.locality.geo_skip))
+        self.assertEquals(input.customer.address.locality.geo_diff, float(data.customer.address.locality.geo_diff))
+        self.assertEquals(input.customer.address.prefs, data.customer.address.prefs.split(','))
+        self.assertEquals(input.customer.address.since, dt_parse(data.customer.address.since))
+        self.assertEquals(input.customer.address.types, data.customer.address.types)
+        self.assertIs(input.customer.address.opaque1, data.customer.address.opaque1)
 
 # ################################################################################################################################
 # ################################################################################################################################
