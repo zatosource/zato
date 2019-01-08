@@ -31,7 +31,7 @@ _builtin_int = types.IntType
 _list_like = (list, tuple)
 
 # Default value added for backward-compatibility with SimpleIO definitions created before the rewrite in Cython.
-backward_compat_default_value = '222'
+backward_compat_default_value = ''
 
 prefix_optional = '-'
 
