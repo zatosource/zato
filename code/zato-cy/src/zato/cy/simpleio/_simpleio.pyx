@@ -331,7 +331,7 @@ cdef class Dict(Elem):
 
                     # .. but if it was an optional key, provide a default value in lieu of it.
                     else:
-                        print('YYY', elem, is_elem, default_value)
+                        #print('YYY', elem, is_elem, default_value)
                         out[key] = elem.default_value if is_elem else default_value
 
                 # Right, we found this key on input, what to do next ..
