@@ -135,9 +135,6 @@ cdef class Elem(object):
 
     def set_default_value(self, sio_default_value):
 
-        #print('WWW', self.user_default_value)
-        #fprint('EEE', sio_default_value)
-
         # If user did not provide a default value, we will use the one that is default for the SimpleIO class ..
         if self.user_default_value is NotGiven:
             self.default_value = sio_default_value
@@ -145,8 +142,6 @@ cdef class Elem(object):
         # .. otherwise, user-defined default has priority.
         else:
             self.default_value = self.user_default_value
-
-        #print('RRR', self.default_value)
 
 # ################################################################################################################################
 
@@ -200,8 +195,12 @@ cdef class AsIs(Elem):
     def __cinit__(self):
         self._type = ElemType.as_is
 
-    def from_json(self, data):
-        return data
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
+        return value
+
+    def from_json(self, value):
+        return AsIs.from_json_static(value)
 
     to_json = from_json
 
@@ -211,8 +210,12 @@ cdef class Bool(Elem):
     def __cinit__(self):
         self._type = ElemType.bool
 
-    def from_json(self, value):
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
         return to_bool(value)
+
+    def from_json(self, value):
+        return Bool.from_json_static(value)
 
     from_xml = to_json = to_xml = from_json
 
@@ -222,8 +225,12 @@ cdef class CSV(Elem):
     def __cinit__(self):
         self._type = ElemType.csv
 
-    def from_json(self, value, *ignored):
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
         return value.split(',')
+
+    def from_json(self, value):
+        return CSV.from_json_static(value)
 
     from_xml = from_json
 
@@ -239,12 +246,16 @@ cdef class Date(Elem):
     def __cinit__(self):
         self._type = ElemType.date
 
-    def from_json(self, value):
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
         try:
             return dt_parse(value)
         except ValueError as e:
             # This is the only way to learn about what kind of exception we caught
-            raise ValueError('Could not parse `{}` as a {} object ({})'.format(value, self.__class__.__name__, e.message))
+            raise ValueError('Could not parse `{}` as a {} object ({})'.format(value, kwargs['class_name'], e.message))
+
+    def from_json(self, value):
+        return Date.from_json_static(value, class_name=self.__class__.__name__)
 
 # ################################################################################################################################
 
@@ -258,8 +269,12 @@ cdef class Decimal(Elem):
     def __cinit__(self):
         self._type = ElemType.decimal
 
-    def from_json(self, value):
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
         return decimal_Decimal(value)
+
+    def from_json(self, value):
+        return Decimal.from_json_static(value)
 
 # ################################################################################################################################
 
@@ -302,7 +317,7 @@ cdef class Dict(Elem):
 # ################################################################################################################################
 
     @staticmethod
-    def from_json_static(data, keys_required, keys_optional, default_value):
+    def from_json_static(data, keys_required, keys_optional, default_value, *args, **kwargs):
 
         if not isinstance(data, dict):
             raise ValueError('Expected a dict instead of `{!r}` ({})'.format(data, type(data).__name__))
@@ -331,15 +346,20 @@ cdef class Dict(Elem):
 
                     # .. but if it was an optional key, provide a default value in lieu of it.
                     else:
-                        #print('YYY', elem, is_elem, default_value)
                         out[key] = elem.default_value if is_elem else default_value
 
                 # Right, we found this key on input, what to do next ..
                 else:
                     # .. enter into the nested element if it is a SimpleIO one ..
                     if is_elem:
-                        #print('UUU', elem, elem.default_value)
-                        out[key] = elem.from_json_static(value, elem._keys_required, elem._keys_optional, elem.default_value)
+
+                        # Various Elem subclasses will required various parameters on input to from_json_static
+                        args = []
+                        dict_keys = [elem._keys_required, elem._keys_optional] if isinstance(elem, Dict) else [None, None]
+                        args.extend(dict_keys)
+                        args.append(elem.default_value)
+
+                        out[key] = elem.from_json_static(value, *args, class_name=elem.__class__.__name__)
 
                     # .. otherwise, simply assign the value to key.
                     else:
@@ -353,9 +373,8 @@ cdef class Dict(Elem):
 
 # ################################################################################################################################
 
-    def from_json(self, data):
-        #print('TTT', self, self.default_value)
-        return Dict.from_json_static(data, self._keys_required, self._keys_optional, self.default_value)
+    def from_json(self, value):
+        return Dict.from_json_static(value, self._keys_required, self._keys_optional, self.default_value)
 
 # ################################################################################################################################
 
@@ -363,11 +382,15 @@ cdef class DictList(Dict):
     def __cinit__(self):
         self._type = ElemType.dict_list
 
-    def from_json(self, value):
+    @staticmethod
+    def from_json_static(value, keys_required, keys_optional, default_value, *args, **kwargs):
         out = []
         for elem in value:
-            out.append(Dict.from_json_static(elem, self._keys_required, self._keys_optional, self.default_value))
+            out.append(Dict.from_json_static(elem, keys_required, keys_optional, default_value))
         return out
+
+    def from_json(self, value):
+        return DictList.from_json_static(value, self._keys_required, self._keys_optional, self.default_value)
 
 # ################################################################################################################################
 
@@ -375,8 +398,12 @@ cdef class Float(Elem):
     def __cinit__(self):
         self._type = ElemType.float
 
-    def from_json(self, value):
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
         return _builtin_float(value)
+
+    def from_json(self, value):
+        return Float.from_json_static(value)
 
 # ################################################################################################################################
 
@@ -384,8 +411,12 @@ cdef class Int(Elem):
     def __cinit__(self):
         self._type = ElemType.int
 
-    def from_json(self, value):
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
         return _builtin_int(value)
+
+    def from_json(self, value):
+        return Int.from_json_static(value)
 
 # ################################################################################################################################
 
@@ -393,8 +424,12 @@ cdef class List(Elem):
     def __cinit__(self):
         self._type = ElemType.list_
 
-    def from_json(self, value):
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
         return value if isinstance(value, _list_like) else [value]
+
+    def from_json(self, value):
+        return List.from_json_static(value)
 
 # ################################################################################################################################
 
@@ -402,8 +437,12 @@ cdef class Opaque(Elem):
     def __cinit__(self):
         self._type = ElemType.opaque
 
-    def from_json(self, value):
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
         return value
+
+    def from_json(self, value):
+        return Opaque.from_json_static(value)
 
     from_xml = to_xml = from_json
 
@@ -421,8 +460,12 @@ cdef class Text(Elem):
         super(Text, self).__init__(name, **kwargs)
         self.encoding = kwargs.get('encoding', 'utf8')
 
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
+        return value if isinstance(value, basestring) else str(value).decode(kwargs['encoding'])
+
     def from_json(self, value):
-        return value if isinstance(value, basestring) else str(value).decode(self.encoding)
+        return Text.from_json_static(value, encoding=self.encoding)
 
 # ################################################################################################################################
 
@@ -431,8 +474,12 @@ cdef class UUID(Elem):
     def __cinit__(self):
         self._type = ElemType.uuid
 
-    def from_json(self, value):
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
         return uuid_UUID(value)
+
+    def from_json(self, value):
+        return UUID.from_json_static(value)
 
 # ################################################################################################################################
 
