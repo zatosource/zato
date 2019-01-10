@@ -67,6 +67,57 @@ cdef class SIODefault(object):
 
 # ################################################################################################################################
 
+cdef class SIOSkipEmpty(object):
+
+    cdef:
+        public empty_input_value
+        public empty_output_value
+        public set skip_input_set
+        public set skip_output_set
+        public set force_empty_input
+        public set force_empty_output
+        public bint skip_all_empty_input
+        public bint skip_all_empty_output
+
+    def __init__(self, empty_input_value, empty_output_value, input_def, output_def, force_empty_input, force_empty_output):
+
+        # Construct configuration for empty input values
+
+        if input_def is NotGiven:
+            skip_input_set = None
+        else:
+            if input_def is True:
+                skip_all_empty_input = True
+                skip_input_set = None
+            else:
+                skip_input_set = set(input_def)
+
+        # Likewise, for output values
+
+        if output_def is NotGiven:
+            skip_output_set = None
+        else:
+            if output_def is True:
+                skip_all_empty_output = True
+                skip_output_set = None
+            else:
+                skip_output_set = set(output_def)
+
+        # Assign all computed values for runtime usage
+
+        self.empty_input_value = empty_input_value
+        self.empty_output_value = empty_output_value
+        self.force_empty_input = set(force_empty_input or [])
+        self.force_empty_output = set(force_empty_output or [])
+
+        self.skip_input_set = skip_input_set
+        self.skip_all_empty_input = skip_all_empty_input
+
+        self.skip_output_set = skip_output_set
+        self.skip_all_empty_output = skip_all_empty_output
+
+# ################################################################################################################################
+
 cdef class ParsingError(Exception):
     pass
 
@@ -606,20 +657,11 @@ cdef class SIODefinition(object):
         # Default values to use for optional elements, unless overridden on a per-element basis
         public SIODefault sio_default
 
+        # Which empty values should not be prodcued from input / sent on output, unless overridden by each element
+        public SIOSkipEmpty skip_empty
+
         # Name of the service this definition is for
         unicode _service_name
-
-        # Whether all non-NotGiven optional input elements should be skipped or not
-        bint _skip_all_empty_request_keys
-
-        # A list of non-NotGiven optional input elements to skip
-        list _skip_empty_request_keys
-
-        # Whether all non-NotGiven optional output elements should be skipped or not
-        bint _skip_all_empty_response_keys
-
-        # A list of non-NotGiven optional output elements to skip
-        list _skip_empty_response_keys
 
         # Name of the response element, or None if there should be no top-level one
         object _response_elem
@@ -630,8 +672,9 @@ cdef class SIODefinition(object):
         self._output_required = SIOList()
         self._output_optional = SIOList()
 
-    def __init__(self, SIODefault sio_default):
+    def __init__(self, SIODefault sio_default, SIOSkipEmpty skip_empty):
         self.sio_default = sio_default
+        self.skip_empty = skip_empty
 
     cdef list get_input_pretty(self):
         cdef list required = []
@@ -676,7 +719,51 @@ cdef class CySimpleIO(object):
 
         cpdef SIODefault sio_default = SIODefault(input_value, output_value, _default_value)
 
-        self.definition = SIODefinition(sio_default)
+        raw_skip_empty = getattr(user_declaration, 'skip_empty_input', NotGiven)
+        class_skip_empty = getattr(user_declaration, 'SkipEmpty', NotGiven)
+
+        # Quick input validation - we cannot have both kinds of configuration
+        if (raw_skip_empty is not NotGiven) and (class_skip_empty is not NotGiven):
+            raise ValueError('Cannot specify both skip_empty_input and SkipEmpty in a SimpleIO definition')
+
+        # Note that to retain backward compatibility, it is force_empty_keys instead of force_empty_output
+        raw_force_empty_output = getattr(user_declaration, 'force_empty_keys', NotGiven)
+
+        # Again, quick input validation
+        if (raw_force_empty_output is not NotGiven) and (class_skip_empty is not NotGiven):
+            raise ValueError('Cannot specify both force_empty_keys and SkipEmpty in a SimpleIO definition')
+
+        if class_skip_empty is NotGiven:
+            empty_input_value = backward_compat_default_value
+            empty_output_value = NotGiven
+            input_def = NotGiven
+            output_def = NotGiven
+            force_empty_input = NotGiven
+            force_empty_output = NotGiven
+        else:
+
+            # We use _InternalNotGiven instead of NotGiven for input values to make sure
+            # backward-compatibility with previous SIO definitions can be retained.
+            empty_input_value = getattr(class_skip_empty, 'empty_input_value', _InternalNotGiven)
+            empty_output_value = getattr(class_skip_empty, 'empty_output_value', _InternalNotGiven)
+
+            # We cannot have NotGiven as the default output value, it cannot be serialized in a meaningful way
+            if empty_output_value is NotGiven:
+                raise ValueError('NotGiven cannot be used as empty_output_value')
+
+            # For backward-compatibility, only empty_input_value is read from sio_default.input_value
+            if empty_input_value is _InternalNotGiven:
+                empty_input_value = sio_default.input_value
+
+            input_def = getattr(class_skip_empty, 'input', NotGiven)
+            output_def = getattr(class_skip_empty, 'output_def', NotGiven)
+            force_empty_input = getattr(class_skip_empty, 'force_empty_input', NotGiven)
+            force_empty_output = getattr(class_skip_empty, 'force_empty_output', NotGiven)
+
+        cpdef SIOSkipEmpty sio_skip_empty = SIOSkipEmpty(
+            empty_input_value, empty_output_value, input_def, output_def, force_empty_input, force_empty_output)
+
+        self.definition = SIODefinition(sio_default, sio_skip_empty)
         self.server_config = server_config
         self.user_declaration = user_declaration
 
@@ -790,9 +877,6 @@ cdef class CySimpleIO(object):
                 sio_default_value = self.definition.sio_default.input_value if container == 'input' else \
                     self.definition.sio_default.output_value
 
-                #print(111, `self.definition.sio_default.input_value`, `self.definition.sio_default.output_value`)
-                #print(222, sio_default_value)
-
                 elem.set_default_value(sio_default_value)
 
                 if is_required:
@@ -884,5 +968,8 @@ cdef class CySimpleIO(object):
 
 # Create server/process-wide singletons
 NotGiven = _NotGiven()
+
+# Akin to NotGiven but must not be used by users
+_InternalNotGiven = _NotGiven()
 
 # ################################################################################################################################

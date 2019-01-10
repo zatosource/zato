@@ -1358,9 +1358,6 @@ class JSONInputParsing(_BaseTestCase):
         class MyService(Service):
             class SimpleIO:
                 input = 'aaa', 'bbb', '-ccc', '-ddd'
-                default_value = NotGiven
-
-                # skip_empty_input = True
 
                 class SkipEmpty:
                     input = True
