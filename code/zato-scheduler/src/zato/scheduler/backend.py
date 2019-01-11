@@ -239,8 +239,8 @@ class Job(object):
                     # Invoke callback in a new greenlet so it doesn't block the current one.
                     self._spawn(self.callback, **{'ctx':self.get_context()})
 
-                except Exception, e:
-                    logger.warn(format_exc(e))
+                except Exception:
+                    logger.warn(format_exc())
 
                 finally:
                     # Pause the greenlet for however long is needed if it is not a one-off job
@@ -251,8 +251,8 @@ class Job(object):
 
             logger.info('Job leaving main loop `%s` after %d iterations', self, self.current_run)
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
         return True
 
@@ -283,8 +283,8 @@ class Job(object):
 
             self.main_loop()
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
 # ################################################################################################################################
 
@@ -323,8 +323,8 @@ class Scheduler(object):
 
             else:
                 logger.debug('Skipping inactive job `%s`', job)
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
     def create(self, *args, **kwargs):
         with self.lock:
@@ -476,5 +476,5 @@ class Scheduler(object):
                 if self.iter_cb:
                     self.iter_cb(*self.iter_cb_args)
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
