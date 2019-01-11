@@ -69,9 +69,8 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                 self.kvdb.conn.ping()
                 self.client = self.kvdb.pubsub()
                 self.client.subscribe(self.topic_callbacks.keys())
-            except Exception, e:
-                logger.warn('Redis connection error, will retry after %ss.\n%s',
-                    self.connect_sleep_time, format_exc(e))
+            except Exception:
+                logger.warn('Redis connection error, will retry after %ss.\n%s', self.connect_sleep_time, format_exc())
                 sleep(self.connect_sleep_time)
 
         def run(self):
@@ -90,9 +89,9 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                             for msg in self.client.listen():
                                 try:
                                     self.on_message(Bunch(msg))
-                                except Exception, e:
-                                    logger.warn('Could not handle broker message `%s`, e:`%s`', msg, format_exc(e))
-                        except redis.ConnectionError, e:
+                                except Exception:
+                                    logger.warn('Could not handle broker message `%s`, e:`%s`', msg, format_exc())
+                        except redis.ConnectionError as e:
                             if e.message not in EXPECTED_CONNECTION_ERRORS:  # Hm, there's no error code, only the message
                                 logger.warn('Caught Redis exception `%s`', e.message)
                                 self.set_up_pub_sub_client()
@@ -168,9 +167,9 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
 
             try:
                 msg = dumps(msg)
-            except Exception, e:
-                error_msg = 'JSON serialization failed for msg:[%r], e:[%s]'
-                logger.error(error_msg, msg, format_exc(e))
+            except Exception:
+                error_msg = 'JSON serialization failed for msg:`%r`, e:`%s`'
+                logger.error(error_msg, msg, format_exc())
                 raise
             else:
                 topic = TOPICS[msg_type]

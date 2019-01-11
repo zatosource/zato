@@ -59,7 +59,7 @@ class _ClientThread(Thread):
                     while self.keep_running:
                         for msg in self.client.listen():
                             self.on_message(Bunch(msg))
-                except redis.ConnectionError, e:
+                except redis.ConnectionError as e:
                     if e.message != REMOTE_END_CLOSED_SOCKET:  # Hm, there's no error code, only the message
                         logger.info('Caught `%s`, will quit now', e.message)
                         raise
@@ -132,9 +132,9 @@ class BrokerClient(Thread):
 
         try:
             msg = dumps(msg)
-        except Exception, e:
-            error_msg = 'JSON serialization failed for msg:[%r], e:[%s]'
-            logger.error(error_msg, msg, format_exc(e))
+        except Exception:
+            error_msg = 'JSON serialization failed for msg:`%r`, e:`%s`'
+            logger.error(error_msg, msg, format_exc())
             raise
         else:
             topic = TOPICS[msg_type]
@@ -157,7 +157,7 @@ class BrokerClient(Thread):
 
                 try:
                     self.kvdb.conn.rename(msg.data, tmp_key)
-                except redis.ResponseError, e:
+                except redis.ResponseError as e:
                     if e.message != 'ERR no such key':  # Doh, I hope Redis guys don't change it out of a sudden :/
                         raise
                     else:

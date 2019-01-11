@@ -136,7 +136,6 @@ cid_base = len(cid_symbols)
 # This reseeds the current process only and each parallel server does it for each subprocess too.
 numpy_seed()
 
-
 # ################################################################################################################################
 
 # We can initialize it once per process here
