@@ -295,7 +295,7 @@ user={}
 
             try:
                 os.remove(self.tmp_file.name)
-            except OSError, e:
+            except OSError as e:
 
                 # ENOENT = No such file, this is fine, apparently another process beat us to that lock's deletion.
                 # But any other exception needs to be re-raised.
