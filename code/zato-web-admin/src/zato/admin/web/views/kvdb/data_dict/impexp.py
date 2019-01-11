@@ -40,8 +40,8 @@ def import_(req, cluster_id):
         data = req.read()
         data.decode('bz2') # A preliminary check to weed out files obviously incorrect
         req.zato.client.invoke('zato.kvdb.data-dict.impexp.import', {'data':data.encode('base64')})
-    except Exception, e:
-        msg = 'Could not import the data dictionaries, e:[{}]'.format(format_exc(e))
+    except Exception:
+        msg = 'Could not import the data dictionaries, e:[{}]'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:

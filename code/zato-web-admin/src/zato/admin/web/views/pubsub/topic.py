@@ -148,8 +148,8 @@ def topic_clear(req, cluster_id, topic_id):
             'cluster_id': cluster_id,
             'id': topic_id,
         })
-    except Exception, e:
-        return HttpResponseServerError(format_exc(e))
+    except Exception:
+        return HttpResponseServerError(format_exc())
     else:
         msg = 'Cleared topic `{}`'.format(
             req.zato.client.invoke('zato.pubsub.topic.get', {
