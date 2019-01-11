@@ -129,7 +129,7 @@ class IPCAPI(object):
 
             return is_success, response
 
-        except OSError, e:
+        except OSError as e:
             if e.errno not in fifo_ignore_err:
                 raise
 
@@ -180,8 +180,8 @@ class IPCAPI(object):
 
             return is_success, response
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
         finally:
             os.remove(fifo_path)
 

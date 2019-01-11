@@ -18,6 +18,9 @@ from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 # psutil
 import psutil
 
+# Python 2/3 compatibility
+from past.builtins import xrange
+
 # Zato
 from zato.common import ZATO_OK
 from zato.common.test.tls_material import ca_cert, server1_cert, server1_key
