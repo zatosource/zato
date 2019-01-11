@@ -252,8 +252,8 @@ def create(req):
                 req.POST['transport'], req.POST['connection'], req.POST['name'])
         else:
             raise ZatoException(msg=response.details)
-    except Exception, e:
-        msg = 'Could not create the object, e:[{e}]'.format(e=format_exc(e))
+    except Exception:
+        msg = 'Object could not be created, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -266,8 +266,8 @@ def edit(req):
                 req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
         else:
             raise ZatoException(msg=response.details)
-    except Exception, e:
-        msg = 'Could not perform the update, e:`{}`'.format(format_exc(e))
+    except Exception:
+        msg = 'Update error, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 

@@ -350,8 +350,8 @@ def request_response_configure(req, service_name, cluster_id):
         req.zato.client.invoke('zato.service.configure-request-response', input_dict)
         return HttpResponse('Saved successfully')
 
-    except Exception, e:
-        msg = 'Could not update the configuration, e:[{e}]'.format(e=format_exc(e))
+    except Exception:
+        msg = 'Could not update the configuration, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -391,8 +391,8 @@ def last_stats(req, service_id, cluster_id):
 
                 return_data[key] = value if value != ZATO_NONE else '0'
 
-    except Exception, e:
-        msg = 'Caught an exception while invoking zato.service.get-by-service, e:[{}]'.format(format_exc(e))
+    except Exception:
+        msg = 'Caught an exception while invoking zato.service.get-by-service, e:`{}`'.format(format_exc())
         logger.error(msg)
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
@@ -495,9 +495,8 @@ def invoke(req, name, cluster_id):
 
         response = req.zato.client.invoke(name, **input_dict)
 
-    except Exception, e:
-        msg = 'Could not invoke the service. name:[{}], cluster_id:[{}], e:[{}]'.format(
-            name, cluster_id, format_exc(e))
+    except Exception:
+        msg = 'Could not invoke the service. name:`{}`, cluster_id:`{}`, e:`{}`'.format(name, cluster_id, format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
@@ -506,5 +505,5 @@ def invoke(req, name, cluster_id):
                 return HttpResponse(response.inner_service_response or '(None)')
             else:
                 return HttpResponseServerError(response.details)
-        except Exception, e:
-            return HttpResponseServerError(format_exc(e))
+        except Exception:
+            return HttpResponseServerError(format_exc())

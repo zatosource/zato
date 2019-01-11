@@ -566,8 +566,8 @@ def settings(req):
             request = {'cluster_id':req.zato.cluster.id, 'name': mapping.job_name}
             try:
                 response = req.zato.client.invoke('zato.scheduler.job.get-by-name', request)
-            except Exception, e:
-                logger.warn(format_exc(e))
+            except Exception:
+                logger.warn(format_exc())
                 return_data['has_scheduler_jobs'] = False
                 break
             if response.has_data:
