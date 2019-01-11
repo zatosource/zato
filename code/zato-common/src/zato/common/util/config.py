@@ -12,6 +12,9 @@ import os
 # Bunch
 from bunch import Bunch
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.common import SECRETS
 

@@ -148,7 +148,7 @@ def validate_haproxy_config(config_data, haproxy_command):
             command = [haproxy_command, '-c', '-f', tf.name]
             timeouting_popen(command, HAPROXY_VALIDATE_TIMEOUT, timeout_msg, rc_non_zero_msg, common_msg)
 
-    except Exception, e:
-        msg = 'Caught an exception, e:`{}`'.format(format_exc(e))
+    except Exception:
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
         logger.error(msg)
         raise Exception(msg)

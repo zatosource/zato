@@ -105,6 +105,10 @@ from texttable import Texttable
 # validate
 from validate import is_boolean, is_integer, VdtTypeError
 
+# Python 2/3 compatibility
+from future.utils import raise_
+from past.builtins import basestring, cmp, reduce, unicode
+
 # Zato
 from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
      SECRET_SHADOW, SECRETS, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, zato_no_op_marker, \
@@ -1223,7 +1227,7 @@ def replace_private_key(orig_payload):
 def delete_tls_material_from_fs(server, info, full_path_func):
     try:
         os.remove(full_path_func(server.tls_dir, info))
-    except OSError, e:
+    except OSError as e:
         if e.errno == errno.ENOENT:
             # It's ok - some other worker must have deleted it already
             pass
@@ -1508,9 +1512,9 @@ def startup_service_payload_from_path(name, value, repo_location):
 
     try:
         payload = open(path).read()
-    except Exception, e:
+    except Exception:
         logger.warn(
-            'Could not open payload path:`%s` `%s`, skipping startup service:`%s`, e:`%s`', orig_path, path, name, format_exc(e))
+            'Could not open payload path:`%s` `%s`, skipping startup service:`%s`, e:`%s`', orig_path, path, name, format_exc())
     else:
         return payload
 
@@ -1601,7 +1605,7 @@ def spawn_greenlet(callable, *args, **kwargs):
 
         if g.exception:
             type_, value, traceback = g.exc_info
-            raise type_(value), None, traceback
+            raise_(type_(value), None, traceback)
 
     except Timeout:
         pass # Timeout = good = no errors

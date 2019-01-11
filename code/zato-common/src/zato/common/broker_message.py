@@ -14,6 +14,9 @@ from inspect import isclass
 # candv
 from candv import Constants as _Constants, ValueConstant as _ValueConstant
 
+# Python 2/3 compatibility
+from past.builtins import cmp
+
 class Constants(_Constants):
     values = _Constants.constants
 
