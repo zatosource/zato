@@ -46,6 +46,10 @@ cdef class _NotGiven(object):
     def __bool__(self):
         return False # Always evaluates to a boolean False
 
+cdef class _InternalNotGiven(_NotGiven):
+    """ Like _NotGiven but used only internally.
+    """
+
 # ################################################################################################################################
 
 cdef class SIODefault(object):
@@ -54,13 +58,13 @@ cdef class SIODefault(object):
         public input_value
         public output_value
 
-    def __init__(self, input_value, output_value, _default_value):
+    def __init__(self, input_value, output_value, default_value):
 
-        if input_value is NotGiven:
-            input_value = backward_compat_default_value if _default_value is NotGiven else _default_value
+        if input_value is InternalNotGiven:
+            input_value = backward_compat_default_value if default_value is InternalNotGiven else default_value
 
-        if output_value is NotGiven:
-            output_value = backward_compat_default_value if output_value is NotGiven else _default_value
+        if output_value is InternalNotGiven:
+            output_value = backward_compat_default_value if output_value is InternalNotGiven else default_value
 
         self.input_value = input_value
         self.output_value = output_value
@@ -109,8 +113,6 @@ cdef class SIOSkipEmpty(object):
 
         self.skip_input_set = skip_input_set
         self.skip_all_empty_input = skip_all_empty_input
-
-        print(111, `skip_input_set`, `self.skip_input_set`, `input_def`)
 
         self.skip_output_set = skip_output_set
         self.skip_all_empty_output = skip_all_empty_output
@@ -718,11 +720,11 @@ cdef class CySimpleIO(object):
 
     def __cinit__(self, _SIOServerConfig server_config, object user_declaration):
 
-        input_value = getattr(user_declaration, 'default_input_value', NotGiven)
-        output_value = getattr(user_declaration, 'default_output_value', NotGiven)
-        _default_value = getattr(user_declaration, 'default_value', NotGiven)
+        input_value = getattr(user_declaration, 'default_input_value', InternalNotGiven)
+        output_value = getattr(user_declaration, 'default_output_value', InternalNotGiven)
+        default_value = getattr(user_declaration, 'default_value', InternalNotGiven)
 
-        cpdef SIODefault sio_default = SIODefault(input_value, output_value, _default_value)
+        cpdef SIODefault sio_default = SIODefault(input_value, output_value, default_value)
 
         raw_skip_empty = getattr(user_declaration, 'skip_empty_keys', NotGiven)
         class_skip_empty = getattr(user_declaration, 'SkipEmpty', NotGiven)
@@ -745,7 +747,7 @@ cdef class CySimpleIO(object):
             force_empty_input_set = NotGiven
             force_empty_output_set = raw_force_empty_output_set if raw_force_empty_output_set is not NotGiven else NotGiven
         else:
-            empty_output_value = getattr(class_skip_empty, 'empty_output_value', _InternalNotGiven)
+            empty_output_value = getattr(class_skip_empty, 'empty_output_value', InternalNotGiven)
 
             # We cannot have NotGiven as the default output value, it cannot be serialized in a meaningful way
             if empty_output_value is NotGiven:
@@ -756,7 +758,7 @@ cdef class CySimpleIO(object):
             force_empty_input_set = getattr(class_skip_empty, 'force_empty_input', NotGiven)
             force_empty_output_set = getattr(class_skip_empty, 'force_empty_output', NotGiven)
 
-        if isinstance(output_def, basestring):
+        if isinstance(input_def, basestring):
             input_def = [input_def]
 
         if isinstance(output_def, basestring):
@@ -937,12 +939,8 @@ cdef class CySimpleIO(object):
     cdef bint _should_skip_on_input(self, SIODefinition definition, Elem sio_item, input_value) except -1:
         cdef bint should_skip = False
 
-        print('QQQ', sio_item.name, definition.skip_empty.skip_input_set)
-
         # Should we skip this value ..
         if definition.skip_empty.skip_all_empty_input or sio_item.name in definition.skip_empty.skip_input_set:
-
-            print(222, sio_item.name, definition.skip_empty.skip_input_set, definition.skip_empty.force_empty_input_set)
 
             # .. possibly, unless we are forced not to include it.
             if sio_item.name not in definition.skip_empty.force_empty_input_set:
@@ -961,10 +959,10 @@ cdef class CySimpleIO(object):
         cdef dict out = {}
 
         for sio_item in chain(self.definition._input_required, self.definition._input_optional):
-            input_value = elem.get(sio_item.name, NotGiven)
+            input_value = elem.get(sio_item.name, InternalNotGiven)
 
             # We do not have such a key on input so an exception needs to be raised if this is a require one
-            if input_value is NotGiven:
+            if input_value is InternalNotGiven:
                 if sio_item.is_required:
                     raise ValueError('No such key `{}` among `{}` in `{}`'.format(sio_item.name, elem.keys(), elem))
                 else:
@@ -1002,6 +1000,6 @@ cdef class CySimpleIO(object):
 NotGiven = _NotGiven()
 
 # Akin to NotGiven but must not be used by users
-_InternalNotGiven = _NotGiven()
+InternalNotGiven = _InternalNotGiven()
 
 # ################################################################################################################################
