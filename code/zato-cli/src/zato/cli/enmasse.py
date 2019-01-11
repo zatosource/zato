@@ -33,6 +33,9 @@ import texttable
 # yaml
 import yaml
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig

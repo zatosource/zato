@@ -7,6 +7,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from builtins import input as raw_input, int
+from imp import reload
 import json
 import logging
 import os
@@ -630,7 +632,7 @@ class ZatoCommand(object):
             # https://github.com/zatosource/zato/issues/328
 
             return_code = self.execute(args)
-            if isinstance(return_code, (int, long)):
+            if isinstance(return_code, int):
                 sys.exit(return_code)
             else:
                 sys.exit(0)
