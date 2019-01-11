@@ -853,7 +853,7 @@ class CACreateCommand(ZatoCommand):
                 self.logger.info('OK')
 
         # Make sure permissions are tight (GH #440)
-        os.chmod(priv_key_name, 0640)
+        os.chmod(priv_key_name, 0o640)
 
         # In case someone needs to invoke us directly and wants to find out
         # what the format_args were.

@@ -31,8 +31,8 @@ from zato.common.haproxy import haproxy_stats, validate_haproxy_config
 from zato.common.repo import RepoManager
 from zato.common.util import get_lb_agent_json_config, timeouting_popen
 
-public_method_prefix = "_lb_agent_"
-config_file = "zato.config"
+public_method_prefix = '_lb_agent_'
+config_file = 'zato.config'
 
 logger = logging.getLogger("")
 logging.addLevelName('TRACE1', TRACE1)
@@ -65,7 +65,7 @@ class LoadBalancerAgent(SSLServer):
         self.config_path = os.path.join(self.repo_dir, config_file)
         self.config = self._read_config()
         self.start_time = datetime.utcnow().replace(tzinfo=UTC).isoformat()
-        self.haproxy_stats = HAProxyStats(self.config.global_["stats_socket"])
+        self.haproxy_stats = HAProxyStats(self.config.global_['stats_socket'])
 
         RepoManager(self.repo_dir).ensure_repo_consistency()
 
@@ -85,19 +85,19 @@ class LoadBalancerAgent(SSLServer):
     def start_load_balancer(self):
         """ Starts the HAProxy load balancer in background.
         """
-        self._re_start_load_balancer("HAProxy didn't start in [{}] seconds. ", 'Failed to start HAProxy. ')
+        self._re_start_load_balancer("HAProxy didn't start in `{}` seconds. ", 'Failed to start HAProxy. ')
 
     def restart_load_balancer(self):
         """ Restarts the HAProxy load balancer without disrupting existing connections.
         """
         additional_params = ['-sf', open(self.haproxy_pidfile).read().strip()]
-        self._re_start_load_balancer("Could not restart in [{}] seconds. ", 'Failed to restart HAProxy. ', additional_params)
+        self._re_start_load_balancer("Could not restart in `{}` seconds. ", 'Failed to restart HAProxy. ', additional_params)
 
     def _dispatch(self, method, params):
         try:
             return SSLServer._dispatch(self, method, params)
-        except Exception, e:
-            logger.error(format_exc(e))
+        except Exception as e:
+            logger.error(format_exc())
             raise e
 
     def register_functions(self):
@@ -110,7 +110,7 @@ class LoadBalancerAgent(SSLServer):
             if item.startswith(public_method_prefix):
                 public_name = item.split(public_method_prefix)[1]
                 attr = getattr(self, item)
-                msg = "Registering [{attr}] under public name [{public_name}]"
+                msg = 'Registering `{attr}` under public name `{public_name}`'
                 logger.info(msg.format(attr=attr, public_name=public_name))  # TODO: Add logging config
                 self.register_function(attr, public_name)
 
@@ -132,7 +132,7 @@ class LoadBalancerAgent(SSLServer):
         has already been validated.
         """
         # TODO: Use local bzr repo here
-        f = open(self.config_path, "wb")
+        f = open(self.config_path, 'wb')
         f.write(config_string)
         f.close()
 
@@ -335,8 +335,8 @@ class LoadBalancerAgent(SSLServer):
         # There's no 'describe commands' command in HAProxy but HAProxy is
         # nice enough to return a usage info when it encounters an unknown
         # command which we parse and return to the caller.
-        if command == "ZATO_DESCRIBE_COMMANDS":
-            result = "\n\n" + "\n".join(result.splitlines()[1:])
+        if command == 'ZATO_DESCRIBE_COMMANDS':
+            result = '\n\n' + '\n'.join(result.splitlines()[1:])
 
         return result
 
@@ -345,11 +345,11 @@ class LoadBalancerAgent(SSLServer):
         similar to what stdlib's sys.version_info does.
         """
         # 'show info' is always available and we use it for determining the HAProxy version.
-        info = self.haproxy_stats.execute("show info")
+        info = self.haproxy_stats.execute('show info')
         for line in info.splitlines():
-            if line.startswith("Version:"):
-                version = line.split("Version:")[1]
-                return version.strip().split(".")
+            if line.startswith('Version:'):
+                version = line.split('Version:')[1]
+                return version.strip().split('.')
 
     def _lb_agent_ping(self):
         """ Always return ZATO_OK.
@@ -377,16 +377,16 @@ class LoadBalancerAgent(SSLServer):
         """ Invoke HAProxy through HTTP monitor_uri and return ZATO_OK if
         HTTP status code is 200. Raise Exception otherwise.
         """
-        host = self.config.frontend["front_http_plain"]["bind"]["address"]
-        port = self.config.frontend["front_http_plain"]["bind"]["port"]
-        path = self.config.frontend["front_http_plain"]["monitor_uri"]
+        host = self.config.frontend['front_http_plain']['bind']['address']
+        port = self.config.frontend['front_http_plain']['bind']['port']
+        path = self.config.frontend['front_http_plain']['monitor_uri']
 
-        url = "http{}://{}:{}{}".format('s' if lb_use_tls else "", host, port, path)
+        url = 'http{}://{}:{}{}'.format('s' if lb_use_tls else '', host, port, path)
 
         try:
             conn = urllib.urlopen(url)
-        except Exception, e:
-            msg = "Could not open URL [{url}], e:[{e}]".format(url=url, e=format_exc(e))
+        except Exception:
+            msg = 'Could not open URL `{}`, e:`{}`'.format(url, format_exc())
             logger.error(msg)
             raise Exception(msg)
         else:
@@ -395,7 +395,7 @@ class LoadBalancerAgent(SSLServer):
                 if code == httplib.OK:
                     return ZATO_OK
                 else:
-                    msg = "Could not open URL [{url}], HTTP code:[{code}]".format(url=url, code=code)
+                    msg = 'Could not open URL [{url}], HTTP code:[{code}]'.format(url=url, code=code)
                     logger.error(msg)
                     raise Exception(msg)
             finally:
@@ -404,6 +404,6 @@ class LoadBalancerAgent(SSLServer):
     def _lb_agent_get_work_config(self):
         """ Return the agent's basic configuration.
         """
-        return {"work_dir":self.work_dir, "haproxy_command":self.haproxy_command, # noqa
-                "keyfile":self.keyfile, "certfile":self.certfile,                 # noqa
-               "ca_certs":self.ca_certs, "verify_fields":self.verify_fields}      # noqa
+        return {'work_dir':self.work_dir, 'haproxy_command':self.haproxy_command, # noqa
+                'keyfile':self.keyfile, 'certfile':self.certfile,                 # noqa
+               'ca_certs':self.ca_certs, 'verify_fields':self.verify_fields}      # noqa
