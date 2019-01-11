@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function
 
 # flake8: noqa
-import os
 from setuptools import Extension, find_packages, setup
 from Cython.Build import cythonize
 
