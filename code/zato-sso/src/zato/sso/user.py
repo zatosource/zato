@@ -19,6 +19,9 @@ from traceback import format_exc
 # SQLAlchemy
 from sqlalchemy import update as sql_update
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
