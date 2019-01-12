@@ -28,13 +28,13 @@ import sys
 import unicodedata
 from ast import literal_eval
 from contextlib import closing
-from cStringIO import StringIO
 from datetime import datetime, timedelta
 from glob import glob
 from hashlib import sha256
 from importlib import import_module
 from inspect import ismethod
-from itertools import ifilter, izip, izip_longest, tee
+from itertools import zip_longest
+from io import StringIO
 from operator import itemgetter
 from os import getuid
 from os.path import abspath, isabs, join
@@ -47,7 +47,7 @@ from tempfile import NamedTemporaryFile
 from threading import current_thread
 from time import sleep
 from traceback import format_exc
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 # alembic
 from alembic import op
@@ -91,9 +91,9 @@ import pytz
 import requests
 
 # Spring Python
-from springpython.context import ApplicationContext
-from springpython.remoting.http import CAValidatingHTTPSConnection
-from springpython.remoting.xmlrpc import SSLClientTransport
+#from springpython.context import ApplicationContext
+#from springpython.remoting.http import CAValidatingHTTPSConnection
+#from springpython.remoting.xmlrpc import SSLClientTransport
 
 # SQLAlchemy
 import sqlalchemy as sa
@@ -108,6 +108,7 @@ from validate import is_boolean, is_integer, VdtTypeError
 # Python 2/3 compatibility
 from future.utils import raise_
 from past.builtins import basestring, cmp, reduce, unicode
+from zato.common.py23_ import ifilter
 
 # Zato
 from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
@@ -648,7 +649,7 @@ def multikeysort(items, columns):
 def grouper(n, iterable, fillvalue=None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * n
-    return izip_longest(fillvalue=fillvalue, *args)
+    return zip_longest(fillvalue=fillvalue, *args)
 
 # ################################################################################################################################
 

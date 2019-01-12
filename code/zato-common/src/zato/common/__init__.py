@@ -11,11 +11,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from collections import OrderedDict
 from copy import deepcopy
-from cStringIO import StringIO
-from httplib import responses
+from http.client import responses
+from io import StringIO
 from numbers import Number
 from string import Template
-from sys import maxint
 from traceback import format_exc
 
 # boto
@@ -33,6 +32,7 @@ from lxml.objectify import ObjectPath as _ObjectPath
 
 # Python 2/3 compatibility
 from past.builtins import basestring
+from zato.common.py23_ import maxint
 
 # Zato
 from zato.vault.client import VAULT
