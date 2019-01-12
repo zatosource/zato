@@ -430,9 +430,9 @@ class ServiceStore(InitializingObject):
             si.hash = sha256(si.source).hexdigest()
             si.hash_method = 'SHA-256'
 
-        except IOError, e:
+        except IOError:
             if has_trace1:
-                logger.log(TRACE1, 'Ignoring IOError, mod:`%s`, e:`%s`', mod, format_exc(e))
+                logger.log(TRACE1, 'Ignoring IOError, mod:`%s`, e:`%s`', mod, format_exc())
 
         return si
 

@@ -28,6 +28,9 @@ from binascii import hexlify
 from string import Template
 from cStringIO import StringIO
 
+# Python 2/3 compatibility
+from past.builtins import basestring, unicode
+
 # Zato
 from zato.server.connection.jms_wmq.jms import DEFAULT_DELIVERY_MODE, BaseException
 

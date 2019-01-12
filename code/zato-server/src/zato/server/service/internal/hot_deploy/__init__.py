@@ -218,8 +218,8 @@ class Create(AdminService):
                     # .. all workers get here.
                     self.response.payload.services_deployed = self.deploy_package(self.request.input.package_id, session)
 
-                except(IOError, OSError), e:
+                except(IOError, OSError) as e:
                     if e.errno == ENOENT:
-                        self.logger.debug('Caught ENOENT e:`%s`', format_exc(e))
+                        self.logger.debug('Caught ENOENT e:`%s`', format_exc())
                     else:
                         raise

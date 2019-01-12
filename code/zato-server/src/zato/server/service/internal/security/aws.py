@@ -69,9 +69,8 @@ class Create(AdminService):
                 session.add(auth)
                 session.commit()
 
-            except Exception, e:
-                msg = 'Could not create an AWS definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('Could not create an AWS definition, e:`{}`', format_exc())
                 session.rollback()
 
                 raise
@@ -116,9 +115,8 @@ class Edit(AdminService):
                 session.add(definition)
                 session.commit()
 
-            except Exception, e:
-                msg = 'Could not update the AWS definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('Could not update the AWS definition, e:`{}`', format_exc())
                 session.rollback()
 
                 raise
@@ -163,9 +161,8 @@ class Delete(AdminService):
 
                 session.delete(auth)
                 session.commit()
-            except Exception, e:
-                msg = 'Could not delete the AWS definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('Could not delete the AWS definition, e:`{}`', format_exc())
                 session.rollback()
 
                 raise

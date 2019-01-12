@@ -37,6 +37,9 @@ import gevent
 from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
@@ -539,8 +542,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 self._cassandra_connections_ready[v.config.id] = False
                 self.update_cassandra_conn(v.config)
                 self.cassandra_api.create_def(k, v.config, self._on_cassandra_connection_established)
-            except Exception, e:
-                logger.warn('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -559,8 +562,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for k, v in self.worker_config.cassandra_query.items():
             try:
                 gevent.spawn(self._init_cassandra_query, self.cassandra_query_api.create, k, v.config)
-            except Exception, e:
-                logger.warn('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -569,14 +572,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for k, v in self.worker_config.out_stomp.items():
             try:
                 self.stomp_outconn_api.create_def(k, v.config)
-            except Exception, e:
-                logger.warn('Could not create a Stomp outgoing connection `%s`, e:`%s`', k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create a Stomp outgoing connection `%s`, e:`%s`', k, format_exc())
 
         for k, v in self.worker_config.channel_stomp.items():
             try:
                 self.stomp_channel_api.create_def(k, v.config, stomp_channel_main_loop, self)
-            except Exception, e:
-                logger.warn('Could not create a Stomp channel `%s`, e:`%s`', k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create a Stomp channel `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -585,8 +588,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self._update_queue_build_cap(v.config)
             try:
                 api.create(k, v.config)
-            except Exception, e:
-                logger.warn('Could not create {} connection `%s`, e:`%s`'.format(name), k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create {} connection `%s`, e:`%s`'.format(name), k, format_exc())
 
 # ################################################################################################################################
 
@@ -1557,7 +1560,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 path = '{}.{}'.format(no_ext, ext)
                 try:
                     os.remove(path)
-                except OSError, e:
+                except OSError as e:
                     if e.errno != ENOENT:
                         raise
 
@@ -2075,8 +2078,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         try:
             response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=msg.data_format)
             status = success
-        except Exception, e:
-            response = format_exc(e)
+        except Exception:
+            response = format_exc()
             status = failure
         finally:
             data = '{};{}'.format(status, response)

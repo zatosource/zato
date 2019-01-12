@@ -18,13 +18,20 @@ from gevent import sleep
 # Redis
 from redis.sentinel import MasterNotFoundError
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 from zato.common import ZatoException
 from zato.common.kvdb import redis_grammar
 from zato.common.util import has_redis_sentinels
 from zato.server.service.internal import AdminService, AdminSIO
 
+# ################################################################################################################################
+
 kvdb_logger = getLogger('zato_kvdb')
+
+# ################################################################################################################################
 
 class ExecuteCommand(AdminService):
     """ Executes a command against the key/value DB.
@@ -50,6 +57,8 @@ class ExecuteCommand(AdminService):
                 parameters[-1] = parameters[-1][:-1]
 
         return parameters
+
+# ################################################################################################################################
 
     def handle(self):
         input_command = self.request.input.command or ''
@@ -85,10 +94,11 @@ class ExecuteCommand(AdminService):
 
             self.response.payload.result = response or '(None)'
 
-        except Exception, e:
-            msg = 'Command parsing error, command:[{}], e:[{}]'.format(input_command, format_exc(e))
-            self.logger.error(msg)
+        except Exception:
+            self.logger.error('Command parsing error, command:`%s`, e:`%s`', input_command, format_exc())
             raise ZatoException(self.cid, msg)
+
+# ################################################################################################################################
 
 class LogConnectionInfo(AdminService):
     """ Writes outs to logs information regarding current connections to KVDB.
@@ -105,22 +115,13 @@ class LogConnectionInfo(AdminService):
                         master_address = self.kvdb.conn.connection_pool.connection_kwargs['connection_pool'].get_master_address()
                         kvdb_logger.debug(
                             'Uses sentinels: `%s %r`, master: `%r`', has_sentinels, config.redis_sentinels, master_address)
-                    except MasterNotFoundError, e:
-                        self.logger.warn(format_exc(e))
-                        kvdb_logger.warn(format_exc(e))
+                    except MasterNotFoundError:
+                        tb = format_exc()
+                        self.logger.warn(tb)
+                        kvdb_logger.warn(tb)
                 else:
                     kvdb_logger.debug(
                         'Uses sentinels: `%s`, conn:`%r`', has_sentinels, self.kvdb.conn)
                 sleep(sleep_time)
 
-# The data browser will most likely be implemented in a future version
-'''
-class GetList(AdminService):
-    """ Returns a list of keys, optionally including their values.
-    """
-    # KEYS, then
-    # HGETALL
-    # GET
-    # LRANGE
-    # SMEMBERS
-'''
+# ################################################################################################################################

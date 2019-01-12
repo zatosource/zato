@@ -525,14 +525,14 @@ class Cache(object):
                 try:
                     _sleep(interval)
                     deleted = self.impl.delete_expired()
-                except Exception, e:
-                    logger.warn('Exception while deleting expired keys %s', format_exc(e))
+                except Exception:
+                    logger.warn('Exception while deleting expired keys %s', format_exc())
                     _sleep(2)
                 else:
                     if deleted:
                         logger.info('Cache `%s` deleted keys expired in the last %ss - %s', self.config.name, interval, deleted)
-        except Exception, e:
-            logger.warn('Exception in _delete_expired loop %s', format_exc(e))
+        except Exception:
+            logger.warn('Exception in _delete_expired loop %s', format_exc())
 
 # ################################################################################################################################
 
@@ -722,9 +722,9 @@ class CacheAPI(object):
             data['cache_name'] = cache_name
             data['source_worker_id'] = self.server.worker_id
             self.server.broker_client.publish(data)
-        except Exception, e:
+        except Exception:
             logger.warn('Could not run `%s` after_state_changed in cache `%s`, data:`%s`, e:`%s`',
-                op, cache_name, data, format_exc(e))
+                op, cache_name, data, format_exc())
 
 # ################################################################################################################################
 
@@ -744,8 +744,8 @@ class CacheAPI(object):
                 servers = [elem.strip() for elem in config.servers.splitlines()]
                 cache = _MemcachedClient(servers, asbool(config.is_debug), **parse_extra_into_dict(config.extra))
                 self._add_cache(config, cache)
-            except Exception, e:
-                logger.warn(format_exc(e))
+            except Exception:
+                logger.warn(format_exc())
 
         spawn(impl)
 

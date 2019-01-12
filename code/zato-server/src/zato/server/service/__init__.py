@@ -28,6 +28,9 @@ from lxml.objectify import ObjectifiedElement
 # gevent
 from gevent import Timeout, spawn
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.bunch import Bunch
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
@@ -70,13 +73,21 @@ Opaque = Opaque
 Unicode = Unicode
 UTC = UTC
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
+
+# ################################################################################################################################
 
 # Back compat
 Bool = Boolean
 Int = Integer
+
+# ################################################################################################################################
 
 # For code completion
 PubSub = PubSub
@@ -94,14 +105,14 @@ after_handle_hooks = ('after_handle', 'finalize_handle')
 def call_hook_no_service(hook):
     try:
         hook()
-    except Exception, e:
-        logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc(e))
+    except Exception:
+        logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc())
 
 def call_hook_with_service(hook, service):
     try:
         hook(service)
-    except Exception, e:
-        logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc(e))
+    except Exception:
+        logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc())
 
 # ################################################################################################################################
 
@@ -497,8 +508,8 @@ class Service(object):
                 if service.finalize_handle:
                     _call_hook_no_service(service.finalize_handle)
 
-            except Exception, e:
-                exc_formatted = format_exc(e)
+            except Exception as e:
+                exc_formatted = format_exc()
                 logger.warn(exc_formatted)
 
             finally:
@@ -511,10 +522,10 @@ class Service(object):
                             self.patterns.parallel.on_call_finished
                         spawn(func, self, service.response.payload, exc_formatted)
 
-                except Exception, resp_e:
+                except Exception as resp_e:
 
                     # If we already have an exception around, log the new one but don't overwrite the old one with it.
-                    logger.warn('Exception in service `%s`, e:`%s`', service.name, format_exc(resp_e))
+                    logger.warn('Exception in service `%s`, e:`%s`', service.name, format_exc())
 
                     if e:
                         if isinstance(e, Reportable):
@@ -582,8 +593,8 @@ class Service(object):
                         raise
             else:
                 return self.update_handle(*invoke_args, **kwargs)
-        except Exception, e:
-            logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc(e))
+        except Exception:
+            logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc())
             raise
 
     def invoke(self, name, *args, **kwargs):

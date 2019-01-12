@@ -23,12 +23,17 @@ from gevent.lock import RLock
 # sortedcontainers
 from sortedcontainers import SortedList as _SortedList
 
+# Python 2/3 compatibility
+from past.builtins import cmp
+
 # Zato
 from zato.common import GENERIC, PUBSUB
 from zato.common.pubsub import PubSubMessage
 from zato.common.util import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub import PubSub
+
+# ################################################################################################################################
 
 # For pyflakes
 PubSub = PubSub
@@ -424,9 +429,9 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-        except Exception, e:
+        except Exception:
             error_msg = 'Exception in delivery task for sub_key:`%s`, e:`%s`'
-            e_formatted = format_exc(e)
+            e_formatted = format_exc()
             logger.warn(error_msg, self.sub_key, e_formatted)
             logger_zato.warn(error_msg, self.sub_key, e_formatted)
 
@@ -760,8 +765,8 @@ class PubSubTool(object):
                 self.delivery_tasks[sub_key].stop()
                 del self.delivery_tasks[sub_key]
 
-            except Exception, e:
-                logger.warn('Exception during sub_key removal `%s`, e:`%s`', sub_key, format_exc(e))
+            except Exception:
+                logger.warn('Exception during sub_key removal `%s`, e:`%s`', sub_key, format_exc())
 
 # ################################################################################################################################
 

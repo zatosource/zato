@@ -30,6 +30,9 @@ import requests
 from requests.exceptions import Timeout as RequestsTimeout
 from requests.sessions import Session as requests_session
 
+# Python 2/3 compatibility
+from past.builtins import basestring, unicode
+
 # Zato
 from zato.common import CONTENT_TYPE, DATA_FORMAT, Inactive, SEC_DEF_TYPE, soapenv11_namespace, soapenv12_namespace, TimeoutException, \
      URL_TYPE, ZATO_NONE
@@ -94,8 +97,8 @@ class BaseHTTPSOAPWrapper(object):
             return self.session.request(
                 method, address, data=data, auth=auth, headers=headers, hooks=hooks,
                 cert=cert, verify=verify, timeout=self.config['timeout'], *args, **kwargs)
-        except RequestsTimeout, e:
-            raise TimeoutException(cid, format_exc(e))
+        except RequestsTimeout:
+            raise TimeoutException(cid, format_exc())
 
     def ping(self, cid, _has_debug=has_debug):
         """ Pings a given HTTP/SOAP resource
@@ -268,8 +271,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         """
 
         if not params:
-            logger.warn('CID:[%s] No parameters given for URL path:`%r`', cid, self.config['address_url_path'])
-            raise ValueError('CID:[{}] No parameters given for URL path'.format(cid))
+            logger.warn('CID:`%s` No parameters given for URL path:`%r`', cid, self.config['address_url_path'])
+            raise ValueError('CID:`{}` No parameters given for URL path'.format(cid))
 
         path_params = {}
         try:
@@ -277,11 +280,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 path_params[name] = params.pop(name)
 
             return (self.address.format(**path_params), dict(params))
-        except(KeyError, ValueError), e:
-            logger.warn('CID:[%s] Could not build URL address `%r` path:`%r` with params:`%r`, e:`%s`',
-                cid, self.address, self.config['address_url_path'], params, format_exc(e))
+        except(KeyError, ValueError):
+            logger.warn('CID:`%s` Could not build URL address `%r` path:`%r` with params:`%r`, e:`%s`',
+                cid, self.address, self.config['address_url_path'], params, format_exc())
 
-            raise ValueError('CID:[{}] Could not build URL path'.format(cid))
+            raise ValueError('CID:`{}` Could not build URL path'.format(cid))
 
 # ################################################################################################################################
 
@@ -460,8 +463,8 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
 
             self.client.put_client(client)
 
-        except Exception, e:
-            logger.warn('Error while adding a SOAP client to `%s` (%s) e:`%s`', self.address, self.conn_type, format_exc(e))
+        except Exception:
+            logger.warn('Error while adding a SOAP client to `%s` (%s) e:`%s`', self.address, self.conn_type, format_exc())
 
     def build_client_queue(self):
 

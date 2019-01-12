@@ -20,6 +20,9 @@ from sqlalchemy import and_
 # TextBlob
 from textblob import TextBlob
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.common import WEB_SOCKET
 from zato.common.odb.model import Server, WebSocketClient, WebSocketSubscription

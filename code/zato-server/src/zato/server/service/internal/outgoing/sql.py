@@ -111,9 +111,8 @@ class Create(AdminService, _SQLService):
                 self.response.payload.name = item.name
                 self.response.payload.display_name = get_sql_engine_display_name(input.engine, self.server.fs_sql_config)
 
-            except Exception, e:
-                msg = 'Could not create an outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('SQL connection could not be created, e:`{}`', format_exc())
                 session.rollback()
 
                 raise
@@ -170,9 +169,8 @@ class Edit(AdminService, _SQLService):
                 self.response.payload.name = item.name
                 self.response.payload.display_name = get_sql_engine_display_name(input.engine, self.server.fs_sql_config)
 
-            except Exception, e:
-                msg = 'Could not update the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('SQL connection could not be updated, e:`{}`', format_exc())
                 session.rollback()
 
                 raise
@@ -198,10 +196,9 @@ class Delete(AdminService, _SQLService):
 
                 self.notify_worker_threads({'name':old_name}, OUTGOING.SQL_DELETE.value)
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                msg = 'Could not delete the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('SQL connection could not be deleted, e:`{}`', format_exc())
 
                 raise
 
@@ -237,10 +234,9 @@ class Ping(AdminService):
                 ping = self.outgoing.sql.get(item.name, False).pool.ping
                 self.response.payload.response_time = str(ping(self.server.fs_sql_config))
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                msg = 'Could not ping the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('SQL connection could not be pinged, e:`{}`', format_exc())
 
                 raise
 
@@ -250,14 +246,14 @@ class AutoPing(AdminService):
     def handle(self):
         try:
             self.server.sql_pool_store[ZATO_ODB_POOL_NAME].pool.ping(self.server.fs_sql_config)
-        except Exception, e:
-            self.logger.warn('Could not ping ODB, e:`%s`', format_exc(e))
+        except Exception:
+            self.logger.warn('Could not ping ODB, e:`%s`', format_exc())
 
         for item in self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id})['zato_outgoing_sql_get_list_response']:
             try:
                 self.invoke(Ping.get_name(), {'id': item['id']})
-            except Exception, e:
-                self.logger.warn('Could not ping SQL pool `%s`, config:`%s`, e:`%s`', item['name'], item, format_exc(e))
+            except Exception:
+                self.logger.warn('Could not ping SQL pool `%s`, config:`%s`, e:`%s`', item['name'], item, format_exc())
 
 class GetEngineList(AdminService):
     """ Returns a list of all engines defined in sql.conf.

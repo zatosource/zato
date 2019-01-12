@@ -29,6 +29,9 @@ from lxml.objectify import deannotate, Element, ElementMaker, ObjectifiedElement
 # SQLAlchemy
 from sqlalchemy.util import KeyedTuple
 
+# Python 2/3 compatibility
+from past.builtins import basestring, unicode
+
 # Zato
 from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, SIMPLE_IO, simple_types, TRACE1, ZatoException, \
      ZATO_OK
@@ -36,9 +39,15 @@ from zato.common.odb.api import WritableKeyedTuple
 from zato.common.util import make_repr
 from zato.server.service.reqresp.sio import AsIs, convert_param, ForceType, ServiceInput, SIOConverter
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
+
+# ################################################################################################################################
 
 direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 
@@ -215,9 +224,9 @@ class Request(SIOConverter):
                     True, self.encrypt_func, self.encrypt_secrets, self.params_priority)
                 params[param_name] = value
 
-            except Exception, e:
+            except Exception:
                 msg = 'Caught an exception, param:`{}`, params_to_visit:`{}`, has_simple_io_config:`{}`, e:`{}`'.format(
-                    param, params_to_visit, self.has_simple_io_config, format_exc(e))
+                    param, params_to_visit, self.has_simple_io_config, format_exc())
                 self.logger.error(msg)
                 raise ParsingException(msg)
 
