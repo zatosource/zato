@@ -134,8 +134,8 @@ class PickupManager(object):
             for topic in topics:
                 spawn_greenlet(self.server.publish_pickup, topic, request)
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
 # ################################################################################################################################
 
@@ -196,7 +196,7 @@ class PickupManager(object):
                                     try:
                                         pe.data = self.get_parser(config.parse_with)(pe.raw_data)
                                         pe.has_data = True
-                                    except Exception, e:
+                                    except Exception as e:
                                         pe.parse_error = e
 
                                 else:
@@ -205,11 +205,11 @@ class PickupManager(object):
                             spawn_greenlet(self.invoke_callbacks, pe, config.services, config.topics)
                             self.post_handle(pe.full_path, config)
 
-                        except Exception, e:
-                            logger.warn(format_exc(e))
+                        except Exception:
+                            logger.warn(format_exc())
 
                 except KeyboardInterrupt:
                     self.keep_running = False
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())

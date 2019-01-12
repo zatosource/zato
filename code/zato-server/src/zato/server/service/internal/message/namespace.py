@@ -66,9 +66,8 @@ class Create(AdminService):
                 session.add(definition)
                 session.commit()
 
-            except Exception, e:
-                msg = 'Could not create a namespace, e:[%s]'
-                self.logger.error(msg, format_exc(e))
+            except Exception:
+                self.logger.error('Could not create a namespace, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -110,9 +109,8 @@ class Edit(AdminService):
                 session.add(definition)
                 session.commit()
 
-            except Exception, e:
-                msg = 'Could not update the namespace, e:[%s]'
-                self.logger.error(msg, format_exc(e))
+            except Exception:
+                self.logger.error('Could not update the namespace, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -141,9 +139,8 @@ class Delete(AdminService):
 
                 session.delete(auth)
                 session.commit()
-            except Exception, e:
-                msg = 'Could not delete the namespace, e:[%s]'
-                self.logger.error(msg, format_exc(e))
+            except Exception:
+                self.logger.error('Could not delete the namespace, e:`%s`', format_exc())
                 session.rollback()
 
                 raise

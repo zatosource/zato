@@ -117,8 +117,8 @@ class Create(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                self.logger.error('Could not create a ZeroMQ channel, e:`%s`', format_exc(e))
+            except Exception:
+                self.logger.error('ZeroMQ channel could not be created, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -194,8 +194,8 @@ class Edit(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                self.logger.error('Could not create the ZeroMQ channel, e:`%s`', format_exc(e))
+            except Exception:
+                self.logger.error('ZeroMQ channel could not be created, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -233,9 +233,9 @@ class Delete(AdminService):
                 }
                 self.broker_client.publish(msg)
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                self.logger.error('Could not delete the ZeroMQ channel, e:`%s`', format_exc(e))
+                self.logger.error('ZeroMQ channel could not be deleted, e:`%s`', format_exc())
 
                 raise
 

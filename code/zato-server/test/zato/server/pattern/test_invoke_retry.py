@@ -83,7 +83,7 @@ class InvokeRetryTestCase(TestCase):
 
         try:
             raise_exception()
-        except Exception, e:
+        except Exception as e:
             pass
 
         msg = retry_failed_msg(so_far, retry_repeats, service_name, retry_seconds, orig_cid, e)
@@ -224,7 +224,7 @@ class InvokeRetryTestCase(TestCase):
 
             try:
                 ir._get_retry_settings(target, **kwargs)
-            except ValueError, e:
+            except ValueError as e:
 
                 for name in 'callback', 'repeats':
                     if name in e.message:
@@ -251,7 +251,7 @@ class InvokeRetryTestCase(TestCase):
 
         try:
             ir._get_retry_settings(target, **kwargs)
-        except ValueError, e:
+        except ValueError as e:
             self.assertEquals(e.message, 'Could not invoke `{}`, only one of seconds:`{}` and minutes:`{}` can be given'.format(
                 target, kwargs['seconds'], kwargs['minutes']))
         else:
@@ -274,7 +274,7 @@ class InvokeRetryTestCase(TestCase):
 
         try:
             ir._get_retry_settings(target, **kwargs)
-        except ValueError, e:
+        except ValueError as e:
             self.assertEquals(
                 e.message, 'Could not invoke `{}`, exactly one of seconds:`{}` or minutes:`{}` must be given'.format(
                     target, kwargs['seconds'], kwargs['minutes']))
@@ -297,7 +297,7 @@ class InvokeRetryTestCase(TestCase):
 
         try:
             ir._get_retry_settings(rand_string(), **kwargs)
-        except ValueError, e:
+        except ValueError as e:
             prefix = 'Service:`{}` does not exist, e:`Traceback (most recent call last):'.format(kwargs['callback'])
             self.assertTrue(e.message.startswith(prefix))
             self.assertIn("KeyError: u'{}'".format(kwargs['callback']), e.message)
@@ -415,7 +415,7 @@ class InvokeRetryTestCase(TestCase):
 
             try:
                 ir.invoke(target, 1, 2, 3, **kwargs)
-            except ZatoException, e:
+            except ZatoException as e:
                 expected_msg = retry_limit_reached_msg(kwargs_copy['repeats'], target, kwargs_copy['seconds'], invoking_service.cid)
                 self.assertEquals(e.cid, cid)
                 self.assertEquals(e.message, expected_msg)

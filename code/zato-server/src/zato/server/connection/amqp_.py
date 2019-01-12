@@ -25,6 +25,9 @@ from gevent import sleep, spawn
 from kombu import Connection, Consumer as _Consumer, pools, Queue
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, Transport
 
+# Python 2/3 compatibility
+from past.builtins import xrange
+
 # Zato
 from zato.common import AMQP, CHANNEL, SECRET_SHADOW, version
 from zato.common.util import get_component_name
@@ -107,8 +110,8 @@ class Consumer(object):
     def _on_amqp_message(self, body, msg):
         try:
             return self.on_amqp_message(body, msg, self.name, self.config)
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
 # ################################################################################################################################
 
@@ -133,11 +136,11 @@ class Consumer(object):
                         self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))
                 consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False)
                 consumer.consume()
-            except Exception, e:
+            except Exception:
                 err_conn_attempts += 1
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
                 logger.info('Could not create an AMQP consumer for channel `%s` (%s %s so far), e:`%s`',
-                    self.name, err_conn_attempts, noun, format_exc(e))
+                    self.name, err_conn_attempts, noun, format_exc())
 
                 # It's fine to sleep for a longer time because if this exception happens it means that we cannot connect
                 # to the server at all, which will likely mean that it is down,
@@ -183,22 +186,22 @@ class Consumer(object):
                         consumer = self._get_consumer()
 
                 # Special-case AMQP-level connection errors and recreate the connection if any is caught.
-                except AMQPConnectionError, e:
-                    logger.warn('Caught AMQP connection error in mainloop e:`%s`', format_exc(e))
+                except AMQPConnectionError:
+                    logger.warn('Caught AMQP connection error in mainloop e:`%s`', format_exc())
                     if connection:
                         connection.close()
                         consumer = self._get_consumer()
 
                 # Regular network-level errors - assume the AMQP connection is still fine and treat it
                 # as an opportunity to perform the heartbeat.
-                except conn_errors, e:
+                except conn_errors:
 
                     try:
                         connection.heartbeat_check()
-                    except Exception, e:
+                    except Exception:
                         hb_errors_so_far += 1
                         if hb_errors_so_far % log_every == 0:
-                            logger.warn('Exception in heartbeat (%s so far), e:`%s`', hb_errors_so_far, format_exc(e))
+                            logger.warn('Exception in heartbeat (%s so far), e:`%s`', hb_errors_so_far, format_exc())
 
                         # Ok, we've lost the connection, set the flag to False and sleep for some time then.
                         if not connection:
@@ -223,8 +226,8 @@ class Consumer(object):
                 connection.close()
             self.is_stopped = True # Set to True if we break out of the main loop.
 
-        except Exception, e:
-            logger.warn('Unrecoverable exception in consumer, e:`%s`', format_exc(e))
+        except Exception:
+            logger.warn('Unrecoverable exception in consumer, e:`%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -411,8 +414,8 @@ class ConnectorAMQP(Connector):
         for producer in self._producers.itervalues():
             try:
                 producer.stop()
-            except Exception, e:
-                logger.warn('Could not stop AMQP producer `%s`, e:`%s`', producer.name, format_exc(e))
+            except Exception:
+                logger.warn('Could not stop AMQP producer `%s`, e:`%s`', producer.name, format_exc())
             else:
                 logger.info('Stopped producer for outconn `%s` in AMQP connector `%s`', producer.name, self.config.name)
 

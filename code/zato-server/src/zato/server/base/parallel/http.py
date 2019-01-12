@@ -20,6 +20,9 @@ from pytz import UTC
 # tzlocal
 from tzlocal import get_localzone
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 from zato.common import NO_REMOTE_ADDRESS
 from zato.common.util import new_cid
@@ -62,8 +65,8 @@ class HTTPHandler(object):
             payload = self.request_dispatcher_dispatch(cid, request_ts_utc, wsgi_environ, self.worker_store) or b''
 
         # Any exception at this point must be our fault
-        except Exception, e:
-            tb = format_exc(e)
+        except Exception:
+            tb = format_exc()
             wsgi_environ['zato.http.response.status'] = b'%s %s' % (INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
             error_msg = b'`%s` Exception caught `%s`' % (cid, tb)
             logger.error(error_msg)

@@ -78,16 +78,15 @@ class Create(_CreateEdit):
                     filter(JSONPointer.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('JSON Pointer [{0}] already exists on this cluster'.format(input.name))
+                    raise Exception('JSON Pointer `{}` already exists in this cluster'.format(input.name))
 
                 definition = JSONPointer(None, input.name, input.value, cluster.id)
 
                 session.add(definition)
                 session.commit()
 
-            except Exception, e:
-                msg = 'Could not create an JSON Pointer, e:[%s]'
-                self.logger.error(msg, format_exc(e))
+            except Exception:
+                self.logger.error('Could not create a JSON Pointer, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -133,9 +132,8 @@ class Edit(_CreateEdit):
                 session.add(definition)
                 session.commit()
 
-            except Exception, e:
-                msg = 'Could not update the JSON Pointer, e:[%s]'
-                self.logger.error(msg, format_exc(e))
+            except Exception:
+                self.logger.error('Could not update the JSON Pointer, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -165,9 +163,8 @@ class Delete(AdminService):
 
                 session.delete(auth)
                 session.commit()
-            except Exception, e:
-                msg = 'Could not delete the JSON Pointer, e:[%s]'
-                self.logger.error(msg, format_exc(e))
+            except Exception:
+                self.logger.error('Could not delete the JSON Pointer, e:`%s`', format_exc())
                 session.rollback()
 
                 raise

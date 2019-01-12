@@ -22,11 +22,18 @@ from imbox.parser import parse_email
 # Outbox
 from outbox import AnonymousOutbox, Attachment, Email, Outbox
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.common import IMAPMessage, EMAIL
 from zato.server.store import BaseAPI, BaseStore
 
+# ################################################################################################################################
+
 logger = getLogger(__name__)
+
+# ################################################################################################################################
 
 _modes = {
     EMAIL.SMTP.MODE.PLAIN.value: None,
@@ -136,8 +143,8 @@ class SMTPConnection(_Connection):
         try:
             with self.conn_class(*self.conn_args) as conn:
                 conn.send(email, atts, from_ or msg.from_)
-        except Exception, e:
-            logger.warn('Could not send an SMTP message to `%s`, e:`%s`', self.config_no_sensitive, format_exc(e))
+        except Exception:
+            logger.warn('Could not send an SMTP message to `%s`, e:`%s`', self.config_no_sensitive, format_exc())
         else:
             if logger.isEnabledFor(INFO):
                 atts_info = ', '.join(att.name for att in atts) if atts else None

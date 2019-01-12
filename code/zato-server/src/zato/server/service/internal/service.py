@@ -21,6 +21,9 @@ from uuid import uuid4
 # validate
 from validate import is_boolean
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.common import BROKER, KVDB, ZatoException
 from zato.common.broker_message import SERVICE
@@ -173,8 +176,8 @@ class Edit(AdminService):
                 internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
                 self.response.payload.may_be_deleted = internal_del if service.is_internal else True
 
-            except Exception, e:
-                msg = 'Could not update the service, e:[{e}]'.format(e=format_exc(e))
+            except Exception:
+                msg = 'Service could not be updated, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
                 session.rollback()
 
@@ -212,9 +215,9 @@ class Delete(AdminService):
                        'is_internal':service.is_internal}
                 self.broker_client.publish(msg)
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                msg = 'Could not delete the service, e:[{e}]'.format(e=format_exc(e))
+                msg = 'Service could not be deleted, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
 
                 raise

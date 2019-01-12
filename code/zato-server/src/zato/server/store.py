@@ -103,8 +103,8 @@ class BaseStore(object):
             item.execute = execute(conn, impl)
 
             logger.debug('Created `%s`', config_no_sensitive)
-        except Exception, e:
-            logger.warn('Could not create `%s`, config:`%s`, e:`%s`', name, config_no_sensitive, format_exc(e))
+        except Exception:
+            logger.warn('Could not create `%s`, config:`%s`, e:`%s`', name, config_no_sensitive, format_exc())
         else:
             item.impl = impl
             item.is_created = True
@@ -131,8 +131,8 @@ class BaseStore(object):
             if not name in self.items:
                 raise Exception('No such name `{}` among `{}`'.format(name, self.items.keys()))
             self.delete_impl()
-        except Exception, e:
-            logger.warn('Error while deleting `%s`, e:`%s`', name, format_exc(e))
+        except Exception:
+            logger.warn('Error while deleting `%s`, e:`%s`', name, format_exc())
         finally:
             if name in self.items:
                 del self.items[name]

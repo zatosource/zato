@@ -28,6 +28,9 @@ from paste.util.converters import asbool
 # regex
 from regex import compile as regex_compile
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
@@ -284,8 +287,8 @@ class RequestDispatcher(object):
                 # Finally return payload to the client
                 return response.payload
 
-            except Exception, e:
-                _format_exc = format_exc(e)
+            except Exception as e:
+                _format_exc = format_exc()
                 status = _status_internal_server_error
 
                 if isinstance(e, ClientHTTPError):

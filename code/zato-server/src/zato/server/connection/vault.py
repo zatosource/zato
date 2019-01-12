@@ -152,8 +152,8 @@ class VaultConnAPI(object):
     def _ping(self, name):
         try:
             self.config[name].client.ping()
-        except Exception, e:
-            logger.warn('Could not ping Vault connection `%s`, e:`%s`', name, format_exc(e))
+        except Exception:
+            logger.warn('Could not ping Vault connection `%s`, e:`%s`', name, format_exc())
         else:
             logger.info('Ping OK, Vault connection `%s`', name)
 
@@ -180,8 +180,8 @@ class VaultConnAPI(object):
     def _delete(self, name):
         try:
             self.config[name].client.close()
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
         finally:
             del self.config[name]
 
