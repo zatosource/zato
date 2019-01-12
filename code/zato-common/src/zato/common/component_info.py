@@ -11,9 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os
 from anyjson import dumps as json_dumps, loads as json_loads
-from cStringIO import StringIO
 from datetime import datetime
 from itertools import groupby
+from io import StringIO
 from operator import attrgetter
 from time import time
 

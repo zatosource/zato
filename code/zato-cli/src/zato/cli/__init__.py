@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from builtins import input as raw_input, int
 from imp import reload
+from io import StringIO
 import json
 import logging
 import os
@@ -16,13 +17,9 @@ import shutil
 import sys
 import tempfile
 import time
-from cStringIO import StringIO
 from datetime import datetime
 from getpass import getpass, getuser
 from socket import gethostname
-
-# Importing
-from peak.util.imports import importString
 
 # SQLAlchemy
 import sqlalchemy
@@ -33,6 +30,7 @@ from zato.cli import util as cli_util
 from zato.common import odb, util, ZATO_INFO_FILE
 from zato.common.util import get_engine_url, get_full_stack, get_session
 from zato.common.util.cli import read_stdin_data
+from zato.common.util.import_ import import_string
 
 # ################################################################################################################################
 
@@ -353,7 +351,7 @@ def run_command(args):
         ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
     )
     for k, v in command_imports:
-        command_class[k] = importString(v)
+        command_class[k] = import_string(v)
 
     command_class[args.command](args).run(args)
 

@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging, os
 from datetime import datetime
-from httplib import OK
+from http.client import OK
 from inspect import getargspec
 from json import dumps, loads
 from traceback import format_exc
