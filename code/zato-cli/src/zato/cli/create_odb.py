@@ -13,10 +13,13 @@ from datetime import datetime
 from getpass import getuser
 from socket import gethostname
 
+# SQLAlchemy
+from sqlalchemy import Column, Text
+
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts
 from zato.common.odb import VERSION
-from zato.common.odb.model import AlembicRevision, Base, ZatoInstallState
+from zato.common.odb.model import AlembicRevision, Base, PubSubMessage, ZatoInstallState
 
 LATEST_ALEMBIC_REVISION = '0028_ae3419a9'
 
@@ -41,6 +44,17 @@ class Create(ZatoCommand):
             return self.SYS_ERROR.ODB_EXISTS
 
         else:
+
+            # Under MySQL, we need to prompt SQLAlchemy into using LONGTEXT for pub/sub messages,
+            # but otherwise TEXT columns must not have any limit set, which is why we add this column here.
+
+            if 'mysql' in args.odb_type:
+                pubsub_data_length = 2 * 10 ** 9 # 2 GB
+            else:
+                pubsub_data_length = None
+
+            PubSubMessage.data = Column(Text(length=pubsub_data_length), nullable=False)
+
             Base.metadata.create_all(engine)
 
             state = ZatoInstallState(None, VERSION, datetime.now(), gethostname(), getuser())
