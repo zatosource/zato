@@ -2342,7 +2342,7 @@ class PubSubMessage(Base):
     #
     # This column is added dynamically by create_odb.py
     #
-    # data = Column(Text(), nullable=False)
+    data = Column(Text(), nullable=False)
 
     data_prefix = Column(Text(), nullable=False)
     data_prefix_short = Column(String(200), nullable=False)
