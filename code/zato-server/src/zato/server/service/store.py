@@ -381,7 +381,11 @@ class ServiceStore(InitializingObject):
     def import_services_from_module(self, mod_name, is_internal):
         """ Imports all the services from a module specified by the given name.
         """
-        return self.import_services_from_module_object(import_module(mod_name), is_internal)
+        try:
+            return self.import_services_from_module_object(import_module(mod_name), is_internal)
+        except ImportError:
+            logger.warn('Could not import module `%s` (internal:%d)', mod_name, is_internal)
+            raise
 
 # ################################################################################################################################
 
