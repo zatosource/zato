@@ -14,12 +14,12 @@ from getpass import getuser
 from socket import gethostname
 
 # SQLAlchemy
-from sqlalchemy import Column, Text
+from sqlalchemy.dialects.postgresql.base import PGTypeCompiler
 
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts
 from zato.common.odb import VERSION
-from zato.common.odb.model import AlembicRevision, Base, PubSubMessage, ZatoInstallState
+from zato.common.odb.model import AlembicRevision, Base, ZatoInstallState
 
 LATEST_ALEMBIC_REVISION = '0028_ae3419a9'
 
@@ -45,15 +45,19 @@ class Create(ZatoCommand):
 
         else:
 
-            # Under MySQL, we need to prompt SQLAlchemy into using LONGTEXT for pub/sub messages,
-            # but otherwise TEXT columns must not have any limit set, which is why we add this column here.
+            # This is needed so that PubSubMessage.data can continue to use length
+            # in the column's specification which in itself is needed for MySQL to use LONGTEXT.
 
-            if 'mysql' in args.odb_type:
-                pubsub_data_length = 2 * 10 ** 9 # 2 GB
-            else:
-                pubsub_data_length = None
+            def _render_string_type(self, type_, name):
 
-            PubSubMessage.data = Column(Text(length=pubsub_data_length), nullable=False)
+                text = name
+                if type_.length and name != 'TEXT':
+                    text += "(%d)" % type_.length
+                if type_.collation:
+                    text += ' COLLATE "%s"' % type_.collation
+                return text
+
+            PGTypeCompiler._render_string_type = _render_string_type
 
             Base.metadata.create_all(engine)
 
