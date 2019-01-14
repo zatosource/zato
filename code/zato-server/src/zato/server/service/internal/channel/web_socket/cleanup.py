@@ -43,7 +43,6 @@ WSXClientSelect = WSXClientTable.select
 
 class _msg:
     initial = 'Cleaning up old WSX connections; now:`%s`, md:`%s`, ma:`%s`'
-    not_found = 'Did not find any WSX connections to clean up'
     found = 'Found %d WSX connection%s to clean up'
     cleaning = 'Cleaning up WSX connection %d/%d; %s'
     cleaned_up = 'Cleaned up WSX connection %d/%d; %s'
@@ -181,9 +180,8 @@ class CleanupWSX(AdminService):
             # Find the old connections now
             result = self._find_old_wsx_connections(session, max_allowed)
 
-        # Nothing to do, log the message and we can return
+        # Nothing to do, we can return
         if not result:
-            self._issue_log_msg(_msg.not_found)
             return
 
         # At least one old connection was found
