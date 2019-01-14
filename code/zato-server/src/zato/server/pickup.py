@@ -134,8 +134,8 @@ class PickupManager(object):
             for topic in topics:
                 spawn_greenlet(self.server.publish_pickup, topic, request)
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
 # ################################################################################################################################
 
@@ -145,7 +145,7 @@ class PickupManager(object):
         if config.move_processed_to:
             shutil_copy(full_path, config.move_processed_to)
 
-        if config.delete_after_pick_up:
+        if config.delete_after_pickup:
             os.remove(full_path)
 
 # ################################################################################################################################
@@ -170,6 +170,7 @@ class PickupManager(object):
                         try:
 
                             pe.base_dir = self.wd_to_path[event.wd]
+
                             config = self.callback_config[pe.base_dir]
 
                             if not self.should_pick_up(event.name, config.patterns):
@@ -181,7 +182,7 @@ class PickupManager(object):
 
                             # If we are deploying services, the path is different than for other resources
                             if config.is_service_hot_deploy:
-                                spawn_greenlet(hot_deploy, self.server, pe.file_name, pe.full_path, config.delete_after_pick_up)
+                                spawn_greenlet(hot_deploy, self.server, pe.file_name, pe.full_path, config.delete_after_pickup)
                                 continue
 
                             if config.read_on_pickup:
@@ -205,11 +206,11 @@ class PickupManager(object):
                             spawn_greenlet(self.invoke_callbacks, pe, config.services, config.topics)
                             self.post_handle(pe.full_path, config)
 
-                        except Exception, e:
-                            logger.warn(format_exc(e))
+                        except Exception:
+                            logger.warn(format_exc())
 
                 except KeyboardInterrupt:
                     self.keep_running = False
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
