@@ -3,7 +3,7 @@
 
 $.fn.zato.data_table.ChannelWebSocket = new Class({
     toString: function() {
-        var s = '<ChannelWebSocket id:{0} name:{1} is_active:{2}';
+        var s = '<ChannelWebSocket id:{0} name:{1} is_active:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)');
@@ -38,12 +38,16 @@ $.fn.zato.channel.wsx.data_table.new_row = function(item, data, include_tr) {
     var is_active = item.is_active == true;
     var cluster_id = $(document).getUrlParam('cluster');
 
+    console.log('111 '+ $.fn.zato.dir(item));
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.address);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service_name, cluster_id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"/zato/channel/wsx/connection-list/{0}/?cluster={1}&amp;channel_name={2}\">Connections</a>",
+        item.id, cluster_id, item.name));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.wsx.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.wsx.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
