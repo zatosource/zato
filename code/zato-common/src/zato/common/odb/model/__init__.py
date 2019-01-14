@@ -2339,7 +2339,7 @@ class PubSubMessage(Base):
     expiration_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
     last_updated = Column(Numeric(20, 7, asdecimal=False), nullable=True)
 
-    data = Column(Text(), nullable=False)
+    data = Column(Text(2000000000), nullable=False) # Max size = 2 GB
     data_prefix = Column(Text(), nullable=False)
     data_prefix_short = Column(String(200), nullable=False)
     data_format = Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.DATA_FORMAT)
