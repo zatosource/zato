@@ -479,7 +479,6 @@ class InRAMSyncBacklog(object):
 
     def has_messages_by_sub_key(self, sub_key):
         with self.lock:
-            logger.warn('TO-MSG %s', self.sub_key_to_msg_id)
             return len(self.sub_key_to_msg_id.get(sub_key, [])) > 0
 
 # ################################################################################################################################
@@ -831,7 +830,6 @@ class PubSub(object):
             if require_backlog_messages:
                 out = []
                 for item in subs:
-                    logger.warn('SUB %s', sub.topic_name)
                     if self.sync_backlog.has_messages_by_sub_key(item.sub_key):
                         out.append(item)
                 return out
