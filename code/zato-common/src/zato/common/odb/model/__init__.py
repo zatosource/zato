@@ -2339,10 +2339,7 @@ class PubSubMessage(Base):
     expiration_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
     last_updated = Column(Numeric(20, 7, asdecimal=False), nullable=True)
 
-    #
-    # This column is added dynamically by create_odb.py
-    #
-    data = Column(Text(), nullable=False)
+    data = Column(Text(2 * 10 ** 9), nullable=False) # 2 GB to prompt a promotion to LONGTEXT under MySQL
 
     data_prefix = Column(Text(), nullable=False)
     data_prefix_short = Column(String(200), nullable=False)
