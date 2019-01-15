@@ -1,0 +1,120 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Pub/sub main{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/task/main.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            '_server',
+            '_len',
+            '_prefix',
+            '_meta',
+
+            'name',
+            'pid'
+
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pub/sub main</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show delivery servers"%}
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:5%">&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Server</a></th>
+
+                        <th><a href="#">Length</a></th>
+                        <th><a href="#">Prefix</a></th>
+                        <th><a href="#">Meta</a></th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>
+                            {{ item.server_name }}:{{ item.server_pid }},
+                            {{ item.server_api_address }},
+                            kr:{{ item.keep_running }},
+                            pubcnt:{{ item.msg_pub_counter }}
+                        </td>
+
+                        <td>
+                            sub-t:{{ item.subscriptions_by_topic }},
+                            sub-sk:{{ item.subscriptions_by_sub_key }},
+                            sks:{{ item.sub_key_servers }},
+                            endp:{{ item.endpoints }},
+                            topics:{{ item.topics }},
+                            sec-endp-id:{{ item.sec_id_to_endpoint_id }},
+                            wsx-endp-id:{{ item.ws_channel_id_to_endpoint_id }},
+                            srv-endp-id:{{ item.service_id_to_endpoint_id }},
+                            pst-sk:{{ item.pubsub_tool_by_sub_key }},
+                            pst:{{ item.pubsub_tools }}
+                        </td>
+
+                        <td>
+                            len:{{ item.data_prefix_len }},
+                            len-s:{{ item.data_prefix_short_len }}
+                        </td>
+
+                        <td class='ignore'>{{ item.server_name }}</td>
+                        <td class='ignore'>{{ item.server_pid }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='16'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

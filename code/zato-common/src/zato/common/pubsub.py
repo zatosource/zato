@@ -187,3 +187,13 @@ class HookCtx(object):
         self.response = None
 
 # ################################################################################################################################
+
+# PubSub's attributes listed separately for ease of making them part of SimpleIO definitions
+pubsub_main_data = 'server_name', 'server_pid', 'server_api_address', 'keep_running', 'subscriptions_by_topic', \
+    'subscriptions_by_sub_key', 'sub_key_servers', 'endpoints', 'topics', 'sec_id_to_endpoint_id', \
+    'ws_channel_id_to_endpoint_id', 'service_id_to_endpoint_id', 'topic_name_to_id', 'pub_buffer_gd', 'pub_buffer_non_gd', \
+    'pubsub_tool_by_sub_key', 'pubsub_tools', 'sync_backlog', 'msg_pub_counter', 'has_meta_endpoint', \
+    'endpoint_meta_store_frequency', 'endpoint_meta_data_len', 'endpoint_meta_max_history', 'data_prefix_len', \
+    'data_prefix_short_len'
+
+# ################################################################################################################################
