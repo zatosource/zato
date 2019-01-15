@@ -341,7 +341,7 @@ class InRAMSyncBacklog(object):
     It acts as a multi-key dict and keeps only a single copy of message for each sub_key.
     """
     def __init__(self, pubsub):
-        self.pubsub = pubsub # type: PubSub
+        self.pubsub = pubsub        # type: PubSub
         self.sub_key_to_msg_id = {} # Sub key  -> Msg ID set --- What messages are available for a given subcriber
         self.msg_id_to_sub_key = {} # Msg ID   -> Sub key set  - What subscribers are interested in a given message
         self.msg_id_to_msg = {}     # Msg ID   -> Message data - What is the actual contents of each message

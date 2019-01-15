@@ -14,6 +14,7 @@ import logging
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.views import Index as _Index
+from zato.common.pubsub import pubsub_main_data
 from zato.common.util import fs_safe_name
 
 # ################################################################################################################################
@@ -22,47 +23,74 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class DeliveryServer(object):
+class PubSubTool(object):
     def __init__(self):
-        self.id = None
-        self.name = None
-        self.pid = None
-        self.tasks = None
-        self.tasks_running = None
-        self.tasks_stopped = None
-        self.sub_keys = None
+        self.server_name = None
+        self.server_pid = None
+        self.server_api_address = None
+        self.keep_running = None
+        self.subscriptions_by_topic = None
+        self.subscriptions_by_sub_key = None
+        self.sub_key_servers = None
+        self.endpoints = None
         self.topics = None
+        self.sec_id_to_endpoint_id = None
+        self.ws_channel_id_to_endpoint_id = None
+        self.service_id_to_endpoint_id = None
+        self.topic_name_to_id = None
+        self.pub_buffer_gd = None
+        self.pub_buffer_non_gd = None
+        self.pubsub_tool_by_sub_key = None
+        self.pubsub_tools = None
+        self.sync_backlog = None
+        self.msg_pub_counter = None
+        self.has_meta_endpoint = None
+        self.endpoint_meta_store_frequency = None
+        self.endpoint_meta_data_len = None
+        self.endpoint_meta_max_history = None
+        self.data_prefix_len = None
+        self.data_prefix_short_len = None
 
-        self.messages = None
-        self.messages_gd = None
-        self.messages_non_gd = None
-        self.msg_handler_counter = 0
+    def __repr__(self):
+        attrs = {}
+        for name in pubsub_main_data:
+            value = getattr(self, name)
+            if value:
+                attrs[name] = value
 
-        self.last_sync = None
-        self.last_sync_utc = None
-
-        self.last_task_run = None
-        self.last_task_run_utc = None
+        return '<{} at {} {}>'.format(self.__class__.__name__, hex(id(self)), attrs)
 
 # ################################################################################################################################
 
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'pubsub-task-delivery-server'
-    template = 'zato/pubsub/task/delivery-server.html'
-    service_name = 'pubsub.task.delivery-server.get-list'
-    output_class = DeliveryServer
+    url_name = 'pubsub-task-main'
+    template = 'zato/pubsub/task/main/index.html'
+    service_name = 'pubsub.task.main.get-list'
+    output_class = PubSubTool
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'pid', 'tasks', 'tasks_running', 'tasks_stopped', 'sub_keys', 'topics',
-            'messages', 'messages_gd', 'messages_non_gd', 'msg_handler_counter')
-        output_optional = ('last_gd_run', 'last_gd_run_utc', 'last_task_run', 'last_task_run_utc')
+        output_optional = pubsub_main_data
         output_repeated = True
 
     def handle_return_data(self, return_data):
 
+        print()
+        print()
+
+        print(111, return_data)
+
+        print()
+
+        print(222, return_data['items'])
+
+        print()
+        print()
+
+        return return_data
+
+        '''
         for item in return_data['items']:
 
             item.id = fs_safe_name('{}-{}'.format(item.name, item.pid))
@@ -76,6 +104,7 @@ class Index(_Index):
                 item.last_task_run = from_utc_to_user(item.last_task_run_utc + '+00:00', self.req.zato.user_profile)
 
         return return_data
+    '''
 
     def handle(self):
         return {}
