@@ -22,9 +22,12 @@
             '_selection',
 
             '_server',
-            '_len',
-            '_prefix',
+            '_main',
+            '_sub',
+            '_dict',
+            '_ps_tools',
             '_meta',
+            '_events',
 
             'name',
             'pid'
@@ -56,10 +59,14 @@
                         <th>&nbsp;</th>
 
                         <th><a href="#">Server</a></th>
+                        <th><a href="#">Main</a></th>
 
-                        <th><a href="#">Length</a></th>
-                        <th><a href="#">Prefix</a></th>
+                        <th><a href="#">Sub</a></th>
+                        <th><a href="#">Dict</a></th>
+                        <th><a href="#">PS tools</a></th>
                         <th><a href="#">Meta</a></th>
+
+                        <th></th>
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -73,28 +80,39 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>
-                            {{ item.server_name }}:{{ item.server_pid }},
-                            {{ item.server_api_address }},
+                            {{ item.server_name }}:{{ item.server_pid }}
+                        </td>
+                        <td>
                             kr:{{ item.keep_running }},
-                            pubcnt:{{ item.msg_pub_counter }}
+                            pubcnt:{{ item.msg_pub_counter }} {% comment %} Eventually, this will display last N messages published {% endcomment %}
                         </td>
 
                         <td>
-                            sub-t:{{ item.subscriptions_by_topic }},
-                            sub-sk:{{ item.subscriptions_by_sub_key }},
-                            sks:{{ item.sub_key_servers }},
-                            endp:{{ item.endpoints }},
-                            topics:{{ item.topics }},
-                            sec-endp-id:{{ item.sec_id_to_endpoint_id }},
-                            wsx-endp-id:{{ item.ws_channel_id_to_endpoint_id }},
-                            srv-endp-id:{{ item.service_id_to_endpoint_id }},
-                            pst-sk:{{ item.pubsub_tool_by_sub_key }},
-                            pst:{{ item.pubsub_tools }}
+                            sub-t:<a href="#">{{ item.subscriptions_by_topic }}</a>,
+                            sub-sk:<a href="#">{{ item.subscriptions_by_sub_key }}</a>,
+                            sks:<a href="#">{{ item.sub_key_servers }}</a>
+                        </td>
+                        <td>
+                            endp:<a href="#">{{ item.endpoints }}</a>,
+                            topics:<a href="#">{{ item.topics }}</a>,
+                            sec-endp-id:<a href="#">{{ item.sec_id_to_endpoint_id }}</a>,
+                            wsx-endp-id:<a href="#">{{ item.ws_channel_id_to_endpoint_id }}</a>,
+                            srv-endp-id:<a href="#">{{ item.service_id_to_endpoint_id }}</a>
+                        </td>
+                        <td>
+                            pst-sk:<a href="#">{{ item.pubsub_tool_by_sub_key }}</a>,
+                            pst:<a href="#">{{ item.pubsub_tools }}</a>
                         </td>
 
                         <td>
-                            len:{{ item.data_prefix_len }},
-                            len-s:{{ item.data_prefix_short_len }}
+                            hsme:{{ item.has_meta_endpoint }},
+                            freq:{{ item.endpoint_meta_store_frequency }},
+                            len:{{ item.endpoint_meta_data_len }},
+                            hist:{{ item.endpoint_meta_max_history }}
+                        </td>
+
+                        <td>
+                            <a href="#">Events</a>
                         </td>
 
                         <td class='ignore'>{{ item.server_name }}</td>
