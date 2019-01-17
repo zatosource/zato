@@ -94,6 +94,12 @@ class msg:
 
 # ################################################################################################################################
 
+class dict_keys:
+    subscription = 'id', 'creation_time', 'sub_key', 'endpoint_id', 'topic_id', 'topic_name', 'sub_pattern_matched', \
+        'task_delivery_interval', 'unsub_on_wsx_close', 'ext_client_id'
+
+# ################################################################################################################################
+
 def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pri_def=_PRIORITY.DEFAULT):
     """ Get and validate message priority.
     """
@@ -120,9 +126,20 @@ def get_expiration(cid, input, default_expiration=_default_expiration):
 
 # ################################################################################################################################
 
-class Endpoint(object):
+class ToDictBase(object):
+    _to_dict_keys = None
+
+    def to_dict(self):
+        return {name: getattr(self, name) for name in self._to_dict_keys}
+
+# ################################################################################################################################
+
+class Endpoint(ToDictBase):
     """ A publisher/subscriber in pub/sub workflows.
     """
+    _to_dict_keys = 'id', 'name', 'endpoint_type', 'role', 'is_active', 'is_internal', 'topic_patterns', \
+        'pub_topic_patterns', 'sub_topic_patterns'
+
     def __init__(self, config):
         self.config = config
         self.id = config.id
@@ -141,6 +158,8 @@ class Endpoint(object):
         self.sub_topics = {}
 
         self.set_up_patterns()
+
+# ################################################################################################################################
 
     def __repr__(self):
         return make_repr(self)
@@ -179,9 +198,14 @@ class Endpoint(object):
 
 # ################################################################################################################################
 
-class Topic(object):
+class Topic(ToDictBase):
     """ An individiual topic in in pub/sub workflows.
     """
+    _to_dict_keys = 'id', 'name', 'is_active', 'is_internal', 'max_depth_gd', 'max_depth_non_gd', 'has_gd', 'depth_check_freq',\
+        'pub_buffer_size_gd', 'task_delivery_interval', 'meta_store_frequency', 'task_sync_interval', 'msg_pub_counter', \
+        'msg_pub_counter_gd', 'msg_pub_counter_non_gd', 'last_synced', 'sync_has_gd_msg', 'sync_has_non_gd_msg', \
+        'gd_pub_time_max'
+
     def __init__(self, config):
         self.config = config
         self.id = config.id
@@ -271,10 +295,13 @@ class Topic(object):
 
 # ################################################################################################################################
 
-class Subscription(object):
+class Subscription(ToDictBase):
     """ Describes an existing subscription object.
     Note that, for WSX clients, it may exist even if the WebSocket is not currently connected.
     """
+    _to_dict_keys = 'id', 'creation_time', 'sub_key', 'topic_id', 'topic_name', 'sub_pattern_matched', \
+        'task_delivery_interval', 'unsub_on_wsx_close', 'ext_client_id', 'is_wsx'
+
     def __init__(self, config):
         self.config = config
         self.id = config.id
@@ -292,8 +319,15 @@ class Subscription(object):
         # otherwise it is None.
         self.is_wsx = bool(self.config.ws_channel_id)
 
+# ################################################################################################################################
+
     def __repr__(self):
         return make_repr(self)
+
+# ################################################################################################################################
+
+    def to_dict(self):
+        return {name: getattr(self, name) for name in self._to_dict_keys}
 
 # ################################################################################################################################
 
@@ -310,9 +344,12 @@ class HookCtx(object):
 
 # ################################################################################################################################
 
-class SubKeyServer(object):
+class SubKeyServer(ToDictBase):
     """ Holds information about which server has subscribers to an individual sub_key.
     """
+    _to_dict_keys = 'sub_key', 'cluster_id', 'server_name', 'server_pid', 'endpoint_type', 'channel_name', 'pub_client_id', \
+        'ext_client_id', 'wsx_info', 'creation_time'
+
     def __init__(self, config, _utcnow=datetime.utcnow):
         self.config = config
         self.sub_key = config['sub_key']
