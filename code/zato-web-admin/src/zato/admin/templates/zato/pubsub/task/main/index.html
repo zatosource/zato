@@ -19,7 +19,6 @@
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
-            '_selection',
 
             '_server',
             '_main',
@@ -44,10 +43,7 @@
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
-
-    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
-
-{% include "zato/search-form.html" with page_prompt="Show delivery servers"%}
+    {% include "zato/search-form.html" with page_prompt="Show delivery servers"%}
 
     {% if cluster_id %}
 
@@ -56,7 +52,6 @@
                 <thead>
                     <tr class='ignore'>
                         <th style="width:5%">&nbsp;</th>
-                        <th>&nbsp;</th>
 
                         <th><a href="#">Server</a></th>
                         <th><a href="#">Main</a></th>
@@ -78,35 +73,34 @@
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
-                        <td class="impexp"><input type="checkbox" /></td>
                         <td>
                             {{ item.server_name }}:{{ item.server_pid }}
                         </td>
                         <td>
-                            kr:{{ item.keep_running }},
+                            kr:{{ item.keep_running|yesno:"t,f" }},
                             pubcnt:{{ item.msg_pub_counter }} {% comment %} Eventually, this will display last N messages published {% endcomment %}
                         </td>
 
                         <td>
-                            sub-t:<a href="#">{{ item.subscriptions_by_topic }}</a>,
-                            sub-sk:<a href="#">{{ item.subscriptions_by_sub_key }}</a>,
-                            sks:<a href="#">{{ item.sub_key_servers }}</a>
+                            sub-t:<a href="{% url "pubsub-task-main-dict-subscriptions-by-topic" "subscriptions_by_topic" item.cluster_id item.server_name item.server_pid %}">{{ item.subscriptions_by_topic }}</a>,
+                            sub-sk:<az href="#">{{ item.subscriptions_by_sub_key }}</a>,
+                            sks:<az href="#">{{ item.sub_key_servers }}</a>
                         </td>
                         <td>
-                            endp:<a href="#">{{ item.endpoints }}</a>,
-                            topics:<a href="#">{{ item.topics }}</a>,
-                            sec-endp-id:<a href="#">{{ item.sec_id_to_endpoint_id }}</a>,
-                            wsx-endp-id:<a href="#">{{ item.ws_channel_id_to_endpoint_id }}</a>,
-                            srv-endp-id:<a href="#">{{ item.service_id_to_endpoint_id }}</a>
+                            endp:<az href="#">{{ item.endpoints }}</a>,
+                            topics:<az href="#">{{ item.topics }}</a>,
+                            sec-endp-id:<az href="#">{{ item.sec_id_to_endpoint_id }}</a>,
+                            wsx-endp-id:<az href="#">{{ item.ws_channel_id_to_endpoint_id }}</a>,
+                            srv-endp-id:<az href="#">{{ item.service_id_to_endpoint_id }}</a>
                         </td>
                         <td>
-                            pst-sk:<a href="#">{{ item.pubsub_tool_by_sub_key }}</a>,
-                            pst:<a href="#">{{ item.pubsub_tools }}</a>
+                            pst-sk:<az href="#">{{ item.pubsub_tool_by_sub_key }}</a>,
+                            pst:<az href="#">{{ item.pubsub_tools }}</a>
                         </td>
 
                         <td>
-                            hsme:{{ item.has_meta_endpoint }},
-                            freq:{{ item.endpoint_meta_store_frequency }},
+                            hsme:{{ item.has_meta_endpoint|yesno:"t,f" }},
+                            frq:{{ item.endpoint_meta_store_frequency }},
                             len:{{ item.endpoint_meta_data_len }},
                             hist:{{ item.endpoint_meta_max_history }}
                         </td>

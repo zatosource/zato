@@ -337,15 +337,32 @@ class Index(_BaseView):
         and fills it in with received attributes.
         """
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
+
+        #print()
+        #print(222, item_list)
+        #print()
+
         for msg_item in item_list:
             item = self.output_class()
             for name in names:
                 value = getattr(msg_item, name, None)
+
+                #print()
+                #print('qqq', msg_item)
+                #print()
+
                 if value is not None:
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:
                     setattr(item, name, value)
-            self.items.append(self.on_before_append_item(item))
+            item = self.on_before_append_item(item)
+
+            if isinstance(item, (list, tuple)):
+                func = self.items.extend
+            else:
+                func = self.items.append
+
+            func(item)
 
     def _handle_item(self, item):
         pass
@@ -379,6 +396,14 @@ class Index(_BaseView):
                         if isinstance(response.data, dict):
                             response.data.pop('_meta', None)
                             data = response.data[response.data.keys()[0]]
+                            print()
+                            print()
+
+                            #print(333, data)
+
+                            print()
+                            print()
+
                         else:
                             data = response.data
                         self._handle_item_list(data)

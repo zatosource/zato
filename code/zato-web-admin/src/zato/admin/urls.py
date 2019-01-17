@@ -1310,6 +1310,9 @@ urlpatterns += [
     url(r'^zato/pubsub/task/main/$',
         login_required(pubsub_task_main.Index()), name=pubsub_task_main.Index.url_name),
 
+    url(r'^zato/pubsub/task/main/dict/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/server/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+        login_required(pubsub_task_main.SubscriptionsByTopic()), name=pubsub_task_main.SubscriptionsByTopic.url_name),
+
     # Per-server delivery tasks
 
     url(r'^zato/pubsub/task/(?P<server_name>.*)/(?P<server_pid>.*)/cluster/(?P<cluster_id>.*)/$',
