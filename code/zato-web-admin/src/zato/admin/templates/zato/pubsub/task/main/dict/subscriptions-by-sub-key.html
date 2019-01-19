@@ -29,7 +29,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Pub/sub dict subscriptions-by-topic {{ server_name }}:{{ server_pid }}</h2>
+<h2 class="zato">Pub/sub dict subscriptions-by-sub-key {{ server_name }}:{{ server_pid }}</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -57,18 +57,7 @@
                         <td class='numbering'>&nbsp;</td>
 
                         <td>
-                            <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ item.key }}">{{ item.key }}</a>
-                        </td>
-                        <td>
-                            {{ item.key_len }}
-                        </td>
-                        <td>
-                            {% for id_elem in item.id_list %}
-                                {{ id_elem }}
-                                {% if forloop.counter|divisibleby:"3" %}
-                                <br/>
-                                {% endif %}
-                            {% endfor %}
+                            <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ item.topic_name }}">{{ item.topic_name }}</a>
                         </td>
 
                     </tr>
