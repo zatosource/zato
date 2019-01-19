@@ -396,14 +396,6 @@ class Index(_BaseView):
                         if isinstance(response.data, dict):
                             response.data.pop('_meta', None)
                             data = response.data[response.data.keys()[0]]
-                            print()
-                            print()
-
-                            #print(333, data)
-
-                            print()
-                            print()
-
                         else:
                             data = response.data
                         self._handle_item_list(data)
@@ -437,7 +429,7 @@ class Index(_BaseView):
             return HttpResponseServerError(format_exc(e))
 
     def handle(self, req=None, *args, **kwargs):
-        raise NotImplementedError('Must be overloaded by a subclass')
+        return {}
 
 # ################################################################################################################################
 

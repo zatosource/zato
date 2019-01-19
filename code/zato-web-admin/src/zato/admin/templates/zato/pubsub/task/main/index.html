@@ -82,8 +82,8 @@
                         </td>
 
                         <td>
-                            sub-t:<a href="{% url "pubsub-task-main-dict-subscriptions-by-topic" "subscriptions_by_topic" item.cluster_id item.server_name item.server_pid %}">{{ item.subscriptions_by_topic }}</a>,
-                            sub-sk:<az href="#">{{ item.subscriptions_by_sub_key }}</a>,
+                            sub-t:<a href="{% url "pubsub-task-main-dict-subscriptions-by-topic" item.cluster_id item.server_name item.server_pid %}">{{ item.subscriptions_by_topic }}</a>,
+                            sub-sk:<a href="#">{{ item.subscriptions_by_sub_key }}</a>,
                             sks:<az href="#">{{ item.sub_key_servers }}</a>
                         </td>
                         <td>
