@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Pub/sub dict subscriptions-by-sub-key{% endblock %}
+{% block html_title %}Pub/sub dict {{ dict_name }}{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -19,7 +19,7 @@
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_numbering',
-            '_topic',
+            '_key',
             '_length',
             '_id_list',
         ]
@@ -29,7 +29,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Pub/sub dict subscriptions-by-sub-key {{ server_name }}:{{ server_pid }}</h2>
+<h2 class="zato">Pub/sub dict {{ dict_name }} {{ server_name }}:{{ server_pid }}</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -44,7 +44,7 @@
                     <tr class='ignore'>
                         <th style="width:5%">&nbsp;</th>
 
-                        <th><a href="#">Topic</a></th>
+                        <th><a href="#">Key</a></th>
                         <th><a href="#">Length</a></th>
                         <th><a href="#">ID list</a></th>
 
@@ -57,7 +57,22 @@
                         <td class='numbering'>&nbsp;</td>
 
                         <td>
-                            <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ item.topic_name }}">{{ item.topic_name }}</a>
+                            {% if key_url_name %}
+                                <a href="{% url key_url_name %}?cluster={{ cluster_id }}&amp;query={{ item.key }}">{{ item.key }}</a>
+                            {% else %}
+                                {{ item.key }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ item.key_len }}
+                        </td>
+                        <td>
+                            {% for id_elem in item.id_list %}
+                                {{ id_elem }}
+                                {% if forloop.counter|divisibleby:"3" %}
+                                <br/>
+                                {% endif %}
+                            {% endfor %}
                         </td>
 
                     </tr>
