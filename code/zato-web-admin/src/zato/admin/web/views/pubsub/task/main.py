@@ -63,7 +63,7 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-class _PubSubDict(object):
+class _PubSubDictKeys(object):
     def __init__(self):
         self.key = None
         self.key_len = None
@@ -71,12 +71,7 @@ class _PubSubDict(object):
 
 # ################################################################################################################################
 
-class _DictSubscriptionsBySubKey(_PubSubDict):
-    pass
-
-# ################################################################################################################################
-
-class _DictSubscriptionsByTopic(_PubSubDict):
+class _SubscriptionDictKeys(_PubSubDictKeys):
     pass
 
 # ################################################################################################################################
@@ -98,90 +93,32 @@ class Index(_Index):
 
 # ################################################################################################################################
 
-'''
-class _DictView(_Index):
+class SubscriptionDictKeys(_Index):
     method_allowed = 'GET'
-    service_name = 'pubsub.task.main.get-dict'
-    output_class = _PubSubDict
-    paginate = True
-
-    class SimpleIO(_Index.SimpleIO):
-        input_required = 'server_name', 'server_pid'
-        output_required = 'key', 'data'
-        output_repeated = True
-
-    def handle(self):
-        return {
-            'cluster_id': self.input.cluster_id,
-            'server_name': self.input.server_name,
-            'server_pid': self.input.server_pid,
-            'len_data': len(self.items),
-        }
-
-# ################################################################################################################################
-
-class _BaseSubscription(_DictView):
-
-    def on_before_append_item(self, item):
-
-        data = item.data
-        data = data if isinstance(data, list) else [data]
-
-        for elem in data:
-            elem.id = fs_safe_name(elem.sub_key)
-            elem.creation_time_utc = datetime_from_ms(elem.creation_time)
-            elem.creation_time = from_utc_to_user(elem.creation_time_utc+'+00:00', self.req.zato.user_profile)
-
-        print()
-        print()
-
-        print(111, data)
-
-        print()
-        print()
-
-        return data
-
-# ################################################################################################################################
-'''
-
-class SubscriptionsByTopic(_Index):
-    method_allowed = 'GET'
-    url_name = 'pubsub-task-main-dict-subscriptions-by-topic'
-    template = 'zato/pubsub/task/main/dict/subscriptions-by-topic.html'
+    url_name = 'pubsub-task-main-subscription-dict-keys'
+    template = 'zato/pubsub/task/main/dict/subscription-dict-keys.html'
     service_name = 'pubsub.task.main.get-dict-keys'
-    output_class = _DictSubscriptionsByTopic
+    output_class = _SubscriptionDictKeys
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = 'server_name', 'server_pid'
+        input_required = 'dict_name', 'server_name', 'server_pid'
+        input_optional = 'key_url_name',
         output_required = 'key', 'key_len', 'id_list'
         output_repeated = True
 
     def handle(self):
         return {
+            'key_url_name': self.input.key_url_name,
+            'dict_name': self.input.dict_name,
             'server_name': self.input.server_name,
             'server_pid': self.input.server_pid,
         }
 
     def get_initial_input(self):
         return {
-            'dict_name': 'subscriptions_by_topic',
-            'sort_by': ['topic_name', 'creation_time', 'sub_key']
-        }
-
-'''
-# ################################################################################################################################
-
-class SubscriptionsBySubKey(_BaseSubscription):
-    url_name = 'pubsub-task-main-dict-subscriptions-by-sub-key'
-    template = 'zato/pubsub/task/main/dict/subscriptions-by-sub-key.html'
-
-    def get_initial_input(self):
-        return {
-            'dict_name': 'subscriptions_by_sub_key',
+            'dict_name': self.input.dict_name,
             'sort_by': ['topic_name', 'creation_time', 'sub_key']
         }
 
 # ################################################################################################################################
-'''

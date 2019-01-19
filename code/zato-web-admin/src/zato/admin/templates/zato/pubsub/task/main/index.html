@@ -82,9 +82,9 @@
                         </td>
 
                         <td>
-                            sub-t:<a href="{% url "pubsub-task-main-dict-subscriptions-by-topic" item.cluster_id item.server_name item.server_pid %}">{{ item.subscriptions_by_topic }}</a>,
-                            sub-sk:<a href="#">{{ item.subscriptions_by_sub_key }}</a>,
-                            sks:<az href="#">{{ item.sub_key_servers }}</a>
+                            sub-t:<a href="{% url "pubsub-task-main-subscription-dict-keys" "subscriptions_by_topic" item.cluster_id item.server_name item.server_pid %}?key_url_name=pubsub-topic">{{ item.subscriptions_by_topic }}</a>,
+                            sub-sk:<a href="{% url "pubsub-task-main-subscription-dict-keys" "subscriptions_by_sub_key" item.cluster_id item.server_name item.server_pid %}?key_url_name=">{{ item.subscriptions_by_sub_key }}</a>,
+                            sks:<a href="{% url "pubsub-task-main-subscription-dict-keys" "sub_key_servers" item.cluster_id item.server_name item.server_pid %}?key_url_name=">{{ item.sub_key_servers }}</a>
                         </td>
                         <td>
                             endp:<az href="#">{{ item.endpoints }}</a>,
