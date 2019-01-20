@@ -64,7 +64,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            {{ item.key_len }}
+                            <a href="{% url values_url_name dict_name cluster_id server_name server_pid %}?key={{ item.key }}">{{ item.key_len }}</a>
                         </td>
                         <td>
                             {% for id_elem in item.id_list %}
