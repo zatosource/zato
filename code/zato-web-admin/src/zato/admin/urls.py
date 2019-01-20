@@ -1310,13 +1310,13 @@ urlpatterns += [
     url(r'^zato/pubsub/task/main/$',
         login_required(pubsub_task_main.Index()), name=pubsub_task_main.Index.url_name),
 
-    # PubSub tools - subscriptions
+    # PubSub tools - dict keys
     url(r'^zato/pubsub/task/main/dict-keys/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
         login_required(pubsub_task_main.SubscriptionDictKeys()), name=pubsub_task_main.SubscriptionDictKeys.url_name),
 
-    # PubSub tools - subscriptions by sub_key
-    #url(r'^zato/pubsub/task/main/dict/subscriptions-by-sub-key/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-    #    login_required(pubsub_task_main.SubscriptionsBySubKey()), name=pubsub_task_main.SubscriptionsBySubKey.url_name),
+    # PubSub tools - dict values - subscriptions
+    url(r'^zato/pubsub/task/main/dict-values/sub/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+        login_required(pubsub_task_main.SubscriptionDictValues()), name=pubsub_task_main.SubscriptionDictValues.url_name),
 
     # Per-server delivery tasks
 
