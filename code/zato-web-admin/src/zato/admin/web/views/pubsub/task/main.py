@@ -37,6 +37,21 @@ dict_name_to_url_name = {
     'endpoint_msg_counter': 'pubsub-task-main-dict-values-messages'
 }
 
+dict_name_to_template_name = {
+    'subscriptions_by_topic': 'subscription',
+    'subscriptions_by_sub_key': 'subscription',
+    'sub_key_servers': 'sks',
+    'endpoints': 'endpoints',
+    'topics': 'topics',
+    'sec_id_to_endpoint_id': 'endpoints',
+    'ws_channel_id_to_endpoint_id': 'endpoints',
+    'service_id_to_endpoint_id': 'endpoints',
+    'topic_name_to_id': 'topics',
+    'pubsub_tool_by_sub_key': 'pubsub-tools',
+    'pubsub_tools': 'pubsub-tools',
+    'endpoint_msg_counter': 'messages'
+}
+
 # ################################################################################################################################
 
 class PubSubTool(object):
@@ -132,7 +147,7 @@ class _SubscriptionDict(_Index):
 
 class SubscriptionDictKeys(_SubscriptionDict):
     url_name = 'pubsub-task-main-subscription-dict-keys'
-    template = 'zato/pubsub/task/main/dict/subscription-dict-keys.html'
+    template = 'zato/pubsub/task/main/dict/keys.html'
     service_name = 'pubsub.task.main.get-dict-keys'
     output_class = _SubscriptionDictKeys
 
@@ -150,7 +165,6 @@ class SubscriptionDictKeys(_SubscriptionDict):
 
 class SubscriptionDictValues(_SubscriptionDict):
     url_name = 'pubsub-task-main-dict-values-subscription'
-    template = 'zato/pubsub/task/main/dict/subscription-dict-values.html'
     service_name = 'pubsub.task.main.get-dict-values'
     output_class = _SubscriptionDictKeys
 
@@ -159,7 +173,7 @@ class SubscriptionDictValues(_SubscriptionDict):
         output_required = 'sub_key',
 
     def handle(self):
-        out = super(SubscriptionDictKeys, self).handle()
+        out = super(SubscriptionDictValues, self).handle()
         out['key'] = self.input.key
         return out
 
@@ -168,7 +182,13 @@ class SubscriptionDictValues(_SubscriptionDict):
         out['sort_by'] = ['topic_name', 'creation_time', 'sub_key']
         return out
 
+    def get_template_name(self):
+        pattern = 'zato/pubsub/task/main/dict/values/{}.html'
+        name = dict_name_to_template_name[self.input.dict_name]
+        return pattern.format(name)
+
 # ################################################################################################################################
+
 '''
 # -*- coding: utf-8 -*-
 
@@ -238,26 +258,44 @@ class TaskMainGetServerList(AdminService):
 
 # ################################################################################################################################
 
-class TaskMainGetDictKeys(AdminService):
+class TaskMainGetDict(AdminService):
     """ Returns a list of dictionaries keyed by attributes of PubSub, i.e. the input dictionary's name
     must be an attribute of PubSub.
     """
-    name = 'pubsub.task.main.get-dict-keys'
+    name = '_pubsub.task.main.get-dict'
 
     class SimpleIO(GetListAdminSIO):
         input_required = 'dict_name'
-        output_optional = 'key', Int('key_len'), List('id_list')
         output_repeated = True
+        skip_empty_keys = True
 
     _keys_allowed = 'subscriptions_by_topic', 'subscriptions_by_sub_key', 'sub_key_servers', 'endpoints', 'topics', \
         'sec_id_to_endpoint_id', 'ws_channel_id_to_endpoint_id', 'service_id_to_endpoint_id', 'topic_name_to_id', \
         'pubsub_tool_by_sub_key', 'pubsub_tools', 'endpoint_msg_counter'
 
-    def handle(self):
+    def validate_input(self):
         if self.request.input.dict_name not in self._keys_allowed:
             raise BadRequest(self.cid, 'Invalid value `{}`'.format(self.request.input.dict_name))
 
+    def handle(self):
         attr = getattr(self.pubsub, self.request.input.dict_name) # type: dict
+        self._handle_attr_call(attr)
+
+    def _handle_attr_call(self, attr):
+        raise NotImplementedError()
+
+# ################################################################################################################################
+
+class TaskMainGetDictKeys(TaskMainGetDict):
+    """ Returns keys from the input PubSub dictionary.
+    """
+    name = 'pubsub.task.main.get-dict-keys'
+
+    class SimpleIO(TaskMainGetDict.SimpleIO):
+        output_optional = 'key', Int('key_len'), List('id_list')
+
+    def _handle_attr_call(self, attr):
+
         key_len = 0
         out = []
 
@@ -274,42 +312,16 @@ class TaskMainGetDictKeys(AdminService):
 
 # ################################################################################################################################
 
-'''
-class TaskMainGetDict(AdminService):
-    """ Returns a list of dictionaries keyed by attributes of PubSub, i.e. the input dictionary's name
-    must be an attribute of PubSub.
+class TaskMainGetDictValues(TaskMainGetDict):
+    """ Returns values from the input PubSub dictionary.
     """
-    name = 'pubsub.task.main.get-dict'
+    name = 'pubsub.task.main.get-dict-values'
 
-    class SimpleIO:
-        input_required = 'dict_name', List('sort_by')
-        output_optional = Int('ken_len'), List('data')
+    class SimpleIO(TaskMainGetDict.SimpleIO):
+        output_optional = 'key', Int('key_len'), List('id_list')
 
-    _keys_allowed = 'subscriptions_by_topic', 'subscriptions_by_sub_key', 'sub_key_servers', 'endpoints', 'topics', \
-        'sec_id_to_endpoint_id', 'ws_channel_id_to_endpoint_id', 'service_id_to_endpoint_id', 'topic_name_to_id', \
-        'pubsub_tool_by_sub_key', 'pubsub_tools', 'endpoint_msg_counter'
-
-    def handle(self):
-        if self.request.input.dict_name not in self._keys_allowed:
-            raise BadRequest(self.cid, 'Invalid value `{}`'.format(self.request.input.dict_name))
-
-        attr = getattr(self.pubsub, self.request.input.dict_name)
-        key_len = 0
-        out = []
-
-        for key, data in attr.items():
-            key_len += 1
-            if data:
-                if isinstance(data, list):
-                    if isinstance(data[0], ToDictBase):
-                        data = [elem.to_dict() for elem in data]
-                        data.sort(key=itemgetter(*self.request.input.sort_by))
-                else:
-                    data = data.to_dict()
-            out.append(data)
-
-        self.response.payload,
-'''
+    def _handle_attr_call(self, attr):
+        self.response.payload[:] = []#attr.values()
 
 # ################################################################################################################################
 
@@ -340,7 +352,6 @@ class TaskMainGetList(AdminService):
                     if pid_info.is_ok:
                         pid_response = pid_info.pid_data.response
                         out.append(pid_response.toDict())
-
 
         return out
 
