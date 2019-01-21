@@ -179,8 +179,13 @@ class SubscriptionDictValues(_SubscriptionDict):
 
     def get_initial_input(self):
         out = super(SubscriptionDictValues, self).get_initial_input()
-        out['sort_by'] = ['topic_name', 'creation_time', 'sub_key']
+        out['sort_by'] = ['creation_time']
         return out
+
+    def on_before_append_item(self, item):
+        item.creation_time_utc = datetime_from_ms(item.creation_time)
+        item.creation_time = from_utc_to_user(item.creation_time_utc+'+00:00', self.req.zato.user_profile)
+        return item
 
     def get_template_name(self):
         pattern = 'zato/pubsub/task/main/dict/values/{}.html'

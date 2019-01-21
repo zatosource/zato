@@ -18,6 +18,7 @@
     $.fn.zato.data_table.get_columns = function() {
         return [
             '_topic',
+            '_endpoint',
             '_sub_key',
             '_creation_time'
             '_meta',
@@ -45,25 +46,13 @@
                         <th style="width:5%">&nbsp;</th>
 
                         <th><a href="#">Topic</a></th>
+                        <th><a href="#">Endpoint</a></th>
                         <th><a href="#">Sub key</a></th>
                         <th><a href="#">Creation time</a></th>
                         <th><a href="#">Meta</a></th>
                         <th><a href="#">EXTCLI</a></th>
 
                 </thead>
-
-                            <!--
-                            topic_name
-                            creation_time
-                            sub_key
-                            sub_pattern_matched
-                            endpoint_id
-                            topic_id
-                            task_delivery_interval
-                            unsub_on_wsx_close
-                            id
-                            ext_client_id
-                            -->
 
                 <tbody>
                 {% if items %}
@@ -72,19 +61,25 @@
                         <td class='numbering'>&nbsp;</td>
 
                         <td>
-                            {{ item.topic_name }}
+                            <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ item.topic_name }}">{{ item.topic_name }}</a>
+                        </td>
+
+                        <td>
+                            <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ item.endpoint_name }}">{{ item.endpoint_name }}</a>
                         </td>
 
                         <td>
                             {{ item.sub_key }}
                         </td>
 
-                        <td>
-                            {{ item.creation_time }}
+                        <td style="width:16%">
+                            <a
+                                id="a_creation_time_{{ item.id }}"
+                                href="javascript:$.fn.zato.toggle_time('creation_time_{{ item.id }}', '{{ item.creation_time }}', '{{ item.creation_time_utc }}')">{{ item.creation_time }}
+                            </a>
                         </td>
-
                         <td>
-                            id:{{ item.id }}, endp-id:{{ item.endpoint_id }}, tdi:{{ item.task_delivery_interval }},
+                            id:{{ item.id }}, tdi:{{ item.task_delivery_interval }},
                             unwsxc:{{ item.unsub_on_wsx_close|yesno:"t,f" }}
                         </td>
 

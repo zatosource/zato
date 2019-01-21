@@ -202,8 +202,8 @@ class dict_keys:
     endpoint = 'id', 'name', 'endpoint_type', 'role', 'is_active', 'is_internal', 'topic_patterns', \
         'pub_topic_patterns', 'sub_topic_patterns'
 
-    subscription = 'id', 'creation_time', 'sub_key', 'endpoint_id', 'topic_id', 'topic_name', 'sub_pattern_matched', \
-        'task_delivery_interval', 'unsub_on_wsx_close', 'ext_client_id'
+    subscription = 'id', 'creation_time', 'sub_key', 'endpoint_id', 'endpoint_name', 'topic_id', 'topic_name', \
+        'sub_pattern_matched', 'task_delivery_interval', 'unsub_on_wsx_close', 'ext_client_id'
 
     topic = 'id', 'name', 'is_active', 'is_internal', 'max_depth_gd', 'max_depth_non_gd', 'has_gd', 'depth_check_freq',\
         'pub_buffer_size_gd', 'task_delivery_interval', 'meta_store_frequency', 'task_sync_interval', 'msg_pub_counter', \
