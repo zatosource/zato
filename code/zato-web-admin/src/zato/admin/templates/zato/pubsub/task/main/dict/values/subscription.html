@@ -1,0 +1,112 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Pub/sub dict values - subscriptions{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_topic',
+            '_sub_key',
+            '_creation_time'
+            '_meta',
+            '_extcli',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pub/sub dict {{ dict_name }} {{ server_name }}:{{ server_pid }} (subscriptions)</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:5%">&nbsp;</th>
+
+                        <th><a href="#">Topic</a></th>
+                        <th><a href="#">Sub key</a></th>
+                        <th><a href="#">Creation time</a></th>
+                        <th><a href="#">Meta</a></th>
+                        <th><a href="#">EXTCLI</a></th>
+
+                </thead>
+
+                            <!--
+                            topic_name
+                            creation_time
+                            sub_key
+                            sub_pattern_matched
+                            endpoint_id
+                            topic_id
+                            task_delivery_interval
+                            unsub_on_wsx_close
+                            id
+                            ext_client_id
+                            -->
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+
+                        <td>
+                            {{ item.topic_name }}
+                        </td>
+
+                        <td>
+                            {{ item.sub_key }}
+                        </td>
+
+                        <td>
+                            {{ item.creation_time }}
+                        </td>
+
+                        <td>
+                            id:{{ item.id }}, endp-id:{{ item.endpoint_id }}, tdi:{{ item.task_delivery_interval }},
+                            unwsxc:{{ item.unsub_on_wsx_close|yesno:"t,f" }}
+                        </td>
+
+                        <td>
+                            {{ item.ext_client_id }}
+                        </td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='5'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

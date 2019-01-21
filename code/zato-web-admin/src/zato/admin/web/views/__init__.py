@@ -347,11 +347,6 @@ class Index(_BaseView):
             item = self.output_class()
             for name in names:
                 value = getattr(msg_item, name, None)
-
-                #print()
-                #print('qqq', msg_item)
-                #print()
-
                 if value is not None:
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:

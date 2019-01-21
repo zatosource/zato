@@ -34,7 +34,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_delivery_server_for_sub_key, get_sql_messages_by_msg_id_list as _get_sql_messages_by_msg_id_list, \
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
-from zato.common.pubsub import skip_to_external
+from zato.common.pubsub import dict_keys, skip_to_external
 from zato.common.util import make_repr, new_cid, spawn_greenlet
 from zato.common.util.hook import HookTool
 from zato.common.util.pubsub import make_short_msg_copy_from_dict
@@ -91,23 +91,6 @@ _page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
 
 class msg:
     wsx_sub_resumed = 'WSX subscription resumed, sk:`%s`, peer:`%s`'
-
-# ################################################################################################################################
-
-class dict_keys:
-    endpoint = 'id', 'name', 'endpoint_type', 'role', 'is_active', 'is_internal', 'topic_patterns', \
-        'pub_topic_patterns', 'sub_topic_patterns'
-
-    subscription = 'id', 'creation_time', 'sub_key', 'endpoint_id', 'topic_id', 'topic_name', 'sub_pattern_matched', \
-        'task_delivery_interval', 'unsub_on_wsx_close', 'ext_client_id'
-
-    topic = 'id', 'name', 'is_active', 'is_internal', 'max_depth_gd', 'max_depth_non_gd', 'has_gd', 'depth_check_freq',\
-        'pub_buffer_size_gd', 'task_delivery_interval', 'meta_store_frequency', 'task_sync_interval', 'msg_pub_counter', \
-        'msg_pub_counter_gd', 'msg_pub_counter_non_gd', 'last_synced', 'sync_has_gd_msg', 'sync_has_non_gd_msg', \
-        'gd_pub_time_max'
-
-    sks = 'sub_key', 'cluster_id', 'server_name', 'server_pid', 'endpoint_type', 'channel_name', 'pub_client_id', \
-        'ext_client_id', 'wsx_info', 'creation_time'
 
 # ################################################################################################################################
 
