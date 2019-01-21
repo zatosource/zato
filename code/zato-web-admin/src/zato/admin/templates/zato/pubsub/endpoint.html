@@ -123,14 +123,14 @@
                         </td>
                         <td>
                             {% if 'pub' in item.role %}
-                                <a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}">Topics</a>
+                                <a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}?cluster={{ cluster_id }}">Topics</a>
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if 'sub' in item.role %}
-                                <a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.name|slugify %}">Queues</a>
+                                <a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.name|slugify %}?cluster={{ cluster_id }}">Queues</a>
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}
