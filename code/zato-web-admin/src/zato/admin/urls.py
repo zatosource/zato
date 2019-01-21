@@ -1322,6 +1322,10 @@ urlpatterns += [
     url(r'^zato/pubsub/task/main/dict-values/sks/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
         login_required(pubsub_task_main.DictValuesSubKeyServer()), name=pubsub_task_main.DictValuesSubKeyServer.url_name),
 
+    # PubSub tools - dict values - endpoints
+    url(r'^zato/pubsub/task/main/dict-values/endpoint/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+        login_required(pubsub_task_main.DictValuesEndpoints()), name=pubsub_task_main.DictValuesEndpoints.url_name),
+
     # Per-server delivery tasks
 
     url(r'^zato/pubsub/task/(?P<server_name>.*)/(?P<server_pid>.*)/cluster/(?P<cluster_id>.*)/$',

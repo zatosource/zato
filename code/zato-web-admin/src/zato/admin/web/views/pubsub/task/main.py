@@ -153,7 +153,7 @@ class SubscriptionDictKeys(_DictView):
 
     class SimpleIO(_DictView.SimpleIO):
         input_optional = 'key_url_name',
-        output_required = 'key', 'key_len', 'id_list'
+        output_required = 'key', 'key_len', 'id_list', 'is_list'
 
     def handle(self):
         out = super(SubscriptionDictKeys, self).handle()
@@ -208,6 +208,12 @@ class DictValuesSubscription(DictValues):
 
 class DictValuesSubKeyServer(DictValues):
     url_name = 'pubsub-task-main-dict-values-sks'
+    _dict_sort_by = ['creation_time']
+
+# ################################################################################################################################
+
+class DictValuesEndpoints(DictValues):
+    url_name = 'pubsub-task-main-dict-values-endpoints'
     _dict_sort_by = ['creation_time']
 
 # ################################################################################################################################
