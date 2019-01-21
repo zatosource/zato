@@ -211,7 +211,7 @@ class dict_keys:
         'gd_pub_time_max'
 
     sks = 'sub_key', 'cluster_id', 'server_name', 'server_pid', 'endpoint_type', 'channel_name', 'pub_client_id', \
-        'ext_client_id', 'wsx_info', 'creation_time'
+        'ext_client_id', 'wsx_info', 'creation_time', 'endpoint_id'
 
 all_dict_keys = dict_keys.endpoint + dict_keys.subscription + dict_keys.topic + dict_keys.sks
 all_dict_keys = list(set(all_dict_keys))
