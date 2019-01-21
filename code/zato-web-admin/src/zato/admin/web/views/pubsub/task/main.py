@@ -101,7 +101,7 @@ class _SubscriptionDictKeys(object):
 
 # ################################################################################################################################
 
-class _SubscriptionDictValues(object):
+class _DictValuesData(object):
     pass
 
 # ################################################################################################################################
@@ -123,7 +123,7 @@ class Index(_Index):
 
 # ################################################################################################################################
 
-class _SubscriptionDict(_Index):
+class _DictView(_Index):
     method_allowed = 'GET'
     paginate = True
 
@@ -145,13 +145,13 @@ class _SubscriptionDict(_Index):
 
 # ################################################################################################################################
 
-class SubscriptionDictKeys(_SubscriptionDict):
+class SubscriptionDictKeys(_DictView):
     url_name = 'pubsub-task-main-subscription-dict-keys'
     template = 'zato/pubsub/task/main/dict/keys.html'
     service_name = 'pubsub.task.main.get-dict-keys'
     output_class = _SubscriptionDictKeys
 
-    class SimpleIO(_SubscriptionDict.SimpleIO):
+    class SimpleIO(_DictView.SimpleIO):
         input_optional = 'key_url_name',
         output_required = 'key', 'key_len', 'id_list'
 
@@ -163,33 +163,51 @@ class SubscriptionDictKeys(_SubscriptionDict):
 
 # ################################################################################################################################
 
-class SubscriptionDictValues(_SubscriptionDict):
-    url_name = 'pubsub-task-main-dict-values-subscription'
+class DictValues(_DictView):
     service_name = 'pubsub.task.main.get-dict-values'
-    output_class = _SubscriptionDictValues
+    output_class = _DictValuesData
+    _dict_sort_by = None
 
-    class SimpleIO(_SubscriptionDict.SimpleIO):
+    class SimpleIO(_DictView.SimpleIO):
         input_optional = 'key',
         output_optional = all_dict_keys
 
     def handle(self):
-        out = super(SubscriptionDictValues, self).handle()
+        out = super(DictValues, self).handle()
         out['key'] = self.input.key
         return out
 
     def get_initial_input(self):
-        out = super(SubscriptionDictValues, self).get_initial_input()
-        out['sort_by'] = ['creation_time']
+        out = super(DictValues, self).get_initial_input()
+        if self._dict_sort_by:
+            out['sort_by'] = self._dict_sort_by
         return out
 
     def on_before_append_item(self, item):
-        item.creation_time_utc = datetime_from_ms(item.creation_time)
-        item.creation_time = from_utc_to_user(item.creation_time_utc+'+00:00', self.req.zato.user_profile)
+        creation_time = getattr(item, 'creation_time', None)
+        if creation_time:
+            if isinstance(creation_time, float):
+                item.creation_time_utc = datetime_from_ms(item.creation_time)
+            else:
+                item.creation_time_utc = creation_time
+            item.creation_time = from_utc_to_user(item.creation_time_utc+'+00:00', self.req.zato.user_profile)
         return item
 
     def get_template_name(self):
         pattern = 'zato/pubsub/task/main/dict/values/{}.html'
         name = dict_name_to_template_name[self.input.dict_name]
         return pattern.format(name)
+
+# ################################################################################################################################
+
+class DictValuesSubscription(DictValues):
+    url_name = 'pubsub-task-main-dict-values-subscription'
+    _dict_sort_by = ['creation_time']
+
+# ################################################################################################################################
+
+class DictValuesSubKeyServer(DictValues):
+    url_name = 'pubsub-task-main-dict-values-sks'
+    _dict_sort_by = ['creation_time']
 
 # ################################################################################################################################

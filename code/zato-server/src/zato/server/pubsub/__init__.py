@@ -1068,6 +1068,13 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def _get_endpoint_by_id(self, endpoint_id):
+        """ Returns an endpoint by ID, must be called with self.lock held.
+        """
+        return self.endpoints[endpoint_id]
+
+# ################################################################################################################################
+
     def get_sub_key_to_topic_name_dict(self, sub_key_list):
         out = {}
         with self.lock:
@@ -1489,6 +1496,9 @@ class PubSub(object):
     def _set_sub_key_server(self, config):
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
+        sub = self._get_subscription_by_sub_key(config['sub_key'])
+        config['endpoint_id'] = sub.endpoint_id
+        config['endpoint_name'] = self._get_endpoint_by_id(sub.endpoint_id)
         config['wsx'] = int(config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
@@ -1581,28 +1591,29 @@ class PubSub(object):
         """
         with closing(self.server.odb.session()) as session:
             data = get_delivery_server_for_sub_key(session, self.server.cluster_id, sub_key, is_wsx)
-            if not data:
-                if self.log_if_deliv_server_not_found:
-                    if is_wsx and (not self.log_if_wsx_deliv_server_not_found):
-                        return
-                    msg = 'Could not find a delivery server in ODB for sub_key `%s` (wsx:%s)'
-                    logger.info(msg, sub_key, is_wsx)
-            else:
 
-                # This is common config that we already know is valid but on top of it
-                # we will try to the server found and ask about PID that handles messages for sub_key.
-                config = {
-                    'sub_key': sub_key,
-                    'cluster_id': data.cluster_id,
-                    'server_name': data.server_name,
-                    'endpoint_type': data.endpoint_type,
-                }
+        if not data:
+            if self.log_if_deliv_server_not_found:
+                if is_wsx and (not self.log_if_wsx_deliv_server_not_found):
+                    return
+                msg = 'Could not find a delivery server in ODB for sub_key `%s` (wsx:%s)'
+                logger.info(msg, sub_key, is_wsx)
+        else:
 
-                # Guaranteed to either set PID or None
-                config['server_pid'] = self.get_server_pid_for_sub_key(data.server_name, sub_key)
+            # This is common config that we already know is valid but on top of it
+            # we will try to the server found and ask about PID that handles messages for sub_key.
+            config = {
+                'sub_key': sub_key,
+                'cluster_id': data.cluster_id,
+                'server_name': data.server_name,
+                'endpoint_type': data.endpoint_type,
+            }
 
-                # OK, set up the server with what we found above
-                self._set_sub_key_server(config)
+            # Guaranteed to either set PID or None
+            config['server_pid'] = self.get_server_pid_for_sub_key(data.server_name, sub_key)
+
+            # OK, set up the server with what we found above
+            self._set_sub_key_server(config)
 
 # ################################################################################################################################
 
