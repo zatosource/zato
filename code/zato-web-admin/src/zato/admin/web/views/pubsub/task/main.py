@@ -110,7 +110,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-task-main'
     template = 'zato/pubsub/task/main/index.html'
-    service_name = 'pubsub.task.main.get-list'
+    service_name = 'zato.pubsub.task.main.get-list'
     output_class = PubSubTool
     paginate = True
 
@@ -148,7 +148,7 @@ class _DictView(_Index):
 class SubscriptionDictKeys(_DictView):
     url_name = 'pubsub-task-main-subscription-dict-keys'
     template = 'zato/pubsub/task/main/dict/keys.html'
-    service_name = 'pubsub.task.main.get-dict-keys'
+    service_name = 'zato.pubsub.task.main.get-dict-keys'
     output_class = _SubscriptionDictKeys
 
     class SimpleIO(_DictView.SimpleIO):
@@ -164,7 +164,7 @@ class SubscriptionDictKeys(_DictView):
 # ################################################################################################################################
 
 class DictValues(_DictView):
-    service_name = 'pubsub.task.main.get-dict-values'
+    service_name = 'zato.pubsub.task.main.get-dict-values'
     output_class = _DictValuesData
     _dict_sort_by = None
 
