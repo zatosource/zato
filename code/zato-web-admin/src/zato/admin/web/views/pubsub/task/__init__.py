@@ -65,8 +65,6 @@ class Index(_Index):
 
         for item in return_data['items']:
 
-            print(333, item.id, item.is_active, item.sub_key)
-
             item.id = fs_safe_name('{}-{}'.format(item.thread_id, item.object_id))
 
             if item.last_gd_run:

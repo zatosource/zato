@@ -80,6 +80,10 @@ _update_attrs = ('data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_
 
 # ################################################################################################################################
 
+_does_not_exist = object()
+
+# ################################################################################################################################
+
 _default_expiration = PUBSUB.DEFAULT.EXPIRATION
 default_sk_server_table_columns = 6, 15, 8, 6, 17, 80
 
@@ -124,7 +128,15 @@ class ToDictBase(object):
     _to_dict_keys = None
 
     def to_dict(self):
-        return {name: getattr(self, name) for name in self._to_dict_keys}
+        out = {}
+
+        for name in self._to_dict_keys:
+            value = getattr(self, name, _does_not_exist)
+            if value is _does_not_exist:
+                value = self.config[name]
+            out[name] = value
+
+        return out
 
 # ################################################################################################################################
 
@@ -322,11 +334,6 @@ class Subscription(ToDictBase):
 
     def get_id(self):
         return self.sub_key
-
-# ################################################################################################################################
-
-    def to_dict(self):
-        return {name: getattr(self, name) for name in self._to_dict_keys}
 
 # ################################################################################################################################
 
