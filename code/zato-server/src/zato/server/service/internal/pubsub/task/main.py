@@ -93,18 +93,26 @@ class GetDictKeys(GetDict):
     """ Returns keys from the input PubSub dictionary.
     """
     class SimpleIO(GetDict.SimpleIO):
-        output_optional = 'key', Int('key_len'), List('id_list')
+        output_optional = 'key', Int('key_len'), List('id_list'), 'is_list'
 
     def _handle_attr_call(self, attr):
         out = []
         for key, values in attr.items():
-            values = values or []
-            values = values if isinstance(values, list) else [values]
+            if isinstance(values, list):
+                is_list = True
+            else:
+                is_list = False
+                values = values or []
+                values = values if isinstance(values, list) else [values]
             out.append({
                 'key': key,
                 'key_len': len(values),
-                'id_list': sorted([elem.get_id() for elem in values])
+                'id_list': sorted([elem.get_id() for elem in values]),
+                'is_list': is_list,
             })
+
+            zzz is_list is_list
+
         self.response.payload[:] = sorted(out, key=itemgetter('key'))
 
 # ################################################################################################################################
