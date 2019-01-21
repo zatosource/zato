@@ -87,7 +87,7 @@
                             sks:<a href="{% url "pubsub-task-main-subscription-dict-keys" "sub_key_servers" item.cluster_id item.server_name item.server_pid %}?key_url_name=">{{ item.sub_key_servers }}</a>
                         </td>
                         <td>
-                            endp:<az href="#">{{ item.endpoints }}</a>,
+                            endp:<a href="{% url "pubsub-task-main-subscription-dict-keys" "endpoints" item.cluster_id item.server_name item.server_pid %}?key_url_name=">{{ item.endpoints }}</a>,
                             topics:<az href="#">{{ item.topics }}</a>,
                             sec-endp-id:<az href="#">{{ item.sec_id_to_endpoint_id }}</a>,
                             wsx-endp-id:<az href="#">{{ item.ws_channel_id_to_endpoint_id }}</a>,
