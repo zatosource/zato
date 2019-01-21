@@ -69,7 +69,7 @@
                         </td>
 
                         <td>
-                            {{ item.sub_key }}
+                            <a href="{% url "pubsub-endpoint-queues" cluster_id item.endpoint_id item.topic_name|slugify %}?cluster={{ cluster_id }}&amp;query={{ item.sub_key }}">{{ item.sub_key }}</a>
                         </td>
 
                         <td style="width:16%">
