@@ -36,6 +36,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import dict_keys, skip_to_external
 from zato.common.util import make_repr, new_cid, spawn_greenlet
+from zato.common.util.event import EventLog
 from zato.common.util.hook import HookTool
 from zato.common.util.pubsub import make_short_msg_copy_from_dict
 from zato.common.util.time_ import utcnow_as_ms
@@ -223,8 +224,18 @@ class Topic(ToDictBase):
     """
     _to_dict_keys = dict_keys.topic
 
-    def __init__(self, config):
+    class Events:
+        set_hooks = 'set_hooks'
+        incr_topic_msg_counter = 'incr_topic_msg_counter'
+        update_task_sync_time_before = 'update_task_sync_time_before'
+        update_task_sync_time_after = 'update_task_sync_time_after'
+        needs_task_sync_before = 'needs_task_sync_before'
+        needs_task_sync_after = 'needs_task_sync_after'
+
+    def __init__(self, config, server_name, server_pid):
         self.config = config
+        self.server_name = server_name
+        self.server_pid = server_pid
         self.id = config.id
         self.name = config.name
         self.is_active = config.is_active
@@ -236,7 +247,8 @@ class Topic(ToDictBase):
         self.pub_buffer_size_gd = config.pub_buffer_size_gd
         self.task_delivery_interval = config.task_delivery_interval
         self.meta_store_frequency = config.meta_store_frequency
-        self._set_hooks()
+        self.event_log = EventLog('{}:{}:{}'.format(self.server_name, self.server_pid, self.name))
+        self.set_hooks()
 
         # For now, task sync interval is the same for GD and non-GD messages
         # so we can arbitrarily pick the former to serve for both types of messages.
@@ -268,12 +280,25 @@ class Topic(ToDictBase):
 
 # ################################################################################################################################
 
-    def _set_hooks(self):
+    def get_event_list(self):
+        return self.event_log.to_dict()
+
+# ################################################################################################################################
+
+    def set_hooks(self):
         self.on_subscribed_service_invoker = self.config.get('on_subscribed_service_invoker')
         self.on_unsubscribed_service_invoker = self.config.get('on_unsubscribed_service_invoker')
         self.before_publish_hook_service_invoker = self.config.get('before_publish_hook_service_invoker')
         self.before_delivery_hook_service_invoker = self.config.get('before_delivery_hook_service_invoker')
         self.on_outgoing_soap_invoke_invoker = self.config.get('on_outgoing_soap_invoke_invoker')
+
+        self.event_log.emit(self.Events.set_hooks, {
+            'on_subscribed_service_invoker': self.on_subscribed_service_invoker,
+            'on_unsubscribed_service_invoker': self.on_unsubscribed_service_invoker,
+            'before_publish_hook_service_invoker': self.before_publish_hook_service_invoker,
+            'before_delivery_hook_service_invoker': self.before_delivery_hook_service_invoker,
+            'on_outgoing_soap_invoke_invoker': self.on_outgoing_soap_invoke_invoker,
+        })
 
 # ################################################################################################################################
 
@@ -288,17 +313,44 @@ class Topic(ToDictBase):
         if has_non_gd:
             self.msg_pub_counter_non_gd += 1
 
+        self.event_log.emit(self.Events.incr_topic_msg_counter, {
+            'has_gd': has_gd,
+            'has_non_gd': has_non_gd,
+            'msg_pub_counter': self.msg_pub_counter,
+            'msg_pub_counter_gd': self.msg_pub_counter_gd,
+            'msg_pub_counter_non_gd': self.msg_pub_counter_non_gd,
+        })
+
 # ################################################################################################################################
 
     def update_task_sync_time(self, _utcnow_as_ms=utcnow_as_ms):
         """ Increases counter of messages published to this topic from current server.
         """
+        self.event_log.emit(self.Events.update_task_sync_time_before, {
+            'last_synced': self.last_synced
+        })
+
         self.last_synced = _utcnow_as_ms()
+
+        self.event_log.emit(self.Events.update_task_sync_time_after, {
+            'last_synced': self.last_synced
+        })
 
 # ################################################################################################################################
 
     def needs_task_sync(self, _utcnow_as_ms=utcnow_as_ms):
-        return _utcnow_as_ms() - self.last_synced >= self.task_sync_interval
+
+        now = _utcnow_as_ms()
+        needs_sync = now - self.last_synced >= self.task_sync_interval
+
+        self.event_log.emit(self.Events.needs_task_sync_before, {
+            'now': now,
+            'last_synced': self.last_synced,
+            'last_synced': self.task_sync_interval,
+            'needs_sync': needs_sync
+        })
+
+        return needs_sync
 
 # ################################################################################################################################
 
@@ -1305,7 +1357,7 @@ class PubSub(object):
         self._set_topic_config_hook_data(config)
         config.meta_store_frequency = self.topic_meta_store_frequency
 
-        self.topics[config.id] = Topic(config)
+        self.topics[config.id] = Topic(config, self.server.name, self.server.pid)
         self.topic_name_to_id[config.name] = config.id
 
 # ################################################################################################################################
@@ -1336,6 +1388,11 @@ class PubSub(object):
             self._delete_topic(config.id, del_name)
             self._create_topic(config)
             self.subscriptions_by_topic[config.name] = subscriptions_by_topic
+
+# ################################################################################################################################
+
+    def get_topic_event_list(self, topic_name):
+        return self.topics[topic_name].
 
 # ################################################################################################################################
 
@@ -1918,7 +1975,7 @@ class PubSub(object):
                 hook_service_id = topic.config.get('hook_service_id')
                 if hook_service_id in services_deployed:
                     self._set_topic_config_hook_data(topic.config)
-                    topic._set_hooks()
+                    topic.set_hooks()
 
 # ################################################################################################################################
 
