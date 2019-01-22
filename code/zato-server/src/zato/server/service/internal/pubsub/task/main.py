@@ -111,8 +111,6 @@ class GetDictKeys(GetDict):
                 'is_list': is_list,
             })
 
-            zzz is_list is_list
-
         self.response.payload[:] = sorted(out, key=itemgetter('key'))
 
 # ################################################################################################################################
