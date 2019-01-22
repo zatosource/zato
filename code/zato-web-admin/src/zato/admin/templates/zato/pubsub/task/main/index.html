@@ -74,35 +74,35 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td>
-                            {{ item.server_name }}:{{ item.server_pid }}
+                            <span title="Server name and PID">{{ item.server_name }}:{{ item.server_pid }}</span>
                         </td>
                         <td>
-                            kr:{{ item.keep_running|yesno:"t,f" }},
-                            pubcnt:{{ item.msg_pub_counter }} {% comment %} Eventually, this will display last N messages published {% endcomment %}
-                        </td>
-
-                        <td>
-                            sub-t:<a href="{% url "pubsub-task-main-subscription-dict-keys" "subscriptions_by_topic" item.cluster_id item.server_name item.server_pid %}?key_url_name=pubsub-topic">{{ item.subscriptions_by_topic }}</a>,
-                            sub-sk:<a href="{% url "pubsub-task-main-subscription-dict-keys" "subscriptions_by_sub_key" item.cluster_id item.server_name item.server_pid %}">{{ item.subscriptions_by_sub_key }}</a>,
-                            sks:<a href="{% url "pubsub-task-main-subscription-dict-keys" "sub_key_servers" item.cluster_id item.server_name item.server_pid %}">{{ item.sub_key_servers }}</a>
-                        </td>
-                        <td>
-                            endp:<a href="{% url "pubsub-task-main-subscription-dict-keys" "endpoints" item.cluster_id item.server_name item.server_pid %}">{{ item.endpoints }}</a>,
-                            topics:<a href="{% url "pubsub-task-main-subscription-dict-keys" "topics" item.cluster_id item.server_name item.server_pid %}">{{ item.topics }}</a>,
-                            sec-endp-id:<az href="#">{{ item.sec_id_to_endpoint_id }}</a>,
-                            wsx-endp-id:<az href="#">{{ item.ws_channel_id_to_endpoint_id }}</a>,
-                            srv-endp-id:<az href="#">{{ item.service_id_to_endpoint_id }}</a>
-                        </td>
-                        <td>
-                            pst-sk:<az href="#">{{ item.pubsub_tool_by_sub_key }}</a>,
-                            pst:<az href="#">{{ item.pubsub_tools }}</a>
+                            <span title="Keep running?">kr:{{ item.keep_running|yesno:"t,f" }}</span>,
+                            <span title="# of messages published">pubcnt:{{ item.msg_pub_counter }}</span>
                         </td>
 
                         <td>
-                            hsme:{{ item.has_meta_endpoint|yesno:"t,f" }},
-                            frq:{{ item.endpoint_meta_store_frequency }},
-                            len:{{ item.endpoint_meta_data_len }},
-                            hist:{{ item.endpoint_meta_max_history }}
+                            <span title="Subscriptions by topic name">sub-t:<a href="{% url "pubsub-task-main-subscription-dict-keys" "subscriptions_by_topic" item.cluster_id item.server_name item.server_pid %}?key_url_name=pubsub-topic">{{ item.subscriptions_by_topic }}</a></span>,
+                            <span title="Subscriptions by sub_key">sub-sk:<a href="{% url "pubsub-task-main-subscription-dict-keys" "subscriptions_by_sub_key" item.cluster_id item.server_name item.server_pid %}">{{ item.subscriptions_by_sub_key }}</a></span>,
+                            <span title="Sub key servers by sub_key">sks:<a href="{% url "pubsub-task-main-subscription-dict-keys" "sub_key_servers" item.cluster_id item.server_name item.server_pid %}">{{ item.sub_key_servers }}</a></span>
+                        </td>
+                        <td>
+                            <span title="Endpoints by ID">endp:<a href="{% url "pubsub-task-main-subscription-dict-keys" "endpoints" item.cluster_id item.server_name item.server_pid %}">{{ item.endpoints }}</a></span>,
+                            <span title="Topics by ID">topics:<a href="{% url "pubsub-task-main-subscription-dict-keys" "topics" item.cluster_id item.server_name item.server_pid %}">{{ item.topics }}</a></span>,
+                            <span title="Security definition ID to endpoint ID">sec-endp-id:<az href="#">{{ item.sec_id_to_endpoint_id }}</a></span>,
+                            <span title="WSX channel ID to endpoint ID">wsx-endp-id:<az href="#">{{ item.ws_channel_id_to_endpoint_id }}</a></span>,
+                            <span title="Service ID to endpoint ID">srv-endp-id:<az href="#">{{ item.service_id_to_endpoint_id }}</a></span>
+                        </td>
+                        <td>
+                            <span title="PubSub tools by sub_key">pst-sk:<az href="#">{{ item.pubsub_tool_by_sub_key }}</a></span>,
+                            <span title="PubSub tools">pst:<az href="#">{{ item.pubsub_tools }}</a></span>
+                        </td>
+
+                        <td>
+                            <span title="">hsme</span>:{{ item.has_meta_endpoint|yesno:"t,f" }},
+                            <span title="">frq</span>:{{ item.endpoint_meta_store_frequency }},
+                            <span title="">len</span>:{{ item.endpoint_meta_data_len }},
+                            <span title="">hist</span>:{{ item.endpoint_meta_max_history }}
                         </td>
 
                         <td>
