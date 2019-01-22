@@ -263,6 +263,11 @@ class Topic(ToDictBase):
 
 # ################################################################################################################################
 
+    def get_id(self):
+        return '{};{}'.format(self.name, self.id)
+
+# ################################################################################################################################
+
     def _set_hooks(self):
         self.on_subscribed_service_invoker = self.config.get('on_subscribed_service_invoker')
         self.on_unsubscribed_service_invoker = self.config.get('on_unsubscribed_service_invoker')
