@@ -19,7 +19,7 @@ from bunch import bunchify
 # Zato
 from zato.common.exception import BadRequest
 from zato.common.pubsub import all_dict_keys, pubsub_main_data
-from zato.server.service import Int, List
+from zato.server.service import Bool, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 len_keys = 'subscriptions_by_topic', 'subscriptions_by_sub_key', 'sub_key_servers', 'endpoints', 'topics', \
@@ -181,5 +181,24 @@ class GetList(AdminService):
 
     def handle(self):
         self.response.payload[:] = self.get_data()
+
+# ################################################################################################################################
+
+class GetTopicEventList(AdminService):
+    """ Returns a list of events for a particular topic.
+    """
+    class SimpleIO(GetListAdminSIO):
+        input_required = 'cluster_id', 'topic_name', Bool('with_pubsub')
+        output_required = 'log_id', 'event_id', 'name', 'timestamp'
+        output_optional = 'ctx',
+        output_repeated = True
+
+    def handle(self):
+        out = []
+        out.extend(self.pubsub.get_topic_event_list(self.request.input.topic_name))
+
+        # TODO: Add PubSub's events if with_pubsub is True
+
+        self.response.payload[:] = out
 
 # ################################################################################################################################
