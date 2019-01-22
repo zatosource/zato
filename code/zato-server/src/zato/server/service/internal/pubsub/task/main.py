@@ -124,7 +124,20 @@ class GetDictValues(GetDict):
 
     def _handle_attr_call(self, attr):
 
-        values = attr[self.request.input.key]
+        try:
+            key = self.request.input.key
+
+            # This may be potentially an integer key that we received as string
+            # so we need to try to convert it to one.
+            try:
+                key = int(key)
+            except ValueError:
+                pass # That is fine, it was not an integer
+
+            values = attr[key]
+        except KeyError:
+            raise KeyError('No such key `{}` ({}) among `{}`'.format(key, type(key), sorted(attr.keys())))
+
         values = values if isinstance(values, list) else [values]
         out = [elem.to_dict() for elem in values]
         out.sort(key=itemgetter(*self.request.input.sort_by), reverse=True)
