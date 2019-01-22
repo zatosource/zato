@@ -176,6 +176,16 @@ class Endpoint(ToDictBase):
 
 # ################################################################################################################################
 
+    def to_dict(self, _replace=('pub_topic_patterns', 'sub_topic_patterns')):
+        out = super(Endpoint, self).to_dict()
+        for key, value in out.items():
+            if key in _replace:
+                if value:
+                    out[key] = sorted([(elem[0], str(elem[1])) for elem in value])
+        return out
+
+# ################################################################################################################################
+
     def set_up_patterns(self):
         data = {
             'topic': self.topic_patterns,

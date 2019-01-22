@@ -29,7 +29,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Pub/sub dict {{ dict_name }} {{ server_name }}:{{ server_pid }} (sub key servers)</h2>
+<h2 class="zato">Pub/sub dict {{ dict_name }} {{ server_name }}:{{ server_pid }} (sub key servers), key:{{ key }}</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
