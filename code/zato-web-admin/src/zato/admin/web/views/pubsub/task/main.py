@@ -23,8 +23,8 @@ from zato.common.util.time_ import datetime_from_ms
 logger = logging.getLogger(__name__)
 
 dict_name_to_url_name = {
-    'subscriptions_by_topic': 'pubsub-task-main-dict-values-subscription',
-    'subscriptions_by_sub_key': 'pubsub-task-main-dict-values-subscription',
+    'subscriptions_by_topic': 'pubsub-task-main-dict-values-subscriptions',
+    'subscriptions_by_sub_key': 'pubsub-task-main-dict-values-subscriptions',
     'sub_key_servers': 'pubsub-task-main-dict-values-sks',
     'endpoints': 'pubsub-task-main-dict-values-endpoints',
     'topics': 'pubsub-task-main-dict-values-topics',
@@ -38,18 +38,18 @@ dict_name_to_url_name = {
 }
 
 dict_name_to_template_name = {
-    'subscriptions_by_topic': 'subscription',
-    'subscriptions_by_sub_key': 'subscription',
+    'subscriptions_by_topic': 'subscriptions',
+    'subscriptions_by_sub_key': 'subscriptions',
     'sub_key_servers': 'sks',
-    'endpoints': 'endpoint',
+    'endpoints': 'endpoints',
     'topics': 'topics',
-    'sec_id_to_endpoint_id': 'endpoint',
-    'ws_channel_id_to_endpoint_id': 'endpoint',
-    'service_id_to_endpoint_id': 'endpoint',
-    'topic_name_to_id': 'topic',
-    'pubsub_tool_by_sub_key': 'pubsub-tool',
-    'pubsub_tools': 'pubsub-tool',
-    'endpoint_msg_counter': 'message'
+    'sec_id_to_endpoint_id': 'endpoints',
+    'ws_channel_id_to_endpoint_id': 'endpoints',
+    'service_id_to_endpoint_id': 'endpoints',
+    'topic_name_to_id': 'topics',
+    'pubsub_tool_by_sub_key': 'pubsub-tools',
+    'pubsub_tools': 'pubsub-tools',
+    'endpoint_msg_counter': 'messages'
 }
 
 # ################################################################################################################################
@@ -200,8 +200,8 @@ class DictValues(_DictView):
 
 # ################################################################################################################################
 
-class DictValuesSubscription(DictValues):
-    url_name = 'pubsub-task-main-dict-values-subscription'
+class DictValuesSubscriptions(DictValues):
+    url_name = 'pubsub-task-main-dict-values-subscriptions'
     _dict_sort_by = ['creation_time']
 
 # ################################################################################################################################
@@ -215,5 +215,11 @@ class DictValuesSubKeyServer(DictValues):
 class DictValuesEndpoints(DictValues):
     url_name = 'pubsub-task-main-dict-values-endpoints'
     _dict_sort_by = ['endpoint_type', 'name']
+
+# ################################################################################################################################
+
+class DictValuesTopics(DictValues):
+    url_name = 'pubsub-task-main-dict-values-topics'
+    _dict_sort_by = ['name']
 
 # ################################################################################################################################
