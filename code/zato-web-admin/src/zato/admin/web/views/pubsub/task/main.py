@@ -54,6 +54,10 @@ dict_name_to_template_name = {
 
 # ################################################################################################################################
 
+time_keys = 'creation_time', 'last_synced', 'gd_pub_time_max'
+
+# ################################################################################################################################
+
 class PubSubTool(object):
     def __init__(self):
         self.server_name = None
@@ -184,13 +188,34 @@ class DictValues(_DictView):
         return out
 
     def on_before_append_item(self, item):
-        creation_time = getattr(item, 'creation_time', None)
-        if creation_time:
-            if isinstance(creation_time, float):
-                item.creation_time_utc = datetime_from_ms(item.creation_time)
-            else:
-                item.creation_time_utc = creation_time
-            item.creation_time = from_utc_to_user(item.creation_time_utc+'+00:00', self.req.zato.user_profile)
+        for name in time_keys:
+            raw_time_value = getattr(item, name, None)
+            if raw_time_value:
+
+                raw_key = '{}_raw'.format(name)
+                utc_key = '{}_utc'.format(name)
+
+                if isinstance(raw_time_value, float):
+                    float_value = getattr(item, name)
+                    float_as_dt = datetime_from_ms(float_value, False)
+
+                    # The float value must have represented seconds rather than seconds
+                    # so we need to retry after converting seconds to milliseconds.
+                    # Year 2000 can be safely used because it will never be a correct value.
+                    if float_as_dt.year < 2000:
+                        float_value = float_value * 1000
+                        float_as_dt = datetime_from_ms(float_value, False)
+
+                    setattr(item, utc_key, float_as_dt.isoformat())
+                else:
+                    setattr(item, utc_key, raw_time_value)
+
+                utc_value = getattr(item, utc_key)
+                utc_value_user = from_utc_to_user(utc_value+'+00:00', self.req.zato.user_profile)
+
+                setattr(item, raw_key, raw_time_value)
+                setattr(item, name, utc_value_user)
+
         return item
 
     def get_template_name(self):
