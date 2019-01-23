@@ -36,9 +36,9 @@
             'id',
             'is_active',
             'is_zato',
-            'on_connect_service_id',
-            'on_message_service_id',
-            'on_close_service_id',
+            'on_connect_service_name',
+            'on_message_service_name',
+            'on_close_service_name',
             'security_def',
             'subscription_list',
             'has_auto_reconnect',
@@ -132,9 +132,9 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_zato }}</td>
-                        <td class='ignore'>{{ item.on_connect_service_id }}</td>
-                        <td class='ignore'>{{ item.on_message_service_id }}</td>
-                        <td class='ignore'>{{ item.on_close_service_id }}</td>
+                        <td class='ignore'>{{ item.on_connect_service_name }}</td>
+                        <td class='ignore'>{{ item.on_message_service_name }}</td>
+                        <td class='ignore'>{{ item.on_close_service_name }}</td>
                         <td class='ignore'>{{ item.security_def }}</td>
                         <td class='ignore'>{{ item.subscription_list }}</td>
                         <td class='ignore'>{{ item.has_auto_reconnect }}</td>
@@ -185,15 +185,15 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">On connect service</td>
-                            <td>{{ create_form.on_connect_service_id }}</td>
+                            <td>{{ create_form.on_connect_service_name }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">On message service</td>
-                            <td>{{ create_form.on_message_service_id }}</td>
+                            <td>{{ create_form.on_message_service_name }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">On close service</td>
-                            <td>{{ create_form.on_close_service_id }}</td>
+                            <td>{{ create_form.on_close_service_name }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Security</td>
@@ -248,15 +248,15 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">On connect service</td>
-                            <td>{{ edit_form.on_connect_service_id }}</td>
+                            <td>{{ edit_form.on_connect_service_name }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">On message service</td>
-                            <td>{{ edit_form.on_message_service_id }}</td>
+                            <td>{{ edit_form.on_message_service_name }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">On close service</td>
-                            <td>{{ edit_form.on_close_service_id }}</td>
+                            <td>{{ edit_form.on_close_service_name }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Security</td>
