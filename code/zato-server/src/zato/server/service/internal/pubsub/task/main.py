@@ -184,21 +184,48 @@ class GetList(AdminService):
 
 # ################################################################################################################################
 
-class GetTopicEventList(AdminService):
+class _GetEventList(AdminService):
     """ Returns a list of events for a particular topic.
     """
     class SimpleIO(GetListAdminSIO):
-        input_required = 'cluster_id', 'topic_name', Bool('with_pubsub')
+        input_required = 'cluster_id', 'server_name', 'server_pid'
+        input_optional = 'topic_name',
         output_required = 'log_id', 'event_id', 'name', 'timestamp'
-        output_optional = 'ctx',
+        output_optional = GetListAdminSIO + ('ctx',)
         output_repeated = True
 
+# ################################################################################################################################
+
+class GetServerEventList(_GetEventList):
+    """ Returns a list of events for a particular topic. Must be invoked on the same server the data is to be returned from.
+    """
     def handle(self):
-        out = []
-        out.extend(self.pubsub.get_topic_event_list(self.request.input.topic_name))
 
+        print()
+        print()
+
+        print(111, self.request.input)
+
+        print()
+        print()
+
+# ################################################################################################################################
+
+class GetEventList(_GetEventList):
+    """ Returns a list of events for a particular topic. Must be invoked on the same server the data is to be returned from.
+    """
+    def handle(self):
+        #out = []
+        #out.extend(self.pubsub.get_topic_event_list(self.request.input.topic_name))
         # TODO: Add PubSub's events if with_pubsub is True
+        #self.response.payload[:] = out
 
-        self.response.payload[:] = out
+        print()
+        print()
+
+        print('aaa', self.request.input)
+
+        print()
+        print()
 
 # ################################################################################################################################
