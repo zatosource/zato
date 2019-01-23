@@ -19,7 +19,7 @@ from bunch import bunchify
 # Zato
 from zato.common.exception import BadRequest
 from zato.common.pubsub import all_dict_keys, pubsub_main_data
-from zato.server.service import Bool, Int, List
+from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 len_keys = 'subscriptions_by_topic', 'subscriptions_by_sub_key', 'sub_key_servers', 'endpoints', 'topics', \
@@ -189,10 +189,11 @@ class _GetEventList(AdminService):
     """
     class SimpleIO(GetListAdminSIO):
         input_required = 'cluster_id', 'server_name', 'server_pid'
-        input_optional = 'topic_name',
-        output_required = 'log_id', 'event_id', 'name', 'timestamp'
-        output_optional = GetListAdminSIO + ('ctx',)
+        input_optional = GetListAdminSIO.input_optional + ('topic_name',)
+        output_required = AsIs('log_id'), AsIs('event_id'), 'name', 'timestamp'
+        output_optional = 'ctx'
         output_repeated = True
+        response_elem = None
 
 # ################################################################################################################################
 
@@ -201,13 +202,19 @@ class GetServerEventList(_GetEventList):
     """
     def handle(self):
 
-        print()
-        print()
+        # We always return PubSub's events ..
+        event_list = self.pubsub.get_event_list()
 
-        print(111, self.request.input)
+        # .. and if requested, topic events are also included.
+        if self.request.input.topic_name:
+            topic_event_list = self.pubsub.get_topic_event_list(self.request.input.topic_name)
+            event_list.extend(topic_event_list)
 
-        print()
-        print()
+        # Sort the events if there are any to be returned
+        if event_list:
+            event_list.sort(key=itemgetter('timestamp', 'log_id', 'event_id'), reverse=True)
+
+        self.response.payload[:] = event_list
 
 # ################################################################################################################################
 
@@ -215,17 +222,8 @@ class GetEventList(_GetEventList):
     """ Returns a list of events for a particular topic. Must be invoked on the same server the data is to be returned from.
     """
     def handle(self):
-        #out = []
-        #out.extend(self.pubsub.get_topic_event_list(self.request.input.topic_name))
-        # TODO: Add PubSub's events if with_pubsub is True
-        #self.response.payload[:] = out
-
-        print()
-        print()
-
-        print('aaa', self.request.input)
-
-        print()
-        print()
+        server = self.servers[self.request.input.server_name]
+        response = server.invoke(GetServerEventList.get_name(), self.request.input, pid=self.request.input.server_pid)
+        self.response.payload[:] = response
 
 # ################################################################################################################################

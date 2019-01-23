@@ -247,7 +247,7 @@ class Topic(ToDictBase):
         self.pub_buffer_size_gd = config.pub_buffer_size_gd
         self.task_delivery_interval = config.task_delivery_interval
         self.meta_store_frequency = config.meta_store_frequency
-        self.event_log = EventLog('{}:{}:{}'.format(self.server_name, self.server_pid, self.name))
+        self.event_log = EventLog('t.{}.{}.{}'.format(self.server_name, self.server_pid, self.name))
         self.set_hooks()
 
         # For now, task sync interval is the same for GD and non-GD messages
@@ -292,6 +292,9 @@ class Topic(ToDictBase):
         self.before_delivery_hook_service_invoker = self.config.get('before_delivery_hook_service_invoker')
         self.on_outgoing_soap_invoke_invoker = self.config.get('on_outgoing_soap_invoke_invoker')
 
+        #
+        # Event log
+        #
         self.event_log.emit(self.Events.set_hooks, {
             'on_subscribed_service_invoker': self.on_subscribed_service_invoker,
             'on_unsubscribed_service_invoker': self.on_unsubscribed_service_invoker,
@@ -313,6 +316,9 @@ class Topic(ToDictBase):
         if has_non_gd:
             self.msg_pub_counter_non_gd += 1
 
+        #
+        # Event log
+        #
         self.event_log.emit(self.Events.incr_topic_msg_counter, {
             'has_gd': has_gd,
             'has_non_gd': has_non_gd,
@@ -326,12 +332,19 @@ class Topic(ToDictBase):
     def update_task_sync_time(self, _utcnow_as_ms=utcnow_as_ms):
         """ Increases counter of messages published to this topic from current server.
         """
+
+        #
+        # Event log
+        #
         self.event_log.emit(self.Events.update_task_sync_time_before, {
             'last_synced': self.last_synced
         })
 
         self.last_synced = _utcnow_as_ms()
 
+        #
+        # Event log
+        #
         self.event_log.emit(self.Events.update_task_sync_time_after, {
             'last_synced': self.last_synced
         })
@@ -343,6 +356,9 @@ class Topic(ToDictBase):
         now = _utcnow_as_ms()
         needs_sync = now - self.last_synced >= self.task_sync_interval
 
+        #
+        # Event log
+        #
         self.event_log.emit(self.Events.needs_task_sync_before, {
             'now': now,
             'last_synced': self.last_synced,
@@ -858,10 +874,18 @@ class InRAMSyncBacklog(object):
 # ################################################################################################################################
 
 class PubSub(object):
+
+    class Events:
+        loop_topic_id_dict  = 'loop_topic_id_dict'
+        loop_sub_keys       = 'loop_sub_keys'
+        loop_before_has_msg = 'loop_before_has_msg'
+        loop_before_sync    = 'loop_has_msg'
+
     def __init__(self, cluster_id, server, broker_client=None):
         self.cluster_id = cluster_id
         self.server = server
         self.broker_client = broker_client
+        self.event_log = EventLog('ps.{}.{}.{}'.format(self.cluster_id, self.server.name, self.server.pid))
         self.lock = RLock()
         self.keep_running = True
         self.sk_server_table_columns = self.server.fs_server_config.pubsub.get('sk_server_table_columns') or \
@@ -2079,6 +2103,16 @@ class PubSub(object):
                 # OK, if we had any subscriptions for at least one topic and there are any messages waiting,
                 # we can continue.
                 try:
+
+                    if topic_id_dict:
+
+                        #
+                        # Event log
+                        #
+                        self.event_log.emit(self.Events.loop_topic_id_dict, {
+                            'topic_id_dict': topic_id_dict
+                        })
+
                     for topic_id in topic_id_dict:
 
                         topic = self.topics[topic_id]
@@ -2097,9 +2131,30 @@ class PubSub(object):
                             if self.get_delivery_server_by_sub_key(item.sub_key):
                                 sub_keys.append(item.sub_key)
 
+                        if sub_keys:
+
+                            #
+                            # Event log
+                            #
+                            self.event_log.emit(self.Events.loop_sub_keys, {
+                                'topic_id': topic_id,
+                                'topic.name': topic.name,
+                                'sub_keys': sub_keys
+                            })
+
                         # Continue only if there are actually any sub_keys left = any tasks up and running ..
                         if sub_keys:
                             non_gd_msg_list = self.sync_backlog._get_delete_messages_by_sub_keys(topic_id, sub_keys)
+
+                            #
+                            # Event log
+                            #
+                            self.event_log.emit(self.Events.loop_before_has_msg, {
+                                'topic_id': topic_id,
+                                'topic.name': topic.name,
+                                'topic.sync_has_gd_msg': topic.sync_has_gd_msg,
+                                'topic.sync_has_non_gd_msg': topic.sync_has_non_gd_msg,
+                            })
 
                             # .. also, continue only if there are still messages for the ones that are up ..
                             if topic.sync_has_gd_msg or topic.sync_has_non_gd_msg:
@@ -2110,8 +2165,22 @@ class PubSub(object):
                                 else:
                                     pub_time_max = topic.gd_pub_time_max
 
+                                non_gd_msg_list_msg_id_list = [elem['pub_msg_id'] for elem in non_gd_msg_list]
+
+                                #
+                                # Event log
+                                #
+                                self.event_log.emit(self.Events.loop_before_sync, {
+                                    'topic_id': topic_id,
+                                    'topic.name': topic.name,
+                                    'topic.sync_has_gd_msg': topic.sync_has_gd_msg,
+                                    'topic.sync_has_non_gd_msg': topic.sync_has_non_gd_msg,
+                                    'non_gd_msg_list': non_gd_msg_list_msg_id_list,
+                                    'pub_time_max': pub_time_max
+                                })
+
                                 logger.info('Syncing messages for `%s` ngd-list:%s (sk_list:%s) cid:%s' % (
-                                    topic_name, [elem['pub_msg_id'] for elem in non_gd_msg_list], sub_keys, cid))
+                                    topic_name, non_gd_msg_list_msg_id_list, sub_keys, cid))
 
                                 request = {
                                     'cid': cid,

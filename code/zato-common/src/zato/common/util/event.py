@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from collections import deque
 from datetime import datetime
 from itertools import count
+from types import DictionaryType
 
 # gevent
 from gevent.lock import RLock
@@ -47,7 +48,7 @@ class Event(object):
             'log_id': self.log_id,
             'event_id': self.event_id,
             'name': self.name,
-            'timestamp': self.timestamp,
+            'timestamp': self.timestamp.isoformat(),
             'ctx': None if self.ctx is None else repr(self.ctx)
         }
 
@@ -70,7 +71,7 @@ class EventLog(object):
 # ################################################################################################################################
 
     def get_event_list(self):
-        return reversed(elem.to_dict() for elem in self.events)
+        return [elem.to_dict() for elem in self.events]
 
 # ################################################################################################################################
 
