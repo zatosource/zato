@@ -105,7 +105,7 @@
                         </td>
 
                         <td>
-                            <a href="#">Events</a>
+                            <a href="{% url "pubsub-task-event-list" item.cluster_id item.server_name item.server_pid %}">Events</a>
                         </td>
 
                         <td class='ignore'>{{ item.server_name }}</td>

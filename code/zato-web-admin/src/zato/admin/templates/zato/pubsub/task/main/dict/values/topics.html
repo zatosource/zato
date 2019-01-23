@@ -57,37 +57,6 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
 
-                        {% comment %}
-                        <!--
-
-                        "name": "/zato/demo/sample",
-
-                        "last_synced": 1548144590.068407,
-                        "task_sync_interval": 0.5,
-                        "sync_has_gd_msg": false,
-                        "sync_has_non_gd_msg": false
-
-                        "msg_pub_counter_gd": 0,
-                        "msg_pub_counter_non_gd": 0,
-                        "msg_pub_counter": 0,
-
-                        "gd_pub_time_max": null,
-
-                        "id": 1,
-                        "is_internal": true,
-                        "is_active": true,
-                        "has_gd": false,
-                        "meta_store_frequency": 1,
-                        "depth_check_freq": 100,
-                        "task_delivery_interval": 2000,
-
-                        "max_depth_gd": 10000,
-                        "max_depth_non_gd": 1000,
-
-                        -->
-                        {% endcomment %}
-
-
                         <td>
                             <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ item.name }}">{{ item.name }}</a>
                         </td>
@@ -122,7 +91,6 @@
                             {% endif %}
                         </td>
 
-
                         <td>
                             <span title="Total/GD/Non-GD">{{ item.msg_pub_counter }}/{{ item.msg_pub_counter_gd }}/{{ item.msg_pub_counter_non_gd }}</a>
                         </td>
@@ -139,7 +107,6 @@
                             maxd-ngd:{{ item.max_depth_non_gd }},
                             sync-i:{{ item.task_sync_interval }}
                         </td>
-
 
                     </tr>
                 {% endfor %}

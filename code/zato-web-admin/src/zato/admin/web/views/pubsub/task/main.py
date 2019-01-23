@@ -16,6 +16,7 @@ from zato.admin.web import from_utc_to_user
 from zato.admin.web.views import Index as _Index
 from zato.common.pubsub import all_dict_keys, pubsub_main_data
 from zato.common.util import fs_safe_name
+from zato.common.util.event import Event
 from zato.common.util.time_ import datetime_from_ms
 
 # ################################################################################################################################
@@ -106,6 +107,11 @@ class _SubscriptionDictKeys(object):
 # ################################################################################################################################
 
 class _DictValuesData(object):
+    pass
+
+# ################################################################################################################################
+
+class _Event(object):
     pass
 
 # ################################################################################################################################
@@ -246,5 +252,23 @@ class DictValuesEndpoints(DictValues):
 class DictValuesTopics(DictValues):
     url_name = 'pubsub-task-main-dict-values-topics'
     _dict_sort_by = ['name']
+
+# ################################################################################################################################
+
+class EventList(_Index):
+    method_allowed = 'GET'
+    url_name = 'pubsub-task-event-list'
+    template = 'zato/pubsub/task/main/event/index.html'
+    service_name = 'zato.pubsub.task.main.get-event-list'
+    output_class = _Event
+    paginate = True
+
+    class SimpleIO(_Index.SimpleIO):
+        input_required = 'cluster_id', 'server_name', 'server_pid'
+        output_optional = Event.__slots__
+        output_repeated = True
+
+    def handle(self):
+        return {}
 
 # ################################################################################################################################

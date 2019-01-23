@@ -1250,7 +1250,6 @@ urlpatterns += [
     url(r'^zato/pubsub/endpoint/queue/browser/gd/(?P<has_gd>.*)/queue/(?P<sub_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_endpoint.EndpointQueueBrowser()), name=pubsub_endpoint.EndpointQueueBrowser.url_name),
 
-
     # Pub/sub - topics
 
     url(r'^zato/pubsub/topic/$',
@@ -1329,6 +1328,10 @@ urlpatterns += [
     # PubSub tools - dict values - topics
     url(r'^zato/pubsub/task/main/dict-values/topic/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
         login_required(pubsub_task_main.DictValuesTopics()), name=pubsub_task_main.DictValuesTopics.url_name),
+
+    # PubSub tools - event list
+    url(r'^zato/pubsub/task/main/event-list/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+        login_required(pubsub_task_main.EventList()), name=pubsub_task_main.EventList.url_name),
 
     # Per-server delivery tasks
 
