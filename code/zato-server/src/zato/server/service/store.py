@@ -172,8 +172,20 @@ class ServiceStore(InitializingObject):
 # ################################################################################################################################
 
     def get_service_class_by_id(self, service_id):
-        impl_name = self.id_to_impl_name[service_id]
-        return self.services[impl_name]
+        try:
+            impl_name = self.id_to_impl_name[service_id]
+        except KeyError:
+            keys_found = sorted(repr(elem) for elem in self.id_to_impl_name.keys())
+            keys_found = [(elem, type(elem)) for elem in keys_found]
+            raise KeyError('No such service_id key `{}` `({})` among `{}`'.format(repr(service_id), type(service_id), keys_found))
+        else:
+            try:
+                return self.services[impl_name]
+            except KeyError:
+                keys_found = sorted(repr(elem) for elem in self.services.keys())
+                keys_found = [(elem, type(elem)) for elem in keys_found]
+                raise KeyError('No such impl_name key `{}` `({})` among `{}`'.format(
+                    repr(impl_name), type(impl_name), keys_found))
 
 # ################################################################################################################################
 

@@ -93,7 +93,7 @@ $.fn.zato.outgoing.wsx.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.outgoing.wsx.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Outgoing WebSocket connection [{0}] deleted',
-        'Are you sure you want to delete the outgoing WebSocket connection [{0}]?',
+        'Outgoing WebSocket connection `{0}` deleted',
+        'Are you sure you want to delete outgoing WebSocket connection `{0}`?',
         true);
 }
