@@ -27,9 +27,9 @@ SELECT_SERVICE_FIELDS = [
     'service',
     'hook_service_id',
     'hook_service_name',
-    'on_connect_service_id',
-    'on_message_service_id',
-    'on_close_service_id',
+    'on_connect_service_name',
+    'on_message_service_name',
+    'on_close_service_name',
 ]
 
 # ################################################################################################################################
