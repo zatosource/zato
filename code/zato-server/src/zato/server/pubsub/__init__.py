@@ -880,6 +880,7 @@ class PubSub(object):
         loop_sub_keys       = 'loop_sub_keys'
         loop_before_has_msg = 'loop_before_has_msg'
         loop_before_sync    = 'loop_has_msg'
+        _set_sync_has_msg   = '_set_sync_has_msg'
 
     def __init__(self, cluster_id, server, broker_client=None):
         self.cluster_id = cluster_id
@@ -1816,7 +1817,7 @@ class PubSub(object):
                 sub_keys, non_gd_msg_list)
 
             # .. and set a flag to signal that there are some available.
-            self._set_sync_has_msg(topic_id, False, True)
+            self._set_sync_has_msg(topic_id, False, True, 'PubSub.store_in_ram')
 
 # ################################################################################################################################
 
@@ -2038,7 +2039,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _set_sync_has_msg(self, topic_id, is_gd, value, gd_pub_time_max=None):
+    def _set_sync_has_msg(self, topic_id, is_gd, value, source, gd_pub_time_max=None):
         """ Updates a given topic's flags indicating that a message has been published since the last sync.
         Must be called with self.lock held.
         """
@@ -2049,11 +2050,23 @@ class PubSub(object):
         else:
             topic.sync_has_non_gd_msg = value
 
+        self.event_log.emit(self.Events._set_sync_has_msg, {
+            'topic_id': topic_id,
+            'is_gd': is_gd,
+            'value': value,
+            'source': source,
+            'gd_pub_time_max': gd_pub_time_max,
+            'topic.name': topic.name,
+            'topic.sync_has_gd_msg': topic.sync_has_gd_msg,
+            'topic.gd_pub_time_max': topic.gd_pub_time_max,
+            'topic.sync_has_non_gd_msg': topic.sync_has_non_gd_msg
+        })
+
 # ################################################################################################################################
 
-    def set_sync_has_msg(self, topic_id, is_gd, value, gd_pub_time_max):
+    def set_sync_has_msg(self, topic_id, is_gd, value, source, gd_pub_time_max):
         with self.lock:
-            self._set_sync_has_msg(topic_id, is_gd, value, gd_pub_time_max)
+            self._set_sync_has_msg(topic_id, is_gd, value, source, gd_pub_time_max)
 
 # ################################################################################################################################
 
@@ -2197,8 +2210,8 @@ class PubSub(object):
                                 spawn(self.invoke_service, 'zato.pubsub.after-publish', request)
 
                         # OK, we can now reset message flags for the topic
-                        self._set_sync_has_msg(topic_id, True, False)
-                        self._set_sync_has_msg(topic_id, False, False)
+                        self._set_sync_has_msg(topic_id, True, False, 'PubSub.loop')
+                        self._set_sync_has_msg(topic_id, False, False, 'PubSub.loop')
 
                 except Exception:
                     logger_zato.warn(format_exc())
