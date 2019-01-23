@@ -37,7 +37,6 @@
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
-    {% include "zato/search-form.html" with page_prompt="Show delivery servers"%}
 
     {% if cluster_id %}
 
