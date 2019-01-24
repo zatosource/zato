@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,7 +15,7 @@ import logging
 from zato.common import GENERIC
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.wsx import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.odb.model import GenericConn
 
 # ################################################################################################################################
