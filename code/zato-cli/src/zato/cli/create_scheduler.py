@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -129,6 +129,11 @@ is_extra_list=True
 [zato.wsx.cleanup]
 minutes=30
 service=pub.zato.channel.web-socket.cleanup-wsx
+
+[zato.pubsub.cleanup]
+minutes=5
+service=zato.pubsub.cleanup-service
+extra=
 """
 
 # ################################################################################################################################
