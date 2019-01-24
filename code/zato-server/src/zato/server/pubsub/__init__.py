@@ -2146,13 +2146,19 @@ class PubSub(object):
 
         _sync_backlog_get_delete_messages_by_sub_keys = self.sync_backlog._get_delete_messages_by_sub_keys
 
+# ################################################################################################################################
+
         def _cmp_non_gd_msg(elem):
             return elem['pub_time']
+
+# ################################################################################################################################
 
         def _do_emit_loop_topic_id_dict(_topic_id_dict):
             _self_emit_loop_topic_id_dict({
                 'topic_id_dict': _topic_id_dict
             })
+
+# ################################################################################################################################
 
         def _do_emit_loop_sub_keys(topic_id, topic_name, sub_keys):
             _self_emit_loop_sub_keys({
@@ -2161,6 +2167,8 @@ class PubSub(object):
                 'sub_keys': sub_keys
             })
 
+# ################################################################################################################################
+
         def _do_emit_loop_before_has_msg(topic_id, topic_name, topic_sync_has_gd_msg, topic_sync_has_non_gd_msg):
             _self_emit_loop_before_has_msg({
                 'topic_id': topic_id,
@@ -2168,6 +2176,8 @@ class PubSub(object):
                 'topic.sync_has_gd_msg': topic_sync_has_gd_msg,
                 'topic.sync_has_non_gd_msg': topic_sync_has_non_gd_msg,
             })
+
+# ################################################################################################################################
 
         def _do_emit_loop_before_sync(topic_id, topic_name, topic_sync_has_gd_msg, topic_sync_has_non_gd_msg,
             non_gd_msg_list_msg_id_list, pub_time_max):
@@ -2179,6 +2189,8 @@ class PubSub(object):
                 'non_gd_msg_list': non_gd_msg_list_msg_id_list,
                 'pub_time_max': pub_time_max
             })
+
+# ################################################################################################################################
 
         # Loop forever or until stopped
         while _keep_running:
@@ -2207,7 +2219,7 @@ class PubSub(object):
                     if not (_topic.sync_has_gd_msg or _topic.sync_has_non_gd_msg):
                         continue
 
-                    # If it does, get subscriptions for it ..
+                    # There are some messages, let's see if there are subscribers ..
                     subs = _self_get_subscriptions_by_topic(_topic.name, require_backlog_messages=True)
 
                     # .. if there are any subscriptions at all, we store that information for later use.
@@ -2243,6 +2255,7 @@ class PubSub(object):
                             if _self_get_delivery_server_by_sub_key(item.sub_key):
                                 sub_keys.append(item.sub_key)
 
+                        # Continue only if there are actually any sub_keys left = any tasks up and running ..
                         if sub_keys:
 
                             #
@@ -2250,8 +2263,6 @@ class PubSub(object):
                             #
                             _do_emit_loop_sub_keys(topic_id, topic.name, sub_keys)
 
-                        # Continue only if there are actually any sub_keys left = any tasks up and running ..
-                        if sub_keys:
                             non_gd_msg_list = _sync_backlog_get_delete_messages_by_sub_keys(topic_id, sub_keys)
 
                             #
