@@ -15,7 +15,6 @@ import logging
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.views import Index as _Index
 from zato.common.pubsub import all_dict_keys, pubsub_main_data
-from zato.common.util import fs_safe_name
 from zato.common.util.event import Event
 from zato.common.util.time_ import datetime_from_ms
 

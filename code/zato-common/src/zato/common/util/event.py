@@ -12,13 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from collections import deque
 from datetime import datetime
 from itertools import count
-from types import DictionaryType
 
 # gevent
 from gevent.lock import RLock
-
-# Zato
-from zato.common.util import new_cid
 
 # ################################################################################################################################
 

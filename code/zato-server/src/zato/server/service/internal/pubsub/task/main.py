@@ -19,7 +19,7 @@ from bunch import bunchify
 # Zato
 from zato.common.exception import BadRequest
 from zato.common.pubsub import all_dict_keys, pubsub_main_data
-from zato.server.service import AsIs, Bool, Int, List
+from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 len_keys = 'subscriptions_by_topic', 'subscriptions_by_sub_key', 'sub_key_servers', 'endpoints', 'topics', \
