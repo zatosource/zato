@@ -30,7 +30,7 @@ from gevent import Timeout, spawn
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
+from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
      ZatoException, zato_no_op_marker
 from zato.common.broker_message import SERVICE
 from zato.common.exception import Reportable
@@ -258,7 +258,7 @@ class Service(object):
             self._worker_config.out_soap,
             self._worker_store.sql_pool_store,
             self._worker_store.stomp_outconn_api,
-            ZMQFacade(self.server) if self.component_enabled_zeromq else None,
+            ZMQFacade(self._worker_store.zmq_out_api) if self.component_enabled_zeromq else NO_DEFAULT_VALUE,
             self._worker_store.outconn_wsx,
             self._worker_store.vault_conn_api,
             SMSAPI(self._worker_store.sms_twilio_api) if self.component_enabled_sms else None,
