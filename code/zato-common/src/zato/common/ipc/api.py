@@ -152,7 +152,7 @@ class IPCAPI(object):
             if is_async:
                 return
 
-            response = None
+            is_success, response = False, None
 
             try:
 
