@@ -282,7 +282,7 @@ class Index(_BaseView):
     """ A base class upon which other index views are based.
     """
     url_name = 'url_name-must-be-defined-in-a-subclass'
-    template = 'template-must-be-defined-in-a-subclass'
+    template = 'template-must-be-defined-in-a-subclass-or-get-template-name'
 
     output_class = None
 
@@ -324,6 +324,11 @@ class Index(_BaseView):
     def get_initial_input(self):
         return {}
 
+    def get_template_name(self):
+        """ May be overridden by subclasses to dynamically decide which template to use,
+        otherwise self.template will be employed.
+        """
+
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
@@ -337,6 +342,7 @@ class Index(_BaseView):
         and fills it in with received attributes.
         """
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
+
         for msg_item in item_list:
             item = self.output_class()
             for name in names:
@@ -345,7 +351,14 @@ class Index(_BaseView):
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:
                     setattr(item, name, value)
-            self.items.append(self.on_before_append_item(item))
+            item = self.on_before_append_item(item)
+
+            if isinstance(item, (list, tuple)):
+                func = self.items.extend
+            else:
+                func = self.items.append
+
+            func(item)
 
     def _handle_item(self, item):
         pass
@@ -406,13 +419,13 @@ class Index(_BaseView):
 
             return_data = self.handle_return_data(return_data)
 
-            return TemplateResponse(req, self.template, return_data)
+            return TemplateResponse(req, self.get_template_name() or self.template, return_data)
 
         except Exception, e:
             return HttpResponseServerError(format_exc(e))
 
     def handle(self, req=None, *args, **kwargs):
-        raise NotImplementedError('Must be overloaded by a subclass')
+        return {}
 
 # ################################################################################################################################
 

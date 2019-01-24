@@ -276,7 +276,7 @@ class GetEndpointQueue(_GetEndpointQueue):
 class GetEndpointQueueList(_GetEndpointQueue):
     """ Returns all queues to which a given endpoint is subscribed.
     """
-    _filter_by = PubSubTopic.name,
+    _filter_by = PubSubTopic.name, PubSubSubscription.sub_key
 
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'endpoint_id')
