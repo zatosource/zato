@@ -17,7 +17,7 @@ from json import loads
 from bunch import bunchify
 
 # SQLAlchemy
-from sqlalchemy import func, not_
+from sqlalchemy import and_, func, not_, or_
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import case
 
@@ -63,9 +63,17 @@ class _SearchWrapper(object):
         if where is not _not_given:
             q = q.filter(where)
         else:
+
+            # If there are multiple filters, they are by default OR-joined
+            # to ease in look ups over more than one column.
+            filter_op = and_ if config.get('filter_op') == 'and' else or_
+            filters = []
+
             for filter_by in config.get('filter_by', []):
                 for criterion in config.get('query', []):
-                    q = q.filter(filter_by.contains(criterion))
+                    filters.append(filter_by.contains(criterion))
+
+            q = q.filter(filter_op(*filters))
 
         # Total number of results
         total_q = q.statement.with_only_columns([func.count()]).order_by(None)

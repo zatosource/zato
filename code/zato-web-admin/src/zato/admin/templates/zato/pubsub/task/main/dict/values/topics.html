@@ -1,0 +1,128 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Pub/sub dict values - topics{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_name',
+            '_sync',
+            '_gd_pub_time',
+            '_pub_counters',
+            '_meta',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pub/sub dict {{ dict_name }} {{ server_name }}:{{ server_pid }} (topics), key:{{ key }}</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:5%">&nbsp;</th>
+
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Sync</a></th>
+                        <th><a href="#">Last GD pub</a></th>
+                        <th><a href="#">Pub counters</a></th>
+                        <th><a href="#">Meta</a></th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+
+                        <td>
+                            <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ item.name }}">{{ item.name }}</a>
+                        </td>
+
+                        <td style="min-width:16%">
+                            {% if item.last_synced %}
+                                <a
+                                    id="a_last_synced_{{ item.id }}"
+                                    href="javascript:$.fn.zato.toggle_time('last_synced_{{ item.id }}', '{{ item.last_synced_utc }}', '{{ item.last_synced }}')">{{ item.last_synced_utc }}
+                                </a>
+                                <br/>
+                                <span class="form_hint">{{ item.last_synced_raw }}
+                                <br>
+                                sync-gd:{{ item.sync_has_gd_msg|yesno:"t,f" }},
+                                sync-ngd:{{ item.sync_has_non_gd_msg|yesno:"t,f" }}
+                                </span>
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+
+                        <td style="min-width:16%">
+                            {% if item.gd_pub_time_max %}
+                                <a
+                                    id="a_gd_pub_time_max_{{ item.id }}"
+                                    href="javascript:$.fn.zato.toggle_time('gd_pub_time_max_{{ item.id }}', '{{ item.gd_pub_time_max_utc }}', '{{ item.gd_pub_time_max }}')">{{ item.gd_pub_time_max_utc }}
+                                </a>
+                                <br/>
+                                <span class="form_hint">{{ item.gd_pub_time_max_raw }}</span>
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <span title="Total/GD/Non-GD">{{ item.msg_pub_counter }}/{{ item.msg_pub_counter_gd }}/{{ item.msg_pub_counter_non_gd }}</a>
+                        </td>
+
+                        <td>
+                            id:{{ item.id }},
+                            is-i:{{ item.is_internal|yesno:"t,f" }},
+                            is-a:{{ item.is_active|yesno:"t,f" }},
+                            has-gd:{{ item.has_gd|yesno:"t,f" }},
+                            meta-freq:{{ item.meta_store_frequency }},
+                            depth-freq:{{ item.depth_check_freq }},
+                            tdi:{{ item.task_delivery_interval }},
+                            maxd-gd:{{ item.max_depth_gd }},
+                            maxd-ngd:{{ item.max_depth_non_gd }},
+                            sync-i:{{ item.task_sync_interval }}
+                        </td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='4'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
