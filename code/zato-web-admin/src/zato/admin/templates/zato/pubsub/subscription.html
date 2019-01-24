@@ -135,7 +135,7 @@
 
                         <td>
                             <a id="pubsub_endpoint_queues_link_{{ item.id }}"
-                               href="{% url "pubsub-endpoint-queues" cluster_id item.id item.endpoint_name|slugify %}">{{ item.subscription_count}} </a>
+                               href="{% url "pubsub-endpoint-queues" cluster_id item.id item.endpoint_name|slugify %}?cluster={{ cluster_id }}">{{ item.subscription_count}} </a>
                         </td>
 
                         <td>{{ item.last_seen|default:"<span class='form_hint'>---</span>" }}</td>

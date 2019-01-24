@@ -1421,6 +1421,7 @@ default_internal_modules = {
     'zato.server.service.internal.pubsub.subscription': True,
     'zato.server.service.internal.pubsub.queue': True,
     'zato.server.service.internal.pubsub.task': True,
+    'zato.server.service.internal.pubsub.task.main': True,
     'zato.server.service.internal.pubsub.task.delivery_server': True,
     'zato.server.service.internal.pubsub.topic': True,
     'zato.server.service.internal.query.cassandra': True,

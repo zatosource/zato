@@ -13,7 +13,6 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/pubsub/task/delivery-server.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -90,9 +89,7 @@
                                 -->
                                 {{ item.tasks }}
 
-                                <span title="
-                                {{ item.tasks_running }} task{% if item.tasks_running == 1%} {% else %}s {% endif %}running
-{{ item.tasks_stopped }} task{% if item.tasks_stopped == 1%} {% else %}s {% endif %}stopped">
+                                <span title="# of tasks (running/stopped)">
                                 ({{ item.tasks_running }}/{{ item.tasks_stopped }})
                                 </span>
 
@@ -114,7 +111,7 @@
                             ({{ item.messages_gd }}/{{ item.messages_non_gd }})
                         </td>
 
-                        <td style="min-width:164px">
+                        <td style="min-width:16%">
                             {% if item.last_gd_run %}
                                 <a
                                     id="a_last_gd_run_{{ item.id }}"
@@ -125,7 +122,7 @@
                             {% endif %}
                         </td>
 
-                        <td style="min-width:164px">
+                        <td style="min-width:16%">
                             {% if item.last_task_run %}
                                 <a
                                     id="a_last_task_run_{{ item.id }}"
