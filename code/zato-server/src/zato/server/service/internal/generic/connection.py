@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from copy import deepcopy
-from json import dumps
+from json import dumps, loads
 
 # Zato
 from zato.common.broker_message import GENERIC
@@ -53,7 +53,12 @@ class _CreateEdit(_BaseService):
 
     def handle(self):
         data = deepcopy(self.request.input)
-        for key, value in self.request.raw_request.items():
+
+        raw_request = self.request.raw_request
+        if isinstance(raw_request, basestring):
+            raw_request = loads(raw_request)
+
+        for key, value in raw_request.items():
             if key not in data:
                 data[key] = self._convert_sio_elem(key, value)
 

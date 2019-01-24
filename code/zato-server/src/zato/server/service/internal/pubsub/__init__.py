@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,18 +11,31 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from logging import getLogger
+from random import choice
 from traceback import format_exc
+
+# gevent
+from gevent import sleep
 
 # Zato
 from zato.common import PUBSUB
 from zato.common.exception import Forbidden
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
+from zato.common.odb.query.pubsub.cleanup import delete_msg_delivered, delete_msg_expired, delete_enq_delivered, \
+     delete_enq_marked_deleted
+from zato.common.util.time_ import utcnow_as_ms
 from zato.server.service import AsIs, Bool, DateTime, Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
 logger_pubsub = getLogger('zato_pubsub.srv')
+
+# ################################################################################################################################
+
+# Jitter to add to sleep_time so as no to have all worker processes issue the same queries at the same time,
+# in the range of 0.10 to 0.29, step 0.1.
+cleanup_sleep_jitter = [elem / 10.0 for elem in range(1, 4, 1)]
 
 # ################################################################################################################################
 
@@ -50,6 +63,7 @@ _no_sk='no-sk'
 _notify_error='notify-error'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class CommonSubData:
     common = ('is_internal', 'topic_name', 'active_status', 'endpoint_type', 'endpoint_id', 'endpoint_name', 'delivery_method',
@@ -71,10 +85,13 @@ class CommonSubData:
     wsx = ('ws_channel_id', 'ws_channel_name', AsIs('ws_pub_client_id'), 'sql_ws_client_id', Bool('unsub_on_wsx_close'),
         Opaque('web_socket'))
 
+# ################################################################################################################################
+
 common_sub_data = CommonSubData.common + CommonSubData.amqp + CommonSubData.files + \
     CommonSubData.ftp + CommonSubData.rest + CommonSubData.service + \
     CommonSubData.sms_twilio + CommonSubData.smtp + CommonSubData.soap + CommonSubData.wsx + CommonSubData.pubapi
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class AfterPublish(AdminService):
@@ -194,6 +211,7 @@ class AfterPublish(AdminService):
 
         return notif_error_sub_keys
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ResumeWSXSubscription(AdminService):
@@ -316,4 +334,89 @@ class ResumeWSXSubscription(AdminService):
 
         return out
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class _BaseCleanup(AdminService):
+    """ Base class for services performing periodical cleanup of messages that are, for instance, expired or already delivered.
+    """
+    def handle(self):
+        try:
+            # Sleep for a moment but add jitter to make it more random
+            jitter = choice(cleanup_sleep_jitter)
+            sleep(jitter)
+
+            with closing(self.odb.session()) as session:
+
+                # Clean up what is needed
+                total, kind = self._cleanup(session)
+
+                # Log what was done
+                suffix = 's' if total > 1 else ''
+                if total:
+                    self.logger.info('GD. Deleted %s %s pub/sub message%s' % (total, kind, suffix))
+
+                # Actually commit on SQL level
+                session.commit()
+
+        except Exception:
+            self.logger.warn('Error in cleanup: `%s`', format_exc())
+
+# ################################################################################################################################
+
+    def _cleanup(self):
+        raise NotImplementedError('Must be implemented in subclasses')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DeleteMsgDelivered(_BaseCleanup):
+    """ Deletes messages from topics that have been already delivered from their queues.
+    """
+    def _cleanup(self, session):
+        total = delete_msg_delivered(session, self.server.cluster_id, utcnow_as_ms())
+        return total, 'delivered (from topic)'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DeleteMsgExpired(_BaseCleanup):
+    """ Deletes expired messages from all topics.
+    """
+    def _cleanup(self, session):
+        total = delete_msg_expired(session, self.server.cluster_id, None, utcnow_as_ms())
+        return total, 'expired'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DeleteEnqDelivered(_BaseCleanup):
+    """ Deletes delivered messages from all message queues.
+    """
+    def _cleanup(self, session):
+        total = delete_enq_delivered(session, self.server.cluster_id, None)
+        return total, 'delivered (from queue)'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DeleteEnqMarkedDeleted(_BaseCleanup):
+    """ Deletes from all message queues messages that have been explicitly marked for deletion (e.g. by hook services).
+    """
+    def _cleanup(self, session):
+        total = delete_enq_marked_deleted(session, self.server.cluster_id, None)
+        return total, 'marked to be deleted'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CleanupService(AdminService):
+    """ Deletes SQL ODB pub/sub messages that can be cleaned up because they expired or have been already delivered.
+    """
+    def handle(self):
+        services = [DeleteMsgDelivered, DeleteMsgExpired, DeleteEnqDelivered, DeleteEnqMarkedDeleted]
+        for service in services:
+            self.invoke(service.get_name())
+
+# ################################################################################################################################
 # ################################################################################################################################
