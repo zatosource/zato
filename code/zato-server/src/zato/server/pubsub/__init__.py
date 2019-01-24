@@ -2220,7 +2220,7 @@ class PubSub(object):
                         continue
 
                     # There are some messages, let's see if there are subscribers ..
-                    subs = _self_get_subscriptions_by_topic(_topic.name, require_backlog_messages=True)
+                    subs = _self_get_subscriptions_by_topic(_topic.name)
 
                     # .. if there are any subscriptions at all, we store that information for later use.
                     if subs:
