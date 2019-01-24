@@ -61,7 +61,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.topic_id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td>
-                            <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.topic_name }}</a>
+                            <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ item.topic_name }}">{{ item.topic_name }}</a>
                         </td>
                         <td style="width:20%">
 
