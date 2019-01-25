@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import sys
 from decimal import Decimal
 from time import sleep
-from unittest import TestCase
+from unittest import main as unittest_main, TestCase
 from uuid import uuid4
 
 # Zato
@@ -479,5 +479,10 @@ class CacheTestCace(TestCase):
 
         returned1 = c.get(key1, None, False)
         self.assertIs(returned1, expected1)
+
+# ################################################################################################################################
+
+if __name__ == '__main__':
+    unittest_main()
 
 # ################################################################################################################################
