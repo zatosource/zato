@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -340,7 +340,7 @@ class RequestDispatcher(object):
 
         # This is 404, no such URL path and SOAP action is not known either.
         else:
-            response = response_404.format(cid, path_info, soap_action)
+            response = response_404.format(cid, path_info.encode('utf8'), soap_action)
             wsgi_environ['zato.http.response.status'] = _status_not_found
 
             logger.error(response)
