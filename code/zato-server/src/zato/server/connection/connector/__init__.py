@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -208,7 +208,7 @@ class Connector(object):
         with self.lock:
             if self.is_inactive:
                 raise Inactive('Connection `{}` is inactive ({})'.format(self.name, self.type))
-            self._send(msg, *args, **kwargs)
+            return self._send(msg, *args, **kwargs)
 
 # ################################################################################################################################
 
