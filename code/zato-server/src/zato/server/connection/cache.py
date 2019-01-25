@@ -183,9 +183,16 @@ class Cache(object):
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_by_prefix(key, value, expiry, return_found, details=False)
-        if out and self.needs_sync:
-            spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
+        meta_ref = {'_now': None, '_any_found': False}
+        out = self.impl.set_by_prefix(key, value, expiry, False, meta_ref, return_found)
+
+        if meta_ref['_any_found'] and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {
+                'key':key,
+                'value':value,
+                'expiry':expiry,
+                'orig_now': meta_ref['_now']
+            })
 
         return out
 
@@ -196,9 +203,16 @@ class Cache(object):
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_by_suffix(key, value, expiry, return_found, details=False)
+        meta_ref = {'_now': None, '_any_found': False}
+        out = self.impl.set_by_suffix(key, value, expiry, False, meta_ref, return_found)
+
         if out and self.needs_sync:
-            spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {
+                'key':key,
+                'value':value,
+                'expiry':expiry,
+                'orig_now': meta_ref['_now']
+            })
 
         return out
 
@@ -209,9 +223,16 @@ class Cache(object):
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_by_regex(key, value, expiry, return_found, details=False)
+        meta_ref = {'_now': None, '_any_found': False}
+        out = self.impl.set_by_regex(key, value, expiry, False, meta_ref, return_found)
+
         if out and self.needs_sync:
-            spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {
+                'key':key,
+                'value':value,
+                'expiry':expiry,
+                'orig_now': meta_ref['_now']
+            })
 
         return out
 
@@ -222,9 +243,16 @@ class Cache(object):
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_contains(key, value, expiry, return_found, details=False)
+        meta_ref = {'_now': None, '_any_found': False}
+        out = self.impl.set_contains(key, value, expiry, False, meta_ref, return_found)
+
         if out and self.needs_sync:
-            spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {
+                'key':key,
+                'value':value,
+                'expiry':expiry,
+                'orig_now': meta_ref['_now']
+            })
 
         return out
 
@@ -235,9 +263,16 @@ class Cache(object):
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_not_contains(key, value, expiry, return_found, details=False)
+        meta_ref = {'_now': None, '_any_found': False}
+        out = self.impl.set_not_contains(key, value, expiry, False, meta_ref, return_found)
+
         if out and self.needs_sync:
-            spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {
+                'key':key,
+                'value':value,
+                'expiry':expiry,
+                'orig_now': meta_ref['_now']
+            })
 
         return out
 
@@ -248,9 +283,16 @@ class Cache(object):
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_contains_all(key, value, expiry, return_found, details=False)
+        meta_ref = {'_now': None, '_any_found': False}
+        out = self.impl.set_contains_all(key, value, expiry, False, meta_ref, return_found)
+
         if out and self.needs_sync:
-            spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {
+                'key':key,
+                'value':value,
+                'expiry':expiry,
+                'orig_now': meta_ref['_now']
+            })
 
         return out
 
@@ -261,9 +303,16 @@ class Cache(object):
         Value must be an integer or string/unicode. Expiry is in seconds (or a fraction of). Optionally,
         returns all matched keys and their previous values.
         """
-        out = self.impl.set_contains_any(key, value, expiry, return_found, details=False)
+        meta_ref = {'_now': None, '_any_found': False}
+        out = self.impl.set_contains_any(key, value, expiry, False, meta_ref, return_found)
+
         if out and self.needs_sync:
-            spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key, 'value':value, 'expiry':expiry})
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {
+                'key':key,
+                'value':value,
+                'expiry':expiry,
+                'orig_now': meta_ref['_now']
+            })
 
         return out
 
@@ -539,45 +588,45 @@ class Cache(object):
     def sync_after_set(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set operation in another worker process.
         """
-        self.impl.set(data.key, data.value, data.expiry, False, False)
+        self.impl.set(data.key, data.value, data.expiry, False, None, data.orig_now)
 
     def sync_after_set_by_prefix(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_by_prefix operation in another worker process.
         """
-        self.impl.set_by_prefix(data.key, data.value, data.expiry, False, False)
+        self.impl.set_by_prefix(data.key, data.value, data.expiry, False, None, data.orig_now)
 
     def sync_after_set_by_suffix(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_by_suffix operation in another worker process.
         """
-        self.impl.set_by_suffix(data.key, data.value, data.expiry, False, False)
+        self.impl.set_by_suffix(data.key, data.value, data.expiry, False, None, data.orig_now)
 
     def sync_after_set_by_regex(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_by_regex operation in another worker process.
         """
-        self.impl.set_by_regex(data.key, data.value, data.expiry, False, False)
+        self.impl.set_by_regex(data.key, data.value, data.expiry, False, None, data.orig_now)
 
     def sync_after_set_contains(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_contains operation in another worker process.
         """
-        self.impl.set_contains(data.key, data.value, data.expiry, False, False)
+        self.impl.set_contains(data.key, data.value, data.expiry, False, None, data.orig_now)
 
     def sync_after_set_not_contains(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_not_contains operation
         in another worker process.
         """
-        self.impl.set_not_contains(data.key, data.value, data.expiry, False, False)
+        self.impl.set_not_contains(data.key, data.value, data.expiry, False, None, data.orig_now)
 
     def sync_after_set_contains_all(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_contains_all operation
         in another worker process.
         """
-        self.impl.set_contains_all(data.key, data.value, data.expiry, False, False)
+        self.impl.set_contains_all(data.key, data.value, data.expiry, False, None, data.orig_now)
 
     def sync_after_set_contains_any(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .set_contains_any operation
         in another worker process.
         """
-        self.impl.set_contains_any(data.key, data.value, data.expiry, False, False)
+        self.impl.set_contains_any(data.key, data.value, data.expiry, False, None, data.orig_now)
 
 # ################################################################################################################################
 
