@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import re as stdlib_re
 from datetime import datetime
 from logging import getLogger
 from operator import itemgetter
@@ -61,8 +62,8 @@ cdef class Matcher(object):
         self.pattern = pattern
         self.matcher = None
         self.is_static = True
-        self._brace_pattern = re_compile('\{[a-zA-Z0-9 _\$.\-|=~^\/]+\}')
-        self._elem_re_template = r'(?P<{}>[a-zA-Z0-9 _\$.\-|=~^'+ slash_pattern +']+)'
+        self._brace_pattern = re_compile('\{[\w \$.\-|=~^\/]+\}', stdlib_re.UNICODE)
+        self._elem_re_template = r'(?P<{}>[\w \$.\-|=~^'+ slash_pattern +']+)'
         self._set_up_matcher(self.pattern)
 
 # ################################################################################################################################
@@ -83,7 +84,7 @@ cdef class Matcher(object):
             pattern = pattern.replace(orig_groups[idx], re)
 
         self.group_names.extend([elem[0] for elem in groups])
-        self.matcher = re_compile(pattern + '$')
+        self.matcher = re_compile(pattern + '$', stdlib_re.UNICODE)
         self.match_func = self.matcher.match
 
         # No groups = URL is static and has no dynamic variables in the pattern
