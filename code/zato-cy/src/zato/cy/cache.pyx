@@ -311,11 +311,19 @@ cdef class Cache(object):
 # ################################################################################################################################
 
     cdef object _delete(self, object key):
-        cdef object out = self._data[key].value # raise Will KeyError on invalid key so _remove_from_index_by_idx is safe to call
-        del self._data[key]
-        self._remove_from_index_by_idx(self._get_index(key))
+        cdef object out
+        cdef Entry entry = self._data.get(key)
 
-        return out
+        if not entry:
+            return
+        else:
+            # We run under self.lock so at this point we know that the key was valid
+            # and _remove_from_index_by_idx is safe to call.
+            out = entry.value
+            del self._data[key]
+            self._remove_from_index_by_idx(self._get_index(key))
+
+            return out
 
 # ################################################################################################################################
 
