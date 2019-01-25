@@ -327,7 +327,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef dict delete_by_prefix(self, object data, bint return_found):
+    cpdef dict delete_by_prefix(self, object data, bint return_found, int limit):
         """ Deletes keys matching the input prefix. Non-string-like keys are ignored. Optionally, returns a dict of keys
         that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -338,13 +338,15 @@ cdef class Cache(object):
         cdef list to_delete = []
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if key.startswith(data):
                     if return_found:
                         out[key] = <Entry>self._data[key].value
                     to_delete.append(key)
+                if idx == limit:
+                    break
 
         # We could not do in the loop above because that would have changed self._data
         # and result in 'RuntimeError: dictionary changed size during iteration'.
@@ -355,7 +357,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef dict delete_by_suffix(self, object data, bint return_found):
+    cpdef dict delete_by_suffix(self, object data, bint return_found, int limit):
         """ Deletes keys matching the input suffix. Non-string-like keys are ignored. Optionally, returns a dict of keys
         that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -366,13 +368,15 @@ cdef class Cache(object):
         cdef list to_delete = []
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if key.endswith(data):
                     if return_found:
                         out[key] = <Entry>self._data[key].value
                     to_delete.append(key)
+                if idx == limit:
+                    break
 
         # We could not do in the loop above because that would have changed self._data
         # and result in 'RuntimeError: dictionary changed size during iteration'.
@@ -383,7 +387,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef dict delete_by_regex(self, object data, bint return_found):
+    cpdef dict delete_by_regex(self, object data, bint return_found, int limit):
         """ Deletes keys matching the input regex pattern. Non-string-like keys are ignored. Optionally, returns a dict of keys
         that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -395,13 +399,15 @@ cdef class Cache(object):
         cdef list to_delete = []
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if regex.match(key):
                     if return_found:
                         out[key] = <Entry>self._data[key].value
                     to_delete.append(key)
+                if idx == limit:
+                    break
 
         # We could not do in the loop above because that would have changed self._data
         # and result in 'RuntimeError: dictionary changed size during iteration'.
@@ -412,7 +418,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef dict delete_contains(self, object data, bint return_found):
+    cpdef dict delete_contains(self, object data, bint return_found, int limit):
         """ Deletes keys containing the input pattern. Non-string-like keys are ignored. Optionally, returns a dict of keys
         that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -423,13 +429,15 @@ cdef class Cache(object):
         cdef list to_delete = []
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if data in key:
                     if return_found:
                         out[key] = <Entry>self._data[key].value
                     to_delete.append(key)
+                if idx == limit:
+                    break
 
         # We could not do in the loop above because that would have changed self._data
         # and result in 'RuntimeError: dictionary changed size during iteration'.
@@ -440,7 +448,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef dict delete_not_contains(self, object data, bint return_found):
+    cpdef dict delete_not_contains(self, object data, bint return_found, int limit):
         """ Deletes keys that don't contain the input pattern. Non-string-like keys are ignored. Optionally,
         returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -451,13 +459,15 @@ cdef class Cache(object):
         cdef list to_delete = []
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if data not in key:
                     if return_found:
                         out[key] = <Entry>self._data[key].value
                     to_delete.append(key)
+                if idx == limit:
+                    break
 
         # We could not do in the loop above because that would have changed self._data
         # and result in 'RuntimeError: dictionary changed size during iteration'.
@@ -468,7 +478,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef dict delete_contains_all(self, object data, bint return_found):
+    cpdef dict delete_contains_all(self, object data, bint return_found, int limit):
         """ Deletes keys that contain all the elements from the input list of patterns. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -480,7 +490,7 @@ cdef class Cache(object):
         cdef bint add_key
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
 
@@ -495,6 +505,9 @@ cdef class Cache(object):
                         out[key] = <Entry>self._data[key].value
                     to_delete.append(key)
 
+                if idx == limit:
+                    break
+
         # We could not do in the loop above because that would have changed self._data
         # and result in 'RuntimeError: dictionary changed size during iteration'.
         for key in to_delete:
@@ -504,7 +517,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef dict delete_contains_any(self, object data, bint return_found):
+    cpdef dict delete_contains_any(self, object data, bint return_found, int limit):
         """ Deletes keys that contain at least one of the elements from the input list of patterns.
         Non-string-like keys are ignored. Optionally, returns a dict of keys that matched the input criteria
         along with their previous values.
@@ -517,7 +530,7 @@ cdef class Cache(object):
         cdef bint use_key
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
 
@@ -531,6 +544,9 @@ cdef class Cache(object):
                     if return_found:
                         out[key] = <Entry>self._data[key].value
                     to_delete.append(key)
+
+                if idx == limit:
+                    break
 
         # We could not do in the loop above because that would have changed self._data
         # and result in 'RuntimeError: dictionary changed size during iteration'.
@@ -697,7 +713,7 @@ cdef class Cache(object):
 # ################################################################################################################################
 
     cpdef dict set_by_prefix(self, object data, value, double expiry, bint details, dict meta_ref, bint return_found,
-        object orig_now=None):
+        int limit, object orig_now=None):
         """ Sets a given value for all keys matching the input prefix. Non-string-like keys are ignored. Optionally,
         returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -708,7 +724,7 @@ cdef class Cache(object):
         cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if key.startswith(data):
@@ -726,12 +742,19 @@ cdef class Cache(object):
                         meta_ref['_any_found'] = True
                         _needs_any_found_report = False
 
+                # Our caller knows how many keys to look up at most
+                if idx == limit:
+                    break
+
+        if meta_ref:
+            meta_ref['_now'] = _now
+
         return out
 
 # ################################################################################################################################
 
     cpdef dict set_by_suffix(self, object data, value, double expiry, bint details, dict meta_ref, bint return_found,
-        object orig_now=None):
+        int limit, object orig_now=None):
         """ Sets a given value for all keys matching the input suffix. Non-string-like keys are ignored. Optionally,
         returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -742,7 +765,7 @@ cdef class Cache(object):
         cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
 
                 if not isinstance(key, str_types):
                     continue
@@ -762,6 +785,10 @@ cdef class Cache(object):
                         meta_ref['_any_found'] = True
                         _needs_any_found_report = False
 
+                # Our caller knows how many keys to look up at most
+                if idx == limit:
+                    break
+
         if meta_ref:
             meta_ref['_now'] = _now
 
@@ -770,7 +797,7 @@ cdef class Cache(object):
 # ################################################################################################################################
 
     cpdef dict set_by_regex(self, object data, value, double expiry, bint details, dict meta_ref, bint return_found,
-        object orig_now=None):
+        int limit, object orig_now=None):
         """ Sets a given value for all keys matching the input regex pattern. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -782,7 +809,7 @@ cdef class Cache(object):
         cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
 
                 if not isinstance(key, str_types):
                     continue
@@ -802,12 +829,19 @@ cdef class Cache(object):
                         meta_ref['_any_found'] = True
                         _needs_any_found_report = False
 
+                # Our caller knows how many keys to look up at most
+                if idx == limit:
+                    break
+
+        if meta_ref:
+            meta_ref['_now'] = _now
+
         return out
 
 # ################################################################################################################################
 
     cpdef dict set_contains(self, object data, value, double expiry, bint details, dict meta_ref, bint return_found,
-        object orig_now=None):
+        int limit, object orig_now=None):
         """ Sets a given value for all keys if the key contains the input pattern. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -819,7 +853,7 @@ cdef class Cache(object):
 
         with self._lock:
 
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
 
                 if not isinstance(key, str_types):
                     continue
@@ -839,12 +873,19 @@ cdef class Cache(object):
                         meta_ref['_any_found'] = True
                         _needs_any_found_report = False
 
+                # Our caller knows how many keys to look up at most
+                if idx == limit:
+                    break
+
+        if meta_ref:
+            meta_ref['_now'] = _now
+
         return out
 
 # ################################################################################################################################
 
     cpdef dict set_not_contains(self, object data, value, double expiry, bint details, dict meta_ref, bint return_found,
-        object orig_now=None):
+        int limit, object orig_now=None):
         """ Sets a given value for all keys if the key doesn't contain the input pattern. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -855,7 +896,7 @@ cdef class Cache(object):
         cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
 
                 if not isinstance(key, str_types):
                     continue
@@ -875,12 +916,16 @@ cdef class Cache(object):
                         meta_ref['_any_found'] = True
                         _needs_any_found_report = False
 
+                # Our caller knows how many keys to look up at most
+                if idx == limit:
+                    break
+
         return out
 
 # ################################################################################################################################
 
     cpdef dict set_contains_all(self, list data, value, double expiry, bint details, dict meta_ref, bint return_found,
-        object orig_now=None):
+        int limit, object orig_now=None):
         """ Sets a given value for all keys if the key contains all of input substrings. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -892,7 +937,7 @@ cdef class Cache(object):
         cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
 
                 if not isinstance(key, str_types):
                     continue
@@ -918,12 +963,19 @@ cdef class Cache(object):
                         meta_ref['_any_found'] = True
                         _needs_any_found_report = False
 
+                # Our caller knows how many keys to look up at most
+                if idx == limit:
+                    break
+
+        if meta_ref:
+            meta_ref['_now'] = _now
+
         return out
 
 # ################################################################################################################################
 
     cpdef dict set_contains_any(self, list data, value, double expiry, bint details, dict meta_ref, bint return_found,
-        object orig_now=None):
+        int limit, object orig_now=None):
         """ Sets a given value for all keys if the key contains any of input substrings. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -935,7 +987,7 @@ cdef class Cache(object):
         cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
 
                 if not isinstance(key, str_types):
                     continue
@@ -960,6 +1012,13 @@ cdef class Cache(object):
                     if _needs_any_found_report:
                         meta_ref['_any_found'] = True
                         _needs_any_found_report = False
+
+                # Our caller knows how many keys to look up at most
+                if idx == limit:
+                    break
+
+        if meta_ref:
+            meta_ref['_now'] = _now
 
         return out
 
@@ -1045,7 +1104,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef object get_by_prefix(self, object data, bint details):
+    cpdef object get_by_prefix(self, object data, bint details, int limit):
         """ Returns all key:value mappings for keys matching a given prefix, or an empty dictionary
         if none of key matches. Non-string-like keys are ignored. Similarly to other self.get/set/expire/delete methods,
         it's a separate one to reduce code branching/CPU mispredictions.
@@ -1053,17 +1112,19 @@ cdef class Cache(object):
         cdef dict out = {}
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if key.startswith(data):
                     out[key] = self._get(key, self.default_get, details)
+                if idx == limit:
+                    break
 
         return out
 
 # ################################################################################################################################
 
-    cpdef object get_by_suffix(self, object data, bint details):
+    cpdef object get_by_suffix(self, object data, bint details, int limit):
         """ Returns all key:value mappings for keys matching a given regex pattern, or an empty dictionary
         if none of key matches. Non-string-like keys are ignored. Similarly to other self.get/set/expire/delete methods,
         it's a separate one to reduce code branching/CPU mispredictions.
@@ -1071,17 +1132,19 @@ cdef class Cache(object):
         cdef dict out = {}
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if key.endswith(data):
                     out[key] = self._get(key, self.default_get, details)
+                if idx == limit:
+                    break
 
         return out
 
 # ################################################################################################################################
 
-    cpdef object get_by_regex(self, object data, bint details):
+    cpdef object get_by_regex(self, object data, bint details, int limit):
         """ Returns all key:value mappings for keys matching a given suffix, or an empty dictionary
         if none of key matches. Non-string-like keys are ignored. Similarly to other self.get/set/expire/delete methods,
         it's a separate one to reduce code branching/CPU mispredictions.
@@ -1090,18 +1153,20 @@ cdef class Cache(object):
         cdef object regex = self._regex_cache.setdefault(data, re_compile(data))
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if regex.match(key):
                     out[key] = self._get(key, self.default_get, details)
+                if idx == limit:
+                    break
 
         return out
 
 
 # ################################################################################################################################
 
-    cpdef object get_contains(self, object data, bint details):
+    cpdef object get_contains(self, object data, bint details, int limit):
         """ Returns all key:value mappings for keys containing a given string, or an empty dictionary
         if none of key matches. Non-string-like keys are ignored. Similarly to other self.get/set/expire/delete methods,
         it's a separate one to reduce code branching/CPU mispredictions.
@@ -1109,17 +1174,19 @@ cdef class Cache(object):
         cdef dict out = {}
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if data in key:
                     out[key] = self._get(key, self.default_get, details)
+                if idx == limit:
+                    break
 
         return out
 
 # ################################################################################################################################
 
-    cpdef object get_not_contains(self, object data, bint details):
+    cpdef object get_not_contains(self, object data, bint details, int limit):
         """ Returns all key:value mappings for keys that don't contain a given string, or an empty dictionary
         if none of key matches. Non-string-like keys are ignored. Similarly to other self.get/set/expire/delete methods,
         it's a separate one to reduce code branching/CPU mispredictions.
@@ -1127,17 +1194,19 @@ cdef class Cache(object):
         cdef dict out = {}
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if data not in key:
                     out[key] = self._get(key, self.default_get, details)
+                if idx == limit:
+                    break
 
         return out
 
 # ################################################################################################################################
 
-    cpdef object get_contains_all(self, list data, bint details):
+    cpdef object get_contains_all(self, list data, bint details, int limit):
         """ Returns all key:value mappings for keys containing all elements from patterns, or an empty dictionary
         if none of key matches. Non-string-like keys are ignored. Similarly to other self.get/set/expire/delete methods,
         it's a separate one to reduce code branching/CPU mispredictions.
@@ -1146,7 +1215,8 @@ cdef class Cache(object):
         cdef bint use_key
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
+
                 if not isinstance(key, str_types):
                     continue
 
@@ -1159,11 +1229,14 @@ cdef class Cache(object):
                 if use_key:
                     out[key] = self._get(key, self.default_get, details)
 
+                if idx == limit:
+                    break
+
         return out
 
 # ################################################################################################################################
 
-    cpdef object get_contains_any(self, list data, bint details):
+    cpdef object get_contains_any(self, list data, bint details, int limit):
         """ Returns all key:value mappings for keys containing all elements from patterns, or an empty dictionary
         if none of key matches. Non-string-like keys are ignored. Similarly to other self.get/set/expire/delete methods,
         it's a separate one to reduce code branching/CPU mispredictions.
@@ -1172,7 +1245,8 @@ cdef class Cache(object):
         cdef bint use_key
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
+
                 if not isinstance(key, str_types):
                     continue
 
@@ -1184,6 +1258,9 @@ cdef class Cache(object):
 
                 if use_key:
                     out[key] = self._get(key, self.default_get, details)
+
+                if idx == limit:
+                    break
 
         return out
 
@@ -1210,43 +1287,47 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef bint expire_by_prefix(self, object data, double expiry):
+    cpdef bint expire_by_prefix(self, object data, double expiry, int limit):
         """ Sets expiration for all keys matching a given prefix. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
         cpdef bint found_any = False
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if key.startswith(data):
                     self._expire(key, expiry, None)
                     found_any = True
+                if idx == limit:
+                    break
 
         return found_any
 
 # ################################################################################################################################
 
-    cpdef bint expire_by_suffix(self, object data, double expiry):
+    cpdef bint expire_by_suffix(self, object data, double expiry, int limit):
         """ Sets expiration for all keys matching a given suffix. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
         cpdef bint found_any = False
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if key.endswith(data):
                     self._expire(key, expiry, None)
                     found_any = True
+                if idx == limit:
+                    break
 
         return found_any
 
 # ################################################################################################################################
 
-    cpdef bint expire_by_regex(self, object data, double expiry):
+    cpdef bint expire_by_regex(self, object data, double expiry, int limit):
         """ Sets expiration for all keys matching a given regex pattern. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
@@ -1254,54 +1335,60 @@ cdef class Cache(object):
         cdef object regex = self._regex_cache.setdefault(data, re_compile(data))
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if regex.match(key):
                     self._expire(key, expiry, None)
                     found_any = True
+                if idx == limit:
+                    break
 
         return found_any
 
 # ################################################################################################################################
 
-    cpdef bint expire_contains(self, object data, double expiry):
+    cpdef bint expire_contains(self, object data, double expiry, int limit):
         """ Sets expiration for all keys containing a given pattern. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
         cpdef bint found_any = False
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if data in key:
                     self._expire(key, expiry, None)
                     found_any = True
+                if idx == limit:
+                    break
 
         return found_any
 
 # ################################################################################################################################
 
-    cpdef bint expire_not_contains(self, object data, double expiry):
+    cpdef bint expire_not_contains(self, object data, double expiry, int limit):
         """ Sets expiration for all keys containing a given pattern. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
         cpdef bint found_any = False
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
                 if data not in key:
                     self._expire(key, expiry, None)
                     found_any = True
+                if idx == limit:
+                    break
 
         return found_any
 
 # ################################################################################################################################
 
-    cpdef bint expire_contains_all(self, object data, double expiry):
+    cpdef bint expire_contains_all(self, object data, double expiry, int limit):
         """ Sets expiration for keys containing all of input elements. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
@@ -1309,7 +1396,7 @@ cdef class Cache(object):
         cdef bint use_key
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
 
@@ -1323,11 +1410,14 @@ cdef class Cache(object):
                     self._expire(key, expiry, None)
                     found_any = True
 
+                if idx == limit:
+                    break
+
         return found_any
 
 # ################################################################################################################################
 
-    cpdef bint expire_contains_any(self, object data, double expiry):
+    cpdef bint expire_contains_any(self, object data, double expiry, int limit):
         """ Sets expiration for keys containing at least one of input elements. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
@@ -1335,7 +1425,7 @@ cdef class Cache(object):
         cdef bint use_key
 
         with self._lock:
-            for key in self._data.iterkeys():
+            for idx, key in enumerate(self._data.iterkeys(), 1):
                 if not isinstance(key, str_types):
                     continue
 
@@ -1348,6 +1438,9 @@ cdef class Cache(object):
                 if use_key:
                     self._expire(key, expiry, None)
                     found_any = True
+
+                if idx == limit:
+                    break
 
         return found_any
 
