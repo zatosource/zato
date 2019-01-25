@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -266,7 +266,7 @@ class ConnectorAMQP(Connector):
 
     def _get_conn_class(self, suffix):
         """ Subclasses below are needed so as to be able to return per-greenlet/thread/process/definition
-        information in an AMQO connection's zato.* properties and, except for zato.version,
+        information in an AMQP connection's zato.* properties and, except for zato.version,
         this information is not available on module level hence the classes are declared here,
         in particular, we need access to self.config.name and suffix which are available only in run-time.
         """
