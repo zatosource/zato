@@ -10,6 +10,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import inspect
 from datetime import datetime
 from decimal import Decimal
+from email.utils import formatdate as stdlib_format_date
+from hashlib import sha256
 from sys import getsizeof, maxint
 
 # Cython
@@ -87,19 +89,74 @@ cdef class Entry:
         # This entry's position in index
         public long position
 
+        # Hashed in SHA256
+        public str hash_value
+
+        # Non-float timestamps
+        public object last_read_iso
+        public object prev_read_iso
+        public object last_write_iso
+        public object prev_write_iso
+
+        public object last_read_http
+        public object prev_read_http
+        public object last_write_http
+        public object prev_write_http
+
     cpdef dict to_dict(self):
         return {
             'key': self.key,
             'value': self.value,
+            'hash': self.hash_value,
+
+            'expiry': self.expiry,
+            'expires_at': self.expires_at,
+
+            'hits': self.hits,
+            'position': self.position,
+
             'last_read': self.last_read,
             'prev_read': self.prev_read,
             'last_write': self.last_write,
             'prev_write': self.prev_write,
-            'expiry': self.expiry,
-            'expires_at': self.expires_at,
-            'hits': self.hits,
-            'position': self.position,
+
+            'last_read_iso': self.last_read_iso,
+            'prev_read_iso': self.prev_read_iso,
+            'last_write_iso': self.last_write_iso,
+            'prev_write_iso': self.prev_write_iso,
+
+            'last_read_http': self.last_read_http,
+            'prev_read_http': self.prev_read_http,
+            'last_write_http': self.last_write_http,
+            'prev_write_http': self.prev_write_http,
+
         }
+
+    cpdef set_metadata(self):
+        """ Configures metadata after set* operations.
+        """
+        # Hash value
+        h = sha256()
+        h.update(self.value if isinstance(self.value, str_types) else str(self.value))
+        self.hash_value = h.hexdigest()
+
+        # Timestamps in formats other than seconds since epoch
+
+        if self.last_read:
+            self.last_read_iso = datetime.fromtimestamp(self.last_read).isoformat()
+            self.last_read_http = stdlib_format_date(self.last_read, usegmt=True)
+
+        if self.prev_read:
+            self.prev_read_iso = datetime.fromtimestamp(self.prev_read).isoformat()
+            self.prev_read_http = stdlib_format_date(self.prev_read, usegmt=True)
+
+        if self.prev_write:
+            self.prev_write_iso = datetime.fromtimestamp(self.prev_write).isoformat()
+            self.prev_write_http = stdlib_format_date(self.prev_write, usegmt=True)
+
+        # This is always available because it is set during the initial write
+        self.last_write_iso = datetime.fromtimestamp(self.last_write).isoformat()
+        self.last_write_http = stdlib_format_date(self.last_write, usegmt=True)
 
 # ################################################################################################################################
 
@@ -563,7 +620,7 @@ cdef class Cache(object):
         if PyDict_Contains(self._data, key):
             entry = <Entry>PyDict_GetItem(self._data, key)
 
-            # If we have a key that previously was not using expiry, we must set it now.
+            # If we have a key that previously was not using expiry, we must set it now if expiry is given on input.
             if not entry.expires_at:
                 if expiry:
                     entry.expiry = expiry
@@ -590,6 +647,7 @@ cdef class Cache(object):
             entry.last_write = _now
             out = entry.value
             entry.value = value
+            entry.set_metadata()
 
         # No such key in cache - let's add it.
         else:
@@ -609,6 +667,7 @@ cdef class Cache(object):
             entry.hits = 0
             entry.expiry = expiry
             entry.expires_at = 0.0 if not expiry else _now + expiry
+            entry.set_metadata()
 
             PyDict_SetItem(self._data, key, entry)
             PyList_Insert(self._index, 0, key)
