@@ -592,17 +592,26 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cdef object _set(self, object key, value, expiry, bint details, dict meta_ref, _getsizeof=getsizeof, _key_types=key_types,
-        _len_values=len_values):
+    cdef object _set(self, object key, value, expiry, bint details, dict meta_ref, object orig_now=None,
+        _getsizeof=getsizeof, _key_types=key_types, _len_values=len_values):
 
         cdef object out = None
         cdef Entry entry
-        cdef double _now = self._get_timestamp()
+        cdef double _now
+        cdef double _orig_now = 0.0
         cdef Py_ssize_t cache_size = PyList_GET_SIZE(self._index)
         cdef Py_ssize_t index_idx
         cdef bint old_key_eq
         cdef long hits_per_position
         cdef long len_value
+
+        # If multiple processes synchronize contents of their caches, the one that originally added the keys
+        # will dictate what the actual, original key addition timestamp was. Otherwise, we are this first
+        # process so we generate the timestamp ourselves.
+        if orig_now:
+            _now = orig_now
+        else:
+            _orig_now = _now = self._get_timestamp()
 
         if not isinstance(key, _key_types):
             raise ValueError('Key must be an instance of one of {}'.format(key_types))
@@ -675,66 +684,93 @@ cdef class Cache(object):
         # If any output dict for metadata was passed in by reference, set its requires items.
         if meta_ref is not None:
             meta_ref['expires_at'] = entry.expires_at
+            meta_ref['orig_now'] = _orig_now
 
         return entry if details else out
 
 # ################################################################################################################################
 
-    cpdef object set(self, object key, value, double expiry, bint details, dict meta_ref):
+    cpdef object set(self, object key, value, double expiry, bint details, dict meta_ref=None, object orig_now=None):
         with self._lock:
-            return self._set(key, value, expiry, details, meta_ref)
+            return self._set(key, value, expiry, details, meta_ref, orig_now)
 
 # ################################################################################################################################
 
-    cpdef dict set_by_prefix(self, object data, value, double expiry, bint return_found, bint details):
+    cpdef dict set_by_prefix(self, object data, value, double expiry, bint details, dict meta_ref, bint return_found,
+        object orig_now=None):
         """ Sets a given value for all keys matching the input prefix. Non-string-like keys are ignored. Optionally,
         returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
         cdef dict out = {}
         cdef Entry entry
+        cdef bint _needs_any_found_report = True if meta_ref else False
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
             for key in self._data.iterkeys():
                 if not isinstance(key, str_types):
                     continue
                 if key.startswith(data):
+
                     # Set it before the update which would overwrite it, this is why we can return
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
                         out[key] = entry if details else entry.value
-                    self._set(key, value, expiry, False, None)
+
+                    self._set(key, value, expiry, False, None, _now)
+
+                    # Indicate to our caller that there was at least one matching key
+                    if _needs_any_found_report:
+                        meta_ref['_any_found'] = True
+                        _needs_any_found_report = False
 
         return out
 
 # ################################################################################################################################
 
-    cpdef dict set_by_suffix(self, object data, value, double expiry, bint return_found, bint details):
+    cpdef dict set_by_suffix(self, object data, value, double expiry, bint details, dict meta_ref, bint return_found,
+        object orig_now=None):
         """ Sets a given value for all keys matching the input suffix. Non-string-like keys are ignored. Optionally,
         returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
         cdef dict out = {}
         cdef Entry entry
+        cdef bint _needs_any_found_report = True if meta_ref else False
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
             for key in self._data.iterkeys():
+
                 if not isinstance(key, str_types):
                     continue
+
                 if key.endswith(data):
+
                     # Set it before the update which would overwrite it, this is why we can return
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
                         out[key] = entry if details else entry.value
-                    self._set(key, value, expiry, False, None)
+
+                    self._set(key, value, expiry, False, None, _now)
+
+                    # Indicate to our caller that there was at least one matching key
+                    if _needs_any_found_report:
+                        meta_ref['_any_found'] = True
+                        _needs_any_found_report = False
+
+        if meta_ref:
+            meta_ref['_now'] = _now
 
         return out
 
 # ################################################################################################################################
 
-    cpdef dict set_by_regex(self, object data, value, double expiry, bint return_found, bint details):
+    cpdef dict set_by_regex(self, object data, value, double expiry, bint details, dict meta_ref, bint return_found,
+        object orig_now=None):
         """ Sets a given value for all keys matching the input regex pattern. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -742,72 +778,109 @@ cdef class Cache(object):
         cdef dict out = {}
         cdef Entry entry
         cdef object regex = self._regex_cache.setdefault(data, re_compile(data))
+        cdef bint _needs_any_found_report = True if meta_ref else False
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
             for key in self._data.iterkeys():
+
                 if not isinstance(key, str_types):
                     continue
+
                 if regex.match(key):
+
                     # Set it before the update which would overwrite it, this is why we can return
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
                         out[key] = entry if details else entry.value
-                    self._set(key, value, expiry, False, None)
+
+                    self._set(key, value, expiry, False, None, _now)
+
+                    # Indicate to our caller that there was at least one matching key
+                    if _needs_any_found_report:
+                        meta_ref['_any_found'] = True
+                        _needs_any_found_report = False
 
         return out
 
 # ################################################################################################################################
 
-    cpdef dict set_contains(self, object data, value, double expiry, bint return_found, bint details):
+    cpdef dict set_contains(self, object data, value, double expiry, bint details, dict meta_ref, bint return_found,
+        object orig_now=None):
         """ Sets a given value for all keys if the key contains the input pattern. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
         cdef dict out = {}
         cdef Entry entry
+        cdef bint _needs_any_found_report = True if meta_ref else False
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
+
             for key in self._data.iterkeys():
+
                 if not isinstance(key, str_types):
                     continue
+
                 if data in key:
+
                     # Set it before the update which would overwrite it, this is why we can return
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
                         out[key] = entry if details else entry.value
-                    self._set(key, value, expiry, False, None)
+
+                    self._set(key, value, expiry, False, None, _now)
+
+                    # Indicate to our caller that there was at least one matching key
+                    if _needs_any_found_report:
+                        meta_ref['_any_found'] = True
+                        _needs_any_found_report = False
 
         return out
 
 # ################################################################################################################################
 
-    cpdef dict set_not_contains(self, object data, value, double expiry, bint return_found, bint details):
+    cpdef dict set_not_contains(self, object data, value, double expiry, bint details, dict meta_ref, bint return_found,
+        object orig_now=None):
         """ Sets a given value for all keys if the key doesn't contain the input pattern. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
         cdef dict out = {}
         cdef Entry entry
+        cdef bint _needs_any_found_report = True if meta_ref else False
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
             for key in self._data.iterkeys():
+
                 if not isinstance(key, str_types):
                     continue
+
                 if data not in key:
+
                     # Set it before the update which would overwrite it, this is why we can return
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
                         out[key] = entry if details else entry.value
-                    self._set(key, value, expiry, False, None)
+
+                    self._set(key, value, expiry, False, None, _now)
+
+                    # Indicate to our caller that there was at least one matching key
+                    if _needs_any_found_report:
+                        meta_ref['_any_found'] = True
+                        _needs_any_found_report = False
 
         return out
 
 # ################################################################################################################################
 
-    cpdef dict set_contains_all(self, list data, value, double expiry, bint return_found, bint details):
+    cpdef dict set_contains_all(self, list data, value, double expiry, bint details, dict meta_ref, bint return_found,
+        object orig_now=None):
         """ Sets a given value for all keys if the key contains all of input substrings. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -815,9 +888,12 @@ cdef class Cache(object):
         cdef dict out = {}
         cdef Entry entry
         cdef bint use_key
+        cdef bint _needs_any_found_report = True if meta_ref else False
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
             for key in self._data.iterkeys():
+
                 if not isinstance(key, str_types):
                     continue
 
@@ -828,18 +904,26 @@ cdef class Cache(object):
                         break
 
                 if use_key:
+
                     # Set it before the update which would overwrite it, this is why we can return
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
                         out[key] = entry if details else entry.value
-                    self._set(key, value, expiry, False, None)
+
+                    self._set(key, value, expiry, False, None, _now)
+
+                    # Indicate to our caller that there was at least one matching key
+                    if _needs_any_found_report:
+                        meta_ref['_any_found'] = True
+                        _needs_any_found_report = False
 
         return out
 
 # ################################################################################################################################
 
-    cpdef dict set_contains_any(self, list data, value, double expiry, bint return_found, bint details):
+    cpdef dict set_contains_any(self, list data, value, double expiry, bint details, dict meta_ref, bint return_found,
+        object orig_now=None):
         """ Sets a given value for all keys if the key contains any of input substrings. Non-string-like keys are ignored.
         Optionally, returns a dict of keys that matched the input criteria along with their previous values.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
@@ -847,9 +931,12 @@ cdef class Cache(object):
         cdef dict out = {}
         cdef Entry entry
         cdef bint use_key
+        cdef bint _needs_any_found_report = True if meta_ref else False
+        cdef double _now = orig_now if orig_now else self._get_timestamp()
 
         with self._lock:
             for key in self._data.iterkeys():
+
                 if not isinstance(key, str_types):
                     continue
 
@@ -860,12 +947,19 @@ cdef class Cache(object):
                         break
 
                 if use_key:
+
                     # Set it before the update which would overwrite it, this is why we can return
                     # value alone, without any metadata.
                     if return_found:
                         entry = <Entry>self._data[key]
                         out[key] = entry if details else entry.value
-                    self._set(key, value, expiry, False, None)
+
+                    self._set(key, value, expiry, False, None, _now)
+
+                    # Indicate to our caller that there was at least one matching key
+                    if _needs_any_found_report:
+                        meta_ref['_any_found'] = True
+                        _needs_any_found_report = False
 
         return out
 
