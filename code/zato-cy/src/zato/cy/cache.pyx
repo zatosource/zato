@@ -90,7 +90,7 @@ cdef class Entry:
         public long position
 
         # Hashed in SHA256
-        public str hash_value
+        public str hash
 
         # Non-float timestamps
         public object last_read_iso
@@ -107,7 +107,7 @@ cdef class Entry:
         return {
             'key': self.key,
             'value': self.value,
-            'hash': self.hash_value,
+            'hash': self.hash,
 
             'expiry': self.expiry,
             'expires_at': self.expires_at,
@@ -138,7 +138,7 @@ cdef class Entry:
         # Hash value
         h = sha256()
         h.update(self.value if isinstance(self.value, str_types) else str(self.value))
-        self.hash_value = h.hexdigest()
+        self.hash = h.hexdigest()
 
         # Timestamps in formats other than seconds since epoch
 
