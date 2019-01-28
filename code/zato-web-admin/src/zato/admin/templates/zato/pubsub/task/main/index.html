@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Pub/sub main{% endblock %}
+{% block html_title %}Pub/sub sync{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -37,12 +37,12 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Pub/sub main</h2>
+<h2 class="zato">Pub/sub sync</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
-    {% include "zato/search-form.html" with page_prompt="Show delivery servers"%}
+    {% include "zato/search-form.html" with page_prompt="Show sync tasks "%}
 
     {% if cluster_id %}
 
