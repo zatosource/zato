@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from cPickle import dumps as pickle_dumps
 from logging import getLogger
 from traceback import format_exc
 
@@ -826,17 +827,36 @@ class CacheAPI(object):
 
 # ################################################################################################################################
 
-    def after_state_changed(self, op, cache_name, data, _broker_msg=builtin_op_to_broker_msg):
+    def after_state_changed(self, op, cache_name, data, _broker_msg=builtin_op_to_broker_msg, _pickle_dumps=pickle_dumps):
         """ Callback method invoked by each cache if it requires synchronization with other worker processes.
         """
         try:
+
             data['action'] = _broker_msg[op]
             data['cache_name'] = cache_name
             data['source_worker_id'] = self.server.worker_id
+
+            key = data['key']
+            value = data['value']
+
+            if isinstance(key, basestring):
+                data['is_key_pickled'] = False
+            else:
+                data['is_key_pickled'] = True
+                data['key'] = _pickle_dumps(key)
+
+            if isinstance(value, basestring):
+                data['is_value_pickled'] = False
+            else:
+                data['is_value_pickled'] = True
+                data['value'] = _pickle_dumps(value)
+
+            logger.info('AFTER %s', data)
+
             self.server.broker_client.publish(data)
-        except Exception, e:
+        except Exception:
             logger.warn('Could not run `%s` after_state_changed in cache `%s`, data:`%s`, e:`%s`',
-                op, cache_name, data, format_exc(e))
+                op, cache_name, data, format_exc())
 
 # ################################################################################################################################
 
