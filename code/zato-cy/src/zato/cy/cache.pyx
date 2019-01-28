@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,8 @@ from datetime import datetime
 from decimal import Decimal
 from email.utils import formatdate as stdlib_format_date
 from hashlib import sha256
+from json import dumps as json_dumps
+from logging import getLogger
 from sys import getsizeof, maxint
 
 # Cython
@@ -35,6 +37,10 @@ from zato.common import CACHE as _COMMON_CACHE
 
 # gevent
 from gevent.lock import RLock
+
+# ################################################################################################################################
+
+logger = getLogger('zato.cache')
 
 # ################################################################################################################################
 
@@ -135,9 +141,19 @@ cdef class Entry:
     cpdef set_metadata(self):
         """ Configures metadata after set* operations.
         """
-        # Hash value
+        # Will contain the computed hash value
         h = sha256()
-        h.update(self.value if isinstance(self.value, str_types) else str(self.value))
+
+        # Make sure that we hash a canonical representation of the object,
+        # e.g. if it is a dictionary then we want to hash the same representation
+        # of this dictionary no matter in which order internally the keys are stored
+        # seeing as from our perspective there is no intrinsic order.
+        if isinstance(self.value, str_types):
+            value = self.value
+        else:
+            value = json_dumps(self.value, sort_keys=True)
+
+        h.update(value)
         self.hash = h.hexdigest()
 
         # Timestamps in formats other than seconds since epoch
@@ -157,6 +173,8 @@ cdef class Entry:
         # This is always available because it is set during the initial write
         self.last_write_iso = datetime.fromtimestamp(self.last_write).isoformat()
         self.last_write_http = stdlib_format_date(self.last_write, usegmt=True)
+
+        logger.info('Set metadata %s', self.to_dict())
 
 # ################################################################################################################################
 
