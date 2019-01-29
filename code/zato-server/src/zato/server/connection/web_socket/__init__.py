@@ -177,7 +177,7 @@ class WebSocket(_WebSocket):
         self.interact_last_set = None
 
         # Manages access to service hooks
-        if getattr(self.config, 'hook_service', None):
+        if self.config.hook_service:
 
             self.hook_tool = HookTool(self.config.parallel_server, HookCtx, hook_type_to_method, self.invoke_service)
 
