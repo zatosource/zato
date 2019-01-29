@@ -73,6 +73,8 @@ class Index(_Index):
     def on_before_append_item(self, item):
         if item.security_id:
             item.security_id = '{}/{}'.format(item.sec_type, item.security_id)
+        else:
+            item.security_id = ZATO_NONE
         return item
 
     def handle(self):

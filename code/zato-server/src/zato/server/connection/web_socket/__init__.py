@@ -1110,7 +1110,7 @@ class ChannelWebSocket(Connector):
     def _start(self):
         self.server = WebSocketServer(self.config, self.auth_func, self.on_message_callback)
         self.is_connected = True
-        self.server.serve_forever()
+        self.server.start()
 
     def _stop(self):
         self.server.stop(3)

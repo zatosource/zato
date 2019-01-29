@@ -55,6 +55,11 @@ logger_pubsub = getLogger('zato_pubsub.srv')
 
 # ################################################################################################################################
 
+def _get_hook_service(self):
+    return self.server.fs_server_config.get('wsx', {}).get('hook_service', '')
+
+# ################################################################################################################################
+
 def broker_message_hook(self, input, instance, attrs, service_type):
     input.source_server = self.server.get_full_name()
     input.config_cid = 'channel.web_socket.{}.{}.{}'.format(service_type, input.source_server, self.cid)
@@ -67,13 +72,14 @@ def broker_message_hook(self, input, instance, attrs, service_type):
         input.sec_type = full_data.sec_type
         input.sec_name = full_data.sec_name
         input.vault_conn_default_auth_method = full_data.vault_conn_default_auth_method
+        input.hook_service = _get_hook_service(self)
 
 # ################################################################################################################################
 
 def instance_hook(self, input, instance, attrs):
 
     if attrs.is_create_edit:
-        instance.hook_service = self.server.fs_server_config.get('wsx', {}).get('hook_service', '')
+        instance.hook_service = _get_hook_service(self)
         instance.is_out = False
         instance.service = attrs._meta_session.query(ServiceModel).\
             filter(ServiceModel.name==input.service_name).\
