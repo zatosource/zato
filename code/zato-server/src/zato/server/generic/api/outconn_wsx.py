@@ -168,7 +168,7 @@ class WSXClient(object):
     def __init__(self, config):
         self.config = config
         self.is_connected = False
-        spawn_greenlet(self._init)
+        spawn_greenlet(self._init, timeout=2)
 
     def _init(self):
         _impl_class = ZatoWSXClient if self.config.is_zato else _NonZatoWSXClient
@@ -250,6 +250,7 @@ class OutconnWSXWrapper(Wrapper):
 # ################################################################################################################################
 
     def _should_handle_close_cb(self, code, reason):
+
         if reason != ZATO_NONE:
             if not self.delete_requested:
                 return True
@@ -281,6 +282,11 @@ class OutconnWSXWrapper(Wrapper):
                 except Exception:
                     logger.warn('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
                         self.config.name, self.config.address, format_exc())
+
+        else:
+            # Do not handle it but log information so as not to overlook the event
+            logger.info('WSX `%s` (%s) ignoring close event code:`%s` reason:`%s`',
+                self.config.name, self.config.address, code, reason)
 
 # ################################################################################################################################
 
