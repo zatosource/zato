@@ -121,6 +121,7 @@ class ZatoWSXClient(_BaseWSXClient):
         self._zato_client_config.client_id = 'wsx.out.{}'.format(new_cid(8))
         self._zato_client_config.address = self.config.address
         self._zato_client_config.on_request_callback = self.on_message_cb
+        self._zato_client_config.on_closed_callback = self.on_close_cb
 
         if self.config.get('username'):
             self._zato_client_config.username = self.config.username

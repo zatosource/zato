@@ -32,7 +32,7 @@ from zato.common.util import spawn_greenlet
 
 # ################################################################################################################################
 
-logger = logging.getLogger('zato.ws_client')
+logger = logging.getLogger('zato.wsx_client')
 
 # ################################################################################################################################
 
@@ -192,10 +192,11 @@ class ResponseToZato(MessageToZato):
 class _WSClient(WebSocketClient):
     """ A low-level subclass of around ws4py's WebSocket client functionality.
     """
-    def __init__(self, on_connected_callback, on_message_callback, on_error_callback, *args, **kwargs):
+    def __init__(self, on_connected_callback, on_message_callback, on_error_callback, on_closed_callback, *args, **kwargs):
         self.on_connected_callback = on_connected_callback
         self.on_message_callback = on_message_callback
         self.on_error_callback = on_error_callback
+        self.on_closed_callback = on_closed_callback
         super(_WSClient, self).__init__(*args, **kwargs)
 
     def opened(self):
@@ -207,6 +208,10 @@ class _WSClient(WebSocketClient):
     def unhandled_error(self, error):
         spawn(self.on_error_callback, error)
 
+    def closed(self, code, reason=None):
+        super(_WSClient, self).closed(code, reason)
+        self.on_closed_callback(code, reason)
+
 # ################################################################################################################################
 
 class Client(object):
@@ -214,11 +219,12 @@ class Client(object):
     """
     def __init__(self, config):
         self.config = config
-        self.conn = _WSClient(self.on_connected, self.on_message, self.on_error, self.config.address)
+        self.conn = _WSClient(self.on_connected, self.on_message, self.on_error, self.on_closed, self.config.address)
         self.keep_running = True
         self.is_authenticated = False
         self.auth_token = None
         self.on_request_callback = self.config.on_request_callback
+        self.on_closed_callback = self.config.on_closed_callback
 
         # Keyed by IDs of requests sent from this client to Zato
         self.requests_sent = {}
@@ -319,6 +325,13 @@ class Client(object):
             data = self.on_request_callback(RequestFromZato.from_json(_msg))
             response_id = MSG_PREFIX.SEND_RESP.format(_uuid4().hex)
             self.send(response_id, ResponseToZato(_msg['meta']['id'], data, response_id, self.config, self.auth_token))
+
+# ################################################################################################################################
+
+    def on_closed(self, code, reason=None):
+        logger.info('Closed WSX client connection to `%s` (remote code:%s reason:%s)', self.config.address, code, reason)
+        if self.on_closed_callback:
+            self.on_closed_callback(code, reason)
 
 # ################################################################################################################################
 
