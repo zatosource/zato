@@ -1595,9 +1595,10 @@ def spawn_greenlet(callable, *args, **kwargs):
     because if it does, it means that there were some errors.
     """
     try:
+        timeout = kwargs.pop('timeout', 0.2)
         g = spawn(callable, *args, **kwargs)
         gevent_sleep(0)
-        g.join(kwargs.pop('timeout', 0.2))
+        g.join(timeout)
 
         if g.exception:
             type_, value, traceback = g.exc_info
