@@ -67,6 +67,7 @@ def broker_message_hook(self, input, instance, attrs, service_type):
         input.sec_type = full_data.sec_type
         input.sec_name = full_data.sec_name
         input.vault_conn_default_auth_method = full_data.vault_conn_default_auth_method
+        input.hook_service = self.server.fs_server_config.wsx.hook_service
 
 # ################################################################################################################################
 
