@@ -82,6 +82,7 @@ class _BaseWSXClient(object):
 # ################################################################################################################################
 
     def closed(self, code, reason=None):
+        print(666, code, reason, self.on_close_cb)
         self.on_close_cb(code, reason)
 
 # ################################################################################################################################
@@ -95,6 +96,7 @@ class _NonZatoWSXClient(WebSocketClient, _BaseWSXClient):
     def close(self, code=1000, reason=ZATO_NONE):
         # It is needed to set this custom reason code because when it is us who closes the connection the 'closed' event
         # (i.e. on_close_cb) gets invoked and we need to know not to reconnect automatically in such a case.
+        print(555, code, reason, self.on_close_cb)
         super(_NonZatoWSXClient, self).close(code, reason)
 
 # ################################################################################################################################
@@ -121,6 +123,7 @@ class ZatoWSXClient(_BaseWSXClient):
         self._zato_client_config.client_id = 'wsx.out.{}'.format(new_cid(8))
         self._zato_client_config.address = self.config.address
         self._zato_client_config.on_request_callback = self.on_message_cb
+        self._zato_client_config.on_closed_callback = self.on_close_cb
 
         if self.config.get('username'):
             self._zato_client_config.username = self.config.username
