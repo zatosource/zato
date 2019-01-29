@@ -533,6 +533,7 @@ directories = (
     'pickup/incoming/json',
     'pickup/incoming/xml',
     'pickup/incoming/csv',
+    'pickup/incoming/user-conf',
     'pickup/processed/static',
     'pickup/processed/json',
     'pickup/processed/xml',
