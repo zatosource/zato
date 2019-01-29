@@ -837,7 +837,7 @@ class CacheAPI(object):
             data['source_worker_id'] = self.server.worker_id
 
             key = data['key']
-            value = data['value']
+            value = data.get('value')
 
             if isinstance(key, basestring):
                 data['is_key_pickled'] = False
@@ -845,13 +845,14 @@ class CacheAPI(object):
                 data['is_key_pickled'] = True
                 data['key'] = _pickle_dumps(key)
 
-            if isinstance(value, basestring):
-                data['is_value_pickled'] = False
+            if value:
+                if isinstance(value, basestring):
+                    data['is_value_pickled'] = False
+                else:
+                    data['is_value_pickled'] = True
+                    data['value'] = _pickle_dumps(value)
             else:
-                data['is_value_pickled'] = True
-                data['value'] = _pickle_dumps(value)
-
-            logger.info('AFTER %s', data)
+                data['is_value_pickled'] = False
 
             self.server.broker_client.publish(data)
         except Exception:
