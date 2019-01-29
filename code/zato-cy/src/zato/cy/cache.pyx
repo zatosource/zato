@@ -12,9 +12,12 @@ from datetime import datetime
 from decimal import Decimal
 from email.utils import formatdate as stdlib_format_date
 from hashlib import sha256
-from json import dumps as json_dumps
+from json import dumps as json_dumps, JSONEncoder
 from logging import getLogger
 from sys import getsizeof, maxint
+
+# Arrow
+from arrow import Arrow
 
 # Cython
 from cpython.dict cimport PyDict_Contains, PyDict_DelItem, PyDict_GetItem, PyDict_Items, PyDict_Keys, PyDict_SetItem, \
@@ -59,6 +62,15 @@ class CACHE:
 class KeyExpiredError(KeyError):
     """ Indicates that an operation would have succeeded had this key not expired before.
     """
+
+# ################################################################################################################################
+
+class _JSONEncoder(JSONEncoder):
+    def default(self, elem):
+        if isinstance(elem, (datetime, Arrow)):
+            return elem.isoformat()
+        else:
+            return str(elem)
 
 # ################################################################################################################################
 
@@ -138,7 +150,7 @@ cdef class Entry:
 
         }
 
-    cpdef set_metadata(self):
+    cpdef set_metadata(self, bint log_details=False):
         """ Configures metadata after set* operations.
         """
         # Will contain the computed hash value
@@ -151,7 +163,7 @@ cdef class Entry:
         if isinstance(self.value, str_types):
             value = self.value
         else:
-            value = json_dumps(self.value, sort_keys=True)
+            value = json_dumps(self.value, sort_keys=True, cls=_JSONEncoder)
 
         h.update(value)
         self.hash = h.hexdigest()
@@ -174,7 +186,8 @@ cdef class Entry:
         self.last_write_iso = datetime.fromtimestamp(self.last_write).isoformat()
         self.last_write_http = stdlib_format_date(self.last_write, usegmt=True)
 
-        logger.info('Set metadata %s', self.to_dict())
+        if log_details:
+            logger.info('Set metadata %s', self.to_dict())
 
 # ################################################################################################################################
 
