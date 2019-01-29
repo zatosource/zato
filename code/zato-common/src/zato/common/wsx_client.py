@@ -209,9 +209,6 @@ class _WSClient(WebSocketClient):
         spawn(self.on_error_callback, error)
 
     def closed(self, code, reason=None):
-        print()
-        print('QQQ', code, reason)
-        print()
         super(_WSClient, self).closed(code, reason)
         self.on_closed_callback(code, reason)
 
