@@ -570,7 +570,7 @@ class ConnectorAMQP(Connector):
         # Dictionary of kwargs is built based on user input falling back to the defaults
         # as specified in the outgoing connection's configuration.
         properties = properties or {}
-        kwargs = {'exchange':exchange, 'routing_key':routing_key}
+        kwargs = {'exchange':exchange, 'routing_key':routing_key, 'mandatory':kwargs.get('mandatory')}
 
         for key in _default_out_keys:
             # The last 'or None' is needed because outconn_config[key] may return '' which is considered
