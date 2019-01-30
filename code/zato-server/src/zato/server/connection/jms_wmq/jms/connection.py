@@ -520,6 +520,7 @@ class WebSphereMQConnection(object):
 
         # Create a message instance ..
         text_message = TextMessage()
+        text_message.mqmd = md
 
         if usr_folder:
             for attr_name, attr_value in usr_folder.items():
