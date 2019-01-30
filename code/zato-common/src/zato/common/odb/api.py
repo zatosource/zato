@@ -663,7 +663,7 @@ class ODBManager(SessionWrapper):
             self.add_deployed_service(deployment_time, details, service_id, source_info)
 
             if not service_info:
-                return service.id, service.is_active, service.slow_threshold
+                return service_id, service.is_active, service.slow_threshold
 
         except Exception:
             logger.error('Could not add service, name:`%s`, e:`%s`', name, format_exc().decode('utf-8'))
