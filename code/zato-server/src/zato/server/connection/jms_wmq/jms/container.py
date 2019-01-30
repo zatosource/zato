@@ -555,12 +555,11 @@ class ConnectionContainer(object):
                     # Resubmit the request
                     return self._on_OUTGOING_WMQ_SEND(msg, is_reconnect=True)
                 else:
-                    raise
+                    return self._on_send_exception()
 
             except Exception as e:
-                exc = format_exc()
-                self.logger.warn(exc)
-                return Response(_http_503, exc)
+                return self._on_send_exception()
+
 
 # ################################################################################################################################
 
@@ -605,6 +604,13 @@ class ConnectionContainer(object):
             del self.channel_id_to_def_id[channel.id]
 
             return Response()
+
+# ################################################################################################################################
+
+    def _on_send_exception(self):
+        msg = 'Exception in _on_OUTGOING_WMQ_SEND (2) `{}`'.format(format_exc())
+        self.logger.warn(msg)
+        return Response(_http_503, msg)
 
 # ################################################################################################################################
 
