@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -52,8 +52,66 @@ class InputLogger(Service):
 class RawRequestLogger(Service):
     """ Writes out self.request.raw_request to server logs.
     """
+    name = 'helpers.raw-request-logger'
+
     def handle(self):
-        self.logger.info('Received raw: `%s`', self.request.raw_request)
+        self.logger.info('Received request: `%s`', self.request.raw_request)
+
+# ################################################################################################################################
+
+class IBMMQLogger(Service):
+    """ Writes out self.request.raw_request to server logs.
+    """
+    name = 'helpers.ibm-mq-logger'
+
+    def handle(self):
+        template = """
+***********************
+IBM MQ message received
+***********************
+MsgId: `{msg_id}`
+CorrelId: `{correlation_id}`
+Timestamp: `{timestamp}`
+PutDate: `{put_date}`
+PutTime: `{put_time}`
+ReplyTo: `{reply_to}`
+MQMD: `{mqmd!r}`
+-----------------------
+Data: `{data}`
+***********************
+"""
+
+        mq = self.request.ibm_mq
+        na = 'n/a'
+
+        try:
+            msg_id = mq.msg_id.decode('ascii')
+        except UnicodeDecodeError:
+            msg_id = repr(mq.msg_id)
+
+        if mq.correlation_id:
+            try:
+                correlation_id = mq.correlation_id.decode('ascii')
+            except UnicodeDecodeError:
+                correlation_id = repr(mq.correlation_id)
+        else:
+            correlation_id = na
+
+        info = {
+            'msg_id': msg_id,
+            'correlation_id': correlation_id,
+            'timestamp': mq.timestamp,
+            'put_date': mq.put_date,
+            'put_time': mq.put_time,
+            'reply_to': mq.reply_to or na,
+            'mqmd': str(mq.mqmd).splitlines(),
+            'data': self.request.raw_request,
+        }
+
+        msg = template.format(**info)
+        msg_out = msg.decode('utf8')
+
+        self.logger.info(msg_out)
 
 # ################################################################################################################################
 

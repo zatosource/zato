@@ -26,6 +26,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import locale
 from binascii import hexlify
 from string import Template
+from cPickle import dumps as pickle_dumps
 from cStringIO import StringIO
 
 # Zato
@@ -143,6 +144,7 @@ class JMSTemplate(object):
 # ################################################################################################################################
 
 class TextMessage(object):
+
     def __init__(self, text=None, jms_correlation_id=None, jms_delivery_mode=None, jms_destination=None, jms_expiration=None,
         jms_message_id=None, jms_priority=None, jms_redelivered=None, jms_reply_to=None, jms_timestamp=None,
         max_chars_printed=100):
@@ -160,6 +162,7 @@ class TextMessage(object):
         self.max_chars_printed = max_chars_printed
         self.put_date = None
         self.put_time = None
+        self.mqmd = None
 
 # ################################################################################################################################
 
@@ -175,6 +178,7 @@ class TextMessage(object):
             'destination':self.jms_destination,
             'reply_to':self.jms_reply_to,
             'redelivered':self.jms_redelivered,
+            'mqmd': pickle_dumps(self.mqmd)
         }
 
 # ################################################################################################################################

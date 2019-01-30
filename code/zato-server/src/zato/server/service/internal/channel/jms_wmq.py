@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from binascii import unhexlify
 from contextlib import closing
+from cPickle import loads as pickle_loads
 from json import loads
 from traceback import format_exc
 
@@ -237,6 +238,8 @@ class OnMessageReceived(AdminService):
             'put_date': msg['put_date'],
             'expiration': expiration,
             'reply_to': msg['reply_to'],
+            'data': data,
+            'mqmd': pickle_loads(msg['mqmd'].encode('utf8'))
         })
 
 # ################################################################################################################################
