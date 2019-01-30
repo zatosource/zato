@@ -114,14 +114,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
     /* 3 */
-    if(is_channel) {
-        row += String.format('<td>{0}</td>',
-            String.format("<a href='/zato/http-soap/details/{3}/{4}/{1}/{0}/{2}/'>{0}</a>",
-            item.name, item.id, cluster_id, connection, data.transport));
-    }
-    else {
-        row += String.format('<td>{0}</td>', item.name);
-    }
+    row += String.format('<td>{0}</td>', item.name);
 
     /* 4 */
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
