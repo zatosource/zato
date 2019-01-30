@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -79,19 +79,24 @@ class AMQPRequestData(object):
 
 # ################################################################################################################################
 
-class WebSphereMQRequestData(object):
+class IBMMQRequestData(object):
     """ Metadata for IBM MQ requests.
     """
-    __slots__ = ('ctx', 'msg_id', 'correlation_id', 'timestamp', 'put_date', 'put_time', 'reply_to')
+    __slots__ = ('ctx', 'data', 'msg_id', 'correlation_id', 'timestamp', 'put_date', 'put_time', 'reply_to', 'mqmd')
 
     def __init__(self, ctx):
         self.ctx = ctx
+        self.data = ctx['data']
         self.msg_id = ctx['msg_id']
         self.correlation_id = ctx['correlation_id']
         self.timestamp = ctx['timestamp']
         self.put_date = ctx['put_date']
         self.put_time = ctx['put_time']
         self.reply_to = ctx['reply_to']
+        self.mqmd = ctx['mqmd']
+
+# Backward compatibility
+WebSphereMQRequestData = IBMMQRequestData
 
 # ################################################################################################################################
 
@@ -101,7 +106,7 @@ class Request(SIOConverter):
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
         'simple_io_config', 'bool_parameter_prefixes', 'int_parameters',
         'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
-        '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp', 'wmq')
+        '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq')
 
     def __init__(self, logger, simple_io_config=None, data_format=None, transport=None):
         self.logger = logger
@@ -123,7 +128,7 @@ class Request(SIOConverter):
         self.merge_channel_params = True
         self.params_priority = PARAMS_PRIORITY.DEFAULT
         self.amqp = None
-        self.wmq = None
+        self.wmq = self.ibm_mq = None
         self.encrypt_func = None
         self.encrypt_secrets = True
 

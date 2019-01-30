@@ -47,7 +47,7 @@ from zato.server.pattern.fanout import FanOut
 from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.pattern.parallel import ParallelExec
 from zato.server.pubsub import PubSub
-from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request, Response, WebSphereMQRequestData
+from zato.server.service.reqresp import AMQPRequestData, Cloud, IBMMQRequestData, Outgoing, Request, Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Date, DateTime, Dict, Float, ForceType, Integer, List, \
@@ -949,7 +949,7 @@ class Service(object):
         if channel_type == _AMQP:
             service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
         elif channel_type == _WMQ:
-            service.request.wmq = WebSphereMQRequestData(wmq_ctx)
+            service.request.wmq = service.request.ibm_mq = IBMMQRequestData(wmq_ctx)
 
         service.channel = service.chan = ChannelInfo(
             channel_item.get('id'), channel_item.get('name'), channel_type,

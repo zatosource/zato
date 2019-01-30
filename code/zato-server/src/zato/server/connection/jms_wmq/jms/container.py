@@ -40,7 +40,7 @@ import httplib
 from bunch import bunchify
 
 # Requests
-from requests import post
+from requests import post as requests_post
 
 # YAML
 import yaml
@@ -110,7 +110,7 @@ class _MessageCtx(object):
 
 # ################################################################################################################################
 
-class WebSphereMQChannel(object):
+class IBMMQChannel(object):
     """ A process to listen for messages from IBM MQ queue managers.
     """
     def __init__(self, conn, channel_id, queue_name, service_name, data_format, on_message_callback, logger):
@@ -295,14 +295,20 @@ class ConnectionContainer(object):
 
 # ################################################################################################################################
 
-    def on_mq_message_received(self, msg_ctx, _post=post):
-        _post(self.server_address, data=dumps({
+    def _post(self, msg, _post=requests_post):
+        self.logger.info('POST to `%s` (%s), msg:`%s`', self.server_address, self.username, msg)
+        _post(self.server_address, data=dumps(msg), auth=self.server_auth)
+
+# ################################################################################################################################
+
+    def on_mq_message_received(self, msg_ctx):
+        return self._post({
             'msg': msg_ctx.mq_msg.to_dict(),
             'channel_id': msg_ctx.channel_id,
             'queue_name': msg_ctx.queue_name,
             'service_name': msg_ctx.service_name,
             'data_format': msg_ctx.data_format,
-        }), auth=self.server_auth)
+            })
 
 # ################################################################################################################################
 
@@ -568,7 +574,7 @@ class ConnectionContainer(object):
         """
         with self.lock:
             conn = self.connections[msg.def_id]
-            channel = WebSphereMQChannel(conn, msg.id, msg.queue.encode('utf8'), msg.service_name, msg.data_format,
+            channel = IBMMQChannel(conn, msg.id, msg.queue.encode('utf8'), msg.service_name, msg.data_format,
                 self.on_mq_message_received, self.logger)
             channel.start()
             self.channels[channel.id] = channel
