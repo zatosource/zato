@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -417,7 +417,7 @@ class ConnectionContainer(object):
             try:
                 conn = self.connections[msg.id]
                 conn.close()
-                conn.password = msg.password
+                conn.password = str(msg.password)
                 conn.connect()
             except Exception as e:
                 self.logger.warn(format_exc())
