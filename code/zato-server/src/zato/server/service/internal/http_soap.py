@@ -20,7 +20,7 @@ from paste.util.converters import asbool
 from zato.common import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
-from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
+from zato.common.util.sql import get_security_by_id, elems_with_opaque, set_instance_opaque_attrs
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
@@ -213,7 +213,6 @@ class Create(_CreateEdit):
                 item.is_active = input.is_active
                 item.host = input.host
                 item.url_path = input.url_path
-                item.security_id = input.security_id or None # So SQLite doesn't reject ''
                 item.method = input.method
                 item.soap_action = input.soap_action
                 item.soap_version = input.soap_version or None
@@ -232,6 +231,11 @@ class Create(_CreateEdit):
                 item.cache_id = input.cache_id or None
                 item.cache_expiry = input.cache_expiry
                 item.content_encoding = input.content_encoding
+
+                if input.security_id:
+                    item.security = get_security_by_id(session, input.security_id)
+                else:
+                    input.security_id = None # To ensure that SQLite doesn't reject ''
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None

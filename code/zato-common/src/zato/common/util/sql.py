@@ -24,7 +24,7 @@ from sqlalchemy.exc import InternalError as SAInternalError
 
 # Zato
 from zato.common import GENERIC, SEARCH
-from zato.common.odb.model import Base
+from zato.common.odb.model import Base, SecurityBase
 from zato.common.util.search import SearchResults
 
 # ################################################################################################################################
@@ -217,5 +217,12 @@ def set_instance_opaque_attrs(instance, input, skip=None, only=None, _zato_skip=
     # Set generic attributes for instance
     if instance_opaque_attrs is not None:
         setattr(instance, GENERIC.ATTR_NAME, dumps(instance_opaque_attrs))
+
+# ################################################################################################################################
+
+def get_security_by_id(session, security_id):
+    return session.query(SecurityBase).\
+           filter(SecurityBase.id==security_id).\
+           one()
 
 # ################################################################################################################################
