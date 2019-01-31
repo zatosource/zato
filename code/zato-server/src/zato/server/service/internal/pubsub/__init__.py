@@ -285,7 +285,7 @@ class ResumeWSXSubscription(AdminService):
                     for sub_key in sub_key_list:
 
                         # .. add relevant SQL objects ..
-                        self.pubsub.add_ws_client_pubsub_keys(session, environ['sql_ws_client_id'], sub_key,
+                        self.pubsub.add_wsx_client_pubsub_keys(session, environ['sql_ws_client_id'], sub_key,
                             environ['ws_channel_config']['name'], environ['pub_client_id'],
                                 environ['web_socket'].get_peer_info_dict())
 
