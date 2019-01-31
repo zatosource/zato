@@ -39,6 +39,7 @@ from zato.common.util import make_repr, new_cid, spawn_greenlet
 from zato.common.util.event import EventLog
 from zato.common.util.hook import HookTool
 from zato.common.util.pubsub import make_short_msg_copy_from_dict
+from zato.common.util.python_ import get_current_stack
 from zato.common.util.time_ import utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
 
@@ -142,6 +143,9 @@ class EventType:
         loop_has_msg = 'loop_has_msg'
         loop_before_sync = 'loop_before_sync'
         _set_sync_has_msg = '_set_sync_has_msg'
+        about_to_subscribe = 'about_to_subscribe'
+        about_to_access_sub_sk = 'about_to_access_sub_sk'
+        in_subscribe_impl = 'in_subscribe_impl'
 
 # ################################################################################################################################
 
@@ -716,9 +720,9 @@ class InRAMSyncBacklog(object):
 
                 # We need this if statement because it is possible that a client is subscribed to a topic
                 # but it will not receive a particular message. This is possible if the message is a response
-                # to a previous request and the latter used reply_to_sk, in which only that one sub_key pointed to by reply_to_sk
-                # will get the response, which ultimately means that self.sub_key_to_msg_id will not have this response
-                # for current sub_key.
+                # to a previous request and the latter used reply_to_sk, in which case only that one sub_key pointed to
+                # by reply_to_sk will get the response, which ultimately means that self.sub_key_to_msg_id
+                # will not have this response for current sub_key.
                 if sub_key_to_msg_id:
 
                     # .. delete the message itself - but we need to catch ValueError because
@@ -921,7 +925,7 @@ class PubSub(object):
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
 
         self.subscriptions_by_topic = {}       # Topic name     -> List of Subscription objects
-        self.subscriptions_by_sub_key = {}     # Sub key        -> Subscription object
+        self._subscriptions_by_sub_key = {}     # Sub key        -> Subscription object
         self.sub_key_servers = {}              # Sub key        -> Server/PID handling it
 
         self.endpoints = {}                    # Endpoint ID    -> Endpoint object
@@ -967,6 +971,13 @@ class PubSub(object):
         self.hook_tool = HookTool(self.server, HookCtx, hook_type_to_method, self.invoke_service)
 
         spawn_greenlet(self.trigger_notify_pubsub_tasks)
+
+# ################################################################################################################################
+
+    @property
+    def subscriptions_by_sub_key(self):
+        self.emit_about_to_access_sub_sk({'sub_sk':sorted(self._subscriptions_by_sub_key), 'stack':get_current_stack()})
+        return self._subscriptions_by_sub_key
 
 # ################################################################################################################################
 
@@ -1550,7 +1561,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def add_ws_client_pubsub_keys(self, session, sql_ws_client_id, sub_key, channel_name, pub_client_id, wsx_info):
+    def add_wsx_client_pubsub_keys(self, session, sql_ws_client_id, sub_key, channel_name, pub_client_id, wsx_info):
         """ Adds to SQL information that a given WSX client handles messages for sub_key.
         This information is transient - it will be dropped each time a WSX client disconnects
         """
@@ -2075,7 +2086,7 @@ class PubSub(object):
         else:
             topic.sync_has_non_gd_msg = value
 
-        self._emit_set_sync_has_msg({
+        self.emit_set_sync_has_msg({
             'topic_id': topic_id,
             'is_gd': is_gd,
             'value': value,
@@ -2095,22 +2106,31 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _emit_loop_topic_id_dict(self, ctx=None, _event=EventType.PubSub.loop_topic_id_dict):
+    def emit_loop_topic_id_dict(self, ctx=None, _event=EventType.PubSub.loop_topic_id_dict):
         self.event_log.emit(_event, ctx)
 
-    def _emit_loop_sub_keys(self, ctx=None, _event=EventType.PubSub.loop_sub_keys):
+    def emit_loop_sub_keys(self, ctx=None, _event=EventType.PubSub.loop_sub_keys):
         self.event_log.emit(_event, ctx)
 
-    def _emit_loop_before_has_msg(self, ctx=None, _event=EventType.PubSub.loop_before_has_msg):
+    def emit_loop_before_has_msg(self, ctx=None, _event=EventType.PubSub.loop_before_has_msg):
         self.event_log.emit(_event, ctx)
 
-    def _emit_loop_has_msg(self, ctx=None, _event=EventType.PubSub.loop_has_msg):
+    def emit_loop_has_msg(self, ctx=None, _event=EventType.PubSub.loop_has_msg):
         self.event_log.emit(_event, ctx)
 
-    def _emit_loop_before_sync(self, ctx=None, _event=EventType.PubSub.loop_before_sync):
+    def emit_loop_before_sync(self, ctx=None, _event=EventType.PubSub.loop_before_sync):
         self.event_log.emit(_event, ctx)
 
-    def _emit_set_sync_has_msg(self, ctx=None, _event=EventType.PubSub._set_sync_has_msg):
+    def emit_set_sync_has_msg(self, ctx=None, _event=EventType.PubSub._set_sync_has_msg):
+        self.event_log.emit(_event, ctx)
+
+    def emit_about_to_subscribe(self, ctx=None, _event=EventType.PubSub.about_to_subscribe):
+        self.event_log.emit(_event, ctx)
+
+    def emit_about_to_access_sub_sk(self, ctx=None, _event=EventType.PubSub.about_to_access_sub_sk):
+        self.event_log.emit(_event, ctx)
+
+    def emit_in_subscribe_impl(self, ctx=None, _event=EventType.PubSub.in_subscribe_impl):
         self.event_log.emit(_event, ctx)
 
 # ################################################################################################################################
@@ -2122,10 +2142,10 @@ class PubSub(object):
 
         # Local aliases
 
-        _self_emit_loop_topic_id_dict  = self._emit_loop_topic_id_dict
-        _self_emit_loop_sub_keys       = self._emit_loop_sub_keys
-        _self_emit_loop_before_has_msg = self._emit_loop_before_has_msg
-        _self_emit_loop_before_sync    = self._emit_loop_before_sync
+        _self_emit_loop_topic_id_dict  = self.emit_loop_topic_id_dict
+        _self_emit_loop_sub_keys       = self.emit_loop_sub_keys
+        _self_emit_loop_before_has_msg = self.emit_loop_before_has_msg
+        _self_emit_loop_before_sync    = self.emit_loop_before_sync
 
         _new_cid      = new_cid
         _spawn        = spawn
@@ -2510,7 +2530,7 @@ class PubSub(object):
             # Non-WSX endpoints always need to be identified by their names
             endpoint_name = kwargs.get('endpoint_name')
             if not endpoint_name:
-                raise Exception('Parameter `service_name` is required for non-WebSockets subscriptions')
+                raise Exception('Parameter `endpoint_name` is required for non-WebSockets subscriptions')
             else:
                 endpoint = self.get_endpoint_by_name(endpoint_name)
 
