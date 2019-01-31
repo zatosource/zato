@@ -55,7 +55,7 @@ def add_wsx_subscription(session, cluster_id, is_internal, sub_key, ext_client_i
 
 # ################################################################################################################################
 
-def add_subscription(session, cluster_id, ctx):
+def add_subscription(session, cluster_id, sub_key, ctx):
     """ Adds an object representing a subscription regardless of the underlying protocol.
     """
     # Common
@@ -67,7 +67,7 @@ def add_subscription(session, cluster_id, ctx):
     ps_sub.is_internal = ctx.is_internal
     ps_sub.is_staging_enabled = ctx.is_staging_enabled
     ps_sub.creation_time = ctx.creation_time
-    ps_sub.sub_key = ctx.sub_key
+    ps_sub.sub_key = sub_key
     ps_sub.sub_pattern_matched = ctx.sub_pattern_matched
     ps_sub.has_gd = ctx.has_gd
     ps_sub.active_status = ctx.active_status

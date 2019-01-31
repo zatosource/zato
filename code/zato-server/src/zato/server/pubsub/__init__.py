@@ -720,9 +720,9 @@ class InRAMSyncBacklog(object):
 
                 # We need this if statement because it is possible that a client is subscribed to a topic
                 # but it will not receive a particular message. This is possible if the message is a response
-                # to a previous request and the latter used reply_to_sk, in which only that one sub_key pointed to by reply_to_sk
-                # will get the response, which ultimately means that self.sub_key_to_msg_id will not have this response
-                # for current sub_key.
+                # to a previous request and the latter used reply_to_sk, in which case only that one sub_key pointed to
+                # by reply_to_sk will get the response, which ultimately means that self.sub_key_to_msg_id
+                # will not have this response for current sub_key.
                 if sub_key_to_msg_id:
 
                     # .. delete the message itself - but we need to catch ValueError because
@@ -2530,7 +2530,7 @@ class PubSub(object):
             # Non-WSX endpoints always need to be identified by their names
             endpoint_name = kwargs.get('endpoint_name')
             if not endpoint_name:
-                raise Exception('Parameter `service_name` is required for non-WebSockets subscriptions')
+                raise Exception('Parameter `endpoint_name` is required for non-WebSockets subscriptions')
             else:
                 endpoint = self.get_endpoint_by_name(endpoint_name)
 

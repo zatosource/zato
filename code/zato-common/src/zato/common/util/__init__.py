@@ -301,7 +301,7 @@ def make_repr(_object, ignore_double_underscore=True, to_avoid_list='repr_to_avo
     for attr in attrs:
         attr_obj = getattr(_object, attr)
         if not callable(attr_obj):
-            buff.write('; %s:`%r`' % (attr, attr_obj))
+            buff.write('; %s:%r' % (attr, attr_obj))
 
     out = _repr_template.safe_substitute(
         class_name=_object.__class__.__name__, mem_loc=hex(id(_object)), attrs=buff.getvalue())
