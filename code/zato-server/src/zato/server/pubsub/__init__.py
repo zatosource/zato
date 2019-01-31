@@ -39,7 +39,7 @@ from zato.common.util import make_repr, new_cid, spawn_greenlet
 from zato.common.util.event import EventLog
 from zato.common.util.hook import HookTool
 from zato.common.util.pubsub import make_short_msg_copy_from_dict
-from zato.common.util.python_ import get_current_stack, log_current_stack
+from zato.common.util.python_ import get_current_stack
 from zato.common.util.time_ import utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
 
