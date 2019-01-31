@@ -424,29 +424,6 @@ class SubscribeServiceImpl(_Subscribe):
                         'sub_sk': sorted(self.pubsub.subscriptions_by_sub_key),
                     }})
 
-                    # If we subscribe a WSX client, we need to create its accompanying SQL models
-                    if is_wsx:
-
-                        # Event log
-                        self.pubsub.emit_in_subscribe_impl({'stage':'before_wsx_sub', 'data':{
-                            'is_wsx': is_wsx,
-                            'sub_sk': sorted(self.pubsub.subscriptions_by_sub_key),
-                        }})
-
-                        # This object persists across multiple WSX connections
-                        wsx_sub = add_wsx_subscription(session, ctx.cluster_id, ctx.is_internal, sub_key,
-                            ctx.ext_client_id, ctx.ws_channel_id, ps_sub.id)
-
-                        # Event log
-                        self.pubsub.emit_in_subscribe_impl({'stage':'after_wsx_sub', 'data':{
-                            'wsx_sub': wsx_sub.asdict(),
-                            'sub_sk': sorted(self.pubsub.subscriptions_by_sub_key),
-                        }})
-
-                        # This object will be transient - dropped each time a WSX client disconnects
-                        self.pubsub.add_wsx_client_pubsub_keys(session, ctx.sql_ws_client_id, sub_key, ctx.ws_channel_name,
-                            ctx.ws_pub_client_id, ctx.web_socket.get_peer_info_dict())
-
                     # Common configuration for WSX and broker messages
                     sub_config = Bunch()
                     sub_config.topic_name = ctx.topic.name
@@ -481,6 +458,26 @@ class SubscribeServiceImpl(_Subscribe):
                     self.pubsub.add_subscription(sub_config)
 
                     if is_wsx:
+
+                        # Event log
+                        self.pubsub.emit_in_subscribe_impl({'stage':'before_wsx_sub', 'data':{
+                            'is_wsx': is_wsx,
+                            'sub_sk': sorted(self.pubsub.subscriptions_by_sub_key),
+                        }})
+
+                        # This object persists across multiple WSX connections
+                        wsx_sub = add_wsx_subscription(session, ctx.cluster_id, ctx.is_internal, sub_key,
+                            ctx.ext_client_id, ctx.ws_channel_id, ps_sub.id)
+
+                        # Event log
+                        self.pubsub.emit_in_subscribe_impl({'stage':'after_wsx_sub', 'data':{
+                            'wsx_sub': wsx_sub.asdict(),
+                            'sub_sk': sorted(self.pubsub.subscriptions_by_sub_key),
+                        }})
+
+                        # This object will be transient - dropped each time a WSX client disconnects
+                        self.pubsub.add_wsx_client_pubsub_keys(session, ctx.sql_ws_client_id, sub_key, ctx.ws_channel_name,
+                            ctx.ws_pub_client_id, ctx.web_socket.get_peer_info_dict())
 
                         # Let the WebSocket connection object know that it should handle this particular sub_key
                         ctx.web_socket.pubsub_tool.add_sub_key(sub_key)
