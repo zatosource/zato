@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, os, signal
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging import INFO
 from re import IGNORECASE
 from tempfile import mkstemp
@@ -503,6 +503,26 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks, self.get_lua_programs())
         self.worker_store.set_broker_client(self.broker_client)
+
+        # Make sure that broker client's connection is ready before continuing
+        # to rule out edge cases where, for instance, hot deployment would
+        # try to publish a locally found package (one of extra packages found)
+        # before the client's thread connected to KVDB.
+        if not self.broker_client.ready:
+            start = now = datetime.utcnow()
+            max_seconds = 120
+            until = now + timedelta(seconds=max_seconds)
+
+            while not self.broker_client.ready:
+                now = datetime.utcnow()
+                delta = (now - start).total_seconds()
+                if now < until:
+                    # Do not log too early so as not to clutter logs
+                    if delta > 2:
+                        logger.info('Waiting for broker client to become ready (%s, max:%s)', delta, max_seconds)
+                    gevent.sleep(0.5)
+                else:
+                    raise Exception('Broker client did not become ready within {} seconds'.format(max_seconds))
 
         self._after_init_accepted(locally_deployed)
 
