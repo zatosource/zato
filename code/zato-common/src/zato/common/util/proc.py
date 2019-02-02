@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,7 +14,7 @@ from tempfile import mkstemp
 from time import time, sleep
 
 # Sarge
-from sarge import run as sarge_run
+from sarge import run as sarge_run, shell_format
 
 # Zato
 from zato.common import CLI_ARG_SEP
@@ -47,7 +47,7 @@ class _StdErr(object):
         now = time()
 
         while time() - now < self.timeout:
-            sleep(0.02)
+            sleep(0.1)
             _stderr = open(self.path)
             _err = _stderr.read()
             if _err:
@@ -57,23 +57,15 @@ class _StdErr(object):
 
 # ################################################################################################################################
 
-def start_python_process(run_in_fg, py_path, name, program_dir, on_keyboard_interrupt=None, failed_to_start_err=-100,
-    extra_options=None, stderr_path=None, stdin_data=None):
+def start_process(component_name, executable, run_in_fg, extra_cli_options='', on_keyboard_interrupt=None,
+    failed_to_start_err=-100, extra_options=None, stderr_path=None, stdin_data=None):
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
-    stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(name.replace(' ','')))[1]
+    stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(component_name.replace(' ','')))[1]
     stdout_redirect = '' if run_in_fg else '1> /dev/null'
     stderr_redirect = '2> {}'.format(stderr_path)
 
-    options = {
-        'fg': run_in_fg,
-    }
-    if extra_options:
-        options.update(extra_options)
-
-    options = CLI_ARG_SEP.join('{}={}'.format(k, v) for k, v in options.items())
-
-    program = '{} -m {} {} {} {} {}'.format(get_executable(), py_path, program_dir, options, stdout_redirect, stderr_redirect)
+    program = '{} {} {} {}'.format(executable, extra_cli_options, stdout_redirect, stderr_redirect)
 
     try:
         _stderr = _StdErr(stderr_path, stderr_sleep_fg if run_in_fg else stderr_sleep_bg)
@@ -98,5 +90,27 @@ def start_python_process(run_in_fg, py_path, name, program_dir, on_keyboard_inte
         if on_keyboard_interrupt:
             on_keyboard_interrupt()
         sys.exit(0)
+
+# ################################################################################################################################
+
+def start_python_process(component_name, run_in_fg, py_path, program_dir, on_keyboard_interrupt=None, failed_to_start_err=-100,
+    extra_options=None, stderr_path=None, stdin_data=None):
+    """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
+    """
+    options = {
+        'fg': run_in_fg,
+    }
+    if extra_options:
+        options.update(extra_options)
+
+    options = CLI_ARG_SEP.join('{}={}'.format(k, v) for k, v in options.items())
+
+    py_path_option = shell_format('-m {0}', py_path)
+    program_dir_option = shell_format('{0}', program_dir)
+
+    extra_cli_options = '{} {} {}'.format(py_path_option, program_dir_option, options)
+
+    return start_process(component_name, get_executable(), run_in_fg, extra_cli_options, on_keyboard_interrupt,
+        failed_to_start_err, extra_options, stderr_path, stdin_data)
 
 # ################################################################################################################################
