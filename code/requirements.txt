@@ -107,7 +107,6 @@ pyaml==14.5.2
 pyasn1==0.1.8
 pycparser==2.10
 pycrypto==2.6
-pycurl==7.43.0.2 # Requires OS libcurl4-openssl-dev package
 pyflakes==0.8.1
 pygments==2.0
 PyJWT==1.4.2
