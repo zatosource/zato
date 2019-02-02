@@ -57,6 +57,7 @@ _meta_endpoint_key = PUBSUB.REDIS.META_ENDPOINT_PUB_KEY
 _meta_topic_optional = ('pub_correl_id', 'ext_client_id', 'in_reply_to')
 
 _log_turning_gd_msg = 'Turning message `%s` into a GD one ({})'
+_inserting_gd_msg = 'Inserting GD messages for topic `%s` `%s` published by `%s` (ext:%s) (cid:%s)'
 
 # ################################################################################################################################
 
@@ -447,8 +448,12 @@ class Publish(AdminService):
                         # This only updates the local ctx variable
                         ctx.current_depth = ctx.current_depth + len_gd_msg_list
 
-                logger_pubsub.info('Inserting GD messages for topic `%s` `%s` published by `%s` (ext:%s) (cid:%s)',
-                    ctx.topic.name, [elem['pub_msg_id'] for elem in ctx.gd_msg_list], ctx.endpoint_name,
+                pub_msg_list = [elem['pub_msg_id'] for elem in ctx.gd_msg_list]
+
+                self.logger.info(_inserting_gd_msg, ctx.topic.name, pub_msg_list, ctx.endpoint_name,
+                    ctx.ext_client_id, self.cid)
+
+                logger_pubsub.info(_inserting_gd_msg, ctx.topic.name, pub_msg_list, ctx.endpoint_name,
                     ctx.ext_client_id, self.cid)
 
                 # This is the call that runs SQL INSERT statements with messages for topics and subscriber queues
