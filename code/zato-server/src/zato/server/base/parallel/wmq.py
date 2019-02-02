@@ -84,7 +84,7 @@ class WMQIPC(object):
         }), self.pid)
 
         # Start IBM MQ connector in a sub-process
-        start_python_process(False, 'zato.server.connection.jms_wmq.jms.container', 'IBM MQ connector', '')
+        start_python_process('IBM MQ connector', False, 'zato.server.connection.jms_wmq.jms.container', '')
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()
