@@ -97,11 +97,14 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
         attempts = 1
 
         if has_debug:
-            logger_zato.info('In sql_op_with_deadlock_retry, %s %s %s %r %r', attempts, cid, name, func, args, kwargs)
+            logger_zato.info('In sql_op_with_deadlock_retry, %s %s %s %s %r %r', attempts, cid, name, func, args, kwargs)
 
         try:
             # Call the SQL function that will possibly result in a deadlock
             func(*args, **kwargs)
+
+            if has_debug:
+                logger_zato.info('In sql_op_with_deadlock_retry, returning True')
 
             # This will return only if there is no exception in calling the SQL function
             return True

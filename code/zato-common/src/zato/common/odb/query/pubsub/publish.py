@@ -58,9 +58,6 @@ def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by
         # Move messages to each subscriber's queue
         if subscriptions_by_topic:
 
-            if has_debug:
-                logger_zato.info('Subscriptions by topic `%s`', subscriptions_by_topic)
-
             try:
                 insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic_id, now, cid)
 
