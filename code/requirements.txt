@@ -128,7 +128,7 @@ python-memcached==1.58
 python-novaclient==2.17.0
 python-ntlm==1.0.1
 python-swiftclient==2.0.3
-pytz==2016.10
+pytz==2018.9
 pyyaml==3.11
 pyzmq==17.0.0
 raven==5.1.1
