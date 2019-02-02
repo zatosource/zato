@@ -57,7 +57,7 @@ class _StdErr(object):
 
 # ################################################################################################################################
 
-def start_process(component_name, executable, run_in_fg, extra_cli_options='', on_keyboard_interrupt=None,
+def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_options='', on_keyboard_interrupt=None,
     failed_to_start_err=-100, extra_options=None, stderr_path=None, stdin_data=None):
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
@@ -110,7 +110,7 @@ def start_python_process(component_name, run_in_fg, py_path, program_dir, on_key
 
     extra_cli_options = '{} {} {}'.format(py_path_option, program_dir_option, options)
 
-    return start_process(component_name, get_executable(), run_in_fg, extra_cli_options, on_keyboard_interrupt,
+    return start_process(component_name, get_executable(), run_in_fg, None, extra_cli_options, on_keyboard_interrupt,
         failed_to_start_err, extra_options, stderr_path, stdin_data)
 
 # ################################################################################################################################
