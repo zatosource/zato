@@ -197,7 +197,7 @@ class PickupManager(object):
                                     try:
                                         pe.data = self.get_parser(config.parse_with)(pe.raw_data)
                                         pe.has_data = True
-                                    except Exception, e:
+                                    except Exception as e:
                                         pe.parse_error = e
 
                                 else:

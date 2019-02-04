@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.views import Delete as _Delete, Index as _Index

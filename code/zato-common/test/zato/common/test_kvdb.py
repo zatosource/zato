@@ -60,7 +60,7 @@ class KVDBTestCase(TestCase):
             config = {'use_redis_sentinels': True}
             kvdb = KVDB(config=config)
             kvdb.init()
-        except ValueError, e:
+        except ValueError as e:
             eq_(e.message, 'kvdb.redis_sentinels must be provided')
         else:
             self.fail('Expected a ValueError (kvdb.redis_sentinels)')
@@ -69,7 +69,7 @@ class KVDBTestCase(TestCase):
             config = {'use_redis_sentinels': True, 'redis_sentinels': redis_sentinels}
             kvdb = KVDB(config=config)
             kvdb.init()
-        except ValueError, e:
+        except ValueError as e:
             eq_(e.message, 'kvdb.redis_sentinels_master must be provided')
         else:
             self.fail('Expected a ValueError (kvdb.redis_sentinels_master)')

@@ -144,8 +144,8 @@ def _update_many(req, cluster_id, service, success_msg, failure_msg):
 
         return HttpResponse(dumps({'message':success_msg}))
 
-    except Exception, e:
-        msg = '{}, e:[{}]'.format(failure_msg, format_exc(e))
+    except Exception:
+        msg = '{}, e:`{}`'.format(failure_msg, format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from bunch import Bunch
 from json import dumps, loads
 from logging import DEBUG, getLogger
+
+# Python 2/3 compatibility
+from past.builtins import basestring
 
 logger = getLogger(__name__)
 

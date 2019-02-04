@@ -140,8 +140,8 @@ class NotifyPubSubMessage(AdminService):
         try:
             self.response.payload.r = self.server.worker_store.web_socket_api.notify_pubsub_message(
                 req.channel_name, self.cid, req.pub_client_id, req.request)
-        except Exception, e:
-            self.logger.warn(format_exc(e))
+        except Exception:
+            self.logger.warn(format_exc())
             raise
 
 # ################################################################################################################################

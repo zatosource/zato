@@ -13,6 +13,9 @@ import logging
 from contextlib import closing
 from traceback import format_exc
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE

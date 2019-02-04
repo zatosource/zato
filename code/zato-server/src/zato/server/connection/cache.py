@@ -638,14 +638,14 @@ class Cache(object):
                 try:
                     _sleep(interval)
                     deleted = self.impl.delete_expired()
-                except Exception, e:
-                    logger.warn('Exception while deleting expired keys %s', format_exc(e))
+                except Exception:
+                    logger.warn('Exception while deleting expired keys %s', format_exc())
                     _sleep(2)
                 else:
                     if deleted:
                         logger.info('Cache `%s` deleted keys expired in the last %ss - %s', self.config.name, interval, deleted)
-        except Exception, e:
-            logger.warn('Exception in _delete_expired loop %s', format_exc(e))
+        except Exception:
+            logger.warn('Exception in _delete_expired loop %s', format_exc())
 
 # ################################################################################################################################
 
@@ -877,8 +877,8 @@ class CacheAPI(object):
                 servers = [elem.strip() for elem in config.servers.splitlines()]
                 cache = _MemcachedClient(servers, asbool(config.is_debug), **parse_extra_into_dict(config.extra))
                 self._add_cache(config, cache)
-            except Exception, e:
-                logger.warn(format_exc(e))
+            except Exception:
+                logger.warn(format_exc())
 
         spawn(impl)
 

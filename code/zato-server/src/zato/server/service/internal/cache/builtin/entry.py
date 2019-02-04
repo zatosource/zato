@@ -14,6 +14,9 @@ from arrow import get as arrow_get
 # Bunch
 from bunch import bunchify
 
+# Python 2/3 compatibility
+from past.builtins import basestring, long
+
 # Zato
 from zato.common import CACHE
 from zato.common.exception import BadRequest
@@ -218,14 +221,14 @@ class _CreateEdit(_Base):
 
 class Create(_CreateEdit):
     """ Creates a new entry in the cache given on input.
-    """ 
+    """
     old_key_elem = 'key'
 
 # ################################################################################################################################
 
 class Update(_CreateEdit):
     """ Updates an existing entry in the cache given on input.
-    """ 
+    """
     old_key_elem = 'old_key'
 
     class SimpleIO(_CreateEdit.SimpleIO):
@@ -244,7 +247,7 @@ class Update(_CreateEdit):
 
 class Get(_Base):
     """ Returns an individual entry from the cache given on input.
-    """ 
+    """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'cache_id', 'key')
         output_required = (Bool('key_found'),)
@@ -271,7 +274,7 @@ class Get(_Base):
 
 class Delete(_Base):
     """ Deletes an entry from the cache given on input.
-    """ 
+    """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'cache_id', 'key')
         output_required = (Bool('key_found'),)

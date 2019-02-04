@@ -200,9 +200,8 @@ class BaseSummarizingService(BaseAggregatingService):
                 values['mean'] = round(sp_stats.tmean(values['mean']), 2)
                 values['rate'] = round(values['usage'] / total_seconds, 2)
 
-        except Exception, e:
-            self.logger.debug('Could not store mean/rate. e=`%r`, locals=`%r`',
-                format_exc(e), locals())
+        except Exception:
+            self.logger.debug('Could not store mean/rate. e=`%r`, locals=`%r`', format_exc(), locals())
 
         else:
             self.hset_aggr_keys(services, key_prefix, key_suffix)

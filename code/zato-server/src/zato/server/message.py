@@ -32,6 +32,9 @@ from lxml import etree
 # Paste
 from paste.util.converters import asbool
 
+# Python 2/3 compatibility
+from past.builtins import long
+
 # Zato
 from zato.common import MSG_MAPPER, ZATO_NOT_GIVEN
 from zato.common.nav import DictNav
@@ -369,9 +372,9 @@ class Mapper(object):
         if force_func:
             try:
                 value = force_func(value)
-            except Exception, e:
+            except Exception:
                 logger.warn('Error in force_func:`%s` `%s` over `%s` in `%s` -> `%s` e:`%s`',
-                    force_func_name, force_func, value, orig_from, to, format_exc(e))
+                    force_func_name, force_func, value, orig_from, to, format_exc())
                 raise
 
         dpath_util.new(self.target, to, value)

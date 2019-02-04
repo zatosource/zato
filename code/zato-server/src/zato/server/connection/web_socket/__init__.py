@@ -31,6 +31,9 @@ from ws4py.websocket import WebSocket as _WebSocket
 from ws4py.server.geventserver import WSGIServer
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.exception import Reportable
@@ -841,8 +844,8 @@ class WebSocket(_WebSocket):
 
             logger.info('Response returned cid:`%s`, time:`%s`', cid, _now()-now)
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
 # ################################################################################################################################
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -74,5 +74,5 @@ if __name__ == '__main__':
         try:
             reply = c.send(b'zato.ping', b'{"id":"123", "data":"mydata"}', True)
             print(x, 'Reply', repr(reply.body))
-        except Exception, e:
+        except Exception as e:
             print(e)

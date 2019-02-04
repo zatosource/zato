@@ -21,6 +21,9 @@ from dateutil.parser import parse
 # gevent
 from gevent import sleep
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
@@ -132,8 +135,8 @@ class Scheduler(BrokerMessageReceiver):
 
         try:
             handler(job_data, **kwargs)
-        except Exception, e:
-            logger.error('Caught exception `%s`', format_exc(e))
+        except Exception:
+            logger.error('Caught exception `%s`', format_exc())
 
 # ################################################################################################################################
 

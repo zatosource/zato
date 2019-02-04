@@ -9,7 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import copy, logging
+import copy
+import logging
+from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy import create_engine
@@ -87,13 +89,13 @@ def drop_all(engine):
     for table in [name for (name,) in engine.execute(text(table_sql))]:
         try:
             engine.execute(text('DROP TABLE %s CASCADE' % table))
-        except Exception, e:
-            print(e)
+        except Exception:
+            logger.warn(format_exc())
 
     for seq in [name for (name,) in engine.execute(text(sequence_sql))]:
         try:
             engine.execute(text('DROP SEQUENCE %s CASCADE' % seq))
-        except Exception, e:
-            print(e)
+        except Exception:
+            logger.warn(format_exc())
 
 # ################################################################################################################################

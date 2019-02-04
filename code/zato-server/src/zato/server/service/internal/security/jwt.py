@@ -87,8 +87,8 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
 
-            except Exception, e:
-                self.logger.error('Could not create a JWT definition, e:`%s`', format_exc(e))
+            except Exception:
+                self.logger.error('Could not create a JWT definition, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -137,8 +137,8 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
 
-            except Exception, e:
-                self.logger.error('Could not update the JWT definition, e:`%s`', format_exc(e))
+            except Exception:
+                self.logger.error('Could not update the JWT definition, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -187,8 +187,8 @@ class Delete(AdminService):
 
                 session.delete(auth)
                 session.commit()
-            except Exception, e:
-                self.logger.error('Could not delete the JWT definition, e:`%s`', format_exc(e))
+            except Exception:
+                self.logger.error('Could not delete the JWT definition, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -235,8 +235,8 @@ class LogOut(AdminService):
 
         try:
             JWTBackend(self.kvdb, self.odb, self.server.fs_server_config.misc.jwt_secret).delete(token)
-        except Exception, e:
-            self.logger.warn(format_exc(e))
+        except Exception:
+            self.logger.warn(format_exc())
             self.response.status_code = BAD_REQUEST
             self.response.payload.result = 'Token could not be deleted'
 

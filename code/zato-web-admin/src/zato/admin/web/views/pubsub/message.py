@@ -326,7 +326,7 @@ def publish_action(req):
 
         req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
 
-    except Exception, e:
+    except Exception as e:
         message = e.message
         is_ok = False
     else:

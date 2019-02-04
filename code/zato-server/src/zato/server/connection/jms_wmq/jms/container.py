@@ -438,7 +438,7 @@ class ConnectionContainer(object):
         """
         try:
             self.connections[msg.id].ping()
-        except WebSphereMQException, e:
+        except WebSphereMQException as e:
             return Response(_http_503, str(e.message), 'text/plain')
         else:
             return Response()
