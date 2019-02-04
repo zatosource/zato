@@ -1,5 +1,4 @@
 anyjson
 bunch
-future
 requests
 zato-common
