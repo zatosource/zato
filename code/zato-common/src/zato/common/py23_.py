@@ -17,6 +17,8 @@ from future.utils import PY2
 if PY2:
     maxint = sys.maxint
     from itertools import ifilter
+    from itertools import izip
 else:
     maxint = sys.maxsize
     ifilter = filter
+    izip = zip
