@@ -12,8 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from contextlib import closing
 from copy import deepcopy
-from cStringIO import StringIO
 from datetime import datetime
+from io import StringIO
 from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
