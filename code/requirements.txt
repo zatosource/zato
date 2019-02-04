@@ -39,7 +39,7 @@ faker==0.7.18
 flake8==2.1.0
 future==0.17.1
 futures==2.1.6
-gevent-inotifyx==0.1.1; sys_platform == 'linux2'
+gevent-inotifyx==0.1.1
 gevent==1.1.2
 greenlet==0.4.12
 gunicorn==18.0
@@ -53,7 +53,7 @@ huTools==0.63
 hvac==0.2.16
 idna==2.6
 imbox==0.6
-inotifyx==0.2.2; sys_platform == 'linux2'
+inotifyx==0.2.2
 ipaddress==1.0.16
 ipython==0.13.2
 iso8601==0.1.10
@@ -118,7 +118,6 @@ python-keystoneclient==0.6.0
 python-memcached==1.58
 python-novaclient==2.17.0
 python-ntlm==1.0.1
-python-swiftclient==2.0.3
 pytz==2018.9
 pyyaml==3.11
 pyzmq==17.0.0

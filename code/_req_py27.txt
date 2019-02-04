@@ -6,6 +6,7 @@ ordereddict==1.1
 pyaml==14.5.2
 pyprof2calltree==1.1.0
 python-ldap==2.4.19
+python-swiftclient==2.0.3
 ruamel.ordereddict==0.4.9
 ruamel.yaml==0.13.7
 simple-rbac==0.1.1
