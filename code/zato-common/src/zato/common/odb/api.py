@@ -119,9 +119,9 @@ class SessionWrapper(object):
 
         try:
             self.pool.ping(self.fs_sql_config)
-        except Exception, e:
+        except Exception:
             msg = 'Could not ping:`%s`, session will be left uninitialized, e:`%s`'
-            self.logger.warn(msg, name, format_exc(e))
+            self.logger.warn(msg, name, format_exc())
         else:
             if use_scoped_session:
                 self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
@@ -221,8 +221,8 @@ class SQLConnectionPool(object):
             try:
                 session = mxServerSession(config_data=config_data)
                 odbc = session.open()
-            except OperationalError, e:
-                self.logger.warn('SQL connection could not be created, caught mxODBC exception, e:`%s`', format_exc(e))
+            except OperationalError:
+                self.logger.warn('SQL connection could not be created, caught mxODBC exception, e:`%s`', format_exc())
             else:
                 url = '{engine}://{username}:{password}@{db_name}'.format(**config)
                 return create_engine(url, module=odbc, **extra)

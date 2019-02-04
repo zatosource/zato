@@ -27,6 +27,9 @@ from django.template.response import TemplateResponse
 # pytz
 from pytz import UTC
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
@@ -421,8 +424,8 @@ class Index(_BaseView):
 
             return TemplateResponse(req, self.get_template_name() or self.template, return_data)
 
-        except Exception, e:
-            return HttpResponseServerError(format_exc(e))
+        except Exception:
+            return HttpResponseServerError(format_exc())
 
     def handle(self, req=None, *args, **kwargs):
         return {}
@@ -494,12 +497,12 @@ class CreateEdit(_BaseView):
 
                 return HttpResponse(dumps(return_data), content_type='application/javascript')
             else:
-                msg = 'response:[{}], details.response.details:[{}]'.format(response, response.details)
+                msg = 'response:`{}`, details.response.details:`{}`'.format(response, response.details)
                 logger.error(msg)
                 raise ZatoException(msg=msg)
 
-        except Exception, e:
-            return HttpResponseServerError(format_exc(e))
+        except Exception:
+            return HttpResponseServerError(format_exc())
 
     def success_message(self, item):
         raise NotImplementedError('Must be implemented by a subclass')
@@ -530,8 +533,8 @@ class BaseCallView(_BaseView):
             input_dict.update(initial_input_dict)
             req.zato.client.invoke(self.service_name or self.get_service_name(), input_dict)
             return HttpResponse()
-        except Exception, e:
-            msg = '{}, e:`{}`'.format(self.error_message, format_exc(e))
+        except Exception:
+            msg = '{}, e:`{}`'.format(self.error_message, format_exc())
             logger.error(msg)
             return HttpResponseServerError(msg)
 
@@ -601,7 +604,7 @@ def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_te
         extra=None):
     try:
         req.zato.client.invoke(service, input_dict)
-    except Exception, e:
+    except Exception as e:
         return HttpResponseServerError(e.message, content_type=content_type)
     else:
         response = {'msg': ok_msg}
@@ -622,7 +625,9 @@ def upload_to_server(req, cluster_id, service, error_msg_template):
 
         return HttpResponse(dumps({'success': True}))
 
-    except Exception, e:
-        msg = error_msg_template.format(format_exc(e))
+    except Exception:
+        msg = error_msg_template.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+# ################################################################################################################################

@@ -74,8 +74,8 @@ class Create(AdminService):
                 session.add(auth)
                 session.commit()
 
-            except Exception, e:
-                msg = 'Could not create an OAuth definition, e:[{e}]'.format(e=format_exc(e))
+            except Exception:
+                msg = 'Could not create an OAuth definition, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
                 session.rollback()
 
@@ -125,8 +125,8 @@ class Edit(AdminService):
                 session.add(definition)
                 session.commit()
 
-            except Exception, e:
-                msg = 'Could not update the OAuth definition, e:[{e}]'.format(e=format_exc(e))
+            except Exception:
+                msg = 'Could not update the OAuth definition, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
                 session.rollback()
 
@@ -172,8 +172,8 @@ class Delete(AdminService):
 
                 session.delete(auth)
                 session.commit()
-            except Exception, e:
-                msg = 'Could not delete the OAuth definition, e:[{e}]'.format(e=format_exc(e))
+            except Exception:
+                msg = 'Could not delete the OAuth definition, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
                 session.rollback()
 

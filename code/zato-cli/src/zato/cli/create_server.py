@@ -475,7 +475,7 @@ Thanks for joining us. Here are a couple great ways to get started:
 Your Zato SSO team.
 """.strip()
 
-secrets_conf_template = b"""
+secrets_conf_template = """
 [secret_keys]
 key1={keys_key1}
 
@@ -639,7 +639,7 @@ class Create(ZatoCommand):
                 file_name = os.path.join(self.target_dir, file_name)
                 if show_output:
                     self.logger.debug('Creating {}'.format(file_name))
-                f = file(file_name, 'w')
+                f = open(file_name, 'w')
                 f.write(contents)
                 f.close()
 
@@ -719,7 +719,7 @@ class Create(ZatoCommand):
                 full_path = os.path.join(self.target_dir, 'config/repo/static/sphinxdoc/apispec', file_path)
                 dir_name = os.path.dirname(full_path)
                 try:
-                    os.makedirs(dir_name, 0770)
+                    os.makedirs(dir_name, 0o770)
                 except OSError:
                     # That is fine, the directory must have already created in one of previous iterations
                     pass

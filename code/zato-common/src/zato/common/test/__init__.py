@@ -32,6 +32,9 @@ from six import string_types
 # SQLAlchemy
 from sqlalchemy import create_engine
 
+# Python 2/3 compatibility
+from past.builtins import basestring, cmp, xrange
+
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
 from zato.common.log_message import CID_LENGTH

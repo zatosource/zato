@@ -425,7 +425,7 @@ class CacheTestCace(TestCase):
         # This fails because expected3 is > than max_item_size
         try:
             c.set(key3, expected3, 0.0, None)
-        except ValueError, e:
+        except ValueError as e:
             self.assertEquals(e.message, 'Value too long 7 > 6')
         else:
             self.fail('Expected aValueError to be raised')

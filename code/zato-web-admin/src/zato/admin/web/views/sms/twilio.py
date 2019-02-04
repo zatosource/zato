@@ -123,8 +123,8 @@ def send_message_action(req, cluster_id, conn_id, name_slug):
             return HttpResponse(dumps({'msg': 'OK, message sent successfully.'}), content_type='application/javascript')
         else:
             raise Exception(response.details)
-    except Exception, e:
-        msg = 'Caught an exception, e:`{}`'.format(format_exc(e))
+    except Exception:
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 

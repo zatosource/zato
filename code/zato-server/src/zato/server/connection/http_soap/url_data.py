@@ -22,6 +22,9 @@ from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer
 from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.bunch import Bunch
 from zato.common import DATA_FORMAT, MISC, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
@@ -32,13 +35,23 @@ from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.jwt import JWT
 from zato.url_dispatcher import CyURLData, Matcher
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+
 _internal_url_path_indicator = '{}/zato/'.format(MISC.SEPARATOR)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class OAuthStore(object):
     def __init__(self, oauth_config):
         self.oauth_config = oauth_config
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class URLData(CyURLData, OAuthDataStore):
     """ Performs URL matching and security checks.
@@ -290,9 +303,9 @@ class URLData(CyURLData, OAuthDataStore):
 
         try:
             result = on_wsse_pwd(self._wss, url_config, body, False)
-        except Exception, e:
+        except Exception:
             if enforce_auth:
-                msg = 'Could not parse the WS-Security data, body:[{}], e:[{}]'.format(body, format_exc(e))
+                msg = 'Could not parse the WS-Security data, body:`{}`, e:`{}`'.format(body, format_exc())
                 raise Unauthorized(cid, msg, 'zato-wss')
             else:
                 return False
@@ -344,9 +357,9 @@ class URLData(CyURLData, OAuthDataStore):
 
         try:
             self._oauth_server.verify_request(oauth_request)
-        except Exception, e:
+        except Exception as e:
             if enforce_auth:
-                msg = 'Signature verification failed, wsgi_environ:[%r], e:[%s], e.message:[%s]'
+                msg = 'Signature verification failed, wsgi_environ:`%r`, e:`%s`, e.message:`%s`'
                 logger.error(msg, wsgi_environ, format_exc(e), e.message)
                 raise Unauthorized(cid, 'Signature verification failed', 'OAuth')
             else:
@@ -502,8 +515,8 @@ class URLData(CyURLData, OAuthDataStore):
                 else:
                     vault_response = self._vault_conn_check_headers(client, wsgi_environ, sec_def_config)
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
             if enforce_auth:
                 self._enforce_vault_sec(cid, sec_def.name)
             else:

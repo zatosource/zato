@@ -9,14 +9,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os
 from collections import OrderedDict
 from copy import deepcopy
-from cStringIO import StringIO
-from httplib import responses
+from http.client import responses
+from io import StringIO
 from numbers import Number
 from string import Template
-from sys import maxint
 from traceback import format_exc
 
 # boto
@@ -32,6 +30,10 @@ from candv import Constants, ValueConstant
 from lxml import etree
 from lxml.objectify import ObjectPath as _ObjectPath
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+from zato.common.py23_ import maxint
+
 # Zato
 from zato.vault.client import VAULT
 
@@ -42,14 +44,7 @@ VAULT = VAULT
 # Version
 # ##############################################################################
 
-try:
-    curdir = os.path.dirname(os.path.abspath(__file__))
-    _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
-    _locals = {}
-    execfile(_version_py, _locals)
-    version = 'Zato {}'.format(_locals['version'])
-except IOError:
-    version = '2.0.3.4'
+version = '3.1.0'
 
 # The namespace for use in all Zato's own services.
 zato_namespace = 'https://zato.io/ns/20130518'
@@ -1125,9 +1120,9 @@ class path(object):
             if self.text_only:
                 return value.text
             return value
-        except(ValueError, AttributeError), e:
+        except(ValueError, AttributeError):
             if self.raise_on_not_found:
-                raise ParsingException(None, format_exc(e))
+                raise ParsingException(None, format_exc())
             else:
                 return None
 

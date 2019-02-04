@@ -25,6 +25,9 @@ from pyparsing import alphanums, oneOf, OneOrMore, Optional, White, Word
 from redis import StrictRedis
 from redis.sentinel import Sentinel
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.common import KVDB as _KVDB, NONCE_STORE
 from zato.common.util import has_redis_sentinels

@@ -104,7 +104,7 @@ class SchedulerServer(object):
         try:
             start_response(ok, headers)
             return [b'{}\n']
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
 # ################################################################################################################################

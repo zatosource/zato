@@ -29,7 +29,7 @@ class SIOLiveTestCase(LiveTestCase):
         # No input provided hence we expect a proper message on output
         try:
             response = self.invoke_asi(service_name)
-        except Exception, e:
+        except Exception as e:
             self.assertIn('Missing input', e.message)
 
         test_data = service_class.test_data

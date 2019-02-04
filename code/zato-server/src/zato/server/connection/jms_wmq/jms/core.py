@@ -29,6 +29,9 @@ from string import Template
 from cPickle import dumps as pickle_dumps
 from cStringIO import StringIO
 
+# Python 2/3 compatibility
+from past.builtins import basestring, unicode
+
 # Zato
 from zato.server.connection.jms_wmq.jms import DEFAULT_DELIVERY_MODE, BaseException
 

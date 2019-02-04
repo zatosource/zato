@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging, os
 from datetime import datetime
-from httplib import OK
+from http.client import OK
 from inspect import getargspec
 from json import dumps, loads
 from traceback import format_exc
@@ -27,6 +27,9 @@ from lxml import objectify
 
 # requests
 import requests
+
+# Python 2/3 compatibility
+from past.builtins import basestring
 
 # Zato
 from zato.common import BROKER, soap_data_path, soap_data_xpath, soap_fault_xpath, \
@@ -58,7 +61,7 @@ else:
 # Version
 # ################################################################################################################################
 
-version = '3.0.2'
+version = '3.1.0'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -179,8 +182,8 @@ class _StructuredResponse(_Response):
     def _set_data_details(self):
         try:
             self.data = self.load_func(self.inner.text.encode('utf-8'))
-        except Exception, e:
-            self.details = format_exc(e)
+        except Exception:
+            self.details = format_exc()
         else:
             return True
 

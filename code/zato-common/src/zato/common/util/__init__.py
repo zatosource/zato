@@ -28,13 +28,13 @@ import sys
 import unicodedata
 from ast import literal_eval
 from contextlib import closing
-from cStringIO import StringIO
 from datetime import datetime, timedelta
 from glob import glob
 from hashlib import sha256
 from importlib import import_module
 from inspect import ismethod
-from itertools import ifilter, izip, izip_longest, tee
+from itertools import zip_longest
+from io import StringIO
 from operator import itemgetter
 from os import getuid
 from os.path import abspath, isabs, join
@@ -47,7 +47,7 @@ from tempfile import NamedTemporaryFile
 from threading import current_thread
 from time import sleep
 from traceback import format_exc
-from urlparse import urlparse
+from urllib.parse import urlparse
 
 # alembic
 from alembic import op
@@ -91,9 +91,9 @@ import pytz
 import requests
 
 # Spring Python
-from springpython.context import ApplicationContext
-from springpython.remoting.http import CAValidatingHTTPSConnection
-from springpython.remoting.xmlrpc import SSLClientTransport
+#from springpython.context import ApplicationContext
+#from springpython.remoting.http import CAValidatingHTTPSConnection
+#from springpython.remoting.xmlrpc import SSLClientTransport
 
 # SQLAlchemy
 import sqlalchemy as sa
@@ -104,6 +104,11 @@ from texttable import Texttable
 
 # validate
 from validate import is_boolean, is_integer, VdtTypeError
+
+# Python 2/3 compatibility
+from future.utils import raise_
+from past.builtins import basestring, cmp, reduce, unicode
+from zato.common.py23_ import ifilter
 
 # Zato
 from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
@@ -131,7 +136,6 @@ cid_base = len(cid_symbols)
 
 # This reseeds the current process only and each parallel server does it for each subprocess too.
 numpy_seed()
-
 
 # ################################################################################################################################
 
@@ -645,7 +649,7 @@ def multikeysort(items, columns):
 def grouper(n, iterable, fillvalue=None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * n
-    return izip_longest(fillvalue=fillvalue, *args)
+    return zip_longest(fillvalue=fillvalue, *args)
 
 # ################################################################################################################################
 
@@ -1223,7 +1227,7 @@ def replace_private_key(orig_payload):
 def delete_tls_material_from_fs(server, info, full_path_func):
     try:
         os.remove(full_path_func(server.tls_dir, info))
-    except OSError, e:
+    except OSError as e:
         if e.errno == errno.ENOENT:
             # It's ok - some other worker must have deleted it already
             pass
@@ -1508,9 +1512,9 @@ def startup_service_payload_from_path(name, value, repo_location):
 
     try:
         payload = open(path).read()
-    except Exception, e:
+    except Exception:
         logger.warn(
-            'Could not open payload path:`%s` `%s`, skipping startup service:`%s`, e:`%s`', orig_path, path, name, format_exc(e))
+            'Could not open payload path:`%s` `%s`, skipping startup service:`%s`, e:`%s`', orig_path, path, name, format_exc())
     else:
         return payload
 
@@ -1602,7 +1606,7 @@ def spawn_greenlet(callable, *args, **kwargs):
 
         if g.exception:
             type_, value, traceback = g.exc_info
-            raise type_(value), None, traceback
+            raise_(type_(value), None, traceback)
 
     except Timeout:
         pass # Timeout = good = no errors

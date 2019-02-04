@@ -86,9 +86,8 @@ class Create(_CreateEdit):
                 session.add(auth)
                 session.commit()
 
-            except Exception, e:
-                msg = 'Could not create an XPath security definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('XPath security definition could not be created, e:`{}', format_exc())
                 session.rollback()
 
                 raise
@@ -136,9 +135,8 @@ class Edit(_CreateEdit):
                 session.add(auth)
                 session.commit()
 
-            except Exception, e:
-                msg = 'Could not update the XPath security definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('XPath security definition could not be updated, e:`{}', format_exc())
                 session.rollback()
 
                 raise
@@ -183,8 +181,8 @@ class Delete(AdminService):
 
                 session.delete(auth)
                 session.commit()
-            except Exception, e:
-                msg = 'Could not delete the XPath security definition, e:[{e}]'.format(e=format_exc(e))
+            except Exception:
+                msg = 'Could not delete the XPath security definition, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
                 session.rollback()
 

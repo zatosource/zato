@@ -22,6 +22,9 @@ from docformatter import format_docstring
 # markdown
 from markdown import markdown
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.common import APISPEC
 from zato.server.service.reqresp.sio import AsIs, SIO_TYPE_MAP, is_bool, is_int

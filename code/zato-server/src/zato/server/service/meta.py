@@ -334,9 +334,9 @@ class CreateEditMeta(AdminServiceMeta):
                     session.add(instance)
                     session.commit()
 
-                except Exception, e:
+                except Exception:
                     msg = 'Could not {} the object, e:`%s`'.format(verb)
-                    logger.error(msg, format_exc(e))
+                    logger.error(msg, format_exc())
                     session.rollback()
                     raise
                 else:
@@ -391,9 +391,9 @@ class DeleteMeta(AdminServiceMeta):
 
                     session.delete(instance)
                     session.commit()
-                except Exception, e:
+                except Exception:
                     msg = 'Could not delete {}, e:`%s`'.format(attrs.label)
-                    self.logger.error(msg, format_exc(e))
+                    self.logger.error(msg, format_exc())
                     session.rollback()
 
                     raise

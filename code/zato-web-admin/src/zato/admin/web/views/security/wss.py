@@ -97,8 +97,8 @@ def edit(req):
     try:
         response = req.zato.client.invoke('zato.security.wss.edit', _get_edit_create_message(req.POST, prefix='edit-'))
         return _edit_create_response(response, 'updated', req.POST['edit-name'], req.POST['edit-password_type'])
-    except Exception, e:
-        msg = 'Could not update the WS-Security definition, e:[{e}]'.format(e=format_exc(e))
+    except Exception:
+        msg = 'WS-Security definition could not be updated, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -107,14 +107,14 @@ def create(req):
     try:
         response = req.zato.client.invoke('zato.security.wss.create', _get_edit_create_message(req.POST))
         return _edit_create_response(response, 'created', req.POST['name'], req.POST['password_type'])
-    except Exception, e:
-        msg = "Could not create a WS-Security definition, e:[{e}]".format(e=format_exc(e))
+    except Exception:
+        msg = "WS-Security definition could not be created, e:[{e}]".format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
 class Delete(_Delete):
     url_name = 'security-wss-delete'
-    error_message = 'Could not delete the WS-Security definition'
+    error_message = 'WS-Security definition could not be deleted'
     service_name = 'zato.security.wss.delete'
 
 @method_allowed('POST')

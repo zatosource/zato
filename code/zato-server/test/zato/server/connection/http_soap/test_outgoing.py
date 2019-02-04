@@ -192,7 +192,7 @@ class HTTPSOAPWrapperTestCase(TestCase, Base):
 
         try:
             wrapper.format_address(cid, None)
-        except ValueError, e:
+        except ValueError as e:
             eq_(e.message, 'CID:[{}] No parameters given for URL path'.format(cid))
         else:
             self.fail('Expected ValueError (params is None)')
@@ -213,7 +213,7 @@ class HTTPSOAPWrapperTestCase(TestCase, Base):
 
         try:
             address, non_path_params = wrapper.format_address(cid, params)
-        except ValueError, e:
+        except ValueError as e:
             eq_(e.message, 'CID:[{}] Could not build URL path'.format(cid))
         else:
             self.fail('Expected ValueError (not enough keys in params)')
@@ -497,7 +497,7 @@ class TLSPingTestCase(TestCase, Base):
 
             try:
                 wrapper.ping(rand_string())
-            except Exception, e:
+            except Exception as e:
                 details = e.message[0][1][0][0]
                 try:
                     self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
@@ -530,7 +530,7 @@ class TLSPingTestCase(TestCase, Base):
 
             try:
                 wrapper.ping(rand_string())
-            except Exception, e:
+            except Exception as e:
                 details = e.message[0][1][0][0]
                 try:
                     self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
@@ -620,7 +620,7 @@ class TLSHTTPTestCase(TestCase, Base):
 
             try:
                 wrapper.get('123')
-            except Exception, e:
+            except Exception as e:
                 details = e.message[0][1][0][0]
                 try:
                     self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
@@ -654,7 +654,7 @@ class TLSHTTPTestCase(TestCase, Base):
 
             try:
                 wrapper.get('123')
-            except Exception, e:
+            except Exception as e:
                 details = e.message[0][1][0][0]
                 try:
                     self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))

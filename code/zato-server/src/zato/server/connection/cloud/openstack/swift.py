@@ -49,7 +49,7 @@ class SwiftWrapper(object):
                  ssl_compression=self.config.needs_tls_compr, retry_on_ratelimit=self.config.should_retr_ratelimit)
         try:
             conn.head_account()
-        except Exception, e:
-            self.logger.warn('Could not HEAD an account (%s), e:`%s`', self.config.name, format_exc(e))
+        except Exception:
+            self.logger.warn('Could not HEAD an account (%s), e:`%s`', self.config.name, format_exc())
 
         self.client.put_client(conn)

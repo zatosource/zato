@@ -1,20 +1,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # flake8: noqa
-import os
+
 from setuptools import setup, find_packages
 
-curdir = os.path.dirname(os.path.abspath(__file__))
-_version_py = os.path.normpath(os.path.join(curdir, '..', '.version.py'))
-_locals = {}
-execfile(_version_py, _locals)
-version = _locals['version']
+version = '3.1.0'
 
 setup(
       name = 'zato-zmq',

@@ -24,11 +24,16 @@ from lxml.objectify import Element
 # Paste
 from paste.util.converters import asbool
 
+# Python 2/3 compatibility
+from past.builtins import cmp, unicode
+
 # Zato
 from zato.common import APISPEC, DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, path, SECRETS, \
      ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.exception import BadRequest, Reportable
 from zato.common.pubsub import PubSubMessage
+
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
@@ -455,7 +460,7 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
 
         return value
 
-    except Exception, e:
+    except Exception as e:
         if isinstance(e, Reportable):
             e.cid = cid
             raise
@@ -486,9 +491,9 @@ convert_from_dict = convert_from_json
 def convert_from_xml(payload, param_name, cid, is_required, is_complex, default_value, path_prefix, use_text):
     try:
         elem = path('{}.{}'.format(path_prefix, param_name), is_required).get_from(payload)
-    except ParsingException, e:
-        msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
-            etree.tostring(payload), format_exc(e))
+    except ParsingException:
+        msg = 'Caught an exception while parsing, payload:`<![CDATA[{}]]>`, e:`{}`'.format(
+            etree.tostring(payload), format_exc())
         raise ParsingException(cid, msg)
 
     if is_complex:

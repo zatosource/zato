@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
 
 # -*- coding: utf-8 -*-
 
@@ -13,6 +20,9 @@ from traceback import format_exc
 # SQLAlchemy
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
+
+# Python 2/3 compatibility
+from past.builtins import basestring
 
 # Zato
 from zato.common.audit import audit_pii
