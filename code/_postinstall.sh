@@ -51,6 +51,7 @@ mkdir zato_extra_paths
 echo "$(pwd)/zato_extra_paths" >> eggs/easy-install.pth
 
 # Apply patches.
+patch -p0 -d eggs < patches/anyjson/__init__.py.diff
 patch -p0 -d eggs < patches/butler/__init__.py.diff
 patch -p0 -d eggs < patches/configobj.py.diff
 patch -p0 -d eggs < patches/gunicorn/arbiter.py.diff
