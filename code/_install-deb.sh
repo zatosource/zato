@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Python version to use needs to be provided by our caller
+PY_BINARY=$1
+echo "*** Zato DEB installation using $PY_BINARY ***"
+
 # Always run an update so there are no surprises later on when it actually
 # comes to fetching the packages from repositories.
 sudo apt-get update
@@ -18,7 +22,7 @@ sudo apt-get install -y \
     build-essential curl git haproxy libbz2-dev libev-dev libev4 libevent-dev \
     libffi-dev libkeyutils-dev libldap2-dev libmemcached-dev libpq-dev \
     libsasl2-dev libssl-dev libxml2-dev libxslt1-dev libyaml-dev openssl \
-    python2.7 python2.7-dev swig uuid-dev uuid-runtime wget zlib1g-dev
+    $PY_BINARY $PY_BINARY-dev swig uuid-dev uuid-runtime wget zlib1g-dev
 
 # On Debian and Ubuntu the binary goes to /usr/sbin/haproxy so we need to
 # symlink it to a directory that can be easily found on PATH so that starting
@@ -28,9 +32,9 @@ then
     sudo ln -sf /usr/sbin/haproxy /usr/bin/haproxy
 fi
 
-curl https://bootstrap.pypa.io/get-pip.py | sudo python2.7
-sudo python2.7 -m pip install -U setuptools virtualenv==15.1.0
+curl https://bootstrap.pypa.io/get-pip.py | sudo $PY_BINARY
+sudo $PY_BINARY -m pip install -U setuptools virtualenv==15.1.0
 
-python2.7 -m virtualenv .
+$PY_BINARY -m virtualenv .
 source ./bin/activate
 source ./_postinstall.sh
