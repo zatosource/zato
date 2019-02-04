@@ -485,7 +485,7 @@ server_conf.kvdb.password={zato_kvdb_password}
 server_conf.main.token={zato_main_token}
 server_conf.misc.jwt_secret={zato_misc_jwt_secret}
 server_conf.odb.password={zato_odb_password}
-"""
+""".encode('utf8')
 
 simple_io_conf_contents = """
 [int]
