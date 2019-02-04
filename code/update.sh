@@ -8,6 +8,7 @@ echo "*** Downloading updates ***"
 git -C $CURDIR pull
 
 # Uninstall old dependencies
+$CURDIR/bin/pip uninstall -y sec-wall
 $CURDIR/bin/pip uninstall -y zato-apitest
 
 echo "*** Installing updates ***"
