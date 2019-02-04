@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
+
+# stdlib
+from logging import DEBUG, getLogger
+from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
@@ -14,6 +18,13 @@ from zato.common import PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, PubSubTopic
 from zato.common.util.sql import sql_op_with_deadlock_retry
+
+# ################################################################################################################################
+
+logger_zato = getLogger('zato')
+logger_pubsub = getLogger('zato_pubsub')
+
+has_debug = logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -36,17 +47,33 @@ def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by
     """ A low-level implementation of sql_publish_with_retry.
     """
     # Publish messages - INSERT rows, each representing an individual message
-    if insert_topic_messages(session, cid, gd_msg_list):
+    topic_messages_inserted = insert_topic_messages(session, cid, gd_msg_list)
+
+    if has_debug:
+        sub_keys_by_topic = sorted(elem.sub_key for elem in subscriptions_by_topic)
+        logger_zato.info('With topic_messages_inserted `%s` `%s` `%s` `%s` `%s` `%s` `%s`',
+                cid, topic_messages_inserted, cluster_id, topic_id, sub_keys_by_topic, gd_msg_list, now)
+
+    if topic_messages_inserted:
 
         # Move messages to each subscriber's queue
         if subscriptions_by_topic:
+
             try:
                 insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic_id, now, cid)
+
+                if has_debug:
+                    logger_zato.info('Inserted queue messages `%s` `%s` `%s` `%s` `%s` `%s`', cid, cluster_id,
+                        sub_keys_by_topic, gd_msg_list, topic_id, now)
 
                 # No integrity error / no deadlock = all good
                 return True
 
             except IntegrityError:
+
+                if has_debug:
+                    logger_zato.info('Caught IntegrityError (_sql_publish_with_retry) `%s` `%s`', cid, format_exc())
+
                 # If we have an integrity error here it means that our transaction, the whole of it,
                 # was rolled back - this will happen on MySQL in case in case of deadlocks which may
                 # occur because delivery tasks update the table that insert_queue_messages wants to insert to.
@@ -55,6 +82,10 @@ def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by
                 return False
 
         else:
+
+            if has_debug:
+                logger_zato.info('No subscribers in `%s`', cid)
+
             # No subscribers, also good
             return True
 
@@ -68,7 +99,14 @@ def sql_publish_with_retry(*args):
     is_ok = False
 
     while not is_ok:
+
+        if has_debug:
+            logger_zato.info('sql_publish_with_retry -> is_ok.1:`%s`', is_ok)
+
         is_ok = _sql_publish_with_retry(*args)
+
+        if has_debug:
+            logger_zato.info('sql_publish_with_retry -> is_ok.2:`%s`', is_ok)
 
 # ################################################################################################################################
 
@@ -84,8 +122,13 @@ def insert_topic_messages(session, cid, msg_list):
     """
     try:
         return sql_op_with_deadlock_retry(cid, 'insert_topic_messages', _insert_topic_messages, session, msg_list)
+
     # Catch duplicate MsgId values sent by clients
     except IntegrityError as e:
+
+        if has_debug:
+            logger_zato.info('Caught IntegrityError (insert_topic_messages) `%s` `%s`', cid, format_exc())
+
         if 'pubsb_msg_pubmsg_id_idx' in e.message:
             raise BadRequest(cid, 'Duplicate msg_id:`{}`'.format(e.message))
         else:

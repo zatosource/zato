@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.common import PUBSUB as COMMON_PUBSUB
+from zato.common.odb.query import pubsub_endpoint_queue_list_by_sub_keys
 from zato.common.util.time_ import datetime_from_ms
 
 # ################################################################################################################################
@@ -71,5 +72,16 @@ def get_last_pub_data(conn, cluster_id, topic_id, _topic_key=COMMON_PUBSUB.REDIS
     if last_data:
         last_data['pub_time'] = datetime_from_ms(float(last_data['pub_time']) * 1000)
         return last_data
+
+# ################################################################################################################################
+
+def get_topic_sub_keys_from_sub_keys(session, cluster_id, sub_key_list):
+    topic_sub_keys = {}
+
+    for item in pubsub_endpoint_queue_list_by_sub_keys(session, cluster_id, sub_key_list):
+        sub_keys = topic_sub_keys.setdefault(item.topic_name, [])
+        sub_keys.append(item.sub_key)
+
+    return topic_sub_keys
 
 # ################################################################################################################################
