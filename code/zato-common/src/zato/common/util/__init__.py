@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -31,7 +31,6 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from glob import glob
 from hashlib import sha256
-from importlib import import_module
 from inspect import ismethod
 from itertools import tee
 from io import StringIO
@@ -89,11 +88,6 @@ import pytz
 # requests
 import requests
 
-# Spring Python
-from springpython.context import ApplicationContext
-from springpython.remoting.http import CAValidatingHTTPSConnection
-from springpython.remoting.xmlrpc import SSLClientTransport
-
 # SQLAlchemy
 import sqlalchemy as sa
 from sqlalchemy import orm
@@ -110,6 +104,7 @@ from future.utils import raise_
 from past.builtins import basestring, cmp, reduce, unicode
 from six.moves.urllib.parse import urlparse
 from zato.common.py23_ import ifilter, izip
+from zato.common.py23_.spring_ import CAValidatingHTTPSConnection, SSLClientTransport
 
 # Zato
 from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
@@ -335,10 +330,8 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
     """
     from zato.agent.load_balancer.client import LoadBalancerAgentClient
 
-    agent_uri = "https://{host}:{port}/RPC2".format(host=lb_host, port=lb_agent_port)
+    agent_uri = 'https://{host}:{port}/RPC2'.format(host=lb_host, port=lb_agent_port)
 
-    # See the 'Problems with XML-RPC over SSL' thread for details
-    # https://lists.springsource.com/archives/springpython-users/2011-June/000480.html
     if sys.version_info >= (2, 7):
         class Python27CompatTransport(SSLClientTransport):
             def make_connection(self, host):
@@ -412,18 +405,6 @@ def _get_ioc_config(location, config_class):
         config = None
 
     return config
-
-# ################################################################################################################################
-
-def get_app_context(config):
-    """ Returns the Zato's Inversion of Control application context.
-    """
-    ctx_class_path = config['spring']['context_class']
-    ctx_class_path = ctx_class_path.split('.')
-    mod_name, class_name = '.'.join(ctx_class_path[:-1]), ctx_class_path[-1:][0]
-    mod = import_module(mod_name)
-    class_ = getattr(mod, class_name)()
-    return ApplicationContext(class_)
 
 # ################################################################################################################################
 

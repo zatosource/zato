@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -17,9 +17,6 @@ from traceback import format_exc
 # pytz
 from pytz import UTC
 
-# Spring Python
-from springpython.remoting.xmlrpc import SSLServer
-
 # YAML
 import yaml
 
@@ -28,6 +25,7 @@ from zato.agent.load_balancer.config import backend_template, config_from_string
 from zato.agent.load_balancer.haproxy_stats import HAProxyStats
 from zato.common import MISC, TRACE1, ZATO_OK
 from zato.common.haproxy import haproxy_stats, validate_haproxy_config
+from zato.common.py23_.spring_ import SSLServer
 from zato.common.repo import RepoManager
 from zato.common.util import get_lb_agent_json_config, timeouting_popen
 

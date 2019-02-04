@@ -33,9 +33,6 @@ from numpy.random import seed as numpy_seed
 # Paste
 from paste.util.converters import asbool
 
-# Spring Python
-from springpython.context import DisposableObject
-
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
@@ -70,7 +67,7 @@ megabyte = 10**6
 
 # ################################################################################################################################
 
-class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
+class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
     """ Main server process.
     """
     def __init__(self):
@@ -115,7 +112,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.deployment_lock_expires = None
         self.deployment_lock_timeout = None
         self.deployment_key = ''
-        self.app_context = None
         self.has_gevent = None
         self.delivery_store = None
         self.static_config = None
@@ -160,7 +156,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         # The main config store
         self.config = ConfigStore()
 
-        gevent.signal(signal.SIGINT, self.destroy)
+        gevent.signal(signal.SIGINT, self.cleanup_on_stop)
 
 # ################################################################################################################################
 
@@ -856,17 +852,19 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         if worker.app.zato_wsgi_app.pid:
             worker.app.zato_wsgi_app.keyutils.user_delete(b'zato-wmq', worker.app.zato_wsgi_app.pid)
 
+        # Any other cleanup procedures
+        worker.app.zato_wsgi_app.cleanup_on_stop()
+
 # ################################################################################################################################
 
-    def destroy(self):
-        """ A Spring Python hook for closing down all the resources held.
+    def cleanup_on_stop(self):
+        """ A shutdown cleanup procedure.
         """
         # Tell the ODB we've gone through a clean shutdown but only if this is
         # the main process going down (Arbiter) not one of Gunicorn workers.
         # We know it's the main process because its ODB's session has never
         # been initialized.
         if not self.odb.session_initialized:
-
 
             self.config.odb_data = self.get_config_odb_data(self)
             self.config.odb_data['fs_sql_config'] = self.fs_sql_config
@@ -880,6 +878,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         # Per-worker cleanup
         else:
 
+            # Close SQL pools
+            self.sql_pool_store.cleanup_on_stop()
+
             # Close all POSIX IPC structures
             self.server_startup_ipc.close()
 
@@ -890,9 +891,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             wsx_service = 'zato.channel.web-socket.client.delete-by-server'
             if self.service_store.is_deployed(wsx_service):
                 self.invoke(wsx_service)
-
-    # Convenience API
-    stop = destroy
 
 # ################################################################################################################################
 

@@ -19,9 +19,6 @@ from threading import RLock
 from time import time
 from traceback import format_exc
 
-# Spring Python
-from springpython.context import DisposableObject
-
 # SQLAlchemy
 from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError, ProgrammingError
@@ -300,12 +297,11 @@ class SQLConnectionPool(object):
 
 # ################################################################################################################################
 
-class PoolStore(DisposableObject):
+class PoolStore(object):
     """ A main class for accessing all of the SQL connection pools. Each server
     thread has its own store.
     """
     def __init__(self, sql_conn_class=SQLConnectionPool):
-        super(PoolStore, self).__init__()
         self.sql_conn_class = sql_conn_class
         self._lock = RLock()
         self.wrappers = {}
@@ -385,8 +381,8 @@ class PoolStore(DisposableObject):
 
 # ################################################################################################################################
 
-    def destroy(self):
-        """ Invoked when Spring Python's container is releasing the store.
+    def cleanup_on_stop(self):
+        """ Invoked when the server is stopping.
         """
         with self._lock:
             for name, wrapper in self.wrappers.items():
