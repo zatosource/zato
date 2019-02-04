@@ -956,13 +956,15 @@ def get_full_stack():
     stack = traceback.extract_stack()[:-1]  # last one would be full_stack()
     if exc is not None:  # i.e. if an exception is present
         del stack[-1]    # remove call of full_stack, the printed exception will contain the caught exception caller instead
-    trc = 'Traceback (most recent call last):\n'
-    stackstr = trc + ''.join(traceback.format_list(stack))
+    trace = 'Traceback (most recent call last):\n'
+    stack_string = trace + ''.join(traceback.format_list(stack))
 
     if exc is not None:
-        stackstr += '  ' + traceback.format_exc().decode('utf-8').lstrip(trc)
+        stack_string += '  '
+        stack_string += traceback.format_exc()
+        stack_string = stack_string.lstrip(trace)
 
-    return stackstr
+    return stack_string
 
 # ################################################################################################################################
 

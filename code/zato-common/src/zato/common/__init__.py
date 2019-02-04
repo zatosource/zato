@@ -1100,7 +1100,7 @@ class CONFIG_FILE:
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
 PLACEHOLDER = 'zato_placeholder'
 
-ZATO_INFO_FILE = b'.zato-info'
+ZATO_INFO_FILE = '.zato-info'
 
 class SECRETS:
 

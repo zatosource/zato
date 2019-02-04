@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -31,13 +31,16 @@ from passlib import hash as passlib_hash
 # py-cpuinfo
 from cpuinfo import get_cpu_info
 
+# Python 2/3 compatibility
+from builtins import str as text
+
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-well_known_data = b'3.141592...' # π number
+well_known_data = '3.141592...' # π number
 zato_stdin_prefix = 'zato+stdin:///'
 
 # ################################################################################################################################
@@ -124,7 +127,7 @@ class CryptoManager(object):
         """ Sets crypto attributes and, to be double sure that they are correct,
         decrypts well known data to itself in order to confirm that keys are valid / expected.
         """
-        key = self._find_secret_key(secret_key).encode('utf8')
+        key = self._find_secret_key(secret_key)
         self.secret_key = Fernet(key)
         self.well_known_data = well_known_data.encode('utf8') if well_known_data else None
 
@@ -196,7 +199,9 @@ class CryptoManager(object):
     def decrypt(self, encrypted):
         """ Returns input data in a clear-text, decrypted, form.
         """
-        return self.secret_key.decrypt(encrypted.encode('utf8'))
+        if isinstance(encrypted, text):
+            encrypted = encrypted.encode('utf8')
+        return self.secret_key.decrypt(encrypted).decode('utf8')
 
 # ################################################################################################################################
 

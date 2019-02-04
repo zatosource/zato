@@ -6,6 +6,9 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Python 2/3 compatibility
+from six import PY2
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -104,8 +107,12 @@ import logging
 import sys
 import traceback
 
-from xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
-from xmlrpc.client import ServerProxy, Transport
+if PY2:
+    from SimpleXMLRPCServer import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
+    from xmlrpclib import ServerProxy, Transport
+else:
+    from xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
+    from xmlrpc.client import ServerProxy, Transport
 
 class VerificationException(Exception):
     """ Raised when the verification of a certificate's fields fails.
