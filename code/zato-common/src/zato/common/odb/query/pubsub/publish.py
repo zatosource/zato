@@ -24,7 +24,7 @@ from zato.common.util.sql import sql_op_with_deadlock_retry
 logger_zato = getLogger('zato')
 logger_pubsub = getLogger('zato_pubsub')
 
-has_debug = True #logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
+has_debug = logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -50,8 +50,9 @@ def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by
     topic_messages_inserted = insert_topic_messages(session, cid, gd_msg_list)
 
     if has_debug:
+        sub_keys_by_topic = sorted(elem.sub_key for elem in subscriptions_by_topic)
         logger_zato.info('With topic_messages_inserted `%s` `%s` `%s` `%s` `%s` `%s` `%s`',
-                cid, topic_messages_inserted, cluster_id, topic_id, subscriptions_by_topic, gd_msg_list, now)
+                cid, topic_messages_inserted, cluster_id, topic_id, sub_keys_by_topic, gd_msg_list, now)
 
     if topic_messages_inserted:
 
@@ -63,7 +64,7 @@ def _sql_publish_with_retry(session, cid, cluster_id, topic_id, subscriptions_by
 
                 if has_debug:
                     logger_zato.info('Inserted queue messages `%s` `%s` `%s` `%s` `%s` `%s`', cid, cluster_id,
-                        subscriptions_by_topic, gd_msg_list, topic_id, now)
+                        sub_keys_by_topic, gd_msg_list, topic_id, now)
 
                 # No integrity error / no deadlock = all good
                 return True

@@ -33,7 +33,7 @@ from zato.common.util.search import SearchResults
 logger_zato = getLogger('zato')
 logger_pubsub = getLogger('zato_pubsub')
 
-has_debug = True #logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
+has_debug = logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -94,7 +94,7 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
     attempts = 0
 
     while True:
-        attempts = 1
+        attempts += 1
 
         if has_debug:
             logger_zato.info('In sql_op_with_deadlock_retry, %s %s %s %s %r %r', attempts, cid, name, func, args, kwargs)
