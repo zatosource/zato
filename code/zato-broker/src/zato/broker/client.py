@@ -91,7 +91,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                                     self.on_message(Bunch(msg))
                                 except Exception:
                                     logger.warn('Could not handle broker message `%s`, e:`%s`', msg, format_exc())
-                        except redis.ConnectionError, e:
+                        except redis.ConnectionError as e:
                             if e.message not in EXPECTED_CONNECTION_ERRORS:  # Hm, there's no error code, only the message
                                 logger.warn('Caught Redis exception `%s`', e.message)
                                 self.set_up_pub_sub_client()
