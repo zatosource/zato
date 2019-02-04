@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from cPickle import dumps as pickle_dumps
 from logging import getLogger
 from traceback import format_exc
 
@@ -31,6 +30,7 @@ from zato.common.util import parse_extra_into_dict
 
 # Python 2/3 compatibility
 from past.builtins import basestring
+from zato.common.py23_ import pickle_dumps, pickle_loads
 
 # ################################################################################################################################
 

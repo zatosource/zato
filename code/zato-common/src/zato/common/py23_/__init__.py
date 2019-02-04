@@ -18,7 +18,11 @@ if PY2:
     maxint = sys.maxint
     from itertools import ifilter
     from itertools import izip
+    from cPickle import dumps as pickle_dumps
+    from cPickle import loads as pickle_loads
 else:
     maxint = sys.maxsize
     ifilter = filter
     izip = zip
+    from pickle import dumps as pickle_dumps
+    from pickle import loads as pickle_loads

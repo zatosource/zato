@@ -14,7 +14,7 @@ from email.utils import formatdate as stdlib_format_date
 from hashlib import sha256
 from json import dumps as json_dumps, JSONEncoder
 from logging import getLogger
-from sys import getsizeof, maxint
+from sys import getsizeof
 
 # Arrow
 from arrow import Arrow
@@ -32,8 +32,9 @@ from posix.time cimport timeval, timezone, gettimeofday
 # regex
 from regex import compile as re_compile
 
-# six
+# Python 2/3 compatibility
 from six import binary_type, integer_types, string_types, text_type
+from zato.common.py23_ import maxint
 
 # Zato
 from zato.common import CACHE as _COMMON_CACHE
