@@ -19,7 +19,6 @@ from tempfile import gettempdir
 from threading import RLock
 from time import sleep
 from traceback import format_exc
-from urlparse import urlparse
 from uuid import uuid4
 
 # Bunch
@@ -38,6 +37,7 @@ from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Python 2/3 compatibility
+from future.moves.urllib.parse import urlparse
 from past.builtins import basestring
 
 # Zato

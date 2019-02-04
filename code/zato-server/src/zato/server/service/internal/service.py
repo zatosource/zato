@@ -15,13 +15,13 @@ from json import dumps, loads
 from mimetypes import guess_type
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
-from urlparse import parse_qs
 from uuid import uuid4
 
 # validate
 from validate import is_boolean
 
 # Python 2/3 compatibility
+from future.moves.urllib.parse import urlparse
 from past.builtins import basestring
 
 # Zato
@@ -390,10 +390,10 @@ class GetWSDL(AdminService):
         output_required = ('content_type',)
         output_optional = ('wsdl', 'wsdl_name',)
 
-    def handle(self):
+    def handle(self, _parse_qs=urlparse.parse_qs):
         if self.wsgi_environ['QUERY_STRING']:
             use_sio = False
-            query = parse_qs(self.wsgi_environ['QUERY_STRING'])
+            query = _parse_qs(self.wsgi_environ['QUERY_STRING'])
             service_name = query.get('service', (None,))[0]
             cluster_id = query.get('cluster_id', (None,))[0]
         else:
