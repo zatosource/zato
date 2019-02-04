@@ -17,4 +17,4 @@ sudo $PY_BINARY -m pip install -U setuptools virtualenv==15.1.0
 
 $PY_BINARY -m virtualenv .
 source ./bin/activate
-source ./_postinstall.sh
+source ./_postinstall.sh $PY_BINARY
