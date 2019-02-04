@@ -14,7 +14,6 @@ from httplib import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import getLogger
 from threading import current_thread
 from traceback import format_exc
-from urlparse import urlparse
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -32,6 +31,7 @@ from ws4py.server.geventserver import WSGIServer
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Python 2/3 compatibility
+from future.moves.urllib.parse import urlparse
 from past.builtins import basestring
 
 # Zato
