@@ -18,10 +18,6 @@ from traceback import format_exc
 from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
      OAuthSignatureMethod_PLAINTEXT, OAuthToken
 
-# sec-wall
-from secwall.server import on_basic_auth, on_wsse_pwd
-from secwall.wsse import WSSE
-
 # Python 2/3 compatibility
 from past.builtins import basestring
 
@@ -31,6 +27,7 @@ from zato.common import DATA_FORMAT, MISC, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_N
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition, update_apikey_username_to_channel
+from zato.common.util.auth import on_basic_auth, on_wsse_pwd, WSSE
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.jwt import JWT
 from zato.url_dispatcher import CyURLData, Matcher
