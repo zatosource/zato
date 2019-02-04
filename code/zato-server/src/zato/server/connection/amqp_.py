@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
-from exceptions import IOError, OSError
 from logging import getLogger
 from socket import error as socket_error
 from traceback import format_exc

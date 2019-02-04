@@ -26,11 +26,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import locale
 from binascii import hexlify
 from string import Template
-from cPickle import dumps as pickle_dumps
 from io import StringIO
 
 # Python 2/3 compatibility
 from past.builtins import basestring, unicode
+from zato.common.py23_ import pickle_dumps
 
 # Zato
 from zato.server.connection.jms_wmq.jms import DEFAULT_DELIVERY_MODE, BaseException
