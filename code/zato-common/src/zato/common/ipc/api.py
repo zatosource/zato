@@ -14,9 +14,9 @@ import logging
 import os
 import stat
 import tempfile
-from cStringIO import StringIO
 from datetime import datetime, timedelta
 from fcntl import fcntl
+from io import StringIO
 from traceback import format_exc
 from uuid import uuid4
 

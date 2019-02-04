@@ -10,8 +10,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from copy import deepcopy
-from cStringIO import StringIO
 from datetime import datetime
+from io import StringIO
 from json import dumps, loads
 from logging import DEBUG, getLogger
 from traceback import format_exc
