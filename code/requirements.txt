@@ -91,7 +91,6 @@ paodate==1.2
 parse-type==0.3.4
 parse==1.6.6
 passlib==1.7.1
-past==0.11.1
 Paste==1.7.5.1
 pathtools==0.1.2
 pbr==0.7.0
