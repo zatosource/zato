@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,8 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from datetime import datetime
-from httplib import BAD_REQUEST, METHOD_NOT_ALLOWED
-from sys import maxint
+from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from traceback import format_exc
 
 # anyjson
@@ -30,6 +29,7 @@ from gevent import Timeout, spawn
 
 # Python 2/3 compatibility
 from past.builtins import basestring
+from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch

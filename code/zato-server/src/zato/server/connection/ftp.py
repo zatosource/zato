@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,7 +15,7 @@ from threading import RLock
 from traceback import format_exc
 
 # pyfilesystem
-from fs.ftpfs import FTPFS, _GLOBAL_DEFAULT_TIMEOUT
+from fs.ftpfs import FTPFS
 
 # Zato
 from zato.common import Inactive, SECRET_SHADOW, TRACE1
@@ -67,7 +67,7 @@ class FTPStore(object):
         with self._lock:
             params = self.conn_params[name]
             if params.is_active:
-                timeout = float(params.timeout) if params.timeout else _GLOBAL_DEFAULT_TIMEOUT
+                timeout = float(params.timeout) if params.timeout else 180
                 return FTPFacade(params.host, params.user, params.get('password'), params.acct, timeout,
                     int(params.port), params.dircache)
             else:
