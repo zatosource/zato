@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from json import dumps, loads
-from logging import getLogger
+from logging import DEBUG, getLogger
 from operator import itemgetter
 from traceback import format_exc
 
@@ -40,6 +40,8 @@ from zato.server.service.internal import AdminService
 
 logger_pubsub = getLogger('zato_pubsub.srv')
 logger_audit = getLogger('zato_pubsub_audit')
+
+has_logger_pubsub_debug = logger_pubsub.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -450,11 +452,9 @@ class Publish(AdminService):
 
                 pub_msg_list = [elem['pub_msg_id'] for elem in ctx.gd_msg_list]
 
-                self.logger.info(_inserting_gd_msg, ctx.topic.name, pub_msg_list, ctx.endpoint_name,
-                    ctx.ext_client_id, self.cid)
-
-                logger_pubsub.info(_inserting_gd_msg, ctx.topic.name, pub_msg_list, ctx.endpoint_name,
-                    ctx.ext_client_id, self.cid)
+                if has_logger_pubsub_debug:
+                    logger_pubsub.debug(_inserting_gd_msg, ctx.topic.name, pub_msg_list, ctx.endpoint_name,
+                        ctx.ext_client_id, self.cid)
 
                 # This is the call that runs SQL INSERT statements with messages for topics and subscriber queues
                 sql_publish_with_retry(session, self.cid, ctx.cluster_id, ctx.topic.id, ctx.subscriptions_by_topic,
