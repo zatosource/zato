@@ -33,7 +33,7 @@ from glob import glob
 from hashlib import sha256
 from importlib import import_module
 from inspect import ismethod
-from itertools import zip_longest
+from itertools import tee
 from io import StringIO
 from operator import itemgetter
 from os import getuid
@@ -47,7 +47,6 @@ from tempfile import NamedTemporaryFile
 from threading import current_thread
 from time import sleep
 from traceback import format_exc
-from urllib.parse import urlparse
 
 # alembic
 from alembic import op
@@ -91,9 +90,9 @@ import pytz
 import requests
 
 # Spring Python
-#from springpython.context import ApplicationContext
-#from springpython.remoting.http import CAValidatingHTTPSConnection
-#from springpython.remoting.xmlrpc import SSLClientTransport
+from springpython.context import ApplicationContext
+from springpython.remoting.http import CAValidatingHTTPSConnection
+from springpython.remoting.xmlrpc import SSLClientTransport
 
 # SQLAlchemy
 import sqlalchemy as sa
@@ -106,9 +105,11 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Python 2/3 compatibility
+from future.moves.itertools import zip_longest
 from future.utils import raise_
 from past.builtins import basestring, cmp, reduce, unicode
-from zato.common.py23_ import ifilter
+from six.moves.urllib.parse import urlparse
+from zato.common.py23_ import ifilter, izip
 
 # Zato
 from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
