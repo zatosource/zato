@@ -29,6 +29,9 @@ from zato.common import CACHE, ZATO_NOT_GIVEN
 from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
 from zato.common.util import parse_extra_into_dict
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # ################################################################################################################################
 
 logger = getLogger(__name__)

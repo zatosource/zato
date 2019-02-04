@@ -116,7 +116,7 @@ def on_wsse_pwd(wsse, url_config, data, needs_auth_info=True):
     request = etree.fromstring(data)
     try:
         ok, wsse_username = wsse.validate(request, url_config)
-    except SecurityException, e:
+    except SecurityException as e:
         return AuthResult(False, AUTH_WSSE_VALIDATION_ERROR, e.description)
     else:
         auth_result = AuthResult(True, '0')

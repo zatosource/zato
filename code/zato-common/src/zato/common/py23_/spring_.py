@@ -30,11 +30,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 # stdlib
-import httplib
+import http.client as http_client
 import socket
 import ssl
 
-class CAValidatingHTTPSConnection(httplib.HTTPConnection):
+class CAValidatingHTTPSConnection(http_client.HTTPConnection):
     """ This class allows communication via SSL/TLS and takes Certificate Authorities
     into account.
     """
@@ -42,7 +42,7 @@ class CAValidatingHTTPSConnection(httplib.HTTPConnection):
     def __init__(self, host, port=None, ca_certs=None, keyfile=None, certfile=None,
                  cert_reqs=None, strict=None, ssl_version=None,
                  timeout=None):
-        httplib.HTTPConnection.__init__(self, host, port, strict, timeout)
+        http_client.HTTPConnection.__init__(self, host, port, strict, timeout)
 
         self.ca_certs = ca_certs
         self.keyfile = keyfile
@@ -68,7 +68,7 @@ class CAValidatingHTTPSConnection(httplib.HTTPConnection):
                                     ca_certs=self.ca_certs, cert_reqs=self.cert_reqs,
                                     ssl_version=self.ssl_version)
 
-class CAValidatingHTTPS(httplib.HTTP):
+class CAValidatingHTTPS(http_client.HTTPConnection):
     """ A subclass of httplib.HTTP which is aware of Certificate Authorities
     used in SSL/TLS transactions.
     """
@@ -100,13 +100,12 @@ class CAValidatingHTTPS(httplib.HTTP):
 
 
 # stdlib
-import httplib
 import logging
 import sys
 import traceback
 
-from SimpleXMLRPCServer import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
-from xmlrpclib import ServerProxy, Transport
+from xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
+from xmlrpc.client import ServerProxy, Transport
 
 class VerificationException(Exception):
     """ Raised when the verification of a certificate's fields fails.
@@ -124,7 +123,7 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
         self.rfile = socket._fileobject(self.request, "rb", self.rbufsize)
         self.wfile = socket._fileobject(self.request, "wb", self.wbufsize)
 
-class SSLServer(object, SimpleXMLRPCServer):
+class SSLServer(SimpleXMLRPCServer):
     def __init__(self, host=None, port=None, keyfile=None, certfile=None,
                  ca_certs=None, cert_reqs=ssl.CERT_NONE, ssl_version=ssl.PROTOCOL_TLSv1,
                  do_handshake_on_connect=True, suppress_ragged_eofs=True, ciphers=None,
@@ -194,7 +193,7 @@ class SSLServer(object, SimpleXMLRPCServer):
                     sock.close()
                     return False
 
-        except Exception, e:
+        except Exception:
 
             # It was either an error on our side or the client didn't send the
             # certificate even though self.cert_reqs was CERT_OPTIONAL (it couldn't
@@ -203,7 +202,7 @@ class SSLServer(object, SimpleXMLRPCServer):
             # Regardless of the reason we cannot accept the client in that case.
 
             msg = "Verification error='%s', cert='%s', from_addr='%s'" % (
-                traceback.format_exc(e), sock.getpeercert(), from_addr)
+                traceback.format_exc(), sock.getpeercert(), from_addr)
             self.logger.error(msg)
 
             sock.close()

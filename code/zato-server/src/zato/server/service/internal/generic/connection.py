@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -20,6 +20,9 @@ from zato.server.service import Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 from zato.server.service.internal.generic import _BaseService
 from zato.server.service.meta import DeleteMeta
+
+# Python 2/3 compatibility
+from past.builtins import basestring
 
 # ################################################################################################################################
 
