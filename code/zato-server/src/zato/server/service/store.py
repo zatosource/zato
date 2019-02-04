@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -35,9 +35,6 @@ try:
 except ImportError:
     from yaml import Dumper   # ditto
     Dumper = Dumper
-
-# Spring Python
-from springpython.context import InitializingObject
 
 # Zato
 from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceInfo, TRACE1
@@ -155,7 +152,7 @@ def get_service_name(class_obj):
 
 # ################################################################################################################################
 
-class ServiceStore(InitializingObject):
+class ServiceStore(object):
     """ A store of Zato services.
     """
     def __init__(self, services=None, service_store_config=None, odb=None, server=None):
