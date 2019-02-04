@@ -10,6 +10,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import __main__
 import sys
 
+# Python 2/3 compatibiliy
+from future.utils import raise_
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -77,7 +80,7 @@ def import_string(name, globalDict=defaultGlobalDict):
                 if '.' not in name:
                     # We've backed up all the way to the beginning, so reraise
                     # the first ImportError we got
-                    raise exc[0],exc[1],exc[2]
+                    raise_(exc[0], exc[1], exc[2])
 
                 # Otherwise back up one position and try again
                 parts = name.split('.')

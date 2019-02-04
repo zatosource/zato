@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,12 +9,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import os
 from collections import OrderedDict
 from copy import deepcopy
 from http.client import responses
 from io import StringIO
 from numbers import Number
 from string import Template
+from sys import version_info as py_version_info
 from traceback import format_exc
 
 # boto
@@ -31,7 +33,7 @@ from lxml import etree
 from lxml.objectify import ObjectPath as _ObjectPath
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from past.builtins import basestring, execfile
 from zato.common.py23_ import maxint
 
 # Zato
@@ -44,7 +46,16 @@ VAULT = VAULT
 # Version
 # ##############################################################################
 
-version = '3.1.0'
+try:
+    curdir = os.path.dirname(os.path.abspath(__file__))
+    _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
+    _locals = {}
+    execfile(_version_py, _locals)
+    version = 'Zato {}'.format(_locals['version'])
+except IOError:
+    version = '3.0.0'
+
+version = '{}-py{}.{}.{}'.format(version, py_version_info.major, py_version_info.minor, py_version_info.micro)
 
 # The namespace for use in all Zato's own services.
 zato_namespace = 'https://zato.io/ns/20130518'
