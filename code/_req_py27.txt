@@ -1,0 +1,14 @@
+bzr==2.6.0
+distutils2==1.0a4
+fs==0.4.0
+importing==1.10
+librabbitmq==1.6.1
+ordereddict==1.1
+pesto==25
+pyprof2calltree==1.1.0
+python-ldap==2.4.19
+ruamel.ordereddict==0.4.9
+ruamel.yaml==0.13.7
+simple-rbac==0.1.1
+stompest==2.1.6
+threadpool==1.2.7

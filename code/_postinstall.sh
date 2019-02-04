@@ -12,12 +12,24 @@ then
     exit 1
 fi
 
+PY_BINARY=$1
+
+# If it starts with "python2" then we install extra pip dependencies for Python 2.7,
+# otherwise, extra dependencies for Python 3.x will be installed.
+if [[ $PY_BINARY == python2* ]]
+then
+    EXTRA_REQ_VERSION=27
+else
+    EXTRA_REQ_VERSION=3
+fi
+
 # Stamp the release hash.
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
 
 # SciPy builds require NumPy available in setup.py, so install it separately.
 pip install numpy==1.14.0
 pip install -r requirements.txt
+pip install -r _req_py$EXTRA_REQ_VERSION.txt
 
 # zato-common must be first.
 pip install \
