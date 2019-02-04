@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,7 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from itertools import chain
 from json import dumps, loads
-from logging import getLogger
+from logging import DEBUG, getLogger
+from traceback import format_exc
 
 # Bunch
 from bunch import bunchify
@@ -31,6 +32,8 @@ from zato.common.util.search import SearchResults
 
 logger_zato = getLogger('zato')
 logger_pubsub = getLogger('zato_pubsub')
+
+has_debug = logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -88,21 +91,30 @@ def search(search_func, config, filter_by, session=None, cluster_id=None, *args,
 
 def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
     cid = cid or None
-    is_ok = False
     attempts = 0
 
-    while not is_ok:
-        attempts = 1
+    while True:
+        attempts += 1
+
+        if has_debug:
+            logger_zato.info('In sql_op_with_deadlock_retry, %s %s %s %s %r %r', attempts, cid, name, func, args, kwargs)
 
         try:
             # Call the SQL function that will possibly result in a deadlock
             func(*args, **kwargs)
+
+            if has_debug:
+                logger_zato.info('In sql_op_with_deadlock_retry, returning True')
 
             # This will return only if there is no exception in calling the SQL function
             return True
 
         # Catch deadlocks - it may happen because both this function and delivery tasks update the same tables
         except SAInternalError as e:
+
+            if has_debug:
+                logger_zato.info('Caught SAInternalError `%s` `%s`', cid, format_exc())
+
             if _deadlock_code not in e.message:
                 raise
             else:

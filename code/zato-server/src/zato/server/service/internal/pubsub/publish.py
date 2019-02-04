@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from json import dumps, loads
-from logging import getLogger
+from logging import DEBUG, getLogger
 from operator import itemgetter
 from traceback import format_exc
 
@@ -41,6 +41,8 @@ from zato.server.service.internal import AdminService
 logger_pubsub = getLogger('zato_pubsub.srv')
 logger_audit = getLogger('zato_pubsub_audit')
 
+has_logger_pubsub_debug = logger_pubsub.isEnabledFor(DEBUG)
+
 # ################################################################################################################################
 
 # For pyflakes
@@ -57,6 +59,7 @@ _meta_endpoint_key = PUBSUB.REDIS.META_ENDPOINT_PUB_KEY
 _meta_topic_optional = ('pub_correl_id', 'ext_client_id', 'in_reply_to')
 
 _log_turning_gd_msg = 'Turning message `%s` into a GD one ({})'
+_inserting_gd_msg = 'Inserting GD messages for topic `%s` `%s` published by `%s` (ext:%s) (cid:%s)'
 
 # ################################################################################################################################
 
@@ -447,9 +450,11 @@ class Publish(AdminService):
                         # This only updates the local ctx variable
                         ctx.current_depth = ctx.current_depth + len_gd_msg_list
 
-                logger_pubsub.info('Inserting GD messages for topic `%s` `%s` published by `%s` (ext:%s) (cid:%s)',
-                    ctx.topic.name, [elem['pub_msg_id'] for elem in ctx.gd_msg_list], ctx.endpoint_name,
-                    ctx.ext_client_id, self.cid)
+                pub_msg_list = [elem['pub_msg_id'] for elem in ctx.gd_msg_list]
+
+                if has_logger_pubsub_debug:
+                    logger_pubsub.debug(_inserting_gd_msg, ctx.topic.name, pub_msg_list, ctx.endpoint_name,
+                        ctx.ext_client_id, self.cid)
 
                 # This is the call that runs SQL INSERT statements with messages for topics and subscriber queues
                 sql_publish_with_retry(session, self.cid, ctx.cluster_id, ctx.topic.id, ctx.subscriptions_by_topic,
