@@ -18,8 +18,12 @@ PY_BINARY=$1
 # otherwise, extra dependencies for Python 3.x will be installed.
 if [[ $PY_BINARY == python2* ]]
 then
+    HAS_PYTHON2=1
+    HAS_PYTHON3=0
     EXTRA_REQ_VERSION=27
 else
+    HAS_PYTHON2=0
+    HAS_PYTHON3=1
     EXTRA_REQ_VERSION=3
 fi
 
@@ -63,7 +67,6 @@ mkdir zato_extra_paths
 echo "$(pwd)/zato_extra_paths" >> eggs/easy-install.pth
 
 # Apply patches.
-patch -p0 -d eggs < patches/anyjson/__init__.py.diff
 patch -p0 -d eggs < patches/butler/__init__.py.diff
 patch -p0 -d eggs < patches/configobj.py.diff
 patch -p0 -d eggs < patches/gunicorn/arbiter.py.diff
@@ -86,3 +89,8 @@ patch -p0 -d eggs < patches/requests/models.py.diff
 patch -p0 -d eggs < patches/requests/sessions.py.diff
 patch -p0 -d eggs < patches/sqlalchemy/sql/crud.py.diff
 patch -p0 -d eggs < patches/ws4py/server/geventserver.py.diff
+
+if [ $HAS_PYTHON2 == 1 ]
+then
+    patch -p0 -d eggs < patches/anyjson/__init__.py.diff
+fi
