@@ -26,7 +26,7 @@ from globre import compile as globre_compile
 from texttable import Texttable
 
 # Python 2/3 compatibility
-from future.utils import iteritems
+from future.utils import iteritems, itervalues
 
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, SEARCH
@@ -606,7 +606,7 @@ class InRAMSyncBacklog(object):
             _has_topic_msg = False # Was the ID found for at least one topic
             _has_sk_msg = False     # Ditto but for sub_keys
 
-            for _topic_msg_set in self.topic_msg_id.itervalues():
+            for _topic_msg_set in itervalues(self.topic_msg_id):
                 try:
                     _topic_msg_set.remove(msg_id)
                 except KeyError:
@@ -614,7 +614,7 @@ class InRAMSyncBacklog(object):
                 else:
                     _has_topic_msg = True
 
-            for _sk_msg_set in self.sub_key_to_msg_id.itervalues():
+            for _sk_msg_set in itervalues(self.sub_key_to_msg_id):
                 try:
                     _sk_msg_set.remove(msg_id)
                 except KeyError:
@@ -949,7 +949,7 @@ class PubSub(object):
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
-        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE)
+        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE())
 
         # How many messages have been published through this server, regardless of which topic they were for
         self.msg_pub_counter = 0
@@ -1036,7 +1036,7 @@ class PubSub(object):
 
     def get_subscription_by_id(self, sub_id):
         with self.lock:
-            for sub in self.subscriptions_by_sub_key.itervalues():
+            for sub in itervalues(self.subscriptions_by_sub_key):
                 if sub.id == sub_id:
                     return sub
 
@@ -1044,7 +1044,7 @@ class PubSub(object):
 
     def get_subscription_by_ext_client_id(self, ext_client_id):
         with self.lock:
-            for sub in self.subscriptions_by_sub_key.itervalues():
+            for sub in itervalues(self.subscriptions_by_sub_key):
                 if sub.ext_client_id == ext_client_id:
                     return sub
 
@@ -2155,6 +2155,7 @@ class PubSub(object):
         _sleep        = sleep
         _self_lock    = self.lock
         _self_topics  = self.topics
+        _self_topics_itervalues = itervalues(self.topics)
         _keep_running = self.keep_running
 
         _logger_info      = logger.info
@@ -2229,7 +2230,7 @@ class PubSub(object):
                 topic_id_dict = {}
 
                 # Get all topics ..
-                for _topic in _self_topics.itervalues(): # type: Topic
+                for _topic in _self_topics_itervalues(): # type: Topic
 
                     # Does the topic require task synchronization now?
                     if not _topic.needs_task_sync():

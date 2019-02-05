@@ -15,7 +15,7 @@ from threading import RLock
 from traceback import format_exc
 
 # Python 2/3 compatibility
-from future.utils import iteritems
+from future.utils import iteritems, itervalues
 from past.builtins import basestring
 from six import PY2
 
@@ -194,7 +194,7 @@ class URLData(CyURLData, OAuthDataStore):
             get_func = self.vault_conn_sec_get
 
             headers['zato.http.response.headers'] = {}
-            for header_info in _vault_ws.itervalues():
+            for header_info in itervalues(_vault_ws):
                 for key, header in iteritems(header_info):
                     headers[header] = auth[key]
 

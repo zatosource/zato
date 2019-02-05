@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from json import dumps
+
+# Python 2/3 compatibility
+from future.utils import itervalues
 
 # Zato
 from zato.common import HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, URL_TYPE
@@ -125,7 +128,7 @@ class DeliverMessage(AdminService):
     def _deliver_amqp(self, msg, subscription, _ignored_impl_getter):
 
         # Ultimately we should use impl_getter to get the outconn
-        for value in self.server.worker_store.worker_config.out_amqp.itervalues():
+        for value in itervalues(self.server.worker_store.worker_config.out_amqp):
             if value['config']['id'] == subscription.config.out_amqp_id:
 
                 data = self._get_data_from_message(msg)
