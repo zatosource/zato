@@ -9,7 +9,6 @@ Babel==1.3
 base32-crockford==0.3.0
 behave==1.2.4
 boto==2.35.1
-bunch==1.0.1
 candv==1.3.1
 cassandra-driver==3.0.0
 cffi==1.11.4

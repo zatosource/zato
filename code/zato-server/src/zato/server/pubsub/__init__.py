@@ -2155,7 +2155,6 @@ class PubSub(object):
         _sleep        = sleep
         _self_lock    = self.lock
         _self_topics  = self.topics
-        _self_topics_itervalues = itervalues(self.topics)
         _keep_running = self.keep_running
 
         _logger_info      = logger.info
@@ -2230,7 +2229,7 @@ class PubSub(object):
                 topic_id_dict = {}
 
                 # Get all topics ..
-                for _topic in _self_topics_itervalues(): # type: Topic
+                for _topic in _self_topics.values(): # type: Topic
 
                     # Does the topic require task synchronization now?
                     if not _topic.needs_task_sync():
