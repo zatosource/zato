@@ -110,7 +110,7 @@ class Lock(object):
 
         # Compute lock_id in PostgreSQL's internal format which is a 64-bit integer (bigint)
         self.priv_id = str(hash('{}{}'.format(self.namespace, self.name)))
-        self.pub_id = pub_hash_func(self.priv_id).hexdigest()
+        self.pub_id = pub_hash_func(self.priv_id.encode('utf8')).hexdigest()
 
         # Try to acquire the lock
         self.acquired = self._acquire()

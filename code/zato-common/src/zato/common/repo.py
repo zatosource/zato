@@ -108,8 +108,11 @@ class GitRepoManager(_BaseRepoManager):
         # Add all files
         sh.git.add('-A', self.repo_location)
 
-        # And commit changes
-        sh.git.commit('-m', 'Committing latest changes')
+        has_channges = 'nothing to commit' not in sh.git.status()
+
+        # And commit changes if there are any
+        if has_channges:
+            sh.git.commit('-m', 'Committing latest changes')
 
 # ################################################################################################################################
 # ################################################################################################################################

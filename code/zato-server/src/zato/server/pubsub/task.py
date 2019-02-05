@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -24,6 +24,7 @@ from gevent.lock import RLock
 from sortedcontainers import SortedList as _SortedList
 
 # Python 2/3 compatibility
+from future.utils import iteritems
 from past.builtins import cmp
 
 # Zato
@@ -905,7 +906,7 @@ class PubSubTool(object):
                 # just not for this one.
                 min_last_gd_run = self.last_gd_run.get(sub_key_list[0])
             else:
-                min_last_gd_run = min(value for key, value in self.last_gd_run.iteritems() if key in sub_key_list)
+                min_last_gd_run = min(value for key, value in iteritems(self.last_gd_run) if key in sub_key_list)
         else:
             min_last_gd_run = None
 

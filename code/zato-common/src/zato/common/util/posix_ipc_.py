@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -56,7 +56,7 @@ class SharedMemoryIPC(object):
         """ Serializes input data as JSON and stores it in RAM, overwriting any previous data.
         """
         self._mmap.seek(0)
-        self._mmap.write(dumps(data))
+        self._mmap.write(dumps(data).encode('utf8'))
         self._mmap.flush()
 
     def store_initial(self):
@@ -71,7 +71,7 @@ class SharedMemoryIPC(object):
         """ Reads in all data from RAM and, optionally, loads it as JSON.
         """
         self._mmap.seek(0)
-        data = self._mmap.read(self.size).strip('\x00')
+        data = self._mmap.read(self.size).strip(b'\x00')
         return loads(data) if needs_loads else data
 
     def close(self):

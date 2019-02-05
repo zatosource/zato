@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
@@ -282,9 +285,9 @@ class GetNonGDMessageList(NonGDSearchService):
 
         # Check if everything is OK on each level - overall, per server and then per process
         if is_all_ok:
-            for server_name, server_data in all_data.iteritems():
+            for server_name, server_data in iteritems(all_data):
                 if server_data['is_ok']:
-                    for server_pid, server_pid_data in server_data['server_data'].iteritems():
+                    for server_pid, server_pid_data in iteritems(server_data['server_data']):
                         if server_pid_data['is_ok']:
                             pid_data = server_pid_data['pid_data']['response']['data']
                             msg_list.extend(pid_data)

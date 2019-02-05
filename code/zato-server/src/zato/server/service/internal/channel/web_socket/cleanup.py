@@ -13,6 +13,9 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from logging import getLogger
 
+# Python 2/3 compatibility
+from future.utils import iteritems
+
 # Zato
 from zato.common import WEB_SOCKET
 from zato.common.broker_message import PUBSUB
@@ -220,7 +223,7 @@ class CleanupWSX(AdminService):
         suffix = '' if len_found == 1 else 's'
         self._issue_log_msg(_msg.found, len_found, suffix)
 
-        for idx, (pub_client_id, wsx) in enumerate(wsx_clients.iteritems(), 1):
+        for idx, (pub_client_id, wsx) in enumerate(iteritems(wsx_clients), 1):
 
             # All subscription keys for that WSX, we are adding it here
             # so that below, for logging purposes, we are able to say

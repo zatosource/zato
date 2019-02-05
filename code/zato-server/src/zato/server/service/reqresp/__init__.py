@@ -30,6 +30,7 @@ from lxml.objectify import deannotate, Element, ElementMaker, ObjectifiedElement
 from sqlalchemy.util import KeyedTuple
 
 # Python 2/3 compatibility
+from future.utils import iteritems
 from past.builtins import basestring, unicode
 
 # Zato
@@ -208,7 +209,7 @@ class Request(SIOConverter):
         self.input.update(required_params)
         self.input.update(optional_params)
 
-        for param, value in self.channel_params.iteritems():
+        for param, value in iteritems(self.channel_params):
             if param not in self.input:
                 self.input[param] = value
 

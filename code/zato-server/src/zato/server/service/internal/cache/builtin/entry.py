@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,6 +15,7 @@ from arrow import get as arrow_get
 from bunch import bunchify
 
 # Python 2/3 compatibility
+from future.utils import iteritems
 from past.builtins import basestring, long
 
 # Zato
@@ -137,7 +138,7 @@ class GetList(_Base):
         has_empty_key_criteria = len(key_criteria) == 0
         has_empty_value_criteria = len(value_criteria) == 0
 
-        for key, entry in cache.iteritems():
+        for key, entry in iteritems(cache):
 
             include_by_key = False
             include_by_value = False
