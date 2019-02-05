@@ -103,7 +103,7 @@ class GitRepoManager(_BaseRepoManager):
         sh.git.config('user.email', '{}@{}'.format(current_user, socket.getfqdn()))
 
         # Default branch is called 'main'
-        sh.git.checkout('-b', 'main')
+        sh.git.checkout('-B', 'main')
 
         # Add all files
         sh.git.add('-A', self.repo_location)

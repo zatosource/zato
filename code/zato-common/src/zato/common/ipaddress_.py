@@ -42,10 +42,7 @@ def ip_list_from_interface(interface, allow_loopback=False):
 
     if af_inet:
         _addresses = [elem.get('addr') for elem in af_inet]
-        _addresses = [elem.decode('utf-8') for elem in _addresses if elem]
-
         for address in _addresses:
-
             address = ip_address(address)
             if address.is_loopback and not allow_loopback:
                 continue
@@ -80,7 +77,7 @@ def get_preferred_ip(base_bind, user_prefs):
     current_ifaces.sort()
 
     current_addresses = [net_ifaddresses(elem).get(AF_INET) for elem in current_ifaces]
-    current_addresses = [[elem.get('addr').decode('utf-8') for elem in x] for x in current_addresses if x]
+    current_addresses = [[elem.get('addr') for elem in x] for x in current_addresses if x]
     current_addresses = list(itertools.chain.from_iterable(current_addresses))
 
     # Preferences broken out into interfacs and network ranges/IP addresses
