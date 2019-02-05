@@ -26,6 +26,7 @@ from zato.common.util import get_crypto_manager_from_server_config, get_odb_sess
 
 # Python 2/3 compatibility
 from configparser import ConfigParser
+from future.utils import iteritems
 
 # ################################################################################################################################
 
@@ -268,7 +269,7 @@ class Migrate(ManageCommand):
         new_cp = ConfigParser()
         for section in all_sections_2_0:
             new_cp.add_section(section)
-            for key, value in new_config[section].items():
+            for key, value in iteritems(new_config[section]):
                 new_cp.set(section, key, value)
 
         server_conf = open(server_conf_path, 'w')
@@ -406,7 +407,7 @@ class Migrate(ManageCommand):
             new_cp = ConfigParser()
             for section in all_sections:
                 new_cp.add_section(section)
-                for key, value in new_config[section].items():
+                for key, value in iteritems(new_config[section]):
                     new_cp.set(section, key, value)
 
             server_conf = open(server_conf_path, 'w')

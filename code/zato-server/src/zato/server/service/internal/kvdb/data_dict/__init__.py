@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.common import KVDB, ZatoException
@@ -34,14 +37,14 @@ class DataDictService(AdminService):
     def _get_dict_items_raw(self):
         """ Yields dictionary items without formatting them into Python dictionaries.
         """
-        for id, item in self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM).items():
+        for id, item in iteritems(self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM)):
             yield id, item
 
     def _get_dict_items(self):
         """ Yields nicely formatted dictionary items defined in the KVDB.
         """
         if not self._dict_items:
-            for id, item in self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM).items():
+            for id, item in iteritems(self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM)):
                 system, key, value = item.decode('utf-8').split(KVDB.SEPARATOR)
                 self._dict_items.append({'id':str(id), 'system':system, 'key':key, 'value':value})
             self._dict_items = multikeysort(self._dict_items, ['system', 'key', 'value'])

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,6 +15,9 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.admin.web import from_utc_to_user, from_user_to_utc
@@ -51,7 +54,7 @@ class Details(_Index):
     def _handle_item(self, item):
         self.item = _drop_utc(item, self.req)
         self.item.args = '\n'.join('{}'.format(elem) for elem in loads(self.item.args))
-        self.item.kwargs = '\n'.join('{}={}'.format(k,v) for k, v in loads(self.item.kwargs).items())
+        self.item.kwargs = '\n'.join('{}={}'.format(k, v) for k, v in iteritems(loads(self.item.kwargs)))
         if self.item.payload:
             self.item.payload_len = len(self.item.payload)
 

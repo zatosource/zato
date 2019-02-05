@@ -15,6 +15,7 @@ from inspect import isclass
 from candv import Constants as _Constants, ValueConstant as _ValueConstant
 
 # Python 2/3 compatibility
+from future.utils import iteritems
 from past.builtins import cmp
 
 class Constants(_Constants):
@@ -493,7 +494,7 @@ code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'
 item_name, item = None, None
-_globals = list(globals().items())
+_globals = list(iteritems(globals()))
 
 for item_name, item in _globals:
     if isclass(item) and issubclass(item, Constants) and item is not Constants:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,6 +23,9 @@ from mock import patch
 
 # nose
 from nose.tools import eq_
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.common import common_namespaces, ZATO_OK
@@ -88,7 +91,7 @@ class JSONClientTestCase(_Base):
 
         eq_(response.ok, ok)
         eq_(response.inner.text, text)
-        eq_(response.data.items(), loads(text).items())
+        eq_(iteritems(response.data), iteritems(loads(text)))
         eq_(response.has_data, True)
         eq_(response.cid, cid)
 
@@ -197,7 +200,7 @@ class JSONSIOClientTestCase(_Base):
 
         eq_(response.ok, ok)
         eq_(response.inner.text, text)
-        eq_(response.data.items(), sio_response[sio_payload_key].items())
+        eq_(iteritems(response.data), iteritems((sio_response[sio_payload_key])))
         eq_(response.has_data, True)
         eq_(response.cid, cid)
         eq_(response.cid, sio_response['zato_env']['cid'])

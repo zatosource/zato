@@ -15,6 +15,7 @@ from threading import RLock
 from traceback import format_exc
 
 # Python 2/3 compatibility
+from future.utils import iteritems
 from past.builtins import basestring
 
 # Zato
@@ -1190,7 +1191,7 @@ class URLData(CyURLData, OAuthDataStore):
             sec_config = getattr(self, '{}_config'.format(msg['sec_type']))
             config_item = sec_config[msg['security_name']]
 
-            for k, v in config_item['config'].items():
+            for k, v in iteritems(config_item['config']):
                 sec_info.sec_def[k] = config_item['config'][k]
         else:
             sec_info.sec_def = ZATO_NONE

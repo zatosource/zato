@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -17,6 +17,9 @@ from uuid import uuid4
 
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
@@ -542,7 +545,7 @@ class Create(ZatoCommand):
         # HTTPSOAP + services
         #
 
-        for name, impl_name in zato_services.iteritems():
+        for name, impl_name in iteritems(zato_services):
 
             service = Service(None, name, True, impl_name, True, cluster)
             session.add(service)
@@ -870,7 +873,7 @@ class Create(ZatoCommand):
         sec = HTTPBasicAuth(None, 'zato.default.cache.client', True, 'zato.cache', 'Zato cache', uuid4().hex, cluster)
         session.add(sec)
 
-        for name, impl_name in service_to_impl.iteritems():
+        for name, impl_name in iteritems(service_to_impl):
 
             service = Service(None, name, True, impl_name, True, cluster)
             session.add(service)
@@ -907,7 +910,7 @@ class Create(ZatoCommand):
         sec = HTTPBasicAuth(None, 'zato.default.crypto.client', True, 'zato.crypto', 'Zato crypto', uuid4().hex, cluster)
         session.add(sec)
 
-        for name, impl_name in service_to_impl.iteritems():
+        for name, impl_name in iteritems(service_to_impl):
 
             service = Service(None, name, True, impl_name, True, cluster)
             session.add(service)

@@ -29,6 +29,9 @@ from lxml import etree
 # nose
 from nose.tools import eq_
 
+# Python 2/3 compatibility
+from future.utils import iteritems
+
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO, URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_NONE, ZATO_OK
 from zato.common.test import rand_string
@@ -469,7 +472,7 @@ class TestRequestHandler(TestCase):
                 eq_(get[qs_key3_2], [qs_value3_1, qs_value3_2])
 
                 if data_format == DATA_FORMAT.POST:
-                    eq_(sorted(wsgi_environ['zato.http.POST'].items()), [(post_key1, post_value1), (post_key2, post_value2)])
+                    eq_(sorted(iteritems(wsgi_environ['zato.http.POST'])), [(post_key1, post_value1), (post_key2, post_value2)])
 
                 if url_params_pri == URL_PARAMS_PRIORITY.PATH_OVER_QS:
                     eq_(channel_params['url_key1'], url_match.url_key1)

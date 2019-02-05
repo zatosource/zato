@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -27,6 +27,9 @@ from dateutil.rrule import MINUTELY, rrule, rruleset
 
 # SciPy
 from scipy import stats as sp_stats
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException
@@ -414,7 +417,7 @@ class StatsReturningService(AdminService):
                 # We can convert all the values to floats here to ease with computing
                 # all the stuff and convert them still to integers later on, when necessary.
                 key_values = Bunch(
-                    ((name, float(value)) for (name, value) in self.server.kvdb.conn.hgetall(key).items()))
+                    ((name, float(value)) for (name, value) in iteritems(self.server.kvdb.conn.hgetall(key))))
 
                 if key_values:
 
