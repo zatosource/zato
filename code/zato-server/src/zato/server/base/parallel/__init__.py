@@ -47,7 +47,7 @@ from zato.common.pubsub import SkipDelivery
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
-from zato.common.util.posix_ipc_ import ServerStartupIPC
+from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
@@ -133,6 +133,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         self.is_first_worker = None
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
+        self.connector_config_ipc = ConnectorConfigIPC()
         self.keyutils = KeyUtils()
         self.sso_api = None
         self.is_sso_enabled = False
@@ -408,7 +409,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
 
         # Create all POSIX IPC objects now that we have the deployment key
         self.shmem_size = int(float(self.fs_server_config.shmem.size) * 10**6) # Convert to megabytes as integer
+
         self.server_startup_ipc.create(self.deployment_key, self.shmem_size)
+        self.connector_config_ipc.create('config-data', self.shmem_size)
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         self.config.odb_data = self.get_config_odb_data(self)
@@ -885,6 +888,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
 
             # Close all POSIX IPC structures
             self.server_startup_ipc.close()
+            self.connector_config_ipc.close()
 
             # Close ZeroMQ-based IPC
             self.ipc_api.close()

@@ -158,15 +158,31 @@ class SharedMemoryIPC(object):
 class ServerStartupIPC(SharedMemoryIPC):
     """ A shared memory-backed IPC object for server startup initialization.
     """
-    pubsub_pid = '/pubsub/pid'
+    key_name = '/pubsub/pid'
 
     def create(self, deployment_key, size):
         super(ServerStartupIPC, self).create('server-{}'.format(deployment_key), size)
 
     def set_pubsub_pid(self, pid):
-        self.set_key(self.pubsub_pid, 'current', pid)
+        self.set_key(self.key_name, 'current', pid)
 
     def get_pubsub_pid(self, timeout=60):
-        return self.get_key(self.pubsub_pid, 'current', timeout)
+        return self.get_key(self.key_name, 'current', timeout)
+
+# ################################################################################################################################
+
+class ConnectorConfigIPC(SharedMemoryIPC):
+    """ A shared memory-backed IPC object for configuration of subprocess-based containers.
+    """
+    key_name = '/connector/config'
+
+    def create(self, deployment_key, size):
+        super(ConnectorConfigIPC, self).create('connector-config-{}'.format(deployment_key), size)
+
+    def set_config(self, connector_key, config):
+        self.set_key(self.key_name, connector_key, config)
+
+    def get_config(self, connector_key, timeout=60):
+        return self.get_key(self.key_name, connector_key, timeout)
 
 # ################################################################################################################################
