@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,10 +13,6 @@ import logging
 from operator import itemgetter
 from threading import RLock
 from traceback import format_exc
-
-# oauth
-from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
-     OAuthSignatureMethod_PLAINTEXT, OAuthToken
 
 # Python 2/3 compatibility
 from past.builtins import basestring
@@ -31,6 +27,19 @@ from zato.common.util.auth import on_basic_auth, on_wsse_pwd, WSSE
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.jwt import JWT
 from zato.url_dispatcher import CyURLData, Matcher
+
+# Python 2/3 compatibility
+from six import PY2
+
+if PY2:
+    from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
+         OAuthSignatureMethod_PLAINTEXT, OAuthToken
+else:
+    class _Placeholder(object):
+        pass
+
+    OAuthDataStore = OAuthConsumer = OAuthRequest = OAuthServer = OAuthSignatureMethod_HMAC_SHA1 = \
+        OAuthSignatureMethod_PLAINTEXT = OAuthToken = _Placeholder
 
 # ################################################################################################################################
 
