@@ -1986,7 +1986,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def invoke_before_delivery_hook(self, hook, topic_id, sub_key, batch, messages, actions=list(PUBSUB.HOOK_ACTION),
+    def invoke_before_delivery_hook(self, hook, topic_id, sub_key, batch, messages, actions=list(PUBSUB.HOOK_ACTION()),
         _deliver=PUBSUB.HOOK_ACTION.DELIVER):
         """ Invokes a hook service for each message from a batch of messages possibly to be delivered and arranges
         each one to a specific key in messages dict.
