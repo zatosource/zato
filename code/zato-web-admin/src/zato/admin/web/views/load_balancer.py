@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -22,6 +22,9 @@ except ImportError:
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.admin.web import from_utc_to_user
@@ -151,7 +154,7 @@ def manage(req, cluster_id):
     lb_start_time = from_utc_to_user(client.get_uptime_info(), req.zato.user_profile)
     lb_config = client.get_config()
     lb_work_config = client.get_work_config()
-    lb_work_config['verify_fields'] = ', '.join(['%s=%s' % (k,v) for (k, v) in sorted(lb_work_config['verify_fields'].items())])
+    lb_work_config['verify_fields'] = ', '.join(['%s=%s' % (k,v) for (k, v) in sorted(iteritems(lb_work_config['verify_fields']))])
 
     form_data = {
         'global_log_host': lb_config['global_']['log']['host'],

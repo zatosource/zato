@@ -100,7 +100,7 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Python 2/3 compatibility
 from future.moves.itertools import zip_longest
-from future.utils import raise_
+from future.utils import iteritems, raise_
 from past.builtins import basestring, cmp, reduce, unicode
 from six.moves.urllib.parse import urlparse
 from zato.common.py23_ import ifilter, izip
@@ -910,7 +910,7 @@ def get_threads_traceback(pid):
     result = {}
     id_name = dict([(th.ident, th.name) for th in threading.enumerate()])
 
-    for thread_id, frame in sys._current_frames().items():
+    for thread_id, frame in iteritems(sys._current_frames()):
         key = '{}:{}'.format(pid, id_name.get(thread_id, '(No name)'))
         result[key] = get_stack(frame, True)
 
@@ -942,8 +942,8 @@ def dump_stacks(*ignored):
 
     rows = [['Proc:Thread/Greenlet', 'Traceback']]
 
-    rows.extend(sorted(get_threads_traceback(pid).items()))
-    rows.extend(sorted(get_greenlets_traceback(pid).items()))
+    rows.extend(sorted(iteritems(get_threads_traceback(pid))))
+    rows.extend(sorted(iteritems(get_greenlets_traceback(pid))))
 
     table.add_rows(rows)
     logger.info('\n' + table.draw())
@@ -1139,7 +1139,7 @@ def validate_tls_from_payload(payload, is_key=False):
         pem = open(tf.name).read()
 
         cert_info = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
-        cert_info = sorted(dict(cert_info.get_subject().get_components()).items())
+        cert_info = sorted(dict(iteritems(cert_info.get_subject().get_components())))
         cert_info = '; '.join('{}={}'.format(k, v) for k, v in cert_info)
 
         if is_key:
@@ -1511,7 +1511,7 @@ def invoke_startup_services(source, key, fs_server_config, repo_location, broker
     also possible that other workers are already running. In short, there is no guarantee that any server or worker in particular
     will receive the requests, only that there will be exactly one.
     """
-    for name, payload in fs_server_config.get(key, {}).items():
+    for name, payload in iteritems(fs_server_config.get(key, {})):
 
         # Don't invoke SSO services if the feature is not enabled
         if not is_sso_enabled:

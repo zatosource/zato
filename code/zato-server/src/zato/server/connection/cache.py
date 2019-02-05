@@ -29,6 +29,7 @@ from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
 from zato.common.util import parse_extra_into_dict
 
 # Python 2/3 compatibility
+from future.utils import iteritems
 from past.builtins import basestring
 from zato.common.py23_ import pickle_dumps, pickle_loads
 
@@ -613,7 +614,7 @@ class Cache(object):
     def iteritems(self):
         """ Returns an iterator over all items in the cache - like dict.iteritems().
         """
-        return self.impl.iteritems()
+        return iteritems(self.impl)
 
 # ################################################################################################################################
 
