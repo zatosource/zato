@@ -1,6 +1,7 @@
 fs==2.2.1
 librabbitmq==2.0.0
-openerp-client-lib==5.0.0-3
+odoo-client-lib==1.2.0
+Paste==3.0.6
 pyaml==18.11.0
 pyprof2calltree==1.4.4
 python-ldap==3.1.0

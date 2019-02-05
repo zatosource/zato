@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -124,7 +124,7 @@ def _get_base_classes():
 # ################################################################################################################################
 
 # Dynamically adds as base classes everything found in current directory that subclasses WorkerImpl
-_WorkerStoreBase = type(b'_WorkerStoreBase', _get_base_classes(), {})
+_WorkerStoreBase = type('_WorkerStoreBase', _get_base_classes(), {})
 
 class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.

@@ -20,7 +20,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # gevent_inotifyx
-import gevent_inotifyx as infx
+#import gevent_inotifyx as infx
 
 # Zato
 from zato.common.util import hot_deploy, spawn_greenlet
@@ -151,6 +151,8 @@ class PickupManager(object):
 # ################################################################################################################################
 
     def run(self):
+
+        return
 
         try:
 
