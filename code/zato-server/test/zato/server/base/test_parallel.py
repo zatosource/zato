@@ -9,8 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import httplib
 from datetime import datetime
+from http.client import OK
 from io import StringIO
 from unittest import TestCase
 
@@ -144,7 +144,7 @@ class HTTPAccessLogTestCase(TestCase):
             'wsgi.url_scheme': 'http',
             'wsgi.input': StringIO(response),
 
-            'zato.http.response.status': httplib.OK,
+            'zato.http.response.status': OK,
             'zato.channel_item': channel_item,
             'zato.request_timestamp_utc': req_timestamp_utc,
 
@@ -176,7 +176,7 @@ class HTTPAccessLogTestCase(TestCase):
 
         class FakeRequestHandler(object):
             def handle(self, *ignored_args, **ignored_kwargs):
-                return Bunch(payload=response, content_type='text/plain', headers={}, status_code=httplib.OK)
+                return Bunch(payload=response, content_type='text/plain', headers={}, status_code=OK)
 
         class FakeAccessLogger(object):
             def __init__(self):

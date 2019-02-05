@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from httplib import OK
+from http.client import OK
 from io import StringIO
 from unittest import TestCase
 from uuid import uuid4

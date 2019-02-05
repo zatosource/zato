@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from copy import deepcopy
-from httplib import OK
+from http.client import OK
 from itertools import chain
 from traceback import format_exc
 
@@ -516,8 +516,7 @@ class Cloud(object):
 class Response(object):
     """ A response from the service's invocation.
     """
-    __slots__ = ('logger', 'result', 'result_details', '_payload', 'payload',
-        '_content_type', 'content_type', 'content_type_changed', 'content_encoding',
+    __slots__ = ('logger', 'result', 'result_details', '_payload', '_content_type', 'content_type_changed', 'content_encoding',
         'headers', 'status_code', 'data_format', 'simple_io_config', 'outgoing_declared')
 
     def __init__(self, logger, result=ZATO_OK, result_details='', payload='',

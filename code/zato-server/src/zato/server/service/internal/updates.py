@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from errno import ENETUNREACH
-from httplib import OK
+from http.client import OK
 from json import loads
 from traceback import format_exc
 

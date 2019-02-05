@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from httplib import BAD_REQUEST, NOT_FOUND
+from http.client import BAD_REQUEST, NOT_FOUND
 from json import dumps, loads
 from mimetypes import guess_type
 from tempfile import NamedTemporaryFile

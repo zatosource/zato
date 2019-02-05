@@ -72,7 +72,7 @@ class CAValidatingHTTPSConnection(http_client.HTTPConnection):
                                     ssl_version=self.ssl_version)
 
 class CAValidatingHTTPS(http_client.HTTPConnection):
-    """ A subclass of httplib.HTTP which is aware of Certificate Authorities
+    """ A subclass of http.client.HTTPConnection which is aware of Certificate Authorities
     used in SSL/TLS transactions.
     """
     _connection_class = CAValidatingHTTPSConnection

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
-from httplib import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import getLogger
 from threading import current_thread
 from traceback import format_exc

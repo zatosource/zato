@@ -77,7 +77,6 @@ newrelic==2.20.0.17
 nltk==3.2.1
 nose==1.3.3
 numpy==1.14.5
-oauth==1.0.1
 openerp-client-lib==1.1.2
 oslo.config==1.2.1
 outbox==0.1.8
