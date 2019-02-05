@@ -46,19 +46,19 @@ _has_debug = logger.isEnabledFor(logging.DEBUG)
 
 # ################################################################################################################################
 
-_status_bad_request = b'{} {}'.format(BAD_REQUEST, HTTP_RESPONSES[BAD_REQUEST])
-_status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
-_status_not_found = b'{} {}'.format(NOT_FOUND, HTTP_RESPONSES[NOT_FOUND])
-_status_method_not_allowed = b'{} {}'.format(METHOD_NOT_ALLOWED, HTTP_RESPONSES[METHOD_NOT_ALLOWED])
-_status_unauthorized = b'{} {}'.format(UNAUTHORIZED, HTTP_RESPONSES[UNAUTHORIZED])
-_status_forbidden = b'{} {}'.format(FORBIDDEN, HTTP_RESPONSES[FORBIDDEN])
-_status_too_many_requests = b'{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO_MANY_REQUESTS])
+_status_bad_request = '{} {}'.format(BAD_REQUEST, HTTP_RESPONSES[BAD_REQUEST])
+_status_internal_server_error = '{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
+_status_not_found = '{} {}'.format(NOT_FOUND, HTTP_RESPONSES[NOT_FOUND])
+_status_method_not_allowed = '{} {}'.format(METHOD_NOT_ALLOWED, HTTP_RESPONSES[METHOD_NOT_ALLOWED])
+_status_unauthorized = '{} {}'.format(UNAUTHORIZED, HTTP_RESPONSES[UNAUTHORIZED])
+_status_forbidden = '{} {}'.format(FORBIDDEN, HTTP_RESPONSES[FORBIDDEN])
+_status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO_MANY_REQUESTS])
 
 # ################################################################################################################################
 
 status_response = {}
 for code, response in HTTP_RESPONSES.items():
-    status_response[code] = b'{} {}'.format(code, response)
+    status_response[code] = '{} {}'.format(code, response)
 
 # ################################################################################################################################
 

@@ -9,9 +9,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import httplib, logging, logging.config, os, ssl, urllib
+import logging
+import logging.config
+import os
+import ssl
+import urllib
 from collections import Counter
 from datetime import datetime
+from http.client import OK
 from traceback import format_exc
 
 # pytz
@@ -390,7 +395,7 @@ class LoadBalancerAgent(SSLServer):
         else:
             try:
                 code = conn.getcode()
-                if code == httplib.OK:
+                if code == OK:
                     return ZATO_OK
                 else:
                     msg = 'Could not open URL [{url}], HTTP code:[{code}]'.format(url=url, code=code)

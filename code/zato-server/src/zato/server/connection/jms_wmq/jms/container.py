@@ -25,6 +25,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import sys
+from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, SERVICE_UNAVAILABLE
 from json import dumps, loads
 from logging import DEBUG, Formatter, getLogger, StreamHandler
 from logging.handlers import RotatingFileHandler
@@ -34,7 +35,6 @@ from threading import RLock
 from time import sleep
 from traceback import format_exc
 from wsgiref.simple_server import make_server
-import httplib
 
 # Bunch
 from bunch import bunchify
@@ -73,12 +73,12 @@ default_logging_config = {
 
 # ################################################################################################################################
 
-_http_200 = b'{} {}'.format(httplib.OK, httplib.responses[httplib.OK])
-_http_400 = b'{} {}'.format(httplib.BAD_REQUEST, httplib.responses[httplib.BAD_REQUEST])
-_http_403 = b'{} {}'.format(httplib.FORBIDDEN, httplib.responses[httplib.FORBIDDEN])
-_http_406 = b'{} {}'.format(httplib.NOT_ACCEPTABLE, httplib.responses[httplib.NOT_ACCEPTABLE])
-_http_500 = b'{} {}'.format(httplib.INTERNAL_SERVER_ERROR, httplib.responses[httplib.INTERNAL_SERVER_ERROR])
-_http_503 = b'{} {}'.format(httplib.SERVICE_UNAVAILABLE, httplib.responses[httplib.SERVICE_UNAVAILABLE])
+_http_200 = b'{} {}'.format(OK, responses[OK])
+_http_400 = b'{} {}'.format(BAD_REQUEST, responses[BAD_REQUEST])
+_http_403 = b'{} {}'.format(FORBIDDEN, responses[FORBIDDEN])
+_http_406 = b'{} {}'.format(NOT_ACCEPTABLE, responses[NOT_ACCEPTABLE])
+_http_500 = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
+_http_503 = b'{} {}'.format(SERVICE_UNAVAILABLE, responses[SERVICE_UNAVAILABLE])
 
 _path_api = '/api'
 _path_ping = '/ping'
