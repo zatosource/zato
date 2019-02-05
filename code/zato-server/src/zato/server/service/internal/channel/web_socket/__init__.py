@@ -121,9 +121,8 @@ class Start(Service):
     """ Starts a WebSocket channel.
     """
     class SimpleIO(object):
-        input_required = tuple(Edit.SimpleIO.input_required) + ('id', 'config_cid')
-        input_optional = tuple(Edit.SimpleIO.input_optional) + (
-            Int('bind_port'), 'service_name', 'sec_name', 'sec_type', 'vault_conn_default_auth_method')
+        input_required = 'id', 'config_cid'
+        input_optional = Int('bind_port'), 'service_name', 'sec_name', 'sec_type', 'vault_conn_default_auth_method'
         request_elem = 'zato_channel_web_socket_start_request'
         response_elem = 'zato_channel_web_socket_start_response'
 

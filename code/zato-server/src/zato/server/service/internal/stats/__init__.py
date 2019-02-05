@@ -15,7 +15,6 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from heapq import nlargest
 from operator import itemgetter
-from sys import maxint
 
 # Bunch
 from bunch import Bunch
@@ -30,6 +29,7 @@ from scipy import stats as sp_stats
 
 # Python 2/3 compatibility
 from future.utils import iteritems
+from zato.common.py23_ import maxint
 
 # Zato
 from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException

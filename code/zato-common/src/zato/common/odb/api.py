@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -647,7 +647,7 @@ class ODBManager(SessionWrapper):
                     self._session.commit()
                     service_id = service.id
                 except(IntegrityError, ProgrammingError):
-                    logger.log(TRACE1, 'IntegrityError (Service), e:`%s`', format_exc().decode('utf-8'))
+                    logger.log(TRACE1, 'IntegrityError (Service), e:`%s`', format_exc())
                     self._session.rollback()
 
                     service_id = self._session.query(Service).\
@@ -662,7 +662,7 @@ class ODBManager(SessionWrapper):
                 return service_id, service.is_active, service.slow_threshold
 
         except Exception:
-            logger.error('Could not add service, name:`%s`, e:`%s`', name, format_exc().decode('utf-8'))
+            logger.error('Could not add service, name:`%s`, e:`%s`', name, format_exc())
             self._session.rollback()
 
 # ################################################################################################################################
@@ -689,7 +689,7 @@ class ODBManager(SessionWrapper):
                 self._session.commit()
             except(IntegrityError, ProgrammingError):
 
-                logger.log(TRACE1, 'IntegrityError (DeployedService), e:`%s`', format_exc().decode('utf-8'))
+                logger.log(TRACE1, 'IntegrityError (DeployedService), e:`%s`', format_exc())
                 self._session.rollback()
 
                 ds = self._session.query(DeployedService).\
@@ -708,7 +708,7 @@ class ODBManager(SessionWrapper):
                 self._session.commit()
 
         except Exception:
-            msg = 'Could not add DeployedService, e:`{}`'.format(format_exc().decode('utf-8'))
+            msg = 'Could not add DeployedService, e:`{}`'.format(format_exc())
             logger.error(msg)
             self._session.rollback()
 
