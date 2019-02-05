@@ -429,7 +429,7 @@ class WebSocket(_WebSocket):
 
     def parse_json(self, data, _create_session=WEB_SOCKET.ACTION.CREATE_SESSION, _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
 
-        parsed = loads(data)
+        parsed = loads(data.decode('utf8'))
         msg = ClientMessage()
 
         meta = parsed.get('meta', {})
@@ -967,7 +967,7 @@ class WebSocket(_WebSocket):
         # Pretend it's an actual response from the client,
         # we cannot use in_reply_to because pong messages are 1:1 copies of ping ones.
         # TODO: Use lxml for XML eventually but for now we are always using JSON
-        self.responses_received[_loads(msg.data)['meta']['id']] = True
+        self.responses_received[_loads(msg.data.decode('utf8'))['meta']['id']] = True
 
         # Since we received a pong response, it means that the peer is connected,
         # in which case we update its pub/sub metadata.

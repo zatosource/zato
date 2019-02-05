@@ -35,7 +35,13 @@ if PY2:
          OAuthSignatureMethod_PLAINTEXT, OAuthToken
 else:
     class _Placeholder(object):
-        pass
+        def __init__(self, *ignored_args, **ignored_kwargs):
+            pass
+
+        def _placeholder(self, *ignored_args, **ignored_kwargs):
+            pass
+
+        add_signature_method = _placeholder
 
     OAuthDataStore = OAuthConsumer = OAuthRequest = OAuthServer = OAuthSignatureMethod_HMAC_SHA1 = \
         OAuthSignatureMethod_PLAINTEXT = OAuthToken = _Placeholder

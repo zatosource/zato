@@ -62,7 +62,7 @@ class EventLog(object):
 # ################################################################################################################################
 
     def emit(self, name, ctx=None):
-        self.events.append(Event(self.log_id, self.event_id_counter.next(), name, ctx))
+        self.events.append(Event(self.log_id, next(self.event_id_counter), name, ctx))
 
 # ################################################################################################################################
 

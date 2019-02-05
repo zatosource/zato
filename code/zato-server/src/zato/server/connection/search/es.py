@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# elasticutils
-from elasticutils import get_es
+# elasticsearch
+from elasticsearch.client import Elasticsearch
 
 # Zato
 from zato.server.store import BaseAPI, BaseStore
@@ -22,4 +22,4 @@ class ElasticSearchConnStore(BaseStore):
     """ Stores connections to ElasticSearch.
     """
     def create_impl(self, config, config_no_sensitive):
-        return get_es(config.hosts.splitlines(), float(config.timeout), send_get_body_as=config.body_as)
+        return Elasticsearch(config.hosts.splitlines(), timeout=float(config.timeout), send_get_body_as=config.body_as)
