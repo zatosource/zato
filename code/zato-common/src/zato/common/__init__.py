@@ -752,9 +752,8 @@ class PUBSUB:
         DELETE = 'delete'
         DELIVER = 'deliver'
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.SKIP, self.DELETE, self.DELIVER))
+        def __iter__(self):
+            return iter((self.SKIP, self.DELETE, self.DELIVER))
 
     class DELIVER_BY:
         PRIORITY = 'priority'
