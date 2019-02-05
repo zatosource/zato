@@ -712,9 +712,6 @@ class ConnectionContainer(object):
 
 if __name__ == '__main__':
 
-    import sys
-    print('JJJ', sys.argv)
-
     container = ConnectionContainer()
     container.run()
 
