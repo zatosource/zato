@@ -4,6 +4,7 @@ fs==0.4.0
 librabbitmq==1.6.1
 openerp-client-lib==1.1.2
 ordereddict==1.1
+Paste==1.7.5.1
 pyaml==14.5.2
 pyprof2calltree==1.1.0
 python-ldap==2.4.19

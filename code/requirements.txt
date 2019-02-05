@@ -54,7 +54,7 @@ huTools==0.63
 hvac==0.2.16
 idna==2.6
 imbox==0.6
-inotifyx==0.2.2
+https://github.com/dsuch/inotifyx/archive/main.zip#egg=inotifyx
 ipaddress==1.0.16
 ipython==0.13.2
 iso8601==0.1.10
@@ -84,7 +84,6 @@ paodate==1.2
 parse-type==0.3.4
 parse==1.6.6
 passlib==1.7.1
-Paste==1.7.5.1
 pathtools==0.1.2
 pbr==0.7.0
 pep8==1.5.7
