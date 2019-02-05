@@ -40,6 +40,7 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 from future.utils import iterkeys
 from future.moves.urllib.parse import urlparse
 from past.builtins import basestring
+from six import PY3
 
 # Zato
 from zato.broker import BrokerMessageReceiver
@@ -124,8 +125,11 @@ def _get_base_classes():
 
 # ################################################################################################################################
 
+_base_type = '_WorkerStoreBase'
+_base_type = _base_type if PY3 else _base_type.encode('utf8')
+
 # Dynamically adds as base classes everything found in current directory that subclasses WorkerImpl
-_WorkerStoreBase = type('_WorkerStoreBase', _get_base_classes(), {})
+_WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 
 class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.

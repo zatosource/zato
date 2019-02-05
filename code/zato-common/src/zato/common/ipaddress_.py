@@ -19,6 +19,7 @@ from netifaces import AF_INET, ifaddresses as net_ifaddresses, interfaces as net
 
 # Python 2/3 compatibility
 from future.moves.urllib.parse import urlparse
+from six import PY2
 
 # ################################################################################################################################
 
@@ -42,6 +43,10 @@ def ip_list_from_interface(interface, allow_loopback=False):
 
     if af_inet:
         _addresses = [elem.get('addr') for elem in af_inet]
+
+        if PY2:
+            _addresses = [elem.decode('utf8') for elem in _addresses]
+
         for address in _addresses:
             address = ip_address(address)
             if address.is_loopback and not allow_loopback:

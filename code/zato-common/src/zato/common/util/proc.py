@@ -78,6 +78,14 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
         if stdin_data:
             run_kwargs['input'] = stdin_data
 
+        print()
+        print()
+
+        print('QQQ', program, run_kwargs)
+
+        print()
+        print()
+
         sarge_run(program, **run_kwargs)
 
         # Wait a moment for any potential errors
@@ -106,9 +114,21 @@ def start_python_process(component_name, run_in_fg, py_path, program_dir, on_key
     options = CLI_ARG_SEP.join('{}={}'.format(k, v) for k, v in options.items())
 
     py_path_option = shell_format('-m {0}', py_path)
-    program_dir_option = shell_format('{0}', program_dir)
+    program_dir_option = shell_format('{0}', program_dir) if program_dir else ''
+
+    #print('TTT', py_path_option)
+    #print('YYY', program_dir_option)
 
     extra_cli_options = '{} {} {}'.format(py_path_option, program_dir_option, options)
+
+    #print(111, extra_cli_options)
+
+    extra_cli_options = '{} '.format(py_path_option)
+    if program_dir_option:
+        extra_cli_options += '{} '.format(program_dir_option)
+    extra_cli_options += '{}'.format(options)
+
+    #print(222, extra_cli_options)
 
     return start_process(component_name, get_executable(), run_in_fg, None, extra_cli_options, on_keyboard_interrupt,
         failed_to_start_err, extra_options, stderr_path, stdin_data)
