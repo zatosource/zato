@@ -15,6 +15,7 @@ from uuid import uuid4
 
 # Zato
 from zato.cache import Cache, KeyExpiredError
+from zato.common.py23_ import maxint
 
 # ################################################################################################################################
 
@@ -434,7 +435,7 @@ class CacheTestCace(TestCase):
 
     def test_max_item_size_number_value(self):
 
-        key1, expected1 = 'key1', sys.maxint
+        key1, expected1 = 'key1', maxint
         key2, expected2 = 'key2', 10.0 ** 10
         key3, expected3 = 'key3', Decimal(2.2 ** 2.2)
         key4, expected4 = 'key4', 123.45j+6789
