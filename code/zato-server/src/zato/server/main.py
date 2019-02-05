@@ -21,6 +21,15 @@ from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log
 
+# Django
+import django
+from django.conf import settings
+
+# Configure Django settings when the module is picked up
+if not settings.configured:
+    settings.configure()
+    django.setup()
+
 # Bunch
 from bunch import Bunch
 

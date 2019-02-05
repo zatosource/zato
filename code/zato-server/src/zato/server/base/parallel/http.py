@@ -21,6 +21,7 @@ from pytz import UTC
 from tzlocal import get_localzone
 
 # Python 2/3 compatibility
+from future.utils import iteritems
 from past.builtins import unicode
 
 # Zato
@@ -83,7 +84,7 @@ class HTTPHandler(object):
             channel_name = '-'
 
         start_response(wsgi_environ['zato.http.response.status'],
-            ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].iteritems()))
+            ((k.encode('utf-8'), v.encode('utf-8')) for k, v in iteritems(wsgi_environ['zato.http.response.headers'])))
 
         if isinstance(payload, unicode):
             payload = payload.encode('utf-8')

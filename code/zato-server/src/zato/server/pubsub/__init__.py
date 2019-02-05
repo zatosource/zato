@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -24,6 +24,9 @@ from globre import compile as globre_compile
 
 # Texttable
 from texttable import Texttable
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, SEARCH
@@ -222,7 +225,7 @@ class Endpoint(ToDictBase):
             (False, True): self.sub_topic_patterns,
         }
 
-        for key, config in data.iteritems():
+        for key, config in iteritems(data):
             is_topic = key == 'topic'
 
             for line in config.splitlines():
@@ -833,7 +836,7 @@ class InRAMSyncBacklog(object):
                     # Calling it once will suffice.
                     now = _utcnow()
 
-                    for msg_id, msg in self.msg_id_to_msg.iteritems():
+                    for msg_id, msg in iteritems(self.msg_id_to_msg):
 
                         if now >= msg['expiration_time']:
 
@@ -1260,17 +1263,17 @@ class PubSub(object):
         ws_chan_id = None
         service_id = None
 
-        for key, value in self.sec_id_to_endpoint_id.iteritems():
+        for key, value in iteritems(self.sec_id_to_endpoint_id):
             if value == endpoint_id:
                 sec_id = key
                 break
 
-        for key, value in self.ws_channel_id_to_endpoint_id.iteritems():
+        for key, value in iteritems(self.ws_channel_id_to_endpoint_id):
             if value == endpoint_id:
                 ws_chan_id = key
                 break
 
-        for key, value in self.service_id_to_endpoint_id.iteritems():
+        for key, value in iteritems(self.service_id_to_endpoint_id):
             if value == endpoint_id:
                 service_id = key
                 break
@@ -1302,7 +1305,7 @@ class PubSub(object):
     def edit_subscription(self, config):
         with self.lock:
             sub = self._get_subscription_by_sub_key(config.sub_key)
-            for key, value in config.iteritems():
+            for key, value in iteritems(config):
                 sub.config[key] = value
 
 # ################################################################################################################################

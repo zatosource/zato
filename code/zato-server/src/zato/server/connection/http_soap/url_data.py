@@ -17,6 +17,7 @@ from traceback import format_exc
 # Python 2/3 compatibility
 from future.utils import iteritems
 from past.builtins import basestring
+from six import PY2
 
 # Zato
 from zato.bunch import Bunch
@@ -28,9 +29,6 @@ from zato.common.util.auth import on_basic_auth, on_wsse_pwd, WSSE
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.jwt import JWT
 from zato.url_dispatcher import CyURLData, Matcher
-
-# Python 2/3 compatibility
-from six import PY2
 
 if PY2:
     from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
@@ -197,7 +195,7 @@ class URLData(CyURLData, OAuthDataStore):
 
             headers['zato.http.response.headers'] = {}
             for header_info in _vault_ws.itervalues():
-                for key, header in header_info.iteritems():
+                for key, header in iteritems(header_info):
                     headers[header] = auth[key]
 
         else:

@@ -33,6 +33,7 @@ from traceback import format_exc
 import xml.etree.ElementTree as etree
 
 # Python 2/3 compatibility
+from future.utils import iteritems
 from past.builtins import basestring, long, unicode
 
 # Zato
@@ -585,7 +586,7 @@ class WebSphereMQConnection(object):
             self.CMQC.MQRO_DISCARD_MSG: 'Discard_Msg',
         }
 
-        for report_name, jms_header_name in md_report_to_jms.iteritems():
+        for report_name, jms_header_name in iteritems(md_report_to_jms):
             report_value = md.Report & report_name
             if report_value:
                 header_value = report_value
