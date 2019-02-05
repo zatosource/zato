@@ -1,5 +1,6 @@
 bzr==2.6.0
 distutils2==1.0a4
+bunch==1.0.1
 fs==0.4.0
 librabbitmq==1.6.1
 openerp-client-lib==1.1.2
