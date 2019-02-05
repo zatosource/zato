@@ -74,7 +74,7 @@ class LoadBalancerAgent(SSLServer):
 
         RepoManager(self.repo_dir).ensure_repo_consistency()
 
-        super(LoadBalancerAgent, self).__init__(
+        SSLServer.__init__(self,
             host=self.json_config['host'],
             port=self.json_config['port'], keyfile=self.keyfile, certfile=self.certfile,
             ca_certs=self.ca_certs, cert_reqs=ssl.CERT_REQUIRED,

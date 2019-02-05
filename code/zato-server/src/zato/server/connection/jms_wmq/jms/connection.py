@@ -356,7 +356,7 @@ class WebSphereMQConnection(object):
             buff.write(mqrfh2jms)
 
         if message.text is not None:
-            buff.write(message.text.encode('utf-8'))
+            buff.write(message.text)
 
         body = buff.getvalue()
         buff.close()
