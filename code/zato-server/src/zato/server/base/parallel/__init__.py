@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging, os, signal
 from datetime import datetime, timedelta
-from logging import INFO
+from logging import INFO, WARN
 from re import IGNORECASE
 from tempfile import mkstemp
 from traceback import format_exc
@@ -150,8 +150,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         self.access_logger = logging.getLogger('zato_access_log')
         self.access_logger_log = self.access_logger._log
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)
-        self.has_pubsub_audit_log = logging.getLogger('zato_pubsub_audit').isEnabledFor('INFO')
-        self.is_enabled_for_warn = logging.getLogger('zato').isEnabledFor('WARN')
+        self.has_pubsub_audit_log = logging.getLogger('zato_pubsub_audit').isEnabledFor(INFO)
+        self.is_enabled_for_warn = logging.getLogger('zato').isEnabledFor(WARN)
 
         # The main config store
         self.config = ConfigStore()
