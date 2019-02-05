@@ -21,7 +21,7 @@ from uuid import uuid4
 from validate import is_boolean
 
 # Python 2/3 compatibility
-from future.moves.urllib.parse import urlparse
+from future.moves.urllib.parse import parse_qs
 from past.builtins import basestring
 
 # Zato
@@ -390,7 +390,7 @@ class GetWSDL(AdminService):
         output_required = ('content_type',)
         output_optional = ('wsdl', 'wsdl_name',)
 
-    def handle(self, _parse_qs=urlparse.parse_qs):
+    def handle(self, _parse_qs=parse_qs):
         if self.wsgi_environ['QUERY_STRING']:
             use_sio = False
             query = _parse_qs(self.wsgi_environ['QUERY_STRING'])
