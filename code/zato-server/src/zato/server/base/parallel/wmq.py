@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -82,19 +82,6 @@ class WMQIPC(object):
             'base_dir': self.base_dir,
             'logging_conf_path': self.logging_conf_path
         }))
-
-        '''
-        self.keyutils.user_set(b'zato-wmq', dumps({
-            'port': self.wmq_ipc_tcp_port,
-            'username': username,
-            'password': password,
-            'server_port': self.port,
-            'server_name': self.name,
-            'server_path': '/zato/internal/callback/wmq',
-            'base_dir': self.base_dir,
-            'logging_conf_path': self.logging_conf_path
-        }), self.pid)
-        '''
 
         # Start IBM MQ connector in a sub-process
         start_python_process('IBM MQ connector', False, 'zato.server.connection.jms_wmq.jms.container', '',

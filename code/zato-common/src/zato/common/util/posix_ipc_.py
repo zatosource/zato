@@ -14,13 +14,14 @@ from json import dumps, loads
 from logging import getLogger
 from mmap import mmap
 from time import sleep
+from traceback import format_exc
 
 # posix-ipc
 import posix_ipc as ipc
 
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger('zato')
 
 # ################################################################################################################################
 
@@ -33,18 +34,26 @@ class SharedMemoryIPC(object):
     backed by shared memory. All data in shared memory is kept as a dictionary and serialized as JSON
     each time any read or write is needed.
     """
+    key_name = '<invalid>'
+
     def __init__(self):
         self.shmem_name = ''
         self.size = -1
 
-    def create(self, shmem_suffix, size):
+    def create(self, shmem_suffix, size, needs_create):
         """ Creates all IPC structures.
         """
         self.shmem_name = _shmem_pattern.format(shmem_suffix)
         self.size = size
 
-        # Create share memory
-        self._mem = ipc.SharedMemory(self.shmem_name, ipc.O_CREAT, size=self.size)
+        # Create or read share memory
+        logger.debug('%s shmem `%s` (%s %s)', 'Creating' if needs_create else 'Opening', self.shmem_name,
+            self.size, self.key_name)
+
+        try:
+            self._mem = ipc.SharedMemory(self.shmem_name, ipc.O_CREAT if needs_create else 0, size=self.size)
+        except ipc.ExistentialError:
+            raise ValueError('Could not create shmem `{}` ({}), e:`{}`'.format(self.shmem_name, self.key_name, format_exc()))
 
         # Map memory to mmap
         self._mmap = mmap(self._mem.fd, self.size)
@@ -113,6 +122,7 @@ class SharedMemoryIPC(object):
         """ Low-level implementation of get_key which does not handle timeouts.
         """
         parent = self.get_parent(parent, False)
+        print('TTTT', parent)
         return parent[key]
 
     def get_key(self, parent, key, timeout=None, _sleep=sleep, _utcnow=datetime.utcnow):
@@ -160,8 +170,8 @@ class ServerStartupIPC(SharedMemoryIPC):
     """
     key_name = '/pubsub/pid'
 
-    def create(self, deployment_key, size):
-        super(ServerStartupIPC, self).create('server-{}'.format(deployment_key), size)
+    def create(self, deployment_key, size, needs_create=True):
+        super(ServerStartupIPC, self).create('server-{}'.format(deployment_key), size, needs_create)
 
     def set_pubsub_pid(self, pid):
         self.set_key(self.key_name, 'current', pid)
@@ -174,10 +184,12 @@ class ServerStartupIPC(SharedMemoryIPC):
 class ConnectorConfigIPC(SharedMemoryIPC):
     """ A shared memory-backed IPC object for configuration of subprocess-based containers.
     """
+    needs_create = False
+
     key_name = '/connector/config'
 
-    def create(self, deployment_key, size):
-        super(ConnectorConfigIPC, self).create('connector-config-{}'.format(deployment_key), size)
+    def create(self, deployment_key, size, needs_create=True):
+        super(ConnectorConfigIPC, self).create('connector-config-{}'.format(deployment_key), size, needs_create)
 
     def set_config(self, connector_key, config):
         self.set_key(self.key_name, connector_key, config)
