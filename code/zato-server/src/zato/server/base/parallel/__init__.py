@@ -411,7 +411,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         self.shmem_size = int(float(self.fs_server_config.shmem.size) * 10**6) # Convert to megabytes as integer
 
         self.server_startup_ipc.create(self.deployment_key, self.shmem_size)
-        self.connector_config_ipc.create('config-data', self.shmem_size)
+        self.connector_config_ipc.create(self.deployment_key, self.shmem_size)
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         self.config.odb_data = self.get_config_odb_data(self)
@@ -548,10 +548,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
                 # Will block for a few seconds at most, until is_ok is returned
                 # which indicates that a connector started or not.
                 is_ok = self.start_ibm_mq_connector(int(self.fs_server_config.ibm_mq.ipc_tcp_start_port))
-                if is_ok:
-                    self.create_initial_wmq_definitions(self.worker_store.worker_config.definition_wmq)
-                    self.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
-                    self.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
+
+                try:
+                    if is_ok:
+                        self.create_initial_wmq_definitions(self.worker_store.worker_config.definition_wmq)
+                        self.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
+                        self.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
+                except Exception as e:
+                    logger.warn('Could not create initial IBM MQ objects, e:`%s`', e)
 
         else:
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={

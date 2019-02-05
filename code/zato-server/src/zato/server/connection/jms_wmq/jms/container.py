@@ -47,6 +47,7 @@ import yaml
 
 # Zato
 from zato.common.broker_message import code_to_name
+from zato.common.util import parse_cmd_line_options
 from zato.common.util.auth import parse_basic_auth
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC
 from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
@@ -217,11 +218,11 @@ class ConnectionContainer(object):
         else:
             self.pymqi = pymqi
 
-        raise ValueError(sys.argv)
+        zato_options = sys.argv[1]
+        zato_options = parse_cmd_line_options(zato_options)
 
-
-        #self.deployment_key = deployment_key
-        #self.shmem_size = shmem_size
+        self.deployment_key = zato_options['deployment_key']
+        self.shmem_size = int(zato_options['shmem_size'])
 
         self.host = '127.0.0.1'
         self.port = None
@@ -236,7 +237,9 @@ class ConnectionContainer(object):
         self.lock = RLock()
         self.logger = None
         self.parent_pid = getppid()
+
         self.config_ipc = ConnectorConfigIPC()
+        self.config_ipc.create(self.deployment_key, self.shmem_size, False)
 
         self.connections = {}
         self.outconns = {}
@@ -249,9 +252,10 @@ class ConnectionContainer(object):
         self.set_config()
 
     def set_config(self):
-        """ Sets self attributes, as configured in keyring by our parent process.
+        """ Sets self attributes, as configured in shmem by our parent process.
         """
         config = self.config_ipc.get_config('zato-ibm-mq')
+
         config = loads(config)
         config = bunchify(config)
 
