@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,6 +18,9 @@ from paste.util.multidict import MultiDict
 
 # Bunch
 from zato.bunch import Bunch
+
+# Python 2/3 compatibility
+from future.utils import itervalues
 
 # Zato
 from zato.common import SECRETS, ZATO_NONE
@@ -113,7 +116,7 @@ class ConfigDict(object):
 
     def itervalues(self):
         with self.lock:
-            return self._impl.itervalues()
+            return itervalues(self._impl)
 
 # ################################################################################################################################
 

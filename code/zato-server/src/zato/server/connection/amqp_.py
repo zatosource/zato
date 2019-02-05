@@ -25,6 +25,7 @@ from kombu import Connection, Consumer as _Consumer, pools, Queue
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, Transport
 
 # Python 2/3 compatibility
+from future.utils import itervalues
 from past.builtins import xrange
 
 # Zato
@@ -87,7 +88,7 @@ class _AMQPProducers(object):
         return self.pool[self.conn].acquire(*args, **kwargs)
 
     def stop(self):
-        for pool in self.pool.itervalues():
+        for pool in itervalues(self.pool):
             pool.connections.force_close_all()
 
 # ################################################################################################################################
@@ -362,7 +363,7 @@ class ConnectorAMQP(Connector):
     def create_channels(self):
         """ Sets up AMQP consumers for all channels.
         """
-        for config in self.channels.itervalues():
+        for config in itervalues(self.channels):
             self._enrich_channel_config(config)
 
             for x in xrange(config.pool_size):
@@ -375,7 +376,7 @@ class ConnectorAMQP(Connector):
         because self.outconns entries are already available.
         """
         with self.lock:
-            for config in self.outconns.itervalues():
+            for config in itervalues(self.outconns):
                 self._create_producers(config)
 
 # ################################################################################################################################
@@ -410,7 +411,7 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def _stop_producers(self):
-        for producer in self._producers.itervalues():
+        for producer in itervalues(self._producers):
             try:
                 producer.stop()
             except Exception:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,12 +23,12 @@ from gevent import lock, sleep
 # paodate
 from paodate import Delta
 
-# Paste
-from paste.util.converters import asbool
+# Python 2/3 compatibility
+from future.utils import itervalues
 
 # Zato
 from zato.common import SCHEDULER
-from zato.common.util import add_scheduler_jobs, add_startup_jobs, make_repr, new_cid, spawn_greenlet
+from zato.common.util import add_scheduler_jobs, add_startup_jobs, asbool, make_repr, new_cid, spawn_greenlet
 
 # ################################################################################################################################
 
@@ -378,7 +378,7 @@ class Scheduler(object):
         _job = None
 
         with self.lock:
-            for job in self.jobs.itervalues():
+            for job in itervalues(self.jobs):
                 if job.name == name:
                     _job = job
                     break
@@ -410,12 +410,12 @@ class Scheduler(object):
         """ Executes a job no matter if it's active or not. One-time job are not unscheduled afterwards.
         """
         with self.lock:
-            for job in self.jobs.itervalues():
+            for job in itervalues(self.jobs):
                 if job.name == name:
                     self.on_job_executed(job.get_context(), False)
                     break
             else:
-                logger.warn('No such job `%s` in `%s`', name, [elem.get_context() for elem in self.jobs.itervalues()])
+                logger.warn('No such job `%s` in `%s`', name, [elem.get_context() for elem in itervalues(self.jobs)])
 
     def on_job_executed(self, ctx, unschedule_one_time=True):
         logger.debug('Executing `%s`, `%s`', ctx['name'], ctx)
@@ -459,7 +459,7 @@ class Scheduler(object):
             _sleep_time = self.sleep_time
 
             with self.lock:
-                for job in sorted(self.jobs.itervalues()):
+                for job in sorted(itervalues(self.jobs)):
                     if job.max_repeats_reached:
                         logger.info('Job `%s` already reached max runs count (%s UTC)', job.name, job.max_repeats_reached_at)
                     else:

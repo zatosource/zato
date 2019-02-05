@@ -865,9 +865,8 @@ class PUBSUB:
         SQL = NameId('SQL', 'sql')
         WEB_SOCKETS = NameId('WebSockets', 'wsx')
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.AMQP, self.INTERNAL, self.REST, self.SERVICE, self.SOAP, self.WEB_SOCKETS))
+        def __iter__(self):
+            return iter((self.AMQP, self.INTERNAL, self.REST, self.SERVICE, self.SOAP, self.WEB_SOCKETS))
 
     class REDIS:
         META_TOPIC_LAST_KEY = 'zato.ps.meta.topic.last.%s.%s'

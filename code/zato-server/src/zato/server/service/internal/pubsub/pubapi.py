@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,6 +13,9 @@ from traceback import format_exc
 
 # rapidjson
 from rapidjson import dumps
+
+# Python 2/3 compatibility
+from future.utils import itervalues
 
 # Zato
 from zato.common import CHANNEL, CONTENT_TYPE, PUBSUB
@@ -74,7 +77,7 @@ class _PubSubService(Service):
         except ValueError:
             raise Forbidden(self.cid)
 
-        basic_auth = self.server.worker_store.request_dispatcher.url_data.basic_auth_config.itervalues()
+        basic_auth = itervalues(self.server.worker_store.request_dispatcher.url_data.basic_auth_config)
 
         for item in basic_auth:
             config = item['config']
