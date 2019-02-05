@@ -72,7 +72,7 @@ class SharedMemoryIPC(object):
         """
         self._mmap.seek(0)
         data = self._mmap.read(self.size).strip(b'\x00')
-        return loads(data) if needs_loads else data
+        return loads(data.decode('utf8')) if needs_loads else data
 
     def close(self):
         """ Closes all underlying in-RAM structures.

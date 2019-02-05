@@ -268,7 +268,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
 
             logger.info('Deployed %d user-defined service%s (%s)', len_user_defined_deployed, suffix, self.name)
 
-            return set(locally_deployed)
+            return set()#set(locally_deployed)
 
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, self.deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
@@ -351,6 +351,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         for name in open(os.path.join(self.repo_location, self.fs_server_config.main.service_sources)):
             name = name.strip()
             if name and not name.startswith('#'):
+                if not os.path.isabs(name):
+                    name = os.path.normpath(os.path.join(self.base_dir, name))
                 self.service_sources.append(name)
 
         # User-config from ./config/repo/user-config

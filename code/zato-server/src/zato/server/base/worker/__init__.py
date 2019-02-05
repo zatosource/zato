@@ -37,6 +37,7 @@ from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Python 2/3 compatibility
+from future.utils import iterkeys
 from future.moves.urllib.parse import urlparse
 from past.builtins import basestring
 
@@ -424,7 +425,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def yield_outconn_http_config_dicts(self):
         for transport in('soap', 'plain_http'):
             config_dict = getattr(self.worker_config, 'out_' + transport)
-            for name in config_dict.keys(): # Must use .keys() explicitly so that config_dict can be changed during iteration
+            for name in list(iterkeys(config_dict)): # Must use list explicitly so config_dict can be changed during iteration
                 yield config_dict, config_dict[name]
 
 # ################################################################################################################################

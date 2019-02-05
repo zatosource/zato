@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -25,6 +25,7 @@ from lxml.objectify import Element
 from paste.util.converters import asbool
 
 # Python 2/3 compatibility
+from builtins import bytes
 from past.builtins import cmp, unicode
 
 # Zato
@@ -573,7 +574,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
 
     else:
         if value is not None and not isinstance(param, COMPLEX_VALUE):
-            if isinstance(value, str):
+            if isinstance(value, bytes):
                 value = value.decode('utf-8')
             else:
                 value = unicode(value)

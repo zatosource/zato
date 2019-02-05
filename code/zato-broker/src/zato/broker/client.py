@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -49,7 +49,15 @@ CODE_NO_SUCH_FROM_KEY = 11
 def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
 
     # Imported here so it's guaranteed to be monkey-patched using gevent.monkey.patch_all by whoever called us
-    from thread import start_new_thread
+
+    try:
+        # Python 2
+        from thread import start_new_thread
+    except ImportError:
+        # Python 3
+        from threading import Thread
+        def start_new_thread(target, args):
+            Thread(target=target, args=args).start()
 
     class _ClientThread(object):
         def __init__(self, kvdb, pubsub, name, topic_callbacks=None, on_message=None):
@@ -173,7 +181,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                 raise
             else:
                 topic = TOPICS[msg_type]
-                key = broker_msg = b'zato:broker{}:{}'.format(KEYS[msg_type], new_cid())
+                key = broker_msg = 'zato:broker{}:{}'.format(KEYS[msg_type], new_cid())
 
                 self.kvdb.conn.set(key, str(msg))
                 self.kvdb.conn.expire(key, expiration)  # In seconds
