@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -36,7 +36,7 @@ from hashlib import sha1
 from datetime import datetime
 
 # Python 2/3 compatibility
-from future.moves.urllib.parse import urlparse
+from future.moves.urllib.parse import quote_plus
 
 # lxml
 from lxml import etree

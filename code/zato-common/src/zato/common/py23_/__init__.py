@@ -26,3 +26,10 @@ else:
     izip = zip
     from pickle import dumps as pickle_dumps
     from pickle import loads as pickle_loads
+
+# For pyflakes
+maxint = maxint
+ifilter = ifilter
+izip = izip
+pickle_dumps = pickle_dumps
+pickle_loads = pickle_loads
