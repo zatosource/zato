@@ -13,7 +13,6 @@ import logging
 import logging.config
 import os
 import ssl
-import urllib
 from collections import Counter
 from datetime import datetime
 from http.client import OK
@@ -24,6 +23,9 @@ from pytz import UTC
 
 # YAML
 import yaml
+
+# Python 2/3 compatibility
+from future.moves.urllib.request import urlopen
 
 # Zato
 from zato.agent.load_balancer.config import backend_template, config_from_string, string_from_config, zato_item_token
@@ -387,7 +389,7 @@ class LoadBalancerAgent(SSLServer):
         url = 'http{}://{}:{}{}'.format('s' if lb_use_tls else '', host, port, path)
 
         try:
-            conn = urllib.urlopen(url)
+            conn = urlopen(url)
         except Exception:
             msg = 'Could not open URL `{}`, e:`{}`'.format(url, format_exc())
             logger.error(msg)

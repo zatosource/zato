@@ -34,7 +34,9 @@ def parse_basic_auth(auth, prefix='Basic '):
 # stdlib
 from hashlib import sha1
 from datetime import datetime
-from urllib import quote_plus
+
+# Python 2/3 compatibility
+from future.moves.urllib.parse import urlparse
 
 # lxml
 from lxml import etree
