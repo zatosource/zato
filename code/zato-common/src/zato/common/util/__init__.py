@@ -361,7 +361,7 @@ def new_cid(bytes=12, _random_bytes=random_bytes, _hexlify=hexlify):
     Changed in 2.0: The number is now 28 characters long not 40, like in previous versions.
     Changed in 3.0: The number is now 96 bits rather than 128, 24 characters, with no constant prefix.
     """
-    return _hexlify(_random_bytes(bytes))
+    return _hexlify(_random_bytes(bytes)).decode('utf8')
 
 # ################################################################################################################################
 
