@@ -23,7 +23,7 @@ from bunch import Bunch
 from gevent import sleep
 
 # Watchdog
-from watchdog.events import FileSystemEventHandler, LoggingEventHandler
+from watchdog.events import FileSystemEvent, FileSystemEventHandler, LoggingEventHandler
 from watchdog.observers.polling import PollingObserver
 
 # Zato
@@ -40,8 +40,56 @@ _singleton = object()
 # ################################################################################################################################
 
 class PickupEventHandler(FileSystemEventHandler):
-    def on_created(self, event):
-        print(111, event)
+
+    def __init__(self, manager, stanza, config):
+        # type: (PickupManager, str, Bunch) -> None
+
+        self.manager = manager
+        self.stanza = stanza
+        self.config = config
+
+    def on_created(self, wd_event):
+        # type: (FileSystemEvent) -> None
+
+        try:
+
+            file_name = os.path.basename(wd_event.src_path) # type: str
+
+            if not self.manager.should_pick_up(file_name, self.config.patterns):
+                return
+
+            logger.warn('TTT %s %r', wd_event, self.config)
+
+            pe = PickupEvent()
+            pe.full_path = wd_event.src_path
+            pe.base_dir = os.path.dirname(wd_event.src_path)
+            pe.file_name = file_name
+            pe.stanza = self.stanza
+
+            if self.config.is_service_hot_deploy:
+                spawn_greenlet(hot_deploy, self.manager.server, pe.file_name, pe.full_path, self.config.delete_after_pickup)
+                return
+
+            if self.config.read_on_pickup:
+
+                f = open(pe.full_path, 'rb')
+                pe.raw_data = f.read()
+                pe.has_raw_data = True
+                f.close()
+
+                if self.config.parse_on_pickup:
+
+                    try:
+                        pe.data = self.manager.get_parser(self.config.parse_with)(pe.raw_data)
+                        pe.has_data = True
+                    except Exception as e:
+                        pe.parse_error = e
+
+            spawn_greenlet(self.manager.invoke_callbacks, pe, self.config.services, self.config.topics)
+            self.manager.post_handle(pe.full_path, self.config)
+
+        except Exception:
+            logger.warn('Exception in pickup event handler `%s`', format_exc())
 
     on_modified = on_created
 
@@ -54,16 +102,16 @@ class PickupEvent(object):
         'parse_error')
 
     def __init__(self):
-        self.base_dir = None
-        self.file_name = None
-        self.full_path = None
-        self.stanza = None
-        self.ts_utc = None
-        self.raw_data = ''
-        self.data = _singleton
-        self.has_raw_data = False
-        self.has_data = False
-        self.parse_error = None
+        self.base_dir = None      # type: str
+        self.file_name = None     # type: str
+        self.full_path = None     # type: str
+        self.stanza = None        # type: str
+        self.ts_utc = None        # type: str
+        self.raw_data = ''        # type: str
+        self.data = _singleton    # type: str
+        self.has_raw_data = False # type: bool
+        self.has_data = False     # type: bool
+        self.parse_error = None   # type: str
 
 # ################################################################################################################################
 
@@ -77,7 +125,6 @@ class PickupManager(object):
         self.keep_running = True
 
         self.observers = []
-        self.event_handler = LoggingEventHandler()
 
         # Unlike the main config dictionary, this one is keyed by incoming directories
         self.callback_config = Bunch()
@@ -88,7 +135,8 @@ class PickupManager(object):
             cb_config.stanza = stanza
 
             observer = PollingObserver(0.25)
-            observer.schedule(self.event_handler, section_config.pickup_from, recursive=False)
+            event_handler = PickupEventHandler(self, stanza, section_config)
+            observer.schedule(event_handler, section_config.pickup_from, recursive=False)
 
             self.observers.append(observer)
 
@@ -170,68 +218,4 @@ class PickupManager(object):
         for observer in self.observers:
             observer.start()
 
-        '''
-        try:
-
-            for path in self.callback_config:
-                if not os.path.exists(path):
-                    raise Exception('Path does not exist `{}`'.format(path))
-
-                self.wd_to_path[infx.add_watch(self.infx_fd, path, infx.IN_CLOSE_WRITE | infx.IN_MOVE)] = path
-
-            while self.keep_running:
-                try:
-                    events = infx.get_events(self.infx_fd, 1.0)
-
-                    for event in events:
-                        pe = PickupEvent()
-
-                        try:
-
-                            pe.base_dir = self.wd_to_path[event.wd]
-
-                            config = self.callback_config[pe.base_dir]
-
-                            if not self.should_pick_up(event.name, config.patterns):
-                                continue
-
-                            pe.file_name = event.name
-                            pe.stanza = config.stanza
-                            pe.full_path = os.path.join(pe.base_dir, event.name)
-
-                            # If we are deploying services, the path is different than for other resources
-                            if config.is_service_hot_deploy:
-                                spawn_greenlet(hot_deploy, self.server, pe.file_name, pe.full_path, config.delete_after_pickup)
-                                continue
-
-                            if config.read_on_pickup:
-
-                                f = open(pe.full_path, 'rb')
-                                pe.raw_data = f.read()
-                                pe.has_raw_data = True
-                                f.close()
-
-                                if config.parse_on_pickup:
-
-                                    try:
-                                        pe.data = self.get_parser(config.parse_with)(pe.raw_data)
-                                        pe.has_data = True
-                                    except Exception as e:
-                                        pe.parse_error = e
-
-                                else:
-                                    pe.data = pe.raw_data
-
-                            spawn_greenlet(self.invoke_callbacks, pe, config.services, config.topics)
-                            self.post_handle(pe.full_path, config)
-
-                        except Exception:
-                            logger.warn(format_exc())
-
-                except KeyboardInterrupt:
-                    self.keep_running = False
-
-        except Exception:
-            logger.warn(format_exc())
-
-            '''
+# ################################################################################################################################
