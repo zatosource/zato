@@ -115,7 +115,7 @@ class LogCSV(Service):
     """ Picks up CSV files and logs their contents.
     """
     def handle(self):
-        with open(self.request.raw_request['full_path'], 'rb') as f:
+        with open(self.request.raw_request['full_path'], 'r') as f:
             reader = csv.reader(f)
             for idx, line in enumerate(reader, 1):
                 self.logger.info('CSV line #%s `%s`', idx, line)
