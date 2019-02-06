@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,8 +19,12 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
-# gevent_inotifyx
-#import gevent_inotifyx as infx
+# gevent
+from gevent import sleep
+
+# Watchdog
+from watchdog.events import FileSystemEventHandler, LoggingEventHandler
+from watchdog.observers.polling import PollingObserver
 
 # Zato
 from zato.common.util import hot_deploy, spawn_greenlet
@@ -32,6 +36,14 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 _singleton = object()
+
+# ################################################################################################################################
+
+class PickupEventHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        print(111, event)
+
+    on_modified = on_created
 
 # ################################################################################################################################
 
@@ -60,18 +72,12 @@ class PickupManager(object):
     """
     def __init__(self, server, config):
 
-        return
-
         self.server = server
         self.config = config
         self.keep_running = True
-        self.watchers = []
 
-        self.infx_fd = infx.init()
-        self._parser_cache = {}
-
-        # Maps inotify's watch descriptors to paths
-        self.wd_to_path = {}
+        self.observers = []
+        self.event_handler = LoggingEventHandler()
 
         # Unlike the main config dictionary, this one is keyed by incoming directories
         self.callback_config = Bunch()
@@ -80,6 +86,11 @@ class PickupManager(object):
             cb_config = self.callback_config.setdefault(section_config.pickup_from, Bunch())
             cb_config.update(section_config)
             cb_config.stanza = stanza
+
+            observer = PollingObserver(0.25)
+            observer.schedule(self.event_handler, section_config.pickup_from, recursive=False)
+
+            self.observers.append(observer)
 
 # ################################################################################################################################
 
@@ -156,8 +167,10 @@ class PickupManager(object):
 
     def run(self):
 
-        return
+        for observer in self.observers:
+            observer.start()
 
+        '''
         try:
 
             for path in self.callback_config:
@@ -220,3 +233,5 @@ class PickupManager(object):
 
         except Exception:
             logger.warn(format_exc())
+
+            '''
