@@ -335,8 +335,7 @@ def index(req):
                     seconds = job_elem.seconds or ''
                     repeats = job_elem.repeats or ''
 
-                    ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes,
-                                        seconds, repeats)
+                    ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes, seconds, repeats)
                     job.interval_based = ib_job
 
                 elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:

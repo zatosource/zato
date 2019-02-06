@@ -328,7 +328,6 @@ class ServiceInvokeResponse(JSONSIOResponse):
                 try:
                     data = loads(self.inner_service_response)
                 except ValueError as e:
-                    print(555, e)
                     # Not a JSON response
                     self.data = self.inner_service_response
                 else:
@@ -337,23 +336,13 @@ class ServiceInvokeResponse(JSONSIOResponse):
                         data_keys = list(data.keys())
                         if len(data_keys) == 1:
                             data_key = data_keys[0]
-                            print()
-                            print()
-                            print(222, data_key, type(data_key))
-                            print()
-                            print()
                             if isinstance(data_key, str) and data_key.startswith('zato'):
-                                print(333)
                                 self.data = data[data_key]
-                                print(333, self.data)
                             else:
-                                print(444)
                                 self.data = data
                         else:
-                            print(555)
                             self.data = data
                     else:
-                        print(666)
                         self.data = data
             else:
                 try:

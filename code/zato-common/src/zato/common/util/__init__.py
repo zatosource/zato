@@ -32,7 +32,7 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from glob import glob
 from hashlib import sha256
-from inspect import ismethod
+from inspect import isfunction
 from itertools import tee
 from io import StringIO
 from operator import itemgetter
@@ -104,6 +104,7 @@ from builtins import bytes
 from future.moves.itertools import zip_longest
 from future.utils import iteritems, raise_
 from past.builtins import basestring, cmp, reduce, unicode
+from six import PY3
 from six.moves.urllib.parse import urlparse
 from zato.common.py23_ import ifilter, izip
 from zato.common.py23_.spring_ import CAValidatingHTTPSConnection, SSLClientTransport
@@ -1706,8 +1707,8 @@ def is_func_overridden(func):
     whether users implemented a given hook. If there is a special internal marker in input arguments,
     it means that it is an internal function from parent class, not a user-defined one.
     """
-    if func and ismethod(func):
-        func_defaults = func.im_func.func_defaults
+    if func and isfunction(func):
+        func_defaults = func.__defaults__ if PY3 else func.im_func.func_defaults
 
         # Only internally defined methods will fulfill conditions that they have default arguments
         # and one of them is our no-op marker, hence if we negate it and the result is True,
