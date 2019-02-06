@@ -103,7 +103,7 @@ class WMQIPC(object):
             if not should_warn:
                 if now >= warn_after:
                     should_warn = True
-            is_ok = self._ping_connector(address, auth)
+            is_ok = self._ping_connector(address, auth, should_warn)
             if is_ok:
                 break
             else:
