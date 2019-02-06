@@ -98,9 +98,9 @@ class WebSphereMQConnection(object):
         needs_mcd=True, needs_jms=False, max_chars_printed=100):
 
         # TCP-level settings
-        self.queue_manager = queue_manager or ''
+        self.queue_manager = queue_manager.encode('utf8') or ''
         self.channel = channel.encode('utf8')
-        self.host = host.encode('utf8')
+        self.host = host
         self.port = port
 
         # Credentials
