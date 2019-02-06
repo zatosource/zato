@@ -85,14 +85,6 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
         if stdin_data:
             run_kwargs['input'] = stdin_data
 
-        print()
-        print()
-
-        print(program, run_kwargs)
-
-        print()
-        print()
-
         sarge_run(program, **run_kwargs)
 
         # Wait a moment for any potential errors
