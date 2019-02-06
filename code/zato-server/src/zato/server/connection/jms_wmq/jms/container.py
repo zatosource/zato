@@ -24,6 +24,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
+import signal
 import sys
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
 from json import dumps, loads
@@ -708,7 +710,21 @@ class ConnectionContainer(object):
 
     def run(self):
         server = make_server(self.host, self.port, self.on_wsgi_request)
-        server.serve_forever()
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+
+            try:
+                # Attempt to clean up, if possible
+                server.shutdown()
+                for conn in self.connections.values():
+                    conn.close()
+            except Exception:
+                # Log exception if cleanup was not possible
+                self.logger.warn('Exception in shutdown procedure `%s`', format_exc())
+            finally:
+                # Anything happens, we need to shut down the process
+                os.kill(os.getpid(), signal.SIGTERM)
 
 # ################################################################################################################################
 
