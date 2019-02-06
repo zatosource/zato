@@ -122,7 +122,6 @@ class SharedMemoryIPC(object):
         """ Low-level implementation of get_key which does not handle timeouts.
         """
         parent = self.get_parent(parent, False)
-        print('TTTT', parent)
         return parent[key]
 
     def get_key(self, parent, key, timeout=None, _sleep=sleep, _utcnow=datetime.utcnow):
