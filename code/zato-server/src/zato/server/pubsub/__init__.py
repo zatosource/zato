@@ -1604,7 +1604,7 @@ class PubSub(object):
         # Add headers
         rows = [['#', 'created', 'name', 'pid', 'channel_name', 'sub_key']]
 
-        servers = self.sub_key_servers.values()
+        servers = list(itervalues(self.sub_key_servers))
         servers.sort(key=attrgetter('creation_time', 'channel_name', 'sub_key'), reverse=True)
 
         for idx, item in enumerate(servers, 1):

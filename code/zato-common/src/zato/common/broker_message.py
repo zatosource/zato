@@ -35,19 +35,19 @@ class MESSAGE:
     NULL_TOKEN = '0' * TOKEN_LENGTH
 
 class MESSAGE_TYPE:
-    TO_SCHEDULER = b'0000'
-    TO_PARALLEL_ANY = b'0001'
-    TO_PARALLEL_ALL = b'0002'
+    TO_SCHEDULER = '0000'
+    TO_PARALLEL_ANY = '0001'
+    TO_PARALLEL_ALL = '0002'
 
-    TO_AMQP_PUBLISHING_CONNECTOR_ALL = b'0003'
-    TO_AMQP_CONSUMING_CONNECTOR_ALL = b'0004'
-    TO_AMQP_CONNECTOR_ALL = b'0005'
+    TO_AMQP_PUBLISHING_CONNECTOR_ALL = '0003'
+    TO_AMQP_CONSUMING_CONNECTOR_ALL = '0004'
+    TO_AMQP_CONNECTOR_ALL = '0005'
 
-    TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL = b'0006'
-    TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL = b'0007'
-    TO_JMS_WMQ_CONNECTOR_ALL = b'0008'
+    TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL = '0006'
+    TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL = '0007'
+    TO_JMS_WMQ_CONNECTOR_ALL = '0008'
 
-    USER_DEFINED_START = b'5000'
+    USER_DEFINED_START = '5000'
 
 TOPICS = {
     MESSAGE_TYPE.TO_SCHEDULER: '/zato/to-scheduler',
@@ -500,4 +500,4 @@ for item_name, item in _globals:
     if isclass(item) and issubclass(item, Constants) and item is not Constants:
         for idx, (attr, const) in enumerate(item.items()):
             const.value = str(item.code_start + idx)
-            code_to_name[const.value.encode('utf-8')] = '{}_{}'.format(item_name, attr)
+            code_to_name[const.value] = '{}_{}'.format(item_name, attr)

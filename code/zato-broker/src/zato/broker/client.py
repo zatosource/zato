@@ -24,6 +24,9 @@ from gevent import sleep
 # Redis
 import redis
 
+# Python 2/3 compatibility
+from builtins import bytes
+
 # Zato
 from zato.common import BROKER, ZATO_NONE
 from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
@@ -96,7 +99,11 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                         try:
                             for msg in self.client.listen():
                                 try:
-                                    self.on_message(Bunch(msg))
+                                    msg = Bunch(msg)
+                                    msg.channel = msg.channel.decode('utf8')
+                                    if isinstance(msg.data, bytes):
+                                        msg.data = msg.data.decode('utf8')
+                                    self.on_message(msg)
                                 except Exception:
                                     logger.warn('Could not handle broker message `%s`, e:`%s`', msg, format_exc())
                         except redis.ConnectionError as e:
@@ -112,7 +119,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
 
         def publish(self, topic, msg):
             if has_debug:
-                logger.debug('Publishing `%s` to `%s`', msg, topic)
+                logger.debug('Publishing `%r` (%s) to `%s` (%s)', msg, type(msg), topic, self.client)
             return self.client.publish(topic, msg)
 
         def close(self):
@@ -168,7 +175,8 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
         def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *ignored_args, **ignored_kwargs):
             msg['msg_type'] = msg_type
             topic = TOPICS[msg_type]
-            self.pub_client.publish(topic, dumps(msg))
+            msg = dumps(msg)
+            self.pub_client.publish(topic, msg)
 
         def invoke_async(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, expiration=BROKER.DEFAULT_EXPIRATION):
             msg['msg_type'] = msg_type
@@ -190,7 +198,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
 
         def on_message(self, msg):
             if has_debug:
-                logger.debug('Got broker message `%s`', msg)
+                logger.warn('Got broker message `%s`', msg)
 
             if msg.type == 'message':
 
@@ -206,8 +214,12 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                         if not payload:
                             logger.info('No KVDB payload for key `%s` (already expired?)', tmp_key)
                         else:
+                            if isinstance(payload, bytes):
+                                payload = payload.decode('utf8')
                             payload = loads(payload)
                 else:
+                    if isinstance(msg.data, bytes):
+                        msg.data = msg.data.decode('utf8')
                     payload = loads(msg.data)
 
                 if payload:

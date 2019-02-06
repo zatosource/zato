@@ -743,7 +743,7 @@ class Service(object):
         #
         # Slow responses
         #
-        if slow_response_enabled:
+        if slow_response_enabled and self.slow_threshold:
 
             if self.processing_time > self.slow_threshold:
 
