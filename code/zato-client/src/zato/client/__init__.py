@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,7 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os
+import logging
+import os
+from base64 import b64decode, b64encode
 from datetime import datetime
 from http.client import OK
 from inspect import getargspec
@@ -29,6 +31,7 @@ from lxml import objectify
 import requests
 
 # Python 2/3 compatibility
+from six import PY3
 from past.builtins import basestring
 
 # Zato
@@ -318,25 +321,39 @@ class ServiceInvokeResponse(JSONSIOResponse):
         response = payload.get('response')
         if response:
             if has_zato_env:
-                self.inner_service_response = payload['response'].decode('base64')
+                payload_response = payload['response']
+                payload_response = b64decode(payload_response)
+                payload_response = payload_response.decode('utf8') if isinstance(payload_response, bytes) else payload_response
+                self.inner_service_response = payload_response
                 try:
                     data = loads(self.inner_service_response)
-                except ValueError:
+                except ValueError as e:
+                    print(555, e)
                     # Not a JSON response
                     self.data = self.inner_service_response
                 else:
                     if isinstance(data, dict):
                         self.meta = data.get('_meta')
-                        data_keys = data.keys()
+                        data_keys = list(data.keys())
                         if len(data_keys) == 1:
                             data_key = data_keys[0]
-                            if isinstance(data_key, basestring) and data_key.startswith('zato'):
+                            print()
+                            print()
+                            print(222, data_key, type(data_key))
+                            print()
+                            print()
+                            if isinstance(data_key, str) and data_key.startswith('zato'):
+                                print(333)
                                 self.data = data[data_key]
+                                print(333, self.data)
                             else:
+                                print(444)
                                 self.data = data
                         else:
+                            print(555)
                             self.data = data
                     else:
+                        print(666)
                         self.data = data
             else:
                 try:
@@ -467,7 +484,7 @@ class AnyServiceInvoker(_Client):
 
         request = {
             id_: value,
-            'payload': payload.encode('base64'),
+            'payload': b64encode(payload.encode('utf8') if PY3 else payload),
             'channel': channel,
             'data_format': data_format,
             'transport': transport,

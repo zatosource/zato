@@ -9,10 +9,17 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from logging import getLogger
 from base64 import b64decode
+
+# Python 2/3 compatibility
+from six import PY2
+from builtins import bytes
 
 # Zato
 from zato.common import AUTH_RESULT
+
+logger = getLogger('zato')
 
 def parse_basic_auth(auth, prefix='Basic '):
     """ Parses username/password out of incoming HTTP Basic Auth data.
@@ -24,7 +31,10 @@ def parse_basic_auth(auth, prefix='Basic '):
         raise ValueError('Invalid prefix in `{}` ({})'.format(auth, AUTH_RESULT.BASIC_AUTH.NO_AUTH))
 
     _, auth = auth.split(prefix)
-    auth = b64decode(auth.strip()).decode('utf8')
+    auth = b64decode(auth.strip())
+    auth = auth if PY2 else auth.decode('utf8')
+
+    logger.warn('QQQ %s %r %s', auth, auth, type(auth))
 
     return auth.split(':', 1)
 
@@ -146,7 +156,9 @@ def _on_basic_auth(auth, expected_username, expected_password):
         return AUTH_BASIC_INVALID_PREFIX
 
     _, auth = auth.split(prefix)
-    auth = auth.strip().decode('base64')
+    auth = auth.strip()
+    auth = b64decode(auth)
+    auth = auth if PY2 else auth.decode('utf8')
 
     username, password = auth.split(':', 1)
 

@@ -459,7 +459,7 @@ class Service(object):
         # implemented by user services.
         if (not self.accept) or service.accept():
 
-            # Assume everything goes fine
+            # Assumes it goes fine by default
             e, exc_formatted = None, None
 
             try:
@@ -508,7 +508,8 @@ class Service(object):
                 if service.finalize_handle:
                     _call_hook_no_service(service.finalize_handle)
 
-            except Exception as e:
+            except Exception as ex:
+                e = ex
                 exc_formatted = format_exc()
                 logger.warn(exc_formatted)
 
@@ -536,7 +537,7 @@ class Service(object):
 
                 else:
                     if e:
-                        raise
+                        raise Exception(e)
 
         # We don't accept it but some response needs to be returned anyway.
         else:

@@ -315,7 +315,10 @@ class SimpleIOPayload(SIOConverter):
         self.zato_output_repeated = True
 
     def __setitem__(self, key, value):
-        setattr(self, key, value)
+        if isinstance(key, slice):
+            return self.__setslice__(key.start, key.stop, value)
+        else:
+            setattr(self, key, value)
 
     def __getitem__(self, key):
         return self.zato_output[key]

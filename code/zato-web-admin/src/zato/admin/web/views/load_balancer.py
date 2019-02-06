@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import json, logging
 from traceback import format_exc
-from xmlrpclib import Fault
+from xmlrpc.client import Fault
 
 # OrderedDict is new in 2.7
 try:

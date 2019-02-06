@@ -100,6 +100,7 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Python 2/3 compatibility
+from builtins import bytes
 from future.moves.itertools import zip_longest
 from future.utils import iteritems, raise_
 from past.builtins import basestring, cmp, reduce, unicode
@@ -479,6 +480,7 @@ def payload_from_request(cid, request, data_format, transport):
                 return ''
             if isinstance(request, basestring) and data_format == DATA_FORMAT.JSON:
                 try:
+                    request = request.decode('utf8') if isinstance(request, bytes) else request
                     payload = loads(request)
                 except ValueError:
                     logger.warn('Could not parse request as JSON:`{}`, e:`{}`'.format(request, format_exc()))
