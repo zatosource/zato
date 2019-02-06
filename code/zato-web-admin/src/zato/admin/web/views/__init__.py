@@ -59,16 +59,9 @@ logger = logging.getLogger(__name__)
 def parse_response_data(response):
     """ Parses out data and metadata out an internal API call response.
     """
-    print()
-    print()
-
-    print(111, response.data)
-
-    print()
-    print()
-
     meta = response.data.pop('_meta', None)
-    data = response.data[response.data.keys()[0]]
+    keys = list(iterkeys(response.data))
+    data = response.data[keys[0]]
     return data, meta
 
 # ################################################################################################################################
@@ -403,7 +396,8 @@ class Index(_BaseView):
                     if output_repeated:
                         if isinstance(response.data, dict):
                             response.data.pop('_meta', None)
-                            data = response.data[response.data.keys()[0]]
+                            keys = list(iterkeys(response.data))
+                            data = response.data[keys[0]]
                         else:
                             data = response.data
                         self._handle_item_list(data)
