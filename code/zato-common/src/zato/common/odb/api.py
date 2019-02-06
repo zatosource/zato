@@ -709,7 +709,7 @@ class ODBManager(SessionWrapper):
 
         except Exception:
             msg = 'Could not add DeployedService, e:`{}`'.format(format_exc())
-            logger.error(msg)
+            #logger.error(msg)
             self._session.rollback()
 
 # ################################################################################################################################

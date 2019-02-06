@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -28,6 +28,7 @@ from django.template.response import TemplateResponse
 from pytz import UTC
 
 # Python 2/3 compatibility
+from future.utils import iterkeys
 from past.builtins import basestring
 
 # Zato
@@ -58,6 +59,14 @@ logger = logging.getLogger(__name__)
 def parse_response_data(response):
     """ Parses out data and metadata out an internal API call response.
     """
+    print()
+    print()
+
+    print(111, response.data)
+
+    print()
+    print()
+
     meta = response.data.pop('_meta', None)
     data = response.data[response.data.keys()[0]]
     return data, meta
@@ -301,7 +310,7 @@ class Index(_BaseView):
         and that all the required parameters were given in GET request. cluster_id doesn't have to be in GET,
         'cluster' will suffice.
         """
-        input_elems = self.req.GET.keys() + self.req.zato.args.keys()
+        input_elems = list(iterkeys(self.req.GET)) + list(iterkeys(self.req.zato.args))
 
         if not self.cluster_id:
             return False

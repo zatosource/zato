@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from base64 import b64decode, b64encode
 from contextlib import closing
 from http.client import BAD_REQUEST, NOT_FOUND
 from json import dumps, loads
@@ -21,6 +22,7 @@ from uuid import uuid4
 from validate import is_boolean
 
 # Python 2/3 compatibility
+from builtins import bytes
 from future.moves.urllib.parse import parse_qs
 from past.builtins import basestring
 
@@ -271,7 +273,8 @@ class Invoke(AdminService):
     def handle(self):
         payload = self.request.input.get('payload')
         if payload:
-            payload = payload_from_request(self.cid, payload.decode('base64'),
+            payload = b64decode(payload)
+            payload = payload_from_request(self.cid, payload,
                 self.request.input.data_format, self.request.input.transport)
 
         id = self.request.input.get('id')
@@ -315,7 +318,8 @@ class Invoke(AdminService):
 
         if isinstance(response, basestring):
             if response:
-                self.response.payload.response = response.encode('base64') if response else ''
+                response = response if isinstance(response, bytes) else response.encode('utf8')
+                self.response.payload.response = b64encode(response) if response else ''
 
 # ################################################################################################################################
 

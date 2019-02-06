@@ -20,7 +20,7 @@ from zato.common import DELEGATED_TO_RBAC, SIMPLE_IO, ZATO_NONE, ZATO_SEC_USE_RB
 # ################################################################################################################################
 
 INITIAL_CHOICES_DICT = {'': '----------'}
-INITIAL_CHOICES = INITIAL_CHOICES_DICT.items()[0]
+INITIAL_CHOICES = list(iteritems(INITIAL_CHOICES_DICT))[0]
 
 # ################################################################################################################################
 
