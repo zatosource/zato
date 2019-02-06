@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import sys
+from threading import Thread
 
 # Python2/3 compatibility
 from future.utils import PY2
@@ -33,3 +34,6 @@ ifilter = ifilter
 izip = izip
 pickle_dumps = pickle_dumps
 pickle_loads = pickle_loads
+
+def start_new_thread(target, args):
+    return Thread(target=target, args=args).start()

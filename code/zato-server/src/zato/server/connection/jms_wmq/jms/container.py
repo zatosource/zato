@@ -30,7 +30,6 @@ from json import dumps, loads
 from logging import DEBUG, Formatter, getLogger, StreamHandler
 from logging.handlers import RotatingFileHandler
 from os import getppid, path
-from thread import start_new_thread
 from threading import RLock
 from time import sleep
 from traceback import format_exc
@@ -44,6 +43,9 @@ from requests import post as requests_post
 
 # YAML
 import yaml
+
+# Python 2/3 compatibility
+from zato.common.py23_ import start_new_thread
 
 # Zato
 from zato.common.broker_message import code_to_name
