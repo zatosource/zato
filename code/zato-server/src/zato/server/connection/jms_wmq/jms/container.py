@@ -713,7 +713,7 @@ class ConnectionContainer(object):
                 status = status.encode('utf8')
                 headers = [(b'Content-type', content_type.encode('utf8'))]
             else:
-                headers = [('Content-type', content_type)]
+                headers = [('Content-type', content_type.decode('utf8'))]
 
             start_response(status, headers)
 
