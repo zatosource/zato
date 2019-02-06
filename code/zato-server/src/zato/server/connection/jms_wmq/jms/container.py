@@ -50,6 +50,7 @@ import yaml
 
 # Python 2/3 compatibility
 from builtins import bytes
+from six import PY2
 from zato.common.py23_ import start_new_thread
 
 # Zato
@@ -101,7 +102,7 @@ _rc_not_authorized = 2035 # pymqi.CMQC.MQRC_NOT_AUTHORIZED
 # ################################################################################################################################
 
 class Response(object):
-    def __init__(self, status=_http_200, data=b'', content_type='text/json'):
+    def __init__(self, status=_http_200, data=b'', content_type=b'text/json'):
         self.status = status
         self.data = data
         self.content_type = content_type
@@ -708,7 +709,12 @@ class ConnectionContainer(object):
             status = _http_503
             data = e.message
         finally:
-            headers = [('Content-type', content_type)]
+            if PY2:
+                status = status.encode('utf8')
+                headers = [(b'Content-type', content_type.encode('utf8'))]
+            else:
+                headers = [('Content-type', content_type)]
+
             start_response(status, headers)
 
             if not isinstance(data, bytes):
