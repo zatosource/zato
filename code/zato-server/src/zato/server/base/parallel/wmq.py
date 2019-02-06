@@ -92,12 +92,17 @@ class WMQIPC(object):
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()
+        warn_after = now + timedelta(seconds=3)
+        should_warn = False
         until = now + timedelta(seconds=timeout)
         is_ok = False
         address = address_pattern.format(self.wmq_ipc_tcp_port, 'ping')
         auth = self.get_wmq_credentials()
 
         while not is_ok or now >= until:
+            if not should_warn:
+                if now >= warn_after:
+                    should_warn = True
             is_ok = self._ping_connector(address, auth)
             if is_ok:
                 break
@@ -112,11 +117,12 @@ class WMQIPC(object):
 
 # ################################################################################################################################
 
-    def _ping_connector(self, address, auth):
+    def _ping_connector(self, address, auth, should_warn):
         try:
             response = get(address, data='{}', auth=auth)
         except Exception:
-            logger.info(format_exc())
+            if should_warn:
+                logger.info(format_exc())
         else:
             return response.ok
 
