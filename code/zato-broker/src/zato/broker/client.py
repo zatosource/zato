@@ -52,15 +52,7 @@ CODE_NO_SUCH_FROM_KEY = 11
 def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
 
     # Imported here so it's guaranteed to be monkey-patched using gevent.monkey.patch_all by whoever called us
-
-    try:
-        # Python 2
-        from thread import start_new_thread
-    except ImportError:
-        # Python 3
-        from threading import Thread
-        def start_new_thread(target, args):
-            Thread(target=target, args=args).start()
+    from zato.common.py23_ import start_new_thread
 
     class _ClientThread(object):
         def __init__(self, kvdb, pubsub, name, topic_callbacks=None, on_message=None):
