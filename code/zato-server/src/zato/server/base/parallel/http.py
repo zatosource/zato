@@ -83,8 +83,7 @@ class HTTPHandler(object):
             # 404 Not Found since we cannot find the channel
             channel_name = '-'
 
-        start_response(wsgi_environ['zato.http.response.status'],
-            ((k.encode('utf-8'), v.encode('utf-8')) for k, v in iteritems(wsgi_environ['zato.http.response.headers'])))
+        start_response(wsgi_environ['zato.http.response.status'], iteritems(wsgi_environ['zato.http.response.headers']))
 
         if isinstance(payload, unicode):
             payload = payload.encode('utf-8')
