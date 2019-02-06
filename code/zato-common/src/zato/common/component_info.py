@@ -46,8 +46,8 @@ def format_connections(conns, format):
 
         for item in items:
 
-            laddr_str = ':'.join(str(elem) for elem in item.laddr).ljust(21).decode('utf-8')
-            raddr_str = ':'.join(str(elem) for elem in item.raddr).rjust(21).decode('utf-8')
+            laddr_str = ':'.join(str(elem) for elem in item.laddr).ljust(21)
+            raddr_str = ':'.join(str(elem) for elem in item.raddr).rjust(21)
 
             out_item = {
                 'from': '{}:{}'.format(*item.laddr),
