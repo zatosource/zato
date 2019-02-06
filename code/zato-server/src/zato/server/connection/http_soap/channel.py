@@ -29,6 +29,7 @@ from paste.util.converters import asbool
 from regex import compile as regex_compile
 
 # Python 2/3 compatibility
+from six import PY3
 from past.builtins import basestring
 
 # Zato
@@ -201,7 +202,7 @@ class RequestDispatcher(object):
         is postponed until a concrete transport-specific handler is invoked.
         """
         # Needed in later steps
-        path_info = wsgi_environ['PATH_INFO'].decode('utf-8')
+        path_info = wsgi_environ['PATH_INFO'] if PY3 else wsgi_environ['PATH_INFO'].decode('utf8')
 
         if _http_soap_action in wsgi_environ:
             soap_action = self._handle_quotes_soap_action(wsgi_environ[_http_soap_action])
