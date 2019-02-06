@@ -6,6 +6,11 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+from base64 import b64decode
+
 # Zato
 from zato.common import AUTH_RESULT
 
@@ -19,7 +24,7 @@ def parse_basic_auth(auth, prefix='Basic '):
         raise ValueError('Invalid prefix in `{}` ({})'.format(auth, AUTH_RESULT.BASIC_AUTH.NO_AUTH))
 
     _, auth = auth.split(prefix)
-    auth = auth.strip().decode('base64')
+    auth = b64decode(auth.strip()).decode('utf8')
 
     return auth.split(':', 1)
 

@@ -102,7 +102,7 @@ class WMQIPC(object):
             if is_ok:
                 break
             else:
-                sleep(0.2)
+                sleep(2)
                 now = datetime.utcnow()
 
         if not is_ok:
@@ -116,7 +116,7 @@ class WMQIPC(object):
         try:
             response = get(address, data='{}', auth=auth)
         except Exception:
-            logger.warn(format_exc())
+            logger.info(format_exc())
         else:
             return response.ok
 

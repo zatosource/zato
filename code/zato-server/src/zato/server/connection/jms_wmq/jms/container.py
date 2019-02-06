@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
@@ -47,6 +49,7 @@ from requests import post as requests_post
 import yaml
 
 # Python 2/3 compatibility
+from builtins import bytes
 from zato.common.py23_ import start_new_thread
 
 # Zato
@@ -57,6 +60,8 @@ from zato.common.util.posix_ipc_ import ConnectorConfigIPC
 from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
 from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
 from zato.server.connection.jms_wmq.jms.core import TextMessage
+
+logger_zato = logging.getLogger('zato')
 
 # ################################################################################################################################
 
@@ -642,7 +647,9 @@ class ConnectionContainer(object):
         if path == _path_ping:
             return Response()
         else:
-            msg = bunchify(loads(msg))
+            msg = msg.decode('utf8')
+            msg = loads(msg)
+            msg = bunchify(msg)
 
             # Delete what handlers don't need
             msg.pop('msg_type', None) # Optional if message was sent by a server that is starting up vs. API call
@@ -703,6 +710,9 @@ class ConnectionContainer(object):
         finally:
             headers = [('Content-type', content_type)]
             start_response(status, headers)
+
+            if not isinstance(data, bytes):
+                data = data.encode('utf8')
 
             return [data]
 
