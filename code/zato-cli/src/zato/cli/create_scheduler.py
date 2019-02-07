@@ -210,22 +210,33 @@ class Create(ZatoCommand):
         else:
             cluster_id = self._get_cluster_id_by_name(args, args.cluster_name)
 
+        odb_password = args.odb_password or ''
+        odb_password = odb_password.encode('utf8')
+
+        kvdb_password = args.kvdb_password or ''
+        kvdb_password = kvdb_password.encode('utf8')
+
+        user1_password = cm.generate_password()
+
         config = {
             'odb_db_name': args.odb_db_name or args.sqlite_path,
             'odb_engine': odb_engine,
             'odb_host': args.odb_host or '',
             'odb_port': args.odb_port or '',
-            'odb_password': cm.encrypt(args.odb_password) if args.odb_password else '',
+            'odb_password': cm.encrypt(odb_password),
             'odb_username': args.odb_user or '',
             'broker_host': args.kvdb_host,
             'broker_port': args.kvdb_port,
-            'broker_password': cm.encrypt(args.kvdb_password) if args.kvdb_password else '',
-            'user1_password': cm.encrypt(cm.generate_password()),
+            'broker_password': cm.encrypt(kvdb_password),
+            'user1_password': cm.encrypt(user1_password),
             'cluster_id': cluster_id,
             'cluster_name': args.cluster_name,
             'secret_key1': secret_key,
-            'well_known_data': cm.encrypt(well_known_data)
+            'well_known_data': cm.encrypt(well_known_data.encode('utf8'))
         }
+
+        for name in 'odb_password', 'broker_password', 'user1_password':
+            config[name] = config[name].decode('utf8')
 
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write(
             common_logging_conf_contents.format(log_path='./logs/scheduler.log'))

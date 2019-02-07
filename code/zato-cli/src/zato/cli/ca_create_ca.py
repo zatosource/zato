@@ -121,7 +121,7 @@ class Create(ZatoCommand):
         template_args['common_name'] = self._get_arg(args, 'common_name', default_ca_name)
         template_args['target_dir'] = self.target_dir
 
-        f = tempfile.NamedTemporaryFile()
+        f = tempfile.NamedTemporaryFile(mode='w+')
         f.write(openssl_template.format(**template_args))
         f.flush()
 

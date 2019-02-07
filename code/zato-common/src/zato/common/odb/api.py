@@ -437,6 +437,15 @@ class ODBManager(SessionWrapper):
 
         with closing(self.session()) as session:
             try:
+
+                print()
+                print()
+
+                print(111, self.token, type(self.token))
+
+                print()
+                print()
+
                 server = session.query(Server).\
                        filter(Server.token == self.token).\
                        one()

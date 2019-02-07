@@ -32,7 +32,7 @@ from passlib import hash as passlib_hash
 from cpuinfo import get_cpu_info
 
 # Python 2/3 compatibility
-from builtins import str as text
+from builtins import bytes, str as text
 
 # ################################################################################################################################
 
@@ -65,6 +65,14 @@ class CryptoManager(object):
             if repo_dir:
                 secret_key, well_known_data = self.get_config(repo_dir)
 
+        #if secret_key:
+        #    secret_key = secret_key if isinstance(secret_key, bytes) else secret_key.encode('utf8')
+
+        #if well_known_data:
+        #    well_known_data = well_known_data if isinstance(well_known_data, bytes) else well_known_data.encode('utf8')
+
+        # print('rrr', secret_key, type(secret_key))
+
         # .. no matter if given on input or through repo_dir, we can set up crypto keys now.
         self.set_config(secret_key, well_known_data)
 
@@ -89,11 +97,14 @@ class CryptoManager(object):
         """ It's possible that what is in config files is not a secret key directly, but information where to find it,
         e.g. in environment variables or stdin. This method looks it up in such cases.
         """
+        secret_key = secret_key.decode('utf8') if isinstance(secret_key, bytes) else secret_key
+
         # Environment variables
         if secret_key.startswith('$'):
             try:
                 env_key = secret_key[1:].upper()
                 value = os.environ[env_key]
+                # print('qqq', value, type(value), env_key)
             except KeyError:
                 raise SecretKeyError('Environment variable not found `{}`'.format(env_key))
 
@@ -109,15 +120,24 @@ class CryptoManager(object):
         # Use the value as it is
         else:
             value = secret_key
+            # print('www', value, type(value), secret_key, type(secret_key))
 
         # Fernet keys always require encoding
-        value = value.encode('utf8')
+        value = value if isinstance(value, bytes) else value.encode('utf8')
+
+        print()
+        print()
+
+        print(222, value, type(value))
+
+        print()
+        print()
 
         # Create a transient key just to confirm that what we found was syntactically correct
         try:
             Fernet(value)
         except Exception as e:
-            raise SecretKeyError(e.message)
+            raise SecretKeyError(e.args)
         else:
             return value
 
@@ -127,9 +147,10 @@ class CryptoManager(object):
         """ Sets crypto attributes and, to be double sure that they are correct,
         decrypts well known data to itself in order to confirm that keys are valid / expected.
         """
+        # print('eee', secret_key, type(secret_key))
         key = self._find_secret_key(secret_key)
         self.secret_key = Fernet(key)
-        self.well_known_data = well_known_data.encode('utf8') if well_known_data else None
+        self.well_known_data = well_known_data if well_known_data else None
 
         if self.well_known_data:
             self.check_consistency()
@@ -140,6 +161,7 @@ class CryptoManager(object):
         """ Used as a consistency check to confirm that a given component's key can decrypt well-known data.
         """
         try:
+            print('RRR', self.well_known_data, type(well_known_data))
             decrypted = self.decrypt(self.well_known_data)
         except InvalidToken:
             raise SecretKeyError('Invalid key, could not decrypt well-known data')
@@ -185,6 +207,15 @@ class CryptoManager(object):
     def from_secret_key(cls, secret_key, well_known_data=None, stdin_data=None):
         """ Creates a new CryptoManager instance from an already existing secret key.
         """
+
+        print()
+        print()
+
+        print(111, cls, secret_key, well_known_data, stdin_data)
+
+        print()
+        print()
+
         return cls(secret_key=secret_key, well_known_data=well_known_data, stdin_data=stdin_data)
 
 # ################################################################################################################################
@@ -201,6 +232,9 @@ class CryptoManager(object):
         """
         if isinstance(encrypted, text):
             encrypted = encrypted.encode('utf8')
+
+        # print('yyy', encrypted)
+
         return self.secret_key.decrypt(encrypted).decode('utf8')
 
 # ################################################################################################################################

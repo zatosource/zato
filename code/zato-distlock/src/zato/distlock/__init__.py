@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -268,7 +268,7 @@ user={}
                 pid, current_name, current_ident, _utcnow().isoformat(), self.os_user_name,
             )
 
-        self.tmp_file.write(contents)
+        self.tmp_file.write(contents.encode('utf8'))
         self.tmp_file.flush()
 
         if _has_debug:

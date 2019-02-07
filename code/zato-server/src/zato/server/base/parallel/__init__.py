@@ -526,9 +526,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
                     raise Exception('Broker client did not become ready within {} seconds'.format(max_seconds))
 
         self._after_init_accepted(locally_deployed)
-
-        self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host,
-                                self.port, self.preferred_address, use_tls)
+        self.odb.server_up_down(
+            server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
 
         if is_first:
 
