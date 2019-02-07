@@ -15,7 +15,14 @@ from io import StringIO
 from time import time
 from traceback import format_exc
 
+# Python 2/3 compatibility
+from builtins import bytes
+
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
 
 class HAProxyStats(object):
     """ Used for communicating with HAProxy through its local UNIX socket interface.
@@ -43,7 +50,7 @@ class HAProxyStats(object):
             while time() <= end:
                 data = client.recv(4096)
                 if data:
-                    buff.write(data)
+                    buff.write(data.decode('utf8') if isinstance(data, bytes) else data)
                 else:
                     return buff.getvalue()
         except Exception:
@@ -51,3 +58,5 @@ class HAProxyStats(object):
             raise
         finally:
             client.close()
+
+# ################################################################################################################################
