@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -48,10 +48,16 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index,
 from zato.common import DATA_FORMAT, SourceInfo, ZATO_NONE
 from zato.common.odb.model import Service
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
 
 ExposedThrough = namedtuple('ExposedThrough', ['id', 'name', 'url'])
 DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details'])
+
+# ################################################################################################################################
 
 class SlowResponse(object):
     def __init__(self, cid=None, service_name=None, threshold=None, req_ts=None,
@@ -67,10 +73,14 @@ class SlowResponse(object):
         self.req_html = req_html
         self.resp_html = resp_html
 
+# ################################################################################################################################
+
 data_format_lexer = {
     'json': JSONLexer,
     'xml': MakoXmlLexer
 }
+
+# ################################################################################################################################
 
 def known_data_format(data):
     data_format = None
@@ -86,11 +96,15 @@ def known_data_format(data):
 
     return data_format
 
+# ################################################################################################################################
+
 def get_public_wsdl_url(cluster, service_name):
     """ Returns an address under which a service's WSDL is publically available.
     """
     return 'http://{}:{}/zato/wsdl?service={}&cluster_id={}'.format(cluster.lb_host,
         cluster.lb_port, service_name, cluster.id)
+
+# ################################################################################################################################
 
 def _get_channels(client, cluster, id, channel_type):
     """ Returns a list of channels of a given type for the given service.
@@ -118,6 +132,8 @@ def _get_channels(client, cluster, id, channel_type):
 
     return out
 
+# ################################################################################################################################
+
 def _get_service(req, name):
     """ Returns service details by its name.
     """
@@ -135,6 +151,8 @@ def _get_service(req, name):
 
     return service
 
+# ################################################################################################################################
+
 def get_pretty_print(value, data_format):
     if data_format == 'xml':
         parser = etree.XMLParser(remove_blank_text=True)
@@ -143,6 +161,8 @@ def get_pretty_print(value, data_format):
     else:
         value = loads(value)
         return stdlib_json.dumps(value, sort_keys=True, indent=2)
+
+# ################################################################################################################################
 
 class Index(_Index):
     """ A view for listing the services along with their basic statistics.
@@ -166,9 +186,13 @@ class Index(_Index):
             'edit_form': EditForm(prefix='edit')
         }
 
+# ################################################################################################################################
+
 @method_allowed('POST')
 def create(req):
     pass
+
+# ################################################################################################################################
 
 class Edit(CreateEdit):
     method_allowed = 'POST'
@@ -181,7 +205,10 @@ class Edit(CreateEdit):
         output_required = ('id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted')
 
     def success_message(self, item):
-        return 'Successfully {0} the service [{1}]'.format(self.verb, item.name)
+        print(111, item)
+        return 'Successfully {} service `{}`'.format(self.verb, item.name)
+
+# ################################################################################################################################
 
 @method_allowed('GET')
 def overview(req, service_name):
@@ -253,6 +280,8 @@ def overview(req, service_name):
 
     return TemplateResponse(req, 'zato/service/overview.html', return_data)
 
+# ################################################################################################################################
+
 @method_allowed('GET')
 def source_info(req, service_name):
 
@@ -285,6 +314,8 @@ def source_info(req, service_name):
         }
 
     return TemplateResponse(req, 'zato/service/source-info.html', return_data)
+
+# ################################################################################################################################
 
 @method_allowed('GET')
 def request_response(req, service_name):
@@ -339,6 +370,8 @@ def request_response(req, service_name):
 
     return TemplateResponse(req, 'zato/service/request-response.html', return_data)
 
+# ################################################################################################################################
+
 @method_allowed('POST')
 def request_response_configure(req, service_name, cluster_id):
     try:
@@ -355,16 +388,22 @@ def request_response_configure(req, service_name, cluster_id):
         logger.error(msg)
         return HttpResponseServerError(msg)
 
+# ################################################################################################################################
+
 class Delete(_Delete):
     url_name = 'service-delete'
     error_message = 'Could not delete the service'
     service_name = 'zato.service.delete'
+
+# ################################################################################################################################
 
 @method_allowed('POST')
 def package_upload(req, cluster_id):
     """ Handles a service package file upload.
     """
     return upload_to_server(req, cluster_id, 'zato.service.upload-package', 'Could not upload the service package, e:`{}`')
+
+# ################################################################################################################################
 
 @method_allowed('POST')
 def last_stats(req, service_id, cluster_id):
@@ -397,6 +436,7 @@ def last_stats(req, service_id, cluster_id):
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
 
+# ################################################################################################################################
 
 @method_allowed('GET')
 def slow_response(req, service_name):
@@ -423,6 +463,8 @@ def slow_response(req, service_name):
         }
 
     return TemplateResponse(req, 'zato/service/slow-response.html', return_data)
+
+# ################################################################################################################################
 
 @method_allowed('GET')
 def slow_response_details(req, cid, service_name):
@@ -473,6 +515,8 @@ def slow_response_details(req, cid, service_name):
 
     return TemplateResponse(req, 'zato/service/slow-response-details.html', return_data)
 
+# ################################################################################################################################
+
 @method_allowed('GET')
 def invoker(req, service_name):
 
@@ -482,6 +526,8 @@ def invoker(req, service_name):
         }
 
     return TemplateResponse(req, 'zato/service/invoker.html', return_data)
+
+# ################################################################################################################################
 
 @method_allowed('POST')
 def invoke(req, name, cluster_id):
@@ -507,3 +553,5 @@ def invoke(req, name, cluster_id):
                 return HttpResponseServerError(response.details)
         except Exception:
             return HttpResponseServerError(format_exc())
+
+# ################################################################################################################################

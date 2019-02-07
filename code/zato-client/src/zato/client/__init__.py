@@ -336,7 +336,7 @@ class ServiceInvokeResponse(JSONSIOResponse):
                         data_keys = list(data.keys())
                         if len(data_keys) == 1:
                             data_key = data_keys[0]
-                            if isinstance(data_key, str) and data_key.startswith('zato'):
+                            if not isinstance(data_key, bytes) and data_key.startswith('zato'):
                                 self.data = data[data_key]
                             else:
                                 self.data = data
