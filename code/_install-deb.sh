@@ -2,7 +2,7 @@
 
 # Python version to use needs to be provided by our caller
 PY_BINARY=$1
-echo "*** Zato DEB installation using $PY_BINARY ***"
+echo "*** Zato `lsb_release -ds` installation using $PY_BINARY ***"
 
 # Always run an update so there are no surprises later on when it actually
 # comes to fetching the packages from repositories.

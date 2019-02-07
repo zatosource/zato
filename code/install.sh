@@ -4,8 +4,7 @@ set -e
 set -o pipefail
 shopt -s compat31
 
-PY_VERSION="2.7"
-PY_BINARY="python"
+PY_BINARY="python2.7"
 
 # Taken from https://stackoverflow.com/a/14203146
 OPTIND=1
@@ -13,18 +12,16 @@ while getopts "p:" opt; do
     case "$opt" in
     p)
         shift
-        PY_VERSION=$1
+        PY_BINARY=$1
         ;;
     esac
 done
 shift $((OPTIND-1))
 [ "${1:-}" = "--" ] && shift
 
-PY_BINARY=$PY_BINARY$PY_VERSION
-
 # Confirm such a Python version is accessible
 if ! [ -x "$(command -v $PY_BINARY)" ]; then
-  echo "Error: Could not find Python binary $PY_BINARY"
+  echo "Error: Could not find Python binary '$PY_BINARY'"
   exit 1
 fi
 
