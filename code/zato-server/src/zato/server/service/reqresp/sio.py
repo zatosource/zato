@@ -25,6 +25,7 @@ from lxml.objectify import Element
 from paste.util.converters import asbool
 
 # Python 2/3 compatibility
+from six import add_metaclass
 from builtins import bytes
 from past.builtins import cmp, unicode
 

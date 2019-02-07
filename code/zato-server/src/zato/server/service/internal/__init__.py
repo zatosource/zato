@@ -109,7 +109,7 @@ class AdminService(Service):
 # ################################################################################################################################
 
     def handle(self, *args, **kwargs):
-        raise NotImplementedError('Should be overridden by subclasses')
+        raise NotImplementedError('Should be overridden by subclasses (AdminService.handle)')
 
 # ################################################################################################################################
 
@@ -137,7 +137,7 @@ class AdminService(Service):
 # ################################################################################################################################
 
     def get_data(self, *args, **kwargs):
-        raise NotImplementedError('Should be overridden by subclasses')
+        raise NotImplementedError('Should be overridden by subclasses (AdminService.get_data)')
 
 # ################################################################################################################################
 

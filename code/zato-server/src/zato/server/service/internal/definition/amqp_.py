@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from uuid import uuid4
+
+# Python 2/3 compatibility
+from six import add_metaclass
 
 # Zato
 from zato.common.broker_message import DEFINITION
@@ -48,28 +51,28 @@ def instance_hook(self, input, instance, attrs):
 
 # ################################################################################################################################
 
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     name = 'zato.definition.amqp.get-list'
     _filter_by = ConnDefAMQP.name,
-    __metaclass__ = GetListMeta
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
     name = 'zato.definition.amqp.create'
-    __metaclass__ = CreateEditMeta
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
     name = 'zato.definition.amqp.edit'
-    __metaclass__ = CreateEditMeta
 
 # ################################################################################################################################
 
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
     name = 'zato.definition.amqp.delete'
-    __metaclass__ = DeleteMeta
 
 # ################################################################################################################################
 
