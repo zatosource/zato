@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,12 +12,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 import os
 
-# Paste
-from paste.util.converters import asbool
+# Python 2/3 compatibility
+from builtins import bytes
 
 # Zato
 from zato.bunch import Bunch
 from zato.common import MISC, SECRETS
+from zato.common.util import asbool
 from zato.common.util.sql import elems_with_opaque
 from zato.server.config import ConfigDict
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore

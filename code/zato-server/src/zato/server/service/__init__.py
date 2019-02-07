@@ -407,7 +407,6 @@ class Service(object):
 
             # We have no custom handlers so we always call 'handle'
             else:
-                logger.warn('QQQ %s', service.handle)
                 service.handle()
 
         # It's not HTTP so we simply call 'handle'
