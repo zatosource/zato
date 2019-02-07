@@ -563,8 +563,8 @@ class SecurityList(object):
         return iter(self.def_items)
 
     def append(self, def_item):
-        value = b'{0}/{1}'.format(def_item.sec_type, def_item.id)
-        label = b'{0}/{1}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
+        value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
+        label = '{0}/{1}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
         self.def_items.append((value, label))
 
     @staticmethod

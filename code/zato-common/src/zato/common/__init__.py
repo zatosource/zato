@@ -720,9 +720,8 @@ class HTTP_SOAP_SERIALIZATION_TYPE:
     SUDS = NameId('Suds', 'suds')
     DEFAULT = STRING_VALUE
 
-    class __metaclass__(type):
-        def __iter__(self):
-            return iter((self.STRING_VALUE, self.SUDS))
+    def __iter__(self):
+        return iter((self.STRING_VALUE, self.SUDS))
 
 class PUBSUB:
 

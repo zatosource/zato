@@ -158,7 +158,7 @@ class BaseStore(object):
             self.edit(password_data.name, new_config)
 
     def create_impl(self):
-        raise NotImplementedError('Should be overridden by subclasses')
+        raise NotImplementedError('Should be overridden by subclasses (BaseStore.create_impl)')
 
     def delete_impl(self):
         pass # It's OK - sometimes deleting a connection doesn't have to mean doing anything unusual
