@@ -6,6 +6,8 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 # stdlib
 from builtins import input as raw_input, int
 from imp import reload
@@ -518,7 +520,7 @@ class ZatoCommand(object):
                 'created_ts': datetime.utcnow().isoformat(), # noqa
                 'component': component
                 }
-        open(os.path.join(target_dir, ZATO_INFO_FILE), 'wb').write(json.dumps(info))
+        open(os.path.join(target_dir, ZATO_INFO_FILE), 'w').write(json.dumps(info))
 
 # ################################################################################################################################
 
@@ -773,7 +775,7 @@ class CACreateCommand(ZatoCommand):
         template_args['common_name'] = self._get_arg(args, 'common_name', default_common_name)
         template_args['target_dir'] = self.target_dir
 
-        f = tempfile.NamedTemporaryFile() # noqa
+        f = tempfile.NamedTemporaryFile(mode='w+') # noqa
         f.write(openssl_template.format(**template_args))
         f.flush()
 

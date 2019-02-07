@@ -276,7 +276,7 @@ sample_key=sample_value
 [deploy_internal]
 {deploy_internal}
 
-""".format(**server_conf_dict).encode('utf-8')
+""".format(**server_conf_dict)
 
 
 pickup_conf = """[json]
@@ -480,12 +480,12 @@ secrets_conf_template = """
 key1={keys_key1}
 
 [zato]
-well_known_data={zato_well_known_data} # π number
+well_known_data={zato_well_known_data} # Pi number
 server_conf.kvdb.password={zato_kvdb_password}
 server_conf.main.token={zato_main_token}
 server_conf.misc.jwt_secret={zato_misc_jwt_secret}
 server_conf.odb.password={zato_odb_password}
-""".encode('utf8')
+"""
 
 simple_io_conf_contents = """
 [int]
@@ -589,7 +589,7 @@ class Create(ZatoCommand):
         super(Create, self).__init__(args)
         self.target_dir = os.path.abspath(args.path)
         self.dirs_prepared = False
-        self.token = uuid.uuid4().hex
+        self.token = uuid.uuid4().hex.encode('utf8')
 
     def prepare_directories(self, show_output):
         if show_output:
@@ -696,13 +696,35 @@ class Create(ZatoCommand):
 
             secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')
             secrets_conf = open(secrets_conf_loc, 'w')
+
+            kvdb_password = args.kvdb_password or ''
+            kvdb_password = kvdb_password.encode('utf8')
+            kvdb_password = fernet1.encrypt(kvdb_password)
+            kvdb_password = kvdb_password.decode('utf8')
+
+            odb_password = args.odb_password or ''
+            odb_password = odb_password.encode('utf8')
+            odb_password = fernet1.encrypt(odb_password)
+            odb_password = odb_password.decode('utf8')
+
+            zato_well_known_data = fernet1.encrypt(well_known_data.encode('utf8'))
+            zato_well_known_data = zato_well_known_data.decode('utf8')
+
+            key1 = key1.decode('utf8')
+
+            zato_main_token = fernet1.encrypt(self.token)
+            zato_main_token = zato_main_token.decode('utf8')
+
+            zato_misc_jwt_secret = fernet1.encrypt(getattr(args, 'jwt_secret', Fernet.generate_key()))
+            zato_misc_jwt_secret = zato_misc_jwt_secret.decode('utf8')
+
             secrets_conf.write(secrets_conf_template.format(
                 keys_key1=key1,
-                zato_well_known_data=fernet1.encrypt(well_known_data),
-                zato_kvdb_password=fernet1.encrypt(args.kvdb_password) if args.kvdb_password else '',
-                zato_main_token=fernet1.encrypt(self.token),
-                zato_misc_jwt_secret=fernet1.encrypt(getattr(args, 'jwt_secret', Fernet.generate_key())),
-                zato_odb_password=fernet1.encrypt(args.odb_password) if args.odb_password else '',
+                zato_well_known_data=zato_well_known_data,
+                zato_kvdb_password=kvdb_password,
+                zato_main_token=zato_main_token,
+                zato_misc_jwt_secret=zato_misc_jwt_secret,
+                zato_odb_password=odb_password,
             ))
             secrets_conf.close()
 

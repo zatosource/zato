@@ -467,6 +467,7 @@ class ConfigLoader(object):
         odb_data.extra = parallel_server.odb_data['extra']
         odb_data.engine = parallel_server.odb_data['engine']
         odb_data.token = parallel_server.fs_server_config.main.token
+
         odb_data.is_odb = True
 
         if odb_data.engine != 'sqlite':

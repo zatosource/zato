@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -26,7 +26,7 @@ WMQ_DEFAULT_PRIORITY = 5
 VERSION = 1
 
 # These databases may be used for ODB but individual SQL outconns can connect to, say, MS SQL
-SUPPORTED_DB_TYPES = (b'mysql', b'postgresql', b'sqlite')
+SUPPORTED_DB_TYPES = ('mysql', 'postgresql', 'sqlite')
 
 # ################################################################################################################################
 

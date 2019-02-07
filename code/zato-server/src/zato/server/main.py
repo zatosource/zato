@@ -177,6 +177,15 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     sso_config = get_config(repo_location, 'sso.conf', needs_user_config=False)
     normalize_sso_config(sso_config)
 
+    '''secrets_config_zato = secrets_config.get('zato')
+    if secrets_config_zato:
+        token = secrets_config_zato.get('server_conf.main.token')
+        if token:
+            secrets_config_zato['server_conf.main.token'] = token.encode('utf8')
+            '''
+
+    server_config.main.token = server_config.main.token.encode('utf8')
+
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
     preferred_address = server_config.preferred_address.get('address')
 
