@@ -805,7 +805,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
     def encrypt(self, data, _prefix=SECRETS.PREFIX):
         """ Returns data encrypted using server's CryptoManager.
         """
-        return '{}{}'.format(_prefix, self.crypto_manager.encrypt(data.encode('utf8')))
+        data = data.encode('utf8')
+        encrypted = self.crypto_manager.encrypt(data)
+        encrypted = encrypted.decode('utf8')
+        return '{}{}'.format(_prefix, encrypted)
 
 # ################################################################################################################################
 
