@@ -2091,7 +2091,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         try:
             with open(msg.reply_to_fifo, 'wb') as fifo:
-                fifo.write(data)
+                fifo.write(data if isinstance(data, bytes) else data.encode('utf'))
         except Exception:
             logger.warn('Could not write to FIFO, m:`%s`, r:`%s`, s:`%s`, e:`%s`', msg, response, status, format_exc())
 

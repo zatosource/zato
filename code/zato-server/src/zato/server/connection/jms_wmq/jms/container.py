@@ -102,7 +102,7 @@ _rc_not_authorized = 2035 # pymqi.CMQC.MQRC_NOT_AUTHORIZED
 # ################################################################################################################################
 
 class Response(object):
-    def __init__(self, status=_http_200, data=b'', content_type=b'text/json'):
+    def __init__(self, status=_http_200, data=b'', content_type='text/json'):
         self.status = status
         self.data = data
         self.content_type = content_type
@@ -707,20 +707,25 @@ class ConnectionContainer(object):
             self.logger.warn(format_exc())
             content_type = 'text/plain'
             status = _http_503
-            data = e.message
+            data = repr(e.args)
         finally:
-            if PY2:
-                status = status.encode('utf8')
-                headers = [(b'Content-type', content_type.encode('utf8'))]
-            else:
-                headers = [('Content-type', content_type.decode('utf8'))]
 
-            start_response(status, headers)
+            try:
+                if PY2:
+                    status = status.encode('utf8')
+                    headers = [(b'Content-type', content_type.encode('utf8'))]
+                else:
+                    headers = [('Content-type', content_type)]
 
-            if not isinstance(data, bytes):
-                data = data.encode('utf8')
+                if not isinstance(data, bytes):
+                    data = data.encode('utf8')
 
-            return [data]
+                start_response(status, headers)
+                return [data]
+
+            except Exception:
+                exc_formatted = format_exc()
+                self.logger.warn('Exception in finally block `%s`', exc_formatted)
 
 # ################################################################################################################################
 
