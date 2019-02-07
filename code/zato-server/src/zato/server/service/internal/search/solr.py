@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+
+# Python 2/3 compatibility
+from six import add_metaclass
 
 # Zato
 from zato.common.broker_message import SEARCH
@@ -16,6 +19,8 @@ from zato.common.util import ping_solr
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta, PingMeta
 
+# ################################################################################################################################
+
 elem = 'search_solr'
 model = Solr
 label = 'a Solr connection'
@@ -24,18 +29,31 @@ broker_message = SEARCH
 broker_message_prefix = 'SOLR_'
 list_func = search_solr_list
 
+# ################################################################################################################################
+
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = Solr.name,
-    __metaclass__ = GetListMeta
 
+# ################################################################################################################################
+
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
+# ################################################################################################################################
+
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
+# ################################################################################################################################
+
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+    pass
+
+# ################################################################################################################################
 
 class Ping(AdminService):
     """ Pings a Solr connection to check if it is alive.
@@ -44,3 +62,5 @@ class Ping(AdminService):
 
     def ping(self, instance):
         ping_solr(instance)
+
+# ################################################################################################################################

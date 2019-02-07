@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from traceback import format_exc
+
+# Python 2/3 compatibility
+from six import add_metaclass
 
 # Zato
 from zato.common import ZatoException
@@ -38,9 +41,9 @@ def response_hook(self, input, _ignored_instance, attrs, service_type):
 
 # ################################################################################################################################
 
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = Server.name,
-    __metaclass__ = GetListMeta
 
 # ################################################################################################################################
 

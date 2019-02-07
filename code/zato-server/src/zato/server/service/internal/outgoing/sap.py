@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,6 +13,9 @@ from contextlib import closing
 from time import time
 from uuid import uuid4
 
+# Python 2/3 compatibility
+from six import add_metaclass
+
 # Zato
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingSAP
@@ -20,6 +23,8 @@ from zato.common.odb.query import out_sap_list
 from zato.common.util import ping_sap
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+
+# ################################################################################################################################
 
 elem = 'email_imap'
 model = OutgoingSAP
@@ -30,26 +35,43 @@ broker_message_prefix = 'SAP_'
 list_func = out_sap_list
 skip_input_params = ['password']
 
+# ################################################################################################################################
+
 def instance_hook(service, input, instance, attrs):
     if 'create' in service.get_name().lower():
         instance.password = uuid4().hex
+
+# ################################################################################################################################
 
 def broker_message_hook(service, input, instance, attrs, service_type):
     if service_type == 'create_edit':
         input.password = instance.password
 
+# ################################################################################################################################
+
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = OutgoingSAP.name,
-    __metaclass__ = GetListMeta
 
+# ################################################################################################################################
+
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
+# ################################################################################################################################
+
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
+# ################################################################################################################################
+
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+    pass
+
+# ################################################################################################################################
 
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an SAP connection
@@ -66,6 +88,8 @@ class ChangePassword(ChangePasswordBase):
 
         return self._handle(OutgoingSAP, _auth, OUTGOING.SAP_CHANGE_PASSWORD.value,
             publish_instance_attrs=['host', 'sysnr', 'client', 'sysid', 'user', 'password', 'router', 'pool_size'])
+
+# ################################################################################################################################
 
 class Ping(AdminService):
     """ Pings a SAP connection to check its configuration.
@@ -88,3 +112,5 @@ class Ping(AdminService):
             response_time = time() - start_time
 
             self.response.payload.info = 'Ping OK, took:`{0:03.4f} s`'.format(response_time)
+
+# ################################################################################################################################

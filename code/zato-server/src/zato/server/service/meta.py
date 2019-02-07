@@ -225,17 +225,17 @@ class AdminServiceMeta(type):
                     sio_elem.extend(attrs.create_edit_input_required_extra)
 
                 # Sorts and removes duplicates
-                setattr(SimpleIO, _name, sorted(list(set(sio_elem))))
+                setattr(SimpleIO, _name, list(set(sio_elem)))
 
         for skip_name in attrs.skip_output_params:
             for attr_names in chain([SimpleIO.output_required, SimpleIO.output_optional]):
                 if skip_name in attr_names:
                     attr_names.remove(skip_name)
 
-        SimpleIO.input_required = tuple(sorted(SimpleIO.input_required))
-        SimpleIO.input_optional = tuple(sorted(SimpleIO.input_optional))
-        SimpleIO.output_required = tuple(sorted(SimpleIO.output_required))
-        SimpleIO.output_optional = tuple(sorted(SimpleIO.output_optional))
+        SimpleIO.input_required = tuple(SimpleIO.input_required)
+        SimpleIO.input_optional = tuple(SimpleIO.input_optional)
+        SimpleIO.output_required = tuple(SimpleIO.output_required)
+        SimpleIO.output_optional = tuple(SimpleIO.output_optional)
 
         return SimpleIO
 

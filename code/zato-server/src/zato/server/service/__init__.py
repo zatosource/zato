@@ -407,6 +407,7 @@ class Service(object):
 
             # We have no custom handlers so we always call 'handle'
             else:
+                logger.warn('QQQ %s', service.handle)
                 service.handle()
 
         # It's not HTTP so we simply call 'handle'
@@ -772,7 +773,7 @@ class Service(object):
         """ The only method Zato services need to implement in order to process
         incoming requests.
         """
-        raise NotImplementedError('Should be overridden by subclasses')
+        raise NotImplementedError('Should be overridden by subclasses (Service.handle)')
 
     def lock(self, name=None, *args, **kwargs):#ttl=20, block=10):
         """ Creates a distributed lock.

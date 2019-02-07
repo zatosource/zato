@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+
+# Python 2/3 compatibility
+from six import add_metaclass
 
 # Zato
 from zato.common.broker_message import CACHE
@@ -17,6 +20,8 @@ from zato.common.util import parse_extra_into_dict
 from zato.server.service.internal import AdminService
 from zato.server.service.internal.cache import common_instance_hook
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+
+# ################################################################################################################################
 
 elem = 'cache_builtin'
 model = CacheMemcached
@@ -57,23 +62,26 @@ def instance_hook(self, input, instance, attrs):
 
 # ################################################################################################################################
 
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = CacheMemcached.name,
-    __metaclass__ = GetListMeta
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
 # ################################################################################################################################
 
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+    pass
 
 # ################################################################################################################################
