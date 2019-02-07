@@ -92,9 +92,9 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                             for msg in self.client.listen():
                                 try:
                                     msg = Bunch(msg)
-                                    msg.channel = msg.channel.decode('utf8')
+                                    msg.channel = msg.channel
                                     if isinstance(msg.data, bytes):
-                                        msg.data = msg.data.decode('utf8')
+                                        msg.data = msg.data
                                     self.on_message(msg)
                                 except Exception:
                                     logger.warn('Could not handle broker message `%s`, e:`%s`', msg, format_exc())
@@ -207,11 +207,11 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                             logger.info('No KVDB payload for key `%s` (already expired?)', tmp_key)
                         else:
                             if isinstance(payload, bytes):
-                                payload = payload.decode('utf8')
+                                payload = payload
                             payload = loads(payload)
                 else:
                     if isinstance(msg.data, bytes):
-                        msg.data = msg.data.decode('utf8')
+                        msg.data = msg.data
                     payload = loads(msg.data)
 
                 if payload:

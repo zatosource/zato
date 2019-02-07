@@ -105,7 +105,7 @@ class IPCAPI(object):
 
 # ################################################################################################################################
 
-    def _get_response(self, fifo, buffer_size, read_size=21, fifo_ignore_err=fifo_ignore_err, empty=('', None)):
+    def _get_response(self, fifo, buffer_size, read_size=21, fifo_ignore_err=fifo_ignore_err, empty=('', b'', None)):
 
         try:
             buff = StringIO()

@@ -162,10 +162,11 @@ class KVDB(object):
         self.conn_class = self._get_connection_class()
 
         if self.has_sentinel:
-            instance = self.conn_class(config['sentinels'], config.get('password'), config.get('socket_timeout'))
+            instance = self.conn_class(config['sentinels'], config.get('password'), config.get('socket_timeout'),
+                charset='utf-8', decode_responses=True)
             self.conn = instance.master_for(config['sentinel_master'])
         else:
-            self.conn = self.conn_class(**config)
+            self.conn = self.conn_class(charset='utf-8', decode_responses=True, **config)
 
         self.lua_container.kvdb = self.conn
 

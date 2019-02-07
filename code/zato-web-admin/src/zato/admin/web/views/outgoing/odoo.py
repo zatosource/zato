@@ -40,7 +40,7 @@ class Index(_Index):
     def handle(self):
 
         for item in self.items:
-            for protocol in ODOO.PROTOCOL:
+            for protocol in ODOO.PROTOCOL():
                 if item.protocol == protocol.id:
                     item.protocol_name = protocol.name
 

@@ -735,9 +735,8 @@ class PUBSUB:
         SOAP = NameId('SOAP', DATA_FORMAT.SOAP)
         XML  = NameId('XML', DATA_FORMAT.XML)
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.CSV, self.DICT, self.JSON, self.POST, self.SOAP, self.XML))
+        def __iter__(self):
+            return iter((self.CSV, self.DICT, self.JSON, self.POST, self.SOAP, self.XML))
 
     class HOOK_TYPE:
         BEFORE_PUBLISH = 'pubsub_before_publish'
@@ -791,18 +790,16 @@ class PUBSUB:
         STAGING = 'staging'
         CURRENT = 'current'
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.STAGING, self.CURRENT))
+        def __iter__(self):
+            return iter((self.STAGING, self.CURRENT))
 
     class GD_CHOICE:
         DEFAULT_PER_TOPIC = NameId('----------', 'default-per-topic')
         YES = NameId('Yes', 'true')
         NO = NameId('No', 'false')
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.DEFAULT_PER_TOPIC, self.YES, self.NO))
+        def __iter__(self):
+            return iter((self.DEFAULT_PER_TOPIC, self.YES, self.NO))
 
     class QUEUE_ACTIVE_STATUS:
         FULLY_ENABLED = NameId('Pub and sub', 'pub-sub')
@@ -810,19 +807,17 @@ class PUBSUB:
         SUB_ONLY = NameId('Sub only', 'sub-only')
         DISABLED = NameId('Disabled', 'disabled')
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.FULLY_ENABLED, self.PUB_ONLY, self.SUB_ONLY, self.DISABLED))
+        def __iter__(self):
+            return iter((self.FULLY_ENABLED, self.PUB_ONLY, self.SUB_ONLY, self.DISABLED))
 
     class DELIVERY_METHOD:
         NOTIFY = NameId('Notify', 'notify')
         PULL = NameId('Pull', 'pull')
         WEB_SOCKET = NameId('WebSocket', 'web-socket')
 
-        class __metaclass__(type):
-            def __iter__(self):
-                # Note that WEB_SOCKET is not included because it's not shown in GUI for subscriptions
-                return iter((self.NOTIFY, self.PULL))
+        def __iter__(self):
+            # Note that WEB_SOCKET is not included because it's not shown in GUI for subscriptions
+            return iter((self.NOTIFY, self.PULL))
 
     class DELIVERY_STATUS:
         DELIVERED = 1
@@ -840,9 +835,8 @@ class PUBSUB:
         SUBSCRIBER = NameId('Subscriber', 'sub-only')
         PUBLISHER_SUBSCRIBER = NameId('Publisher/subscriber', 'pub-sub')
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.PUBLISHER, self.SUBSCRIBER, self.PUBLISHER_SUBSCRIBER))
+        def __iter__(self):
+            return iter((self.PUBLISHER, self.SUBSCRIBER, self.PUBLISHER_SUBSCRIBER))
 
     class RUN_DELIVERY_STATUS:
         NO_MSG = 'no-messages'
@@ -967,9 +961,8 @@ class ODOO:
         JSON_RPC = NameId('JSON-RPC', 'jsonrpc')
         JSON_RPCS = NameId('JSON-RPCS', 'jsonrpcs')
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.XML_RPC, self.XML_RPCS, self.JSON_RPC, self.JSON_RPCS))
+        def __iter__(self):
+            return iter((self.XML_RPC, self.XML_RPCS, self.JSON_RPC, self.JSON_RPCS))
 
 class SAP:
     class DEFAULT:
