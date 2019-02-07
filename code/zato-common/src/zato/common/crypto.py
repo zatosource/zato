@@ -125,13 +125,13 @@ class CryptoManager(object):
         # Fernet keys always require encoding
         value = value if isinstance(value, bytes) else value.encode('utf8')
 
-        print()
-        print()
+        #print()
+        #print()
 
-        print(222, value, type(value))
+        #print(222, value, type(value))
 
-        print()
-        print()
+        #print()
+        #print()
 
         # Create a transient key just to confirm that what we found was syntactically correct
         try:
@@ -161,7 +161,7 @@ class CryptoManager(object):
         """ Used as a consistency check to confirm that a given component's key can decrypt well-known data.
         """
         try:
-            print('RRR', self.well_known_data, type(well_known_data))
+            #print('RRR', self.well_known_data, type(well_known_data))
             decrypted = self.decrypt(self.well_known_data)
         except InvalidToken:
             raise SecretKeyError('Invalid key, could not decrypt well-known data')
@@ -207,14 +207,13 @@ class CryptoManager(object):
     def from_secret_key(cls, secret_key, well_known_data=None, stdin_data=None):
         """ Creates a new CryptoManager instance from an already existing secret key.
         """
+        #print()
+        #print()
 
-        print()
-        print()
+        #print(111, cls, secret_key, well_known_data, stdin_data)
 
-        print(111, cls, secret_key, well_known_data, stdin_data)
-
-        print()
-        print()
+        #print()
+        #print()
 
         return cls(secret_key=secret_key, well_known_data=well_known_data, stdin_data=stdin_data)
 

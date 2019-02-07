@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -25,6 +25,9 @@ from gevent import sleep
 
 # pyrapidjson
 from rapidjson import loads
+
+# Python 2/3 compatibility
+from builtins import bytes
 
 # Zato
 from zato.common import IPC
@@ -114,7 +117,7 @@ class IPCAPI(object):
 
             while data not in empty:
                 data = os.read(fifo, read_size)
-                buff.write(data)
+                buff.write(data.decode('utf8') if isinstance(data, bytes) else data)
 
             response = buff.getvalue()
 
