@@ -32,7 +32,7 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from glob import glob
 from hashlib import sha256
-from inspect import isfunction
+from inspect import isfunction, ismethod
 from itertools import tee
 from io import StringIO
 from operator import itemgetter
@@ -150,6 +150,11 @@ TLS_KEY_TYPE = {
     crypto.TYPE_DSA: 'DSA',
     crypto.TYPE_RSA: 'RSA'
 }
+
+# ################################################################################################################################
+
+def is_method(class_, func=isfunction if PY3 else ismethod):
+    return func(class_)
 
 # ################################################################################################################################
 
@@ -1707,7 +1712,7 @@ def is_func_overridden(func):
     whether users implemented a given hook. If there is a special internal marker in input arguments,
     it means that it is an internal function from parent class, not a user-defined one.
     """
-    if func and isfunction(func):
+    if func and is_method(func):
         func_defaults = func.__defaults__ if PY3 else func.im_func.func_defaults
 
         # Only internally defined methods will fulfill conditions that they have default arguments

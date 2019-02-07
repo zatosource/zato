@@ -31,6 +31,7 @@ from lxml import objectify
 import requests
 
 # Python 2/3 compatibility
+from builtins import str as text
 from six import PY3
 from past.builtins import basestring
 
@@ -336,7 +337,7 @@ class ServiceInvokeResponse(JSONSIOResponse):
                         data_keys = list(data.keys())
                         if len(data_keys) == 1:
                             data_key = data_keys[0]
-                            if not isinstance(data_key, bytes) and data_key.startswith('zato'):
+                            if isinstance(data_key, text) and data_key.startswith('zato'):
                                 self.data = data[data_key]
                             else:
                                 self.data = data
