@@ -477,6 +477,7 @@ class CreateEdit(_BaseView):
             logger.debug('Sending `%s` to `%s`', self.input_dict, self.service_name)
 
             response = self.req.zato.client.invoke(self.service_name, self.input_dict)
+
             if response.ok:
                 return_data = {
                     'message': self.success_message(response.data)
