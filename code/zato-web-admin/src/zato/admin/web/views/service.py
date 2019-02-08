@@ -330,6 +330,7 @@ def request_response(req, service_name):
     service_response = req.zato.client.invoke('zato.service.get-request-response', input_dict)
     if service_response.ok:
         request = b64decode(service_response.data.sample_req if service_response.data.sample_req else '')
+        request = request.decode('utf8')
         request_data_format = known_data_format(request)
         if request_data_format:
             if pretty_print:
@@ -338,6 +339,7 @@ def request_response(req, service_name):
                 HtmlFormatter(linenos='table'))
 
         response = b64decode(service_response.data.sample_resp if service_response.data.sample_resp else '')
+        response = response.decode('utf8')
         response_data_format = known_data_format(response)
         if response_data_format:
             if pretty_print:
