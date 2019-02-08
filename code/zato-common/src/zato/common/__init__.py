@@ -206,9 +206,8 @@ class URL_TYPE(object):
     SOAP = 'soap'
     PLAIN_HTTP = 'plain_http'
 
-    class __metaclass__(type):
-        def __iter__(self):
-            return iter((self.SOAP, self.PLAIN_HTTP))
+    def __iter__(self):
+        return iter((self.SOAP, self.PLAIN_HTTP))
 
 # Whether WS-Security passwords are transmitted in clear-text or not.
 ZATO_WSS_PASSWORD_CLEAR_TEXT = Bunch(name='clear_text', label='Clear text')
@@ -379,11 +378,10 @@ class DATA_FORMAT(Attrs):
     POST = 'post'
     SOAP = 'soap'
 
-    class __metaclass__(type):
-        def __iter__(self):
-            # Note that DICT and other attributes aren't included because they're never exposed to external world as-is,
-            # they may at most only used so that services can invoke each other directly
-            return iter((self.XML, self.JSON, self.CSV, self.POST))
+    def __iter__(self):
+        # Note that DICT and other attributes aren't included because they're never exposed to external world as-is,
+        # they may at most only used so that services can invoke each other directly
+        return iter((self.XML, self.JSON, self.CSV, self.POST))
 
 # TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
 class SIMPLE_IO:
@@ -422,9 +420,8 @@ class CACHE:
         STR = NameId('String/unicode', 'str')
         INT = NameId('Integer', 'int')
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.STR, self.INT))
+        def __iter__(self):
+            return iter((self.STR, self.INT))
 
     class STATE_CHANGED:
 
@@ -468,17 +465,15 @@ class CACHE:
         NO_PERSISTENT_STORAGE = NameId('No persistent storage', 'no-persistent-storage')
         SQL = NameId('SQL', 'sql')
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.NO_PERSISTENT_STORAGE, self.SQL))
+        def __iter__(self):
+            return iter((self.NO_PERSISTENT_STORAGE, self.SQL))
 
     class SYNC_METHOD:
         NO_SYNC = NameId('No synchronization', 'no-sync')
         IN_BACKGROUND = NameId('In background', 'in-background')
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.NO_SYNC, self.IN_BACKGROUND))
+        def __iter__(self):
+            return iter((self.NO_SYNC, self.IN_BACKGROUND))
 
 class KVDB(Attrs):
     SEPARATOR = ':::'
@@ -674,9 +669,8 @@ class CLOUD:
                 GLACIER = 'GLACIER'
                 DEFAULT = STANDARD
 
-                class __metaclass__(type):
-                    def __iter__(self):
-                        return iter((self.STANDARD, self.REDUCED_REDUNDANCY, self.GLACIER))
+                def __iter__(self):
+                    return iter((self.STANDARD, self.REDUCED_REDUNDANCY, self.GLACIER))
 
             class DEFAULTS:
                 ADDRESS = 'https://s3.amazonaws.com/'
@@ -699,9 +693,8 @@ class PARAMS_PRIORITY:
     MSG_OVER_CHANNEL_PARAMS = 'msg-over-channel-params'
     DEFAULT = CHANNEL_PARAMS_OVER_MSG
 
-    class __metaclass__(type):
-        def __iter__(self):
-            return iter((self.CHANNEL_PARAMS_OVER_MSG, self.MSG_OVER_CHANNEL_PARAMS, self.DEFAULT))
+    def __iter__(self):
+        return iter((self.CHANNEL_PARAMS_OVER_MSG, self.MSG_OVER_CHANNEL_PARAMS, self.DEFAULT))
 
 class NONCE_STORE:
     KEY_PATTERN = 'zato:nonce-store:{}:{}' # E.g. zato:nonce-store:oauth:27
@@ -711,9 +704,8 @@ class MSG_PATTERN_TYPE:
     JSON_POINTER = NameId('JSONPointer', 'json-pointer')
     XPATH = NameId('XPath', 'xpath')
 
-    class __metaclass__(type):
-        def __iter__(self):
-            return iter((self.JSON_POINTER, self.XPATH))
+    def __iter__(self):
+        return iter((self.JSON_POINTER, self.XPATH))
 
 class HTTP_SOAP_SERIALIZATION_TYPE:
     STRING_VALUE = NameId('String', 'string')
@@ -758,9 +750,8 @@ class PUBSUB:
         EXT_PUB_TIME = 'ext_pub_time'
         PUB_TIME = 'pub_time'
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.PRIORITY, self.EXT_PUB_TIME, self.PUB_TIME))
+        def __iter__(self):
+            return iter((self.PRIORITY, self.EXT_PUB_TIME, self.PUB_TIME))
 
     class ON_NO_SUBS_PUB:
         ACCEPT = NameId('Accept', 'accept')
@@ -1060,9 +1051,8 @@ class AMQP:
         ACK = NameId('Ack', 'ack')
         REJECT = NameId('Reject', 'reject')
 
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.ACK, self.REJECT))
+        def __iter__(self):
+            return iter((self.ACK, self.REJECT))
 
 class SERVER_STARTUP:
     class PHASE:
