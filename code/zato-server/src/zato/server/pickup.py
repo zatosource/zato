@@ -58,8 +58,6 @@ class PickupEventHandler(FileSystemEventHandler):
             if not self.manager.should_pick_up(file_name, self.config.patterns):
                 return
 
-            logger.warn('TTT %s %r', wd_event, self.config)
-
             pe = PickupEvent()
             pe.full_path = wd_event.src_path
             pe.base_dir = os.path.dirname(wd_event.src_path)
