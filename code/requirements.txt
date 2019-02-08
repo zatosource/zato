@@ -46,6 +46,7 @@ httplib2==0.8
 https://bitbucket.org/dsuch/suds/get/fb304981931b.zip#egg=suds-ovnicraft
 https://github.com/dsuch/dpath-python/archive/66a2f5ab.zip#egg=dpath
 https://github.com/dsuch/globre-lgpl/archive/5327b065.zip#egg=globre
+humanize==0.5.1
 huTools==0.63
 hvac==0.2.16
 idna==2.6

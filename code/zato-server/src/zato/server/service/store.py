@@ -18,6 +18,7 @@ from importlib import import_module
 from inspect import isclass
 from json import dumps
 from traceback import format_exc
+from typing import Any, List
 
 # Bunch
 from bunch import bunchify
@@ -28,21 +29,31 @@ from dill import dumps as dill_dumps, load as dill_load
 # gevent
 from gevent.lock import RLock
 
+# humanize
+from humanize import naturalsize
+
 # PyYAML
 try:
-    from yaml import CDumper  # Looks awkward but it's to make import checkers happy
+    from yaml import CDumper  # For pyflakes
     Dumper = CDumper
 except ImportError:
     from yaml import Dumper   # ditto
     Dumper = Dumper
 
+# Python 2/3 compatibility
+from builtins import str as text
+
 # Zato
-from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceInfo, TRACE1
+from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceCodeInfo, TRACE1
 from zato.common.match import Matcher
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service
 from zato.server.service.internal import AdminService
+
+# For pyflakes
+Any = Any
+List = List
 
 # ################################################################################################################################
 
@@ -53,6 +64,31 @@ has_trace1 = logger.isEnabledFor(TRACE1)
 # ################################################################################################################################
 
 hook_methods = ('accept', 'get_request_hash') + before_handle_hooks + after_handle_hooks + before_job_hooks + after_job_hooks
+
+class InRAMService(object):
+    __slots__ = 'id', 'name', 'impl_name', 'deployment_info', 'service_class', 'is_active', 'slow_threshold', 'source_code_info'
+
+    def __init__(self):
+        self.id = None               # type: int
+        self.impl_name = None        # type: text
+        self.name = None             # type: text
+        self.deployment_info = None  # type: text
+        self.service_class = None    # type: object
+        self.is_active = None        # type: bool
+        self.slow_threshold = None   # type: int
+        self.source_code_info = None # type: SourceCodeInfo
+
+# ################################################################################################################################
+
+class DeploymentInfo(object):
+    __slots__ = 'deployed', 'total_services', 'total_size', 'total_size_human'
+
+    def __init__(self):
+        self.deployed = []        # type: List
+        self.total_size = 0       # type: int
+        self.total_size_human = 0 # type: text
+
+# ################################################################################################################################
 
 def set_up_class_attributes(class_, service_store=None, name=None):
     class_.add_http_method_handlers()
@@ -278,8 +314,9 @@ class ServiceStore(object):
             }
 
             logger.info('Deploying and caching internal services (%s)', self.server.name)
-            deployed = self.import_services_from_anywhere(items, base_dir)
+            info = self.import_services_from_anywhere(items, base_dir)
 
+            '''
             for class_ in deployed:
                 impl_name = class_.get_impl_name()
                 service_info.append({
@@ -297,14 +334,17 @@ class ServiceStore(object):
             f = open(cache_file_path, 'wb')
             f.write(dill_dumps(internal_cache))
             f.close()
+            '''
 
-            logger.info('Deployed and cached %d internal services (%s)', len(deployed), self.server.name)
+            logger.info('Deployed and cached %d internal services (%s) (%s)',
+                len(info.deployed), info.total_size_human, self.server.name)
 
-            return deployed
+            return info.deployed
 
         else:
             deployed = []
 
+            '''
             f = open(cache_file_path, 'rb')
             items = bunchify(dill_load(f))
             f.close()
@@ -314,9 +354,12 @@ class ServiceStore(object):
             logger.info('Deploying %d cached internal services (%s)', len_si, self.server.name)
 
             for idx, item in enumerate(items.service_info, 1):
-                self._visit_class(item.mod, deployed, item.class_, item.fs_location, True, sql_services.get(item.impl_name))
+                class_ = self._visit_class(
+                    item.mod, None, item.class_, item.fs_location, True, sql_services.get(item.impl_name))
+                deployed.append(class_)
 
             logger.info('Deployed %d cached internal services (%s)', len_si, self.server.name)
+            '''
 
             return deployed
 
@@ -326,6 +369,8 @@ class ServiceStore(object):
         """ Imports services from any of the supported sources, be it module names,
         individual files, directories or distutils2 packages (compressed or not).
         """
+        # type: (Any, text, text) -> DeploymentInfo
+
         items = items if isinstance(items, (list, tuple)) else [items]
         deployed = []
 
@@ -347,7 +392,24 @@ class ServiceStore(object):
             else:
                 deployed.extend(self.import_services_from_module(item, is_internal))
 
-        return deployed
+        total_size = 0
+
+        for item in deployed: # type: InRAMService
+            total_size += len(item.source_code_info.source)
+            total_size += len(item.source_code_info.source_html)
+
+        # print()
+        # print()
+        # print(111, len(deployed), total)
+        # print()
+        # print()
+
+        info = DeploymentInfo()
+        info.deployed[:] = deployed
+        info.total_size = total_size
+        info.total_size_human = naturalsize(info.total_size)
+
+        return info
 
 # ################################################################################################################################
 
@@ -430,29 +492,54 @@ class ServiceStore(object):
     def _get_source_code_info(self, mod):
         """ Returns the source code of and the FS path to the given module.
         """
-        si = SourceInfo()
+        # type: (Any) -> SourceInfo
+
+        source_info = SourceCodeInfo()
         try:
             file_name = mod.__file__
             if file_name[-1] in('c', 'o'):
                 file_name = file_name[:-1]
 
-            # We would've used inspect.getsource(mod) hadn't it been apparently using
+            # We would have used inspect.getsource(mod) had it not been apparently using
             # cached copies of the source code
-            si.source = open(file_name, 'rb').read()
+            source_info.source = open(file_name, 'rb').read()
 
-            si.path = inspect.getsourcefile(mod)
-            si.hash = sha256(si.source).hexdigest()
-            si.hash_method = 'SHA-256'
+            source_info.path = inspect.getsourcefile(mod)
+            source_info.hash = sha256(source_info.source).hexdigest()
+            source_info.hash_method = 'SHA-256'
 
         except IOError:
             if has_trace1:
                 logger.log(TRACE1, 'Ignoring IOError, mod:`%s`, e:`%s`', mod, format_exc())
 
-        return si
+        return source_info
 
 # ################################################################################################################################
 
-    def _visit_class(self, mod, deployed, class_, fs_location, is_internal, service_info=None, _utcnow=datetime.utcnow):
+    def _store_in_ram(self, services):
+        # type: (List[InRAMService]) -> None
+
+        with self.update_lock:
+            for item in service: # type: InRAMService
+
+                self.services[item.impl_name] = {}
+                self.services[item.impl_name]['name'] = item.name
+                self.services[item.impl_name]['deployment_info'] = item.depl_info
+                self.services[item.impl_name]['service_class'] = item.service_class
+
+                self.services[item.impl_name]['is_active'] = item.is_active
+                self.services[item.impl_name]['slow_threshold'] = item.slow_threshold
+
+                self.id_to_impl_name[item.id] = item.impl_name
+                self.impl_name_to_id[item.impl_name] = item.id
+                self.name_to_impl_name[item.name] = item.impl_name
+
+                item.service_class.after_add_to_store(logger)
+
+# ################################################################################################################################
+
+    def _visit_class(self, mod, class_, fs_location, is_internal, service_info=None, _utcnow=datetime.utcnow):
+        # type: (Any, Any, text, bool, Any, Any) -> InRAMService
 
         now = _utcnow()
         depl_info = dumps(deployment_info('service-store', str(class_), now.isoformat(), fs_location))
@@ -462,26 +549,38 @@ class ServiceStore(object):
 
         set_up_class_attributes(class_, self, name)
 
+        '''
         self.services[impl_name] = {}
         self.services[impl_name]['name'] = name
         self.services[impl_name]['deployment_info'] = depl_info
         self.services[impl_name]['service_class'] = class_
+        '''
 
-        si = self._get_source_code_info(mod)
+        # Note that at this point we do not have the service's ID, is_active and slow_threshold values;
+        # this is because this object is created prior to its deployment in ODB.
+        in_ram_service = InRAMService()
+        in_ram_service.name = name
+        in_ram_service.impl_name = impl_name
+        in_ram_service.service_class = class_
+        in_ram_service.source_code_info = self._get_source_code_info(mod)
 
+        return in_ram_service
+
+
+        '''
         if service_info:
             service_id = service_info['id']
             is_active = service_info['is_active']
             slow_threshold = service_info['slow_threshold']
 
-            self.odb.add_service(name, impl_name, is_internal, now, dumps(str(depl_info)), si, service_info)
+            self.odb.add_service(name, impl_name, is_internal, now, dumps(str(depl_info)), source_info, service_info)
 
         else:
             service_id, is_active, slow_threshold = self.odb.add_service(
-                name, impl_name, is_internal, now, dumps(str(depl_info)), si, service_info)
+                name, impl_name, is_internal, now, dumps(str(depl_info)), source_info, service_info)
+        '''
 
-        deployed.append(class_)
-
+        '''
         self.services[impl_name]['is_active'] = is_active
         self.services[impl_name]['slow_threshold'] = slow_threshold
 
@@ -493,6 +592,9 @@ class ServiceStore(object):
             logger.debug('Imported service:`%s`', name)
 
         class_.after_add_to_store(logger)
+        '''
+
+        # return class_
 
 # ################################################################################################################################
 
@@ -514,7 +616,7 @@ class ServiceStore(object):
 
                     if self._should_deploy(name, item):
                         if item.before_add_to_store(logger):
-                            self._visit_class(mod, deployed, item, fs_location, is_internal)
+                            deployed.append(self._visit_class(mod, item, fs_location, is_internal))
                         else:
                             logger.info('Skipping `%s` from `%s`', item, fs_location)
 
