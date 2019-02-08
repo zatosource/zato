@@ -377,7 +377,7 @@ class GetSourceInfo(AdminService):
             si = self.get_data(session)
             self.response.payload.service_id = si.service_id
             self.response.payload.server_name = si.server_name
-            self.response.payload.source = si.source.encode('base64') if si.source else None
+            self.response.payload.source = b64encode(si.source) if si.source else None
             self.response.payload.source_path = si.source_path
             self.response.payload.source_hash = si.source_hash
             self.response.payload.source_hash_method = si.source_hash_method

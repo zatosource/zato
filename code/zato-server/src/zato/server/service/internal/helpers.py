@@ -145,7 +145,6 @@ class HTMLService(Service):
 
         if self.logger.isEnabledFor(DEBUG):
             buff = StringIO()
-            pprint(ctx, buff)
             self.logger.debug(buff.getvalue())
             buff.close()
 

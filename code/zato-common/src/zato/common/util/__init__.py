@@ -686,7 +686,6 @@ def from_utc_to_local(dt, tz_name):
     """ What is the local time in the user-provided time zone name?
     """
     if not isinstance(dt, datetime):
-        print(111, dt, type(dt))
         dt = parse(dt)
 
     local_tz = pytz.timezone(tz_name)

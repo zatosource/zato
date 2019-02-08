@@ -208,12 +208,7 @@ class Create(ZatoCommand):
         else:
             cluster_id = self._get_cluster_id_by_name(args, args.cluster_name)
 
-            print()
-            print()
-
         odb_password = args.odb_password or ''
-
-        print('QQQ odb_password', odb_password, type(odb_password))
 
         odb_password = odb_password.encode('utf8')
         odb_password = cm.encrypt(odb_password)
@@ -224,33 +219,15 @@ class Create(ZatoCommand):
         kvdb_password = cm.encrypt(kvdb_password)
         kvdb_password = kvdb_password.decode('utf8')
 
-        print('QQQ kvdb_password', kvdb_password, type(kvdb_password))
-
         user1_password = cm.generate_password()
-
-        print('QQQ user1_password', user1_password, type(user1_password))
-
         user1_password = cm.encrypt(user1_password)
         user1_password = user1_password.decode('utf8')
 
         zato_well_known_data = well_known_data.encode('utf8')
-        print('QQQ zato_well_known_data', zato_well_known_data, type(zato_well_known_data))
-
-
         zato_well_known_data = cm.encrypt(zato_well_known_data)
         zato_well_known_data = zato_well_known_data.decode('utf8')
 
-        print()
-
         secret_key = secret_key.decode('utf8')
-
-        print('ZZZ odb_password', odb_password, type(odb_password))
-        print('ZZZ kvdb_password', kvdb_password, type(kvdb_password))
-        print('ZZZ user1_password', user1_password, type(user1_password))
-        print('ZZZ zato_well_known_data', zato_well_known_data, type(zato_well_known_data))
-
-        print()
-        print()
 
         config = {
             'odb_db_name': args.odb_db_name or args.sqlite_path,

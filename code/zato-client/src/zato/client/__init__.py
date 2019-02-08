@@ -18,9 +18,6 @@ from inspect import getargspec
 from json import dumps, loads
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps as anyjson_dumps
-
 # Bunch
 from bunch import bunchify
 
@@ -51,16 +48,6 @@ DEFAULT_MAX_CID_REPR = 5
 
 mod_logger = logging.getLogger(__name__)
 
-# For pyflakes
-dumps = dumps
-
-# Work around https://bitbucket.org/runeh/anyjson/pull-request/4/
-if getargspec(anyjson_dumps).keywords:
-    dumps = anyjson_dumps
-else:
-    def dumps(data, *args, **kwargs):
-        return anyjson_dumps(data)
-
 # ################################################################################################################################
 # Version
 # ################################################################################################################################
@@ -68,6 +55,15 @@ else:
 version = '3.0.0'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def default_json_handler(value):
+    if isinstance(value, datetime):
+        return value.isoformat()
+    elif isinstance(value, bytes):
+        return value.decode('utf8')
+    raise TypeError('Cannot serialize `{}`'.format(value))
+
 # ################################################################################################################################
 
 class _APIResponse(object):
@@ -106,7 +102,7 @@ class APIClient(object):
         func = getattr(self.session, verb)
         url_path = self.path.format(service_name)
         full_address = '{}{}'.format(self.address, url_path)
-        response = func(full_address, verify=self.tls_verify, data=dumps(request))
+        response = func(full_address, verify=self.tls_verify, data=dumps(request, default=default_json_handler))
 
         return _APIResponse(response)
 
@@ -424,7 +420,7 @@ class _JSONClient(_Client):
 
     def invoke(self, payload='', headers=None, to_json=True):
         if to_json:
-            payload = dumps(payload)
+            payload = dumps(payload, default=default_json_handler)
         return super(_JSONClient, self).invoke(payload, self.response_class, headers=headers)
 
 class JSONClient(_JSONClient):
@@ -452,11 +448,6 @@ class AnyServiceInvoker(_Client):
     don't have to be available through any channels, it suffices for zato.service.invoke
     to be exposed over HTTP.
     """
-    def json_default_handler(self, value):
-        if isinstance(value, datetime):
-            return value.isoformat()
-        raise TypeError('Cannot serialize [{}]'.format(value))
-
     def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json',
                 transport=None, async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
                 to_json=True, output_repeated=ZATO_NOT_GIVEN, pid=None, all_pids=False, timeout=None):
@@ -468,7 +459,7 @@ class AnyServiceInvoker(_Client):
             output_repeated = name.lower().endswith('list')
 
         if to_json:
-            payload = dumps(payload, default=self.json_default_handler)
+            payload = dumps(payload, default=default_json_handler)
 
         id_, value = ('name', name) if name else ('id', id)
 
@@ -485,7 +476,8 @@ class AnyServiceInvoker(_Client):
             'timeout': timeout,
         }
 
-        return super(AnyServiceInvoker, self).invoke(dumps(request), ServiceInvokeResponse, async, headers, output_repeated)
+        return super(AnyServiceInvoker, self).invoke(dumps(request, default=default_json_handler),
+            ServiceInvokeResponse, async, headers, output_repeated)
 
     def invoke(self, *args, **kwargs):
         return self._invoke(async=False, *args, **kwargs)

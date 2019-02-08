@@ -30,6 +30,7 @@ from lxml.objectify import deannotate, Element, ElementMaker, ObjectifiedElement
 from sqlalchemy.util import KeyedTuple
 
 # Python 2/3 compatibility
+from builtins import bytes
 from future.utils import iteritems
 from past.builtins import basestring, unicode
 
@@ -437,8 +438,8 @@ class SimpleIOPayload(SIOConverter):
                     if isinstance(name, ForceType):
                         name = name.name
 
-                    if isinstance(elem_value, basestring):
-                        elem_value = elem_value if isinstance(elem_value, unicode) else elem_value.decode('utf-8')
+                    if isinstance(elem_value, bytes):
+                        elem_value = elem_value.decode('utf-8')
 
                     if self.zato_is_xml:
                         setattr(out_item, name, elem_value)
