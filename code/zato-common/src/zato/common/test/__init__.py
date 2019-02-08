@@ -367,7 +367,7 @@ class ServiceTestCase(TestCase):
             instance.broker_client.publish = broker_client_publish
 
         def set_response_func(*args, **kwargs):
-            print(111, args, kwargs)
+            pass
 
         instance.handle()
         #instance.update_handle(

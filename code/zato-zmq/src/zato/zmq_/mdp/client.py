@@ -73,6 +73,5 @@ if __name__ == '__main__':
     for x in range(6):
         try:
             reply = c.send(b'zato.ping', b'{"id":"123", "data":"mydata"}', True)
-            print(x, 'Reply', repr(reply.body))
         except Exception as e:
             print(e)

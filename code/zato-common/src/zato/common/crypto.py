@@ -65,14 +65,6 @@ class CryptoManager(object):
             if repo_dir:
                 secret_key, well_known_data = self.get_config(repo_dir)
 
-        #if secret_key:
-        #    secret_key = secret_key if isinstance(secret_key, bytes) else secret_key.encode('utf8')
-
-        #if well_known_data:
-        #    well_known_data = well_known_data if isinstance(well_known_data, bytes) else well_known_data.encode('utf8')
-
-        print('rrr', secret_key, type(secret_key))
-
         # .. no matter if given on input or through repo_dir, we can set up crypto keys now.
         self.set_config(secret_key, well_known_data)
 
@@ -104,7 +96,6 @@ class CryptoManager(object):
             try:
                 env_key = secret_key[1:].upper()
                 value = os.environ[env_key]
-                # print('qqq', value, type(value), env_key)
             except KeyError:
                 raise SecretKeyError('Environment variable not found `{}`'.format(env_key))
 
@@ -120,18 +111,9 @@ class CryptoManager(object):
         # Use the value as it is
         else:
             value = secret_key
-            # print('www', value, type(value), secret_key, type(secret_key))
 
         # Fernet keys always require encoding
         value = value if isinstance(value, bytes) else value.encode('utf8')
-
-        print()
-        print()
-
-        print(222, value, type(value))
-
-        print()
-        print()
 
         # Create a transient key just to confirm that what we found was syntactically correct
         try:
@@ -147,7 +129,6 @@ class CryptoManager(object):
         """ Sets crypto attributes and, to be double sure that they are correct,
         decrypts well known data to itself in order to confirm that keys are valid / expected.
         """
-        # print('eee', secret_key, type(secret_key))
         key = self._find_secret_key(secret_key)
         self.secret_key = Fernet(key)
         self.well_known_data = well_known_data if well_known_data else None
@@ -161,7 +142,6 @@ class CryptoManager(object):
         """ Used as a consistency check to confirm that a given component's key can decrypt well-known data.
         """
         try:
-            #print('RRR', self.well_known_data, type(well_known_data))
             decrypted = self.decrypt(self.well_known_data)
         except InvalidToken:
             raise SecretKeyError('Invalid key, could not decrypt well-known data')
@@ -199,7 +179,6 @@ class CryptoManager(object):
     def from_repo_dir(cls, secret_key, repo_dir, stdin_data):
         """ Creates a new CryptoManager instance from a path to configuration file(s).
         """
-        print(555, cls, secret_key, repo_dir, stdin_data)
         return cls(secret_key=secret_key, repo_dir=repo_dir, stdin_data=stdin_data)
 
 # ################################################################################################################################
@@ -208,14 +187,6 @@ class CryptoManager(object):
     def from_secret_key(cls, secret_key, well_known_data=None, stdin_data=None):
         """ Creates a new CryptoManager instance from an already existing secret key.
         """
-        #print()
-        #print()
-
-        #print(111, cls, secret_key, well_known_data, stdin_data)
-
-        #print()
-        #print()
-
         return cls(secret_key=secret_key, well_known_data=well_known_data, stdin_data=stdin_data)
 
 # ################################################################################################################################
@@ -232,8 +203,6 @@ class CryptoManager(object):
         """
         if isinstance(encrypted, text):
             encrypted = encrypted.encode('utf8')
-
-        # print('yyy', encrypted)
 
         return self.secret_key.decrypt(encrypted).decode('utf8')
 
@@ -278,8 +247,6 @@ class SchedulerCryptoManager(CryptoManager):
     def get_config(self, repo_dir):
         conf_path = os.path.join(repo_dir, 'scheduler.conf')
         conf = bunchify(ConfigObj(conf_path, use_zato=False))
-        print(666, conf.secret_keys.key1, type(conf.secret_keys.key1))
-        print(666, conf.crypto.well_known_data, type(conf.crypto.well_known_data))
         return conf.secret_keys.key1, conf.crypto.well_known_data
 
 # ################################################################################################################################

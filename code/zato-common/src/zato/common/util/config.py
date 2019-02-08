@@ -50,7 +50,6 @@ def resolve_value(key, value, decrypt_func=None, _default=object(), _secrets=SEC
 
     # It may be an encrypted value
     elif key in _secrets.PARAMS and value.startswith(_secrets.PREFIX):
-        print(111, key, _secrets.PARAMS, value, _secrets.PREFIX)
         value = decrypt_func(value)
 
     # Pre-processed, we can assign this pair to output

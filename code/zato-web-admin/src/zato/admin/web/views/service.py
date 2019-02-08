@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 import json as stdlib_json
+from base64 import b64decode
 from collections import namedtuple
 from datetime import datetime
 from traceback import format_exc
@@ -205,7 +206,6 @@ class Edit(CreateEdit):
         output_required = ('id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted')
 
     def success_message(self, item):
-        print(111, item)
         return 'Successfully {} service `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
@@ -296,7 +296,7 @@ def source_info(req, service_name):
     if response.has_data:
         service.id = response.data.service_id
 
-        source = response.data.source.decode('base64').decode('utf-8') if response.data.source else ''
+        source = b64decode(response.data.source) if response.data.source else ''
         if source:
             source_html = highlight(source, PythonLexer(stripnl=False), HtmlFormatter(linenos='table'))
 
