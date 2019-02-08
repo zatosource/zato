@@ -326,6 +326,7 @@ class ServiceStore(object):
         """ Imports services from any of the supported sources, be it module names,
         individual files, directories or distutils2 packages (compressed or not).
         """
+        items = items if isinstance(items, (list, tuple)) else [items]
         deployed = []
 
         for item in items:

@@ -49,10 +49,17 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+DeployedServiceTable = DeployedService.__table__
+DeployedServiceDelete = DeployedServiceTable.delete
+
+# ################################################################################################################################
+
 # Based on https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WriteableTuple
+
 
 class WritableKeyedTuple(object):
 
+# ################################################################################################################################
 # ################################################################################################################################
 
     def __init__(self, elem):
@@ -86,6 +93,7 @@ class WritableKeyedTuple(object):
         return 'WritableKeyedTuple(%s)' % (', '.join('%r=%r' % (key, value) for (key, value) in inner + outer))
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class WritableTupleQuery(Query):
 
@@ -98,6 +106,7 @@ class WritableTupleQuery(Query):
         else:
             return it
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SessionWrapper(object):
@@ -672,9 +681,10 @@ class ODBManager(SessionWrapper):
         """ Removes all the deployed services from a server.
         """
         with closing(self.session()) as session:
-            session.query(DeployedService).\
-                filter(DeployedService.server_id==server_id).\
-                delete()
+            session.execute(
+                DeployedServiceDelete().\
+                where(DeployedService.server_id==server_id)
+            )
             session.commit()
 
 # ################################################################################################################################
