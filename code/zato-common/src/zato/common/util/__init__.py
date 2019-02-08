@@ -27,6 +27,7 @@ import socket
 import sys
 import unicodedata
 from ast import literal_eval
+from base64 import b64decode
 from binascii import hexlify
 from contextlib import closing
 from datetime import datetime, timedelta
@@ -1310,7 +1311,7 @@ def get_basic_auth_credentials(auth):
         return None, None
 
     _, auth = auth.split(prefix)
-    auth = auth.strip().decode('base64')
+    auth = b64decode(auth.strip())
 
     return auth.split(':', 1)
 

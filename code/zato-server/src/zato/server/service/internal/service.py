@@ -430,7 +430,7 @@ class GetWSDL(AdminService):
             content_type = 'text/plain'
 
         if use_sio:
-            self.response.payload.wsdl = (service.wsdl or '').encode('base64')
+            self.response.payload.wsdl = b64encode(service.wsdl or '')
             self.response.payload.wsdl_name = service.wsdl_name
             self.response.payload.content_type = content_type
         else:
@@ -462,7 +462,7 @@ class SetWSDL(AdminService):
             service = session.query(Service).\
                 filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
                 one()
-            service.wsdl = self.request.input.wsdl.decode('base64')
+            service.wsdl = b64decode(self.request.input.wsdl)
             service.wsdl_name = self.request.input.wsdl_name
 
             session.add(service)
@@ -517,8 +517,8 @@ class GetRequestResponse(AdminService):
         self.response.payload.sample_cid = result.get('cid')
         self.response.payload.sample_req_ts = result.get('req_ts')
         self.response.payload.sample_resp_ts = result.get('resp_ts')
-        self.response.payload.sample_req = result.get('req', '').encode('base64')
-        self.response.payload.sample_resp = result.get('resp', '').encode('base64')
+        self.response.payload.sample_req = b64encode(result.get('req', b''))
+        self.response.payload.sample_resp = b64encode(result.get('resp', b''))
         self.response.payload.sample_req_resp_freq = result.get('freq', 0)
 
 # ################################################################################################################################
@@ -547,7 +547,8 @@ class UploadPackage(AdminService):
 
     def handle(self):
         with NamedTemporaryFile(prefix='zato-hd-', suffix=self.request.input.payload_name) as tf:
-            tf.write(self.request.input.payload.decode('base64'))
+            input_payload = b64decode(self.request.input.payload)
+            tf.write(input_payload)
             tf.flush()
 
             package_id = hot_deploy(self.server, self.request.input.payload_name, tf.name, False)

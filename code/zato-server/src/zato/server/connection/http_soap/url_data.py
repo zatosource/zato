@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from base64 import b64encode
 from operator import itemgetter
 from threading import RLock
 from traceback import format_exc
@@ -187,8 +188,8 @@ class URLData(CyURLData, OAuthDataStore):
         if sec_def_type == _basic_auth:
             auth_func = self._handle_security_basic_auth
             get_func = self.basic_auth_get
-            headers['HTTP_AUTHORIZATION'] = 'Basic {}'.format(
-                '{}:{}'.format(auth['username'], auth['secret']).encode('base64'))
+            auth = b64encode('{}:{}'.format(auth['username'], auth['secret']))
+            headers['HTTP_AUTHORIZATION'] = 'Basic {}'.format(auth)
 
         elif sec_def_type == _jwt:
             auth_func = self._handle_security_jwt
