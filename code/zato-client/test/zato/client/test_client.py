@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from base64 import b64encode
 from unittest import TestCase
 from uuid import uuid4
 
@@ -325,7 +326,7 @@ class AnyServiceInvokerTestCase(_Base):
         service_response_name = '{}_response'.format(service_name)
         service_response_payload = {'service_id':5207, 'has_wsdl':True}
         service_response_dict = {'zato_service_has_wsdl_response':service_response_payload}
-        service_response = dumps(service_response_dict).encode('base64')
+        service_response = b64encode(dumps(service_response_dict))
 
         text = dumps({
             'zato_env':{'result':ZATO_OK, 'details':''},

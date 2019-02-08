@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from base64 import b64encode
 from datetime import datetime
 from json import dumps
 from traceback import format_exc
@@ -39,7 +40,7 @@ def import_(req, cluster_id):
     try:
         data = req.read()
         data.decode('bz2') # A preliminary check to weed out files obviously incorrect
-        req.zato.client.invoke('zato.kvdb.data-dict.impexp.import', {'data':data.encode('base64')})
+        req.zato.client.invoke('zato.kvdb.data-dict.impexp.import', {'data':b64encode(data)})
     except Exception:
         msg = 'Could not import the data dictionaries, e:[{}]'.format(format_exc())
         logger.error(msg)

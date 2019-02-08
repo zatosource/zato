@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import getLogger
-from base64 import b64decode
+from base64 import b64decode, b64encode
 
 # Python 2/3 compatibility
 from six import PY2
@@ -33,8 +33,6 @@ def parse_basic_auth(auth, prefix='Basic '):
     _, auth = auth.split(prefix)
     auth = b64decode(auth.strip())
     auth = auth if PY2 else auth.decode('utf8')
-
-    logger.warn('QQQ %s %r %s', auth, auth, type(auth))
 
     return auth.split(':', 1)
 
@@ -257,13 +255,13 @@ class WSSE(object):
     def _get_digest(self, password, nonce, created):
         """ Returns the password's expected digest.
         """
-        nonce = nonce.decode('base64')
+        nonce = b64decode(nonce)
         concat = nonce + created + password
 
         h = sha1()
         h.update(concat)
 
-        return str.encode(h.digest(), 'base64').rstrip('\n')
+        return b64encode(h.digest()).rstrip('\n')
 
     def error(self, description='', expected_element='', soap=None):
         """ A utility function for exceptions in erronous situations. May be

@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from base64 import b64decode
+
 # anyjson
 from anyjson import loads
 
@@ -29,7 +32,10 @@ class Import(DataDictService):
         input_required = ('data',)
 
     def handle(self):
-        data = loads(self.request.input.data.decode('base64').decode('bz2'))
+        data = self.request.input.data
+        data = b64decode(data)
+        data = data.decode('bz2')
+        data = loads(data)
         with self.server.kvdb.conn.pipeline() as p:
             p.delete(KVDB.DICTIONARY_ITEM_ID)
             p.delete(KVDB.DICTIONARY_ITEM)

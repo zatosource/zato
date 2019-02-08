@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from base64 import b64encode
 from datetime import datetime, timedelta
 from itertools import chain
 from traceback import format_exc
@@ -622,7 +623,7 @@ def upload_to_server(req, cluster_id, service, error_msg_template):
     try:
         input_dict = {
             'cluster_id': cluster_id,
-            'payload': req.read().encode('base64'),
+            'payload': b64encode(req.read()),
             'payload_name': req.GET['qqfile']
         }
         req.zato.client.invoke(service, input_dict)

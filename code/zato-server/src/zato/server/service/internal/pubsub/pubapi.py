@@ -20,19 +20,9 @@ from future.utils import itervalues
 # Zato
 from zato.common import CHANNEL, CONTENT_TYPE, PUBSUB
 from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
+from zato.common.util.auth import parse_basic_auth
 from zato.server.service import AsIs, Int, Service
 from zato.server.service.internal.pubsub.subscription import CreateWSXSubscription
-
-# ################################################################################################################################
-
-def parse_basic_auth(auth, prefix = 'Basic '):
-    if not auth.startswith(prefix):
-        raise ValueError('Missing Basic Auth prefix')
-
-    _, auth = auth.split(prefix)
-    auth = auth.strip().decode('base64')
-
-    return auth.split(':', 1)
 
 # ################################################################################################################################
 

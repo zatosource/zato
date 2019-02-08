@@ -329,7 +329,7 @@ def request_response(req, service_name):
 
     service_response = req.zato.client.invoke('zato.service.get-request-response', input_dict)
     if service_response.ok:
-        request = (service_response.data.sample_req if service_response.data.sample_req else '').decode('base64')
+        request = b64decode(service_response.data.sample_req if service_response.data.sample_req else '')
         request_data_format = known_data_format(request)
         if request_data_format:
             if pretty_print:
@@ -337,7 +337,7 @@ def request_response(req, service_name):
             service.sample_req_html = highlight(request, data_format_lexer[request_data_format](),
                 HtmlFormatter(linenos='table'))
 
-        response = (service_response.data.sample_resp if service_response.data.sample_resp else '').decode('base64')
+        response = b64decode(service_response.data.sample_resp if service_response.data.sample_resp else '')
         response_data_format = known_data_format(response)
         if response_data_format:
             if pretty_print:
