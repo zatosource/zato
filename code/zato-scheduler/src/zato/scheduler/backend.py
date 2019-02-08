@@ -105,6 +105,9 @@ class Job(object):
     def __eq__(self, other):
         return self.name == other.name
 
+    def __lt__(self, other):
+        return self.name < other.name
+
     def clone(self, name=None, is_active=None):
 
         # It will not be None if an edit changed it from True to False or the other way around
