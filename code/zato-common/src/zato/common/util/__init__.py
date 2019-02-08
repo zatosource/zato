@@ -799,7 +799,8 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
                         extra = dumps(extra)
 
                 if extra:
-                    extra = extra.encode('utf8')
+                    if not isinstance(extra, bytes):
+                        extra = extra.encode('utf8')
 
                 service = session.query(Service).\
                     filter(Service.name==item['service']).\
