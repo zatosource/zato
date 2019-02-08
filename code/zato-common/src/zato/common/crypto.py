@@ -71,7 +71,7 @@ class CryptoManager(object):
         #if well_known_data:
         #    well_known_data = well_known_data if isinstance(well_known_data, bytes) else well_known_data.encode('utf8')
 
-        # print('rrr', secret_key, type(secret_key))
+        print('rrr', secret_key, type(secret_key))
 
         # .. no matter if given on input or through repo_dir, we can set up crypto keys now.
         self.set_config(secret_key, well_known_data)
@@ -125,13 +125,13 @@ class CryptoManager(object):
         # Fernet keys always require encoding
         value = value if isinstance(value, bytes) else value.encode('utf8')
 
-        #print()
-        #print()
+        print()
+        print()
 
-        #print(222, value, type(value))
+        print(222, value, type(value))
 
-        #print()
-        #print()
+        print()
+        print()
 
         # Create a transient key just to confirm that what we found was syntactically correct
         try:
@@ -199,6 +199,7 @@ class CryptoManager(object):
     def from_repo_dir(cls, secret_key, repo_dir, stdin_data):
         """ Creates a new CryptoManager instance from a path to configuration file(s).
         """
+        print(555, cls, secret_key, repo_dir, stdin_data)
         return cls(secret_key=secret_key, repo_dir=repo_dir, stdin_data=stdin_data)
 
 # ################################################################################################################################
@@ -277,6 +278,8 @@ class SchedulerCryptoManager(CryptoManager):
     def get_config(self, repo_dir):
         conf_path = os.path.join(repo_dir, 'scheduler.conf')
         conf = bunchify(ConfigObj(conf_path, use_zato=False))
+        print(666, conf.secret_keys.key1, type(conf.secret_keys.key1))
+        print(666, conf.crypto.well_known_data, type(conf.crypto.well_known_data))
         return conf.secret_keys.key1, conf.crypto.well_known_data
 
 # ################################################################################################################################

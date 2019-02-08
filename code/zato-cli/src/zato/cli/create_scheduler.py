@@ -197,8 +197,6 @@ class Create(ZatoCommand):
             secret_key = args.secret_key
 
         secret_key = secret_key or SchedulerCryptoManager.generate_key()
-
-        secret_key = secret_key or SchedulerCryptoManager.generate_key()
         cm = SchedulerCryptoManager.from_secret_key(secret_key)
 
         odb_engine=args.odb_type
@@ -210,33 +208,66 @@ class Create(ZatoCommand):
         else:
             cluster_id = self._get_cluster_id_by_name(args, args.cluster_name)
 
+            print()
+            print()
+
         odb_password = args.odb_password or ''
+
+        print('QQQ odb_password', odb_password, type(odb_password))
+
         odb_password = odb_password.encode('utf8')
+        odb_password = cm.encrypt(odb_password)
+        odb_password = odb_password.decode('utf8')
 
         kvdb_password = args.kvdb_password or ''
         kvdb_password = kvdb_password.encode('utf8')
+        kvdb_password = cm.encrypt(kvdb_password)
+        kvdb_password = kvdb_password.decode('utf8')
+
+        print('QQQ kvdb_password', kvdb_password, type(kvdb_password))
 
         user1_password = cm.generate_password()
+
+        print('QQQ user1_password', user1_password, type(user1_password))
+
+        user1_password = cm.encrypt(user1_password)
+        user1_password = user1_password.decode('utf8')
+
+        zato_well_known_data = well_known_data.encode('utf8')
+        print('QQQ zato_well_known_data', zato_well_known_data, type(zato_well_known_data))
+
+
+        zato_well_known_data = cm.encrypt(zato_well_known_data)
+        zato_well_known_data = zato_well_known_data.decode('utf8')
+
+        print()
+
+        secret_key = secret_key.decode('utf8')
+
+        print('ZZZ odb_password', odb_password, type(odb_password))
+        print('ZZZ kvdb_password', kvdb_password, type(kvdb_password))
+        print('ZZZ user1_password', user1_password, type(user1_password))
+        print('ZZZ zato_well_known_data', zato_well_known_data, type(zato_well_known_data))
+
+        print()
+        print()
 
         config = {
             'odb_db_name': args.odb_db_name or args.sqlite_path,
             'odb_engine': odb_engine,
             'odb_host': args.odb_host or '',
             'odb_port': args.odb_port or '',
-            'odb_password': cm.encrypt(odb_password),
+            'odb_password': odb_password,
             'odb_username': args.odb_user or '',
             'broker_host': args.kvdb_host,
             'broker_port': args.kvdb_port,
-            'broker_password': cm.encrypt(kvdb_password),
-            'user1_password': cm.encrypt(user1_password),
+            'broker_password': kvdb_password,
+            'user1_password': user1_password,
             'cluster_id': cluster_id,
             'cluster_name': args.cluster_name,
             'secret_key1': secret_key,
-            'well_known_data': cm.encrypt(well_known_data.encode('utf8'))
+            'well_known_data': zato_well_known_data,
         }
-
-        for name in 'odb_password', 'broker_password', 'user1_password':
-            config[name] = config[name].decode('utf8')
 
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write(
             common_logging_conf_contents.format(log_path='./logs/scheduler.log'))

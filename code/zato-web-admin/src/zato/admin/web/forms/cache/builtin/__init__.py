@@ -34,8 +34,8 @@ class CreateForm(forms.Form):
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        add_select(self, 'sync_method', CACHE.SYNC_METHOD)
-        add_select(self, 'persistent_storage', CACHE.PERSISTENT_STORAGE)
+        add_select(self, 'sync_method', CACHE.SYNC_METHOD())
+        add_select(self, 'persistent_storage', CACHE.PERSISTENT_STORAGE())
 
 # ################################################################################################################################
 

@@ -109,6 +109,9 @@ from six.moves.urllib.parse import urlparse
 from zato.common.py23_ import ifilter, izip
 from zato.common.py23_.spring_ import CAValidatingHTTPSConnection, SSLClientTransport
 
+if PY3:
+    from functools import cmp_to_key
+
 # Zato
 from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
      SECRET_SHADOW, SECRETS, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, zato_no_op_marker, \
@@ -632,7 +635,11 @@ def multikeysort(items, columns):
                 return mult * result
         else:
             return 0
-    return sorted(items, cmp=comparer)
+
+    if PY3:
+        return sorted(items, key=cmp_to_key(comparer))
+    else:
+        return sorted(items, cmp=comparer)
 
 # ################################################################################################################################
 

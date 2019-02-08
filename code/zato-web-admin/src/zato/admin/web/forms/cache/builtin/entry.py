@@ -29,8 +29,8 @@ class CreateForm(forms.Form):
 
     def __init__(self, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data)
-        add_select(self, 'key_data_type', CACHE.BUILTIN_KV_DATA_TYPE)
-        add_select(self, 'value_data_type', CACHE.BUILTIN_KV_DATA_TYPE)
+        add_select(self, 'key_data_type', CACHE.BUILTIN_KV_DATA_TYPE())
+        add_select(self, 'value_data_type', CACHE.BUILTIN_KV_DATA_TYPE())
 
 # ################################################################################################################################
 

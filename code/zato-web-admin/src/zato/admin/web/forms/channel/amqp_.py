@@ -39,7 +39,7 @@ class CreateForm(DataFormatForm):
         add_services(self, req)
 
         self.fields['ack_mode'].choices = []
-        for item in AMQP.ACK_MODE:
+        for item in AMQP.ACK_MODE():
             self.fields['ack_mode'].choices.append([item.id, item.name])
 
     def set_def_id(self, def_ids):
