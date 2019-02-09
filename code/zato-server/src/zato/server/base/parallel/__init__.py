@@ -260,7 +260,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
             logger.info('Deploying user-defined services (%s)', self.name)
 
             user_defined_deployed = self.service_store.import_services_from_anywhere(
-                self.service_modules + self.service_sources, self.base_dir)
+                self.service_modules + self.service_sources, self.base_dir).to_process
 
             locally_deployed.extend(user_defined_deployed)
             len_user_defined_deployed = len(user_defined_deployed)
@@ -269,7 +269,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
 
             logger.info('Deployed %d user-defined service%s (%s)', len_user_defined_deployed, suffix, self.name)
 
-            return set()#set(locally_deployed)
+            return set(locally_deployed)
 
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, self.deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
