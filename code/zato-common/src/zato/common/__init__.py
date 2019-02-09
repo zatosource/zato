@@ -1188,11 +1188,12 @@ class Inactive(ZatoException):
 class SourceCodeInfo(object):
     """ A bunch of attributes dealing the service's source code.
     """
-    __slots__ = 'source', 'source_html', 'path', 'hash', 'hash_method', 'server_name'
+    __slots__ = 'source', 'source_html', 'len_source', 'path', 'hash', 'hash_method', 'server_name'
 
     def __init__(self):
         self.source = ''        # type: text
         self.source_html = ''   # type: text
+        self.len_source = 0     # type: int
         self.path = None        # type: text
         self.hash = None        # type: text
         self.hash_method = None # type: text
