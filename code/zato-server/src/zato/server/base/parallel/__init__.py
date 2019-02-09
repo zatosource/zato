@@ -455,13 +455,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         self.worker_store.target_matcher.read_config(self.fs_server_config.invoke_target_patterns_allowed)
         self.set_up_config(server)
 
-        # Deploys services
-        is_first, locally_deployed = self._after_init_common(server)
-
-        # Initializes worker store, including connectors
-        self.worker_store.init()
-        self.request_dispatcher_dispatch = self.worker_store.request_dispatcher.dispatch
-
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
 
@@ -470,6 +463,22 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
 
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
+
+        # Added in 3.1, hence optional
+        max_batch_size = int(self.fs_server_config.hot_deploy.get('max_batch_size', 1000))
+
+        # Turn it into megabytes
+        max_batch_size = max_batch_size * 1000
+
+        # Finally, assign it to ServiceStore
+        self.service_store.max_batch_size = max_batch_size
+
+        # Deploys services
+        is_first, locally_deployed = self._after_init_common(server)
+
+        # Initializes worker store, including connectors
+        self.worker_store.init()
+        self.request_dispatcher_dispatch = self.worker_store.request_dispatcher.dispatch
 
         # Configure remaining parts of SSO
         self.configure_sso()

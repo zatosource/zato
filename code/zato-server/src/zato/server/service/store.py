@@ -188,14 +188,63 @@ def get_service_name(class_obj):
 
 # ################################################################################################################################
 
+def get_batch_indexes(services, max_batch_size):
+    # type: (List[InRAMService], int) -> List[int, int]
+
+    # If there is only one service to deploy, we can already return the result
+    if len(services) == 1:
+        return [[0, 1]]
+
+    out = []
+
+    start_idx = 0
+    current_batch_size = 0
+    batch_size_reached = False
+
+    # We expect for indexes to end at this one
+    max_index_possible = len(services)
+
+    # This is needed because current_idx below is not available outside the loop
+    max_index_reached = 0
+
+    # We have more than one service, so we need to iterate through them all
+    for current_idx, item in enumerate(services, 1): # type: (int, InRAMService)
+
+        print(11, max_batch_size, current_idx, item.name, item.source_code_info.len_source)
+
+        current_batch_size += item.source_code_info.len_source
+
+        if current_batch_size >= max_batch_size:
+            batch_size_reached = True
+
+        if batch_size_reached:
+            out.append([start_idx, current_idx])
+            start_idx = current_idx
+
+            max_index_reached = current_idx
+
+            current_batch_size = 0
+            batch_size_reached = False
+
+    # It is possible that the for loop above completed before we reached the list's theoretical max index,
+    # this is possible if batch_size_reached is not reached in the last iteration, i.e. there was not enough
+    # of len_source to fill out the whole batch. At this point, the batch must be smaller that the maximum
+    # size allowed so we can just group together anything that is left after the loop.
+    if max_index_reached < max_index_possible:
+        out.append([max_index_reached, max_index_possible])
+
+    return out
+
+# ################################################################################################################################
+
 class ServiceStore(object):
     """ A store of Zato services.
     """
-    def __init__(self, services=None, service_store_config=None, odb=None, server=None):
-        self.services = services
-        self.service_store_config = service_store_config
-        self.odb = odb
-        self.server = server
+    def __init__(self, services=None, odb=None, server=None):
+        self.services = services          # type: dict
+        self.odb = odb                    # type: Any
+        self.server = server              # type: Any
+        self.max_batch_size = 0           # type: int
         self.id_to_impl_name = {}
         self.impl_name_to_id = {}
         self.name_to_impl_name = {}
@@ -363,6 +412,44 @@ class ServiceStore(object):
 
             return deployed
 
+
+# ################################################################################################################################
+
+    def _store_in_ram(self, info):
+        # type: (DeploymentInfo) -> None
+
+        with self.update_lock:
+            for item in info.deployed: # type: InRAMService
+
+                self.services[item.impl_name] = {}
+                self.services[item.impl_name]['name'] = item.name
+                self.services[item.impl_name]['deployment_info'] = item.depl_info
+                self.services[item.impl_name]['service_class'] = item.service_class
+
+                self.services[item.impl_name]['is_active'] = item.is_active
+                self.services[item.impl_name]['slow_threshold'] = item.slow_threshold
+
+                self.id_to_impl_name[item.id] = item.impl_name
+                self.impl_name_to_id[item.impl_name] = item.id
+                self.name_to_impl_name[item.name] = item.impl_name
+
+                item.service_class.after_add_to_store(logger)
+
+# ################################################################################################################################
+
+    def _store_in_odb(self, info):
+        # type: (DeploymentInfo) -> None
+
+        batch_indexes = get_batch_indexes(info.deployed, self.max_batch_size)
+
+        print()
+        print()
+
+        print(111, batch_indexes)
+
+        print()
+        print()
+
 # ################################################################################################################################
 
     def import_services_from_anywhere(self, items, base_dir, work_dir=None):
@@ -395,8 +482,7 @@ class ServiceStore(object):
         total_size = 0
 
         for item in deployed: # type: InRAMService
-            total_size += len(item.source_code_info.source)
-            total_size += len(item.source_code_info.source_html)
+            total_size += item.source_code_info.len_source
 
         # print()
         # print()
@@ -409,6 +495,11 @@ class ServiceStore(object):
         info.total_size = total_size
         info.total_size_human = naturalsize(info.total_size)
 
+        # Save data to both ODB and RAM now
+        self._store_in_odb(info)
+        self._store_in_ram(info)
+
+        # Done deploying, we can return
         return info
 
 # ################################################################################################################################
@@ -503,6 +594,7 @@ class ServiceStore(object):
             # We would have used inspect.getsource(mod) had it not been apparently using
             # cached copies of the source code
             source_info.source = open(file_name, 'rb').read()
+            source_info.len_source = len(source_info.source)
 
             source_info.path = inspect.getsourcefile(mod)
             source_info.hash = sha256(source_info.source).hexdigest()
@@ -513,28 +605,6 @@ class ServiceStore(object):
                 logger.log(TRACE1, 'Ignoring IOError, mod:`%s`, e:`%s`', mod, format_exc())
 
         return source_info
-
-# ################################################################################################################################
-
-    def _store_in_ram(self, services):
-        # type: (List[InRAMService]) -> None
-
-        with self.update_lock:
-            for item in service: # type: InRAMService
-
-                self.services[item.impl_name] = {}
-                self.services[item.impl_name]['name'] = item.name
-                self.services[item.impl_name]['deployment_info'] = item.depl_info
-                self.services[item.impl_name]['service_class'] = item.service_class
-
-                self.services[item.impl_name]['is_active'] = item.is_active
-                self.services[item.impl_name]['slow_threshold'] = item.slow_threshold
-
-                self.id_to_impl_name[item.id] = item.impl_name
-                self.impl_name_to_id[item.impl_name] = item.id
-                self.name_to_impl_name[item.name] = item.impl_name
-
-                item.service_class.after_add_to_store(logger)
 
 # ################################################################################################################################
 
