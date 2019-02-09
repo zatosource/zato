@@ -20,7 +20,7 @@ from time import time
 from traceback import format_exc
 
 # SQLAlchemy
-from sqlalchemy import create_engine, event
+from sqlalchemy import and_, create_engine, event, select
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
@@ -49,18 +49,18 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+ServiceTable = Service.__table__
+ServiceTableInsert = ServiceTable.insert
+
 DeployedServiceTable = DeployedService.__table__
 DeployedServiceDelete = DeployedServiceTable.delete
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 # Based on https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WriteableTuple
 
-
 class WritableKeyedTuple(object):
-
-# ################################################################################################################################
-# ################################################################################################################################
 
     def __init__(self, elem):
         object.__setattr__(self, '_elem', elem)
@@ -643,6 +643,50 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_basic_data_service_list(self):
+        """ Returns basic information about all the services in ODB.
+        """
+        with closing(self.session()) as session:
+
+            query = select([
+                ServiceTable.c.name,
+                ServiceTable.c.impl_name,
+            ]).where(
+                ServiceTable.c.cluster_id==self.cluster_id
+            )
+
+            return session.execute(query).\
+                fetchall()
+
+# ################################################################################################################################
+
+    def get_basic_data_deployed_service_list(self):
+        """ Returns basic information about all the deployed services in ODB.
+        """
+        with closing(self.session()) as session:
+
+            query = select([
+                ServiceTable.c.name,
+            ]).where(and_(
+                DeployedServiceTable.c.service_id==ServiceTable.c.id,
+                DeployedServiceTable.c.server_id==self.server_id
+            ))
+
+            return session.execute(query).\
+                fetchall()
+
+# ################################################################################################################################
+
+    def add_services(self, services):
+        # type: (List[dict]) -> None
+
+        with closing(self.session()) as session:
+            session.execute(ServiceTableInsert().values(services))
+            session.commit()
+
+# ################################################################################################################################
+
+    '''
     def add_service(self, name, impl_name, is_internal, deployment_time, details, source_info, service_info=None):
         """ Adds information about the server's service into the ODB.
         """
@@ -674,21 +718,11 @@ class ODBManager(SessionWrapper):
         except Exception:
             logger.error('Could not add service, name:`%s`, e:`%s`', name, format_exc())
             self._session.rollback()
+'''
 
 # ################################################################################################################################
 
-    def drop_deployed_services(self, server_id):
-        """ Removes all the deployed services from a server.
-        """
-        with closing(self.session()) as session:
-            session.execute(
-                DeployedServiceDelete().\
-                where(DeployedService.server_id==server_id)
-            )
-            session.commit()
-
-# ################################################################################################################################
-
+    '''
     def add_deployed_service(self, deployment_time, details, service_id, source_info):
         """ Adds information about the server's deployed service into the ODB.
         """
@@ -722,6 +756,19 @@ class ODBManager(SessionWrapper):
             msg = 'Could not add DeployedService, e:`{}`'.format(format_exc())
             #logger.error(msg)
             self._session.rollback()
+            '''
+
+# ################################################################################################################################
+
+    def drop_deployed_services(self, server_id):
+        """ Removes all the deployed services from a server.
+        """
+        with closing(self.session()) as session:
+            session.execute(
+                DeployedServiceDelete().\
+                where(DeployedService.server_id==server_id)
+            )
+            session.commit()
 
 # ################################################################################################################################
 

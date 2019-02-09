@@ -66,25 +66,37 @@ has_trace1 = logger.isEnabledFor(TRACE1)
 hook_methods = ('accept', 'get_request_hash') + before_handle_hooks + after_handle_hooks + before_job_hooks + after_job_hooks
 
 class InRAMService(object):
-    __slots__ = 'id', 'name', 'impl_name', 'deployment_info', 'service_class', 'is_active', 'slow_threshold', 'source_code_info'
+    __slots__ = 'cluster_id', 'id', 'name', 'impl_name', 'deployment_info', 'service_class', 'is_active', 'is_internal', \
+        'slow_threshold', 'source_code_info'
 
     def __init__(self):
+        self.cluster_id = None       # type: int
         self.id = None               # type: int
         self.impl_name = None        # type: text
         self.name = None             # type: text
         self.deployment_info = None  # type: text
         self.service_class = None    # type: object
         self.is_active = None        # type: bool
+        self.is_internal = None      # type: bool
         self.slow_threshold = None   # type: int
         self.source_code_info = None # type: SourceCodeInfo
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'impl_name': self.impl_name,
+            'is_active': self.is_active,
+            'is_internal': self.is_internal,
+            'cluster_id': self.cluster_id
+        }
 
 # ################################################################################################################################
 
 class DeploymentInfo(object):
-    __slots__ = 'deployed', 'total_services', 'total_size', 'total_size_human'
+    __slots__ = 'to_process', 'total_services', 'total_size', 'total_size_human'
 
     def __init__(self):
-        self.deployed = []        # type: List
+        self.to_process = []      # type: List
         self.total_size = 0       # type: int
         self.total_size_human = 0 # type: text
 
@@ -209,8 +221,6 @@ def get_batch_indexes(services, max_batch_size):
 
     # We have more than one service, so we need to iterate through them all
     for current_idx, item in enumerate(services, 1): # type: (int, InRAMService)
-
-        print(11, max_batch_size, current_idx, item.name, item.source_code_info.len_source)
 
         current_batch_size += item.source_code_info.len_source
 
@@ -365,8 +375,7 @@ class ServiceStore(object):
             logger.info('Deploying and caching internal services (%s)', self.server.name)
             info = self.import_services_from_anywhere(items, base_dir)
 
-            '''
-            for class_ in deployed:
+            for in_ram_service in info.to_process: # type: InRAMService
                 impl_name = class_.get_impl_name()
                 service_info.append({
                     'class_': class_,
@@ -383,15 +392,14 @@ class ServiceStore(object):
             f = open(cache_file_path, 'wb')
             f.write(dill_dumps(internal_cache))
             f.close()
-            '''
 
             logger.info('Deployed and cached %d internal services (%s) (%s)',
-                len(info.deployed), info.total_size_human, self.server.name)
+                len(info.to_process), info.total_size_human, self.server.name)
 
-            return info.deployed
+            return info.to_process
 
         else:
-            deployed = []
+            to_process = []
 
             '''
             f = open(cache_file_path, 'rb')
@@ -405,12 +413,12 @@ class ServiceStore(object):
             for idx, item in enumerate(items.service_info, 1):
                 class_ = self._visit_class(
                     item.mod, None, item.class_, item.fs_location, True, sql_services.get(item.impl_name))
-                deployed.append(class_)
+                to_process.append(class_)
 
             logger.info('Deployed %d cached internal services (%s)', len_si, self.server.name)
             '''
 
-            return deployed
+            return to_process
 
 
 # ################################################################################################################################
@@ -419,11 +427,11 @@ class ServiceStore(object):
         # type: (DeploymentInfo) -> None
 
         with self.update_lock:
-            for item in info.deployed: # type: InRAMService
+            for item in info.to_process: # type: InRAMService
 
                 self.services[item.impl_name] = {}
                 self.services[item.impl_name]['name'] = item.name
-                self.services[item.impl_name]['deployment_info'] = item.depl_info
+                self.services[item.impl_name]['deployment_info'] = item.deployment_info
                 self.services[item.impl_name]['service_class'] = item.service_class
 
                 self.services[item.impl_name]['is_active'] = item.is_active
@@ -440,15 +448,73 @@ class ServiceStore(object):
     def _store_in_odb(self, info):
         # type: (DeploymentInfo) -> None
 
-        batch_indexes = get_batch_indexes(info.deployed, self.max_batch_size)
+        # Get all services already deployed for comparisons (Service)
+        services = self.get_basic_data_services()
 
-        print()
-        print()
+        # Same goes for deployed services objects (DeployedService)
+        deployed_services = self.get_basic_data_deployed_services()
 
-        print(111, batch_indexes)
+        batch_indexes = get_batch_indexes(info.to_process, self.max_batch_size)
 
-        print()
-        print()
+        for start_idx, end_idx in batch_indexes:
+
+            services_to_add = []
+            deployed_services_to_add = []
+
+            batch_services = info.to_process[start_idx:end_idx]
+
+            for service in batch_services: # type: InRAMService
+
+                # No such Service object in ODB so we need to store
+                if service.name not in services:
+                    services_to_add.append(service)
+
+                # Same with DeployedService objects
+                if service.id not in deployed_services:
+                    deployed_services_to_add.append(service)
+
+            '''
+            print()
+            print()
+
+            print(222, services_to_add, start_idx, end_idx, services_to_add, batch_services)
+
+            print()
+            print()
+            '''
+
+            # Add to ODB all the Service objects from this batch found not to be in ODB already
+            if services_to_add:
+                self.odb.add_services([elem.to_dict() for elem in services_to_add])
+
+            # Do the same as above but with DeployedService objects
+            #zzz add self.odb.add_deployed_services
+
+# ################################################################################################################################
+
+    def get_basic_data_services(self):
+        # type: (None) -> dict
+
+        # We will return service keyed by IDs
+        out = {}
+
+        # This is a list of services to turn into a dict
+        service_list = self.odb.get_basic_data_service_list()
+
+        for name, impl_name in service_list: # type: name, name
+            out[name] = impl_name
+
+        return out
+
+# ################################################################################################################################
+
+    def get_basic_data_deployed_services(self):
+        # type: (None) -> set
+
+        # This is a list of services to turn into a set
+        deployed_service_list = self.odb.get_basic_data_deployed_service_list()
+
+        return set(deployed_service_list)
 
 # ################################################################################################################################
 
@@ -459,7 +525,7 @@ class ServiceStore(object):
         # type: (Any, text, text) -> DeploymentInfo
 
         items = items if isinstance(items, (list, tuple)) else [items]
-        deployed = []
+        to_process = []
 
         for item in items:
             if has_debug:
@@ -469,29 +535,29 @@ class ServiceStore(object):
 
             # A regular directory
             if os.path.isdir(item):
-                deployed.extend(self.import_services_from_directory(item, base_dir))
+                to_process.extend(self.import_services_from_directory(item, base_dir))
 
             # .. a .py/.pyw
             elif is_python_file(item):
-                deployed.extend(self.import_services_from_file(item, is_internal, base_dir))
+                to_process.extend(self.import_services_from_file(item, is_internal, base_dir))
 
             # .. must be a module object
             else:
-                deployed.extend(self.import_services_from_module(item, is_internal))
+                to_process.extend(self.import_services_from_module(item, is_internal))
 
         total_size = 0
 
-        for item in deployed: # type: InRAMService
+        for item in to_process: # type: InRAMService
             total_size += item.source_code_info.len_source
 
         # print()
         # print()
-        # print(111, len(deployed), total)
+        # print(111, len(to_process), total)
         # print()
         # print()
 
         info = DeploymentInfo()
-        info.deployed[:] = deployed
+        info.to_process[:] = to_process
         info.total_size = total_size
         info.total_size_human = naturalsize(info.total_size)
 
@@ -507,7 +573,7 @@ class ServiceStore(object):
     def import_services_from_file(self, file_name, is_internal, base_dir):
         """ Imports all the services from the path to a file.
         """
-        deployed = []
+        to_process = []
 
         try:
             mod_info = import_module_from_path(file_name, base_dir)
@@ -515,9 +581,9 @@ class ServiceStore(object):
             msg = 'Could not load source, file_name:`%s`, e:`%s`'
             logger.error(msg, file_name, format_exc())
         else:
-            deployed.extend(self._visit_module(mod_info.module, is_internal, mod_info.file_name))
+            to_process.extend(self._visit_module(mod_info.module, is_internal, mod_info.file_name))
         finally:
-            return deployed
+            return to_process
 
 # ################################################################################################################################
 
@@ -532,12 +598,12 @@ class ServiceStore(object):
         of Python source code to import, as is the case with services that have
         been hot-deployed.
         """
-        deployed = []
+        to_process = []
 
         for py_path in visit_py_source(dir_name):
-            deployed.extend(self.import_services_from_file(py_path, False, base_dir))
+            to_process.extend(self.import_services_from_file(py_path, False, base_dir))
 
-        return deployed
+        return to_process
 
 # ################################################################################################################################
 
@@ -629,6 +695,9 @@ class ServiceStore(object):
         # Note that at this point we do not have the service's ID, is_active and slow_threshold values;
         # this is because this object is created prior to its deployment in ODB.
         in_ram_service = InRAMService()
+        in_ram_service.cluster_id = self.server.cluster_id
+        in_ram_service.is_active = True
+        in_ram_service.is_internal = is_internal
         in_ram_service.name = name
         in_ram_service.impl_name = impl_name
         in_ram_service.service_class = class_
@@ -678,7 +747,7 @@ class ServiceStore(object):
     def _visit_module(self, mod, is_internal, fs_location, needs_odb_deployment=True):
         """ Actually imports services from a module object.
         """
-        deployed = []
+        to_process = []
         try:
             for name in sorted(dir(mod)):
                 with self.update_lock:
@@ -686,7 +755,7 @@ class ServiceStore(object):
 
                     if self._should_deploy(name, item):
                         if item.before_add_to_store(logger):
-                            deployed.append(self._visit_class(mod, item, fs_location, is_internal))
+                            to_process.append(self._visit_class(mod, item, fs_location, is_internal))
                         else:
                             logger.info('Skipping `%s` from `%s`', item, fs_location)
 
@@ -695,6 +764,6 @@ class ServiceStore(object):
                 'Exception while visiting mod:`%s`, is_internal:`%s`, fs_location:`%s`, e:`%s`',
                 mod, is_internal, fs_location, format_exc())
         finally:
-            return deployed
+            return to_process
 
 # ################################################################################################################################

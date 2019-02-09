@@ -44,6 +44,10 @@ def instance_hook(service, input, instance, attrs):
 class GetList(AdminService):
     _filter_by = IMAP.name,
 
+@add_metaclass(GetListMeta)
+class GetList2(AdminService):
+    _filter_by = IMAP.name,
+
 # ################################################################################################################################
 
 @add_metaclass(CreateEditMeta)
