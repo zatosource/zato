@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import inspect
 import logging
 import os
+from contextlib import closing
 from datetime import datetime
 from hashlib import sha256
 from importlib import import_module
@@ -446,7 +447,7 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _store_services_in_odb(self, batch_indexes, to_process):
+    def _store_services_in_odb(self, session, batch_indexes, to_process):
         """ Looks up all Service objects in ODB and if any of our local ones is not in the databaset yet, it is added.
         """
         # Get all services already deployed in ODB for comparisons (Service)
@@ -466,11 +467,11 @@ class ServiceStore(object):
 
             # Add to ODB all the Service objects from this batch found not to be in ODB already
             if to_add:
-                self.odb.add_services([elem.to_dict() for elem in to_add])
+                self.odb.add_services(session, [elem.to_dict() for elem in to_add])
 
 # ################################################################################################################################
 
-    def _store_deployed_services_in_odb(self, batch_indexes, to_process, _utcnow=datetime.utcnow):
+    def _store_deployed_services_in_odb(self, session, batch_indexes, to_process, _utcnow=datetime.utcnow):
         """ Looks up all Service objects in ODB, checks if any is not deployed locally and deploys it if it is not.
         """
         # Local objects
@@ -525,7 +526,7 @@ class ServiceStore(object):
 
             # If any services are to be deployed, do it now.
             if to_add:
-                self.odb.add_deployed_services(to_add)
+                self.odb.add_deployed_services(session, to_add)
 
 # ################################################################################################################################
 
@@ -538,11 +539,16 @@ class ServiceStore(object):
         # Indicates boundaries of deployment batches
         batch_indexes = get_batch_indexes(to_process, self.max_batch_size)
 
-        # Store Service objects first
-        self._store_services_in_odb(batch_indexes, to_process)
+        with closing(self.odb.session()) as session:
 
-        # Now DeployedService can be added - they assume that all Service objects all are in ODB already
-        self._store_deployed_services_in_odb(batch_indexes, to_process)
+            # Store Service objects first
+            self._store_services_in_odb(session, batch_indexes, to_process)
+
+            # Now DeployedService can be added - they assume that all Service objects all are in ODB already
+            self._store_deployed_services_in_odb(session, batch_indexes, to_process)
+
+            # Done with everything, we can commit it now
+            session.commit()
 
 # ################################################################################################################################
 
@@ -568,7 +574,7 @@ class ServiceStore(object):
         # This is a list of services to turn into a set
         deployed_service_list = self.odb.get_basic_data_deployed_service_list()
 
-        return deployed_service_list
+        return set(elem[0] for elem in deployed_service_list)
 
 # ################################################################################################################################
 

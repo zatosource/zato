@@ -679,95 +679,15 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def add_services(self, data):
+    def add_services(self, session, data):
         # type: (List[dict]) -> None
-
-        with closing(self.session()) as session:
-            session.execute(ServiceTableInsert().values(data))
-            session.commit()
+        session.execute(ServiceTableInsert().values(data))
 
 # ################################################################################################################################
 
-    def add_deployed_services(self, data):
+    def add_deployed_services(self, session, data):
         # type: (List[dict]) -> None
-
-        with closing(self.session()) as session:
-            session.execute(DeployedServiceInsert().values(data))
-            session.commit()
-
-# ################################################################################################################################
-
-    '''
-    def add_service(self, name, impl_name, is_internal, deployment_time, details, source_info, service_info=None):
-        """ Adds information about the server's service into the ODB.
-        """
-        try:
-            if service_info:
-                service_id = service_info['id']
-
-            else:
-                service = Service(None, name, True, impl_name, is_internal, self.cluster)
-                self._session.add(service)
-                try:
-                    self._session.commit()
-                    service_id = service.id
-                except(IntegrityError, ProgrammingError):
-                    logger.log(TRACE1, 'IntegrityError (Service), e:`%s`', format_exc())
-                    self._session.rollback()
-
-                    service_id = self._session.query(Service).\
-                        join(Cluster, Service.cluster_id==Cluster.id).\
-                        filter(Service.name==name).\
-                        filter(Cluster.id==self.cluster.id).\
-                        one().id
-
-            self.add_deployed_service(deployment_time, details, service_id, source_info)
-
-            if not service_info:
-                return service_id, service.is_active, service.slow_threshold
-
-        except Exception:
-            logger.error('Could not add service, name:`%s`, e:`%s`', name, format_exc())
-            self._session.rollback()
-'''
-
-# ################################################################################################################################
-
-    '''
-    def add_deployed_service(self, deployment_time, details, service_id, source_info):
-        """ Adds information about the server's deployed service into the ODB.
-        """
-        try:
-            ds = DeployedService(deployment_time, details, self.server.id, service_id,
-                source_info.source, source_info.path, source_info.hash, source_info.hash_method)
-            self._session.add(ds)
-            try:
-                self._session.commit()
-            except(IntegrityError, ProgrammingError):
-
-                logger.log(TRACE1, 'IntegrityError (DeployedService), e:`%s`', format_exc())
-                self._session.rollback()
-
-                ds = self._session.query(DeployedService).\
-                    filter(DeployedService.service_id==service_id).\
-                    filter(DeployedService.server_id==self.server.id).\
-                    one()
-
-                ds.deployment_time = deployment_time
-                ds.details = details
-                ds.source = source_info.source
-                ds.source_path = source_info.path
-                ds.source_hash = source_info.hash
-                ds.source_hash_method = source_info.hash_method
-
-                self._session.add(ds)
-                self._session.commit()
-
-        except Exception:
-            msg = 'Could not add DeployedService, e:`{}`'.format(format_exc())
-            #logger.error(msg)
-            self._session.rollback()
-            '''
+        session.execute(DeployedServiceInsert().values(data))
 
 # ################################################################################################################################
 
