@@ -11,9 +11,6 @@ from contextlib import closing
 from copy import deepcopy
 from json import dumps, loads
 
-# Python 2/3 compatibility
-from six import add_metaclass
-
 # Zato
 from zato.common.broker_message import GENERIC
 from zato.common.odb.model import GenericConn as ModelGenericConn

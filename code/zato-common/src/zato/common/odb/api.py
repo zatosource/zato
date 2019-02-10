@@ -21,7 +21,6 @@ from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
-from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
@@ -31,7 +30,7 @@ from sqlalchemy.sql.expression import true
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, \
+from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, \
      ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \

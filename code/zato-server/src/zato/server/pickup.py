@@ -19,11 +19,8 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
-# gevent
-from gevent import sleep
-
 # Watchdog
-from watchdog.events import FileSystemEvent, FileSystemEventHandler, LoggingEventHandler
+from watchdog.events import FileSystemEventHandler
 from watchdog.observers.polling import PollingObserver
 
 # Zato

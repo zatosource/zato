@@ -14,7 +14,6 @@ import os
 from base64 import b64decode, b64encode
 from datetime import datetime
 from http.client import OK
-from inspect import getargspec
 from json import dumps, loads
 from traceback import format_exc
 
@@ -30,7 +29,6 @@ import requests
 # Python 2/3 compatibility
 from builtins import str as text
 from six import PY3
-from past.builtins import basestring
 
 # Zato
 from zato.common import BROKER, soap_data_path, soap_data_xpath, soap_fault_xpath, \
@@ -324,7 +322,7 @@ class ServiceInvokeResponse(JSONSIOResponse):
                 self.inner_service_response = payload_response
                 try:
                     data = loads(self.inner_service_response)
-                except ValueError as e:
+                except ValueError:
                     # Not a JSON response
                     self.data = self.inner_service_response
                 else:

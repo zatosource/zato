@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from io import StringIO
 from logging import DEBUG
-from pprint import pprint
 
 # Django
 import django

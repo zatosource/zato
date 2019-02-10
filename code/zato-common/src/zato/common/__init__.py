@@ -33,7 +33,6 @@ from lxml import etree
 from lxml.objectify import ObjectPath as _ObjectPath
 
 # Python 2/3 compatibility
-from builtins import str as text
 from past.builtins import basestring, execfile
 from zato.common.py23_ import maxint
 
