@@ -381,15 +381,15 @@ class ServiceStore(object):
                 impl_name = service.impl_name
 
                 service_info.append({
-                    'class_': class_,
+                    'service_class': class_,
                     'mod': inspect.getmodule(class_),
                     'impl_name': impl_name,
                     'service_id': self.impl_name_to_id[impl_name],
                     'is_active': self.services[impl_name]['is_active'],
                     'slow_threshold': self.services[impl_name]['slow_threshold'],
                     'fs_location': inspect.getfile(class_),
+                    'deployment_info': 'zzz'
                 })
-
 
             # All set, write out the cache file
             f = open(cache_file_path, 'wb')
@@ -402,19 +402,21 @@ class ServiceStore(object):
             return info.to_process
 
         else:
+            logger.info('Deploying cached internal services (%s)', self.server.name)
+
             to_process = []
 
             f = open(cache_file_path, 'rb')
-            items = bunchify(dill_load(f))
+            items = dill_load(f)
             f.close()
 
-            len_si = len(items.service_info)
+            len_si = len(items['service_info'])
 
-            logger.info('Deploying %d cached internal services (%s)', len_si, self.server.name)
-
-            for idx, item in enumerate(items.service_info, 1):
-                class_ = self._visit_class(item.mod, item.class_, item.fs_location, True)
+            for idx, item in enumerate(items['service_info'], 1):
+                class_ = self._visit_class(item['mod'], item['service_class'], item['fs_location'], True)
                 to_process.append(class_)
+
+            self._store_in_ram(to_process)
 
             logger.info('Deployed %d cached internal services (%s)', len_si, self.server.name)
 
@@ -422,11 +424,11 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _store_in_ram(self, info):
-        # type: (DeploymentInfo) -> None
+    def _store_in_ram(self, to_process):
+        # type: (List[DeploymentInfo]) -> None
 
         with self.update_lock:
-            for item in info.to_process: # type: InRAMService
+            for item in to_process: # type: InRAMService
 
                 self.services[item.impl_name] = {}
                 self.services[item.impl_name]['name'] = item.name
@@ -527,20 +529,20 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _store_in_odb(self, info):
-        # type: (DeploymentInfo) -> None
+    def _store_in_odb(self, to_process):
+        # type: (List[DeploymentInfo]) -> None
 
         # Local objects
         now = datetime.utcnow()
 
         # Indicates boundaries of deployment batches
-        batch_indexes = get_batch_indexes(info.to_process, self.max_batch_size)
+        batch_indexes = get_batch_indexes(to_process, self.max_batch_size)
 
         # Store Service objects first
-        self._store_services_in_odb(batch_indexes, info.to_process)
+        self._store_services_in_odb(batch_indexes, to_process)
 
         # Now DeployedService can be added - they assume that all Service objects all are in ODB already
-        self._store_deployed_services_in_odb(batch_indexes, info.to_process)
+        self._store_deployed_services_in_odb(batch_indexes, to_process)
 
 # ################################################################################################################################
 
@@ -608,8 +610,8 @@ class ServiceStore(object):
         info.total_size_human = naturalsize(info.total_size)
 
         # Save data to both ODB and RAM now
-        self._store_in_odb(info)
-        self._store_in_ram(info)
+        self._store_in_odb(info.to_process)
+        self._store_in_ram(info.to_process)
 
         # Done deploying, we can return
         return info
