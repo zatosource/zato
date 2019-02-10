@@ -12,9 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 import os
 
-# Python 2/3 compatibility
-from builtins import bytes
-
 # Zato
 from zato.bunch import Bunch
 from zato.common import MISC, SECRETS
