@@ -14,7 +14,6 @@ from base64 import b64decode, b64encode
 
 # Python 2/3 compatibility
 from six import PY2
-from builtins import bytes
 
 # Zato
 from zato.common import AUTH_RESULT

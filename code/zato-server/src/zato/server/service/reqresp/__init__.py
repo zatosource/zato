@@ -32,7 +32,7 @@ from sqlalchemy.util import KeyedTuple
 # Python 2/3 compatibility
 from builtins import bytes
 from future.utils import iteritems
-from past.builtins import basestring, unicode
+from past.builtins import basestring
 
 # Zato
 from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, SIMPLE_IO, simple_types, TRACE1, ZatoException, \

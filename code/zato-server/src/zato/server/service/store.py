@@ -21,9 +21,6 @@ from json import dumps
 from traceback import format_exc
 from typing import Any, List
 
-# Bunch
-from bunch import bunchify
-
 # dill
 from dill import dumps as dill_dumps, load as dill_load
 
@@ -40,9 +37,6 @@ try:
 except ImportError:
     from yaml import Dumper   # ditto
     Dumper = Dumper
-
-# Python 2/3 compatibility
-from builtins import str as text
 
 # Zato
 from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceCodeInfo, TRACE1
@@ -533,9 +527,6 @@ class ServiceStore(object):
     def _store_in_odb(self, to_process):
         # type: (List[DeploymentInfo]) -> None
 
-        # Local objects
-        now = datetime.utcnow()
-
         # Indicates boundaries of deployment batches
         batch_indexes = get_batch_indexes(to_process, self.max_batch_size)
 
@@ -730,9 +721,6 @@ class ServiceStore(object):
 
     def _visit_class(self, mod, class_, fs_location, is_internal, _utcnow=datetime.utcnow):
         # type: (Any, Any, text, bool, Any, Any) -> InRAMService
-
-        now = _utcnow()
-        depl_info = dumps(deployment_info('service-store', str(class_), now.isoformat(), fs_location))
 
         name = class_.get_name()
         impl_name = class_.get_impl_name()
