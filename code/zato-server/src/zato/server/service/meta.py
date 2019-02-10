@@ -42,7 +42,6 @@ req_resp = {
     'Create': 'create',
     'Edit': 'edit',
     'GetList': 'get_list',
-    'GetList2': 'get_list2',
     'Delete': 'delete',
     'Ping': 'ping',
 }

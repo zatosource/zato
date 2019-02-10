@@ -53,6 +53,7 @@ ServiceTable = Service.__table__
 ServiceTableInsert = ServiceTable.insert
 
 DeployedServiceTable = DeployedService.__table__
+DeployedServiceInsert = DeployedServiceTable.insert
 DeployedServiceDelete = DeployedServiceTable.delete
 
 # ################################################################################################################################
@@ -649,6 +650,7 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
 
             query = select([
+                ServiceTable.c.id,
                 ServiceTable.c.name,
                 ServiceTable.c.impl_name,
             ]).where(
@@ -677,11 +679,20 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def add_services(self, services):
+    def add_services(self, data):
         # type: (List[dict]) -> None
 
         with closing(self.session()) as session:
-            session.execute(ServiceTableInsert().values(services))
+            session.execute(ServiceTableInsert().values(data))
+            session.commit()
+
+# ################################################################################################################################
+
+    def add_deployed_services(self, data):
+        # type: (List[dict]) -> None
+
+        with closing(self.session()) as session:
+            session.execute(DeployedServiceInsert().values(data))
             session.commit()
 
 # ################################################################################################################################

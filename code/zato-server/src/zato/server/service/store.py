@@ -375,8 +375,11 @@ class ServiceStore(object):
             logger.info('Deploying and caching internal services (%s)', self.server.name)
             info = self.import_services_from_anywhere(items, base_dir)
 
-            for in_ram_service in info.to_process: # type: InRAMService
-                impl_name = class_.get_impl_name()
+            for service in info.to_process: # type: InRAMService
+
+                class_ = service.service_class
+                impl_name = service.impl_name
+
                 service_info.append({
                     'class_': class_,
                     'mod': inspect.getmodule(class_),
@@ -401,7 +404,6 @@ class ServiceStore(object):
         else:
             to_process = []
 
-            '''
             f = open(cache_file_path, 'rb')
             items = bunchify(dill_load(f))
             f.close()
@@ -411,15 +413,12 @@ class ServiceStore(object):
             logger.info('Deploying %d cached internal services (%s)', len_si, self.server.name)
 
             for idx, item in enumerate(items.service_info, 1):
-                class_ = self._visit_class(
-                    item.mod, None, item.class_, item.fs_location, True, sql_services.get(item.impl_name))
+                class_ = self._visit_class(item.mod, item.class_, item.fs_location, True)
                 to_process.append(class_)
 
             logger.info('Deployed %d cached internal services (%s)', len_si, self.server.name)
-            '''
 
             return to_process
-
 
 # ################################################################################################################################
 
@@ -445,50 +444,103 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _store_in_odb(self, info):
-        # type: (DeploymentInfo) -> None
+    def _store_services_in_odb(self, batch_indexes, to_process):
+        """ Looks up all Service objects in ODB and if any of our local ones is not in the databaset yet, it is added.
+        """
+        # Get all services already deployed in ODB for comparisons (Service)
+        services = self.get_basic_data_services()
 
-        # Get all services already deployed for comparisons (Service)
+        # Add any missing Service objects from each batch delineated by indexes found
+        for start_idx, end_idx in batch_indexes:
+
+            to_add = []
+            batch_services = to_process[start_idx:end_idx]
+
+            for service in batch_services: # type: InRAMService
+
+                # No such Service object in ODB so we need to store it
+                if service.name not in services:
+                    to_add.append(service)
+
+            # Add to ODB all the Service objects from this batch found not to be in ODB already
+            if to_add:
+                self.odb.add_services([elem.to_dict() for elem in to_add])
+
+# ################################################################################################################################
+
+    def _store_deployed_services_in_odb(self, batch_indexes, to_process, _utcnow=datetime.utcnow):
+        """ Looks up all Service objects in ODB, checks if any is not deployed locally and deploys it if it is not.
+        """
+        # Local objects
+        now = _utcnow()
+        now_iso = now.isoformat()
+
+        # Get all services already deployed in ODB for comparisons (Service) - it is needed to do it again,
+        # in addition to _store_deployed_services_in_odb, because that other method may have added
+        # DB-level IDs that we need with our own objects.
         services = self.get_basic_data_services()
 
         # Same goes for deployed services objects (DeployedService)
         deployed_services = self.get_basic_data_deployed_services()
 
-        batch_indexes = get_batch_indexes(info.to_process, self.max_batch_size)
+        # Modules visited may return a service that has been already visited via another module,
+        # in which case we need to skip such a duplicate service.
+        already_visited = set()
 
+        # Add any missing DeployedService objects from each batch delineated by indexes found
         for start_idx, end_idx in batch_indexes:
 
-            services_to_add = []
-            deployed_services_to_add = []
-
-            batch_services = info.to_process[start_idx:end_idx]
+            to_add = []
+            batch_services = to_process[start_idx:end_idx]
 
             for service in batch_services: # type: InRAMService
 
-                # No such Service object in ODB so we need to store
-                if service.name not in services:
-                    services_to_add.append(service)
+                if service.name in already_visited:
+                    continue
+                else:
+                    already_visited.add(service.name)
 
-                # Same with DeployedService objects
-                if service.id not in deployed_services:
-                    deployed_services_to_add.append(service)
+                # At this point we wil always have IDs for all Service objects
+                service_id = services[service.name]['id']
 
-            '''
-            print()
-            print()
+                # Metadata about this deployment as a JSON object
+                class_ = service.service_class
+                path = service.source_code_info.path
+                deployment_details = dumps(deployment_info('service-store', str(class_), now_iso, path))
 
-            print(222, services_to_add, start_idx, end_idx, services_to_add, batch_services)
+                # No such Service object in ODB so we need to store it
+                if service.name not in deployed_services:
+                    to_add.append({
+                        'server_id': self.server.id,
+                        'service_id': service_id,
+                        'deployment_time': now,
+                        'details': deployment_details,
+                        'source': service.source_code_info.source,
+                        'source_path': service.source_code_info.path,
+                        'source_hash': service.source_code_info.hash,
+                        'source_hash_method': service.source_code_info.hash_method,
+                    })
 
-            print()
-            print()
-            '''
+            # If any services are to be deployed, do it now.
+            if to_add:
+                self.odb.add_deployed_services(to_add)
 
-            # Add to ODB all the Service objects from this batch found not to be in ODB already
-            if services_to_add:
-                self.odb.add_services([elem.to_dict() for elem in services_to_add])
+# ################################################################################################################################
 
-            # Do the same as above but with DeployedService objects
-            #zzz add self.odb.add_deployed_services
+    def _store_in_odb(self, info):
+        # type: (DeploymentInfo) -> None
+
+        # Local objects
+        now = datetime.utcnow()
+
+        # Indicates boundaries of deployment batches
+        batch_indexes = get_batch_indexes(info.to_process, self.max_batch_size)
+
+        # Store Service objects first
+        self._store_services_in_odb(batch_indexes, info.to_process)
+
+        # Now DeployedService can be added - they assume that all Service objects all are in ODB already
+        self._store_deployed_services_in_odb(batch_indexes, info.to_process)
 
 # ################################################################################################################################
 
@@ -501,8 +553,8 @@ class ServiceStore(object):
         # This is a list of services to turn into a dict
         service_list = self.odb.get_basic_data_service_list()
 
-        for name, impl_name in service_list: # type: name, name
-            out[name] = impl_name
+        for service_id, name, impl_name in service_list: # type: name, name
+            out[name] = {'id': service_id, 'impl_name': impl_name}
 
         return out
 
@@ -514,7 +566,7 @@ class ServiceStore(object):
         # This is a list of services to turn into a set
         deployed_service_list = self.odb.get_basic_data_deployed_service_list()
 
-        return set(deployed_service_list)
+        return deployed_service_list
 
 # ################################################################################################################################
 
@@ -549,12 +601,6 @@ class ServiceStore(object):
 
         for item in to_process: # type: InRAMService
             total_size += item.source_code_info.len_source
-
-        # print()
-        # print()
-        # print(111, len(to_process), total)
-        # print()
-        # print()
 
         info = DeploymentInfo()
         info.to_process[:] = to_process
@@ -674,7 +720,7 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _visit_class(self, mod, class_, fs_location, is_internal, service_info=None, _utcnow=datetime.utcnow):
+    def _visit_class(self, mod, class_, fs_location, is_internal, _utcnow=datetime.utcnow):
         # type: (Any, Any, text, bool, Any, Any) -> InRAMService
 
         now = _utcnow()
@@ -685,55 +731,18 @@ class ServiceStore(object):
 
         set_up_class_attributes(class_, self, name)
 
-        '''
-        self.services[impl_name] = {}
-        self.services[impl_name]['name'] = name
-        self.services[impl_name]['deployment_info'] = depl_info
-        self.services[impl_name]['service_class'] = class_
-        '''
-
         # Note that at this point we do not have the service's ID, is_active and slow_threshold values;
         # this is because this object is created prior to its deployment in ODB.
-        in_ram_service = InRAMService()
-        in_ram_service.cluster_id = self.server.cluster_id
-        in_ram_service.is_active = True
-        in_ram_service.is_internal = is_internal
-        in_ram_service.name = name
-        in_ram_service.impl_name = impl_name
-        in_ram_service.service_class = class_
-        in_ram_service.source_code_info = self._get_source_code_info(mod)
+        service = InRAMService()
+        service.cluster_id = self.server.cluster_id
+        service.is_active = True
+        service.is_internal = is_internal
+        service.name = name
+        service.impl_name = impl_name
+        service.service_class = class_
+        service.source_code_info = self._get_source_code_info(mod)
 
-        return in_ram_service
-
-
-        '''
-        if service_info:
-            service_id = service_info['id']
-            is_active = service_info['is_active']
-            slow_threshold = service_info['slow_threshold']
-
-            self.odb.add_service(name, impl_name, is_internal, now, dumps(str(depl_info)), source_info, service_info)
-
-        else:
-            service_id, is_active, slow_threshold = self.odb.add_service(
-                name, impl_name, is_internal, now, dumps(str(depl_info)), source_info, service_info)
-        '''
-
-        '''
-        self.services[impl_name]['is_active'] = is_active
-        self.services[impl_name]['slow_threshold'] = slow_threshold
-
-        self.id_to_impl_name[service_id] = impl_name
-        self.impl_name_to_id[impl_name] = service_id
-        self.name_to_impl_name[name] = impl_name
-
-        if has_debug:
-            logger.debug('Imported service:`%s`', name)
-
-        class_.after_add_to_store(logger)
-        '''
-
-        # return class_
+        return service
 
 # ################################################################################################################################
 
