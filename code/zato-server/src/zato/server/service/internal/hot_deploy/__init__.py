@@ -122,16 +122,17 @@ class Create(AdminService):
         self._backup_linear_log(fs_now, current_work_dir, backup_format, backup_work_dir, backup_history)
 
     def _deploy_file(self, current_work_dir, payload, file_name):
+
         f = open(file_name, 'w')
         f.write(payload.decode('utf8') if isinstance(payload, bytes) else payload)
         f.close()
 
         services_deployed = []
+        info = self.server.service_store.import_services_from_anywhere(file_name, current_work_dir)
 
-        for service in self.server.service_store.import_services_from_anywhere(file_name, current_work_dir):
+        for service in info.to_process:
 
-            impl_name = self.server.service_store.name_to_impl_name[service.get_name()]
-            service_id = self.server.service_store.impl_name_to_id[impl_name]
+            service_id = self.server.service_store.impl_name_to_id[service.impl_name]
             services_deployed.append(service_id)
 
             msg = {}
