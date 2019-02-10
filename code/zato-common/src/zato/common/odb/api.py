@@ -20,8 +20,7 @@ from time import time
 from traceback import format_exc
 
 # SQLAlchemy
-from sqlalchemy import create_engine, event
-from sqlalchemy.exc import IntegrityError, ProgrammingError
+from sqlalchemy import and_, create_engine, event, select
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
@@ -31,7 +30,7 @@ from sqlalchemy.sql.expression import true
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, \
+from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, \
      ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
@@ -49,18 +48,19 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+ServiceTable = Service.__table__
+ServiceTableInsert = ServiceTable.insert
+
 DeployedServiceTable = DeployedService.__table__
+DeployedServiceInsert = DeployedServiceTable.insert
 DeployedServiceDelete = DeployedServiceTable.delete
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 # Based on https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WriteableTuple
 
-
 class WritableKeyedTuple(object):
-
-# ################################################################################################################################
-# ################################################################################################################################
 
     def __init__(self, elem):
         object.__setattr__(self, '_elem', elem)
@@ -643,37 +643,50 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def add_service(self, name, impl_name, is_internal, deployment_time, details, source_info, service_info=None):
-        """ Adds information about the server's service into the ODB.
+    def get_basic_data_service_list(self):
+        """ Returns basic information about all the services in ODB.
         """
-        try:
-            if service_info:
-                service_id = service_info['id']
+        with closing(self.session()) as session:
 
-            else:
-                service = Service(None, name, True, impl_name, is_internal, self.cluster)
-                self._session.add(service)
-                try:
-                    self._session.commit()
-                    service_id = service.id
-                except(IntegrityError, ProgrammingError):
-                    logger.log(TRACE1, 'IntegrityError (Service), e:`%s`', format_exc())
-                    self._session.rollback()
+            query = select([
+                ServiceTable.c.id,
+                ServiceTable.c.name,
+                ServiceTable.c.impl_name,
+            ]).where(
+                ServiceTable.c.cluster_id==self.cluster_id
+            )
 
-                    service_id = self._session.query(Service).\
-                        join(Cluster, Service.cluster_id==Cluster.id).\
-                        filter(Service.name==name).\
-                        filter(Cluster.id==self.cluster.id).\
-                        one().id
+            return session.execute(query).\
+                fetchall()
 
-            self.add_deployed_service(deployment_time, details, service_id, source_info)
+# ################################################################################################################################
 
-            if not service_info:
-                return service_id, service.is_active, service.slow_threshold
+    def get_basic_data_deployed_service_list(self):
+        """ Returns basic information about all the deployed services in ODB.
+        """
+        with closing(self.session()) as session:
 
-        except Exception:
-            logger.error('Could not add service, name:`%s`, e:`%s`', name, format_exc())
-            self._session.rollback()
+            query = select([
+                ServiceTable.c.name,
+            ]).where(and_(
+                DeployedServiceTable.c.service_id==ServiceTable.c.id,
+                DeployedServiceTable.c.server_id==self.server_id
+            ))
+
+            return session.execute(query).\
+                fetchall()
+
+# ################################################################################################################################
+
+    def add_services(self, session, data):
+        # type: (List[dict]) -> None
+        session.execute(ServiceTableInsert().values(data))
+
+# ################################################################################################################################
+
+    def add_deployed_services(self, session, data):
+        # type: (List[dict]) -> None
+        session.execute(DeployedServiceInsert().values(data))
 
 # ################################################################################################################################
 
@@ -686,42 +699,6 @@ class ODBManager(SessionWrapper):
                 where(DeployedService.server_id==server_id)
             )
             session.commit()
-
-# ################################################################################################################################
-
-    def add_deployed_service(self, deployment_time, details, service_id, source_info):
-        """ Adds information about the server's deployed service into the ODB.
-        """
-        try:
-            ds = DeployedService(deployment_time, details, self.server.id, service_id,
-                source_info.source, source_info.path, source_info.hash, source_info.hash_method)
-            self._session.add(ds)
-            try:
-                self._session.commit()
-            except(IntegrityError, ProgrammingError):
-
-                logger.log(TRACE1, 'IntegrityError (DeployedService), e:`%s`', format_exc())
-                self._session.rollback()
-
-                ds = self._session.query(DeployedService).\
-                    filter(DeployedService.service_id==service_id).\
-                    filter(DeployedService.server_id==self.server.id).\
-                    one()
-
-                ds.deployment_time = deployment_time
-                ds.details = details
-                ds.source = source_info.source
-                ds.source_path = source_info.path
-                ds.source_hash = source_info.hash
-                ds.source_hash_method = source_info.hash_method
-
-                self._session.add(ds)
-                self._session.commit()
-
-        except Exception:
-            msg = 'Could not add DeployedService, e:`{}`'.format(format_exc())
-            #logger.error(msg)
-            self._session.rollback()
 
 # ################################################################################################################################
 

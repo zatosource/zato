@@ -46,7 +46,7 @@ from validate import is_boolean
 from zato.admin.web import from_utc_to_user, last_hour_start_stop
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
-from zato.common import DATA_FORMAT, SourceInfo, ZATO_NONE
+from zato.common import DATA_FORMAT, SourceCodeInfo, ZATO_NONE
 from zato.common.odb.model import Service
 
 # ################################################################################################################################
@@ -300,7 +300,7 @@ def source_info(req, service_name):
         if source:
             source_html = highlight(source, PythonLexer(stripnl=False), HtmlFormatter(linenos='table'))
 
-            service.source_info = SourceInfo()
+            service.source_info = SourceCodeInfo()
             service.source_info.source = source
             service.source_info.source_html = source_html
             service.source_info.path = response.data.source_path

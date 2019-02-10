@@ -442,7 +442,7 @@ def deployment_info(method, object_, timestamp, fs_location, remote_host='', rem
         'object': object_,
         'timestamp': timestamp,
         'fs_location':fs_location,
-        'remote_host': remote_host,
+        'remote_host': remote_host or os.environ.get('SSH_CONNECTION', ''),
         'remote_user': remote_user,
         'current_host': current_host(),
         'current_user': get_current_user(),

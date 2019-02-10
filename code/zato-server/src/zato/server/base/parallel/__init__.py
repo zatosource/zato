@@ -260,7 +260,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
             logger.info('Deploying user-defined services (%s)', self.name)
 
             user_defined_deployed = self.service_store.import_services_from_anywhere(
-                self.service_modules + self.service_sources, self.base_dir)
+                self.service_modules + self.service_sources, self.base_dir).to_process
 
             locally_deployed.extend(user_defined_deployed)
             len_user_defined_deployed = len(user_defined_deployed)
@@ -269,7 +269,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
 
             logger.info('Deployed %d user-defined service%s (%s)', len_user_defined_deployed, suffix, self.name)
 
-            return set()#set(locally_deployed)
+            return set(locally_deployed)
 
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, self.deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
@@ -455,13 +455,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         self.worker_store.target_matcher.read_config(self.fs_server_config.invoke_target_patterns_allowed)
         self.set_up_config(server)
 
-        # Deploys services
-        is_first, locally_deployed = self._after_init_common(server)
-
-        # Initializes worker store, including connectors
-        self.worker_store.init()
-        self.request_dispatcher_dispatch = self.worker_store.request_dispatcher.dispatch
-
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
 
@@ -470,6 +463,22 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
 
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
+
+        # Added in 3.1, hence optional
+        max_batch_size = int(self.fs_server_config.hot_deploy.get('max_batch_size', 1000))
+
+        # Turn it into megabytes
+        max_batch_size = max_batch_size * 1000
+
+        # Finally, assign it to ServiceStore
+        self.service_store.max_batch_size = max_batch_size
+
+        # Deploys services
+        is_first, locally_deployed = self._after_init_common(server)
+
+        # Initializes worker store, including connectors
+        self.worker_store.init()
+        self.request_dispatcher_dispatch = self.worker_store.request_dispatcher.dispatch
 
         # Configure remaining parts of SSO
         self.configure_sso()
