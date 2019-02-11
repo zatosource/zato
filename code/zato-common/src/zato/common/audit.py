@@ -10,10 +10,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps
 
 # ipaddress
 from ipaddress import IPv4Address, IPv6Address
+
+# Zato
+from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
 

@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from base64 import b64decode
 from contextlib import closing
-from json import dumps, loads
+from json import loads
 
 # Zato
 from zato.client import AnyServiceInvoker
@@ -19,6 +19,7 @@ from zato.common import INFO_FORMAT, SERVER_JOIN_STATUS, SERVER_UP_STATUS
 from zato.common.broker_message import SERVER_STATUS
 from zato.common.odb.query import server_list
 from zato.common.component_info import format_info, get_info, get_worker_pids
+from zato.common.util.json_ import dumps
 from zato.server.service import List, Service
 
 # ################################################################################################################################

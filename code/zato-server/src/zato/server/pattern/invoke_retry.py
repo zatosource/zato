@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
@@ -22,6 +21,7 @@ from gevent import sleep
 # Zato
 from zato.common import ZatoException
 from zato.common.util import new_cid
+from zato.common.util.json_ import dumps
 
 logger = getLogger(__name__)
 

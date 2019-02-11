@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from copy import deepcopy
 from datetime import datetime
-from json import dumps
 from traceback import format_exc
 from uuid import uuid4
 
@@ -28,6 +27,7 @@ from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
 from zato.common.pubsub import new_sub_key
 from zato.common.util import get_http_json_channel, get_http_soap_channel
+from zato.common.util.json_ import dumps
 from zato.common.util.time_ import utcnow_as_ms
 
 # ################################################################################################################################

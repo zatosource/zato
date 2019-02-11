@@ -17,7 +17,6 @@ from datetime import datetime
 from hashlib import sha256
 from importlib import import_module
 from inspect import isclass
-from json import dumps
 from traceback import format_exc
 from typing import Any, List
 
@@ -43,6 +42,7 @@ from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceCodeInfo, TRACE1
 from zato.common.match import Matcher
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
+from zato.common.util.json_ import dumps
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service
 from zato.server.service.internal import AdminService
 

@@ -12,7 +12,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import subprocess
 from datetime import datetime, timedelta
-from json import dumps, loads
+from json import loads
 from socket import error as SocketError
 from traceback import format_exc
 from uuid import uuid4
@@ -29,6 +29,7 @@ from ws4py.client.geventclient import WebSocketClient
 
 # Zato
 from zato.common.util import spawn_greenlet
+from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
 

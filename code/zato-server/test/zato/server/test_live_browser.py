@@ -9,10 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import dumps
 from unittest import TestCase
 
 # Zato
+from zato.common.util.json_ import dumps
 from zato.server.live_browser import match_pattern
 
 # ################################################################################################################################

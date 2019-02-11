@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from binascii import unhexlify
 from datetime import datetime, timedelta
-from json import dumps, loads
+from json import loads
 from logging import getLogger
 from traceback import format_exc
 
@@ -25,6 +25,7 @@ from requests import get, post
 from zato.common import IPC, WebSphereMQCallData
 from zato.common.broker_message import CHANNEL, DEFINITION, OUTGOING
 from zato.common.util import get_free_port
+from zato.common.util.json_ import dumps
 from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
