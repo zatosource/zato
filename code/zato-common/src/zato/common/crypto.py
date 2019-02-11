@@ -32,7 +32,7 @@ from passlib import hash as passlib_hash
 from cpuinfo import get_cpu_info
 
 # Python 2/3 compatibility
-from builtins import bytes, str as text
+from builtins import bytes
 
 # ################################################################################################################################
 
@@ -201,9 +201,8 @@ class CryptoManager(object):
     def decrypt(self, encrypted):
         """ Returns input data in a clear-text, decrypted, form.
         """
-        if isinstance(encrypted, text):
+        if not isinstance(encrypted, bytes):
             encrypted = encrypted.encode('utf8')
-
         return self.secret_key.decrypt(encrypted).decode('utf8')
 
 # ################################################################################################################################

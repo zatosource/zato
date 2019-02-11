@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from base64 import b64encode
 from logging import getLogger
 from traceback import format_exc
 
@@ -29,6 +30,7 @@ from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
 from zato.common.util import parse_extra_into_dict
 
 # Python 2/3 compatibility
+from builtins import bytes
 from future.utils import iteritems, itervalues
 from past.builtins import basestring
 from zato.common.py23_ import pickle_dumps
@@ -854,7 +856,8 @@ class CacheAPI(object):
                     data['is_value_pickled'] = False
                 else:
                     data['is_value_pickled'] = True
-                    data['value'] = _pickle_dumps(value)
+                    value = _pickle_dumps(key)
+                    data['value'] = b64encode(value)
             else:
                 data['is_value_pickled'] = False
 
