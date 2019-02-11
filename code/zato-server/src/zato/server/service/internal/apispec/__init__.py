@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from io import StringIO
 from itertools import chain
-from json import dumps
 from operator import attrgetter
 import os
 
@@ -25,6 +24,7 @@ from zato.server.service import List, Opaque, Service
 
 # Zato
 from zato.common.util import aslist, fs_safe_name
+from zato.common.util.json_ import dumps
 from zato.server.apispec import Generator
 from zato.server.service import Bool
 

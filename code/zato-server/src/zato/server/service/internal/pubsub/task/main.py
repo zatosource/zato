@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime
-from json import dumps
 from operator import itemgetter
 
 # Bunch
@@ -19,6 +18,7 @@ from bunch import bunchify
 # Zato
 from zato.common.exception import BadRequest
 from zato.common.pubsub import all_dict_keys, pubsub_main_data
+from zato.common.util.json_ import dumps
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 

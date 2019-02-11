@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
@@ -28,6 +27,7 @@ from zato.admin.web.views.pubsub import get_endpoint_html
 from zato.common import PUBSUB
 from zato.common.pubsub import new_msg_id
 from zato.common.util import asbool
+from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
 

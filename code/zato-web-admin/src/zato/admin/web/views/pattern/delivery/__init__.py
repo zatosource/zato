@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps, loads
+from json import loads
 from traceback import format_exc
 
 # Django
@@ -25,6 +25,7 @@ from zato.admin.web.forms.pattern.delivery.definition import InstanceListForm
 from zato.admin.web.views import CreateEdit, Index as _Index, get_js_dt_format, method_allowed
 from zato.common import DELIVERY_STATE
 from zato.common.model import DeliveryItem
+from zato.common.util.json_ import dumps
 
 logger = logging.getLogger(__name__)
 

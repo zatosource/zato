@@ -511,6 +511,8 @@ class Message(PubSubMessage):
             (max_pri - other.priority, other.ext_pub_time, other.pub_time)
         )
 
+    __lt__ = __cmp__
+
 # ################################################################################################################################
 
     def __repr__(self):

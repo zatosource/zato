@@ -10,11 +10,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from copy import deepcopy
-from json import dumps, loads
+from json import loads
 from uuid import uuid4
 
 # Zato
 from zato.common import ADAPTER_PARAMS, HTTPException
+from zato.common.util.json_ import dumps
 from zato.server.service import Service
 
 # ################################################################################################################################

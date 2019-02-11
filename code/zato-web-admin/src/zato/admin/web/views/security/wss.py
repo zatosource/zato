@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps
 from traceback import format_exc
 
 # Django
@@ -23,6 +22,7 @@ from zato.admin.web.forms.security.wss import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, Delete as _Delete, method_allowed, parse_response_data
 from zato.common import ZATO_WSS_PASSWORD_TYPES
 from zato.common.odb.model import WSSDefinition
+from zato.common.util.json_ import dumps
 
 logger = logging.getLogger(__name__)
 

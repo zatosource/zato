@@ -8,9 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from json import dumps
-
 # Python 2/3 compatibility
 from future.utils import itervalues
 
@@ -20,6 +17,7 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.pubsub import HandleNewMessageCtx
 from zato.server.pubsub.task import PubSubTool
+from zato.common.util.json_ import dumps
 from zato.server.service import Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 

@@ -30,7 +30,7 @@ import os
 import signal
 import sys
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
-from json import dumps, loads
+from json import loads
 from logging import DEBUG, Formatter, getLogger, StreamHandler
 from logging.handlers import RotatingFileHandler
 from os import getppid, path
@@ -57,6 +57,7 @@ from zato.common.py23_ import start_new_thread
 from zato.common.broker_message import code_to_name
 from zato.common.util import parse_cmd_line_options
 from zato.common.util.auth import parse_basic_auth
+from zato.common.util.json_ import dumps
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC
 from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
 from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection

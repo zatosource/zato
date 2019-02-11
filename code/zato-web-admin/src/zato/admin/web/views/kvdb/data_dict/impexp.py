@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from base64 import b64encode
 from datetime import datetime
-from json import dumps
 from traceback import format_exc
 
 # Django
@@ -22,6 +21,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.common.util import current_host, translation_name
+from zato.common.util.json_ import dumps
 
 logger = logging.getLogger(__name__)
 

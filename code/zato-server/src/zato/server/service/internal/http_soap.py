@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from json import dumps
 from traceback import format_exc
 
 # Paste
@@ -24,6 +23,7 @@ from zato.common.util.sql import get_security_by_id, elems_with_opaque, set_inst
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
+from zato.common.util.json_ import dumps
 from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 

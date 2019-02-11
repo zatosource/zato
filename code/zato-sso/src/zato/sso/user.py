@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime, timedelta
-from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
@@ -26,6 +25,7 @@ from past.builtins import basestring
 from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
+from zato.common.util.json_ import dumps
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_sign_up_status_by_token, get_user_by_id, get_user_by_username, get_user_by_ust
