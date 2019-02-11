@@ -17,6 +17,7 @@ from datetime import datetime
 from hashlib import sha256
 from importlib import import_module
 from inspect import isclass
+from pickle import HIGHEST_PROTOCOL as highest_pickle_protocol
 from traceback import format_exc
 from typing import Any, List
 
@@ -58,7 +59,13 @@ has_trace1 = logger.isEnabledFor(TRACE1)
 
 # ################################################################################################################################
 
+_unsupported_pickle_protocol_msg = 'unsupported pickle protocol:'
+
+# ################################################################################################################################
+
 hook_methods = ('accept', 'get_request_hash') + before_handle_hooks + after_handle_hooks + before_job_hooks + after_job_hooks
+
+# ################################################################################################################################
 
 class InRAMService(object):
     __slots__ = 'cluster_id', 'id', 'name', 'impl_name', 'deployment_info', 'service_class', 'is_active', 'is_internal', \
@@ -401,13 +408,37 @@ class ServiceStore(object):
 
             to_process = []
 
-            f = open(cache_file_path, 'rb')
-            items = dill_load(f)
-            f.close()
+            try:
+                f = open(cache_file_path, 'rb')
+                dill_items = dill_load(f)
+            except ValueError as e:
+                msg = e.args[0]
+                if _unsupported_pickle_protocol_msg in msg:
+                    msg = msg.replace(_unsupported_pickle_protocol_msg, '').strip()
+                    protocol_found = int(msg)
 
-            len_si = len(items['service_info'])
+                    # If the protocol found is higher than our own, it means that the cache
+                    # was built a Python version higher than our own, we are on Python 2.7
+                    # and cache was created under Python 3.4. In such a case, we need to
+                    # recreate the cache anew.
+                    if protocol_found > highest_pickle_protocol:
+                        logger.info('Cache pickle protocol found `%d` > current highest `%d`, forcing sync_internal',
+                            protocol_found, highest_pickle_protocol)
+                        return self.import_internal_services(items, base_dir, True, is_first)
 
-            for idx, item in enumerate(items['service_info'], 1):
+                    # A different reason, re-raise the erorr then
+                    else:
+                        raise
+
+                # Must be a different kind of a ValueError, propagate it then
+                else:
+                    raise
+            finally:
+                f.close()
+
+            len_si = len(dill_items['service_info'])
+
+            for idx, item in enumerate(dill_items['service_info'], 1):
                 class_ = self._visit_class(item['mod'], item['service_class'], item['fs_location'], True)
                 to_process.append(class_)
 
