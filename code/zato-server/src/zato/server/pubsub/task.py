@@ -58,6 +58,7 @@ class SortedList(_SortedList):
         """ Removes a pubsub message from a SortedList instance - we cannot use the regular .remove method
         because it may triggger __cmp__ per https://github.com/grantjenks/sorted_containers/issues/81.
         """
+        logger.info('In remove_pubsub_msg msg:`%s`, self._maxes:`%s`', msg, self._maxes)
         pos = bisect_left(self._maxes, msg)
 
         if pos == len(self._maxes):
@@ -318,7 +319,12 @@ class DeliveryTask(object):
             else:
                 with self.delivery_lock:
                     for msg in to_deliver:
-                        self.delivery_list.remove_pubsub_msg(msg)
+                        try:
+                            self.delivery_list.remove_pubsub_msg(msg)
+                        except Exception:
+                            msg = 'Caught exception in run_delivery/remove_pubsub_msg, e:`%s`'
+                            logger.warn(msg, format_exc())
+                            logger_zato.warn(msg, format_exc())
 
                 # Status of messages is updated in both SQL and RAM so we can now log success
                 len_delivered = len(delivered_msg_id_list)
