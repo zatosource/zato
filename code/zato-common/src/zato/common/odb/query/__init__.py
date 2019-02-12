@@ -1596,11 +1596,17 @@ def web_socket_client_by_ext_id(session, ext_client_id, needs_one_or_none=False)
 
 # ################################################################################################################################
 
-def web_socket_clients_by_server_id(session, server_id):
+def web_socket_clients_by_server_id(session, server_id, server_pid):
     """ A list of WebSocket clients attached to a particular server by the latter's ID.
     """
-    return session.query(WebSocketClient).\
+    query = session.query(WebSocketClient).\
         filter(WebSocketClient.server_id==server_id)
+
+    if server_pid:
+        query = query.\
+            filter(WebSocketClient.server_proc_pid==server_pid)
+
+    return query
 
 # ################################################################################################################################
 

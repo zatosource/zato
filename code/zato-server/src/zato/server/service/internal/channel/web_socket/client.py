@@ -118,10 +118,14 @@ class UnregisterWSSubKey(AdminService):
 class DeleteByServer(AdminService):
     """ Deletes information about a previously established WebSocket connection. Called when a server shuts down.
     """
+    class SimpleIO(AdminSIO):
+        input_required = 'needs_pid',
+
     def handle(self):
 
         with closing(self.odb.session()) as session:
-            clients = web_socket_clients_by_server_id(session, self.server.id)
+            server_pid = self.server.pid if self.request.input.needs_pid else None
+            clients = web_socket_clients_by_server_id(session, self.server.id, server_pid)
             clients.delete()
             session.commit()
 
