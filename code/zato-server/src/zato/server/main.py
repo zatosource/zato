@@ -21,6 +21,10 @@ from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log
 
+# gevent monkeypatch is needed
+from gevent.monkey import patch_all
+patch_all()
+
 # Django
 import django
 from django.conf import settings

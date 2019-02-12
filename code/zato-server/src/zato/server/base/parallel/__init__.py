@@ -9,7 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os, signal
+import atexit
+import logging
+import os
 from datetime import datetime, timedelta
 from logging import INFO, WARN
 from re import IGNORECASE
@@ -21,7 +23,6 @@ from uuid import uuid4
 from anyjson import dumps
 
 # gevent
-import gevent
 import gevent.monkey # Needed for Cassandra
 
 # globre
@@ -160,10 +161,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
 
         # The main config store
         self.config = ConfigStore()
-
-        gevent.signal(signal.SIGINT, self.cleanup_on_stop)
-        gevent.signal(signal.SIGQUIT, self.cleanup_on_stop)
-        gevent.signal(signal.SIGKILL, self.cleanup_on_stop)
 
 # ################################################################################################################################
 
@@ -552,6 +549,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
                 'parallel_server': self,
             })
 
+            # Clean up any old WSX connections possibly registered for this server
+            # which may be still linger around, for instance, if the server was previously
+            # shut down forcibly and did not have an opportunity to run self.cleanup_on_stop
+            self.cleanup_wsx()
+
             # Startup services
             self.invoke_startup_services(is_first)
             spawn_greenlet(self.set_up_pickup)
@@ -883,9 +885,26 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
 
 # ################################################################################################################################
 
+    def cleanup_wsx(self, needs_pid=False):
+        """ Delete persistent information about WSX clients currently registered with the server.
+        """
+        wsx_service = 'zato.channel.web-socket.client.delete-by-server'
+
+        logger.warn('QQQ %s %s', wsx_service, type(wsx_service))
+        logger.warn('WWW %s', self.service_store.is_deployed(wsx_service))
+        logger.warn('EEE %s', self.service_store.name_to_impl_name)
+
+        if self.service_store.is_deployed(wsx_service):
+            self.invoke(wsx_service, {'needs_pid': needs_pid})
+
+# ################################################################################################################################
+
     def cleanup_on_stop(self):
         """ A shutdown cleanup procedure.
         """
+
+        logger.warn('ZZZ cleanup_on_stop %s', os.getpid())
+
         # Tell the ODB we've gone through a clean shutdown but only if this is
         # the main process going down (Arbiter) not one of Gunicorn workers.
         # We know it's the main process because its ODB's session has never
@@ -920,11 +939,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
             # Close ZeroMQ-based IPC
             self.ipc_api.close()
 
-            # Delete persistent information about all clients currently connected
-            wsx_service = 'zato.channel.web-socket.client.delete-by-server'
-
-            if self.service_store.is_deployed(wsx_service):
-                self.invoke(wsx_service)
+            # WSX connections for this server cleanup
+            self.cleanup_wsx(True)
 
 # ################################################################################################################################
 
