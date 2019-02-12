@@ -40,6 +40,7 @@ future==0.17.1
 futures==2.1.6
 gevent==1.1.2
 greenlet==0.4.12
+gunicorn==19.9.0
 hiredis==0.2.0
 httpagentparser==1.7.9
 httplib2==0.8

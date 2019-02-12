@@ -19,6 +19,8 @@ from tempfile import mkstemp
 from traceback import format_exc
 from uuid import uuid4
 
+import gunicorn
+
 # anyjson
 from anyjson import dumps
 
@@ -147,7 +149,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
 
         # Our arbiter may potentially call the cleanup procedure multiple times
         # and this will be set to True the first time around.
-        self._is_worker_closing = False
+        self._is_process_closing = False
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -890,20 +892,18 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         """
         wsx_service = 'zato.channel.web-socket.client.delete-by-server'
 
-        logger.warn('QQQ %s %s', wsx_service, type(wsx_service))
-        logger.warn('WWW %s', self.service_store.is_deployed(wsx_service))
-        logger.warn('EEE %s', self.service_store.name_to_impl_name)
-
         if self.service_store.is_deployed(wsx_service):
             self.invoke(wsx_service, {'needs_pid': needs_pid})
 
 # ################################################################################################################################
 
+    @staticmethod
+    def cleanup_worker(worker):
+        worker.app.cleanup_on_stop()
+
     def cleanup_on_stop(self):
         """ A shutdown cleanup procedure.
         """
-
-        logger.warn('ZZZ cleanup_on_stop %s', os.getpid())
 
         # Tell the ODB we've gone through a clean shutdown but only if this is
         # the main process going down (Arbiter) not one of Gunicorn workers.
@@ -924,10 +924,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         else:
 
             # Set the flag to True only the first time we are called, otherwise simply return
-            if self._is_worker_closing:
+            if self._is_process_closing:
                 return
             else:
-                self._is_worker_closing = True
+                self._is_process_closing = True
 
             # Close SQL pools
             self.sql_pool_store.cleanup_on_stop()
@@ -941,6 +941,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
 
             # WSX connections for this server cleanup
             self.cleanup_wsx(True)
+
+            logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
 
 # ################################################################################################################################
 
