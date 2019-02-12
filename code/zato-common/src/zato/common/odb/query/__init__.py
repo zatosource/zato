@@ -1581,17 +1581,18 @@ def web_socket_client_by_pub_id(session, pub_client_id):
 
 # ################################################################################################################################
 
-def web_socket_client_by_ext_id(session, ext_client_id):
+def web_socket_client_by_ext_id(session, ext_client_id, needs_one_or_none=False):
     """ An individual WebSocket connection by its external client ID.
     """
-    return session.query(
+    query = session.query(
         WebSocketClient,
         ChannelWebSocket.id.label('channel_id'),
         ChannelWebSocket.name.label('channel_name')
         ).\
         filter(WebSocketClient.ext_client_id==ext_client_id).\
-        outerjoin(ChannelWebSocket, ChannelWebSocket.id==WebSocketClient.channel_id).\
-        one_or_none()
+        outerjoin(ChannelWebSocket, ChannelWebSocket.id==WebSocketClient.channel_id)
+
+    return query.one_or_none() if needs_one_or_none else query.all()
 
 # ################################################################################################################################
 
