@@ -144,6 +144,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         self._hash_secret_rounds = None
         self._hash_secret_salt_size = None
 
+        # Our arbiter may potentially call the cleanup procedure multiple times
+        # and this will be set to True the first time around.
+        self._is_worker_closing = False
+
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
         self.user_ctx_lock = gevent.lock.RLock()
@@ -158,6 +162,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         self.config = ConfigStore()
 
         gevent.signal(signal.SIGINT, self.cleanup_on_stop)
+        gevent.signal(signal.SIGQUIT, self.cleanup_on_stop)
+        gevent.signal(signal.SIGKILL, self.cleanup_on_stop)
 
 # ################################################################################################################################
 
@@ -898,6 +904,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         # Per-worker cleanup
         else:
 
+            # Set the flag to True only the first time we are called, otherwise simply return
+            if self._is_worker_closing:
+                return
+            else:
+                self._is_worker_closing = True
+
             # Close SQL pools
             self.sql_pool_store.cleanup_on_stop()
 
@@ -910,6 +922,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
 
             # Delete persistent information about all clients currently connected
             wsx_service = 'zato.channel.web-socket.client.delete-by-server'
+
             if self.service_store.is_deployed(wsx_service):
                 self.invoke(wsx_service)
 

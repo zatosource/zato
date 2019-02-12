@@ -1,5 +1,5 @@
---- gunicorn/arbiter.py.orig	2016-07-30 12:01:28.691556648 +0200
-+++ gunicorn/arbiter.py	2016-07-30 12:01:40.571556840 +0200
+--- gunicorn/arbiter.py.orig	2019-02-12 11:07:30.253916939 +0100
++++ gunicorn/arbiter.py	2019-02-12 11:07:40.997917112 +0100
 @@ -410,7 +410,8 @@
          util._setproctitle("master [%s]" % self.proc_name)
  
@@ -20,3 +20,12 @@
              self.spawn_worker()
              time.sleep(0.1 * random.random())
  
+@@ -545,6 +547,8 @@
+         :attr sig: `signal.SIG*` value
+          """
+         try:
++            worker = self.WORKERS[pid]
++            self.cfg.worker_exit(self, worker)
+             os.kill(pid, sig)
+         except OSError as e:
+             if e.errno == errno.ESRCH:
