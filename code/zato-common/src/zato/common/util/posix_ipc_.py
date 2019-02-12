@@ -42,6 +42,8 @@ class SharedMemoryIPC(object):
     def __init__(self):
         self.shmem_name = ''
         self.size = -1
+        self._mmap = None
+        self.running = False
 
     def create(self, shmem_suffix, size, needs_create):
         """ Creates all IPC structures.
@@ -63,6 +65,8 @@ class SharedMemoryIPC(object):
 
         # Write initial data so that JSON .loads always succeeds
         self.store_initial()
+
+        self.running = True
 
     def store(self, data):
         """ Serializes input data as JSON and stores it in RAM, overwriting any previous data.
@@ -89,6 +93,12 @@ class SharedMemoryIPC(object):
     def close(self):
         """ Closes all underlying in-RAM structures.
         """
+        if not self.running:
+            logger.debug('Skipped close, IPC not running (%s)', self.key_name)
+            return
+        else:
+            logger.info('Closing IPC (%s)', self.key_name)
+
         self._mmap.close()
         try:
             self._mem.unlink()
