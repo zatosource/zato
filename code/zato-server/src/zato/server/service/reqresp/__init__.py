@@ -117,7 +117,7 @@ class Request(SIOConverter):
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
         'simple_io_config', 'bool_parameter_prefixes', 'int_parameters',
         'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
-        '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq')
+        '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'enforce_string_encoding')
 
     def __init__(self, logger, simple_io_config=None, data_format=None, transport=None):
         self.logger = logger
@@ -142,6 +142,7 @@ class Request(SIOConverter):
         self.wmq = self.ibm_mq = None
         self.encrypt_func = None
         self.encrypt_secrets = True
+        self.bytes_to_str_encoding = None
 
 # ################################################################################################################################
 
@@ -185,6 +186,7 @@ class Request(SIOConverter):
             self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
             self.int_parameters = self.simple_io_config.get('int_parameters', [])
             self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
+            self.bytes_to_str_encoding = self.simple_io_config['bytes_to_str']['encoding']
         else:
             self.payload = self.raw_request
 
@@ -228,7 +230,7 @@ class Request(SIOConverter):
                     self.cid, '' if use_channel_params_only else self.payload, param, self.data_format, is_required,
                     default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
                     self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes,
-                    True, self.encrypt_func, self.encrypt_secrets, self.params_priority)
+                    True, self.encrypt_func, self.encrypt_secrets, self.params_priority, self.bytes_to_str_encoding)
                 params[param_name] = value
 
             except Exception:

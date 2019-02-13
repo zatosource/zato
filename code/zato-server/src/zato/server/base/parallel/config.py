@@ -352,6 +352,13 @@ class ConfigLoader(object):
         self.config.simple_io['int_parameter_suffixes'] = int_suffix if isinstance(int_suffix, list) else [int_suffix]
         self.config.simple_io['bool_parameter_prefixes'] = bool_prefix if isinstance(bool_prefix, list) else [bool_prefix]
 
+        # Maintain backward-compatibility with pre-3.1 versions that did not specify any particular encoding
+        bytes_to_str = self.sio_config.get('bytes_to_str')
+        if not bytes_to_str:
+            bytes_to_str = {'encoding': None}
+
+        self.config.simple_io['bytes_to_str'] = bytes_to_str
+
         # Pub/sub
         self.config.pubsub = Bunch()
 
