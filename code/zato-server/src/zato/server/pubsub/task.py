@@ -511,14 +511,6 @@ class Message(PubSubMessage):
 
 # ################################################################################################################################
 
-    def __cmp__(self, other, max_pri=9):
-        return cmp(
-            (max_pri - self.priority, self.ext_pub_time, self.pub_time),
-            (max_pri - other.priority, other.ext_pub_time, other.pub_time)
-        )
-
-# ################################################################################################################################
-
     def __lt__(self, other, max_pri=9):
 
         self_priority = max_pri - self.priority
