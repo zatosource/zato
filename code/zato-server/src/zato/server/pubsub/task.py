@@ -517,7 +517,21 @@ class Message(PubSubMessage):
             (max_pri - other.priority, other.ext_pub_time, other.pub_time)
         )
 
-    __lt__ = __cmp__
+# ################################################################################################################################
+
+    def __lt__(self, other, max_pri=9):
+
+        self_priority = max_pri - self.priority
+        other_priority = max_pri - other.priority
+
+        if self_priority < other_priority:
+            return True
+
+        elif self.ext_pub_time < other.ext_pub_time:
+            return True
+
+        elif self.pub_time < other.pub_time:
+            return True
 
 # ################################################################################################################################
 
