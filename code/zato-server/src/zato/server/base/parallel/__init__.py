@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import atexit
 import logging
 import os
 from datetime import datetime, timedelta
@@ -18,8 +17,6 @@ from re import IGNORECASE
 from tempfile import mkstemp
 from traceback import format_exc
 from uuid import uuid4
-
-import gunicorn
 
 # anyjson
 from anyjson import dumps
