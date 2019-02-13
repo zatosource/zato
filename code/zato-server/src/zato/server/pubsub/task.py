@@ -25,7 +25,6 @@ from sortedcontainers import SortedList as _SortedList
 
 # Python 2/3 compatibility
 from future.utils import iteritems
-from past.builtins import cmp
 
 # Zato
 from zato.common import GENERIC, PUBSUB
