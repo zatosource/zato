@@ -498,6 +498,9 @@ prefix=by_, has_, is_, may_, needs_, should_
 
 [secret]
 exact=auth_data, auth_token, password, password1, password2, secret_key, token
+
+[bytes_to_str]
+encoding=
 """.lstrip()
 
 lua_zato_rename_if_exists = """
