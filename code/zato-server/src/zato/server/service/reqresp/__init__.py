@@ -226,11 +226,16 @@ class Request(SIOConverter):
 
         for param in params_to_visit:
             try:
+
                 param_name, value = convert_param(
                     self.cid, '' if use_channel_params_only else self.payload, param, self.data_format, is_required,
                     default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
                     self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes,
-                    True, self.encrypt_func, self.encrypt_secrets, self.params_priority, self.bytes_to_str_encoding)
+                    True, self.encrypt_func, self.encrypt_secrets, self.params_priority)
+
+                if self.bytes_to_str_encoding and isinstance(value, bytes):
+                    value = value.decode(self.bytes_to_str_encoding)
+
                 params[param_name] = value
 
             except Exception:
@@ -294,6 +299,7 @@ class SimpleIOPayload(SIOConverter):
         self.zato_force_empty_keys = ignore_skip_empty
         self.zato_allow_empty_required = allow_empty_required
         self.zato_meta = {}
+        self.zato_bytes_to_str_encoding = simple_io_config['bytes_to_str']['encoding']
         self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
         self.int_parameters = simple_io_config.get('int_parameters', [])
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])

@@ -20,6 +20,9 @@ from cryptography.fernet import Fernet
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
+# Python 2/3 compatibility
+from six import PY3
+
 # Zato
 from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
 from zato.cli._apispec_default import apispec_files
@@ -28,6 +31,7 @@ from zato.common.crypto import well_known_data
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
 
+# ################################################################################################################################
 
 server_conf_dict = deepcopy(CONTENT_TYPE)
 server_conf_dict.deploy_internal = {}
@@ -500,7 +504,7 @@ prefix=by_, has_, is_, may_, needs_, should_
 exact=auth_data, auth_token, password, password1, password2, secret_key, token
 
 [bytes_to_str]
-encoding=
+encoding={bytes_to_str_encoding}
 """.lstrip()
 
 lua_zato_rename_if_exists = """
@@ -732,9 +736,13 @@ class Create(ZatoCommand):
             ))
             secrets_conf.close()
 
+            bytes_to_str_encoding = 'utf8' if PY3 else ''
+
             simple_io_conf_loc = os.path.join(self.target_dir, 'config/repo/simple-io.conf')
             simple_io_conf = open(simple_io_conf_loc, 'w')
-            simple_io_conf.write(simple_io_conf_contents)
+            simple_io_conf.write(simple_io_conf_contents.format(
+                bytes_to_str_encoding=bytes_to_str_encoding
+            ))
             simple_io_conf.close()
 
             if show_output:
