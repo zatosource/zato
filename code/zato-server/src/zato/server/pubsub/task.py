@@ -518,8 +518,10 @@ class Message(PubSubMessage):
         if self_priority < other_priority:
             return True
 
-        elif self.ext_pub_time < other.ext_pub_time:
-            return True
+        # Under Python 3, we must ensure these are not None,
+        # because None < None is undefined (TypeError: unorderable types: NoneType() < NoneType())
+        elif self.ext_pub_time and other.ext_pub_time:
+            return self.ext_pub_time < other.ext_pub_time
 
         elif self.pub_time < other.pub_time:
             return True
