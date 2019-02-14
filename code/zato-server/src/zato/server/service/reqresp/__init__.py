@@ -358,10 +358,16 @@ class SimpleIOPayload(SIOConverter):
 
         if isinstance(attrs, dict):
             for name in names:
-                setattr(self, name, attrs[name])
+                value = attrs[name]
+                if self.zato_bytes_to_str_encoding and isinstance(value, bytes):
+                    value = value.decode(self.zato_bytes_to_str_encoding)
+                setattr(self, name, value)
         else:
             for name in names:
-                setattr(self, name, getattr(attrs, name))
+                value = getattr(attrs, name)
+                if self.zato_bytes_to_str_encoding and isinstance(value, bytes):
+                    value = value.decode(self.zato_bytes_to_str_encoding)
+                setattr(self, name, value)
 
     def append(self, item):
         self.zato_output.append(item)
