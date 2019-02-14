@@ -478,7 +478,12 @@ class SIOConverter(object):
     """ A class which knows how to convert values into the types defined in a service's SimpleIO config.
     """
     def convert(self, *params):
-        return convert_sio(*params)
+        value = convert_sio(*params)
+
+        if self.zato_bytes_to_str_encoding and isinstance(value, bytes):
+            value = value.decode(self.zato_bytes_to_str_encoding)
+
+        return value
 
 # ################################################################################################################################
 
@@ -523,7 +528,7 @@ convert_impl = {
 
 def convert_param(cid, payload, param, data_format, is_required, default_value, path_prefix, use_text, channel_params,
     has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes, force_empty_keys, encrypt_func,
-    encrypt_secrets, params_priority, bytes_to_str_encoding):
+    encrypt_secrets, params_priority):
     """ Converts request parameters from any data format supported into Python objects.
     """
     param_name = param.name if isinstance(param, ForceType) else param
