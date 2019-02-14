@@ -875,11 +875,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
     @staticmethod
     def worker_exit(arbiter, worker):
 
-        # Clean up IBM MQ configuration
-        if worker.app.zato_wsgi_app.pid:
-            worker.app.zato_wsgi_app.keyutils.user_delete(b'zato-wmq', worker.app.zato_wsgi_app.pid)
-
-        # Any other cleanup procedures
+        # Invoke cleanup procedures
         worker.app.zato_wsgi_app.cleanup_on_stop()
 
 # ################################################################################################################################
