@@ -104,6 +104,9 @@ loggers:
     '':
         level: INFO
         handlers: [stdout, default]
+    'gunicorn.main':
+        level: INFO
+        handlers: [stdout, default]
     zato:
         level: INFO
         handlers: [stdout, default]
