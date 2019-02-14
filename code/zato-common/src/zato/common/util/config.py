@@ -15,6 +15,7 @@ import os
 from bunch import Bunch
 
 # Python 2/3 compatibility
+from builtins import bytes
 from past.builtins import basestring
 
 # Zato
@@ -31,6 +32,8 @@ def resolve_value(key, value, decrypt_func=None, _default=object(), _secrets=SEC
 
     if not value:
         return value
+
+    value = value.decode('utf8') if isinstance(value, bytes) else value
 
     # It may be an environment variable ..
     if value.startswith('$'):
