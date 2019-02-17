@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+
+# Python 2/3 compatibility
+from six import add_metaclass
 
 # Zato
 from zato.common.broker_message import SECURITY
@@ -23,8 +26,10 @@ get_list_docs = 'TLS CA certs'
 broker_message = SECURITY
 broker_message_prefix = 'TLS_CA_CERT_'
 list_func = tls_ca_cert_list
-skip_input_params = ['info',]
-output_optional_extra = ['info',]
+skip_input_params = ['info']
+output_optional_extra = ['info']
+
+# ################################################################################################################################
 
 def instance_hook(service, input, instance, attrs):
 
@@ -39,26 +44,45 @@ def instance_hook(service, input, instance, attrs):
         full_path = store_tls(service.server.tls_dir, service.request.input.value)
         service.logger.info('CA certificate saved under `%s`', full_path)
 
+# ################################################################################################################################
+
 def response_hook(service, input, instance, attrs, service_type):
     if service_type == 'create_edit':
         service.response.payload.info = instance.info
+
+# ################################################################################################################################
 
 def broker_message_hook(service, input, instance, attrs, service_type):
     if service_type == 'delete':
         input.value = instance.value
 
+# ################################################################################################################################
+
 def delete_hook(service, input, instance, attrs):
     delete_tls_material_from_fs(service.server, instance.info, get_tls_ca_cert_full_path)
 
+# ################################################################################################################################
+
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = TLSCACert.name,
-    __metaclass__ = GetListMeta
 
-class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+# ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
+# ################################################################################################################################
+
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
+
+# ################################################################################################################################
+
+@add_metaclass(DeleteMeta)
+class Delete(AdminService):
+    pass
+
+# ################################################################################################################################

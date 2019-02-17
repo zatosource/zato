@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from cPickle import dumps as pickle_dumps
+from base64 import b64encode
 from logging import getLogger
 from traceback import format_exc
 
@@ -28,6 +28,11 @@ from zato.cache import Cache as _CyCache
 from zato.common import CACHE, ZATO_NOT_GIVEN
 from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
 from zato.common.util import parse_extra_into_dict
+
+# Python 2/3 compatibility
+from future.utils import iteritems, itervalues
+from past.builtins import basestring
+from zato.common.py23_ import pickle_dumps
 
 # ################################################################################################################################
 
@@ -596,7 +601,7 @@ class Cache(object):
     def itervalues(self):
         """ Returns an iterator over all values in the cache - like dict.itervalues().
         """
-        return self.impl.itervalues()
+        return itervalues(self.impl)
 
 # ################################################################################################################################
 
@@ -610,7 +615,7 @@ class Cache(object):
     def iteritems(self):
         """ Returns an iterator over all items in the cache - like dict.iteritems().
         """
-        return self.impl.iteritems()
+        return iteritems(self.impl)
 
 # ################################################################################################################################
 
@@ -638,14 +643,14 @@ class Cache(object):
                 try:
                     _sleep(interval)
                     deleted = self.impl.delete_expired()
-                except Exception, e:
-                    logger.warn('Exception while deleting expired keys %s', format_exc(e))
+                except Exception:
+                    logger.warn('Exception while deleting expired keys %s', format_exc())
                     _sleep(2)
                 else:
                     if deleted:
                         logger.info('Cache `%s` deleted keys expired in the last %ss - %s', self.config.name, interval, deleted)
-        except Exception, e:
-            logger.warn('Exception in _delete_expired loop %s', format_exc(e))
+        except Exception:
+            logger.warn('Exception in _delete_expired loop %s', format_exc())
 
 # ################################################################################################################################
 
@@ -850,7 +855,8 @@ class CacheAPI(object):
                     data['is_value_pickled'] = False
                 else:
                     data['is_value_pickled'] = True
-                    data['value'] = _pickle_dumps(value)
+                    value = _pickle_dumps(key)
+                    data['value'] = b64encode(value)
             else:
                 data['is_value_pickled'] = False
 
@@ -877,8 +883,8 @@ class CacheAPI(object):
                 servers = [elem.strip() for elem in config.servers.splitlines()]
                 cache = _MemcachedClient(servers, asbool(config.is_debug), **parse_extra_into_dict(config.extra))
                 self._add_cache(config, cache)
-            except Exception, e:
-                logger.warn(format_exc(e))
+            except Exception:
+                logger.warn(format_exc())
 
         spawn(impl)
 

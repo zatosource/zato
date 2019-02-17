@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,8 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from base64 import b64decode
 from contextlib import closing
-from json import dumps, loads
+from json import loads
 
 # Zato
 from zato.client import AnyServiceInvoker
@@ -18,6 +19,7 @@ from zato.common import INFO_FORMAT, SERVER_JOIN_STATUS, SERVER_UP_STATUS
 from zato.common.broker_message import SERVER_STATUS
 from zato.common.odb.query import server_list
 from zato.common.component_info import format_info, get_info, get_worker_pids
+from zato.common.util.json_ import dumps
 from zato.server.service import List, Service
 
 # ################################################################################################################################
@@ -51,7 +53,8 @@ class GetInfo(Service):
                         channel.url_path, (sec_def.username, sec_def.password))
                     response = client.invoke('zato.info.get-server-info')
                     if response.ok:
-                        response = loads(response.inner.text)['zato_service_invoke_response']['response'].decode('base64')
+                        response = loads(response.inner.text)['zato_service_invoke_response']['response']
+                        response = b64decode(response)
                         response = loads(response)['response']
                         server_info['info'] = loads(response['info'])
                     else:

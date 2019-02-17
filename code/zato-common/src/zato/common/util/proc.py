@@ -6,6 +6,8 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 # stdlib
 import os
 import sys
@@ -15,6 +17,9 @@ from time import time, sleep
 
 # Sarge
 from sarge import run as sarge_run, shell_format
+
+# Python 2/3 compatibility
+from six import PY2
 
 # Zato
 from zato.common import CLI_ARG_SEP
@@ -27,6 +32,11 @@ logger = getLogger(__name__)
 
 stderr_sleep_fg = 0.9
 stderr_sleep_bg = 1.2
+
+# ################################################################################################################################
+
+# This is for convenience of switching to a newer version of sarge in the future. Newer versions use async_ instead of async.
+async_keyword = 'async' if PY2 else 'async'
 
 # ################################################################################################################################
 
@@ -58,7 +68,7 @@ class _StdErr(object):
 # ################################################################################################################################
 
 def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_options='', on_keyboard_interrupt=None,
-    failed_to_start_err=-100, extra_options=None, stderr_path=None, stdin_data=None):
+    failed_to_start_err=-100, extra_options=None, stderr_path=None, stdin_data=None, async_keyword=async_keyword):
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
     stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(component_name.replace(' ','')))[1]
@@ -71,7 +81,7 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
         _stderr = _StdErr(stderr_path, stderr_sleep_fg if run_in_fg else stderr_sleep_bg)
 
         run_kwargs = {
-            'async': False if run_in_fg else True,
+            async_keyword: False if run_in_fg else True,
         }
 
         # Do not send input if it does not really exist because it prevents pdb from attaching to a service's stdin
@@ -106,9 +116,14 @@ def start_python_process(component_name, run_in_fg, py_path, program_dir, on_key
     options = CLI_ARG_SEP.join('{}={}'.format(k, v) for k, v in options.items())
 
     py_path_option = shell_format('-m {0}', py_path)
-    program_dir_option = shell_format('{0}', program_dir)
+    program_dir_option = shell_format('{0}', program_dir) if program_dir else ''
 
     extra_cli_options = '{} {} {}'.format(py_path_option, program_dir_option, options)
+
+    extra_cli_options = '{} '.format(py_path_option)
+    if program_dir_option:
+        extra_cli_options += '{} '.format(program_dir_option)
+    extra_cli_options += '{}'.format(options)
 
     return start_process(component_name, get_executable(), run_in_fg, None, extra_cli_options, on_keyboard_interrupt,
         failed_to_start_err, extra_options, stderr_path, stdin_data)

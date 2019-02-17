@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,13 +11,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Django
 from django import forms
 
+# Python 2/3 compatibility
+from future.utils import iteritems
+
 # Zato
 from zato.common import DELEGATED_TO_RBAC, SIMPLE_IO, ZATO_NONE, ZATO_SEC_USE_RBAC
 
 # ################################################################################################################################
 
 INITIAL_CHOICES_DICT = {'': '----------'}
-INITIAL_CHOICES = INITIAL_CHOICES_DICT.items()[0]
+INITIAL_CHOICES = list(iteritems(INITIAL_CHOICES_DICT))[0]
 
 # ################################################################################################################################
 
@@ -177,7 +180,7 @@ class SearchForm(forms.Form):
         #
 
         if len(clusters) == 1:
-            initial = dict(data.iteritems())
+            initial = dict(iteritems(data))
             initial.update({'cluster':clusters[0].id})
             self.zato_auto_submit = True
         else:
@@ -212,7 +215,7 @@ class DataFormatForm(forms.Form):
         self.fields['data_format'].choices = []
         self.fields['data_format'].choices.append(INITIAL_CHOICES)
 
-        for code, name in (self.data_formats_allowed or SIMPLE_IO.COMMON_FORMAT).iteritems():
+        for code, name in iteritems(self.data_formats_allowed or SIMPLE_IO.COMMON_FORMAT):
             self.fields['data_format'].choices.append([code, name])
 
 # ################################################################################################################################

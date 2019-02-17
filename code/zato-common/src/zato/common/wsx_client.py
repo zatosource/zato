@@ -12,7 +12,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import subprocess
 from datetime import datetime, timedelta
-from json import dumps, loads
+from json import loads
 from socket import error as SocketError
 from traceback import format_exc
 from uuid import uuid4
@@ -29,6 +29,7 @@ from ws4py.client.geventclient import WebSocketClient
 
 # Zato
 from zato.common.util import spawn_greenlet
+from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
 
@@ -345,15 +346,33 @@ class Client(object):
     def _run(self, max_wait=10):
 
         needs_connect = True
-        now = datetime.utcnow()
+        start = now = datetime.utcnow()
+
+        # In the first few seconds, do not warn about socket errors in case
+        # the other end is intrinsically slow to connect to.
+        warn_from = start + timedelta(seconds=3)
+        use_warn = False
+
+        # Wait for max_wait seconds until we have the connection
         until = now + timedelta(seconds=max_wait)
 
         while needs_connect and now < until:
             try:
                 self.conn.connect()
             except SocketError as e:
-                logger.warn('Socket error caught `%s` while connecting to WSX `%s`', e, self.config.address)
+
+                if use_warn:
+                    log_func = logger.warn
+                else:
+                    if now >= warn_from:
+                        log_func = logger.warn
+                        use_warn = True
+                    else:
+                        log_func = logger.debug
+
+                log_func('Socket error caught `%s` while connecting to WSX `%s`', e, self.config.address)
                 sleep(2)
+                now = datetime.utcnow()
             else:
                 needs_connect = False
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -49,7 +49,7 @@ class SwiftWrapper(object):
                  ssl_compression=self.config.needs_tls_compr, retry_on_ratelimit=self.config.should_retr_ratelimit)
         try:
             conn.head_account()
-        except Exception, e:
-            self.logger.warn('Could not HEAD an account (%s), e:`%s`', self.config.name, format_exc(e))
+        except Exception:
+            self.logger.warn('Could not HEAD an account (%s), e:`%s`', self.config.name, format_exc())
 
         self.client.put_client(conn)

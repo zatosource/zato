@@ -9,9 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from cStringIO import StringIO
+from io import StringIO
 from logging import DEBUG
-from pprint import pprint
 
 # Django
 import django
@@ -145,7 +144,6 @@ class HTMLService(Service):
 
         if self.logger.isEnabledFor(DEBUG):
             buff = StringIO()
-            pprint(ctx, buff)
             self.logger.debug(buff.getvalue())
             buff.close()
 

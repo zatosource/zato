@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -28,6 +28,9 @@ LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
 
 def update_globals(config, base_dir='.'):
     globals()['DATABASES'] = {'default': {}}
+
+    for name in 'zato_secret_key', 'well_known_data', 'DATABASE_PASSWORD', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':
+        config[name] = config[name].encode('utf8')
 
     cm = WebAdminCryptoManager.from_secret_key(
         config['zato_secret_key'], config['well_known_data'], stdin_data=read_stdin_data())

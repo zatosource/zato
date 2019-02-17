@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -118,10 +118,14 @@ class UnregisterWSSubKey(AdminService):
 class DeleteByServer(AdminService):
     """ Deletes information about a previously established WebSocket connection. Called when a server shuts down.
     """
+    class SimpleIO(AdminSIO):
+        input_required = 'needs_pid',
+
     def handle(self):
 
         with closing(self.odb.session()) as session:
-            clients = web_socket_clients_by_server_id(session, self.server.id)
+            server_pid = self.server.pid if self.request.input.needs_pid else None
+            clients = web_socket_clients_by_server_id(session, self.server.id, server_pid)
             clients.delete()
             session.commit()
 
@@ -140,8 +144,8 @@ class NotifyPubSubMessage(AdminService):
         try:
             self.response.payload.r = self.server.worker_store.web_socket_api.notify_pubsub_message(
                 req.channel_name, self.cid, req.pub_client_id, req.request)
-        except Exception, e:
-            self.logger.warn(format_exc(e))
+        except Exception:
+            self.logger.warn(format_exc())
             raise
 
 # ################################################################################################################################

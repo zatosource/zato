@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -24,6 +24,9 @@ cloghandler = cloghandler # For pyflakes
 
 # YAML
 import yaml
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.common.util import absjoin, get_config, store_pidfile
@@ -61,7 +64,7 @@ def main():
         's' if config.main.crypto.use_tls else '', config.main.bind.host, config.main.bind.port))
 
     # Fix up configuration so it uses the format internal utilities expect
-    for name, job_config in get_config(repo_location, 'startup_jobs.conf', needs_user_config=False).items():
+    for name, job_config in iteritems(get_config(repo_location, 'startup_jobs.conf', needs_user_config=False)):
         job_config['name'] = name
         config.startup_jobs.append(job_config)
 

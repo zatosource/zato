@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime
-from httplib import INTERNAL_SERVER_ERROR, responses
+from http.client import INTERNAL_SERVER_ERROR, responses
 from logging import getLogger, INFO
 from traceback import format_exc
 
@@ -19,6 +19,10 @@ from pytz import UTC
 
 # tzlocal
 from tzlocal import get_localzone
+
+# Python 2/3 compatibility
+from future.utils import iteritems
+from past.builtins import unicode
 
 # Zato
 from zato.common import NO_REMOTE_ADDRESS
@@ -62,8 +66,8 @@ class HTTPHandler(object):
             payload = self.request_dispatcher_dispatch(cid, request_ts_utc, wsgi_environ, self.worker_store) or b''
 
         # Any exception at this point must be our fault
-        except Exception, e:
-            tb = format_exc(e)
+        except Exception:
+            tb = format_exc()
             wsgi_environ['zato.http.response.status'] = b'%s %s' % (INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
             error_msg = b'`%s` Exception caught `%s`' % (cid, tb)
             logger.error(error_msg)
@@ -79,8 +83,7 @@ class HTTPHandler(object):
             # 404 Not Found since we cannot find the channel
             channel_name = '-'
 
-        start_response(wsgi_environ['zato.http.response.status'],
-            ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].iteritems()))
+        start_response(wsgi_environ['zato.http.response.status'], iteritems(wsgi_environ['zato.http.response.headers']))
 
         if isinstance(payload, unicode):
             payload = payload.encode('utf-8')

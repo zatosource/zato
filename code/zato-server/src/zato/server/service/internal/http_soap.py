@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from json import dumps
 from traceback import format_exc
 
 # Paste
@@ -24,6 +23,7 @@ from zato.common.util.sql import get_security_by_id, elems_with_opaque, set_inst
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
+from zato.common.util.json_ import dumps
 from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
@@ -415,9 +415,8 @@ class Edit(_CreateEdit):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                msg = 'Could not update the object, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('Object could not be updated, e:`{}`' % format_exc())
                 session.rollback()
 
                 raise
@@ -455,10 +454,9 @@ class Delete(AdminService, _HTTPSOAPService):
                 self.notify_worker_threads({'name':old_name, 'transport':old_transport,
                     'old_url_path':old_url_path, 'old_soap_action':old_soap_action}, action)
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                msg = 'Could not delete the object, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Object could not be deleted, e:`{}`', format_exc())
 
                 raise
 

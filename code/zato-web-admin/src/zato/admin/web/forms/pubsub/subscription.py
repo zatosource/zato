@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -96,9 +96,9 @@ class CreateForm(forms.Form):
 
         add_select(self, 'out_amqp_id', data_list.out_amqp_list)
 
-        add_select(self, 'active_status', PUBSUB.QUEUE_ACTIVE_STATUS)
-        add_select(self, 'delivery_method', PUBSUB.DELIVERY_METHOD)
-        add_select(self, 'delivery_data_format', PUBSUB.DATA_FORMAT)
+        add_select(self, 'active_status', PUBSUB.QUEUE_ACTIVE_STATUS())
+        add_select(self, 'delivery_method', PUBSUB.DELIVERY_METHOD())
+        add_select(self, 'delivery_data_format', PUBSUB.DATA_FORMAT())
 
         add_http_soap_select(self, 'out_rest_http_soap_id', req, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP)
         add_http_soap_select(self, 'out_soap_http_soap_id', req, CONNECTION.OUTGOING, URL_TYPE.SOAP)

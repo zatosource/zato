@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -110,9 +110,9 @@ class _CreateEdit(AdminService):
                 self.response.payload.name = item.name
                 self.response.payload.def_name = item.definition.name
 
-            except Exception, e:
+            except Exception:
                 msg = 'Could not %s an OpenStack Swift notification definition, e:`%s`'
-                self.logger.error(msg, self.source_service_type, format_exc(e))
+                self.logger.error(msg, self.source_service_type, format_exc())
                 session.rollback()
 
                 raise
@@ -172,10 +172,9 @@ class Delete(AdminService):
                 msg = {'action': NOTIF.CLOUD_OPENSTACK_SWIFT_DELETE.value, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg)
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                msg = 'Could not delete the OpenStack Swift notification definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('OpenStack Swift notification definition could not be deleted, e:`{}`', format_exc())
 
                 raise
 
@@ -196,8 +195,8 @@ class RunNotifier(NotifierService):
     def _get_data(self, client, config, container, name):
         try:
             return client.get_object(container, name)[1]
-        except Exception, e:
-            self.logger.warn('Could not get `%s` from `%s`, e:`%s`', container, name, format_exc(e))
+        except Exception:
+            self.logger.warn('Could not get `%s` from `%s`, e:`%s`', container, name, format_exc())
 
     def _prepare_service_request(self, ext_result, item, container, path, full_name):
 

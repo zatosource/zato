@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,8 +13,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from cStringIO import StringIO
 from datetime import datetime
+from io import StringIO
 from traceback import format_exc
 
 # anyjson
@@ -335,8 +335,7 @@ def index(req):
                     seconds = job_elem.seconds or ''
                     repeats = job_elem.repeats or ''
 
-                    ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes,
-                                        seconds, repeats)
+                    ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes, seconds, repeats)
                     job.interval_based = ib_job
 
                 elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
@@ -392,10 +391,9 @@ def index(req):
                     response['message'] = _get_success_message(action, job_type, job_name)
                     response = dumps(response)
                 return HttpResponse(response, content_type='application/javascript')
-            except Exception, e:
-                msg = ('Could not invoke action [%s], job_type:[%s], e:[%s]'
-                       'req.POST:[%s], req.GET:[%s]') % (action, job_type,
-                          format_exc(), pprint(req.POST), pprint(req.GET))
+            except Exception:
+                msg = 'Could not invoke action `{}`, job_type:`{}`, e:`{}` req.POST:`{}`, req.GET:`{}'.format(
+                    action, job_type, format_exc(), pprint(req.POST), pprint(req.GET))
 
                 logger.error(msg)
                 return HttpResponseServerError(msg)
@@ -420,8 +418,8 @@ def index(req):
         return_data.update(get_js_dt_format(req.zato.user_profile))
 
         return TemplateResponse(req, 'zato/scheduler.html', return_data)
-    except Exception, e:
-        msg = '<pre>Could not invoke the method, e:[{0}]</pre>'.format(format_exc(e))
+    except Exception:
+        msg = '<pre>Method could not be invoked, e:`{}`</pre>'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -437,8 +435,8 @@ def execute(req, job_id, cluster_id):
     """
     try:
         req.zato.client.invoke('zato.scheduler.job.execute', {'id':job_id})
-    except Exception, e:
-        msg = 'Could not execute the job. job_id:[{0}], cluster_id:[{1}], e:[{2}]'.format(job_id, cluster_id, format_exc(e))
+    except Exception:
+        msg = 'Job could not be executed. job_id:`{}`, cluster_id:`{}`, e:`{}`'.format(job_id, cluster_id, format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:

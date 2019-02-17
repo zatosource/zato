@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -110,9 +110,14 @@ class Create(ZatoCommand):
         zato_secret_key = WebAdminCryptoManager.generate_key()
         cm = WebAdminCryptoManager.from_secret_key(zato_secret_key)
 
-        django_secret_key = uuid4().hex
+        django_secret_key = uuid4().hex.encode('utf8')
         django_site_id = getrandbits(20)
+
         admin_invoke_password = getattr(args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password')
+        admin_invoke_password = admin_invoke_password.encode('utf8')
+
+        odb_password = args.odb_password or ''
+        odb_password = odb_password.encode('utf8')
 
         config = {
             'host': web_admin_host,
@@ -120,10 +125,10 @@ class Create(ZatoCommand):
             'db_type': args.odb_type,
             'log_config': 'logging.conf',
             'zato_secret_key':zato_secret_key,
-            'well_known_data': cm.encrypt(well_known_data),
+            'well_known_data': cm.encrypt(well_known_data.encode('utf8')),
             'DATABASE_NAME': args.odb_db_name or args.sqlite_path,
             'DATABASE_USER': args.odb_user or '',
-            'DATABASE_PASSWORD': cm.encrypt(args.odb_password) if args.odb_password else '',
+            'DATABASE_PASSWORD': cm.encrypt(odb_password),
             'DATABASE_HOST': args.odb_host or '',
             'DATABASE_PORT': args.odb_port or '',
             'SITE_ID': django_site_id,
@@ -131,6 +136,9 @@ class Create(ZatoCommand):
             'ADMIN_INVOKE_NAME':'admin.invoke',
             'ADMIN_INVOKE_PASSWORD':cm.encrypt(admin_invoke_password),
         }
+
+        for name in 'zato_secret_key', 'well_known_data', 'DATABASE_PASSWORD', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':
+            config[name] = config[name].decode('utf8')
 
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write(
             common_logging_conf_contents.format(log_path='./logs/web-admin.log'))

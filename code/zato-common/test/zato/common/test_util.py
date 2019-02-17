@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from sys import maxint
 from unittest import TestCase
 from uuid import uuid4
 
@@ -22,6 +21,7 @@ from lxml import etree
 # Zato
 from zato.common import ParsingException, soap_body_xpath, zato_path
 from zato.common import util
+from zato.common.py23_ import maxint
 from zato.common.test.tls_material import ca_cert
 
 # ################################################################################################################################
@@ -61,10 +61,7 @@ class UtilsTestCase(TestCase):
     def test_uncamelify(self):
         original = 'ILikeToReadWSDLDocsNotReallyNOPENotMeQ'
         expected1 = 'i-like-to-read-wsdl-docs-not-really-nope-not-me-q'
-        expected2 = 'I_LIKE_TO_READ_WSDL_DOCS_NOT_REALLY_NOPE_NOT_ME_Q'
-
         self.assertEquals(util.uncamelify(original), expected1)
-        self.assertEquals(util.uncamelify(original, '_', unicode.upper), expected2)
 
 # ################################################################################################################################
 

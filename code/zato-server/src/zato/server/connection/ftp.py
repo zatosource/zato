@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,7 +15,7 @@ from threading import RLock
 from traceback import format_exc
 
 # pyfilesystem
-from fs.ftpfs import FTPFS, _GLOBAL_DEFAULT_TIMEOUT
+from fs.ftpfs import FTPFS
 
 # Zato
 from zato.common import Inactive, SECRET_SHADOW, TRACE1
@@ -41,7 +41,7 @@ class FTPStore(object):
         """
         self.conn_params[params.name] = params
 
-        msg = 'FTP params added:[{!r}]'
+        msg = 'FTP params added:`{!r}`'
 
         if logger.isEnabledFor(TRACE1):
             logger.log(TRACE1, msg.format(params))
@@ -67,8 +67,9 @@ class FTPStore(object):
         with self._lock:
             params = self.conn_params[name]
             if params.is_active:
-                timeout = float(params.timeout) if params.timeout else _GLOBAL_DEFAULT_TIMEOUT
-                return FTPFacade(params.host, params.user, params.get('password'), params.acct, timeout, int(params.port), params.dircache)
+                timeout = float(params.timeout) if params.timeout else 180
+                return FTPFacade(params.host, params.user, params.get('password'), params.acct, timeout,
+                    int(params.port), params.dircache)
             else:
                 raise Inactive(params.name)
 
@@ -80,8 +81,8 @@ class FTPStore(object):
                 try:
                     if ftp:
                         ftp.close()
-                except Exception, e:
-                    msg = 'Could not close the FTP connection [{0}], e [{1}]'.format(params.name, format_exc(e))
+                except Exception:
+                    msg = 'Could not close the FTP connection `{}`, e:`{}`'.format(params.name, format_exc())
                     logger.warn(msg)
                 finally:
                     self._add(params)
@@ -89,15 +90,15 @@ class FTPStore(object):
             if old_name and old_name != params.name:
                 del self.conn_params[old_name]
 
-            msg = 'FTP connection stored, name:[{}], old_name:[{}]'.format(params.name, old_name)
+            msg = 'FTP connection stored, name:`{}`, old_name:`{}`'.format(params.name, old_name)
             logger.info(msg)
 
     def change_password(self, name, password):
         with self._lock:
             self.conn_params[name].password = password
-            logger.info('Password updated - FTP connection [{}]'.format(name))
+            logger.info('Password updated - FTP connection `{}`'.format(name))
 
     def delete(self, name):
         with self._lock:
             del self.conn_params[name]
-            logger.info('FTP connection [{}] deleted'.format(name))
+            logger.info('FTP connection `{}` deleted'.format(name))

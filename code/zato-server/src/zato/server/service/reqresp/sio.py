@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -24,11 +24,17 @@ from lxml.objectify import Element
 # Paste
 from paste.util.converters import asbool
 
+# Python 2/3 compatibility
+from builtins import bytes
+from past.builtins import cmp, unicode
+
 # Zato
 from zato.common import APISPEC, DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, path, SECRETS, \
      ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.exception import BadRequest, Reportable
 from zato.common.pubsub import PubSubMessage
+
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
@@ -455,7 +461,7 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
 
         return value
 
-    except Exception, e:
+    except Exception as e:
         if isinstance(e, Reportable):
             e.cid = cid
             raise
@@ -472,7 +478,12 @@ class SIOConverter(object):
     """ A class which knows how to convert values into the types defined in a service's SimpleIO config.
     """
     def convert(self, *params):
-        return convert_sio(*params)
+        value = convert_sio(*params)
+
+        if self.zato_bytes_to_str_encoding and isinstance(value, bytes):
+            value = value.decode(self.zato_bytes_to_str_encoding)
+
+        return value
 
 # ################################################################################################################################
 
@@ -486,9 +497,9 @@ convert_from_dict = convert_from_json
 def convert_from_xml(payload, param_name, cid, is_required, is_complex, default_value, path_prefix, use_text):
     try:
         elem = path('{}.{}'.format(path_prefix, param_name), is_required).get_from(payload)
-    except ParsingException, e:
-        msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
-            etree.tostring(payload), format_exc(e))
+    except ParsingException:
+        msg = 'Caught an exception while parsing, payload:`<![CDATA[{}]]>`, e:`{}`'.format(
+            etree.tostring(payload), format_exc())
         raise ParsingException(cid, msg)
 
     if is_complex:
@@ -568,7 +579,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
 
     else:
         if value is not None and not isinstance(param, COMPLEX_VALUE):
-            if isinstance(value, str):
+            if isinstance(value, bytes):
                 value = value.decode('utf-8')
             else:
                 value = unicode(value)

@@ -11,12 +11,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from binascii import unhexlify
 from contextlib import closing
-from cPickle import loads as pickle_loads
 from json import loads
 from traceback import format_exc
 
 # Arrow
 from arrow import get as arrow_get
+
+# Python 2/3 compatibility
+from zato.common.py23_ import pickle_loads
 
 # Zato
 from zato.common import CHANNEL

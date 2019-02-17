@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -22,6 +22,9 @@ from configobj import ConfigObj
 
 # psutil
 from psutil import AccessDenied, Process, NoSuchProcess
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.cli import ManageCommand
@@ -72,7 +75,7 @@ class CheckConfig(ManageCommand):
 # ################################################################################################################################
 
     def check_sql_odb_server_scheduler(self, cm, conf, fs_sql_config, needs_decrypt_password=True):
-        engine_params = dict(conf['odb'].items())
+        engine_params = dict(iteritems((conf['odb'])))
         engine_params['extra'] = {}
         engine_params['pool_size'] = 1
 
@@ -108,7 +111,7 @@ class CheckConfig(ManageCommand):
 
     def on_server_check_kvdb(self, cm, conf, conf_key='kvdb'):
 
-        kvdb_config = Bunch(dict(conf[conf_key].items()))
+        kvdb_config = Bunch(dict(iteritems((conf[conf_key]))))
         kvdb = KVDB(None, kvdb_config, cm.decrypt)
         kvdb.init()
 

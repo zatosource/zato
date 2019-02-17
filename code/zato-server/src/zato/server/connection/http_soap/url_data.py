@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,17 +10,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from base64 import b64encode
 from operator import itemgetter
 from threading import RLock
 from traceback import format_exc
 
-# oauth
-from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
-     OAuthSignatureMethod_PLAINTEXT, OAuthToken
-
-# sec-wall
-from secwall.server import on_basic_auth, on_wsse_pwd
-from secwall.wsse import WSSE
+# Python 2/3 compatibility
+from future.utils import iteritems, itervalues
+from past.builtins import basestring
+from six import PY2
 
 # Zato
 from zato.bunch import Bunch
@@ -28,17 +26,44 @@ from zato.common import DATA_FORMAT, MISC, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_N
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition, update_apikey_username_to_channel
+from zato.common.util.auth import on_basic_auth, on_wsse_pwd, WSSE
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.jwt import JWT
 from zato.url_dispatcher import CyURLData, Matcher
 
+if PY2:
+    from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
+         OAuthSignatureMethod_PLAINTEXT, OAuthToken
+else:
+    class _Placeholder(object):
+        def __init__(self, *ignored_args, **ignored_kwargs):
+            pass
+
+        def _placeholder(self, *ignored_args, **ignored_kwargs):
+            pass
+
+        add_signature_method = _placeholder
+
+    OAuthDataStore = OAuthConsumer = OAuthRequest = OAuthServer = OAuthSignatureMethod_HMAC_SHA1 = \
+        OAuthSignatureMethod_PLAINTEXT = OAuthToken = _Placeholder
+
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+
 _internal_url_path_indicator = '{}/zato/'.format(MISC.SEPARATOR)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class OAuthStore(object):
     def __init__(self, oauth_config):
         self.oauth_config = oauth_config
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class URLData(CyURLData, OAuthDataStore):
     """ Performs URL matching and security checks.
@@ -163,8 +188,8 @@ class URLData(CyURLData, OAuthDataStore):
         if sec_def_type == _basic_auth:
             auth_func = self._handle_security_basic_auth
             get_func = self.basic_auth_get
-            headers['HTTP_AUTHORIZATION'] = 'Basic {}'.format(
-                '{}:{}'.format(auth['username'], auth['secret']).encode('base64'))
+            auth = b64encode('{}:{}'.format(auth['username'], auth['secret']))
+            headers['HTTP_AUTHORIZATION'] = 'Basic {}'.format(auth)
 
         elif sec_def_type == _jwt:
             auth_func = self._handle_security_jwt
@@ -176,8 +201,8 @@ class URLData(CyURLData, OAuthDataStore):
             get_func = self.vault_conn_sec_get
 
             headers['zato.http.response.headers'] = {}
-            for header_info in _vault_ws.itervalues():
-                for key, header in header_info.iteritems():
+            for header_info in itervalues(_vault_ws):
+                for key, header in iteritems(header_info):
                     headers[header] = auth[key]
 
         else:
@@ -290,9 +315,9 @@ class URLData(CyURLData, OAuthDataStore):
 
         try:
             result = on_wsse_pwd(self._wss, url_config, body, False)
-        except Exception, e:
+        except Exception:
             if enforce_auth:
-                msg = 'Could not parse the WS-Security data, body:[{}], e:[{}]'.format(body, format_exc(e))
+                msg = 'Could not parse the WS-Security data, body:`{}`, e:`{}`'.format(body, format_exc())
                 raise Unauthorized(cid, msg, 'zato-wss')
             else:
                 return False
@@ -344,9 +369,9 @@ class URLData(CyURLData, OAuthDataStore):
 
         try:
             self._oauth_server.verify_request(oauth_request)
-        except Exception, e:
+        except Exception as e:
             if enforce_auth:
-                msg = 'Signature verification failed, wsgi_environ:[%r], e:[%s], e.message:[%s]'
+                msg = 'Signature verification failed, wsgi_environ:`%r`, e:`%s`, e.message:`%s`'
                 logger.error(msg, wsgi_environ, format_exc(e), e.message)
                 raise Unauthorized(cid, 'Signature verification failed', 'OAuth')
             else:
@@ -502,8 +527,8 @@ class URLData(CyURLData, OAuthDataStore):
                 else:
                     vault_response = self._vault_conn_check_headers(client, wsgi_environ, sec_def_config)
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
             if enforce_auth:
                 self._enforce_vault_sec(cid, sec_def.name)
             else:
@@ -1171,7 +1196,7 @@ class URLData(CyURLData, OAuthDataStore):
             sec_config = getattr(self, '{}_config'.format(msg['sec_type']))
             config_item = sec_config[msg['security_name']]
 
-            for k, v in config_item['config'].items():
+            for k, v in iteritems(config_item['config']):
                 sec_info.sec_def[k] = config_item['config'][k]
         else:
             sec_info.sec_def = ZATO_NONE

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,6 +23,9 @@ from gevent import sleep
 
 # Redis
 import redis
+
+# Python 2/3 compatibility
+from builtins import bytes
 
 # Zato
 from zato.common import BROKER, ZATO_NONE
@@ -49,7 +52,7 @@ CODE_NO_SUCH_FROM_KEY = 11
 def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
 
     # Imported here so it's guaranteed to be monkey-patched using gevent.monkey.patch_all by whoever called us
-    from thread import start_new_thread
+    from zato.common.py23_ import start_new_thread
 
     class _ClientThread(object):
         def __init__(self, kvdb, pubsub, name, topic_callbacks=None, on_message=None):
@@ -88,10 +91,14 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                         try:
                             for msg in self.client.listen():
                                 try:
-                                    self.on_message(Bunch(msg))
+                                    msg = Bunch(msg)
+                                    msg.channel = msg.channel
+                                    if isinstance(msg.data, bytes):
+                                        msg.data = msg.data
+                                    self.on_message(msg)
                                 except Exception:
                                     logger.warn('Could not handle broker message `%s`, e:`%s`', msg, format_exc())
-                        except redis.ConnectionError, e:
+                        except redis.ConnectionError as e:
                             if e.message not in EXPECTED_CONNECTION_ERRORS:  # Hm, there's no error code, only the message
                                 logger.warn('Caught Redis exception `%s`', e.message)
                                 self.set_up_pub_sub_client()
@@ -104,7 +111,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
 
         def publish(self, topic, msg):
             if has_debug:
-                logger.debug('Publishing `%s` to `%s`', msg, topic)
+                logger.debug('Publishing `%r` (%s) to `%s` (%s)', msg, type(msg), topic, self.client)
             return self.client.publish(topic, msg)
 
         def close(self):
@@ -160,7 +167,8 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
         def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *ignored_args, **ignored_kwargs):
             msg['msg_type'] = msg_type
             topic = TOPICS[msg_type]
-            self.pub_client.publish(topic, dumps(msg))
+            msg = dumps(msg)
+            self.pub_client.publish(topic, msg)
 
         def invoke_async(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, expiration=BROKER.DEFAULT_EXPIRATION):
             msg['msg_type'] = msg_type
@@ -173,7 +181,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                 raise
             else:
                 topic = TOPICS[msg_type]
-                key = broker_msg = b'zato:broker{}:{}'.format(KEYS[msg_type], new_cid())
+                key = broker_msg = 'zato:broker{}:{}'.format(KEYS[msg_type], new_cid())
 
                 self.kvdb.conn.set(key, str(msg))
                 self.kvdb.conn.expire(key, expiration)  # In seconds
@@ -182,7 +190,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
 
         def on_message(self, msg):
             if has_debug:
-                logger.debug('Got broker message `%s`', msg)
+                logger.warn('Got broker message `%s`', msg)
 
             if msg.type == 'message':
 
@@ -198,8 +206,12 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                         if not payload:
                             logger.info('No KVDB payload for key `%s` (already expired?)', tmp_key)
                         else:
+                            if isinstance(payload, bytes):
+                                payload = payload
                             payload = loads(payload)
                 else:
+                    if isinstance(msg.data, bytes):
+                        msg.data = msg.data
                     payload = loads(msg.data)
 
                 if payload:

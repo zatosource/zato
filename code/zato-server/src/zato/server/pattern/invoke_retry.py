@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
@@ -22,6 +21,7 @@ from gevent import sleep
 # Zato
 from zato.common import ZatoException
 from zato.common.util import new_cid
+from zato.common.util.json_ import dumps
 
 logger = getLogger(__name__)
 
@@ -98,8 +98,8 @@ class InvokeRetry(object):
 
             try:
                 self.invoking_service.server.service_store.name_to_impl_name[callback]
-            except KeyError, e:
-                msg = 'Service:`{}` does not exist, e:`{}`'.format(callback, format_exc(e))
+            except KeyError:
+                msg = 'Service:`{}` does not exist, e:`{}`'.format(callback, format_exc())
                 logger.error(msg)
                 raise ValueError(msg)
 
@@ -153,9 +153,9 @@ class InvokeRetry(object):
 
         try:
             result = self.invoking_service.invoke(target, *args, **kwargs)
-        except Exception, e:
+        except Exception as e:
 
-            msg = 'Could not invoke:`{}`, cid:`{}`, e:`{}`'.format(target, self.invoking_service.cid, format_exc(e))
+            msg = 'Could not invoke:`{}`, cid:`{}`, e:`{}`'.format(target, self.invoking_service.cid, format_exc())
             logger.warn(msg)
 
             # How we handle the exception depends on whether the caller wants us
@@ -176,7 +176,7 @@ class InvokeRetry(object):
                 while remaining > 1:
                     try:
                         result = self.invoking_service.invoke(target, *args, **kwargs)
-                    except Exception, e:
+                    except Exception as e:
                         msg = retry_failed_msg(
                             (retry_repeats-remaining)+1, retry_repeats, target, retry_seconds, self.invoking_service.cid, e)
                         logger.info(msg)

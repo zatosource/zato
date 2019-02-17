@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps
 from traceback import format_exc
 
 # Django
@@ -21,6 +20,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms.sms.twilio import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import SMSTwilio
+from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
 
@@ -123,8 +123,8 @@ def send_message_action(req, cluster_id, conn_id, name_slug):
             return HttpResponse(dumps({'msg': 'OK, message sent successfully.'}), content_type='application/javascript')
         else:
             raise Exception(response.details)
-    except Exception, e:
-        msg = 'Caught an exception, e:`{}`'.format(format_exc(e))
+    except Exception:
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,14 +9,18 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import socket, ssl
-from httplib import OK
+import socket
+import ssl
+from http.client import OK
 from tempfile import NamedTemporaryFile
 from threading import Thread
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 # psutil
 import psutil
+
+# Python 2/3 compatibility
+from past.builtins import xrange
 
 # Zato
 from zato.common import ZATO_OK

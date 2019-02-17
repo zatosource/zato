@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # dictalchemy
 from dictalchemy.utils import asdict
+
+# Python 2/3 compatibility
+from six import add_metaclass
 
 # Zato
 from zato.common import CACHE as _COMMON_CACHE
@@ -70,24 +73,27 @@ class Get(AdminService):
 
 # ################################################################################################################################
 
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = CacheBuiltin.name,
-    __metaclass__ = GetListMeta
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
 # ################################################################################################################################
 
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+    pass
 
 # ################################################################################################################################
 

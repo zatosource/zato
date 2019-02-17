@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import json, logging
 from traceback import format_exc
-from xmlrpclib import Fault
+from xmlrpc.client import Fault
 
 # OrderedDict is new in 2.7
 try:
@@ -22,6 +22,9 @@ except ImportError:
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.admin.web import from_utc_to_user
@@ -41,11 +44,11 @@ def _haproxy_alive(client, lb_use_tls):
     haproxy_alive = {}
     try:
         client.is_haproxy_alive(lb_use_tls)
-    except Exception, e:
-        haproxy_alive["status"] = False
-        haproxy_alive["error"] = format_exc(e)
+    except Exception:
+        haproxy_alive['status'] = False
+        haproxy_alive['error'] = format_exc()
     else:
-        haproxy_alive["status"] = True
+        haproxy_alive['status'] = True
 
     return haproxy_alive
 
@@ -57,24 +60,24 @@ def _haproxy_stat_config(client=None, lb_config=None):
 
     # Stats URI is optional
     try:
-        stats_uri = lb_config["defaults"]["stats_uri"]
+        stats_uri = lb_config['defaults']['stats_uri']
     except KeyError:
         return None, None
     else:
-        stats_port = lb_config["frontend"]["front_http_plain"]["bind"]["port"]
+        stats_port = lb_config['frontend']['front_http_plain']['bind']['port']
         return stats_uri, stats_port
 
 def _get_validate_save_flag(cluster_id, req_post):
     """ A convenience function for checking we were told to validate & save
     a config or was it a request for validating it only.
     """
-    if "validate_save" in req_post:
+    if 'validate_save' in req_post:
         save = True
-    elif "validate" in req_post:
+    elif 'validate' in req_post:
         save = False
     else:
-        msg = "Expected a flag indicating what to do with input data. cluster_id:[{cluster_id}] req.POST:[{post}]"
-        msg = msg.format(cluster_id=cluster_id, post=req_post)
+        msg = 'Expected a flag indicating what to do with input data. cluster_id:`{}` req.POST:`{}`'
+        msg = msg.format(cluster_id, req_post)
         logger.error(msg)
         raise Exception(msg)
 
@@ -89,11 +92,11 @@ def _client_validate_save(req, func, *args):
 
     try:
         func(*args)
-    except Fault, e:
+    except Fault as e:
         msg = e.faultString
         has_error = True
-    except Exception, e:
-        msg = format_exc(e)
+    except Exception:
+        msg = format_exc()
         has_error = True
 
     if has_error:
@@ -106,7 +109,7 @@ def _client_validate_save(req, func, *args):
         else:
             return HttpResponse("Config is valid, it's safe to save it")
 
-@method_allowed("GET", "POST")
+@method_allowed('GET', 'POST')
 def remote_command(req, cluster_id):
     """ Execute a HAProxy command.
     """
@@ -118,30 +121,30 @@ def remote_command(req, cluster_id):
 
     # We need to know the HAProxy version before we can build up the select box
     # on the form.
-    commands = haproxy_stats[("1", "3")]
+    commands = haproxy_stats[('1', '3')]
 
     version_info = tuple(client.haproxy_version_info())
-    if version_info >= ("1", "4"):
-        commands.update(haproxy_stats[("1", "4")])
+    if version_info >= ('1', '4'):
+        commands.update(haproxy_stats[('1', '4')])
 
-    if req.method == "POST":
-        result = client.execute_command(req.POST["command"], req.POST["timeout"], req.POST.get("extra", ""))
+    if req.method == 'POST':
+        result = client.execute_command(req.POST['command'], req.POST['timeout'], req.POST.get('extra', ''))
         if not result.strip():
-            result = "(empty result)"
+            result = '(empty result)'
 
-        initial={"result":result}
+        initial={'result':result}
         for k, v in req.POST.items():
-            if k != "result":
+            if k != 'result':
                 initial[k] = v
         form = RemoteCommandForm(commands, initial)
     else:
         form = RemoteCommandForm(commands)
 
-    return_data = {"form":form, "cluster":cluster, "haproxy_alive":haproxy_alive, "lb_use_tls": req.zato.lb_use_tls}
+    return_data = {'form':form, 'cluster':cluster, 'haproxy_alive':haproxy_alive, 'lb_use_tls': req.zato.lb_use_tls}
 
     return TemplateResponse(req, 'zato/load_balancer/remote_command.html', return_data)
 
-@method_allowed("GET")
+@method_allowed('GET')
 def manage(req, cluster_id):
     """ GUI for managing HAProxy configuration.
     """
@@ -151,7 +154,7 @@ def manage(req, cluster_id):
     lb_start_time = from_utc_to_user(client.get_uptime_info(), req.zato.user_profile)
     lb_config = client.get_config()
     lb_work_config = client.get_work_config()
-    lb_work_config['verify_fields'] = ', '.join(['%s=%s' % (k,v) for (k, v) in sorted(lb_work_config['verify_fields'].items())])
+    lb_work_config['verify_fields'] = ', '.join(['%s=%s' % (k,v) for (k, v) in sorted(iteritems(lb_work_config['verify_fields']))])
 
     form_data = {
         'global_log_host': lb_config['global_']['log']['host'],
@@ -195,7 +198,7 @@ def manage(req, cluster_id):
 
     return TemplateResponse(req, 'zato/load_balancer/manage.html', return_data)
 
-@method_allowed("POST")
+@method_allowed('POST')
 def validate_save(req, cluster_id):
     """ A common handler for both validating and saving a HAProxy config using
     a pretty GUI form.
@@ -206,29 +209,29 @@ def validate_save(req, cluster_id):
     client = get_lb_client(cluster)
 
     lb_config = Config()
-    lb_config.global_["log"] = {}
+    lb_config.global_['log'] = {}
 
-    lb_config.frontend["front_http_plain"] = {}
-    lb_config.frontend["front_http_plain"]["bind"] = {}
+    lb_config.frontend['front_http_plain'] = {}
+    lb_config.frontend['front_http_plain']['bind'] = {}
 
-    lb_config.global_["log"]["host"] = req.POST["global_log_host"]
-    lb_config.global_["log"]["port"] = req.POST["global_log_port"]
-    lb_config.global_["log"]["level"] = req.POST["global_log_level"]
-    lb_config.global_["log"]["facility"] = req.POST["global_log_facility"]
+    lb_config.global_['log']['host'] = req.POST['global_log_host']
+    lb_config.global_['log']['port'] = req.POST['global_log_port']
+    lb_config.global_['log']['level'] = req.POST['global_log_level']
+    lb_config.global_['log']['facility'] = req.POST['global_log_facility']
 
-    lb_config.defaults["timeout_connect"] = req.POST["timeout_connect"]
-    lb_config.defaults["timeout_client"] = req.POST["timeout_client"]
-    lb_config.defaults["timeout_server"] = req.POST["timeout_server"]
+    lb_config.defaults['timeout_connect'] = req.POST['timeout_connect']
+    lb_config.defaults['timeout_client'] = req.POST['timeout_client']
+    lb_config.defaults['timeout_server'] = req.POST['timeout_server']
 
-    lb_config.frontend["front_http_plain"]["bind"]["address"] = req.POST["http_plain_bind_address"]
-    lb_config.frontend["front_http_plain"]["bind"]["port"] = req.POST["http_plain_bind_port"]
-    lb_config.frontend["front_http_plain"]["log_http_requests"] = req.POST["http_plain_log_http_requests"]
-    lb_config.frontend["front_http_plain"]["maxconn"] = req.POST["http_plain_maxconn"]
-    lb_config.frontend["front_http_plain"]["monitor_uri"] = req.POST["http_plain_monitor_uri"]
+    lb_config.frontend['front_http_plain']['bind']['address'] = req.POST['http_plain_bind_address']
+    lb_config.frontend['front_http_plain']['bind']['port'] = req.POST['http_plain_bind_port']
+    lb_config.frontend['front_http_plain']['log_http_requests'] = req.POST['http_plain_log_http_requests']
+    lb_config.frontend['front_http_plain']['maxconn'] = req.POST['http_plain_maxconn']
+    lb_config.frontend['front_http_plain']['monitor_uri'] = req.POST['http_plain_monitor_uri']
 
     for key, value in req.POST.items():
-        if key.startswith("bck_http"):
-            for token in("address", "port", "extra"):
+        if key.startswith('bck_http'):
+            for token in('address', 'port', 'extra'):
                 splitted = key.split(token)
                 if splitted[0] == key:
                     continue # We don't have the token in that key.
@@ -246,7 +249,7 @@ def validate_save(req, cluster_id):
     # Invoke the LB agent
     return _client_validate_save(req, client.validate_save, lb_config, save)
 
-@method_allowed("GET")
+@method_allowed('GET')
 def manage_source_code(req, cluster_id):
     """ Source code view for managing HAProxy configuration.
     """
@@ -256,13 +259,13 @@ def manage_source_code(req, cluster_id):
 
     haproxy_alive = _haproxy_alive(client, req.zato.lb_use_tls)
     source_code = client.get_config_source_code()
-    form = ManageLoadBalancerSourceCodeForm(initial={"source_code":source_code})
+    form = ManageLoadBalancerSourceCodeForm(initial={'source_code':source_code})
 
-    return_data = {"form": form, "haproxy_alive":haproxy_alive, "cluster":cluster, "lb_use_tls": req.zato.lb_use_tls}
+    return_data = {'form': form, 'haproxy_alive':haproxy_alive, 'cluster':cluster, 'lb_use_tls': req.zato.lb_use_tls}
 
     return TemplateResponse(req, 'zato/load_balancer/manage_source_code.html', return_data)
 
-@method_allowed("POST")
+@method_allowed('POST')
 def validate_save_source_code(req, cluster_id):
     """ A common handler for both validating and saving a HAProxy config using
     the raw HAProxy config file's view.
@@ -274,7 +277,7 @@ def validate_save_source_code(req, cluster_id):
     client = get_lb_client(cluster)
     return _client_validate_save(req, client.validate_save_source_code, req.POST["source_code"], save)
 
-@method_allowed("GET")
+@method_allowed('GET')
 def get_addresses(req, cluster_id):
     """ Return JSON-formatted addresses known to HAProxy.
     """
@@ -282,16 +285,15 @@ def get_addresses(req, cluster_id):
     client = get_lb_client(cluster)
 
     addresses = {}
-    addresses["cluster"] = {"lb_host": cluster.lb_host, "lb_agent_port":cluster.lb_agent_port}
+    addresses['cluster'] = {'lb_host': cluster.lb_host, 'lb_agent_port':cluster.lb_agent_port}
 
     try:
         lb_config = client.get_config()
-    except Exception, e:
-        msg = "Could not get load balancer's config, client:[{client!r}], e:[{e}]".format(client=client,
-                                                            e=format_exc(e))
+    except Exception:
+        msg = 'Could not get load balancer\'s config, client:`{!r}`, e:`{}'.format(client, format_exc())
         logger.error(msg)
         lb_config = None
 
-    addresses["cluster"]["lb_config"] = lb_config
+    addresses['cluster']['lb_config'] = lb_config
 
     return HttpResponse(json.dumps(addresses))

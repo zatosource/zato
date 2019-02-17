@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -52,7 +52,7 @@ class SearchResults(object):
 
         self.num_pages = num_pages
         self.cur_page = cur_page + 1 # Adding 1 because, again, the external API is 1-indexed
-        self.prev_page = self.cur_page - 1 if self.cur_page > 1 else None
+        self.prev_page = self.cur_page - 1 if self.cur_page > 1 else 0
         self.next_page = self.cur_page + 1 if self.cur_page < self.num_pages else None
         self.has_prev_page = self.prev_page >= 1
         self.has_next_page = bool(self.next_page and self.next_page <= self.num_pages) or False
