@@ -1071,6 +1071,7 @@ class GENERIC:
     class CONNECTION:
         class TYPE:
             OUTCONN_WSX = 'outconn-wsx'
+            OUTCONN_SFTP = 'outconn-sftp'
 
 class CONFIG_FILE:
     USER_DEFINED = 'user-defined'
