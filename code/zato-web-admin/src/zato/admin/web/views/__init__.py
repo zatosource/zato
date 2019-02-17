@@ -424,6 +424,8 @@ class Index(_BaseView):
 
             return_data = self.handle_return_data(return_data)
 
+            logger.info('Index data for frontend `%s`', return_data)
+
             return TemplateResponse(req, self.get_template_name() or self.template, return_data)
 
         except Exception:
@@ -469,11 +471,14 @@ class CreateEdit(_BaseView):
 
             self.input_dict.update(input_dict)
 
-            logger.debug(
-                'Request input dict `%r` out of `%r`, `%r`, `%r`, `%r`, `%r`', self.input_dict,
-                self.SimpleIO.input_required, self.SimpleIO.input_optional, self.input, self.req.GET, self.req.POST)
+            logger.info('Request self.input_dict %s', self.input_dict)
+            logger.info('Request self.SimpleIO.input_required %s', self.SimpleIO.input_required)
+            logger.info('Request self.SimpleIO.input_optional %s', self.SimpleIO.input_optional)
+            logger.info('Request self.input %s', self.input)
+            logger.info('Request self.req.GET %s', self.req.GET)
+            logger.info('Request self.req.POST %s', self.req.POST)
 
-            logger.debug('Sending `%s` to `%s`', self.input_dict, self.service_name)
+            logger.info('Sending `%s` to `%s`', self.input_dict, self.service_name)
 
             response = self.req.zato.client.invoke(self.service_name, self.input_dict)
 
@@ -496,7 +501,7 @@ class CreateEdit(_BaseView):
 
                 self.post_process_return_data(return_data)
 
-                logger.debug('CreateEdit data for frontend `%s`', return_data)
+                logger.info('CreateEdit data for frontend `%s`', return_data)
 
                 return HttpResponse(dumps(return_data), content_type='application/javascript')
             else:
