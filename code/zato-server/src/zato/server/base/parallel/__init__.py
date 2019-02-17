@@ -55,7 +55,7 @@ from zato.server.config import ConfigStore
 from zato.server.connection.server import Servers
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
-from zato.server.base.parallel.wmq import WMQIPC
+from zato.server.base.parallel.ibm_mq import IBMMQIPC
 from zato.server.pickup import PickupManager
 
 # ################################################################################################################################
@@ -67,7 +67,7 @@ megabyte = 10**6
 
 # ################################################################################################################################
 
-class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
+class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, IBMMQIPC):
     """ Main server process.
     """
     def __init__(self):
@@ -128,7 +128,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         self.pid = None
         self.sync_internal = None
         self.ipc_api = IPCAPI()
-        self.wmq_ipc_tcp_port = None
         self.fifo_response_buffer_size = None # Will be in megabytes
         self.is_first_worker = None
         self.shmem_size = -1.0

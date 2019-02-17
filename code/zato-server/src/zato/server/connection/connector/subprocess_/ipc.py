@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from binascii import unhexlify
 from datetime import datetime, timedelta
 from json import loads
 from logging import getLogger
@@ -22,8 +21,6 @@ from gevent import sleep
 from requests import get, post
 
 # Zato
-from zato.common import IPC, WebSphereMQCallData
-from zato.common.broker_message import CHANNEL, DEFINITION, OUTGOING
 from zato.common.util import get_free_port
 from zato.common.util.json_ import dumps
 from zato.common.util.proc import start_python_process
@@ -35,60 +32,76 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 address_pattern='http://127.0.0.1:{}/{}'
-not_enabled_msg = 'IBM MQ component is not enabled - set component_enabled.ibm_mq to True in server.conf ' \
-                  'and restart all servers before IBM MQ connections can be used.'
+not_enabled_pattern = '{connector_name} component is not enabled - set component_enabled.{check_enabled} to True ' \
+    'in server.conf and restart all servers before {connector_name} connections can be used.'
 
 # ################################################################################################################################
 
-class WMQIPC(object):
-    """ Implements communication with an IBM MQ MQ connector for a given server.
+class SubprocessIPC(object):
+    """ Base class for IPC with subprocess-based connectors.
     """
+    check_enabled = None
+    connector_name = '<connector-name-empty>'
+    callback_suffix = '<callback-suffix-empty>'
+    ipc_config_name = '<ipc-config-name-empty>'
+    auth_username = '<auth-username-empty>'
+
+    connector_module = '<connector-module-empty>'
+
+    action_definition_create = None
+    action_outgoing_create = None
+    action_channel_create = None
+    action_ping = None
 
 # ################################################################################################################################
 
     def _check_enabled(self):
-        if not self.fs_server_config.component_enabled.ibm_mq:
-            raise Exception(not_enabled_msg)
+        if not self.fs_server_config.component_enabled[self.check_enabled]:
+            raise Exception(not_enabled_pattern.format(**{
+                'connector_name': self.connector_name,
+                'check_enabled': self.check_enabled
+            }))
 
 # ################################################################################################################################
 
-    def get_wmq_credentials(self, username=IPC.CONNECTOR.IBM_MQ.USERNAME):
-        """ Returns a username/password pair that authentication with IBM MQ connectors is established with.
+    def get_credentials(self):
+        """ Returns a username/password pair using which it is possible to authenticate with a connector.
         """
-        config = self.worker_store.basic_auth_get(username)['config']
+        config = self.worker_store.basic_auth_get(self.auth_username)['config']
         return config.username, config.password
 
 # ################################################################################################################################
 
-    def start_ibm_mq_connector(self, ipc_tcp_start_port, timeout=5):
-        """ Starts an HTTP server acting as an IBM MQ MQ connector. Its port will be greater than ipc_tcp_start_port,
+    def start_connector(self, ipc_tcp_start_port, timeout=5):
+        """ Starts an HTTP server acting as an connector process. Its port will be greater than ipc_tcp_start_port,
         which is the starting point to find a free port from.
         """
-        self._check_enabled()
+        if self.check_enabled:
+            self._check_enabled()
 
-        self.wmq_ipc_tcp_port = get_free_port(ipc_tcp_start_port)
-        logger.info('Starting IBM MQ connector for server `%s` on `%s`', self.name, self.wmq_ipc_tcp_port)
+        self.ipc_tcp_port = get_free_port(ipc_tcp_start_port)
+        logger.info('Starting {} connector for server `%s` on `%s`'.format(self.connector_name),
+            self.name, self.ipc_tcp_port)
 
         # Credentials for both servers and connectors
-        username, password = self.get_wmq_credentials()
+        username, password = self.get_credentials()
 
         # Employ IPC to exchange subprocess startup configuration
-        self.connector_config_ipc.set_config('zato-ibm-mq', dumps({
-            'port': self.wmq_ipc_tcp_port,
+        self.connector_config_ipc.set_config(self.ipc_config_name, dumps({
+            'port': self.ipc_tcp_port,
             'username': username,
             'password': password,
             'server_port': self.port,
             'server_name': self.name,
-            'server_path': '/zato/internal/callback/wmq',
+            'server_path': '/zato/internal/callback/{}'.format(self.callback_suffix),
             'base_dir': self.base_dir,
             'logging_conf_path': self.logging_conf_path
         }))
 
-        # Start IBM MQ connector in a sub-process
-        start_python_process('IBM MQ connector', False, 'zato.server.connection.jms_wmq.jms.container', '',
-            extra_options={
-                'deployment_key': self.deployment_key,
-                'shmem_size': self.shmem_size
+        # Start connector in a sub-process
+        start_python_process('{} connector'.format(self.connector_name), False, self.connector_module, '', extra_options={
+            'deployment_key': self.deployment_key,
+            'shmem_size': self.shmem_size
         })
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
@@ -97,8 +110,8 @@ class WMQIPC(object):
         should_warn = False
         until = now + timedelta(seconds=timeout)
         is_ok = False
-        address = address_pattern.format(self.wmq_ipc_tcp_port, 'ping')
-        auth = self.get_wmq_credentials()
+        address = address_pattern.format(self.ipc_tcp_port, 'ping')
+        auth = self.get_credentials()
 
         while not is_ok or now >= until:
             if not should_warn:
@@ -112,7 +125,7 @@ class WMQIPC(object):
                 now = datetime.utcnow()
 
         if not is_ok:
-            logger.warn('IBM MQ connector (%s) could not be started after %s', address, timeout)
+            logger.warn('{} connector (%s) could not be started after %s'.format(self.connector_name), address, timeout)
         else:
             return is_ok
 
@@ -129,79 +142,69 @@ class WMQIPC(object):
 
 # ################################################################################################################################
 
-    def ping_wmq(self, id):
-        return self.invoke_wmq_connector({
-            'action': DEFINITION.WMQ_PING.value,
+    def ping(self, id):
+        return self.invoke_connector({
+            'action': self.action_ping.value,
             'id': id
         })
 
 # ################################################################################################################################
 
-    def send_wmq_message(self, msg):
-        self._check_enabled()
+    def send_message(self, msg):
+        if self.check_enabled:
+            self._check_enabled()
 
-        msg['action'] = OUTGOING.WMQ_SEND.value
-        response = self.invoke_wmq_connector(msg)
+        msg['action'] = self.action_send.value
+        response = self.invoke_connector(msg)
 
         # If we are here, it means that there was no error because otherwise an exception
-        # would have been raised by invoke_wmq_connector.
+        # would have been raised by invoke_connector.
         response = loads(response.text)
 
-        return WebSphereMQCallData(unhexlify(response['msg_id']).strip(), unhexlify(response['correlation_id']).strip())
+        return response
 
 # ################################################################################################################################
 
-    def invoke_wmq_connector(self, msg, raise_on_error=True, address_pattern=address_pattern):
-        self._check_enabled()
+    def invoke_connector(self, msg, raise_on_error=True, address_pattern=address_pattern):
+        if self.check_enabled:
+            self._check_enabled()
 
-        address = address_pattern.format(self.wmq_ipc_tcp_port, 'api')
-        response = post(address, data=dumps(msg), auth=self.get_wmq_credentials())
+        address = address_pattern.format(self.ipc_tcp_port, 'api')
+        response = post(address, data=dumps(msg), auth=self.get_credentials())
 
         if not response.ok:
             if raise_on_error:
                 raise Exception(response.text)
             else:
-                logger.warn('Error message from IBM MQ connector `{}`'.format(response.text))
+                logger.warn('Error message from {} connector `{}`'.format(self.connector_name, response.text))
         else:
             return response
 
 # ################################################################################################################################
 
-    def _create_initial_wmq_objects(self, config_dict, action, text_pattern, text_func):
+    def _create_initial_objects(self, config_dict, action, text_pattern, text_func):
         for value in config_dict.values():
             config = value['config']
             logger.info(text_pattern, text_func(config))
-            config['action'] = action
-            self.invoke_wmq_connector(config, False)
+            config['action'] = action.value
+            self.invoke_connector(config, False)
 
 # ################################################################################################################################
 
-    def create_initial_wmq_definitions(self, config_dict):
-        def text_func(config):
-            return '{} {}:{} (queue manager:{})'.format(config['name'], config['host'], config['port'], config['queue_manager'])
-
-        text_pattern = 'Creating IBM MQ definition %s'
-        action = DEFINITION.WMQ_CREATE.value
-        self._create_initial_wmq_objects(config_dict, action, text_pattern, text_func)
+    def create_initial_definitions(self, config_dict, text_func):
+        text_pattern = 'Creating {} definition %s'.format(self.connector_name)
+        self._create_initial_objects(config_dict, self.action_definition_create, text_pattern, text_func)
 
 # ################################################################################################################################
 
-    def create_initial_wmq_outconns(self, config_dict):
-        def text_func(config):
-            return config['name']
-
-        text_pattern = 'Creating IBM MQ outconn %s'
-        action = OUTGOING.WMQ_CREATE.value
-        self._create_initial_wmq_objects(config_dict, action, text_pattern, text_func)
+    def create_initial_outconns(self, config_dict, text_func):
+        text_pattern = 'Creating {} outconn %s'.format(self.connector_name)
+        self._create_initial_objects(config_dict, self.action_outgoing_create, text_pattern, text_func)
 
 # ################################################################################################################################
 
-    def create_initial_wmq_channels(self, config_dict):
-        def text_func(config):
-            return config['name']
-
-        text_pattern = 'Creating IBM MQ channel %s'
-        action = CHANNEL.WMQ_CREATE.value
-        self._create_initial_wmq_objects(config_dict, action, text_pattern, text_func)
+    def create_initial_channels(self, config_dict, text_func):
+        text_pattern = 'Creating {} channel %s'.format(self.connector_name)
+        self._create_initial_objects(config_dict, self.action_channel_create, text_pattern, text_func)
 
 # ################################################################################################################################
