@@ -608,6 +608,14 @@ def id_only_service(req, service, id, error_template='{}', initial=None):
 
 # ################################################################################################################################
 
+def ping_connection(req, service, connection_id, connection_type='{}'):
+    ret = id_only_service(req, service, connection_id, 'Could not ping {}, e:`{{}}`'.format(connection_type))
+    if isinstance(ret, HttpResponseServerError):
+        return ret
+    return HttpResponse(ret.data.info)
+
+# ################################################################################################################################
+
 def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_template='', content_type='application/javascript',
         extra=None):
     try:

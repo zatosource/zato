@@ -739,6 +739,8 @@ urlpatterns += [
         login_required(out_sftp.Delete()), name=out_sftp.Delete.url_name),
     url(r'^zato/outgoing/sftp/change-password/$',
         login_required(out_sftp.change_password), name='out-sftp-change-password'),
+    url(r'^zato/outgoing/sftp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_sftp.ping), name='out-sftp-ping'),
     ]
 
 # ################################################################################################################################
