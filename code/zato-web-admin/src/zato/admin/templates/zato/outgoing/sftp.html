@@ -24,13 +24,18 @@
         return [
             '_numbering',
             '_selection',
+
             'name',
             '_is_active',
-            'address',
-            'username',
-            'identity_file',
-            'is_compression_enabled',
+
+            '_host',
+            '_port',
+
+            '_username',
+            '_identity_file',
             'bandwidth_limit',
+
+            '_change_password',
             '_edit',
             '_delete',
             '_ping',
@@ -43,10 +48,10 @@
             'port',
             'username',
 
+            'identity_file',
             'ssh_config_file',
             'buffer_size',
             'is_compression_enabled',
-            'bandwidth_limit',
 
             'force_ip_type',
             'should_flush',
@@ -85,13 +90,18 @@
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Address</a></th>
+
+                        <th><a href="#">Host</a></th>
+                        <th><a href="#">Port</a></th>
+
                         <th><a href="#">Username</a></th>
                         <th><a href="#">Identity file</a></th>
-                        <th><a href="#">Compression</a></th>
                         <th><a href="#">Band. limit</a></th>
+
+                        <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -122,31 +132,35 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
+
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.host }}:{{ item.port }}</td>
 
-                        <td>{{ item.username }}</td>
-                        <td>{{ item.identity_file }}</td>
-                        <td>{{ item.compression|yesno:'Yes,No' }}</td>
+                        <td>{{ item.host|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.port|default:'<span class="form_hint">---</span>' }}</td>
+
+                        <td>{{ item.username|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.identity_file|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.bandwidth_limit }}</td>
 
+                        <td><a href="javascript:$.fn.zato.outgoing.sftp.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.sftp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.sftp.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.sftp.ping('{{ item.id }}')">Ping</a></td>
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.log_level }}</td>
                         <td class='ignore'>{{ item.host }}</td>
                         <td class='ignore'>{{ item.port }}</td>
-
                         <td class='ignore'>{{ item.username }}</td>
+
+                        <td class='ignore'>{{ item.identity_file }}</td>
                         <td class='ignore'>{{ item.ssh_config_file }}</td>
                         <td class='ignore'>{{ item.buffer_size }}</td>
                         <td class='ignore'>{{ item.is_compression_enabled }}</td>
 
-                        <td class='ignore'>{{ item.bandwidth_limit }}</td>
                         <td class='ignore'>{{ item.force_ip_type }}</td>
                         <td class='ignore'>{{ item.should_flush }}</td>
                         <td class='ignore'>{{ item.should_preserve_meta }}</td>
@@ -171,7 +185,7 @@
                 <form action="{% url "out-sftp-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:13%">Name</td>
+                            <td style="vertical-align:middle;width:10%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
@@ -218,7 +232,7 @@
                                 |
 
                                 <label>
-                                Band. limit <span class="form_hint">(megabytes)</span>
+                                Band. limit <span class="form_hint">(in MB)</span>
                                 {{ create_form.bandwidth_limit }}
                                 </label>
 
@@ -263,7 +277,7 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">SSH conf. file</td>
+                            <td style="vertical-align:middle">Conf. file</td>
                             <td>
                                 {{ create_form.ssh_config_file }}
                             </td>

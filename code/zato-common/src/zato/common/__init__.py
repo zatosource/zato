@@ -1073,6 +1073,28 @@ class GENERIC:
             OUTCONN_WSX = 'outconn-wsx'
             OUTCONN_SFTP = 'outconn-sftp'
 
+class SFTP:
+    class DEFAULT:
+        PORT = 22
+        BUFFER_SIZE = 32768
+        BANDWIDTH_LIMIT = 10
+
+    class LOG_LEVEL:
+        LEVEL1 = NameId('1', '1')
+        LEVEL2 = NameId('2', '2')
+        LEVEL3 = NameId('3', '3')
+        LEVEL4 = NameId('4', '4')
+
+        def __iter__(self):
+            return iter((self.LEVEL1, self.LEVEL2, self.LEVEL3, self.LEVEL4))
+
+    class IP_TYPE:
+        IPV4 = NameId('IPv4', 'ipv4')
+        IPV6 = NameId('IPv6', 'ipv6')
+
+        def __iter__(self):
+            return iter((self.IPV4, self.IPV6))
+
 class CONFIG_FILE:
     USER_DEFINED = 'user-defined'
 
