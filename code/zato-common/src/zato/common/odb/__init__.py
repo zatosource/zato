@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,7 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import copy, logging
+import copy
+import logging
+from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy import create_engine
@@ -24,7 +26,7 @@ WMQ_DEFAULT_PRIORITY = 5
 VERSION = 1
 
 # These databases may be used for ODB but individual SQL outconns can connect to, say, MS SQL
-SUPPORTED_DB_TYPES = (b'mysql', b'postgresql', b'sqlite')
+SUPPORTED_DB_TYPES = ('mysql', 'postgresql', 'sqlite')
 
 # ################################################################################################################################
 
@@ -87,13 +89,13 @@ def drop_all(engine):
     for table in [name for (name,) in engine.execute(text(table_sql))]:
         try:
             engine.execute(text('DROP TABLE %s CASCADE' % table))
-        except Exception, e:
-            print(e)
+        except Exception:
+            logger.warn(format_exc())
 
     for seq in [name for (name,) in engine.execute(text(sequence_sql))]:
         try:
             engine.execute(text('DROP SEQUENCE %s CASCADE' % seq))
-        except Exception, e:
-            print(e)
+        except Exception:
+            logger.warn(format_exc())
 
 # ################################################################################################################################

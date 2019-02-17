@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,8 +10,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from base64 import b64encode
 from datetime import datetime
-from json import dumps
 from traceback import format_exc
 
 # Django
@@ -21,6 +21,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.common.util import current_host, translation_name
+from zato.common.util.json_ import dumps
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +40,9 @@ def import_(req, cluster_id):
     try:
         data = req.read()
         data.decode('bz2') # A preliminary check to weed out files obviously incorrect
-        req.zato.client.invoke('zato.kvdb.data-dict.impexp.import', {'data':data.encode('base64')})
-    except Exception, e:
-        msg = 'Could not import the data dictionaries, e:[{}]'.format(format_exc(e))
+        req.zato.client.invoke('zato.kvdb.data-dict.impexp.import', {'data':b64encode(data)})
+    except Exception:
+        msg = 'Could not import the data dictionaries, e:[{}]'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:

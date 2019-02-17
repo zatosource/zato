@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from binascii import unhexlify
 from datetime import datetime, timedelta
-from json import dumps, loads
+from json import loads
 from logging import getLogger
 from traceback import format_exc
 
@@ -25,6 +25,7 @@ from requests import get, post
 from zato.common import IPC, WebSphereMQCallData
 from zato.common.broker_message import CHANNEL, DEFINITION, OUTGOING
 from zato.common.util import get_free_port
+from zato.common.util.json_ import dumps
 from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
@@ -71,8 +72,8 @@ class WMQIPC(object):
         # Credentials for both servers and connectors
         username, password = self.get_wmq_credentials()
 
-        # User kernel's facilities to store configuration
-        self.keyutils.user_set(b'zato-wmq', dumps({
+        # Employ IPC to exchange subprocess startup configuration
+        self.connector_config_ipc.set_config('zato-ibm-mq', dumps({
             'port': self.wmq_ipc_tcp_port,
             'username': username,
             'password': password,
@@ -81,24 +82,33 @@ class WMQIPC(object):
             'server_path': '/zato/internal/callback/wmq',
             'base_dir': self.base_dir,
             'logging_conf_path': self.logging_conf_path
-        }), self.pid)
+        }))
 
         # Start IBM MQ connector in a sub-process
-        start_python_process('IBM MQ connector', False, 'zato.server.connection.jms_wmq.jms.container', '')
+        start_python_process('IBM MQ connector', False, 'zato.server.connection.jms_wmq.jms.container', '',
+            extra_options={
+                'deployment_key': self.deployment_key,
+                'shmem_size': self.shmem_size
+        })
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
         now = datetime.utcnow()
+        warn_after = now + timedelta(seconds=3)
+        should_warn = False
         until = now + timedelta(seconds=timeout)
         is_ok = False
         address = address_pattern.format(self.wmq_ipc_tcp_port, 'ping')
         auth = self.get_wmq_credentials()
 
         while not is_ok or now >= until:
-            is_ok = self._ping_connector(address, auth)
+            if not should_warn:
+                if now >= warn_after:
+                    should_warn = True
+            is_ok = self._ping_connector(address, auth, should_warn)
             if is_ok:
                 break
             else:
-                sleep(0.2)
+                sleep(2)
                 now = datetime.utcnow()
 
         if not is_ok:
@@ -108,11 +118,12 @@ class WMQIPC(object):
 
 # ################################################################################################################################
 
-    def _ping_connector(self, address, auth):
+    def _ping_connector(self, address, auth, should_warn):
         try:
             response = get(address, data='{}', auth=auth)
         except Exception:
-            logger.warn(format_exc())
+            if should_warn:
+                logger.info(format_exc())
         else:
             return response.ok
 

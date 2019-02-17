@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -17,6 +17,9 @@ from bunch import Bunch, bunchify
 
 # nose
 from nose.tools import eq_
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.common import DATA_FORMAT, MISC, URL_TYPE, ZATO_NONE
@@ -1321,7 +1324,7 @@ class URLDataTestCase(TestCase):
             eq_(sec_info.transport, msg.transport)
 
             if msg.security_name:
-                for k, v in basic_auth_config[security_name]['config'].items():
+                for k, v in iteritems(basic_auth_config[security_name]['config']):
                     eq_(sec_info.sec_def[k], v)
             else:
                 eq_(sec_info.sec_def, ZATO_NONE)

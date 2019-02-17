@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -80,8 +80,8 @@ class Create(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                msg = 'Could not create an AWS S3 connection, e:[{e}]'.format(e=format_exc(e))
+            except Exception:
+                msg = 'Could not create an AWS S3 connection, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
                 session.rollback()
 
@@ -129,8 +129,8 @@ class Edit(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                msg = 'Could not update the AWS S3 connection, e:[{e}]'.format(e=format_exc(e))
+            except Exception:
+                msg = 'Could not update the AWS S3 connection, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
                 session.rollback()
 
@@ -157,9 +157,9 @@ class Delete(AdminService):
                 msg = {'action': CLOUD.AWS_S3_DELETE.value, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg)
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                msg = 'Could not delete the AWS S3 connection, e:[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the AWS S3 connection, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
 
                 raise

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,22 +14,15 @@ from traceback import format_exc
 # rapidjson
 from rapidjson import dumps
 
+# Python 2/3 compatibility
+from future.utils import itervalues
+
 # Zato
 from zato.common import CHANNEL, CONTENT_TYPE, PUBSUB
 from zato.common.exception import BadRequest, Forbidden, PubSubSubscriptionExists
+from zato.common.util.auth import parse_basic_auth
 from zato.server.service import AsIs, Int, Service
 from zato.server.service.internal.pubsub.subscription import CreateWSXSubscription
-
-# ################################################################################################################################
-
-def parse_basic_auth(auth, prefix = 'Basic '):
-    if not auth.startswith(prefix):
-        raise ValueError('Missing Basic Auth prefix')
-
-    _, auth = auth.split(prefix)
-    auth = auth.strip().decode('base64')
-
-    return auth.split(':', 1)
 
 # ################################################################################################################################
 
@@ -74,7 +67,7 @@ class _PubSubService(Service):
         except ValueError:
             raise Forbidden(self.cid)
 
-        basic_auth = self.server.worker_store.request_dispatcher.url_data.basic_auth_config.itervalues()
+        basic_auth = itervalues(self.server.worker_store.request_dispatcher.url_data.basic_auth_config)
 
         for item in basic_auth:
             config = item['config']

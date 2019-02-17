@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -32,6 +32,10 @@ import texttable
 
 # yaml
 import yaml
+
+# Python 2/3 compatibility
+from future.utils import iteritems
+from past.builtins import basestring
 
 # Zato
 from zato.cli import ManageCommand
@@ -69,7 +73,7 @@ def find_first(it, pred):
 def dict_match(haystack, needle):
     """Return True if all the keys from `needle` appear in `haystack` with the
     same value."""
-    return all(haystack.get(key) == value for key, value in needle.items())
+    return all(haystack.get(key) == value for key, value in iteritems(needle))
 
 
 #: List of zato services we explicitly don't support.
@@ -98,7 +102,7 @@ def populate_services_from_apispec(client, logger):
         methods = by_prefix.setdefault(prefix, {})
         methods[name] = service
 
-    for prefix, methods in by_prefix.items():
+    for prefix, methods in iteritems(by_prefix):
         # Ignore prefixes lacking "get-list", "create" and "edit" methods.
         if not all(n in methods for n in ('get-list', 'create', 'edit')):
             continue
@@ -447,7 +451,7 @@ class InputValidator(object):
         """
         :rtype Results:
         """
-        for item_type, items in self.json.items():
+        for item_type, items in iteritems(self.json):
             for item in items:
                 self.validate_one(item_type, item)
 
@@ -503,7 +507,7 @@ class DependencyScanner(object):
         :param item: dict describing the item.
         """
         service_info = SERVICE_BY_NAME[item_type]
-        for dep_key, dep_info in service_info.object_dependencies.items():
+        for dep_key, dep_info in iteritems(service_info.object_dependencies):
             if not test_item(item, dep_info.get('condition')):
                 continue
 
@@ -526,12 +530,12 @@ class DependencyScanner(object):
         :rtype Results:
         """
         results = Results()
-        for item_type, items in self.json.items():
+        for item_type, items in iteritems(self.json):
             for item in items:
                 self.scan_item(item_type, item, results)
 
         if not self.ignore_missing:
-            for (missing_type, missing_name), dep_names in sorted(self.missing.items()):
+            for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing.items)):
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
                 raw = (missing_type, missing_name, dep_names, existing)
                 results.add_warning(
@@ -559,7 +563,7 @@ class ObjectImporter(object):
         service_info = SERVICE_BY_NAME[item_type]
         item_dict = dict(item)
 
-        for dep_field, dep_info in service_info.service_dependencies.items():
+        for dep_field, dep_info in iteritems(service_info.service_dependencies.items):
             if not test_item(item, dep_info.get('condition')):
                 continue
 
@@ -588,7 +592,7 @@ class ObjectImporter(object):
                 results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB, "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
                                     missing_name, missing_type, dep_names)
 
-        for item_type, items in self.json.items():
+        for item_type, items in iteritems(self.json.items):
             for item in items:
                 self.validate_service_required(item_type, item)
 
@@ -649,7 +653,7 @@ class ObjectImporter(object):
 
     def find_already_existing_odb_objects(self):
         results = Results()
-        for item_type, items in self.json.items():
+        for item_type, items in iteritems(self.json.items):
             for item in items:
                 name = item.get('name')
                 if not name:
@@ -708,7 +712,7 @@ class ObjectImporter(object):
         #
         # Create new objects, again, definitions come first ..
         #
-        for item_type, items in self.json.items():
+        for item_type, items in iteritems(self.json.items):
             if SERVICE_BY_NAME[item_type].is_security or 'def' in item_type:
                 new_defs.append({item_type: items})
             else:
@@ -718,7 +722,7 @@ class ObjectImporter(object):
         # .. actually create the objects now.
         #
         for elem in new_defs + new_other:
-            for item_type, attr_list in elem.items():
+            for item_type, attr_list in iteritems(elem.items):
                 for attrs in attr_list:
 
                     if self.should_skip_item(item_type, attrs, False):
@@ -756,7 +760,7 @@ class ObjectImporter(object):
             odb_item = self.object_mgr.find(def_type, {'name': item.name})
             item.id = odb_item.id
 
-        for field_name, info in service_info.object_dependencies.items():
+        for field_name, info in iteritems(service_info.object_dependencies.items):
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
                 dep_obj = self.object_mgr.find(info['dependent_type'], {
                     info['dependent_field']: item[field_name]
@@ -848,7 +852,7 @@ class ObjectManager(object):
         normalize_service_name(item)
         service_info = SERVICE_BY_NAME[item_type]
 
-        for field_name, info in service_info.object_dependencies.iteritems():
+        for field_name, info in iteritems(service_info.object_dependencies.items):
 
             if 'id_field' not in info:
                 continue
@@ -911,7 +915,7 @@ class ObjectManager(object):
 
     def delete_all(self):
         count = 0
-        for item_type, items in self.objects.items():
+        for item_type, items in iteritems(self.objects.items):
             for item in items:
                 self.delete(item_type, item)
                 count += 1
@@ -947,14 +951,13 @@ class ObjectManager(object):
             data = response.data
 
         for item in map(Bunch, data):
-            if any(getattr(item, key, None) == value
-                   for key, value in service_info.export_filter.items()):
+            if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)):
                 continue
             if self.is_ignored_name(item):
                 continue
 
             # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
-            for key, value in item.items():
+            for key, value in iteritems(item):
                 if isinstance(value, basestring):
                     if value.startswith(SECRETS.PREFIX):
                         item[key] = None # Enmasse does not export secrets such as passwords or other auth information
@@ -968,7 +971,7 @@ class ObjectManager(object):
         for service_info in SERVICES:
             self.get_objects_by_type(service_info.name)
 
-        for item_type, items in self.objects.items():
+        for item_type, items in iteritems(self.objects):
             for item in items:
                 self.fix_up_odb_object(item_type, item)
 
@@ -1100,7 +1103,7 @@ class InputParser(object):
 # ################################################################################################################################
 
     def parse_items(self, dct, results):
-        for item_type, items in dct.items():
+        for item_type, items in iteritems(dct):
             if item_type not in SERVICE_BY_NAME and item_type not in HTTP_SOAP_ITEM_TYPES:
                 raw = (item_type,)
                 results.add_error(raw, ERROR_UNKNOWN_ELEM, "Ignoring unknown element type {} in the input.", item_type)
@@ -1261,7 +1264,7 @@ class EnMasse(ManageCommand):
                     for item in output.pop(service_info.name, [])
                 )
 
-        for _, items in output.items():
+        for _, items in iteritems(output):
             for item in items:
                 normalize_service_name(item)
 
@@ -1333,7 +1336,7 @@ class EnMasse(ManageCommand):
         table.set_cols_dtype(['t', 't'])
 
         rows = [['Key', 'Value']]
-        rows.extend(sorted(out.items()))
+        rows.extend(sorted(iteritems(out)))
 
         table.add_rows(rows)
 
@@ -1345,7 +1348,7 @@ class EnMasse(ManageCommand):
         results = Results()
         merged = copy.deepcopy(self.object_mgr.objects)
 
-        for json_key, json_elems in self.json.items():
+        for json_key, json_elems in iteritems(self.json.items):
             if 'http' in json_key or 'soap' in json_key:
                 odb_key = 'http_soap'
             else:

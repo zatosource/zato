@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,7 +13,6 @@ from calendar import monthrange
 from copy import deepcopy
 from datetime import date, datetime, timedelta
 from itertools import chain
-from sys import maxint
 from traceback import format_exc
 
 # Bunch
@@ -29,6 +28,9 @@ from paodate import Date
 
 # SciPy
 from scipy import stats as sp_stats
+
+# Python 2/3 compatibility
+from zato.common.py23_ import maxint
 
 # Zato
 from zato.common import KVDB, StatsElem, ZatoException
@@ -200,9 +202,8 @@ class BaseSummarizingService(BaseAggregatingService):
                 values['mean'] = round(sp_stats.tmean(values['mean']), 2)
                 values['rate'] = round(values['usage'] / total_seconds, 2)
 
-        except Exception, e:
-            self.logger.debug('Could not store mean/rate. e=`%r`, locals=`%r`',
-                format_exc(e), locals())
+        except Exception:
+            self.logger.debug('Could not store mean/rate. e=`%r`, locals=`%r`', format_exc(), locals())
 
         else:
             self.hset_aggr_keys(services, key_prefix, key_suffix)

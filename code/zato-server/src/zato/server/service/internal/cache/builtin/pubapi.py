@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.common import ZATO_NOT_GIVEN
@@ -160,7 +163,7 @@ class _Multi(_BaseService):
 
         result = self._get_cache_func(cache)(*args)
         if return_prev:
-            self.response.payload[:] = [{'key':key, 'prev_value':value} for key, value in result.iteritems()]
+            self.response.payload[:] = [{'key':key, 'prev_value':value} for key, value in iteritems(result)]
 
     def _get_cache_func(self, cache):
         raise NotImplementedError('Must be implemented in subclasses')

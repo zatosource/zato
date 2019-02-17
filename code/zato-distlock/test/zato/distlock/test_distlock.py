@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -156,7 +156,7 @@ class _Base(TestCase):
         # This raises LockTimeout because we wait for 1 second only and the lock above has ttl of 2 seconds.
         try:
             lock_manager.acquire(name, block=1)
-        except LockTimeout, e:
+        except LockTimeout as e:
             expected = 'Could not obtain lock for `{}` `{}` within 1s'.format(default_ns, name)
             self.assertEquals(e.args[0], expected)
         else:

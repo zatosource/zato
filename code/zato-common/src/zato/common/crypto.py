@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -31,13 +31,16 @@ from passlib import hash as passlib_hash
 # py-cpuinfo
 from cpuinfo import get_cpu_info
 
+# Python 2/3 compatibility
+from builtins import bytes
+
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-well_known_data = b'3.141592...' # π number
+well_known_data = '3.141592...' # π number
 zato_stdin_prefix = 'zato+stdin:///'
 
 # ################################################################################################################################
@@ -86,6 +89,8 @@ class CryptoManager(object):
         """ It's possible that what is in config files is not a secret key directly, but information where to find it,
         e.g. in environment variables or stdin. This method looks it up in such cases.
         """
+        secret_key = secret_key.decode('utf8') if isinstance(secret_key, bytes) else secret_key
+
         # Environment variables
         if secret_key.startswith('$'):
             try:
@@ -108,13 +113,13 @@ class CryptoManager(object):
             value = secret_key
 
         # Fernet keys always require encoding
-        value = value.encode('utf8')
+        value = value if isinstance(value, bytes) else value.encode('utf8')
 
         # Create a transient key just to confirm that what we found was syntactically correct
         try:
             Fernet(value)
         except Exception as e:
-            raise SecretKeyError(e.message)
+            raise SecretKeyError(e.args)
         else:
             return value
 
@@ -124,9 +129,9 @@ class CryptoManager(object):
         """ Sets crypto attributes and, to be double sure that they are correct,
         decrypts well known data to itself in order to confirm that keys are valid / expected.
         """
-        key = self._find_secret_key(secret_key).encode('utf8')
+        key = self._find_secret_key(secret_key)
         self.secret_key = Fernet(key)
-        self.well_known_data = well_known_data.encode('utf8') if well_known_data else None
+        self.well_known_data = well_known_data if well_known_data else None
 
         if self.well_known_data:
             self.check_consistency()
@@ -196,7 +201,9 @@ class CryptoManager(object):
     def decrypt(self, encrypted):
         """ Returns input data in a clear-text, decrypted, form.
         """
-        return self.secret_key.decrypt(encrypted.encode('utf8'))
+        if not isinstance(encrypted, bytes):
+            encrypted = encrypted.encode('utf8')
+        return self.secret_key.decrypt(encrypted).decode('utf8')
 
 # ################################################################################################################################
 

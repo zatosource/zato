@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
@@ -24,17 +26,18 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
+import signal
 import sys
-from json import dumps, loads
+from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
+from json import loads
 from logging import DEBUG, Formatter, getLogger, StreamHandler
 from logging.handlers import RotatingFileHandler
 from os import getppid, path
-from thread import start_new_thread
 from threading import RLock
 from time import sleep
 from traceback import format_exc
 from wsgiref.simple_server import make_server
-import httplib
 
 # Bunch
 from bunch import bunchify
@@ -45,13 +48,22 @@ from requests import post as requests_post
 # YAML
 import yaml
 
+# Python 2/3 compatibility
+from builtins import bytes
+from six import PY2
+from zato.common.py23_ import start_new_thread
+
 # Zato
-from zato.common.util.auth import parse_basic_auth
 from zato.common.broker_message import code_to_name
-from zato.common.zato_keyutils import KeyUtils
+from zato.common.util import parse_cmd_line_options
+from zato.common.util.auth import parse_basic_auth
+from zato.common.util.json_ import dumps
+from zato.common.util.posix_ipc_ import ConnectorConfigIPC
 from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
 from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
 from zato.server.connection.jms_wmq.jms.core import TextMessage
+
+logger_zato = logging.getLogger('zato')
 
 # ################################################################################################################################
 
@@ -73,12 +85,12 @@ default_logging_config = {
 
 # ################################################################################################################################
 
-_http_200 = b'{} {}'.format(httplib.OK, httplib.responses[httplib.OK])
-_http_400 = b'{} {}'.format(httplib.BAD_REQUEST, httplib.responses[httplib.BAD_REQUEST])
-_http_403 = b'{} {}'.format(httplib.FORBIDDEN, httplib.responses[httplib.FORBIDDEN])
-_http_406 = b'{} {}'.format(httplib.NOT_ACCEPTABLE, httplib.responses[httplib.NOT_ACCEPTABLE])
-_http_500 = b'{} {}'.format(httplib.INTERNAL_SERVER_ERROR, httplib.responses[httplib.INTERNAL_SERVER_ERROR])
-_http_503 = b'{} {}'.format(httplib.SERVICE_UNAVAILABLE, httplib.responses[httplib.SERVICE_UNAVAILABLE])
+_http_200 = '{} {}'.format(OK, responses[OK])
+_http_400 = '{} {}'.format(BAD_REQUEST, responses[BAD_REQUEST])
+_http_403 = '{} {}'.format(FORBIDDEN, responses[FORBIDDEN])
+_http_406 = '{} {}'.format(NOT_ACCEPTABLE, responses[NOT_ACCEPTABLE])
+_http_500 = '{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
+_http_503 = '{} {}'.format(SERVICE_UNAVAILABLE, responses[SERVICE_UNAVAILABLE])
 
 _path_api = '/api'
 _path_ping = '/ping'
@@ -217,6 +229,12 @@ class ConnectionContainer(object):
         else:
             self.pymqi = pymqi
 
+        zato_options = sys.argv[1]
+        zato_options = parse_cmd_line_options(zato_options)
+
+        self.deployment_key = zato_options['deployment_key']
+        self.shmem_size = int(zato_options['shmem_size'])
+
         self.host = '127.0.0.1'
         self.port = None
         self.username = None
@@ -230,7 +248,9 @@ class ConnectionContainer(object):
         self.lock = RLock()
         self.logger = None
         self.parent_pid = getppid()
-        self.keyutils = KeyUtils('zato-wmq', self.parent_pid)
+
+        self.config_ipc = ConnectorConfigIPC()
+        self.config_ipc.create(self.deployment_key, self.shmem_size, False)
 
         self.connections = {}
         self.outconns = {}
@@ -243,9 +263,10 @@ class ConnectionContainer(object):
         self.set_config()
 
     def set_config(self):
-        """ Sets self attributes, as configured in keyring by our parent process.
+        """ Sets self attributes, as configured in shmem by our parent process.
         """
-        config = self.keyutils.user_get()
+        config = self.config_ipc.get_config('zato-ibm-mq')
+
         config = loads(config)
         config = bunchify(config)
 
@@ -438,7 +459,7 @@ class ConnectionContainer(object):
         """
         try:
             self.connections[msg.id].ping()
-        except WebSphereMQException, e:
+        except WebSphereMQException as e:
             return Response(_http_503, str(e.message), 'text/plain')
         else:
             return Response()
@@ -628,7 +649,9 @@ class ConnectionContainer(object):
         if path == _path_ping:
             return Response()
         else:
-            msg = bunchify(loads(msg))
+            msg = msg.decode('utf8')
+            msg = loads(msg)
+            msg = bunchify(msg)
 
             # Delete what handlers don't need
             msg.pop('msg_type', None) # Optional if message was sent by a server that is starting up vs. API call
@@ -685,18 +708,45 @@ class ConnectionContainer(object):
             self.logger.warn(format_exc())
             content_type = 'text/plain'
             status = _http_503
-            data = e.message
+            data = repr(e.args)
         finally:
-            headers = [('Content-type', content_type)]
-            start_response(status, headers)
 
-            return [data]
+            try:
+                if PY2:
+                    status = status.encode('utf8')
+                    headers = [(b'Content-type', content_type.encode('utf8'))]
+                else:
+                    headers = [('Content-type', content_type)]
+
+                if not isinstance(data, bytes):
+                    data = data.encode('utf8')
+
+                start_response(status, headers)
+                return [data]
+
+            except Exception:
+                exc_formatted = format_exc()
+                self.logger.warn('Exception in finally block `%s`', exc_formatted)
 
 # ################################################################################################################################
 
     def run(self):
         server = make_server(self.host, self.port, self.on_wsgi_request)
-        server.serve_forever()
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+
+            try:
+                # Attempt to clean up, if possible
+                server.shutdown()
+                for conn in self.connections.values():
+                    conn.close()
+            except Exception:
+                # Log exception if cleanup was not possible
+                self.logger.warn('Exception in shutdown procedure `%s`', format_exc())
+            finally:
+                # Anything happens, we need to shut down the process
+                os.kill(os.getpid(), signal.SIGTERM)
 
 # ################################################################################################################################
 

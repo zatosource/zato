@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,6 +11,9 @@ from operator import itemgetter
 
 # Django
 from django import forms
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.admin.web.forms import INITIAL_CHOICES_DICT
@@ -35,7 +38,7 @@ class DeliveryTargetForm(forms.Form):
     def __init__(self, data=None):
         super(DeliveryTargetForm, self).__init__(data)
         self.fields['target_type'].choices = []
-        for id, name in sorted(_targets.iteritems(), key=itemgetter(1)):
+        for id, name in sorted(iteritems(_targets), key=itemgetter(1)):
             self.fields['target_type'].choices.append([id, name])
 
 class CreateForm(forms.Form):

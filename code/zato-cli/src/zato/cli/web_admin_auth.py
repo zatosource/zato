@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -104,8 +104,8 @@ class CreateUser(_WebAdminAuthCommand):
 
         try:
             Command().handle(interactive=self.is_interactive, **options)
-        except Exception, e:
-            self.logger.error('Could not create the user, details: `%s`', format_exc(e))
+        except Exception:
+            self.logger.error('Could not create the user, details: `%s`', format_exc())
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
         else:
             self._ok(args)

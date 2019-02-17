@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,8 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from datetime import datetime
-from httplib import BAD_REQUEST, METHOD_NOT_ALLOWED
-from sys import maxint
+from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED
 from traceback import format_exc
 
 # anyjson
@@ -27,6 +26,10 @@ from lxml.objectify import ObjectifiedElement
 
 # gevent
 from gevent import Timeout, spawn
+
+# Python 2/3 compatibility
+from past.builtins import basestring
+from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
@@ -70,13 +73,21 @@ Opaque = Opaque
 Unicode = Unicode
 UTC = UTC
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
+
+# ################################################################################################################################
 
 # Back compat
 Bool = Boolean
 Int = Integer
+
+# ################################################################################################################################
 
 # For code completion
 PubSub = PubSub
@@ -94,14 +105,14 @@ after_handle_hooks = ('after_handle', 'finalize_handle')
 def call_hook_no_service(hook):
     try:
         hook()
-    except Exception, e:
-        logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc(e))
+    except Exception:
+        logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc())
 
 def call_hook_with_service(hook, service):
     try:
         hook(service)
-    except Exception, e:
-        logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc(e))
+    except Exception:
+        logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc())
 
 # ################################################################################################################################
 
@@ -448,7 +459,7 @@ class Service(object):
         # implemented by user services.
         if (not self.accept) or service.accept():
 
-            # Assume everything goes fine
+            # Assumes it goes fine by default
             e, exc_formatted = None, None
 
             try:
@@ -497,8 +508,9 @@ class Service(object):
                 if service.finalize_handle:
                     _call_hook_no_service(service.finalize_handle)
 
-            except Exception, e:
-                exc_formatted = format_exc(e)
+            except Exception as ex:
+                e = ex
+                exc_formatted = format_exc()
                 logger.warn(exc_formatted)
 
             finally:
@@ -511,10 +523,10 @@ class Service(object):
                             self.patterns.parallel.on_call_finished
                         spawn(func, self, service.response.payload, exc_formatted)
 
-                except Exception, resp_e:
+                except Exception as resp_e:
 
                     # If we already have an exception around, log the new one but don't overwrite the old one with it.
-                    logger.warn('Exception in service `%s`, e:`%s`', service.name, format_exc(resp_e))
+                    logger.warn('Exception in service `%s`, e:`%s`', service.name, format_exc())
 
                     if e:
                         if isinstance(e, Reportable):
@@ -525,7 +537,7 @@ class Service(object):
 
                 else:
                     if e:
-                        raise
+                        raise Exception(e)
 
         # We don't accept it but some response needs to be returned anyway.
         else:
@@ -582,8 +594,8 @@ class Service(object):
                         raise
             else:
                 return self.update_handle(*invoke_args, **kwargs)
-        except Exception, e:
-            logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc(e))
+        except Exception:
+            logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc())
             raise
 
     def invoke(self, name, *args, **kwargs):
@@ -732,7 +744,7 @@ class Service(object):
         #
         # Slow responses
         #
-        if slow_response_enabled:
+        if slow_response_enabled and self.slow_threshold:
 
             if self.processing_time > self.slow_threshold:
 
@@ -760,7 +772,7 @@ class Service(object):
         """ The only method Zato services need to implement in order to process
         incoming requests.
         """
-        raise NotImplementedError('Should be overridden by subclasses')
+        raise NotImplementedError('Should be overridden by subclasses (Service.handle)')
 
     def lock(self, name=None, *args, **kwargs):#ttl=20, block=10):
         """ Creates a distributed lock.

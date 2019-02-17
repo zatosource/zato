@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -24,6 +24,9 @@ from globre import compile as globre_compile
 
 # Texttable
 from texttable import Texttable
+
+# Python 2/3 compatibility
+from future.utils import iteritems, itervalues
 
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, SEARCH
@@ -222,7 +225,7 @@ class Endpoint(ToDictBase):
             (False, True): self.sub_topic_patterns,
         }
 
-        for key, config in data.iteritems():
+        for key, config in iteritems(data):
             is_topic = key == 'topic'
 
             for line in config.splitlines():
@@ -603,7 +606,7 @@ class InRAMSyncBacklog(object):
             _has_topic_msg = False # Was the ID found for at least one topic
             _has_sk_msg = False     # Ditto but for sub_keys
 
-            for _topic_msg_set in self.topic_msg_id.itervalues():
+            for _topic_msg_set in itervalues(self.topic_msg_id):
                 try:
                     _topic_msg_set.remove(msg_id)
                 except KeyError:
@@ -611,7 +614,7 @@ class InRAMSyncBacklog(object):
                 else:
                     _has_topic_msg = True
 
-            for _sk_msg_set in self.sub_key_to_msg_id.itervalues():
+            for _sk_msg_set in itervalues(self.sub_key_to_msg_id):
                 try:
                     _sk_msg_set.remove(msg_id)
                 except KeyError:
@@ -833,7 +836,7 @@ class InRAMSyncBacklog(object):
                     # Calling it once will suffice.
                     now = _utcnow()
 
-                    for msg_id, msg in self.msg_id_to_msg.iteritems():
+                    for msg_id, msg in iteritems(self.msg_id_to_msg):
 
                         if now >= msg['expiration_time']:
 
@@ -946,7 +949,7 @@ class PubSub(object):
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
-        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE)
+        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE())
 
         # How many messages have been published through this server, regardless of which topic they were for
         self.msg_pub_counter = 0
@@ -1033,7 +1036,7 @@ class PubSub(object):
 
     def get_subscription_by_id(self, sub_id):
         with self.lock:
-            for sub in self.subscriptions_by_sub_key.itervalues():
+            for sub in itervalues(self.subscriptions_by_sub_key):
                 if sub.id == sub_id:
                     return sub
 
@@ -1041,7 +1044,7 @@ class PubSub(object):
 
     def get_subscription_by_ext_client_id(self, ext_client_id):
         with self.lock:
-            for sub in self.subscriptions_by_sub_key.itervalues():
+            for sub in itervalues(self.subscriptions_by_sub_key):
                 if sub.ext_client_id == ext_client_id:
                     return sub
 
@@ -1260,17 +1263,17 @@ class PubSub(object):
         ws_chan_id = None
         service_id = None
 
-        for key, value in self.sec_id_to_endpoint_id.iteritems():
+        for key, value in iteritems(self.sec_id_to_endpoint_id):
             if value == endpoint_id:
                 sec_id = key
                 break
 
-        for key, value in self.ws_channel_id_to_endpoint_id.iteritems():
+        for key, value in iteritems(self.ws_channel_id_to_endpoint_id):
             if value == endpoint_id:
                 ws_chan_id = key
                 break
 
-        for key, value in self.service_id_to_endpoint_id.iteritems():
+        for key, value in iteritems(self.service_id_to_endpoint_id):
             if value == endpoint_id:
                 service_id = key
                 break
@@ -1302,7 +1305,7 @@ class PubSub(object):
     def edit_subscription(self, config):
         with self.lock:
             sub = self._get_subscription_by_sub_key(config.sub_key)
-            for key, value in config.iteritems():
+            for key, value in iteritems(config):
                 sub.config[key] = value
 
 # ################################################################################################################################
@@ -1601,7 +1604,7 @@ class PubSub(object):
         # Add headers
         rows = [['#', 'created', 'name', 'pid', 'channel_name', 'sub_key']]
 
-        servers = self.sub_key_servers.values()
+        servers = list(itervalues(self.sub_key_servers))
         servers.sort(key=attrgetter('creation_time', 'channel_name', 'sub_key'), reverse=True)
 
         for idx, item in enumerate(servers, 1):
@@ -1986,7 +1989,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def invoke_before_delivery_hook(self, hook, topic_id, sub_key, batch, messages, actions=list(PUBSUB.HOOK_ACTION),
+    def invoke_before_delivery_hook(self, hook, topic_id, sub_key, batch, messages, actions=list(PUBSUB.HOOK_ACTION()),
         _deliver=PUBSUB.HOOK_ACTION.DELIVER):
         """ Invokes a hook service for each message from a batch of messages possibly to be delivered and arranges
         each one to a specific key in messages dict.
@@ -2226,7 +2229,7 @@ class PubSub(object):
                 topic_id_dict = {}
 
                 # Get all topics ..
-                for _topic in _self_topics.itervalues(): # type: Topic
+                for _topic in _self_topics.values(): # type: Topic
 
                     # Does the topic require task synchronization now?
                     if not _topic.needs_task_sync():
