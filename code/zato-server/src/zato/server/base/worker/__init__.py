@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,7 +19,6 @@ from tempfile import gettempdir
 from threading import RLock
 from time import sleep
 from traceback import format_exc
-from urlparse import urlparse
 from uuid import uuid4
 
 # Bunch
@@ -36,6 +35,12 @@ import gevent
 # gunicorn
 from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
+
+# Python 2/3 compatibility
+from future.utils import iterkeys
+from future.moves.urllib.parse import urlparse
+from past.builtins import basestring
+from six import PY3
 
 # Zato
 from zato.broker import BrokerMessageReceiver
@@ -120,8 +125,11 @@ def _get_base_classes():
 
 # ################################################################################################################################
 
+_base_type = '_WorkerStoreBase'
+_base_type = _base_type if PY3 else _base_type.encode('utf8')
+
 # Dynamically adds as base classes everything found in current directory that subclasses WorkerImpl
-_WorkerStoreBase = type(b'_WorkerStoreBase', _get_base_classes(), {})
+_WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 
 class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
@@ -421,7 +429,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def yield_outconn_http_config_dicts(self):
         for transport in('soap', 'plain_http'):
             config_dict = getattr(self.worker_config, 'out_' + transport)
-            for name in config_dict.keys(): # Must use .keys() explicitly so that config_dict can be changed during iteration
+            for name in list(iterkeys(config_dict)): # Must use list explicitly so config_dict can be changed during iteration
                 yield config_dict, config_dict[name]
 
 # ################################################################################################################################
@@ -539,8 +547,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 self._cassandra_connections_ready[v.config.id] = False
                 self.update_cassandra_conn(v.config)
                 self.cassandra_api.create_def(k, v.config, self._on_cassandra_connection_established)
-            except Exception, e:
-                logger.warn('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -559,8 +567,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for k, v in self.worker_config.cassandra_query.items():
             try:
                 gevent.spawn(self._init_cassandra_query, self.cassandra_query_api.create, k, v.config)
-            except Exception, e:
-                logger.warn('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -569,14 +577,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for k, v in self.worker_config.out_stomp.items():
             try:
                 self.stomp_outconn_api.create_def(k, v.config)
-            except Exception, e:
-                logger.warn('Could not create a Stomp outgoing connection `%s`, e:`%s`', k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create a Stomp outgoing connection `%s`, e:`%s`', k, format_exc())
 
         for k, v in self.worker_config.channel_stomp.items():
             try:
                 self.stomp_channel_api.create_def(k, v.config, stomp_channel_main_loop, self)
-            except Exception, e:
-                logger.warn('Could not create a Stomp channel `%s`, e:`%s`', k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create a Stomp channel `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -585,8 +593,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self._update_queue_build_cap(v.config)
             try:
                 api.create(k, v.config)
-            except Exception, e:
-                logger.warn('Could not create {} connection `%s`, e:`%s`'.format(name), k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create {} connection `%s`, e:`%s`'.format(name), k, format_exc())
 
 # ################################################################################################################################
 
@@ -1557,7 +1565,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 path = '{}.{}'.format(no_ext, ext)
                 try:
                     os.remove(path)
-                except OSError, e:
+                except OSError as e:
                     if e.errno != ENOENT:
                         raise
 
@@ -2075,15 +2083,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         try:
             response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=msg.data_format)
             status = success
-        except Exception, e:
-            response = format_exc(e)
+        except Exception:
+            response = format_exc()
             status = failure
         finally:
             data = '{};{}'.format(status, response)
 
         try:
             with open(msg.reply_to_fifo, 'wb') as fifo:
-                fifo.write(data)
+                fifo.write(data if isinstance(data, bytes) else data.encode('utf'))
         except Exception:
             logger.warn('Could not write to FIFO, m:`%s`, r:`%s`, s:`%s`, e:`%s`', msg, response, status, format_exc())
 

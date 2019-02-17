@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -18,6 +18,9 @@ from bunch import bunchify
 
 # nose
 from nose.tools import eq_
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.common.odb.model import Cluster, Service as ServiceModel
@@ -78,9 +81,9 @@ class _TestBase(Service):
 
         lod = data.list_of_dicts
         eq_(len(lod), 3)
-        eq_(sorted(lod[0].items()), [('1', '11'), ('2', '22')])
-        eq_(sorted(lod[1].items()), [('3', '33')])
-        eq_(sorted(lod[2].items()), [('1', '11'), ('2', '22'), ('3', '33'), ('4', '44'), ('5', '55')])
+        eq_(sorted(iteritems(lod[0])), [('1', '11'), ('2', '22')])
+        eq_(sorted(iteritems(lod[1])), [('3', '33')])
+        eq_(sorted(iteritems(lod[2])), [('1', '11'), ('2', '22'), ('3', '33'), ('4', '44'), ('5', '55')])
 
         eq_(data.unicode1, 'zzzä')
         eq_(data.unicode2, 'zä')

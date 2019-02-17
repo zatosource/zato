@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.common import PUBSUB
@@ -59,7 +62,7 @@ class GetHookServiceList(AdminService):
     def handle(self):
         out = []
 
-        for impl_name, details in self.server.service_store.services.iteritems():
+        for impl_name, details in iteritems(self.server.service_store.services):
 
             if is_class_pubsub_hook(details['service_class']):
                 service_id = self.server.service_store.impl_name_to_id[impl_name]

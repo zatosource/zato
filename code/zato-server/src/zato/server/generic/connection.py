@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from json import dumps, loads
+from json import loads
 
 # Bunch
 from bunch import bunchify
 
 # Zato
 from zato.common import GENERIC
+from zato.common.util.json_ import dumps
 from zato.server.generic import attrs_gen_conn
 
 # ################################################################################################################################

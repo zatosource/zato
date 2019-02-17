@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -24,6 +24,9 @@ from pyparsing import alphanums, oneOf, OneOrMore, Optional, White, Word
 # redis
 from redis import StrictRedis
 from redis.sentinel import Sentinel
+
+# Python 2/3 compatibility
+from past.builtins import basestring
 
 # Zato
 from zato.common import KVDB as _KVDB, NONCE_STORE
@@ -159,10 +162,11 @@ class KVDB(object):
         self.conn_class = self._get_connection_class()
 
         if self.has_sentinel:
-            instance = self.conn_class(config['sentinels'], config.get('password'), config.get('socket_timeout'))
+            instance = self.conn_class(config['sentinels'], config.get('password'), config.get('socket_timeout'),
+                charset='utf-8', decode_responses=True)
             self.conn = instance.master_for(config['sentinel_master'])
         else:
-            self.conn = self.conn_class(**config)
+            self.conn = self.conn_class(charset='utf-8', decode_responses=True, **config)
 
         self.lua_container.kvdb = self.conn
 

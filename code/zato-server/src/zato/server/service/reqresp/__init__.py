@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from copy import deepcopy
-from httplib import OK
+from http.client import OK
 from itertools import chain
 from traceback import format_exc
 
@@ -29,6 +29,11 @@ from lxml.objectify import deannotate, Element, ElementMaker, ObjectifiedElement
 # SQLAlchemy
 from sqlalchemy.util import KeyedTuple
 
+# Python 2/3 compatibility
+from builtins import bytes
+from future.utils import iteritems
+from past.builtins import basestring
+
 # Zato
 from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, SIMPLE_IO, simple_types, TRACE1, ZatoException, \
      ZATO_OK
@@ -36,9 +41,15 @@ from zato.common.odb.api import WritableKeyedTuple
 from zato.common.util import make_repr
 from zato.server.service.reqresp.sio import AsIs, convert_param, ForceType, ServiceInput, SIOConverter
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
+
+# ################################################################################################################################
 
 direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 
@@ -106,7 +117,7 @@ class Request(SIOConverter):
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
         'simple_io_config', 'bool_parameter_prefixes', 'int_parameters',
         'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
-        '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq')
+        '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp', 'wmq', 'ibm_mq', 'enforce_string_encoding')
 
     def __init__(self, logger, simple_io_config=None, data_format=None, transport=None):
         self.logger = logger
@@ -131,6 +142,7 @@ class Request(SIOConverter):
         self.wmq = self.ibm_mq = None
         self.encrypt_func = None
         self.encrypt_secrets = True
+        self.bytes_to_str_encoding = None
 
 # ################################################################################################################################
 
@@ -174,6 +186,7 @@ class Request(SIOConverter):
             self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
             self.int_parameters = self.simple_io_config.get('int_parameters', [])
             self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
+            self.bytes_to_str_encoding = self.simple_io_config['bytes_to_str']['encoding']
         else:
             self.payload = self.raw_request
 
@@ -199,7 +212,7 @@ class Request(SIOConverter):
         self.input.update(required_params)
         self.input.update(optional_params)
 
-        for param, value in self.channel_params.iteritems():
+        for param, value in iteritems(self.channel_params):
             if param not in self.input:
                 self.input[param] = value
 
@@ -213,16 +226,21 @@ class Request(SIOConverter):
 
         for param in params_to_visit:
             try:
+
                 param_name, value = convert_param(
                     self.cid, '' if use_channel_params_only else self.payload, param, self.data_format, is_required,
                     default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
                     self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes,
                     True, self.encrypt_func, self.encrypt_secrets, self.params_priority)
+
+                if self.bytes_to_str_encoding and isinstance(value, bytes):
+                    value = value.decode(self.bytes_to_str_encoding)
+
                 params[param_name] = value
 
-            except Exception, e:
+            except Exception:
                 msg = 'Caught an exception, param:`{}`, params_to_visit:`{}`, has_simple_io_config:`{}`, e:`{}`'.format(
-                    param, params_to_visit, self.has_simple_io_config, format_exc(e))
+                    param, params_to_visit, self.has_simple_io_config, format_exc())
                 self.logger.error(msg)
                 raise ParsingException(msg)
 
@@ -281,6 +299,7 @@ class SimpleIOPayload(SIOConverter):
         self.zato_force_empty_keys = ignore_skip_empty
         self.zato_allow_empty_required = allow_empty_required
         self.zato_meta = {}
+        self.zato_bytes_to_str_encoding = simple_io_config['bytes_to_str']['encoding']
         self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
         self.int_parameters = simple_io_config.get('int_parameters', [])
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
@@ -305,7 +324,10 @@ class SimpleIOPayload(SIOConverter):
         self.zato_output_repeated = True
 
     def __setitem__(self, key, value):
-        setattr(self, key, value)
+        if isinstance(key, slice):
+            return self.__setslice__(key.start, key.stop, value)
+        else:
+            setattr(self, key, value)
 
     def __getitem__(self, key):
         return self.zato_output[key]
@@ -336,10 +358,16 @@ class SimpleIOPayload(SIOConverter):
 
         if isinstance(attrs, dict):
             for name in names:
-                setattr(self, name, attrs[name])
+                value = attrs[name]
+                if self.zato_bytes_to_str_encoding and isinstance(value, bytes):
+                    value = value.decode(self.zato_bytes_to_str_encoding)
+                setattr(self, name, value)
         else:
             for name in names:
-                setattr(self, name, getattr(attrs, name))
+                value = getattr(attrs, name)
+                if self.zato_bytes_to_str_encoding and isinstance(value, bytes):
+                    value = value.decode(self.zato_bytes_to_str_encoding)
+                setattr(self, name, value)
 
     def append(self, item):
         self.zato_output.append(item)
@@ -424,8 +452,8 @@ class SimpleIOPayload(SIOConverter):
                     if isinstance(name, ForceType):
                         name = name.name
 
-                    if isinstance(elem_value, basestring):
-                        elem_value = elem_value if isinstance(elem_value, unicode) else elem_value.decode('utf-8')
+                    if isinstance(elem_value, bytes):
+                        elem_value = elem_value.decode('utf-8')
 
                     if self.zato_is_xml:
                         setattr(out_item, name, elem_value)
@@ -507,8 +535,7 @@ class Cloud(object):
 class Response(object):
     """ A response from the service's invocation.
     """
-    __slots__ = ('logger', 'result', 'result_details', '_payload', 'payload',
-        '_content_type', 'content_type', 'content_type_changed', 'content_encoding',
+    __slots__ = ('logger', 'result', 'result_details', '_payload', '_content_type', 'content_type_changed', 'content_encoding',
         'headers', 'status_code', 'data_format', 'simple_io_config', 'outgoing_declared')
 
     def __init__(self, logger, result=ZATO_OK, result_details='', payload='',

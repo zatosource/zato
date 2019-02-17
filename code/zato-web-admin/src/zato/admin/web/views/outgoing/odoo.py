@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -40,7 +40,7 @@ class Index(_Index):
     def handle(self):
 
         for item in self.items:
-            for protocol in ODOO.PROTOCOL:
+            for protocol in ODOO.PROTOCOL():
                 if item.protocol == protocol.id:
                     item.protocol_name = protocol.name
 

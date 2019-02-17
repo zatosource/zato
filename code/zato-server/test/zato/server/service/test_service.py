@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2013 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -26,6 +26,9 @@ from lxml import etree, objectify
 
 # nose
 from nose.tools import eq_
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.common import DATA_FORMAT, PARAMS_PRIORITY, URL_TYPE
@@ -167,8 +170,8 @@ class TestRequest(TestCase):
             request.init(is_sio, cid, io, data_format, transport, wsgi_environ)
 
             eq_(request.http.method, wsgi_environ['REQUEST_METHOD'])
-            eq_(sorted(request.http.GET.items()), sorted(wsgi_environ['zato.http.GET'].items()))
-            eq_(sorted(request.http.POST.items()), sorted(wsgi_environ['zato.http.POST'].items()))
+            eq_(sorted(iteritems(request.http.GET)), sorted(iteritems(wsgi_environ['zato.http.GET'])))
+            eq_(sorted(iteritems(request.http.POST)), sorted(iteritems(wsgi_environ['zato.http.POST'])))
 
     def xtest_init_sio(self):
 
@@ -233,26 +236,26 @@ class TestRequest(TestCase):
 
                 if io is io_default:
 
-                    eq_(sorted(request.input.items()),
-                        sorted({'a': 'channel_param_a', 'b': 'channel_param_b',
+                    eq_(sorted(iteritems(request.input)),
+                        sorted(iteritems({'a': 'channel_param_a', 'b': 'channel_param_b',
                          'c':'channel_param_c', 'd': 'channel_param_d', 'e': 'channel_param_e', 'f': 'channel_param_f',
-                         'h':'channel_param_h'}.items()))
+                         'h':'channel_param_h'})))
 
                 else:
                     if params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG:
 
-                        eq_(sorted(request.input.items()),
-                            sorted({'a': 'channel_param_a', 'b': 'channel_param_b', 'c': 'channel_param_c',
+                        eq_(sorted(iteritems(request.input)),
+                            sorted(iteritems({'a': 'channel_param_a', 'b': 'channel_param_b', 'c': 'channel_param_c',
                              'd': 'channel_param_d', 'e': 'channel_param_e', 'f': 'channel_param_f',
                              'g': 'g-msg',
-                             'h':'channel_param_h'}.items()))
+                             'h':'channel_param_h'})))
 
                     else:
-                        eq_(sorted(request.input.items()),
-                            sorted({'a': 'a-req', 'b': 'b-req', 'c': 'c-req',
+                        eq_(sorted(iteritems(request.input)),
+                            sorted(iteritems({'a': 'a-req', 'b': 'b-req', 'c': 'c-req',
                              'd': 'd-opt', 'e': 'e-opt', 'f': 'f-opt',
                              'g': 'g-msg',
-                             'h':'channel_param_h'}.items()))
+                             'h':'channel_param_h'})))
 
 # ################################################################################################################################
 
@@ -387,7 +390,7 @@ class TestNav(TestCase):
                 # I.e. W601 .has_key() is deprecated, use 'in'
 
                 response = {
-                    'key1': sorted(dn.get(['nested', 'a']).items()),
+                    'key1': sorted(iteritems(dn.get(['nested', 'a']))),
                     'value': dn.get(['nested', 'a', 'b', 'c']),
                     'has_key_flat_true': dn.has_key('flat', False), # nopep8
                     'has_key_flat_false': dn.has_key(rand_string(), True),

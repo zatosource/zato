@@ -10,10 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from cStringIO import StringIO
 from gzip import GzipFile
 from hashlib import sha256
-from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
+from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
+from io import StringIO
 from traceback import format_exc
 
 # anyjson
@@ -27,6 +27,10 @@ from paste.util.converters import asbool
 
 # regex
 from regex import compile as regex_compile
+
+# Python 2/3 compatibility
+from six import PY3
+from past.builtins import basestring
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
@@ -43,19 +47,19 @@ _has_debug = logger.isEnabledFor(logging.DEBUG)
 
 # ################################################################################################################################
 
-_status_bad_request = b'{} {}'.format(BAD_REQUEST, HTTP_RESPONSES[BAD_REQUEST])
-_status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
-_status_not_found = b'{} {}'.format(NOT_FOUND, HTTP_RESPONSES[NOT_FOUND])
-_status_method_not_allowed = b'{} {}'.format(METHOD_NOT_ALLOWED, HTTP_RESPONSES[METHOD_NOT_ALLOWED])
-_status_unauthorized = b'{} {}'.format(UNAUTHORIZED, HTTP_RESPONSES[UNAUTHORIZED])
-_status_forbidden = b'{} {}'.format(FORBIDDEN, HTTP_RESPONSES[FORBIDDEN])
-_status_too_many_requests = b'{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO_MANY_REQUESTS])
+_status_bad_request = '{} {}'.format(BAD_REQUEST, HTTP_RESPONSES[BAD_REQUEST])
+_status_internal_server_error = '{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
+_status_not_found = '{} {}'.format(NOT_FOUND, HTTP_RESPONSES[NOT_FOUND])
+_status_method_not_allowed = '{} {}'.format(METHOD_NOT_ALLOWED, HTTP_RESPONSES[METHOD_NOT_ALLOWED])
+_status_unauthorized = '{} {}'.format(UNAUTHORIZED, HTTP_RESPONSES[UNAUTHORIZED])
+_status_forbidden = '{} {}'.format(FORBIDDEN, HTTP_RESPONSES[FORBIDDEN])
+_status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO_MANY_REQUESTS])
 
 # ################################################################################################################################
 
 status_response = {}
 for code, response in HTTP_RESPONSES.items():
-    status_response[code] = b'{} {}'.format(code, response)
+    status_response[code] = '{} {}'.format(code, response)
 
 # ################################################################################################################################
 
@@ -198,7 +202,7 @@ class RequestDispatcher(object):
         is postponed until a concrete transport-specific handler is invoked.
         """
         # Needed in later steps
-        path_info = wsgi_environ['PATH_INFO'].decode('utf-8')
+        path_info = wsgi_environ['PATH_INFO'] if PY3 else wsgi_environ['PATH_INFO'].decode('utf8')
 
         if _http_soap_action in wsgi_environ:
             soap_action = self._handle_quotes_soap_action(wsgi_environ[_http_soap_action])
@@ -284,8 +288,8 @@ class RequestDispatcher(object):
                 # Finally return payload to the client
                 return response.payload
 
-            except Exception, e:
-                _format_exc = format_exc(e)
+            except Exception as e:
+                _format_exc = format_exc()
                 status = _status_internal_server_error
 
                 if isinstance(e, ClientHTTPError):

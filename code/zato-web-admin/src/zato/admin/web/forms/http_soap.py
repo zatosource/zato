@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -68,7 +68,7 @@ class CreateForm(DataFormatForm):
             self.fields['params_pri'].choices.append([value, label])
 
         self.fields['serialization_type'].choices = []
-        for item in HTTP_SOAP_SERIALIZATION_TYPE:
+        for item in HTTP_SOAP_SERIALIZATION_TYPE():
             self.fields['serialization_type'].choices.append([item.id, item.name])
 
         self.fields['soap_version'].choices = []

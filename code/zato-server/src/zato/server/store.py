@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -103,8 +103,8 @@ class BaseStore(object):
             item.execute = execute(conn, impl)
 
             logger.debug('Created `%s`', config_no_sensitive)
-        except Exception, e:
-            logger.warn('Could not create `%s`, config:`%s`, e:`%s`', name, config_no_sensitive, format_exc(e))
+        except Exception:
+            logger.warn('Could not create `%s`, config:`%s`, e:`%s`', name, config_no_sensitive, format_exc())
         else:
             item.impl = impl
             item.is_created = True
@@ -131,8 +131,8 @@ class BaseStore(object):
             if not name in self.items:
                 raise Exception('No such name `{}` among `{}`'.format(name, self.items.keys()))
             self.delete_impl()
-        except Exception, e:
-            logger.warn('Error while deleting `%s`, e:`%s`', name, format_exc(e))
+        except Exception:
+            logger.warn('Error while deleting `%s`, e:`%s`', name, format_exc())
         finally:
             if name in self.items:
                 del self.items[name]
@@ -158,7 +158,7 @@ class BaseStore(object):
             self.edit(password_data.name, new_config)
 
     def create_impl(self):
-        raise NotImplementedError('Should be overridden by subclasses')
+        raise NotImplementedError('Should be overridden by subclasses (BaseStore.create_impl)')
 
     def delete_impl(self):
         pass # It's OK - sometimes deleting a connection doesn't have to mean doing anything unusual

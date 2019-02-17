@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 import os
 from setuptools import setup, find_packages
+
+# Python 2/3 compatibility
+from past.builtins import execfile
 
 curdir = os.path.dirname(os.path.abspath(__file__))
 _version_py = os.path.normpath(os.path.join(curdir, '..', '.version.py'))

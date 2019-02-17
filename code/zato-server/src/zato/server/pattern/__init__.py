@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,12 +10,25 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from bunch import Bunch
-from json import dumps, loads
+from json import loads
 from logging import DEBUG, getLogger
+
+# Python 2/3 compatibility
+from past.builtins import basestring
+
+# Zato
+from zato.common.util.json_ import dumps
+
+# ################################################################################################################################
 
 logger = getLogger(__name__)
 
+# ################################################################################################################################
+
 JSON_KEYS = ('source', 'on_final', 'on_target', 'data', 'req_ts_utc')
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ParallelBase(object):
     """ Base class containing code common across both fan-out/fan-in and parallel execution features.
@@ -33,6 +46,8 @@ class ParallelBase(object):
     def __init__(self, source):
         self.source = source
         self.cid = source.cid
+
+# ################################################################################################################################
 
     def invoke(self, targets, on_final, on_target=None, cid=None):
         """ Invokes targets collecting their responses, can be both as a whole or individual ones,
@@ -67,8 +82,12 @@ class ParallelBase(object):
 
         return cid
 
+# ################################################################################################################################
+
     def _log_before_callbacks(self, cb_type, cb_list, invoked_service):
         logger.debug('(%s) Before %s callbacks `%s` after `%s`', self.pattern_name, cb_type, cb_list, invoked_service.name)
+
+# ################################################################################################################################
 
     def on_call_finished(self, invoked_service, response, exception):
 
@@ -128,7 +147,12 @@ class ParallelBase(object):
                     invoked_service.kvdb.conn.delete(counter_key)
                     invoked_service.kvdb.conn.delete(data_key)
 
+# ################################################################################################################################
+
     def invoke_callbacks(self, invoked_service, payload, cb_list, channel, cid):
         for name in cb_list:
             if name:
                 invoked_service.invoke_async(name, payload, channel, to_json_string=True, zato_ctx={'fanout_cid': cid})
+
+# ################################################################################################################################
+# ################################################################################################################################

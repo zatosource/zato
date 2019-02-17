@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -95,8 +95,8 @@ def create(req):
 
         return _edit_create_response(req.zato.client, 'created', response.data.id,
             req.POST['name'], delivery_mode_text, req.POST['def_id'], req.POST['cluster_id'])
-    except Exception, e:
-        msg = 'Could not create an outgoing AMQP connection, e:`{}`'.format(format_exc(e))
+    except Exception:
+        msg = 'Outgoing AMQP connection could not be created, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -109,8 +109,8 @@ def edit(req):
 
         return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'],
             delivery_mode_text, req.POST['edit-def_id'], req.POST['cluster_id'])
-    except Exception, e:
-        msg = 'Could not update the outgoing AMQP connection, e:`{}`'.format(format_exc(e))
+    except Exception:
+        msg = 'Outgoing AMQP connection could not be updated, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 

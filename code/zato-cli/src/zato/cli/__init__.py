@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 # stdlib
+from builtins import input as raw_input, int
+from imp import reload
+from io import StringIO
 import json
 import logging
 import os
@@ -14,13 +19,9 @@ import shutil
 import sys
 import tempfile
 import time
-from cStringIO import StringIO
 from datetime import datetime
 from getpass import getpass, getuser
 from socket import gethostname
-
-# Importing
-from peak.util.imports import importString
 
 # SQLAlchemy
 import sqlalchemy
@@ -31,6 +32,7 @@ from zato.cli import util as cli_util
 from zato.common import odb, util, ZATO_INFO_FILE
 from zato.common.util import get_engine_url, get_full_stack, get_session
 from zato.common.util.cli import read_stdin_data
+from zato.common.util.import_ import import_string
 
 # ################################################################################################################################
 
@@ -100,6 +102,9 @@ def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
 common_logging_conf_contents = """
 loggers:
     '':
+        level: INFO
+        handlers: [stdout, default]
+    'gunicorn.main':
         level: INFO
         handlers: [stdout, default]
     zato:
@@ -351,7 +356,7 @@ def run_command(args):
         ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
     )
     for k, v in command_imports:
-        command_class[k] = importString(v)
+        command_class[k] = import_string(v)
 
     command_class[args.command](args).run(args)
 
@@ -518,7 +523,7 @@ class ZatoCommand(object):
                 'created_ts': datetime.utcnow().isoformat(), # noqa
                 'component': component
                 }
-        open(os.path.join(target_dir, ZATO_INFO_FILE), 'wb').write(json.dumps(info))
+        open(os.path.join(target_dir, ZATO_INFO_FILE), 'w').write(json.dumps(info))
 
 # ################################################################################################################################
 
@@ -630,7 +635,7 @@ class ZatoCommand(object):
             # https://github.com/zatosource/zato/issues/328
 
             return_code = self.execute(args)
-            if isinstance(return_code, (int, long)):
+            if isinstance(return_code, int):
                 sys.exit(return_code)
             else:
                 sys.exit(0)
@@ -773,7 +778,7 @@ class CACreateCommand(ZatoCommand):
         template_args['common_name'] = self._get_arg(args, 'common_name', default_common_name)
         template_args['target_dir'] = self.target_dir
 
-        f = tempfile.NamedTemporaryFile() # noqa
+        f = tempfile.NamedTemporaryFile(mode='w+') # noqa
         f.write(openssl_template.format(**template_args))
         f.flush()
 
@@ -853,7 +858,7 @@ class CACreateCommand(ZatoCommand):
                 self.logger.info('OK')
 
         # Make sure permissions are tight (GH #440)
-        os.chmod(priv_key_name, 0640)
+        os.chmod(priv_key_name, 0o640)
 
         # In case someone needs to invoke us directly and wants to find out
         # what the format_args were.

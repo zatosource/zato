@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -13,6 +13,9 @@ from operator import itemgetter
 
 # Django
 from django import forms
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.admin.settings import delivery_friendly_name
@@ -33,14 +36,14 @@ class CreateForm(forms.Form):
         self.fields['def_id'].choices = []
 
         # Sort modes by their friendly name.
-        modes = sorted(delivery_friendly_name.iteritems(), key=itemgetter(1))
+        modes = sorted(iteritems(delivery_friendly_name), key=itemgetter(1))
 
         for mode, friendly_name in modes:
             self.fields['delivery_mode'].choices.append([mode, friendly_name])
 
     def set_def_id(self, def_ids):
         # Sort definitions by their names.
-        def_ids = sorted(def_ids.iteritems(), key=itemgetter(1))
+        def_ids = sorted(iteritems(def_ids), key=itemgetter(1))
 
         for id, name in def_ids:
             self.fields['def_id'].choices.append([id, name])

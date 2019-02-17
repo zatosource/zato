@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -28,7 +28,7 @@ class CreateForm(forms.Form):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
         self.fields['protocol'].choices = []
-        for item in ODOO.PROTOCOL:
+        for item in ODOO.PROTOCOL():
             self.fields['protocol'].choices.append([item.id, item.name])
 
 class EditForm(CreateForm):

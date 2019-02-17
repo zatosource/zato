@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import select
@@ -22,8 +24,10 @@ def read_stdin_data(strip=True):
 
     if to_read:
         data = to_read[0].read()
-        return data.strip() if strip else data
+        out = data.strip() if strip else data
     else:
-        return ''
+        out = ''
+
+    return out
 
 # ################################################################################################################################

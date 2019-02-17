@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps
 from traceback import format_exc
 
 # Bunch
@@ -28,6 +27,7 @@ from zato.admin.web.views.pubsub import get_client_html
 from zato.common import PUBSUB, ZATO_NONE
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubSubscription, PubSubTopic
 from zato.common.util import asbool, get_sa_model_columns
+from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
 

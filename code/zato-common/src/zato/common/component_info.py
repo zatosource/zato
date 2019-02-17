@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,9 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os
 from anyjson import dumps as json_dumps, loads as json_loads
-from cStringIO import StringIO
 from datetime import datetime
 from itertools import groupby
+from io import StringIO
 from operator import attrgetter
 from time import time
 
@@ -46,8 +46,8 @@ def format_connections(conns, format):
 
         for item in items:
 
-            laddr_str = ':'.join(str(elem) for elem in item.laddr).ljust(21).decode('utf-8')
-            raddr_str = ':'.join(str(elem) for elem in item.raddr).rjust(21).decode('utf-8')
+            laddr_str = ':'.join(str(elem) for elem in item.laddr).ljust(21)
+            raddr_str = ':'.join(str(elem) for elem in item.raddr).rjust(21)
 
             out_item = {
                 'from': '{}:{}'.format(*item.laddr),

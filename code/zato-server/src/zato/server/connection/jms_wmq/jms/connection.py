@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,7 +25,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from cStringIO import StringIO
+from io import StringIO
 from logging import DEBUG, getLogger
 from struct import pack, unpack
 from xml.sax.saxutils import escape
@@ -31,6 +33,10 @@ from time import time, mktime, strptime, altzone
 from threading import RLock
 from traceback import format_exc
 import xml.etree.ElementTree as etree
+
+# Python 2/3 compatibility
+from future.utils import iteritems
+from past.builtins import basestring, long, unicode
 
 # Zato
 from zato.common.util.wmq import unhexlify_wmq_id
@@ -92,9 +98,9 @@ class WebSphereMQConnection(object):
         needs_mcd=True, needs_jms=False, max_chars_printed=100):
 
         # TCP-level settings
-        self.queue_manager = queue_manager or ''
+        self.queue_manager = queue_manager.encode('utf8') or ''
         self.channel = channel.encode('utf8')
-        self.host = host.encode('utf8')
+        self.host = host
         self.port = port
 
         # Credentials
@@ -173,7 +179,7 @@ class WebSphereMQConnection(object):
                     self._open_receive_queues_cache.clear()
                     self._open_dynamic_queues_cache.clear()
                     logger.info('Caches cleared')
-                except Exception, e:
+                except Exception:
                     try:
                         logger.error('Could not clear caches, e:`%s`' % format_exc())
                     except:
@@ -182,10 +188,10 @@ class WebSphereMQConnection(object):
                     logger.info('Disconnecting from queue manager `%s`' % self.queue_manager)
                     self.mgr.disconnect()
                     logger.info('Disconnected from queue manager `%s`' % self.queue_manager)
-                except Exception, e:
+                except Exception:
                     try:
                         msg = 'Could not disconnect from queue manager `%s`, e:`%s`'
-                        logger.error(msg % (self.queue_manager, format_exc(e)))
+                        logger.error(msg % (self.queue_manager, format_exc()))
                     except Exception:
                         pass
 
@@ -263,7 +269,7 @@ class WebSphereMQConnection(object):
             try:
                 self.mgr.connect_with_options(self.queue_manager, cd=cd, opts=connect_options, user=self.username,
                     password=self.password, **kwargs)
-            except self.mq.MQMIError, e:
+            except self.mq.MQMIError as e:
                 exc = WebSphereMQException(e, e.comp, e.reason)
                 raise exc
             else:
@@ -352,7 +358,7 @@ class WebSphereMQConnection(object):
             buff.write(mqrfh2jms)
 
         if message.text is not None:
-            buff.write(message.text.encode('utf-8'))
+            buff.write(message.text)
 
         body = buff.getvalue()
         buff.close()
@@ -361,7 +367,7 @@ class WebSphereMQConnection(object):
 
         try:
             queue.put(body, md)
-        except self.mq.MQMIError, e:
+        except self.mq.MQMIError as e:
             logger.error('MQMIError in queue.put, comp:`%s`, reason:`%s`' % (e.comp, e.reason))
             exc = WebSphereMQException(e, e.comp, e.reason)
             raise exc
@@ -425,7 +431,7 @@ class WebSphereMQConnection(object):
 
             return self._build_text_message(md, message)
 
-        except self.mq.MQMIError, e:
+        except self.mq.MQMIError as e:
             if e.reason == self.CMQC.MQRC_NO_MSG_AVAILABLE:
                 text = 'No message available for destination:`%s`, wait_interval:`%s` ms' % (destination, wait_interval)
                 raise NoMessageAvailableException(text)
@@ -582,7 +588,7 @@ class WebSphereMQConnection(object):
             self.CMQC.MQRO_DISCARD_MSG: 'Discard_Msg',
         }
 
-        for report_name, jms_header_name in md_report_to_jms.iteritems():
+        for report_name, jms_header_name in iteritems(md_report_to_jms):
             report_value = md.Report & report_name
             if report_value:
                 header_value = report_value

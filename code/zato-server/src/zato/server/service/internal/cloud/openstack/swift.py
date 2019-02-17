@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -76,9 +76,8 @@ class Create(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                msg = 'Could not create an OpenStack Swift connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('OpenStack Swift connection could not created, e:`{}`', format_exc())
                 session.rollback()
 
                 raise
@@ -120,9 +119,8 @@ class Edit(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                msg = 'Could not update the OpenStack Swift connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('OpenStack Swift connection could not updated, e:`{}`', format_exc())
                 session.rollback()
 
                 raise
@@ -148,9 +146,8 @@ class Delete(AdminService):
                 msg = {'action': CLOUD.OPENSTACK_SWIFT_DELETE.value, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg)
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                msg = 'Could not delete the OpenStack Swift connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('OpenStack Swift connection could not deleted, e:`{}`', format_exc())
 
                 raise

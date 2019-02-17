@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -44,7 +44,7 @@ class MsgPublishForm(MsgForm):
         super(MsgPublishForm, self).__init__(*args, **kwargs)
         add_select(self, 'topic_name', topic_list)
         add_select(self, 'publisher_id', publisher_list)
-        add_select(self, 'gd', PUBSUB.GD_CHOICE, False)
+        add_select(self, 'gd', PUBSUB.GD_CHOICE(), False)
 
         self.initial['topic_name'] = initial_topic_name
         self.initial['select_changer_source'] = select_changer_data

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,7 +23,7 @@ import yaml
 from zato.common import TRACE1
 from zato.common.settings_db import SettingsDB
 from zato.common.util import get_engine_url
-from zato_settings import * # noqa
+from zato.admin.zato_settings import *  # NOQA
 
 logging.addLevelName('TRACE1', TRACE1)
 if 'log_config' in globals():

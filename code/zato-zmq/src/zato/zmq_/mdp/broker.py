@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -22,6 +22,9 @@ from gevent.lock import RLock
 
 # ZeroMQ
 import zmq.green as zmq
+
+# Python 2/3 compatibility
+from past.builtins import basestring
 
 # Zato
 from zato.common import CHANNEL, ZMQ
@@ -71,7 +74,7 @@ class Broker(object):
         # Maps service names to workers registered to handle requests to that service
         self.services = {}
 
-        # Details about each worker, mapped by worker_id:Worker object 
+        # Details about each worker, mapped by worker_id:Worker object
         self.workers = {}
 
         # Held upon most operations on sockets
@@ -119,8 +122,8 @@ class Broker(object):
             # Ok, we are actually running now
             logger.info('Starting ZMQ MDP 0.1 broker at %s', self.address)
 
-        except Exception, e:
-            logger.warn('Could not bind to `%s`, e:`%s`', self.address, format_exc(e))
+        except Exception:
+            logger.warn('Could not bind to `%s`, e:`%s`', self.address, format_exc())
 
         # Main loop
         while self.keep_running:
@@ -146,8 +149,8 @@ class Broker(object):
                 self.send_disconnect_to_all()
                 break
 
-            except Exception, e:
-                logger.warn(format_exc(e))
+            except Exception:
+                logger.warn(format_exc())
 
 # ################################################################################################################################
 
@@ -225,8 +228,8 @@ class Broker(object):
             func = self.handle_client_message if originator == const.v01.client else self.handle_worker_message
             func(sender_id, *payload)
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
 # ################################################################################################################################
 
