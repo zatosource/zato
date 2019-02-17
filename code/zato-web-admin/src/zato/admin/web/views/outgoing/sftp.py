@@ -59,8 +59,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = _sio_required
-        input_optional = _sio_optional
+        input_required = _sio_required + _sio_optional
         output_required = ('id', 'name')
 
     def populate_initial_input_dict(self, initial_input_dict):
