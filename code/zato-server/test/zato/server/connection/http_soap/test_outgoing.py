@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2013 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,8 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import httplib, ssl
+import ssl
 from datetime import datetime
+from http.client import OK
 from logging import getLogger
 from tempfile import NamedTemporaryFile
 from time import sleep
@@ -192,7 +193,7 @@ class HTTPSOAPWrapperTestCase(TestCase, Base):
 
         try:
             wrapper.format_address(cid, None)
-        except ValueError, e:
+        except ValueError as e:
             eq_(e.message, 'CID:[{}] No parameters given for URL path'.format(cid))
         else:
             self.fail('Expected ValueError (params is None)')
@@ -213,7 +214,7 @@ class HTTPSOAPWrapperTestCase(TestCase, Base):
 
         try:
             address, non_path_params = wrapper.format_address(cid, params)
-        except ValueError, e:
+        except ValueError as e:
             eq_(e.message, 'CID:[{}] Could not build URL path'.format(cid))
         else:
             self.fail('Expected ValueError (not enough keys in params)')
@@ -497,7 +498,7 @@ class TLSPingTestCase(TestCase, Base):
 
             try:
                 wrapper.ping(rand_string())
-            except Exception, e:
+            except Exception as e:
                 details = e.message[0][1][0][0]
                 try:
                     self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
@@ -530,7 +531,7 @@ class TLSPingTestCase(TestCase, Base):
 
             try:
                 wrapper.ping(rand_string())
-            except Exception, e:
+            except Exception as e:
                 details = e.message[0][1][0][0]
                 try:
                     self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
@@ -593,7 +594,7 @@ class TLSHTTPTestCase(TestCase, Base):
 
         wrapper = HTTPSOAPWrapper(config, requests)
 
-        self.assertEquals(httplib.OK, wrapper.get('123').status_code)
+        self.assertEquals(OK, wrapper.get('123').status_code)
 
     def test_http_get_unknown_ca_verify_invalid_ca_cert(self):
 
@@ -620,7 +621,7 @@ class TLSHTTPTestCase(TestCase, Base):
 
             try:
                 wrapper.get('123')
-            except Exception, e:
+            except Exception as e:
                 details = e.message[0][1][0][0]
                 try:
                     self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
@@ -654,7 +655,7 @@ class TLSHTTPTestCase(TestCase, Base):
 
             try:
                 wrapper.get('123')
-            except Exception, e:
+            except Exception as e:
                 details = e.message[0][1][0][0]
                 try:
                     self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))

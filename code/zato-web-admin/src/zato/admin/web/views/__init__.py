@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,12 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from base64 import b64encode
 from datetime import datetime, timedelta
 from itertools import chain
 from traceback import format_exc
-
-# anyjson
-from json import dumps
 
 # bunch
 from bunch import Bunch
@@ -27,11 +25,16 @@ from django.template.response import TemplateResponse
 # pytz
 from pytz import UTC
 
+# Python 2/3 compatibility
+from future.utils import iterkeys
+from past.builtins import basestring
+
 # Zato
 from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
 from zato.common import SEC_DEF_TYPE_NAME, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.util import get_lb_client as _get_lb_client
+from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
 
@@ -56,7 +59,8 @@ def parse_response_data(response):
     """ Parses out data and metadata out an internal API call response.
     """
     meta = response.data.pop('_meta', None)
-    data = response.data[response.data.keys()[0]]
+    keys = list(iterkeys(response.data))
+    data = response.data[keys[0]]
     return data, meta
 
 # ################################################################################################################################
@@ -298,7 +302,7 @@ class Index(_BaseView):
         and that all the required parameters were given in GET request. cluster_id doesn't have to be in GET,
         'cluster' will suffice.
         """
-        input_elems = self.req.GET.keys() + self.req.zato.args.keys()
+        input_elems = list(iterkeys(self.req.GET)) + list(iterkeys(self.req.zato.args))
 
         if not self.cluster_id:
             return False
@@ -391,7 +395,8 @@ class Index(_BaseView):
                     if output_repeated:
                         if isinstance(response.data, dict):
                             response.data.pop('_meta', None)
-                            data = response.data[response.data.keys()[0]]
+                            keys = list(iterkeys(response.data))
+                            data = response.data[keys[0]]
                         else:
                             data = response.data
                         self._handle_item_list(data)
@@ -421,8 +426,8 @@ class Index(_BaseView):
 
             return TemplateResponse(req, self.get_template_name() or self.template, return_data)
 
-        except Exception, e:
-            return HttpResponseServerError(format_exc(e))
+        except Exception:
+            return HttpResponseServerError(format_exc())
 
     def handle(self, req=None, *args, **kwargs):
         return {}
@@ -471,6 +476,7 @@ class CreateEdit(_BaseView):
             logger.debug('Sending `%s` to `%s`', self.input_dict, self.service_name)
 
             response = self.req.zato.client.invoke(self.service_name, self.input_dict)
+
             if response.ok:
                 return_data = {
                     'message': self.success_message(response.data)
@@ -494,12 +500,12 @@ class CreateEdit(_BaseView):
 
                 return HttpResponse(dumps(return_data), content_type='application/javascript')
             else:
-                msg = 'response:[{}], details.response.details:[{}]'.format(response, response.details)
+                msg = 'response:`{}`, details.response.details:`{}`'.format(response, response.details)
                 logger.error(msg)
                 raise ZatoException(msg=msg)
 
-        except Exception, e:
-            return HttpResponseServerError(format_exc(e))
+        except Exception:
+            return HttpResponseServerError(format_exc())
 
     def success_message(self, item):
         raise NotImplementedError('Must be implemented by a subclass')
@@ -530,8 +536,8 @@ class BaseCallView(_BaseView):
             input_dict.update(initial_input_dict)
             req.zato.client.invoke(self.service_name or self.get_service_name(), input_dict)
             return HttpResponse()
-        except Exception, e:
-            msg = '{}, e:`{}`'.format(self.error_message, format_exc(e))
+        except Exception:
+            msg = '{}, e:`{}`'.format(self.error_message, format_exc())
             logger.error(msg)
             return HttpResponseServerError(msg)
 
@@ -557,8 +563,8 @@ class SecurityList(object):
         return iter(self.def_items)
 
     def append(self, def_item):
-        value = b'{0}/{1}'.format(def_item.sec_type, def_item.id)
-        label = b'{0}/{1}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
+        value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
+        label = '{0}/{1}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
         self.def_items.append((value, label))
 
     @staticmethod
@@ -601,7 +607,7 @@ def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_te
         extra=None):
     try:
         req.zato.client.invoke(service, input_dict)
-    except Exception, e:
+    except Exception as e:
         return HttpResponseServerError(e.message, content_type=content_type)
     else:
         response = {'msg': ok_msg}
@@ -615,14 +621,16 @@ def upload_to_server(req, cluster_id, service, error_msg_template):
     try:
         input_dict = {
             'cluster_id': cluster_id,
-            'payload': req.read().encode('base64'),
+            'payload': b64encode(req.read()),
             'payload_name': req.GET['qqfile']
         }
         req.zato.client.invoke(service, input_dict)
 
         return HttpResponse(dumps({'success': True}))
 
-    except Exception, e:
-        msg = error_msg_template.format(format_exc(e))
+    except Exception:
+        msg = error_msg_template.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+# ################################################################################################################################

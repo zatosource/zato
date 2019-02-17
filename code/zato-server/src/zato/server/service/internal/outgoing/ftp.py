@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -89,9 +89,8 @@ class Create(_FTPService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                msg = 'Could not create an outgoing FTP connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('Could not create an outgoing FTP connection, e:`{}`', format_exc())
                 session.rollback()
 
                 raise
@@ -142,9 +141,8 @@ class Edit(_FTPService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                msg = 'Could not update the outgoing FTP connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+            except Exception:
+                self.logger.error('Could not update the outgoing FTP connection, e:`{}`', format_exc())
                 session.rollback()
 
                 raise
@@ -170,10 +168,9 @@ class Delete(_FTPService):
 
                 self.notify_worker_threads({'name':old_name}, OUTGOING.FTP_DELETE.value)
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                msg = 'Could not delete the outgoing FTP connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not delete the outgoing FTP connection, e:`{}`', format_exc())
 
                 raise
 

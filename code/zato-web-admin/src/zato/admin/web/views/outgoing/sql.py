@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -111,8 +111,8 @@ def create(req):
         return _edit_create_response(
             'created', response.data.id, req.POST['name'], response.data.display_name, req.zato.cluster.id)
 
-    except Exception, e:
-        msg = 'Could not create an outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
+    except Exception:
+        msg = 'Could not create an outgoing SQL connection, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -128,8 +128,8 @@ def edit(req):
         return _edit_create_response(
             'updated', req.POST['id'], req.POST['edit-name'], response.data.display_name, req.zato.cluster.id)
 
-    except Exception, e:
-        msg = 'Could not update the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
+    except Exception:
+        msg = 'Could not update the outgoing SQL connection, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -150,8 +150,8 @@ def ping(req, cluster_id, id):
                 {'response_time':'%.3f' % float(response.data.response_time)})
         else:
             return HttpResponseServerError(response.details)
-    except Exception, e:
-        msg = 'Could not ping the outgoing SQL connection, e:[{}]'.format(format_exc(e))
+    except Exception:
+        msg = 'Could not ping the outgoing SQL connection, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 

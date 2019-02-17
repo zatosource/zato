@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -196,7 +196,7 @@ def normalize_sso_config(sso_conf):
     # which will let serviced in run-time efficiently check for membership of an address in that network.
 
     user_address_list = sso_conf.user_address_list
-    for username, ip_allowed in user_address_list.iteritems():
+    for username, ip_allowed in user_address_list.items():
         if ip_allowed:
             ip_allowed = user_address_list if isinstance(ip_allowed, list) else [ip_allowed]
             ip_allowed = [ip_network(elem.decode('utf8')) for elem in ip_allowed if elem != '*']

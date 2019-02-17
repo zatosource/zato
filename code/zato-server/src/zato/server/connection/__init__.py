@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -152,11 +152,11 @@ class BaseConnPoolStore(object):
                     except KeyboardInterrupt:
                         return
 
-                    except Exception, e:
+                    except Exception as e:
                         self._log_connection_error(name, item.config_no_sensitive, e, ', sleeping for 20 s')
                         self._gevent.sleep(20) # TODO: Should be configurable
 
-        except Exception, e:
+        except Exception as e:
             self._log_connection_error(name, item.config_no_sensitive, e)
         else:
 
@@ -209,8 +209,8 @@ class BaseConnPoolStore(object):
                 if session and session.is_connected:
                     self.delete_session(name)
 
-            except Exception, e:
-                logger.warn('Error while shutting down session `%s`, e:`%s`', name, format_exc(e))
+            except Exception:
+                logger.warn('Error while shutting down session `%s`, e:`%s`', name, format_exc())
             finally:
                 self.sessions.pop(name, None)
 
@@ -218,8 +218,8 @@ class BaseConnPoolStore(object):
         with self.lock:
             try:
                 self.delete_session(name)
-            except Exception, e:
-                logger.warn('Could not delete session `%s`, config:`%s`, e:`%s`', name, config, format_exc(e))
+            except Exception:
+                logger.warn('Could not delete session `%s`, config:`%s`, e:`%s`', name, config, format_exc())
             else:
                 return self._create(config.name, config, on_connection_established_callback, *args, **kwargs)
 

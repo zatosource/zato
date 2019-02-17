@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2015 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,6 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+
+# Python 2/3 compatibility
+from six import add_metaclass
 
 # Zato
 from zato.common.broker_message import CHANNEL
@@ -30,6 +33,8 @@ create_edit_input_required_extra = ['service_name']
 create_edit_rewrite = ['service_name']
 list_func = channel_stomp_list
 
+# ################################################################################################################################
+
 def instance_hook(self, input, instance, attrs):
     # So they are not stored as None/NULL
     instance.username = input.username or ''
@@ -42,18 +47,31 @@ def instance_hook(self, input, instance, attrs):
             filter(Service.cluster_id==input.cluster_id).\
             one().id
 
+# ################################################################################################################################
+
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = ChannelSTOMP.name,
-    __metaclass__ = GetListMeta
 
+# ################################################################################################################################
+
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
+# ################################################################################################################################
+
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
+# ################################################################################################################################
+
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+    pass
+
+# ################################################################################################################################
 
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a STOMP channel.
@@ -70,9 +88,13 @@ class ChangePassword(ChangePasswordBase):
 
         return self._handle(ChannelSTOMP, _auth, CHANNEL.STOMP_CHANGE_PASSWORD.value)
 
+# ################################################################################################################################
+
 class Ping(AdminService):
     __metaclass__ = PingMeta
 
     def ping(self, config):
         session = create_stomp_session(config)
         session.disconnect()
+
+# ################################################################################################################################

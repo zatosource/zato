@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
@@ -28,6 +27,7 @@ from zato.admin.web.views.pubsub import get_endpoint_html
 from zato.common import PUBSUB
 from zato.common.pubsub import new_msg_id
 from zato.common.util import asbool
+from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
 
@@ -326,7 +326,7 @@ def publish_action(req):
 
         req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
 
-    except Exception, e:
+    except Exception as e:
         message = e.message
         is_ok = False
     else:

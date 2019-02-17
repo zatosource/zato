@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,10 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import json, os, sys
 from ast import literal_eval
-from ConfigParser import ConfigParser
 from contextlib import closing
-from cStringIO import StringIO
 from datetime import datetime
+from io import StringIO
 
 # Bunch
 from bunch import bunchify
@@ -24,6 +23,12 @@ from zato.cli import common_logging_conf_contents, ManageCommand
 from zato.cli.create_server import lua_zato_rename_if_exists, server_conf_template, user_conf_contents
 from zato.common import version as zato_version, ZATO_INFO_FILE
 from zato.common.util import get_crypto_manager_from_server_config, get_odb_session_from_server_config, get_zato_command
+
+# Python 2/3 compatibility
+from configparser import ConfigParser
+from future.utils import iteritems
+
+# ################################################################################################################################
 
 zato_version_number_full = zato_version.replace('Zato ', '')
 zato_version_number = zato_version_number_full[:3]
@@ -264,7 +269,7 @@ class Migrate(ManageCommand):
         new_cp = ConfigParser()
         for section in all_sections_2_0:
             new_cp.add_section(section)
-            for key, value in new_config[section].items():
+            for key, value in iteritems(new_config[section]):
                 new_cp.set(section, key, value)
 
         server_conf = open(server_conf_path, 'w')
@@ -402,7 +407,7 @@ class Migrate(ManageCommand):
             new_cp = ConfigParser()
             for section in all_sections:
                 new_cp.add_section(section)
-                for key, value in new_config[section].items():
+                for key, value in iteritems(new_config[section]):
                     new_cp.set(section, key, value)
 
             server_conf = open(server_conf_path, 'w')

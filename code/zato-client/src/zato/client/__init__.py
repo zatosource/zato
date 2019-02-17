@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,15 +9,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os
+import logging
+import os
+from base64 import b64decode, b64encode
 from datetime import datetime
-from httplib import OK
-from inspect import getargspec
+from http.client import OK
 from json import dumps, loads
 from traceback import format_exc
-
-# anyjson
-from anyjson import dumps as anyjson_dumps
 
 # Bunch
 from bunch import bunchify
@@ -27,6 +25,10 @@ from lxml import objectify
 
 # requests
 import requests
+
+# Python 2/3 compatibility
+from builtins import str as text
+from six import PY3
 
 # Zato
 from zato.common import BROKER, soap_data_path, soap_data_xpath, soap_fault_xpath, \
@@ -44,23 +46,22 @@ DEFAULT_MAX_CID_REPR = 5
 
 mod_logger = logging.getLogger(__name__)
 
-# For pyflakes
-dumps = dumps
-
-# Work around https://bitbucket.org/runeh/anyjson/pull-request/4/
-if getargspec(anyjson_dumps).keywords:
-    dumps = anyjson_dumps
-else:
-    def dumps(data, *args, **kwargs):
-        return anyjson_dumps(data)
-
 # ################################################################################################################################
 # Version
 # ################################################################################################################################
 
-version = '3.0.2'
+version = '3.0.0'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+def default_json_handler(value):
+    if isinstance(value, datetime):
+        return value.isoformat()
+    elif isinstance(value, bytes):
+        return value.decode('utf8')
+    raise TypeError('Cannot serialize `{}`'.format(value))
+
 # ################################################################################################################################
 
 class _APIResponse(object):
@@ -99,7 +100,7 @@ class APIClient(object):
         func = getattr(self.session, verb)
         url_path = self.path.format(service_name)
         full_address = '{}{}'.format(self.address, url_path)
-        response = func(full_address, verify=self.tls_verify, data=dumps(request))
+        response = func(full_address, verify=self.tls_verify, data=dumps(request, default=default_json_handler))
 
         return _APIResponse(response)
 
@@ -179,8 +180,8 @@ class _StructuredResponse(_Response):
     def _set_data_details(self):
         try:
             self.data = self.load_func(self.inner.text.encode('utf-8'))
-        except Exception, e:
-            self.details = format_exc(e)
+        except Exception:
+            self.details = format_exc()
         else:
             return True
 
@@ -315,7 +316,10 @@ class ServiceInvokeResponse(JSONSIOResponse):
         response = payload.get('response')
         if response:
             if has_zato_env:
-                self.inner_service_response = payload['response'].decode('base64')
+                payload_response = payload['response']
+                payload_response = b64decode(payload_response)
+                payload_response = payload_response.decode('utf8') if isinstance(payload_response, bytes) else payload_response
+                self.inner_service_response = payload_response
                 try:
                     data = loads(self.inner_service_response)
                 except ValueError:
@@ -324,10 +328,10 @@ class ServiceInvokeResponse(JSONSIOResponse):
                 else:
                     if isinstance(data, dict):
                         self.meta = data.get('_meta')
-                        data_keys = data.keys()
+                        data_keys = list(data.keys())
                         if len(data_keys) == 1:
                             data_key = data_keys[0]
-                            if isinstance(data_key, basestring) and data_key.startswith('zato'):
+                            if isinstance(data_key, text) and data_key.startswith('zato'):
                                 self.data = data[data_key]
                             else:
                                 self.data = data
@@ -414,7 +418,7 @@ class _JSONClient(_Client):
 
     def invoke(self, payload='', headers=None, to_json=True):
         if to_json:
-            payload = dumps(payload)
+            payload = dumps(payload, default=default_json_handler)
         return super(_JSONClient, self).invoke(payload, self.response_class, headers=headers)
 
 class JSONClient(_JSONClient):
@@ -442,11 +446,6 @@ class AnyServiceInvoker(_Client):
     don't have to be available through any channels, it suffices for zato.service.invoke
     to be exposed over HTTP.
     """
-    def json_default_handler(self, value):
-        if isinstance(value, datetime):
-            return value.isoformat()
-        raise TypeError('Cannot serialize [{}]'.format(value))
-
     def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json',
                 transport=None, async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
                 to_json=True, output_repeated=ZATO_NOT_GIVEN, pid=None, all_pids=False, timeout=None):
@@ -458,13 +457,13 @@ class AnyServiceInvoker(_Client):
             output_repeated = name.lower().endswith('list')
 
         if to_json:
-            payload = dumps(payload, default=self.json_default_handler)
+            payload = dumps(payload, default=default_json_handler)
 
         id_, value = ('name', name) if name else ('id', id)
 
         request = {
             id_: value,
-            'payload': payload.encode('base64'),
+            'payload': b64encode(payload.encode('utf8') if PY3 else payload),
             'channel': channel,
             'data_format': data_format,
             'transport': transport,
@@ -475,7 +474,8 @@ class AnyServiceInvoker(_Client):
             'timeout': timeout,
         }
 
-        return super(AnyServiceInvoker, self).invoke(dumps(request), ServiceInvokeResponse, async, headers, output_repeated)
+        return super(AnyServiceInvoker, self).invoke(dumps(request, default=default_json_handler),
+            ServiceInvokeResponse, async, headers, output_repeated)
 
     def invoke(self, *args, **kwargs):
         return self._invoke(async=False, *args, **kwargs)

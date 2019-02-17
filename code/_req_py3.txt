@@ -1,0 +1,12 @@
+https://github.com/dsuch/bunch/archive/master.zip#egg=bunch
+fs==2.2.1
+librabbitmq==2.0.0
+odoo-client-lib==1.2.0
+https://github.com/dsuch/paodate/archive/master.zip#egg=paodate
+Paste==3.0.6
+pyaml==18.11.0
+pyprof2calltree==1.4.4
+python-ldap==3.1.0
+python-swiftclient==3.6.0
+git+https://github.com/tonyseek/simple-rbac.git@048d4170b8cbeb65b7bf88be3bd26385bfc449fa#egg=simple-rbac
+stompest==2.3.0

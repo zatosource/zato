@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,15 +21,28 @@ from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log
 
+# gevent monkeypatch is needed
+from gevent.monkey import patch_all
+patch_all()
+
+# Django
+import django
+from django.conf import settings
+
+# Configure Django settings when the module is picked up
+if not settings.configured:
+    settings.configure()
+    django.setup()
+
+# Bunch
+from bunch import Bunch
+
 # ConfigObj
 from configobj import ConfigObj
 
 # gunicorn
 import gunicorn
 from gunicorn.app.base import Application
-
-# Paste
-from paste.util.converters import asbool
 
 # psycopg2
 import psycopg2
@@ -44,13 +57,17 @@ from repoze.profile import ProfileMiddleware
 import yaml
 
 # Zato
-from zato.common import SERVER_STARTUP, TRACE1
+from zato.common import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto import ServerCryptoManager
 from zato.common.ipaddress_ import get_preferred_ip
+from zato.common.kvdb import KVDB
+from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
-from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_kvdb_config_for_log, \
-     parse_cmd_line_options, register_diag_handlers, store_pidfile
+from zato.common.util import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
+     register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
+from zato.server.base.parallel import ParallelServer
+from zato.server.service.store import ServiceStore
 from zato.server.startup_callable import StartupCallableTool
 from zato.sso.api import SSOAPI
 from zato.sso.util import new_user_id, normalize_sso_config
@@ -164,6 +181,15 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     sso_config = get_config(repo_location, 'sso.conf', needs_user_config=False)
     normalize_sso_config(sso_config)
 
+    '''secrets_config_zato = secrets_config.get('zato')
+    if secrets_config_zato:
+        token = secrets_config_zato.get('server_conf.main.token')
+        if token:
+            secrets_config_zato['server_conf.main.token'] = token.encode('utf8')
+            '''
+
+    server_config.main.token = server_config.main.token.encode('utf8')
+
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
     preferred_address = server_config.preferred_address.get('address')
 
@@ -208,9 +234,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
         logger.info('Locale is `%s`, amount of %s -> `%s`', user_locale, value, locale.currency(
             value, grouping=True).decode('utf-8'))
 
-    # Spring Python
-    app_context = get_app_context(server_config)
-
     # Makes queries against Postgres asynchronous
     if asbool(server_config.odb.use_async_driver) and server_config.odb.engine == 'postgresql':
         make_psycopg_green()
@@ -218,7 +241,24 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     if server_config.misc.http_proxy:
         os.environ['http_proxy'] = server_config.misc.http_proxy
 
-    server = app_context.get_object('server')
+    # Basic components needed for the server to boot up
+    kvdb = KVDB()
+    odb_manager = ODBManager(well_known_data=ZATO_CRYPTO_WELL_KNOWN_DATA)
+    sql_pool_store = PoolStore()
+
+    service_store = ServiceStore()
+    service_store.odb = odb_manager
+    service_store.services = {}
+
+    server = ParallelServer()
+    server.odb = odb_manager
+    server.service_store = service_store
+    server.service_store.server = server
+    server.sql_pool_store = sql_pool_store
+    server.service_modules = []
+    server.kvdb = kvdb
+    server.user_config = Bunch()
+
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
     server.crypto_manager = crypto_manager
@@ -239,7 +279,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.sio_config = sio_config
     server.sso_config = sso_config
     server.user_config.update(server_config.user_config_items)
-    server.app_context = app_context
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
     server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
@@ -250,7 +289,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
             crypto_manager.hash_secret, crypto_manager.verify_hash, new_user_id)
 
     # Remove all locks possibly left over by previous server instances
-    kvdb = app_context.get_object('kvdb')
     kvdb.component = 'master-proc'
     clear_locks(kvdb, server_config.main.token, server_config.kvdb, crypto_manager.decrypt)
 

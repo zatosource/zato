@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+
+# Python 2/3 compatibility
+from six import add_metaclass
 
 # Zato
 from zato.common import SEC_DEF_TYPE
@@ -27,6 +30,8 @@ list_func = tls_channel_sec_list
 create_edit_input_required_extra = ['value']
 skip_input_params = ['sec_type']
 
+# ################################################################################################################################
+
 def instance_hook(self, input, instance, attrs):
 
     # Parsing returns a generator which we exhaust be converting it into a list.
@@ -36,18 +41,33 @@ def instance_hook(self, input, instance, attrs):
     # So that username, an artificial and inherited field, is not an empty string.
     instance.username = input.username = input.name
 
+# ################################################################################################################################
+
 def broker_message_hook(self, input, instance, attrs, service_type):
     input.sec_type = SEC_DEF_TYPE.TLS_CHANNEL_SEC
 
+# ################################################################################################################################
+
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = TLSChannelSecurity.name,
-    __metaclass__ = GetListMeta
 
-class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+# ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
+# ################################################################################################################################
+
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
+
+# ################################################################################################################################
+
+@add_metaclass(DeleteMeta)
+class Delete(AdminService):
+    pass
+
+# ################################################################################################################################

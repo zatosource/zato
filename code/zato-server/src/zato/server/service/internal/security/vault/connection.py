@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,6 +14,9 @@ from uuid import uuid4
 
 # SQLAlchemy
 from sqlalchemy.orm.exc import NoResultFound
+
+# Python 2/3 compatibility
+from six import add_metaclass
 
 # Zato
 from zato.common.broker_message import VAULT
@@ -32,10 +35,14 @@ list_func = vault_connection_list
 output_optional_extra = ['service_id', 'service_name']
 extra_delete_attrs = ['cluster_id', 'service_id']
 
+# ################################################################################################################################
+
 def instance_hook(self, input, instance, attrs):
     instance.tls_key_cert_id = instance.tls_key_cert_id or None
     instance.tls_ca_cert_id = instance.tls_ca_cert_id or None
     instance.username = uuid4().hex
+
+# ################################################################################################################################
 
 def broker_message_hook(self, input, instance, attrs, service_type):
 
@@ -45,15 +52,28 @@ def broker_message_hook(self, input, instance, attrs, service_type):
         except NoResultFound:
             input.service_name = '' # That is fine, service is optional for Vault connections
 
+# ################################################################################################################################
+
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = VaultConnection.name,
-    __metaclass__ = GetListMeta
 
+# ################################################################################################################################
+
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
+# ################################################################################################################################
+
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
+# ################################################################################################################################
+
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+    pass
+
+# ################################################################################################################################

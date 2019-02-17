@@ -9,11 +9,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from cPickle import loads as pickle_loads
+from base64 import b64decode
 
 # Zato
 from zato.common import CACHE
 from zato.server.base.worker.common import WorkerImpl
+
+# Python 2/3 compatibility
+from zato.common.py23_ import pickle_loads
 
 # ################################################################################################################################
 
@@ -50,7 +53,7 @@ class CacheBuiltin(WorkerImpl):
             msg['key'] = _pickle_loads(msg['key'])
 
         if msg['is_value_pickled']:
-            msg['value'] = _pickle_loads(msg['value'])
+            msg['value'] = _pickle_loads(b64decode(msg['value']))
 
 # ################################################################################################################################
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -52,8 +52,8 @@ class SAPWrapper(object):
 
         try:
             ping_sap(conn)
-        except Exception, e:
-            self.logger.warn('Could not ping SAP (%s), e:`%s`', self.config.name, format_exc(e))
+        except Exception:
+            self.logger.warn('Could not ping SAP (%s), e:`%s`', self.config.name, format_exc())
 
         self.client.put_client(conn)
 

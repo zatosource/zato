@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -20,6 +20,9 @@ from dateutil.parser import parse
 
 # gevent
 from gevent import sleep
+
+# Python 2/3 compatibility
+from past.builtins import basestring
 
 # Zato
 from zato.broker import BrokerMessageReceiver
@@ -132,8 +135,8 @@ class Scheduler(BrokerMessageReceiver):
 
         try:
             handler(job_data, **kwargs)
-        except Exception, e:
-            logger.error('Caught exception `%s`', format_exc(e))
+        except Exception:
+            logger.error('Caught exception `%s`', format_exc())
 
 # ################################################################################################################################
 

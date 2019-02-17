@@ -1,68 +1,34 @@
---- gunicorn/glogging.py.orig	2016-02-20 16:05:01.558349358 +0100
-+++ gunicorn/glogging.py	2016-02-20 16:05:21.650349683 +0100
-@@ -50,11 +50,11 @@
+--- gunicorn/glogging.py.orig	2019-02-14 22:57:59.976563959 +0100
++++ gunicorn/glogging.py	2019-02-14 22:58:26.104563776 +0100
+@@ -56,11 +56,11 @@
  
          loggers={
              "root": {"level": "INFO", "handlers": ["console"]},
 -            "gunicorn.error": {
 +            "gunicorn.main": {
                  "level": "INFO",
-                 "handlers": ["console"],
+                 "handlers": ["error_console"],
                  "propagate": True,
 -                "qualname": "gunicorn.error"
 +                "qualname": "gunicorn.main"
-             }
-         },
-         handlers={
-@@ -155,50 +155,13 @@
+             },
+ 
+             "gunicorn.access": {
+@@ -188,7 +188,7 @@
      atoms_wrapper_class = SafeAtoms
  
      def __init__(self, cfg):
 -        self.error_log = logging.getLogger("gunicorn.error")
 +        self.error_log = logging.getLogger("gunicorn.main")
+         self.error_log.propagate = False
          self.access_log = logging.getLogger("gunicorn.access")
-         self.error_handlers = []
-         self.access_handlers = []
-         self.cfg = cfg
-         self.logfile = None
-         self.lock = threading.Lock()
--        self.setup(cfg)
--
--    def setup(self, cfg):
--        if not cfg.logconfig:
--            loglevel = self.LOG_LEVELS.get(cfg.loglevel.lower(), logging.INFO)
--            self.error_log.setLevel(loglevel)
--            self.access_log.setLevel(logging.INFO)
--
--            if cfg.errorlog != "-":
--                # if an error log file is set redirect stdout & stderr to
--                # this log file.
--                for stream in sys.stdout, sys.stderr:
--                    stream.flush()
--
--                self.logfile = open(cfg.errorlog, 'a+')
--                os.dup2(self.logfile.fileno(), sys.stdout.fileno())
--                os.dup2(self.logfile.fileno(), sys.stderr.fileno())
--
--            # set gunicorn.error handler
--            self._set_handler(self.error_log, cfg.errorlog,
--                    logging.Formatter(self.error_fmt, self.datefmt))
--
--            # set gunicorn.access handler
--            if cfg.accesslog is not None:
--                self._set_handler(self.access_log, cfg.accesslog,
--                    fmt=logging.Formatter(self.access_fmt))
--
--            # set syslog handler
--            if cfg.syslog:
--                self._set_syslog_handler(self.error_log, cfg, self.syslog_fmt)
--
--        else:
--            if os.path.exists(cfg.logconfig):
--                fileConfig(cfg.logconfig, defaults=CONFIG_DEFAULTS,
--                        disable_existing_loggers=False)
--            else:
--                raise RuntimeError("Error: log config '%s' not found" % cfg.logconfig)
+         self.access_log.propagate = False
+@@ -204,7 +204,7 @@
+         self.error_log.setLevel(self.loglevel)
+         self.access_log.setLevel(logging.INFO)
  
-     def critical(self, msg, *args, **kwargs):
-         self.error_log.critical(msg, *args, **kwargs)
+-        # set gunicorn.error handler
++        # set gunicorn.main handler
+         if self.cfg.capture_output and cfg.errorlog != "-":
+             for stream in sys.stdout, sys.stderr:
+                 stream.flush()

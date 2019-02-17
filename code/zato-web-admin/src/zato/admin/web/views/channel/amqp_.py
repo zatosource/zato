@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -85,8 +85,8 @@ def create(req):
         response = req.zato.client.invoke('zato.channel.amqp.create', _get_edit_create_message(req.POST))
         return _edit_create_response(req.zato.client, 'created', response.data.id,
             req.POST['name'], req.POST['def_id'], req.POST['cluster_id'])
-    except Exception, e:
-        msg = 'Could not create an AMQP channel, e:`{}`'.format(format_exc(e))
+    except Exception:
+        msg = 'Could not create an AMQP channel, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -98,8 +98,8 @@ def edit(req):
         return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'],
             req.POST['edit-def_id'], req.POST['cluster_id'])
 
-    except Exception, e:
-        msg = 'Could not update the AMQP channel, e:`{}`'.format(format_exc(e))
+    except Exception:
+        msg = 'Could not update the AMQP channel, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 

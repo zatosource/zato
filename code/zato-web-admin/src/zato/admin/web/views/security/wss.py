@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps
 from traceback import format_exc
 
 # Django
@@ -23,6 +22,7 @@ from zato.admin.web.forms.security.wss import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, Delete as _Delete, method_allowed, parse_response_data
 from zato.common import ZATO_WSS_PASSWORD_TYPES
 from zato.common.odb.model import WSSDefinition
+from zato.common.util.json_ import dumps
 
 logger = logging.getLogger(__name__)
 
@@ -97,8 +97,8 @@ def edit(req):
     try:
         response = req.zato.client.invoke('zato.security.wss.edit', _get_edit_create_message(req.POST, prefix='edit-'))
         return _edit_create_response(response, 'updated', req.POST['edit-name'], req.POST['edit-password_type'])
-    except Exception, e:
-        msg = 'Could not update the WS-Security definition, e:[{e}]'.format(e=format_exc(e))
+    except Exception:
+        msg = 'WS-Security definition could not be updated, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -107,14 +107,14 @@ def create(req):
     try:
         response = req.zato.client.invoke('zato.security.wss.create', _get_edit_create_message(req.POST))
         return _edit_create_response(response, 'created', req.POST['name'], req.POST['password_type'])
-    except Exception, e:
-        msg = "Could not create a WS-Security definition, e:[{e}]".format(e=format_exc(e))
+    except Exception:
+        msg = "WS-Security definition could not be created, e:[{e}]".format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
 class Delete(_Delete):
     url_name = 'security-wss-delete'
-    error_message = 'Could not delete the WS-Security definition'
+    error_message = 'WS-Security definition could not be deleted'
     service_name = 'zato.security.wss.delete'
 
 @method_allowed('POST')

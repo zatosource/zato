@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,12 +23,17 @@ from gevent.lock import RLock
 # sortedcontainers
 from sortedcontainers import SortedList as _SortedList
 
+# Python 2/3 compatibility
+from future.utils import iteritems
+
 # Zato
 from zato.common import GENERIC, PUBSUB
 from zato.common.pubsub import PubSubMessage
 from zato.common.util import grouper, spawn_greenlet
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub import PubSub
+
+# ################################################################################################################################
 
 # For pyflakes
 PubSub = PubSub
@@ -52,6 +57,7 @@ class SortedList(_SortedList):
         """ Removes a pubsub message from a SortedList instance - we cannot use the regular .remove method
         because it may triggger __cmp__ per https://github.com/grantjenks/sorted_containers/issues/81.
         """
+        logger.info('In remove_pubsub_msg msg:`%s`, self._maxes:`%s`', msg, self._maxes)
         pos = bisect_left(self._maxes, msg)
 
         if pos == len(self._maxes):
@@ -312,7 +318,12 @@ class DeliveryTask(object):
             else:
                 with self.delivery_lock:
                     for msg in to_deliver:
-                        self.delivery_list.remove_pubsub_msg(msg)
+                        try:
+                            self.delivery_list.remove_pubsub_msg(msg)
+                        except Exception:
+                            msg = 'Caught exception in run_delivery/remove_pubsub_msg, e:`%s`'
+                            logger.warn(msg, format_exc())
+                            logger_zato.warn(msg, format_exc())
 
                 # Status of messages is updated in both SQL and RAM so we can now log success
                 len_delivered = len(delivered_msg_id_list)
@@ -424,9 +435,9 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-        except Exception, e:
+        except Exception:
             error_msg = 'Exception in delivery task for sub_key:`%s`, e:`%s`'
-            e_formatted = format_exc(e)
+            e_formatted = format_exc()
             logger.warn(error_msg, self.sub_key, e_formatted)
             logger_zato.warn(error_msg, self.sub_key, e_formatted)
 
@@ -499,11 +510,21 @@ class Message(PubSubMessage):
 
 # ################################################################################################################################
 
-    def __cmp__(self, other, max_pri=9):
-        return cmp(
-            (max_pri - self.priority, self.ext_pub_time, self.pub_time),
-            (max_pri - other.priority, other.ext_pub_time, other.pub_time)
-        )
+    def __lt__(self, other, max_pri=9):
+
+        self_priority = max_pri - self.priority
+        other_priority = max_pri - other.priority
+
+        if self_priority < other_priority:
+            return True
+
+        # Under Python 3, we must ensure these are not None,
+        # because None < None is undefined (TypeError: unorderable types: NoneType() < NoneType())
+        elif self.ext_pub_time and other.ext_pub_time:
+            return self.ext_pub_time < other.ext_pub_time
+
+        elif self.pub_time < other.pub_time:
+            return True
 
 # ################################################################################################################################
 
@@ -760,8 +781,8 @@ class PubSubTool(object):
                 self.delivery_tasks[sub_key].stop()
                 del self.delivery_tasks[sub_key]
 
-            except Exception, e:
-                logger.warn('Exception during sub_key removal `%s`, e:`%s`', sub_key, format_exc(e))
+            except Exception:
+                logger.warn('Exception during sub_key removal `%s`, e:`%s`', sub_key, format_exc())
 
 # ################################################################################################################################
 
@@ -900,7 +921,7 @@ class PubSubTool(object):
                 # just not for this one.
                 min_last_gd_run = self.last_gd_run.get(sub_key_list[0])
             else:
-                min_last_gd_run = min(value for key, value in self.last_gd_run.iteritems() if key in sub_key_list)
+                min_last_gd_run = min(value for key, value in iteritems(self.last_gd_run) if key in sub_key_list)
         else:
             min_last_gd_run = None
 

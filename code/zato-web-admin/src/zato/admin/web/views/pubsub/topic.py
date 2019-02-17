@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -148,8 +148,8 @@ def topic_clear(req, cluster_id, topic_id):
             'cluster_id': cluster_id,
             'id': topic_id,
         })
-    except Exception, e:
-        return HttpResponseServerError(format_exc(e))
+    except Exception:
+        return HttpResponseServerError(format_exc())
     else:
         msg = 'Cleared topic `{}`'.format(
             req.zato.client.invoke('zato.pubsub.topic.get', {
