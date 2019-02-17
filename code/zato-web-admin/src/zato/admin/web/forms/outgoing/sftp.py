@@ -11,22 +11,26 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Django
 from django import forms
 
+# Zato
+from zato.common import SFTP
+from zato.admin.web.forms import add_select
+
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     log_level = forms.ChoiceField(widget=forms.Select())
 
     host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:70%'}))
-    port = forms.CharField(widget=forms.TextInput(attrs={'style':'width:12%'}))
+    port = forms.CharField(widget=forms.TextInput(attrs={'style':'width:12%'}), initial=SFTP.DEFAULT.PORT)
 
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     password = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     identity_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     ssh_config_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
-    buffer_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:12%'}))
+    buffer_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:12%'}), initial=SFTP.DEFAULT.BUFFER_SIZE)
     is_compression_enabled = forms.ChoiceField(widget=forms.Select())
-    bandwidth_limit = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
+    bandwidth_limit = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=SFTP.DEFAULT.BANDWIDTH_LIMIT)
 
     force_ip_type = forms.ChoiceField(widget=forms.Select())
     should_flush = forms.BooleanField(required=False, widget=forms.CheckboxInput())
@@ -36,6 +40,8 @@ class CreateForm(forms.Form):
 
     def __init__(self, prefix=None, req=None):
         super(CreateForm, self).__init__(prefix=prefix)
+        add_select(self, 'log_level', SFTP.LOG_LEVEL(), needs_initial_select=False)
+        add_select(self, 'force_ip_type', SFTP.IP_TYPE())
 
 
 class EditForm(CreateForm):

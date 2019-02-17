@@ -14,7 +14,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Python 2/3 compatibility
-from builtins import str as text
+from past.builtins import basestring
 
 # Zato
 from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
@@ -126,11 +126,12 @@ class AdminService(Service):
     def after_handle(self):
 
         payload = self.response.payload
-        is_text = isinstance(payload, text)
+        is_text = isinstance(payload, basestring)
         needs_meta = self.request.input.get('needs_meta', True)
 
-        if needs_meta and hasattr(self, '_search_tool') and not is_text:
-            payload.zato_meta = self._search_tool.output_meta
+        if needs_meta and hasattr(self, '_search_tool'):
+            if not is_text:
+                payload.zato_meta = self._search_tool.output_meta
 
         logger.info(
             'cid:`%s`, name:`%s`, response:`%r`', self.cid, self.name, replace_private_key(get_response_value(self.response)))

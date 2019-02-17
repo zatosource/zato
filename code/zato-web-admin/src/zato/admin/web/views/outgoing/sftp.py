@@ -25,6 +25,13 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+_sio_required = 'name', 'log_level'
+_sio_optional = 'is_active', 'host', 'port', 'username', 'password', 'identity_file', \
+    'ssh_config_file', 'buffer_size', 'is_compression_enabled', 'bandwidth_limit', 'force_ip_type', 'should_flush', \
+    'should_preserve_meta', 'ssh_options'
+
+# ################################################################################################################################
+
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'out-sftp'
@@ -35,10 +42,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'type_')
-        output_required = ('id', 'name', 'address')
-        output_optional = ('is_active', 'is_zato',
-            'on_connect_service_id', 'on_connect_service_name', 'on_message_service_id', 'on_message_service_name',
-            'on_close_service_id', 'on_close_service_name', 'subscription_list', 'security_def', 'has_auto_reconnect')
+        output_required = ('id',) + _sio_required
+        output_optional = _sio_optional
         output_repeated = True
 
     def handle(self):
@@ -54,25 +59,17 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'is_zato', 'address', 'on_connect_service_name', 'on_message_service_name',
-            'on_close_service_name', 'subscription_list', 'security_def', 'has_auto_reconnect')
+        input_required = _sio_required
+        input_optional = _sio_optional
         output_required = ('id', 'name')
 
     def populate_initial_input_dict(self, initial_input_dict):
-        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_WSX
+        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_SFTP
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outconn'] = True
         initial_input_dict['pool_size'] = 1
         initial_input_dict['sec_use_rbac'] = False
-
-    def post_process_return_data(self, return_data):
-
-        for name in ('connect', 'message', 'close'):
-            field_name = 'on_{}_service_name'.format(name)
-            return_data[field_name] = self.input_dict.get(field_name)
-
-        return return_data
 
     def success_message(self, item):
         return 'Successfully {} outgoing SFTP connection `{}`'.format(self.verb, item.name)

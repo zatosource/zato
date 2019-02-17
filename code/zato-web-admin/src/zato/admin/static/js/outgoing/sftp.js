@@ -14,11 +14,11 @@ $.fn.zato.data_table.SFTP = new Class({
 
 $(document).ready(function() {
     $('#data-table').tablesorter();
-    $.fn.zato.data_table.password_required = true;
+    $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.SFTP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.sftp.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'address', 'security_def']);
+    $.fn.zato.data_table.setup_forms(['name']);
 })
 
 $.fn.zato.outgoing.sftp.create = function() {
@@ -37,52 +37,43 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
     }
 
     var is_active = item.is_active == true;
-    var is_zato = item.is_zato == true;
-    var has_auto_reconnect = item.has_auto_reconnect == true;
+    var is_compression_enabled = item.is_compression_enabled == true;
+    var should_flush = item.should_flush == true;
+    var should_preserve_meta = item.should_preserve_meta == true;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
+
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.address);
-    row += String.format('<td>{0}</td>', is_zato ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', item.host ? item.host : $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>', item.port ? item.port : $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>', item.username ? item.username : $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>', item.identity_file ? item.identity_file : $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>', item.bandwidth_limit);
 
-    if(data.on_connect_service_name) {
-        row += String.format('<td>{0}</td>',
-            String.format("<a href='/zato/service/overview/{0}/?cluster={1}'>{0}</a>",
-            data.on_connect_service_name, item.cluster_id));
-    }
-    else {
-        row += $.fn.zato.empty_table_cell;
-    }
-
-    if(data.on_message_service_name) {
-        row += String.format('<td>{0}</td>',
-            String.format("<a href='/zato/service/overview/{0}/?cluster={1}'>{0}</a>",
-            data.on_message_service_name, item.cluster_id));
-    }
-    else {
-        row += $.fn.zato.empty_table_cell;
-    }
-
-    if(data.on_close_service_name) {
-        row += String.format('<td>{0}</td>',
-            String.format("<a href='/zato/service/overview/{0}/?cluster={1}'>{0}</a>",
-            data.on_close_service_name, item.cluster_id));
-    }
-    else {
-        row += $.fn.zato.empty_table_cell;
-    }
-
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.sftp.change_password('{0}')\">Change password</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.sftp.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.sftp.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.sftp.ping({0});'>Ping</a>", item.id));
+
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
-    row += String.format("<td class='ignore'>{0}</td>", is_active);
-    row += String.format("<td class='ignore'>{0}</td>", is_zato);
-    row += String.format("<td class='ignore'>{0}</td>", item.on_connect_service_id);
-    row += String.format("<td class='ignore'>{0}</td>", item.security_def);
-    row += String.format("<td class='ignore'>{0}</td>", item.subscription_list);
-    row += String.format("<td class='ignore'>{0}</td>", has_auto_reconnect);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.log_level);
+    row += String.format("<td class='ignore'>{0}</td>", item.host);
+    row += String.format("<td class='ignore'>{0}</td>", item.port);
+    row += String.format("<td class='ignore'>{0}</td>", item.username);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.identity_file);
+    row += String.format("<td class='ignore'>{0}</td>", item.ssh_config_file);
+    row += String.format("<td class='ignore'>{0}</td>", item.buffer_size);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_compression_enabled);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.force_ip_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.should_flush);
+    row += String.format("<td class='ignore'>{0}</td>", item.should_preserve_meta);
+    row += String.format("<td class='ignore'>{0}</td>", item.ssh_options);
 
     if(include_tr) {
         row += '</tr>';
