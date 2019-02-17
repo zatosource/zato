@@ -10,17 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from setuptools import setup, find_packages
 
-# Python 2/3 compatibility
-from past.builtins import execfile
-
-try:
-    curdir = os.path.dirname(os.path.abspath(__file__))
-    _version_py = os.path.normpath(os.path.join(curdir, '..', '.version.py'))
-    _locals = {}
-    execfile(_version_py, _locals)
-    version = _locals['version']
-except IOError:
-    version = '2.0.3.4'
+version = '3.1.1'
 
 def parse_requirements(requirements):
     ignored = ['#', 'setuptools', '-e']
