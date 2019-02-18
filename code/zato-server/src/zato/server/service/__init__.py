@@ -537,7 +537,7 @@ class Service(object):
 
                 else:
                     if e:
-                        raise Exception(e)
+                        raise e if isinstance(e, Exception) else Exception(e)
 
         # We don't accept it but some response needs to be returned anyway.
         else:
