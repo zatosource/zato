@@ -508,6 +508,13 @@ def slow_response_details(req, cid, service_name):
                         setattr(item, attr_name, highlight(value,
                              data_format_lexer[data_format](), HtmlFormatter(linenos='table')))
 
+                    else:
+                        # Regular raw value
+                        setattr(item, name, value)
+
+                        # We do not have an HTML version but we need to populate it anyway for pretty-print toggling
+                        setattr(item, name + '_html', value)
+
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'service': service,
