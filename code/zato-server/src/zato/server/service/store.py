@@ -83,6 +83,9 @@ class InRAMService(object):
         self.slow_threshold = None   # type: int
         self.source_code_info = None # type: SourceCodeInfo
 
+    def __repr__(self):
+        return '<{} at {} name:{} impl_name:{}>'.format(self.__class__.__name__, hex(id(self)), self.name, self.impl_name)
+
     def to_dict(self):
         return {
             'name': self.name,
@@ -493,6 +496,7 @@ class ServiceStore(object):
             # Add to ODB all the Service objects from this batch found not to be in ODB already
             if to_add:
                 self.odb.add_services(session, [elem.to_dict() for elem in to_add])
+                return True
 
 # ################################################################################################################################
 
@@ -564,7 +568,13 @@ class ServiceStore(object):
         with closing(self.odb.session()) as session:
 
             # Store Service objects first
-            self._store_services_in_odb(session, batch_indexes, to_process)
+            needs_commit = self._store_services_in_odb(session, batch_indexes, to_process)
+
+            # This flag will be True if there were any services to be added,
+            # in which case we need to commit the sesssion here to make it possible
+            # for the next method to have access to these newly added Service objects.
+            if needs_commit:
+                session.commit()
 
             # Now DeployedService can be added - they assume that all Service objects all are in ODB already
             self._store_deployed_services_in_odb(session, batch_indexes, to_process)
