@@ -342,7 +342,7 @@ class GetDeploymentInfoList(AdminService):
             all()
 
         for item in items:
-            item.details = loads(loads(item.details))
+            item.details = loads(item.details)
 
         return items
 
