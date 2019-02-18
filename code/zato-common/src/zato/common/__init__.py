@@ -633,6 +633,7 @@ class MISC:
     OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
+    SLOW_THRESHOLD_DEFAULT = 99999
 
 class ADAPTER_PARAMS:
     APPLY_AFTER_REQUEST = 'apply-after-request'
