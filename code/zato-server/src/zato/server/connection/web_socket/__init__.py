@@ -78,7 +78,7 @@ class HookCtx(object):
     __slots__ = ('hook_type', 'config', 'pub_client_id', 'ext_client_id', 'ext_client_name', 'connection_time', 'user_data',
         'forwarded_for', 'forwarded_for_fqdn', 'peer_address', 'peer_host', 'peer_fqdn', 'peer_conn_info_pretty', 'msg')
 
-    def __init__(self, hook_type, **kwargs):
+    def __init__(self, hook_type, *args, **kwargs):
         self.hook_type = hook_type
         for name in self.__slots__:
             if name != 'hook_type':

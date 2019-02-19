@@ -17,7 +17,12 @@ from zato.common import WEB_SOCKET
 
 # ################################################################################################################################
 
-logger = getLogger('zato_web_socket')
+logger_zato = getLogger('zato')
+logger_wsx = getLogger('zato_web_socket')
+
+# ################################################################################################################################
+
+msg_cleanup_error = 'WSX cleanup error, wcr:`%d`, si:`%s`, pci:`%s`, sk_list:`%s`, h:`%r`, hs:`%r`, hr:`%r`, ofl:`%s`, e:`%s`'
 
 # ################################################################################################################################
 
@@ -62,12 +67,13 @@ def cleanup_wsx_client(wsx_cleanup_required, service_invoker, pub_client_id, sub
                     func()
 
         # Run the relevant on_disconnected hook, if any is available (even if the session was never opened)
+
         if hook:
             hook(_on_disconnected, hook_service, **hook_request)
 
     except Exception:
-        logger.warn('WSX cleanup error, wcr:`%d`, si:`%s`, pci:`%s`, sk_list:`%s`, h:`%s`, hs:`%s`, hr:`%s`, ofl:`%s`, e:`%s`',
-            wsx_cleanup_required, service_invoker, pub_client_id, sub_keys, hook, hook_service, hook_request, opaque_func_list,
-            format_exc())
+        for logger in logger_zato, logger_wsx:
+            logger.warn(msg_cleanup_error, wsx_cleanup_required, service_invoker, pub_client_id, sub_keys, hook,
+                hook_service, hook_request, opaque_func_list, format_exc())
 
 # ################################################################################################################################
