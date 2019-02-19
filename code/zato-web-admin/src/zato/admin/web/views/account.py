@@ -18,28 +18,57 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin import zato_settings
 from zato.admin.web.forms.account import BasicSettingsForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.views import method_allowed
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
 
 DEFAULT_PROMPT = 'Click to pick a color'
 
+# ################################################################################################################################
+
 profile_attrs = ('timezone', 'date_format', 'time_format')
+
+# ################################################################################################################################
 
 @method_allowed('GET')
 def settings_basic(req):
+
     initial = {}
     for attr in profile_attrs:
         initial[attr] = getattr(req.zato.user_profile, attr)
 
-    return_data = {'clusters':req.zato.clusters, 'default_prompt':DEFAULT_PROMPT, 'form':BasicSettingsForm(initial)}
+    initial['totp_token'] = 'GISJ7BLH3CD3IGVV'
 
-    cluster_colors = {str(getattr(item, 'cluster_id')):getattr(item, 'color') for item in req.zato.user_profile.cluster_color_markers.all()}
+    return_data = {
+        'clusters': req.zato.clusters,
+        'default_prompt': DEFAULT_PROMPT,
+        'form':BasicSettingsForm(initial)
+    }
+
+    cluster_color_markers = req.zato.user_profile.cluster_color_markers.all()
+    cluster_colors = {str(getattr(item, 'cluster_id')):getattr(item, 'color') for item in cluster_color_markers}
     return_data['cluster_colors'] = cluster_colors
 
+    secret_key = zato_settings.zato_secret_key
+
+    print()
+    print()
+
+    print(111, secret_key)
+
+    print()
+    print()
+
     return TemplateResponse(req, 'zato/account/settings.html', return_data)
+
+# ################################################################################################################################
 
 @method_allowed('POST')
 def settings_basic_save(req):
@@ -69,3 +98,5 @@ def settings_basic_save(req):
     msg = 'Settings saved'
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
     return redirect(reverse('account-settings-basic'))
+
+# ################################################################################################################################
