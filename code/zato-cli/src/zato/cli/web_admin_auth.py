@@ -22,7 +22,7 @@ class _WebAdminAuthCommand(ManageCommand):
     def _prepare(self, args):
         os.chdir(os.path.abspath(args.path))
         base_dir = os.path.join(self.original_dir, args.path)
-        config = json.loads(open(os.path.join(base_dir, './config/repo/web-admin.conf')).read())
+        config = json.loads(open(os.path.join(base_dir, '.', 'config/repo/web-admin.conf')).read())
         config['config_dir'] = os.path.abspath(args.path)
         update_globals(config, base_dir)
 
