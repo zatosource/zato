@@ -30,7 +30,7 @@ from future.utils import iteritems
 from zato.cli import ManageCommand
 from zato.common import INFO_FORMAT, ping_queries
 from zato.common.component_info import get_info
-from zato.common.crypto import SchedulerCryptoManager, ServerCryptoManager, WebAdminCryptoManager
+from zato.common.crypto import resolve_secret_key, SchedulerCryptoManager, ServerCryptoManager, WebAdminCryptoManager
 from zato.common.kvdb import KVDB
 from zato.common.haproxy import validate_haproxy_config
 from zato.common.odb import create_pool, get_ping_query
@@ -278,8 +278,11 @@ class CheckConfig(ManageCommand):
     def _on_web_admin(self, args, *ignored_args, **ignored_kwargs):
         repo_dir = join(self.component_dir, 'config', 'repo')
 
+        secret_key = getattr(args, 'secret_key', None)
+        secret_key = resolve_secret_key(secret_key)
+
         self.check_sql_odb_web_admin(
-            self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None), WebAdminCryptoManager),
+            self.get_crypto_manager(secret_key, getattr(args, 'stdin_data', None), WebAdminCryptoManager),
             self.get_json_conf('web-admin.conf', repo_dir))
 
         self.ensure_no_pidfile('web-admin')
