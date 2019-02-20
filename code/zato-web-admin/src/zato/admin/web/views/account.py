@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from json import dumps, loads
 
 # Django
 from django.contrib import messages
@@ -25,6 +26,7 @@ from zato.admin import zato_settings
 from zato.admin.web.forms.account import BasicSettingsForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.views import method_allowed
+from zato.common.crypto import CryptoManager
 
 # ################################################################################################################################
 
@@ -50,10 +52,20 @@ def settings_basic(req):
         initial[attr] = getattr(req.zato.user_profile, attr, None)
 
     opaque_attrs = req.zato.user_profile.opaque1
+    if opaque_attrs:
+        opaque_attrs = loads(opaque_attrs)
+
+        for attr in profile_attrs_opaque:
+            initial[attr] = opaque_attrs[attr]
 
     totp_token = initial.get('totp_token')
     if not totp_token:
-        initial['totp_token'] = pyotp.random_base32()
+        totp_token = pyotp.random_base32()
+    else:
+        cm = CryptoManager(secret_key=zato_settings.zato_secret_key)
+        totp_token = cm.decrypt(totp_token)
+
+    initial['totp_token'] = totp_token
 
     return_data = {
         'clusters': req.zato.clusters,
@@ -64,16 +76,6 @@ def settings_basic(req):
     cluster_color_markers = req.zato.user_profile.cluster_color_markers.all()
     cluster_colors = {str(getattr(item, 'cluster_id')):getattr(item, 'color') for item in cluster_color_markers}
     return_data['cluster_colors'] = cluster_colors
-
-    secret_key = zato_settings.zato_secret_key
-
-    print()
-    print()
-
-    print(111, secret_key)
-
-    print()
-    print()
 
     return TemplateResponse(req, 'zato/account/settings.html', return_data)
 
@@ -87,7 +89,18 @@ def settings_basic_save(req):
         value = req.POST.get(attr, False)
         setattr(req.zato.user_profile, attr, value)
 
-    print(222, req.zato.user_profile)
+    opaque_attrs = {}
+    for attr in profile_attrs_opaque:
+        value = req.POST.get(attr)
+        opaque_attrs[attr] = value
+
+    totp_token = opaque_attrs.get('totp_token')
+    if totp_token:
+        cm = CryptoManager(secret_key=zato_settings.zato_secret_key)
+        totp_token = cm.encrypt(totp_token.encode('utf8'))
+        opaque_attrs['totp_token'] = totp_token
+
+    req.zato.user_profile.opaque1 = dumps(opaque_attrs)
 
     req.zato.user_profile.save()
 
