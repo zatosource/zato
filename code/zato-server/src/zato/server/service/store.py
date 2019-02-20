@@ -14,6 +14,7 @@ import logging
 import os
 from contextlib import closing
 from datetime import datetime
+from functools import total_ordering
 from hashlib import sha256
 from importlib import import_module
 from inspect import isclass
@@ -67,6 +68,7 @@ hook_methods = ('accept', 'get_request_hash') + before_handle_hooks + after_hand
 
 # ################################################################################################################################
 
+@total_ordering
 class InRAMService(object):
     __slots__ = 'cluster_id', 'id', 'name', 'impl_name', 'deployment_info', 'service_class', 'is_active', 'is_internal', \
         'slow_threshold', 'source_code_info'
@@ -85,6 +87,17 @@ class InRAMService(object):
 
     def __repr__(self):
         return '<{} at {} name:{} impl_name:{}>'.format(self.__class__.__name__, hex(id(self)), self.name, self.impl_name)
+
+    def __eq__(self, other):
+        # type: (InRAMService) -> bool
+        return self.name == other.name
+
+    def __lt__(self, other):
+        # type: (InRAMService) -> bool
+        return self.name < other.name
+
+    def __hash__(self):
+        return hash(self.name)
 
     def to_dict(self):
         return {
@@ -478,6 +491,9 @@ class ServiceStore(object):
     def _store_services_in_odb(self, session, batch_indexes, to_process):
         """ Looks up all Service objects in ODB and if any of our local ones is not in the databaset yet, it is added.
         """
+        # Will be set to True if any of the batches added at list one new service to ODB
+        any_added = False
+
         # Get all services already deployed in ODB for comparisons (Service)
         services = self.get_basic_data_services()
 
@@ -496,7 +512,9 @@ class ServiceStore(object):
             # Add to ODB all the Service objects from this batch found not to be in ODB already
             if to_add:
                 self.odb.add_services(session, [elem.to_dict() for elem in to_add])
-                return True
+                any_added = True
+
+        return any_added
 
 # ################################################################################################################################
 
@@ -638,6 +656,9 @@ class ServiceStore(object):
                 to_process.extend(self.import_services_from_module(item, is_internal))
 
         total_size = 0
+
+        to_process = set(to_process)
+        to_process = list(to_process)
 
         for item in to_process: # type: InRAMService
             total_size += item.source_code_info.len_source
