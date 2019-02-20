@@ -54,7 +54,7 @@ gunicorn_proc_name=
 gunicorn_logger_class=
 gunicorn_graceful_timeout=1
 
-deployment_lock_expires=1073741824 # 2 ** 30 seconds ≅ 34 years
+deployment_lock_expires=1073741824 # 2 ** 30 seconds = +/- 34 years
 deployment_lock_timeout=180
 
 token=zato+secret://zato.server_conf.main.token
