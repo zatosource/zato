@@ -81,8 +81,6 @@ $.fn.zato.account.basic_settings.set_totp_key_qr_code = function() {
     token_provsion_elem.value = String.format('otpauth://totp/{0}:{1}?secret={2}&amp;issuer={0}',
         issuer, username, secret);
 
-    console.log(token_provsion_elem.value);
-
     var qr_code_elem = document.getElementById('totp_key_qr_code');
     var qr_code = new QRCode(qr_code_elem, {
         width : 100,
@@ -91,6 +89,28 @@ $.fn.zato.account.basic_settings.set_totp_key_qr_code = function() {
 
     qr_code.clear();
     qr_code.makeCode(token_provsion_elem.value);
+
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.account.basic_settings.generate_new_totp_key = function() {
+
+    var totp_elem = document.getElementById('id_totp_key');
+
+    var http_callback = function(data, status) {
+        var success = status == 'success';
+        if(success) {
+            totp_elem.value = data.responseText;
+            $.fn.zato.account.basic_settings.set_totp_key_qr_code();
+        }
+        else {
+            $.fn.zato.user_message(success, data.responseText);
+        }
+    }
+
+    $.fn.zato.post('./generate-totp-key', http_callback, null, 'text', true);
+
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

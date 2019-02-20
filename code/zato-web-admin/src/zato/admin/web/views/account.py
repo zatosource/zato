@@ -15,6 +15,7 @@ from json import dumps, loads
 # Django
 from django.contrib import messages
 from django.core.urlresolvers import reverse
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 
@@ -160,5 +161,11 @@ def settings_basic_save(req):
     msg = 'Settings saved'
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
     return redirect(reverse('account-settings-basic'))
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def generate_totp_key(req):
+    return HttpResponse(pyotp.random_base32())
 
 # ################################################################################################################################
