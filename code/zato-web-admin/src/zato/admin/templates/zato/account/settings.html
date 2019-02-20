@@ -81,13 +81,15 @@
         </tr>
         <tr>
             <td style="width:15%">
-                TOTP token
+                TOTP
                 <br/>
                 <a class="form_hint" href="#">Generate new</a>
             </td>
             <td style="width:25%;text-align:left" colspan="3">
-                {{ form.totp_token }}
-                <div id="totp_token_qr_code" style="width:100px; height:100px; margin-top:25px;margin-bottom:25px"></div>
+                Token: {{ form.totp_key }}
+                <br/>
+                Label: {{ form.totp_key_label }}
+                <div id="totp_key_qr_code" style="width:100px; height:100px; margin-top:25px;margin-bottom:25px"></div>
             </td>
         </tr>
 
