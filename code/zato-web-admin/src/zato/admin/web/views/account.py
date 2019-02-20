@@ -39,33 +39,47 @@ DEFAULT_PROMPT = 'Click to pick a color'
 # ################################################################################################################################
 
 profile_attrs = 'timezone', 'date_format', 'time_format'
-profile_attrs_opaque = 'totp_token',
+profile_attrs_opaque = 'totp_key', 'totp_key_label'
 
 # ################################################################################################################################
 
 @method_allowed('GET')
 def settings_basic(req):
 
+    # Data for the template
     initial = {}
 
+    # Process explicitly named attributes
     for attr in profile_attrs:
         initial[attr] = getattr(req.zato.user_profile, attr, None)
 
+    # Process attributes from opaque data
     opaque_attrs = req.zato.user_profile.opaque1
     if opaque_attrs:
         opaque_attrs = loads(opaque_attrs)
 
         for attr in profile_attrs_opaque:
-            initial[attr] = opaque_attrs[attr]
+            initial[attr] = opaque_attrs.get(attr) or ''
 
-    totp_token = initial.get('totp_token')
-    if not totp_token:
-        totp_token = pyotp.random_base32()
+    # Generate or use the existing TOTP key
+    totp_key = initial.get('totp_key')
+    if not totp_key:
+        totp_key = pyotp.random_base32()
     else:
         cm = CryptoManager(secret_key=zato_settings.zato_secret_key)
-        totp_token = cm.decrypt(totp_token)
+        totp_key = cm.decrypt(totp_key)
 
-    initial['totp_token'] = totp_token
+    # Make sure TOTP key label is not empty
+    totp_key_label = initial['totp_key_label']
+    totp_key_label = totp_key_label or 'Zato web-admin'
+    initial['totp_key_label'] = totp_key_label
+
+    # Build the actual TOTP object for later use
+    totp =  pyotp.totp.TOTP(totp_key)
+
+    # Update template data with TOTP information
+    initial['totp_key'] = totp.secret
+    initial['totp_key_provision_uri'] = totp.provisioning_uri(req.user.username, issuer_name=totp_key_label)
 
     return_data = {
         'clusters': req.zato.clusters,
@@ -84,26 +98,32 @@ def settings_basic(req):
 @method_allowed('POST')
 def settings_basic_save(req):
 
+    # Process explicitly named attributes
     for attr in profile_attrs:
         # Use False as default value so as to convert blank checkboxes into a boolean value
         value = req.POST.get(attr, False)
         setattr(req.zato.user_profile, attr, value)
 
+    # Process opaque attributes
     opaque_attrs = {}
     for attr in profile_attrs_opaque:
         value = req.POST.get(attr)
         opaque_attrs[attr] = value
 
-    totp_token = opaque_attrs.get('totp_token')
-    if totp_token:
+    # Encrypt TOTP before it is saved to the database
+    totp_key = opaque_attrs.get('totp_key')
+    if totp_key:
         cm = CryptoManager(secret_key=zato_settings.zato_secret_key)
-        totp_token = cm.encrypt(totp_token.encode('utf8'))
-        opaque_attrs['totp_token'] = totp_token
+        totp_key = cm.encrypt(totp_key.encode('utf8'))
+        opaque_attrs['totp_key'] = totp_key
 
+    # Save all opaque attributes along with the profile
     req.zato.user_profile.opaque1 = dumps(opaque_attrs)
 
+    # Save the profile
     req.zato.user_profile.save()
 
+    # Save preferred cluster colour markers
     for key, value in req.POST.items():
         if key.startswith('color_') and value != DEFAULT_PROMPT:
             cluster_id = key.replace('color_', '')

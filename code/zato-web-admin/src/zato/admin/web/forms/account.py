@@ -23,7 +23,9 @@ class BasicSettingsForm(forms.Form):
     timezone = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     date_format = forms.ChoiceField()
     time_format = forms.ChoiceField()
-    totp_token = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
+    totp_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
+    totp_key_label = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
+    totp_key_provision_uri = forms.CharField(widget=forms.HiddenInput())
 
     def __init__(self, initial, *args, **kwargs):
         super(BasicSettingsForm, self).__init__(initial, *args, **kwargs)
