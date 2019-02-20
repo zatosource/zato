@@ -71,7 +71,7 @@ urlpatterns = [
 
 # ################################################################################################################################
 
-    url(r'^accounts/login/$', login, {'template_name': 'zato/login.html'}, name='login'),
+    url(r'^accounts/login/$', main.login, name='login'),
     url(r'^$', main.index_redirect),
     url(r'^zato/$', login_required(main.index), name='main-page'),
     url(r'^logout/$', login_required(main.logout), name='logout'),
