@@ -23,6 +23,7 @@ class UserProfile(models.Model):
     timezone = models.CharField(max_length=100, null=True, default='UTC')
     date_format = models.CharField(max_length=100, null=True, default='dd-mm-yyyy')
     time_format = models.CharField(max_length=10, null=True, default='24')
+    opaque1 = models.TextField(null=True)
 
     def __init__(self, *args, **kwargs):
         super(UserProfile, self).__init__(*args, **kwargs)

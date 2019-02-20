@@ -1,4 +1,6 @@
-$(document).ready(function() { 
+$(document).ready(function() {
+
+    $.fn.zato.account.basic_settings.set_totp_token_qr_code();
 
     $('input[id^="color_"]').each(function(idx, input) {
         $(input).ColorPicker({
@@ -40,8 +42,26 @@ $(document).ready(function() {
 
 });
 
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.account.basic_settings.preview = function(id) {
     var div = $('#cluster_color_div');
     div.removeClass('hidden').addClass('visible');
     div.css('backgroundColor', $('#color_'+id).css('backgroundColor'));
 };
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+$.fn.zato.account.basic_settings.set_totp_token_qr_code = function() {
+
+    var qr_code = new QRCode(document.getElementById('totp_token_qr_code'), {
+        width : 100,
+        height : 100
+    });
+
+    var token_elem = document.getElementById('id_totp_token');
+    qr_code.makeCode(token_elem.value);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
