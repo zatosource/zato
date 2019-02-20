@@ -43,6 +43,38 @@ profile_attrs_opaque = 'totp_key', 'totp_key_label'
 
 # ################################################################################################################################
 
+def set_initial_opaque_attrs(username, initial, opaque_attrs):
+
+    # By default, opaque attributes are not set for user
+    if opaque_attrs:
+        opaque_attrs = loads(opaque_attrs)
+
+        for attr in profile_attrs_opaque:
+            initial[attr] = opaque_attrs.get(attr) or ''
+
+    # Generate or use the existing TOTP key
+    totp_key = initial.get('totp_key')
+    if not totp_key:
+        totp_key = pyotp.random_base32()
+        initial['totp_key_label'] = 'Zato web-admin'
+    else:
+        cm = CryptoManager(secret_key=zato_settings.zato_secret_key)
+
+        # TOTP key is always decrypted so we need to decrypt it here
+        totp_key = cm.decrypt(totp_key)
+
+        # .. same goes for its label
+        initial['totp_key_label'] = cm.decrypt(initial['totp_key_label'])
+
+    # Build the actual TOTP object for later use
+    totp =  pyotp.totp.TOTP(totp_key)
+
+    # Update template data with TOTP information
+    initial['totp_key'] = totp.secret
+    initial['totp_key_provision_uri'] = totp.provisioning_uri(username, issuer_name=initial['totp_key_label'])
+
+# ################################################################################################################################
+
 @method_allowed('GET')
 def settings_basic(req):
 
@@ -54,32 +86,7 @@ def settings_basic(req):
         initial[attr] = getattr(req.zato.user_profile, attr, None)
 
     # Process attributes from opaque data
-    opaque_attrs = req.zato.user_profile.opaque1
-    if opaque_attrs:
-        opaque_attrs = loads(opaque_attrs)
-
-        for attr in profile_attrs_opaque:
-            initial[attr] = opaque_attrs.get(attr) or ''
-
-    # Generate or use the existing TOTP key
-    totp_key = initial.get('totp_key')
-    if not totp_key:
-        totp_key = pyotp.random_base32()
-    else:
-        cm = CryptoManager(secret_key=zato_settings.zato_secret_key)
-        totp_key = cm.decrypt(totp_key)
-
-    # Make sure TOTP key label is not empty
-    totp_key_label = initial['totp_key_label']
-    totp_key_label = totp_key_label or 'Zato web-admin'
-    initial['totp_key_label'] = totp_key_label
-
-    # Build the actual TOTP object for later use
-    totp =  pyotp.totp.TOTP(totp_key)
-
-    # Update template data with TOTP information
-    initial['totp_key'] = totp.secret
-    initial['totp_key_provision_uri'] = totp.provisioning_uri(req.user.username, issuer_name=totp_key_label)
+    set_initial_opaque_attrs(req.user.username, initial, req.zato.user_profile.opaque1)
 
     return_data = {
         'clusters': req.zato.clusters,
@@ -112,10 +119,19 @@ def settings_basic_save(req):
 
     # Encrypt TOTP before it is saved to the database
     totp_key = opaque_attrs.get('totp_key')
+
     if totp_key:
         cm = CryptoManager(secret_key=zato_settings.zato_secret_key)
+
+        # TOTP key is always encrypted
         totp_key = cm.encrypt(totp_key.encode('utf8'))
         opaque_attrs['totp_key'] = totp_key
+
+        # .. and so is its label
+        totp_key_label = opaque_attrs.get('totp_key_label')
+        if totp_key_label:
+            totp_key_label = cm.encrypt(totp_key_label.encode('utf8'))
+            opaque_attrs['totp_key_label'] = totp_key_label
 
     # Save all opaque attributes along with the profile
     req.zato.user_profile.opaque1 = dumps(opaque_attrs)
