@@ -24,7 +24,7 @@ class BasicSettingsForm(forms.Form):
     date_format = forms.ChoiceField()
     time_format = forms.ChoiceField()
     totp_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
-    totp_key_label = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
+    totp_key_label = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%', 'maxlength':25}))
     totp_key_provision_uri = forms.CharField(widget=forms.HiddenInput())
 
     def __init__(self, initial, *args, **kwargs):
