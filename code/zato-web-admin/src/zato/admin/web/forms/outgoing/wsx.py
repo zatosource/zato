@@ -18,7 +18,7 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    is_zato = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_zato = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     has_auto_reconnect = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     on_connect_service_name = forms.ChoiceField(widget=forms.Select())
     on_message_service_name = forms.ChoiceField(widget=forms.Select())
