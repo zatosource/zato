@@ -91,7 +91,8 @@ def settings_basic(req):
     return_data = {
         'clusters': req.zato.clusters,
         'default_prompt': DEFAULT_PROMPT,
-        'form':BasicSettingsForm(initial)
+        'form':BasicSettingsForm(initial),
+        'username': req.user.username
     }
 
     cluster_color_markers = req.zato.user_profile.cluster_color_markers.all()

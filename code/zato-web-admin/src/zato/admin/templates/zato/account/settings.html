@@ -90,6 +90,10 @@
                 <br/>
                 Label: {{ form.totp_key_label }}
                 <div id="totp_key_qr_code" style="width:100px; height:100px; margin-top:25px;margin-bottom:25px"></div>
+
+                {{ form.totp_key_provision_uri }}
+                <input id="id_username" name="username" type="hidden" value="{{ username }}"/>
+
             </td>
         </tr>
 
