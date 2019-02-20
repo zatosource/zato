@@ -372,7 +372,7 @@ class HashParamsComputer(object):
 def resolve_secret_key(secret_key, _url_prefix=SECRETS.URL_PREFIX):
     """ Finds a secret key among command line options or via environment variables.
     """
-    # We always requrie a string
+    # We always require a string
     secret_key = secret_key or ''
 
     # This is a direct value, to be used as-is

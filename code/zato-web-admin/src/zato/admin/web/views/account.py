@@ -17,6 +17,9 @@ from django.core.urlresolvers import reverse
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 
+# PyOTP
+import pyotp
+
 # Zato
 from zato.admin import zato_settings
 from zato.admin.web.forms.account import BasicSettingsForm
@@ -33,7 +36,8 @@ DEFAULT_PROMPT = 'Click to pick a color'
 
 # ################################################################################################################################
 
-profile_attrs = ('timezone', 'date_format', 'time_format')
+profile_attrs = 'timezone', 'date_format', 'time_format'
+profile_attrs_opaque = 'totp_token',
 
 # ################################################################################################################################
 
@@ -41,10 +45,15 @@ profile_attrs = ('timezone', 'date_format', 'time_format')
 def settings_basic(req):
 
     initial = {}
-    for attr in profile_attrs:
-        initial[attr] = getattr(req.zato.user_profile, attr)
 
-    initial['totp_token'] = 'GISJ7BLH3CD3IGVV'
+    for attr in profile_attrs:
+        initial[attr] = getattr(req.zato.user_profile, attr, None)
+
+    opaque_attrs = req.zato.user_profile.opaque1
+
+    totp_token = initial.get('totp_token')
+    if not totp_token:
+        initial['totp_token'] = pyotp.random_base32()
 
     return_data = {
         'clusters': req.zato.clusters,
@@ -77,6 +86,9 @@ def settings_basic_save(req):
         # Use False as default value so as to convert blank checkboxes into a boolean value
         value = req.POST.get(attr, False)
         setattr(req.zato.user_profile, attr, value)
+
+    print(222, req.zato.user_profile)
+
     req.zato.user_profile.save()
 
     for key, value in req.POST.items():

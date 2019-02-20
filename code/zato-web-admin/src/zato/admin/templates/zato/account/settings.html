@@ -7,6 +7,7 @@
 
 {% block "extra_js" %}
     <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/qrcode.js"></script>
     <script type="text/javascript" src="/static/js/account/settings.js"></script>
     <script type="text/javascript" src="/static/js/colorpicker/js/colorpicker.js"></script>
 {% endblock %}
@@ -84,10 +85,10 @@
                 <br/>
                 <a class="form_hint" href="#">Generate new</a>
             </td>
-            <td style="width:25%;text-align:left">{{ form.totp_token }}
-            <td style="width:15%">QR code</td>
-            <td style="width:40%;text-align:left">{{ form.date_format }} {{ form.time_format }}
-            </span></td>
+            <td style="width:25%;text-align:left" colspan="3">
+                {{ form.totp_token }}
+                <div id="totp_token_qr_code" style="width:100px; height:100px; margin-top:25px;margin-bottom:25px"></div>
+            </td>
         </tr>
 
         <tr>
