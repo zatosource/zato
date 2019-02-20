@@ -87,6 +87,8 @@ urlpatterns += [
         login_required(account.settings_basic), name='account-settings-basic'),
     url(r'^account/settings/basic/save/$',
         login_required(account.settings_basic_save), name='account-settings-basic-save'),
+    url(r'^account/settings/basic/generate-totp-key$',
+        login_required(account.generate_totp_key), name='account-settings-basic-generate-totp-key'),
     ]
 
 # ################################################################################################################################
