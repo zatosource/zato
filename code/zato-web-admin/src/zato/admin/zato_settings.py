@@ -10,12 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
-import sys
 
 # Zato
 from zato.common import SCHEDULER
 from zato.common.crypto import resolve_secret_key, WebAdminCryptoManager
-from zato.common.util import parse_cmd_line_options
 from zato.common.util.cli import read_stdin_data
 
 # ################################################################################################################################
@@ -33,8 +31,6 @@ def update_globals(config, base_dir='.'):
 
     for name in 'zato_secret_key', 'well_known_data', 'DATABASE_PASSWORD', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':
         config[name] = config[name].encode('utf8')
-
-    print(111, config)
 
     # If secret key is not given directly in the config file, we will expect to find it
     # on command line.

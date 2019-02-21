@@ -13,7 +13,7 @@ from logging import getLogger
 
 # Django
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
-from django.http import HttpResponseForbidden, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.template.response import TemplateResponse
 from django.utils.http import is_safe_url
@@ -25,7 +25,6 @@ import pyotp
 from zato.admin.settings import LOGIN_REDIRECT_URL
 from zato.admin import zato_settings
 from zato.admin.web.forms.main import AuthenticationForm
-from zato.admin.web.models import UserProfile
 from zato.admin.web.util import get_user_profile
 from zato.admin.web.views import method_allowed
 from zato.common.crypto import CryptoManager

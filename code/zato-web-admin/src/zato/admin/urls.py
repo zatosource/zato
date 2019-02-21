@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Django
 from django.conf.urls import url
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import login
 from django.views.static import serve as django_static_serve
 
 # Zato
