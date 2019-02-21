@@ -34,6 +34,8 @@ def update_globals(config, base_dir='.'):
     for name in 'zato_secret_key', 'well_known_data', 'DATABASE_PASSWORD', 'SECRET_KEY', 'ADMIN_INVOKE_PASSWORD':
         config[name] = config[name].encode('utf8')
 
+    print(111, config)
+
     # If secret key is not given directly in the config file, we will expect to find it
     # on command line.
     zato_secret_key = config['zato_secret_key']

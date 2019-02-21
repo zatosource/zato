@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Django
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
-from django.contrib.auth.forms import AuthenticationForm as zzz
 from django.http import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.template.response import TemplateResponse
@@ -54,9 +53,12 @@ def login(req):
         # If they are ..
         if user is not None:
 
+            print(333, is_totp_enabled)
+
             # If TOTP is enabled, make sure that it matches what is expected
-            if is_totp_enabled:
-                zzz
+            #if is_totp_enabled:
+            #    zzz
+            #    print(zzz)
 
             # Make sure the redirect-to address is valid
             redirect_to = req.POST.get('next', '') or req.GET.get('next', '')
@@ -76,6 +78,7 @@ def login(req):
     return TemplateResponse(req, 'zato/login.html', {
         'form': AuthenticationForm(req.POST if needs_post_form_data else None),
         'next': req.GET.get('next', ''),
+        'is_totp_enabled': is_totp_enabled,
     })
 
 # ################################################################################################################################
