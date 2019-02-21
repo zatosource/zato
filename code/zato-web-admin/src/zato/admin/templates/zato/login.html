@@ -33,7 +33,7 @@
         {% csrf_token %}
         <table class="form-data" border="">
             <tr>
-                <td style="width:{% if has_totp %}19{% else %}7{% endif %}%">
+                <td style="width:{% if is_totp_enabled %}19{% else %}7{% endif %}%">
                     Username
                 </td>
                 <td>
@@ -49,7 +49,7 @@
                 </td>
             </tr>
 
-            {% if has_totp %}
+            {% if is_totp_enabled %}
 
             <tr>
                 <td>
