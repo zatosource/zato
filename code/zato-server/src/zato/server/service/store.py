@@ -469,8 +469,14 @@ class ServiceStore(object):
     def _store_in_ram(self, to_process):
         # type: (List[DeploymentInfo]) -> None
 
+        # We need to look up all the services in ODB to be able to find their IDs
+        services = self.get_basic_data_services()
+
         with self.update_lock:
             for item in to_process: # type: InRAMService
+
+                service_dict = services[item.name]
+                service_id = service_dict['id']
 
                 self.services[item.impl_name] = {}
                 self.services[item.impl_name]['name'] = item.name
@@ -480,8 +486,11 @@ class ServiceStore(object):
                 self.services[item.impl_name]['is_active'] = item.is_active
                 self.services[item.impl_name]['slow_threshold'] = item.slow_threshold
 
-                self.id_to_impl_name[item.id] = item.impl_name
-                self.impl_name_to_id[item.impl_name] = item.id
+                if 'hook' in item.name:
+                    print(111, item.impl_name, item.name, service_id)
+
+                self.id_to_impl_name[service_id] = item.impl_name
+                self.impl_name_to_id[item.impl_name] = service_id
                 self.name_to_impl_name[item.name] = item.impl_name
 
                 item.service_class.after_add_to_store(logger)
@@ -605,7 +614,7 @@ class ServiceStore(object):
     def get_basic_data_services(self):
         # type: (None) -> dict
 
-        # We will return service keyed by IDs
+        # We will return service keyed by their names
         out = {}
 
         # This is a list of services to turn into a dict
