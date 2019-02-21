@@ -14,7 +14,7 @@ from django import forms
 class AuthenticationForm(forms.Form):
     """ A form to log a user in.
     """
-    username = forms.CharField(widget=forms.TextInput())
-    password = forms.CharField(widget=forms.TextInput())
+    username = forms.CharField(max_length=254)
+    password = forms.CharField(strip=False, widget=forms.PasswordInput)
     totp_code = forms.CharField(widget=forms.TextInput())
 
