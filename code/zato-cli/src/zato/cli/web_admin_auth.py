@@ -12,10 +12,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json, os, sys
 from traceback import format_exc
 
+# PyOTP
+import pyotp
+
 # Zato
 from zato.admin.zato_settings import update_globals
 from zato.cli import ManageCommand
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _WebAdminAuthCommand(ManageCommand):
@@ -35,6 +39,7 @@ class _WebAdminAuthCommand(ManageCommand):
         self.reset_logger(args, True)
         self.logger.info('OK')
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CreateUser(_WebAdminAuthCommand):
@@ -111,6 +116,7 @@ class CreateUser(_WebAdminAuthCommand):
             self._ok(args)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class UpdatePassword(_WebAdminAuthCommand):
     """ Updates a web admin user's password
@@ -145,4 +151,51 @@ class UpdatePassword(_WebAdminAuthCommand):
         if not called_from_wrapper:
             self._ok(args)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ResetTOTPKey(_WebAdminAuthCommand):
+    """ Resets a user's TOTP secret key and returns it.
+    """
+    opts = [
+        {'name': 'username', 'help': 'Username to reset the TOTP secret key of'},
+        {'name': '--key', 'help': 'Key to use'},
+        {'name': '--key-label', 'help': 'Label to apply to the key'},
+    ]
+
+    def before_execute(self, args):
+        super(ResetTOTPKey, self).before_execute(args)
+        self._prepare(args)
+
+    def execute(self, args):
+
+        # If there was a key given on input, we need to validate it,
+        # this report an erorr if the key cannot be used.
+        if args.key:
+            totp = pyotp.TOTP(args.key)
+            totp.now()
+
+            # If we are here, it means that the key was valid
+            key = args.key
+        else:
+            key = pyotp.random_base32()
+
+        from zato.admin.web.models import User
+        from zato.admin.web.util import get_user_profile
+        self.reset_logger(args, True)
+
+        try:
+            user = User.objects.get(username=args.username)
+        except User.DoesNotExist:
+            self.logger.warn('No such user `%s` found in `%s`', args.username, args.path)
+            return
+
+        key_label = args.key_label or 'Zato web-admin'
+
+        # Here we know we have the user and key for sure, now we need to get the person's profile
+        user_profile = get_user_profile(user)
+
+        print(111, 'Using key', key, user, user_profile)
+
+# ################################################################################################################################
 # ################################################################################################################################

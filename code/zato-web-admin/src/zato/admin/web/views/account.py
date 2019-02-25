@@ -26,6 +26,7 @@ import pyotp
 from zato.admin import zato_settings
 from zato.admin.web.forms.account import BasicSettingsForm
 from zato.admin.web.models import ClusterColorMarker
+from zato.admin.web.util import set_user_profile_totp_key
 from zato.admin.web.views import method_allowed
 from zato.common.crypto import CryptoManager
 
@@ -123,6 +124,12 @@ def settings_basic_save(req):
     totp_key = opaque_attrs.get('totp_key')
 
     if totp_key:
+
+        # set_user_profile_totp_key(profile, zato_secret_key, key, label, opaque_attrs=None)
+        set_user_profile_totp_key(req.zato.user_profile, zato_settings.zato_secret_key,
+            totp_key, opaque_attrs.get('totp_key_label'), opaque_attrs)
+
+        '''
         cm = CryptoManager(secret_key=zato_settings.zato_secret_key)
 
         # TOTP key is always encrypted
@@ -134,6 +141,7 @@ def settings_basic_save(req):
         if totp_key_label:
             totp_key_label = cm.encrypt(totp_key_label.encode('utf8'))
             opaque_attrs['totp_key_label'] = totp_key_label
+            '''
 
     # Save all opaque attributes along with the profile
     req.zato.user_profile.opaque1 = dumps(opaque_attrs)
