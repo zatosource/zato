@@ -93,7 +93,7 @@ def login(req):
 
                 # At this point the user is logged in but we still do not have the person's profile
                 # so we need to look it up ourselves instead of relying on req.zato.user_profile.
-                user_profile = get_user_profile(req)
+                user_profile = get_user_profile(req.use)
 
                 # This is what we have configured for user
                 user_totp_data = user_profile.get_totp_data()

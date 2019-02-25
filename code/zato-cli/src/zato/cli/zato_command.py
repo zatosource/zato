@@ -29,7 +29,7 @@ from zato.cli import apispec as apispec_mod, ca_create_ca as ca_create_ca_mod, c
      create_server as create_server_mod, create_web_admin as create_web_admin_mod, crypto as crypto_mod, \
      delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, migrate as migrate_mod, \
      quickstart as quickstart_mod, run_command, service as service_mod, sso as sso_mod, start as start_mod, \
-     stop as stop_mod, web_admin_auth as web_admin_auth_mod
+     stop as stop_mod, totp as totp_mod, web_admin_auth as web_admin_auth_mod
 from zato.common import version
 
 def add_opts(parser, opts):
@@ -245,6 +245,15 @@ def get_parser():
     migrate.add_argument('path', help='Path to a Zato component')
     migrate.set_defaults(command='migrate')
     add_opts(migrate, migrate_mod.Migrate.opts)
+
+    #
+    # reset-totp-key
+    #
+    reset_totp_key = subs.add_parser('reset-totp-key',
+        description=web_admin_auth_mod.ResetTOTPKey.__doc__, parents=[base_parser])
+    reset_totp_key.add_argument('path', help='Path to web-admin')
+    reset_totp_key.set_defaults(command='reset_totp_key')
+    add_opts(reset_totp_key, web_admin_auth_mod.ResetTOTPKey.opts)
 
     #
     # quickstart
