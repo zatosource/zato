@@ -20,9 +20,12 @@ from zato.admin.web import DATE_FORMATS, TIME_FORMATS
 class BasicSettingsForm(forms.Form):
     """ All the basic settings not including cluster color markers.
     """
-    timezone = forms.ChoiceField()
+    timezone = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     date_format = forms.ChoiceField()
     time_format = forms.ChoiceField()
+    totp_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:27%'}))
+    totp_key_label = forms.CharField(widget=forms.TextInput(attrs={'style':'width:27%', 'maxlength':25}))
+    totp_key_provision_uri = forms.CharField(widget=forms.HiddenInput())
 
     def __init__(self, initial, *args, **kwargs):
         super(BasicSettingsForm, self).__init__(initial, *args, **kwargs)

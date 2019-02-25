@@ -40,6 +40,7 @@ config_template = """{{
   "lb_tls_verify": true,
   "zato_secret_key": "{zato_secret_key}",
   "well_known_data": "{well_known_data}",
+  "is_totp_enabled": false,
 
   "DEBUG": 0,
   "ALLOWED_HOSTS": ["*"],

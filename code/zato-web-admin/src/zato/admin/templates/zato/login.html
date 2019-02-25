@@ -14,7 +14,7 @@
 {% block "extra_js" %}
 
     <script type='text/javascript'>
-        $(document).ready(function() { 
+        $(document).ready(function() {
             $('#id_username').focus();
         });
     </script>
@@ -23,7 +23,7 @@
 
 {% block "content" %}
 
-<h2 class="zato">Please enter your username and password</h2>
+<h2 class="zato">Please enter your credentials</h2>
 
 <!-- Preloads the image so it's always displayed properly in the actual app -->
 <img src="/static/gfx/ajax-loader.gif" style="display:none" alt="Please wait" />
@@ -33,14 +33,11 @@
         {% csrf_token %}
         <table class="form-data" border="">
             <tr>
-                <td style="width:7%">
+                <td style="width:{% if is_totp_enabled %}19{% else %}7{% endif %}%">
                     Username
                 </td>
                 <td>
                     {{ form.username }}
-                    {% if form.username.errors %}
-                        {{ form.username.errors.as_text }}
-                    {% endif %}
                 </td>
             </tr>
             <tr>
@@ -49,13 +46,27 @@
                 </td>
                 <td>
                     {{ form.password }}
-                    {% if form.password.errors %}
-                        {{ form.password.errors.as_text }}
-                    {% else %}
-                        {% if form.errors %}
-                        <br/><br/>
-                        Your username and password didn't match. Please try again.
-                        {% endif %}
+                </td>
+            </tr>
+
+            {% if is_totp_enabled %}
+
+            <tr>
+                <td>
+                    Security code
+                </td>
+                <td>
+                    {{ form.totp_code }}
+                </td>
+            </tr>
+
+            {% endif %}
+
+            <tr>
+                <td></td>
+                <td>
+                    {% if has_errors %}
+                    Invalid credentials. Please try again.
                     {% endif %}
                 </td>
             </tr>
