@@ -47,11 +47,15 @@ def index(req):
 
 # ################################################################################################################################
 
-def get_login_response(req, needs_post_form_data):
+def get_login_response(req, needs_post_form_data, has_errors):
+
+    form = AuthenticationForm(req.POST if needs_post_form_data else None)
+
     return TemplateResponse(req, 'zato/login.html', {
-        'form': AuthenticationForm(req.POST if needs_post_form_data else None),
+        'form': form,
         'next': req.GET.get('next', ''),
         'is_totp_enabled': zato_settings.is_totp_enabled,
+        'has_errors': has_errors or form.errors
     })
 
 # ################################################################################################################################
@@ -60,10 +64,16 @@ def login(req):
 
     logger.info('Login request received')
 
+    # By default, assume the credentials are invalid unless proved otherwise
+    has_errors = True
+
     # If it is a GET request, we only return the form to display
     if req.method == 'GET':
         needs_post_form_data = False
         logger.info('Login request -> GET')
+
+        # No data was POST-ed so there cannot be any errors yet
+        has_errors = False
     else:
 
         logger.info('Login request -> POST')
@@ -93,7 +103,7 @@ def login(req):
 
                 # At this point the user is logged in but we still do not have the person's profile
                 # so we need to look it up ourselves instead of relying on req.zato.user_profile.
-                user_profile = get_user_profile(req.use)
+                user_profile = get_user_profile(req.user)
 
                 # This is what we have configured for user
                 user_totp_data = user_profile.get_totp_data()
@@ -101,7 +111,7 @@ def login(req):
                 # TOTP is required but it is not set for user, we need to reject such a request
                 if not user_totp_data.key:
                     logger.warn('No TOTP key for user `%s`', username)
-                    return get_login_response(req, True)
+                    return get_login_response(req, True, True)
 
                 # Decrypt the key found in the user profile
                 cm = CryptoManager(secret_key=zato_settings.zato_secret_key)
@@ -109,9 +119,10 @@ def login(req):
 
                 # Confirm that what user provided is what we expected
                 totp = pyotp.TOTP(user_totp_key_decrypted)
-                if not totp.now() == totp_code:
+
+                if not totp.verify(totp_code):
                     logger.warn('Invalid TOTP code received')
-                    return get_login_response(req, True)
+                    return get_login_response(req, True, True)
 
             # Make sure the redirect-to address is valid
             redirect_to = req.POST.get('next', '') or req.GET.get('next', '')
@@ -129,7 +140,7 @@ def login(req):
 
     # Here, we know that we need to return the form, either because it is a GET request
     # or because it was POST but credentials were invalid
-    return get_login_response(req, needs_post_form_data)
+    return get_login_response(req, needs_post_form_data, has_errors)
 
 # ################################################################################################################################
 

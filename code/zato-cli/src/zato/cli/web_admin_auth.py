@@ -9,13 +9,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import json, os, sys
+import json
+import os
+import sys
 from traceback import format_exc
 
 # PyOTP
 import pyotp
 
 # Zato
+from zato.admin.web.util import set_user_profile_totp_key
 from zato.admin.zato_settings import update_globals
 from zato.cli import ManageCommand
 
@@ -182,6 +185,7 @@ class ResetTOTPKey(_WebAdminAuthCommand):
 
         from zato.admin.web.models import User
         from zato.admin.web.util import get_user_profile
+        from zato.admin.zato_settings import zato_secret_key
         self.reset_logger(args, True)
 
         try:
@@ -190,12 +194,22 @@ class ResetTOTPKey(_WebAdminAuthCommand):
             self.logger.warn('No such user `%s` found in `%s`', args.username, args.path)
             return
 
-        key_label = args.key_label or 'Zato web-admin'
-
         # Here we know we have the user and key for sure, now we need to get the person's profile
         user_profile = get_user_profile(user)
 
-        print(111, 'Using key', key, user, user_profile)
+        # Everything is ready, we can reset the key ..
+        opaque_attrs = set_user_profile_totp_key(user_profile, zato_secret_key, key, args.key_label)
+
+        # .. and save the modified profile.
+        user_profile.opaque1 = json.dumps(opaque_attrs)
+        user_profile.save()
+
+        # Log the key only if it was not given on input. Otherwise the user is expected to know it already
+        # and may perhaps want not to disclose it.
+        if self.args.key:
+            self.logger.info('OK')
+        else:
+            self.logger.info(key)
 
 # ################################################################################################################################
 # ################################################################################################################################

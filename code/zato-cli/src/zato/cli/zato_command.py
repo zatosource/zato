@@ -29,7 +29,7 @@ from zato.cli import apispec as apispec_mod, ca_create_ca as ca_create_ca_mod, c
      create_server as create_server_mod, create_web_admin as create_web_admin_mod, crypto as crypto_mod, \
      delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, migrate as migrate_mod, \
      quickstart as quickstart_mod, run_command, service as service_mod, sso as sso_mod, start as start_mod, \
-     stop as stop_mod, totp as totp_mod, web_admin_auth as web_admin_auth_mod
+     stop as stop_mod, web_admin_auth as web_admin_auth_mod
 from zato.common import version
 
 def add_opts(parser, opts):

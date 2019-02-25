@@ -9,15 +9,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import dumps, loads
+from json import loads
 
 # Zato
-from zato.admin.web.models import UserProfile
 from zato.common.crypto import CryptoManager
 
 # ################################################################################################################################
 
 def get_user_profile(user):
+    from zato.admin.web.models import UserProfile
     try:
         user_profile = UserProfile.objects.get(user=user)
     except UserProfile.DoesNotExist:
@@ -45,19 +45,7 @@ def set_user_profile_totp_key(user_profile, zato_secret_key, totp_key, totp_key_
         totp_key_label = cm.encrypt(totp_key_label.encode('utf8'))
         opaque_attrs['totp_key_label'] = totp_key_label
 
-    '''
-    cm = CryptoManager(secret_key=zato_settings.zato_secret_key)
-
-    # TOTP key is always encrypted
-    totp_key = cm.encrypt(totp_key.encode('utf8'))
-    opaque_attrs['totp_key'] = totp_key
-
-    # .. and so is its label
-    totp_key_label = opaque_attrs.get('totp_key_label')
-    if totp_key_label:
-        totp_key_label = cm.encrypt(totp_key_label.encode('utf8'))
-        opaque_attrs['totp_key_label'] = totp_key_label
-    '''
+    return opaque_attrs
 
 
 # ################################################################################################################################
