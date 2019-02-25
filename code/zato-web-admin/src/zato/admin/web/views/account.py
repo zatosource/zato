@@ -129,20 +129,6 @@ def settings_basic_save(req):
         set_user_profile_totp_key(req.zato.user_profile, zato_settings.zato_secret_key,
             totp_key, opaque_attrs.get('totp_key_label'), opaque_attrs)
 
-        '''
-        cm = CryptoManager(secret_key=zato_settings.zato_secret_key)
-
-        # TOTP key is always encrypted
-        totp_key = cm.encrypt(totp_key.encode('utf8'))
-        opaque_attrs['totp_key'] = totp_key
-
-        # .. and so is its label
-        totp_key_label = opaque_attrs.get('totp_key_label')
-        if totp_key_label:
-            totp_key_label = cm.encrypt(totp_key_label.encode('utf8'))
-            opaque_attrs['totp_key_label'] = totp_key_label
-            '''
-
     # Save all opaque attributes along with the profile
     req.zato.user_profile.opaque1 = dumps(opaque_attrs)
 
