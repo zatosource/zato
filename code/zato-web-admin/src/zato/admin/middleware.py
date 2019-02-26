@@ -21,7 +21,8 @@ from django.core.urlresolvers import resolve
 # Zato
 from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, SASession, settings_db
 from zato.admin.web.forms import SearchForm
-from zato.admin.web.models import ClusterColorMarker, UserProfile
+from zato.admin.web.models import ClusterColorMarker
+from zato.admin.web.util import get_user_profile
 from zato.client import AnyServiceInvoker
 from zato.common import version
 from zato.common.odb.model import Cluster
@@ -118,12 +119,7 @@ class ZatoMiddleware(object):
             req.zato.search_form = SearchForm(req.zato.clusters, req.GET)
 
             if not req.user.is_anonymous():
-                try:
-                    user_profile = UserProfile.objects.get(user=req.user)
-                except UserProfile.DoesNotExist:
-                    user_profile = UserProfile(user=req.user)
-                    user_profile.save()
-                req.zato.user_profile = user_profile
+                req.zato.user_profile = get_user_profile(req.user)
             else:
                 req.zato.user_profile = None
         except Exception:

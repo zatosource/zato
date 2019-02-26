@@ -7,6 +7,8 @@
 
 {% block "extra_js" %}
     <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/js/qrcode.js"></script>
     <script type="text/javascript" src="/static/js/account/settings.js"></script>
     <script type="text/javascript" src="/static/js/colorpicker/js/colorpicker.js"></script>
 {% endblock %}
@@ -20,6 +22,8 @@
     <div id="user-message-div"><pre id="user-message" class="user-message user-message-{{ message.tags }}">{{ message }}</pre></div>
     {% endfor %}
 {% endif %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
 
 <div id="markup">
@@ -74,6 +78,34 @@
                 </td>
             </tr>
         {% endfor %}
+
+        <tr>
+            <td class="inline_header" colspan="4">Multi-factor authentication</td>
+        </tr>
+        <tr>
+            <td style="width:15%">
+                TOTP
+                <br/>
+                <a class="form_hint" href="javascript:$.fn.zato.account.basic_settings.generate_new_totp_key();">Generate new</a>
+            </td>
+            <td style="width:25%;text-align:left" colspan="3">
+                <table style="width:100%">
+                    <tr>
+                        <td style="width:2%">Key</td>
+                        <td>{{ form.totp_key }}</td>
+                    </tr>
+                    <tr>
+                        <td>Label</td>
+                        <td>{{ form.totp_key_label }}</td>
+                    </tr>
+                </table>
+                <div id="totp_key_qr_code" style="width:100px; height:100px; margin-top:25px;margin-bottom:25px"></div>
+
+                {{ form.totp_key_provision_uri }}
+                <input id="id_username" name="username" type="hidden" value="{{ username }}"/>
+
+            </td>
+        </tr>
 
         <tr>
             <td colspan="4" style="text-align:right;border-top:1px solid #ddd"><button id="save_settings" name="save_settings" type="submit">Save settings</button></td>

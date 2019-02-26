@@ -8,12 +8,20 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from json import loads
+
 # Django
 from django.db import models
 from django.contrib.auth.models import User
 
 # Zato
 from zato.admin.web import DATE_FORMATS, MONTH_YEAR_FORMATS, TIME_FORMATS
+
+class TOTPData(object):
+    def __init__(self):
+        self.key = None
+        self.label = None
 
 class UserProfile(models.Model):
     class Meta:
@@ -23,6 +31,7 @@ class UserProfile(models.Model):
     timezone = models.CharField(max_length=100, null=True, default='UTC')
     date_format = models.CharField(max_length=100, null=True, default='dd-mm-yyyy')
     time_format = models.CharField(max_length=10, null=True, default='24')
+    opaque1 = models.TextField(null=True)
 
     def __init__(self, *args, **kwargs):
         super(UserProfile, self).__init__(*args, **kwargs)
@@ -39,6 +48,16 @@ class UserProfile(models.Model):
             self.time_format_py, self.month_year_format_py, self.date_time_format_py)
 
     __unicode__ = __repr__
+
+    def get_totp_data(self):
+        totp_data = TOTPData()
+
+        if self.opaque1:
+            opaque = loads(self.opaque1)
+            totp_data.key = opaque.get('totp_key')
+            totp_data.label = opaque.get('totp_label')
+
+        return totp_data
 
 class ClusterColorMarker(models.Model):
     class Meta:

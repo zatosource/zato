@@ -247,6 +247,15 @@ def get_parser():
     add_opts(migrate, migrate_mod.Migrate.opts)
 
     #
+    # reset-totp-key
+    #
+    reset_totp_key = subs.add_parser('reset-totp-key',
+        description=web_admin_auth_mod.ResetTOTPKey.__doc__, parents=[base_parser])
+    reset_totp_key.add_argument('path', help='Path to web-admin')
+    reset_totp_key.set_defaults(command='reset_totp_key')
+    add_opts(reset_totp_key, web_admin_auth_mod.ResetTOTPKey.opts)
+
+    #
     # quickstart
     #
     quickstart = subs.add_parser('quickstart', description='Quickly set up and manage Zato clusters', parents=[base_parser])

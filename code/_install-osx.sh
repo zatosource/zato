@@ -8,7 +8,7 @@ fi
 
 # Python version to use needs to be provided by our caller
 PY_BINARY=$1
-echo "*** Zato OS X installation using $PY_BINARY ***"
+echo "*** Zato Mac installation using $PY_BINARY ***"
 
 brew install \
     bzip2 curl bzr git gsasl haproxy libev libevent libffi libxml2 libxslt \

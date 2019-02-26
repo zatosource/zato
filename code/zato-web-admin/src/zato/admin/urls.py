@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Django
 from django.conf.urls import url
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import login
 from django.views.static import serve as django_static_serve
 
 # Zato
@@ -72,7 +71,7 @@ urlpatterns = [
 
 # ################################################################################################################################
 
-    url(r'^accounts/login/$', login, {'template_name': 'zato/login.html'}, name='login'),
+    url(r'^accounts/login/$', main.login, name='login'),
     url(r'^$', main.index_redirect),
     url(r'^zato/$', login_required(main.index), name='main-page'),
     url(r'^logout/$', login_required(main.logout), name='logout'),
@@ -88,6 +87,8 @@ urlpatterns += [
         login_required(account.settings_basic), name='account-settings-basic'),
     url(r'^account/settings/basic/save/$',
         login_required(account.settings_basic_save), name='account-settings-basic-save'),
+    url(r'^account/settings/basic/generate-totp-key$',
+        login_required(account.generate_totp_key), name='account-settings-basic-generate-totp-key'),
     ]
 
 # ################################################################################################################################
