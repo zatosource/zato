@@ -63,6 +63,7 @@ from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
+from zato.server.generic.api.outconn_sftp import OutconnSFTPWrapper
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
@@ -208,12 +209,17 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Generic connections - WSX outconns
         self.outconn_wsx = {}
 
+        # Generic connections - SFTP
+        self.outconn_sftp = {}
+
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
+            GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.outconn_sftp,
             GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
         }
 
         self._generic_conn_handler = {
+            GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: OutconnSFTPWrapper,
             GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
         }
 
