@@ -35,7 +35,7 @@ def get_user_profile(user):
         user_profile.save()
         logger.info('Created a profile for user `%s`', user)
     finally:
-        logger.info('Return a user profile for `%s`', user)
+        logger.info('Returning a user profile for `%s`', user)
         return user_profile
 
 # ################################################################################################################################
