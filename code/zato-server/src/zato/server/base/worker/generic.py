@@ -70,6 +70,15 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
+    def ping_generic_connection(self, conn_id):
+        conn_dict, _ = self._find_conn_info(conn_id)
+
+        self.logger.info('About to ping generic connection `%s` (%s)', conn_dict.name, conn_dict.type_)
+        conn_dict.conn.ping()
+        self.logger.info('Generic connection `%s` ping successfully (%s)', conn_dict.name, conn_dict.type_)
+
+# ################################################################################################################################
+
     def reconnect_generic(self, conn_id):
         found_conn_dict, found_name = self._find_conn_info(conn_id)
         self.on_broker_msg_GENERIC_CONNECTION_EDIT(found_conn_dict, ['conn', 'parent'])
