@@ -486,9 +486,6 @@ class ServiceStore(object):
                 self.services[item.impl_name]['is_active'] = item.is_active
                 self.services[item.impl_name]['slow_threshold'] = item.slow_threshold
 
-                if 'hook' in item.name:
-                    print(111, item.impl_name, item.name, service_id)
-
                 self.id_to_impl_name[service_id] = item.impl_name
                 self.impl_name_to_id[item.impl_name] = service_id
                 self.name_to_impl_name[item.name] = item.impl_name
