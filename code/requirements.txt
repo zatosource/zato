@@ -99,6 +99,7 @@ pygments==2.0
 PyJWT==1.4.2
 PyMySQL==0.8.1
 pyOpenSSL==17.5.0
+pyotp==2.2.7
 pyparsing==2.2.0
 PyPubSub==3.3.0
 pyrapidjson==0.5.1

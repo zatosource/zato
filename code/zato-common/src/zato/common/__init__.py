@@ -1113,6 +1113,9 @@ class SECRETS:
     # Zato secret (Fernet)
     PREFIX = 'zato.secf.'
 
+    # Zato secret (configuration)
+    URL_PREFIX = 'zato+secret://'
+
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):
         self.path = path

@@ -340,6 +340,7 @@ def run_command(args):
         ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
         ('info', 'zato.cli.info.Info'),
         ('migrate', 'zato.cli.migrate.Migrate'),
+        ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('service_invoke', 'zato.cli.service.Invoke'),
         ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),

@@ -2,12 +2,11 @@
 
 # Python version to use needs to be provided by our caller
 PY_BINARY=$1
-echo "*** Zato `lsb_release -ds` installation using $PY_BINARY ***"
+echo "*** Zato Ubuntu/Debian installation using $PY_BINARY ***"
 
 # Always run an update so there are no surprises later on when it actually
 # comes to fetching the packages from repositories.
-#sudo apt-get update
-#sudo apt-get install -y lsb-release
+sudo apt-get update
 
 # Debian 7.0 (Wheezy) requires the wheezy-backports repository.
 if [[ "$(lsb_release -sir)" =~ '^Debian.7\.' ]]
@@ -18,11 +17,11 @@ then
     sudo apt-get install -y --reinstall libffi5
 fi
 
-#sudo apt-get install -y \
-#    build-essential curl git haproxy libbz2-dev libev-dev libev4 libevent-dev \
-#    libffi-dev libkeyutils-dev libldap2-dev libmemcached-dev libpq-dev \
-#    libsasl2-dev libssl-dev libxml2-dev libxslt1-dev libyaml-dev openssl \
-#    $PY_BINARY $PY_BINARY-dev swig uuid-dev uuid-runtime wget zlib1g-dev
+sudo apt-get install -y \
+    build-essential curl git haproxy libbz2-dev libev-dev libev4 libevent-dev \
+    libffi-dev libkeyutils-dev libldap2-dev libmemcached-dev libpq-dev \
+    libsasl2-dev libssl-dev libxml2-dev libxslt1-dev libyaml-dev openssl \
+    $PY_BINARY $PY_BINARY-dev python-pip swig uuid-dev uuid-runtime wget zlib1g-dev
 
 # On Debian and Ubuntu the binary goes to /usr/sbin/haproxy so we need to
 # symlink it to a directory that can be easily found on PATH so that starting
