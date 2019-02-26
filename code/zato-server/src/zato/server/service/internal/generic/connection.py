@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from copy import deepcopy
+from datetime import datetime
 from json import loads
 
 # Zato
@@ -201,13 +202,15 @@ class Ping(_BaseService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
 
-            response_time = 'WWW'
+            # To ensure that the input ID is correct
+            self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
+
+            start_time = datetime.utcnow()
+            self.server.worker_store.ping_generic_connection(self.request.input.id)
+            response_time = datetime.utcnow() - start_time
 
             self.response.payload.info = 'Connection pinged; response time: {}'.format(response_time)
-
-            self.logger.warn('QQQ %s', instance)
 
 # ################################################################################################################################
 # ################################################################################################################################
