@@ -86,6 +86,8 @@ class SFTPConnectionContainer(BaseConnectionContainer):
     def _on_OUTGOING_SFTP_DELETE(self, msg):
         return super(SFTPConnectionContainer, self).on_definition_delete(msg)
 
+    _on_GENERIC_CONNECTION_EDIT = _on_OUTGOING_SFTP_DELETE
+
 # ################################################################################################################################
 
     def _on_OUTGOING_SFTP_CREATE(self, msg):
@@ -95,6 +97,15 @@ class SFTPConnectionContainer(BaseConnectionContainer):
 
     def _on_OUTGOING_SFTP_EDIT(self, msg):
         return super(SFTPConnectionContainer, self).on_definition_edit(msg)
+
+    _on_GENERIC_CONNECTION_EDIT = _on_OUTGOING_SFTP_EDIT
+
+# ################################################################################################################################
+
+    def _on_OUTGOING_SFTP_CHANGE_PASSWORD(self, msg):
+        return super(SFTPConnectionContainer, self).on_definition_change_password(msg)
+
+    _on_GENERIC_CONNECTION_CHANGE_PASSWORD = _on_OUTGOING_SFTP_CHANGE_PASSWORD
 
 # ################################################################################################################################
 

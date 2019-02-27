@@ -9,6 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
+from zato.common import GENERIC as COMMON_GENERIC
+from zato.common.broker_message import GENERIC as BROKER_MSG_GENERIC
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
 
@@ -70,6 +72,12 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
+    def _edit_generic_connection(self, msg, skip):
+        self._delete_generic_connection(msg)
+        self._create_generic_connection(msg, True, skip)
+
+# ################################################################################################################################
+
     def ping_generic_connection(self, conn_id):
         conn_dict, _ = self._find_conn_info(conn_id)
 
@@ -85,18 +93,10 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_GENERIC_CONNECTION_CREATE(self, msg):
-        self._create_generic_connection(msg, True)
+    def on_broker_msg_GENERIC_CONNECTION_CREATE(self, msg, *args, **kwargs):
+        func = self._get_generic_impl_func(msg)
+        func(msg)
 
-# ################################################################################################################################
-
-    def on_broker_msg_GENERIC_CONNECTION_DELETE(self, msg):
-        self._delete_generic_connection(msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_GENERIC_CONNECTION_EDIT(self, msg, skip=None):
-        self._delete_generic_connection(msg)
-        self._create_generic_connection(msg, True, skip)
+    on_broker_msg_GENERIC_CONNECTION_EDIT = on_broker_msg_GENERIC_CONNECTION_DELETE = on_broker_msg_GENERIC_CONNECTION_CREATE
 
 # ################################################################################################################################
