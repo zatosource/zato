@@ -45,9 +45,9 @@ from six import PY3
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common import broker_message, CHANNEL, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, SEC_DEF_TYPE, \
-     simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
-from zato.common.broker_message import code_to_name, SERVICE
+from zato.common import broker_message, CHANNEL, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, \
+     PUBSUB, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
@@ -89,11 +89,21 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+class _generic_msg:
+    create          = BROKER_MSG_GENERIC.CONNECTION_CREATE.value
+    edit            = BROKER_MSG_GENERIC.CONNECTION_EDIT.value
+    delete          = BROKER_MSG_GENERIC.CONNECTION_DELETE.value
+    change_password = BROKER_MSG_GENERIC.CONNECTION_CHANGE_PASSWORD.value
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GeventWorker(GunicornGeventWorker):
     def __init__(self, *args, **kwargs):
         self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
         super(GunicornGeventWorker, self).__init__(*args, **kwargs)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SyncWorker(GunicornSyncWorker):
@@ -123,6 +133,7 @@ def _get_base_classes():
 
     return tuple(out)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 _base_type = '_WorkerStoreBase'
@@ -213,12 +224,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
-            GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
         }
 
         self._generic_conn_handler = {
-            GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
         }
+
+        # Maps message actions against generic connection types and their message handlers
+        self.generic_impl_func_map = {}
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
@@ -300,6 +314,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_amqp()
 
         # Generic connections
+        self.init_generic_connections_config()
         self.init_generic_connections()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
@@ -896,10 +911,40 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for config_dict in self.worker_config.generic_connection.values():
 
             # Not all generic connections are created here
-            if config_dict['config']['type_'] != GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
+            if config_dict['config']['type_'] != COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
                 continue
 
             self._create_generic_connection(bunchify(config_dict['config']))
+
+# ################################################################################################################################
+
+    def init_generic_connections_config(self):
+
+        # Local aliases
+        outconn_wsx_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX, {})
+        outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
+
+        # Outgoing WSX connections are pure generic objects that we can handle ourselves
+        outconn_wsx_map[_generic_msg.create] = self._create_generic_connection
+        outconn_wsx_map[_generic_msg.edit]   = self._edit_generic_connection
+        outconn_wsx_map[_generic_msg.delete] = self._delete_generic_connection
+
+        # Outgoing SFTP connections require for a different API to be called (provided by ParallelServer)
+        outconn_sftp_map[_generic_msg.create] = self.server.connector_sftp.invoke_connector
+        outconn_sftp_map[_generic_msg.edit]   = self.server.connector_sftp.invoke_connector
+        outconn_sftp_map[_generic_msg.delete] = self.server.connector_sftp.invoke_connector
+        outconn_sftp_map[_generic_msg.change_password] = self.server.connector_sftp.invoke_connector
+
+# ################################################################################################################################
+
+    def _get_generic_impl_func(self, msg, *args, **kwargs):
+        """ Returns a function/method to invoke depending on which generic connection type is given on input.
+        Required because some connection types (e.g. SFTP) are not managed via GenericConnection objects,
+        for instance, in the case of SFTP, it uses subprocesses and a different management API.
+        """
+        func_map = self.generic_impl_func_map[msg['type_']]
+        func = func_map[msg['action']]
+        return func(msg, *args, **kwargs)
 
 # ################################################################################################################################
 

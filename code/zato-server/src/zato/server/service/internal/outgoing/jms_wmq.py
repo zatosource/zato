@@ -227,6 +227,6 @@ class SendMessage(AdminService):
         input_optional = _optional + ('reply_to', AsIs('correl_id'), AsIs('msg_id'))
 
     def handle(self):
-        self.server.send_wmq_message(self.request.input)
+        self.server.connector_ibm_mq.send_wmq_message(self.request.input)
 
 # ################################################################################################################################
