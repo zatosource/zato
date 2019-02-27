@@ -18,6 +18,7 @@ from ipaddress import ip_address, ip_network
 from netifaces import AF_INET, ifaddresses as net_ifaddresses, interfaces as net_ifaces
 
 # Python 2/3 compatibility
+from builtins import bytes
 from future.moves.urllib.parse import urlparse
 from six import PY2
 
@@ -102,7 +103,7 @@ def get_preferred_ip(base_bind, user_prefs):
     # or through a network range.
     for current in current_addresses:
         for preferred in pref_networks:
-            if ip_address(current) in preferred:
+            if ip_address(current.decode('utf8') if isinstance(current, bytes) else current) in preferred:
                 return current
 
     # Ok, still nothing, so we need to find something ourselves
