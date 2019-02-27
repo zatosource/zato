@@ -50,8 +50,20 @@ class SFTPConnection(object):
         self.logger = logger
         self.config = config # type: dict
 
+# ################################################################################################################################
+
+    def execute(self, data):
+        """ Executes a single or multiple SFTP commands from the input 'data' string.
+        """
+
+# ################################################################################################################################
+
     def connect(self):
-        pass # This is a no-op added for API completeness
+        # We do not maintain long-running connections but we may still want to ping the remote end
+        # to make sure we are actually able to connect to it.
+        return self.ping()
+
+# ################################################################################################################################
 
     def ping(self):
         self.logger.warn('QQQ %s', self.config)
@@ -86,7 +98,7 @@ class SFTPConnectionContainer(BaseConnectionContainer):
 
 # ################################################################################################################################
 
-    def _on_OUTGOING_SFTP_SEND(self, msg, is_reconnect=False):
+    def _on_OUTGOING_SFTP_EXECUTE(self, msg, is_reconnect=False):
         pass
 
 # ################################################################################################################################

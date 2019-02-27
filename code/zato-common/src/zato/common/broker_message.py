@@ -211,7 +211,7 @@ class OUTGOING(Constants):
     SFTP_EDIT = ValueConstant('')
     SFTP_DELETE = ValueConstant('')
     SFTP_CHANGE_PASSWORD = ValueConstant('')
-    SFTP_SEND = ValueConstant('')
+    SFTP_EXECUTE = ValueConstant('')
     SFTP_PING = ValueConstant('')
 
 class CHANNEL(Constants):
