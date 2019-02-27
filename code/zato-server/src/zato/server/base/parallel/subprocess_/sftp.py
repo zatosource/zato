@@ -30,7 +30,7 @@ class SFTPIPC(SubprocessIPC):
     connector_module = 'zato.server.connection.connector.subprocess_.impl.sftp'
 
     action_outgoing_create = OUTGOING.SFTP_CREATE
-    action_send = OUTGOING.SFTP_SEND
+    action_send = OUTGOING.SFTP_EXECUTE
     action_ping = OUTGOING.SFTP_PING
 
 # ################################################################################################################################

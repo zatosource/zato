@@ -57,6 +57,9 @@
             'should_flush',
             'should_preserve_meta',
             'ssh_options',
+
+            'sftp_command',
+            'ping_command',
         ]
     }
     </script>
@@ -99,7 +102,7 @@
 
                         <th><a href="#">Username</a></th>
                         <th><a href="#">Identity file</a></th>
-                        <th><a href="#">Band. limit</a></th>
+                        <th><a href="#">Bandw. limit</a></th>
 
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -121,6 +124,9 @@
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -165,6 +171,9 @@
                         <td class='ignore'>{{ item.should_flush }}</td>
                         <td class='ignore'>{{ item.should_preserve_meta }}</td>
                         <td class='ignore'>{{ item.ssh_options }}</td>
+
+                        <td class='ignore'>{{ item.sftp_command }}</td>
+                        <td class='ignore'>{{ item.ping_command }}</td>
 
                     </tr>
                 {% endfor %}
@@ -246,7 +255,6 @@
                             </td>
                         </tr>
 
-
                         <tr>
                             <td style="vertical-align:middle">Host</td>
                             <td>
@@ -266,6 +274,21 @@
                             <td style="vertical-align:middle">Username</td>
                             <td>
                                 {{ create_form.username }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">SFTP command</td>
+                            <td>
+                                {{ create_form.sftp_command }}
+
+                                |
+
+                                <label>
+                                Ping command
+                                {{ create_form.ping_command }}
+                                </label>
+
                             </td>
                         </tr>
 
@@ -290,7 +313,6 @@
                             {{ create_form.ssh_options }}
                             </td>
                         </tr>
-
 
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -392,6 +414,21 @@
                             <td style="vertical-align:middle">Username</td>
                             <td>
                                 {{ edit_form.username }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">SFTP command</td>
+                            <td>
+                                {{ edit_form.sftp_command }}
+
+                                |
+
+                                <label>
+                                Ping command
+                                {{ edit_form.ping_command }}
+                                </label>
+
                             </td>
                         </tr>
 

@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 _sio_required = 'name', 'log_level'
 _sio_optional = 'is_active', 'host', 'port', 'username', 'password', 'identity_file', \
     'ssh_config_file', 'buffer_size', 'is_compression_enabled', 'bandwidth_limit', 'force_ip_type', 'should_flush', \
-    'should_preserve_meta', 'ssh_options'
+    'should_preserve_meta', 'ssh_options', 'sftp_command', 'ping_command'
 
 # ################################################################################################################################
 
@@ -67,7 +67,7 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outconn'] = True
-        initial_input_dict['pool_size'] = 100
+        initial_input_dict['pool_size'] = 1
         initial_input_dict['sec_use_rbac'] = False
 
     def success_message(self, item):
