@@ -21,21 +21,30 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-def get_user_profile(user):
-    logger.info('Getting profile for user `%s`', user)
+def get_user_profile(user, needs_logging=True):
+    if needs_logging:
+        logger.info('Getting profile for user `%s`', user)
 
     from zato.admin.web.models import UserProfile
 
     try:
         user_profile = UserProfile.objects.get(user=user)
-        logger.info('Found an existing profile for user `%s`', user)
+        if needs_logging:
+            logger.info('Found an existing profile for user `%s`', user)
     except UserProfile.DoesNotExist:
-        logger.info('Did not find an existing profile for user `%s`', user)
+
+        if needs_logging:
+            logger.info('Did not find an existing profile for user `%s`', user)
+
         user_profile = UserProfile(user=user)
         user_profile.save()
-        logger.info('Created a profile for user `%s`', user)
+
+        if needs_logging:
+            logger.info('Created a profile for user `%s`', user)
+
     finally:
-        logger.info('Returning a user profile for `%s`', user)
+        if needs_logging:
+            logger.info('Returning a user profile for `%s`', user)
         return user_profile
 
 # ################################################################################################################################

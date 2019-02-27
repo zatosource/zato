@@ -26,6 +26,7 @@ from future.utils import itervalues
 from zato.common import SECRETS, ZATO_NONE
 from zato.common.util.config import resolve_value
 from zato.common.util.sql import ElemsWithOpaqueMaker
+from zato.server.generic.connection import GenericConnection
 
 # ################################################################################################################################
 
@@ -179,7 +180,7 @@ class ConfigDict(object):
 # ################################################################################################################################
 
     @staticmethod
-    def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False, decrypt_func=None):
+    def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False, decrypt_func=None, drop_opaque=False):
         """ Return a new ConfigDict with items taken from an SQL query.
         """
         config_dict = ConfigDict(name)
@@ -228,8 +229,16 @@ class ConfigDict(object):
 
         # Post-process data before it is returned to resolve any opaque attributes
         for value in config_dict.values():
-            ElemsWithOpaqueMaker.process_config_dict(value['config'])
+            value_config = value['config']
+            if ElemsWithOpaqueMaker.has_opaque_data(value_config):
+                ElemsWithOpaqueMaker.process_config_dict(value_config, drop_opaque)
 
+        return config_dict
+
+# ################################################################################################################################
+
+    @staticmethod
+    def from_generic(config_dict):
         return config_dict
 
 # ################################################################################################################################

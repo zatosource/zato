@@ -64,7 +64,6 @@ class SFTPIPC(SubprocessIPC):
     def create_initial_sftp_outconns(self, config_dict):
         def text_func(config):
             return config['name']
-
         return self.create_initial_outconns(config_dict, text_func)
 
 # ################################################################################################################################
