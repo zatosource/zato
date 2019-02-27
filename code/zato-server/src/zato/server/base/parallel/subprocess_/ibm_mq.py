@@ -26,9 +26,9 @@ class IBMMQIPC(SubprocessIPC):
     connector_name = 'IBM MQ'
     callback_suffix = 'wmq'
     ipc_config_name = 'zato-ibm-mq'
-    auth_username = IPC.CONNECTOR.IBM_MQ.USERNAME
+    auth_username = IPC.CONNECTOR.USERNAME.IBM_MQ
 
-    connector_module = 'zato.server.connection.connector.subprocess_.ibm_mq'
+    connector_module = 'zato.server.connection.connector.subprocess_.impl.ibm_mq'
 
     action_definition_create = DEFINITION.WMQ_CREATE
     action_outgoing_create = OUTGOING.WMQ_CREATE

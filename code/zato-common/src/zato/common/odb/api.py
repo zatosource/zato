@@ -30,7 +30,7 @@ from sqlalchemy.sql.expression import true
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, \
+from zato.common import DEPLOYMENT_STATUS, GENERIC, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, \
      ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
@@ -1112,6 +1112,14 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.out_sap_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_out_sftp_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of outgoing SAP RFC connections.
+        """
+        with closing(self.session()) as session:
+            return query_generic.connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, needs_columns)
 
 # ################################################################################################################################
 

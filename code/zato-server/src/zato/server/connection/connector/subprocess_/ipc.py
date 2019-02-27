@@ -55,8 +55,13 @@ class SubprocessIPC(object):
 
 # ################################################################################################################################
 
+    def __init__(self, server):
+        self.server = server
+
+# ################################################################################################################################
+
     def _check_enabled(self):
-        if not self.fs_server_config.component_enabled[self.check_enabled]:
+        if not self.server.fs_server_config.component_enabled[self.check_enabled]:
             raise Exception(not_enabled_pattern.format(**{
                 'connector_name': self.connector_name,
                 'check_enabled': self.check_enabled
@@ -67,7 +72,7 @@ class SubprocessIPC(object):
     def get_credentials(self):
         """ Returns a username/password pair using which it is possible to authenticate with a connector.
         """
-        config = self.worker_store.basic_auth_get(self.auth_username)['config']
+        config = self.server.worker_store.basic_auth_get(self.auth_username)['config']
         return config.username, config.password
 
 # ################################################################################################################################
@@ -81,27 +86,27 @@ class SubprocessIPC(object):
 
         self.ipc_tcp_port = get_free_port(ipc_tcp_start_port)
         logger.info('Starting {} connector for server `%s` on `%s`'.format(self.connector_name),
-            self.name, self.ipc_tcp_port)
+            self.server.name, self.ipc_tcp_port)
 
         # Credentials for both servers and connectors
         username, password = self.get_credentials()
 
         # Employ IPC to exchange subprocess startup configuration
-        self.connector_config_ipc.set_config(self.ipc_config_name, dumps({
+        self.server.connector_config_ipc.set_config(self.ipc_config_name, dumps({
             'port': self.ipc_tcp_port,
             'username': username,
             'password': password,
-            'server_port': self.port,
-            'server_name': self.name,
+            'server_port': self.server.port,
+            'server_name': self.server.name,
             'server_path': '/zato/internal/callback/{}'.format(self.callback_suffix),
-            'base_dir': self.base_dir,
-            'logging_conf_path': self.logging_conf_path
+            'base_dir': self.server.base_dir,
+            'logging_conf_path': self.server.logging_conf_path
         }))
 
         # Start connector in a sub-process
         start_python_process('{} connector'.format(self.connector_name), False, self.connector_module, '', extra_options={
-            'deployment_key': self.deployment_key,
-            'shmem_size': self.shmem_size
+            'deployment_key': self.server.deployment_key,
+            'shmem_size': self.server.shmem_size
         })
 
         # Wait up to timeout seconds for the connector to start as indicated by its responding to a PING request
@@ -192,19 +197,19 @@ class SubprocessIPC(object):
 # ################################################################################################################################
 
     def create_initial_definitions(self, config_dict, text_func):
-        text_pattern = 'Creating {} definition %s'.format(self.connector_name)
+        text_pattern = 'Creating {} definition `%s`'.format(self.connector_name)
         self._create_initial_objects(config_dict, self.action_definition_create, text_pattern, text_func)
 
 # ################################################################################################################################
 
     def create_initial_outconns(self, config_dict, text_func):
-        text_pattern = 'Creating {} outconn %s'.format(self.connector_name)
+        text_pattern = 'Creating {} outconn `%s`'.format(self.connector_name)
         self._create_initial_objects(config_dict, self.action_outgoing_create, text_pattern, text_func)
 
 # ################################################################################################################################
 
     def create_initial_channels(self, config_dict, text_func):
-        text_pattern = 'Creating {} channel %s'.format(self.connector_name)
+        text_pattern = 'Creating {} channel `%s`'.format(self.connector_name)
         self._create_initial_objects(config_dict, self.action_channel_create, text_pattern, text_func)
 
 # ################################################################################################################################

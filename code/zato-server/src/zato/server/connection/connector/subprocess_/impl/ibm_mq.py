@@ -26,43 +26,20 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
-import signal
-import sys
+from logging import DEBUG
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
-from json import loads
-from logging import DEBUG, Formatter, getLogger, StreamHandler
-from logging.handlers import RotatingFileHandler
-from os import getppid, path
-from threading import RLock
 from time import sleep
 from traceback import format_exc
-from wsgiref.simple_server import make_server
-
-# Bunch
-from bunch import bunchify
-
-# Requests
-from requests import post as requests_post
-
-# YAML
-import yaml
 
 # Python 2/3 compatibility
-from builtins import bytes
-from six import PY2
 from zato.common.py23_ import start_new_thread
 
 # Zato
-from zato.common.broker_message import code_to_name
-from zato.common.util import parse_cmd_line_options
-from zato.common.util.auth import parse_basic_auth
 from zato.common.util.json_ import dumps
-from zato.common.util.posix_ipc_ import ConnectorConfigIPC
 from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
 from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
 from zato.server.connection.jms_wmq.jms.core import TextMessage
-from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer, get_logging_config
+from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer, Response
 
 # ################################################################################################################################
 
@@ -84,14 +61,6 @@ _paths = (_path_api, _path_ping)
 _cc_failed         = 2    # pymqi.CMQC.MQCC_FAILED
 _rc_conn_broken    = 2009 # pymqi.CMQC.MQRC_CONNECTION_BROKEN
 _rc_not_authorized = 2035 # pymqi.CMQC.MQRC_NOT_AUTHORIZED
-
-# ################################################################################################################################
-
-class Response(object):
-    def __init__(self, status=_http_200, data=b'', content_type='text/json'):
-        self.status = status
-        self.data = data
-        self.content_type = content_type
 
 # ################################################################################################################################
 
@@ -204,7 +173,13 @@ class IBMMQChannel(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class IBMMQConnectionContainer(object):
+class IBMMQConnectionContainer(BaseConnectionContainer):
+
+    connection_class = WebSphereMQConnection
+    ipc_name = 'ibm-mq'
+    conn_type = 'ibm_mq'
+    logging_file_name = 'ibm-mq'
+
     def __init__(self):
 
         # PyMQI is an optional dependency so let's import it here rather than on module level
@@ -234,139 +209,63 @@ class IBMMQConnectionContainer(object):
     def _on_DEFINITION_WMQ_CREATE(self, msg):
         """ Creates a new connection to IBM MQ.
         """
+        # Require that PyMQI be available
         if not self.pymqi:
             return Response(_http_503, 'Could not find pymqi module, IBM MQ connections will not start')
 
-        with self.lock:
-            try:
-                self._create_definition(msg)
-            except Exception as e:
-                self.logger.warn(format_exc())
-                return Response(_http_503, str(e.message))
-            else:
-                return Response()
+        # Call our parent which will actually create the definition
+        return super(IBMMQConnectionContainer, self).on_definition_create(msg)
 
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_EDIT(self, msg):
-        """ Updates an existing definition - close the current one, including channels and outconns,
-        and creates a new one in its place.
-        """
-        with self.lock:
-            def_id = msg.id
-            old_conn = self.connections[def_id]
-
-            # Edit messages don't carry passwords
-            msg.password = old_conn.password
-
-            # It's possible that we are editing a connection that has no connected yet,
-            # e.g. if password was invalid, so this needs to be guarded by an if.
-            if old_conn.is_connected:
-                self.connections[def_id].close()
-
-            # Overwrites the previous connection object
-            new_conn = self._create_definition(msg, old_conn.is_connected)
-
-            # Stop and start all channels using this definition.
-            for channel_id, _def_id in self.channel_id_to_def_id.items():
-                if def_id == _def_id:
-                    channel = self.channels[channel_id]
-                    channel.stop()
-                    channel.conn = new_conn
-                    channel.start()
-
-            return Response()
+        return super(IBMMQConnectionContainer, self).on_definition_edit(msg)
 
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_DELETE(self, msg):
-        """ Deletes an IBM MQ MQ definition along with its associated outconns and channels.
-        """
-        with self.lock:
-            def_id = msg.id
-
-            # Stop all connections ..
-            try:
-                self.connections[def_id].close()
-            except Exception:
-                self.logger.warn(format_exc())
-            finally:
-                try:
-                    del self.connections[def_id]
-                except Exception:
-                    self.logger.warn(format_exc())
-
-                # .. continue to delete outconns regardless of errors above ..
-                for outconn_id, outconn_def_id in self.outconn_id_to_def_id.items():
-                    if outconn_def_id == def_id:
-                        del self.outconn_id_to_def_id[outconn_id]
-                        del self.outconns[outconn_id]
-
-                # .. delete channels too.
-                for channel_id, channel_def_id in self.channel_id_to_def_id.items():
-                    if channel_def_id == def_id:
-                        del self.channel_id_to_def_id[channel_id]
-                        del self.channels[channel_id]
-
-            return Response()
+        return super(IBMMQConnectionContainer, self).on_definition_delete(msg)
 
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_CHANGE_PASSWORD(self, msg):
-        with self.lock:
-            try:
-                conn = self.connections[msg.id]
-                conn.close()
-                conn.password = str(msg.password)
-                conn.connect()
-            except Exception as e:
-                self.logger.warn(format_exc())
-                return Response(_http_503, str(e.message), 'text/plain')
-            else:
-                return Response()
+        return super(IBMMQConnectionContainer, self).on_definition_change_password(msg)
 
 # ################################################################################################################################
 
     def _on_DEFINITION_WMQ_PING(self, msg):
-        """ Pings a remote IBM MQ manager.
-        """
-        try:
-            self.connections[msg.id].ping()
-        except WebSphereMQException as e:
-            return Response(_http_503, str(e.message), 'text/plain')
-        else:
-            return Response()
+        return super(IBMMQConnectionContainer, self).on_definition_ping(msg)
 
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_DELETE(self, msg):
-        """ Deletes an existing IBM MQ outconn.
-        """
-        with self.lock:
-            self._delete_outconn(msg)
-            return Response()
+        return super(IBMMQConnectionContainer, self).on_outgoing_delete(msg)
 
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_CREATE(self, msg):
-        """ Creates a new IBM MQ outgoin connections using an already existing definition.
-        """
-        with self.lock:
-            return self._create_outconn(msg)
+        return super(IBMMQConnectionContainer, self).on_outgoing_create(msg)
 
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_EDIT(self, msg):
-        """ Updates and existing outconn by deleting and creating it again with latest configuration.
-        """
-        with self.lock:
-            self._delete_outconn(msg, msg.old_name)
-            return self._create_outconn(msg)
+        return super(IBMMQConnectionContainer, self).on_outgoing_edit(msg)
+
+# ################################################################################################################################
+
+    def _on_CHANNEL_WMQ_CREATE(self, msg):
+        return super(IBMMQConnectionContainer, self).on_channel_create(msg)
+
+# ################################################################################################################################
+
+    def _on_CHANNEL_WMQ_DELETE(self, msg):
+        return super(IBMMQConnectionContainer, self).on_channel_delete(msg)
 
 # ################################################################################################################################
 
     def _on_OUTGOING_WMQ_SEND(self, msg, is_reconnect=False):
-        """ Sends a message to a remote IBM MQ queue.
+        """ Sends a message to a remote IBM MQ queue - note that the functionality is specific to IBM MQ
+        and, consequently, it does not make use of any method in the parent class unlike, e.g. _on_CHANNEL_WMQ_DELETE.
         """
         with self.lock:
             outconn_id = msg.get('id') or self.outconn_name_to_id[msg.outconn_name]
@@ -429,25 +328,11 @@ class IBMMQConnectionContainer(object):
             except Exception as e:
                 return self._on_send_exception()
 
-
 # ################################################################################################################################
 
     def _create_channel_impl(self, conn, msg):
         return IBMMQChannel(conn, msg.id, msg.queue.encode('utf8'), msg.service_name, msg.data_format,
             self.on_mq_message_received, self.logger)
-
-# ################################################################################################################################
-
-    def _on_CHANNEL_WMQ_CREATE(self, msg):
-        """ Creates a new background channel listening for messages from a given queue.
-        """
-        with self.lock:
-            conn = self.connections[msg.def_id]
-            channel = self._create_channel_impl(conn, msg)
-            channel.start()
-            self.channels[channel.id] = channel
-            self.channel_id_to_def_id[channel.id] = msg.def_id
-            return Response()
 
 # ################################################################################################################################
 
@@ -464,18 +349,6 @@ class IBMMQConnectionContainer(object):
             channel.start()
 
             return Response()
-
-# ################################################################################################################################
-
-    def _on_CHANNEL_WMQ_DELETE(self, msg):
-        """ Stops and deletes a background channel.
-        """
-        with self.lock:
-            channel = self.channels[msg.id]
-            channel.keep_running = False
-
-            del self.channels[channel.id]
-            del self.channel_id_to_def_id[channel.id]
 
 # ################################################################################################################################
 

@@ -214,12 +214,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
-            GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.outconn_sftp,
             GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
         }
 
         self._generic_conn_handler = {
-            GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: OutconnSFTPWrapper,
             GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
         }
 
@@ -897,6 +895,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def init_generic_connections(self):
         for config_dict in self.worker_config.generic_connection.values():
+
+            # Not all generic connections are created here
+            if config_dict['config']['type_'] != GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
+                continue
+
             self._create_generic_connection(bunchify(config_dict['config']))
 
 # ################################################################################################################################
