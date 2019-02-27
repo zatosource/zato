@@ -31,11 +31,10 @@ import signal
 import sys
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
 from json import loads
-from logging import DEBUG, Formatter, getLogger, StreamHandler
+from logging import Formatter, getLogger, StreamHandler
 from logging.handlers import RotatingFileHandler
 from os import getppid, path
 from threading import RLock
-from time import sleep
 from traceback import format_exc
 from wsgiref.simple_server import make_server
 
@@ -51,7 +50,6 @@ import yaml
 # Python 2/3 compatibility
 from builtins import bytes
 from six import PY2
-from zato.common.py23_ import start_new_thread
 
 # Zato
 from zato.common.broker_message import code_to_name
@@ -59,9 +57,6 @@ from zato.common.util import parse_cmd_line_options
 from zato.common.util.auth import parse_basic_auth
 from zato.common.util.json_ import dumps
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC
-from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
-from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
-from zato.server.connection.jms_wmq.jms.core import TextMessage
 
 # ################################################################################################################################
 
@@ -72,7 +67,7 @@ logger_zato = logging.getLogger('zato')
 def get_logging_config(conn_type, file_name):
     return {
         'loggers': {
-            'zato_ibm_mq': {
+            'zato_{}'.format(conn_type): {
                 'qualname':'zato_{}'.format(conn_type),
                 'level':'INFO',
                 'propagate':False,
@@ -111,7 +106,25 @@ _paths = (_path_api, _path_ping)
 # ################################################################################################################################
 # ################################################################################################################################
 
+class Response(object):
+    def __init__(self, status=_http_200, data=b'', content_type='text/json'):
+        self.status = status
+        self.data = data
+        self.content_type = content_type
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class BaseConnectionContainer(object):
+
+    # Set by our subclasses that actually create connections
+    connection_class = None
+
+    # Logging configuration that will be set by subclasses
+    ipc_name = 'invalid-notset-ipc-name'
+    conn_type = 'invalid-notset-conn-type'
+    logging_file_name = 'invalid-notset-logging-file-name'
+
     def __init__(self):
 
         zato_options = sys.argv[1]
@@ -150,7 +163,7 @@ class BaseConnectionContainer(object):
     def set_config(self):
         """ Sets self attributes, as configured in shmem by our parent process.
         """
-        config = self.config_ipc.get_config('zato-ibm-mq')
+        config = self.config_ipc.get_config('zato-{}'.format(self.ipc_name))
 
         config = loads(config)
         config = bunchify(config)
@@ -168,9 +181,8 @@ class BaseConnectionContainer(object):
         with open(config.logging_conf_path) as f:
             logging_config = yaml.load(f)
 
-        # IBM MQ logging configuration is new in Zato 3.0, so it's optional.
-        if not 'zato_ibm_mq' in logging_config['loggers']:
-            logging_config = default_logging_config
+        if not 'zato_{}'.format(self.conn_type) in logging_config['loggers']:
+            logging_config = get_logging_config(self.conn_type, self.logging_file_name)
 
         self.set_up_logging(logging_config)
 
@@ -178,8 +190,8 @@ class BaseConnectionContainer(object):
 
     def set_up_logging(self, config):
 
-        logger_conf = config['loggers']['zato_ibm_mq']
-        wmq_handler_conf = config['handlers']['ibm_mq']
+        logger_conf = config['loggers']['zato_{}'.format(self.conn_type)]
+        wmq_handler_conf = config['handlers'][self.conn_type]
         del wmq_handler_conf['formatter']
         wmq_handler_conf.pop('class', False)
         formatter_conf = config['formatters']['default']['format']
@@ -230,7 +242,7 @@ class BaseConnectionContainer(object):
         msg.pop('_encrypted_in_odb', False)
 
         # We always create and add a connetion ..
-        conn = WebSphereMQConnection(**msg)
+        conn = self.connection_class(**msg)
         self.connections[id] = conn
 
         # .. because even if it fails here, it will be eventually established during one of .send or .receive,
@@ -246,12 +258,17 @@ class BaseConnectionContainer(object):
     def _create_outconn(self, msg):
         """ A low-level method to create an outgoing connection. Must be called with self.lock held.
         """
-        # Just to be on the safe side, make sure that our connection exists
-        if not msg.def_id in self.connections:
-            return Response(_http_503, 'Could not find def_id among {}'.format(self.connections.keys()), 'text/plain')
+        # Not all outgoing connections have their parent definitions
+        def_id = msg.get('def_id')
 
-        # Map outconn to its definition
-        self.outconn_id_to_def_id[msg.id] = msg.def_id
+        if def_id:
+
+            # Just to be on the safe side, make sure that our connection exists
+            if not msg.def_id in self.connections:
+                return Response(_http_503, 'Could not find def_id among {}'.format(self.connections.keys()), 'text/plain')
+
+            # Map outconn to its definition
+            self.outconn_id_to_def_id[msg.id] = msg.def_id
 
         # Create the outconn now
         self.outconns[msg.id] = msg
@@ -371,53 +388,161 @@ class BaseConnectionContainer(object):
 
 # ################################################################################################################################
 
-    def _on_CHANNEL_WMQ_DELETE(self, msg):
-        pass
+    def on_channel_delete(self, msg):
+        """ Stops and deletes an existing channel.
+        """
+        with self.lock:
+            channel = self.channels[msg.id]
+            channel.keep_running = False
+
+            del self.channels[channel.id]
+            del self.channel_id_to_def_id[channel.id]
 
 # ################################################################################################################################
 
-    def _on_CHANNEL_WMQ_CREATE(self, msg):
-        pass
+    def on_channel_create(self, msg):
+        """ Creates a new channel listening for messages from a given endpoint.
+        """
+        with self.lock:
+            conn = self.connections[msg.def_id]
+            channel = self._create_channel_impl(conn, msg)
+            channel.start()
+            self.channels[channel.id] = channel
+            self.channel_id_to_def_id[channel.id] = msg.def_id
+            return Response()
 
 # ################################################################################################################################
 
-    def _on_OUTGOING_WMQ_EDIT(self, msg):
-        pass
+    def on_outgoing_edit(self, msg):
+        """ Updates and existing outconn by deleting and creating it again with latest configuration.
+        """
+        with self.lock:
+            self._delete_outconn(msg, msg.old_name)
+            return self._create_outconn(msg)
 
 # ################################################################################################################################
 
-    def _on_OUTGOING_WMQ_CREATE(self, msg):
-        pass
+    def on_outgoing_create(self, msg):
+        """ Creates a new outgoing connection using an already existing definition.
+        """
+        with self.lock:
+            return self._create_outconn(msg)
 
 # ################################################################################################################################
 
-    def _on_OUTGOING_WMQ_DELETE(self, msg):
-        pass
+    def on_outgoing_delete(self, msg):
+        """ Deletes an existing outgoing connection.
+        """
+        with self.lock:
+            self._delete_outconn(msg)
+            return Response()
 
 # ################################################################################################################################
 
-    def _on_DEFINITION_WMQ_PING(self, msg):
-        pass
+    def on_definition_ping(self, msg):
+        """ Pings a remote endpoint.
+        """
+        try:
+            self.connections[msg.id].ping()
+        except Exception as e:
+            return Response(_http_503, str(e.message), 'text/plain')
+        else:
+            return Response()
 
 # ################################################################################################################################
 
-    def _on_DEFINITION_WMQ_CHANGE_PASSWORD(self, msg):
-        pass
+    def on_definition_change_password(self, msg):
+        """ Changes the password of an existing definition and reconnects to the remote end.
+        """
+        with self.lock:
+            try:
+                conn = self.connections[msg.id]
+                conn.close()
+                conn.password = str(msg.password)
+                conn.connect()
+            except Exception as e:
+                self.logger.warn(format_exc())
+                return Response(_http_503, str(e.message), 'text/plain')
+            else:
+                return Response()
 
 # ################################################################################################################################
 
-    def _on_DEFINITION_WMQ_DELETE(self, msg):
-        pass
+    def on_definition_delete(self, msg):
+        """ Deletes a definition along with its associated outconns and channels.
+        """
+        with self.lock:
+            def_id = msg.id
+
+            # Stop all connections ..
+            try:
+                self.connections[def_id].close()
+            except Exception:
+                self.logger.warn(format_exc())
+            finally:
+                try:
+                    del self.connections[def_id]
+                except Exception:
+                    self.logger.warn(format_exc())
+
+                # .. continue to delete outconns regardless of errors above ..
+                for outconn_id, outconn_def_id in self.outconn_id_to_def_id.items():
+                    if outconn_def_id == def_id:
+                        del self.outconn_id_to_def_id[outconn_id]
+                        del self.outconns[outconn_id]
+
+                # .. delete channels too.
+                for channel_id, channel_def_id in self.channel_id_to_def_id.items():
+                    if channel_def_id == def_id:
+                        del self.channel_id_to_def_id[channel_id]
+                        del self.channels[channel_id]
+
+            return Response()
 
 # ################################################################################################################################
 
-    def _on_DEFINITION_WMQ_EDIT(self, msg):
-        pass
+    def on_definition_edit(self, msg):
+        """ Updates an existing definition - close the current one, including channels and outconns,
+        and creates a new one in its place.
+        """
+        with self.lock:
+            def_id = msg.id
+            old_conn = self.connections[def_id]
+
+            # Edit messages don't carry passwords
+            msg.password = old_conn.password
+
+            # It's possible that we are editing a connection that has no connected yet,
+            # e.g. if password was invalid, so this needs to be guarded by an if.
+            if old_conn.is_connected:
+                self.connections[def_id].close()
+
+            # Overwrites the previous connection object
+            new_conn = self._create_definition(msg, old_conn.is_connected)
+
+            # Stop and start all channels using this definition.
+            for channel_id, _def_id in self.channel_id_to_def_id.items():
+                if def_id == _def_id:
+                    channel = self.channels[channel_id]
+                    channel.stop()
+                    channel.conn = new_conn
+                    channel.start()
+
+            return Response()
 
 # ################################################################################################################################
 
-    def _on_DEFINITION_WMQ_CREATE(self, msg):
-        pass
+    def on_definition_create(self, msg):
+        """ Creates a new definition from the input message.
+        """
+        with self.lock:
+            try:
+                self._create_definition(msg)
+            except Exception as e:
+                self.logger.warn(format_exc())
+                return Response(_http_503, str(e.message))
+            else:
+                return Response()
 
 # ################################################################################################################################
 

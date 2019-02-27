@@ -1001,8 +1001,9 @@ class IPC:
         LENGTH = 2 # Length of either success or failure messages
 
     class CONNECTOR:
-        class IBM_MQ:
-            USERNAME = 'zato.connector.wmq'
+        class USERNAME:
+            IBM_MQ = 'zato.connector.wmq'
+            SFTP   = 'zato.connector.sftp'
 
 class WEB_SOCKET:
     class DEFAULT:
