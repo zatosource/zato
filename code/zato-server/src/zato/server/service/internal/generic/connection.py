@@ -13,6 +13,7 @@ from datetime import datetime
 from json import loads
 
 # Zato
+from zato.common import GENERIC as COMMON_GENERIC
 from zato.common.broker_message import GENERIC
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
@@ -204,10 +205,18 @@ class Ping(_BaseService):
         with closing(self.odb.session()) as session:
 
             # To ensure that the input ID is correct
-            self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
+            instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
+
+            # Different code paths will be taken depending on what kind of a generic connection this is
+            ping_func_dict = {
+                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.server.worker_store.ping_generic_connection,
+                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.server.connector_sftp.ping_sftp
+            }
+
+            ping_func = ping_func_dict[instance.type_]
 
             start_time = datetime.utcnow()
-            self.server.worker_store.ping_generic_connection(self.request.input.id)
+            ping_func(self.request.input.id)
             response_time = datetime.utcnow() - start_time
 
             self.response.payload.info = 'Connection pinged; response time: {}'.format(response_time)

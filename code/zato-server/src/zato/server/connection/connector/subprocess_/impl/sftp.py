@@ -42,17 +42,19 @@ from zato.server.connection.jms_wmq.jms.core import TextMessage
 from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer, Response
 
 # ################################################################################################################################
-
-logger_zato = logging.getLogger('zato')
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class SFTPConnection(object):
 
-    def run(self):
-        # This is a no-op added for API completeness
-        pass
+    def __init__(self, logger, **config):
+        self.logger = logger
+        self.config = config # type: dict
+
+    def connect(self):
+        pass # This is a no-op added for API completeness
+
+    def ping(self):
+        self.logger.warn('QQQ %s', self.config)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,23 +66,23 @@ class SFTPConnectionContainer(BaseConnectionContainer):
 
 # ################################################################################################################################
 
-    def _on_DEFINITION_SFTP_PING(self, msg):
+    def _on_OUTGOING_SFTP_PING(self, msg):
         return super(SFTPConnectionContainer, self).on_definition_ping(msg)
 
 # ################################################################################################################################
 
     def _on_OUTGOING_SFTP_DELETE(self, msg):
-        return super(SFTPConnectionContainer, self).on_outgoing_delete(msg)
+        return super(SFTPConnectionContainer, self).on_definition_delete(msg)
 
 # ################################################################################################################################
 
     def _on_OUTGOING_SFTP_CREATE(self, msg):
-        return super(SFTPConnectionContainer, self).on_outgoing_create(msg)
+        return super(SFTPConnectionContainer, self).on_definition_create(msg)
 
 # ################################################################################################################################
 
     def _on_OUTGOING_SFTP_EDIT(self, msg):
-        return super(SFTPConnectionContainer, self).on_outgoing_edit(msg)
+        return super(SFTPConnectionContainer, self).on_definition_edit(msg)
 
 # ################################################################################################################################
 

@@ -60,10 +60,6 @@ from zato.common.util.posix_ipc_ import ConnectorConfigIPC
 
 # ################################################################################################################################
 
-logger_zato = logging.getLogger('zato')
-
-# ################################################################################################################################
-
 def get_logging_config(conn_type, file_name):
     return {
         'loggers': {
@@ -242,7 +238,7 @@ class BaseConnectionContainer(object):
         msg.pop('_encrypted_in_odb', False)
 
         # We always create and add a connetion ..
-        conn = self.connection_class(**msg)
+        conn = self.connection_class(self.logger, **msg)
         self.connections[id] = conn
 
         # .. because even if it fails here, it will be eventually established during one of .send or .receive,
@@ -275,6 +271,8 @@ class BaseConnectionContainer(object):
 
         # Maps outconn name to its ID
         self.outconn_name_to_id[msg.name] = msg.id
+
+        self.logger.info('Added connection `%s`, self.outconns -> `%s`', msg.name, self.outconns)
 
         # Everything OK
         return Response()
@@ -443,6 +441,7 @@ class BaseConnectionContainer(object):
         """ Pings a remote endpoint.
         """
         try:
+            self.logger.warn('QQQ %s', self.connections)
             self.connections[msg.id].ping()
         except Exception as e:
             return Response(_http_503, str(e.message), 'text/plain')

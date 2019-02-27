@@ -18,6 +18,7 @@ from zato.common import MISC, SECRETS
 from zato.common.util import asbool
 from zato.common.util.sql import elems_with_opaque
 from zato.server.config import ConfigDict
+from zato.server.generic.connection import GenericConnection
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
 
@@ -169,7 +170,7 @@ class ConfigLoader(object):
 
         # SFTP
         query = self.odb.get_out_sftp_list(server.cluster.id, True)
-        self.config.out_sftp = ConfigDict.from_query('out_sftp', query, decrypt_func=self.decrypt)
+        self.config.out_sftp = ConfigDict.from_query('out_sftp', query, decrypt_func=self.decrypt, drop_opaque=True)
 
         # SOAP
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)

@@ -92,7 +92,7 @@ del(_msd, _msgbody)
 
 class WebSphereMQConnection(object):
 
-    def __init__(self, queue_manager=None, channel=None, host=None, port=None, username=None,
+    def __init__(self, _ignored_logger, queue_manager=None, channel=None, host=None, port=None, username=None,
         password=None, cache_open_send_queues=True, cache_open_receive_queues=True, use_shared_connections=True,
         dynamic_queue_template='SYSTEM.DEFAULT.MODEL.QUEUE', ssl=False, ssl_cipher_spec=None, ssl_key_repository=None,
         needs_mcd=True, needs_jms=False, max_chars_printed=100):

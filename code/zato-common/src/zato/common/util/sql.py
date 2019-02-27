@@ -131,22 +131,36 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
                 attempts += 1
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ElemsWithOpaqueMaker(object):
     def __init__(self, elems):
         self.elems = elems
 
+# ################################################################################################################################
+
     @staticmethod
-    def _set_opaque(elem):
-        opaque = elem.get(GENERIC.ATTR_NAME)
-        opaque = loads(opaque) if opaque else {}
-        elem.update(opaque)
+    def get_opaque_data(elem):
+        return elem.get(GENERIC.ATTR_NAME)
+
+    has_opaque_data = get_opaque_data
 
 # ################################################################################################################################
 
     @staticmethod
-    def process_config_dict(config):
-        ElemsWithOpaqueMaker._set_opaque(config)
+    def _set_opaque(elem, drop_opaque=False):
+        opaque = ElemsWithOpaqueMaker.get_opaque_data(elem)
+        opaque = loads(opaque) if opaque else {}
+        elem.update(opaque)
+
+        if drop_opaque:
+            del elem[GENERIC.ATTR_NAME]
+
+# ################################################################################################################################
+
+    @staticmethod
+    def process_config_dict(config, drop_opaque=False):
+        ElemsWithOpaqueMaker._set_opaque(config, drop_opaque)
 
 # ################################################################################################################################
 
@@ -186,6 +200,7 @@ class ElemsWithOpaqueMaker(object):
         else:
             return self._process_elems([], self.elems)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 def elems_with_opaque(elems):
