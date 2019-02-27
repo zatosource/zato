@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.SFTP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.sftp.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'buffer_size', 'bandwidth_limit']);
+    $.fn.zato.data_table.setup_forms(['name', 'buffer_size', 'bandwidth_limit', 'sftp_command', 'ping_command']);
 })
 
 $.fn.zato.outgoing.sftp.create = function() {
@@ -74,6 +74,9 @@ $.fn.zato.outgoing.sftp.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.should_flush);
     row += String.format("<td class='ignore'>{0}</td>", item.should_preserve_meta);
     row += String.format("<td class='ignore'>{0}</td>", item.ssh_options);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.sftp_command);
+    row += String.format("<td class='ignore'>{0}</td>", item.ping_command);
 
     if(include_tr) {
         row += '</tr>';

@@ -28,6 +28,9 @@ class CreateForm(forms.Form):
     identity_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     ssh_config_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
+    sftp_command = forms.CharField(widget=forms.TextInput(attrs={'style':'width:40%'}), initial=SFTP.DEFAULT.COMMAND_SFTP)
+    ping_command = forms.CharField(widget=forms.TextInput(attrs={'style':'width:37%'}), initial=SFTP.DEFAULT.COMMAND_PING)
+
     buffer_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:12%'}), initial=SFTP.DEFAULT.BUFFER_SIZE)
     is_compression_enabled = forms.ChoiceField(widget=forms.Select())
     bandwidth_limit = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=SFTP.DEFAULT.BANDWIDTH_LIMIT)

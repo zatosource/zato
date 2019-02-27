@@ -1076,9 +1076,11 @@ class GENERIC:
 
 class SFTP:
     class DEFAULT:
-        PORT = 22
-        BUFFER_SIZE = 32768
         BANDWIDTH_LIMIT = 10
+        BUFFER_SIZE = 32768
+        COMMAND_SFTP = 'sftp'
+        COMMAND_PING = 'ls .'
+        PORT = 22
 
     class LOG_LEVEL:
         LEVEL1 = NameId('1', '1')
