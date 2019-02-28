@@ -121,6 +121,9 @@ class BaseConnectionContainer(object):
     conn_type = 'invalid-notset-conn-type'
     logging_file_name = 'invalid-notset-logging-file-name'
 
+    remove_id_from_def_msg = True
+    remove_name_from_def_msg = True
+
     def __init__(self):
 
         zato_options = sys.argv[1]
@@ -229,13 +232,16 @@ class BaseConnectionContainer(object):
     def _create_definition(self, msg, needs_connect=True):
         """ A low-level method to create connection definitions. Must be called with self.lock held.
         """
-        msg.pop('name')
         msg.pop('cluster_id', None)
-        msg.pop('old_name', None)
-        id = msg.pop('id')
         msg['needs_jms'] = msg.pop('use_jms', False)
         msg.pop('_encryption_needed', False)
         msg.pop('_encrypted_in_odb', False)
+
+        id = msg.pop('id') if self.remove_id_from_def_msg else msg['id']
+
+        if self.remove_name_from_def_msg:
+            msg.pop('name')
+            msg.pop('old_name', None)
 
         # We always create and add a connetion ..
         conn = self.connection_class(self.logger, **msg)
