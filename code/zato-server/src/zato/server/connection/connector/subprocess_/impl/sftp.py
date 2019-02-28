@@ -167,18 +167,21 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from tempfile import NamedTemporaryFile
 
 # Bunch
 from bunch import Bunch, bunchify
 
 # sh
-from sh import sftp
+from sh import Command
 
-print(333, `sftp`)
+# Zato
+from zato.common import SFTP
 
 # ################################################################################################################################
 
-logging.basicConfig(level=logging.INFO)
+log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+logging.basicConfig(level=logging.INFO, format=log_format)
 
 # ################################################################################################################################
 
@@ -190,20 +193,46 @@ logger = logging.getLogger(__name__)
 mb_to_kbit = 8000
 
 # ################################################################################################################################
+
+ip_type_map = {
+    SFTP.IP_TYPE.IPV4.id: '-4',
+    SFTP.IP_TYPE.IPV6.id: '-6',
+}
+
+log_level_map = {
+    SFTP.LOG_LEVEL.LEVEL0.id: '',
+    SFTP.LOG_LEVEL.LEVEL1.id: '-v',
+    SFTP.LOG_LEVEL.LEVEL2.id: '-vv',
+    SFTP.LOG_LEVEL.LEVEL3.id: '-vvv',
+    SFTP.LOG_LEVEL.LEVEL4.id: '-vvvv',
+}
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SFTPConnection(object):
-
+    """ Wraps access to SFTP commands via command line.
+    """
     def __init__(self, logger, **config):
         self.logger = logger
         self.config = bunchify(config)     # type: Bunch
+
+        # Reject unknown IP types
+        if self.config.force_ip_type:
+            if not SFTP.IP_TYPE().is_valid(self.config.force_ip_type):
+                raise ValueError('Unknown IP type `{!r}`'.format(self.config.force_ip_type))
+
+        # Reject unknown logging levels
+        if self.config.log_level:
+            if not SFTP.LOG_LEVEL().is_valid(self.config.log_level):
+                raise ValueError('Unknown log level `{!r}`'.format(self.config.log_level))
 
         self.id = self.config.id                # type: int
         self.name = self.config.name            # type: str
         self.is_active = self.config.is_active  # type: str
 
         self.host = self.config.host or ''      # type: str
-        self.port = self.config.port or None     # type: int
+        self.port = self.config.port or None    # type: int
 
         self.username = self.config.username       # type: str
         self.password = self.config.password or '' # type: str
@@ -215,28 +244,109 @@ class SFTPConnection(object):
         self.identity_file = self.config.identity_file or ''     # type: str
         self.ssh_config_file = self.config.ssh_config_file or '' # type: str
 
-        self.log_level = int(self.config.log_level)  # type: int
+        self.log_level = self.config.log_level       # type: int
         self.should_flush = self.config.should_flush # type: bool
         self.buffer_size = self.config.buffer_size   # type: int
 
-        self.ssh_options = self.config.ssh_options or ''     # type: str
+        self.ssh_options = self.config.ssh_options or []     # type: str
         self.force_ip_type = self.config.force_ip_type or '' # type: str
 
         self.should_preserve_meta = self.config.should_preserve_meta     # type: bool
         self.is_compression_enabled = self.config.is_compression_enabled # type: bool
 
         # SFTP expects kilobits instead of megabytes
-        self.bandwidth_limit = float(self.config.bandwidth_limit) * mb_to_kbit # type: float
+        self.bandwidth_limit = int(float(self.config.bandwidth_limit) * mb_to_kbit) # type: int
 
         # Added for API completeness
         self.is_connected = True
+
+        # Create the reusable command object
+        self.command = self.get_command()
+
+# ################################################################################################################################
+
+    def get_command(self):
+        """ Returns a reusable sh.Command object that can execute multiple different SFTP commands.
+        """
+        # A list of arguments that will be added to the base command
+        args = []
+
+        # Buffer size is always available
+        args.append('-B')
+        args.append(self.buffer_size)
+
+        # Bandwidth limit is always available
+        args.append('-l')
+        args.append(self.bandwidth_limit)
+
+        # Bandwidth limit is always available but may map to an empty string
+        log_level = log_level_map[self.log_level]
+        if log_level:
+            args.append(log_level)
+
+        # Port is optional
+        if self.port:
+            args.append('-P')
+            args.append(self.port)
+
+        # Identity file is optional
+        if self.identity_file:
+            args.append('-i')
+            args.append(self.identity_file)
+
+        # SSH config file is optional
+        if self.ssh_config_file:
+            args.append('-F')
+            args.append(self.ssh_config_file)
+
+        # Base command to build additional arguments into
+        command = Command(self.sftp_command)
+        command = command.bake(*args)
+
+        return command
 
 # ################################################################################################################################
 
     def execute(self, data):
         """ Executes a single or multiple SFTP commands from the input 'data' string.
         """
-        print(111, data)
+        self.logger.info('Executing `%s`', data)
+
+        # Additional command arguments
+        args = []
+
+        with NamedTemporaryFile(mode='w+', suffix='-zato-sftp.txt') as f:
+
+            # Write command to the temporary file
+            f.write(data)
+            f.flush()
+
+            # Append the file names to the list of arguments SFTP receives
+            args.append('-b')
+            args.append(f.name)
+
+            # Both username and host are optional but if they are provided, they must be the last arguments in the command
+            if self.host:
+                if self.username:
+                    args.append('{}@{}'.format(self.username, self.host))
+                else:
+                    args.append(self.host)
+
+            # Finally, execute all the commands
+            out = self.command(*args)
+
+        self.logger.info('')
+        self.logger.info('')
+
+        self.logger.info('STDOUT %s', out.stdout)
+
+        self.logger.info('')
+
+        self.logger.info('STDERR %s', out.stderr)
+
+        self.logger.info('')
+        self.logger.info('')
+
 
 # ################################################################################################################################
 
@@ -277,7 +387,7 @@ config = {
     'identity_file': None,
     'ssh_config_file': None,
 
-    'log_level': 4,
+    'log_level': '4',
     'should_flush': True,
     'buffer_size': 32678,
 
@@ -292,6 +402,6 @@ config = {
 
 conn = SFTPConnection(logger, **config)
 conn.connect()
-command = 'whoami'
+command = 'pwd'
 result = conn.execute(command)
 '''

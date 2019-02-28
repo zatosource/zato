@@ -1083,13 +1083,17 @@ class SFTP:
         PORT = 22
 
     class LOG_LEVEL:
+        LEVEL0 = NameId('0', '0')
         LEVEL1 = NameId('1', '1')
         LEVEL2 = NameId('2', '2')
         LEVEL3 = NameId('3', '3')
         LEVEL4 = NameId('4', '4')
 
         def __iter__(self):
-            return iter((self.LEVEL1, self.LEVEL2, self.LEVEL3, self.LEVEL4))
+            return iter((self.LEVEL0, self.LEVEL1, self.LEVEL2, self.LEVEL3, self.LEVEL4))
+
+        def is_valid(self, value):
+            return value in (elem.id for elem in self)
 
     class IP_TYPE:
         IPV4 = NameId('IPv4', 'ipv4')
@@ -1097,6 +1101,9 @@ class SFTP:
 
         def __iter__(self):
             return iter((self.IPV4, self.IPV6))
+
+        def is_valid(self, value):
+            return value in (elem.id for elem in self)
 
 class CONFIG_FILE:
     USER_DEFINED = 'user-defined'
