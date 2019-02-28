@@ -167,6 +167,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from datetime import datetime
+from itertools import count
 from tempfile import NamedTemporaryFile
 
 # Bunch
@@ -210,9 +212,34 @@ log_level_map = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+class Output(object):
+    """ Represents output resulting from execution of SFTP command(s).
+    """
+    __slots__ = 'cid', 'command', 'command_no', 'stdout', 'stderr'
+
+    def __init__(self, cid, command_no, command, stdout, stderr):
+        self.cid = cid               # type: str
+        self.command_no = command_no # type: int
+        self.command = command       # type: str
+        self.stdout = stdout         # type: str
+        self.stderr = stderr         # type: str
+
+    def to_dict(self):
+        return {
+            'cid': self.cid,
+            'command': self.command,
+            'command_no': self.command_no,
+            'stdout': self.stdout,
+            'stderr': self.stderr,
+        }
+
+# ################################################################################################################################
+
 class SFTPConnection(object):
     """ Wraps access to SFTP commands via command line.
     """
+    command_counter = count(1)
+
     def __init__(self, logger, **config):
         self.logger = logger
         self.config = bunchify(config)     # type: Bunch
@@ -284,6 +311,22 @@ class SFTPConnection(object):
         if log_level:
             args.append(log_level)
 
+        # Preserving file and directory metadata is optional
+        if self.should_preserve_meta:
+            args.append('-p')
+
+        # Immediate flushing is optional
+        if self.should_flush:
+            args.append('-f')
+
+        # Compression is optional
+        if self.is_compression_enabled:
+            args.append('-C')
+
+        # Forcing a particular IP version is optional
+        if self.force_ip_type:
+            args.append(ip_type_map[self.force_ip_type])
+
         # Port is optional
         if self.port:
             args.append('-P')
@@ -307,10 +350,13 @@ class SFTPConnection(object):
 
 # ################################################################################################################################
 
-    def execute(self, data):
+    def execute(self, cid, data):
         """ Executes a single or multiple SFTP commands from the input 'data' string.
         """
-        self.logger.info('Executing `%s`', data)
+        # Increment the command counter each time .execute is called
+        command_no = next(self.command_counter) # type: int
+
+        self.logger.info('Executing cid:`%s` (%s), data:`%s`', cid, command_no, data)
 
         # Additional command arguments
         args = []
@@ -334,19 +380,7 @@ class SFTPConnection(object):
 
             # Finally, execute all the commands
             out = self.command(*args)
-
-        self.logger.info('')
-        self.logger.info('')
-
-        self.logger.info('STDOUT %s', out.stdout)
-
-        self.logger.info('')
-
-        self.logger.info('STDERR %s', out.stderr)
-
-        self.logger.info('')
-        self.logger.info('')
-
+            return Output(cid, command_no, out.cmd, out.stdout, out.stderr)
 
 # ################################################################################################################################
 
@@ -363,8 +397,8 @@ class SFTPConnection(object):
 
 # ################################################################################################################################
 
-    def ping(self):
-        self.execute(self.ping_command)
+    def ping(self, _utcnow=datetime.utcnow):
+        self.execute('ping-{}'.format(_utcnow().isoformat()), self.ping_command)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -403,5 +437,14 @@ config = {
 conn = SFTPConnection(logger, **config)
 conn.connect()
 command = 'pwd'
-result = conn.execute(command)
+cid = 'abc'
+result = conn.execute(cid, command)
+
+print()
+print()
+
+print(111, result.to_dict())
+
+print()
+print()
 '''
