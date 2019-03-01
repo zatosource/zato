@@ -10,6 +10,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from json import dumps
+from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -136,6 +138,27 @@ def command_shell(req, id, cluster_id, name_slug):
 
 @method_allowed('POST')
 def command_shell_action(req, id, cluster_id, name_slug):
-    return HttpResponse('Executed successfully, response time: QQQ')
+
+    try:
+        response = req.zato.client.invoke('zato.outgoing.sftp.execute', {
+            'cluster_id': req.zato.cluster_id,
+            'id': id,
+            'data': req.POST['data'],
+        })
+
+        if response.ok:
+            data = response.data
+            return HttpResponse(dumps({
+                'msg': 'Response time: {} (#{})'.format(data.response_time, data.command_no),
+                'stdout': data.get('stdout', '(None)'),
+                'stderr': data.get('stderr', '(None)'),
+            }), content_type='application/javascript')
+        else:
+            raise Exception(response.details)
+
+    except Exception:
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
+        logger.error(msg)
+        return HttpResponseServerError(msg)
 
 # ################################################################################################################################

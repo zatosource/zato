@@ -49,13 +49,6 @@ class SFTPIPC(SubprocessIPC):
 
 # ################################################################################################################################
 
-    def send_sftp_message(self, *args, **kwargs):
-        out = self.send_message(*args, **kwargs)
-        return out
-        #return WebSphereMQCallData(unhexlify(out['msg_id']).strip(), unhexlify(out['correlation_id']).strip())
-
-# ################################################################################################################################
-
     def ping_sftp(self, *args, **kwargs):
         return self.ping(*args, **kwargs)
 

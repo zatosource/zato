@@ -31,7 +31,7 @@
         </tr>
         <tr>
             <td>
-                <form id="command_shell_form" action="{% url "out-sftp-command-shell-action" cluster_id conn_id name_slug %}" method="post">
+                <form id="command_shell_form" action="{% url "out-sftp-command-shell-action" conn_id cluster_id name_slug %}" method="post">
                 {% csrf_token %}
                     {{ form.data }}
                     <br/><br/>
@@ -40,6 +40,7 @@
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
 
                     <div style="text-align:right">
+                        <span class="form_hint">Log level:</span> {{ form.log_level }}
                         <input type="submit" value="Submit" />
                     </div>
 

@@ -62,6 +62,11 @@ class CommandShellForm(forms.Form):
     data = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:70px'}), initial='ls .')
     stdout = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:170px'}))
     stderr = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:270px'}))
+    log_level = forms.ChoiceField(widget=forms.Select())
+
+    def __init__(self):
+        super(CommandShellForm, self).__init__()
+        add_select(self, 'log_level', SFTP.LOG_LEVEL(), needs_initial_select=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
