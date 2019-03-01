@@ -126,6 +126,7 @@ class SFTPConnection(object):
 
         # Added for API completeness
         self.is_connected = True
+        self.password = 'dummy-password'
 
         # Create the reusable command object
         self.command = self.get_command()
@@ -196,7 +197,7 @@ class SFTPConnection(object):
         # Increment the command counter each time .execute is called
         command_no = next(self.command_counter) # type: int
 
-        self.logger.info('Executing cid:`%s` (%s), data:`%s`', cid, command_no, data)
+        self.logger.info('Executing cid:`%s` (%s; %s; %s), data:`%s`', cid, self.id, self.name, command_no, data)
 
         # Additional command arguments
         args = []
@@ -261,12 +262,14 @@ class SFTPConnectionContainer(BaseConnectionContainer):
     def _on_OUTGOING_SFTP_DELETE(self, msg):
         return super(SFTPConnectionContainer, self).on_definition_delete(msg)
 
-    _on_GENERIC_CONNECTION_EDIT = _on_OUTGOING_SFTP_DELETE
+    _on_GENERIC_CONNECTION_DELETE = _on_OUTGOING_SFTP_DELETE
 
 # ################################################################################################################################
 
     def _on_OUTGOING_SFTP_CREATE(self, msg):
         return super(SFTPConnectionContainer, self).on_definition_create(msg)
+
+    _on_GENERIC_CONNECTION_CREATE = _on_OUTGOING_SFTP_CREATE
 
 # ################################################################################################################################
 

@@ -447,7 +447,6 @@ class BaseConnectionContainer(object):
         """ Pings a remote endpoint.
         """
         try:
-            self.logger.warn('QQQ %s', self.connections)
             self.connections[msg.id].ping()
         except Exception as e:
             return Response(_http_503, str(e.message), 'text/plain')
@@ -478,9 +477,14 @@ class BaseConnectionContainer(object):
         """
         with self.lock:
             def_id = msg.id
+            delete_id = None
+            delete_name = None
 
             # Stop all connections ..
             try:
+                conn = self.connections[def_id]
+                delete_id = conn.id
+                delete_name = conn.name
                 self.connections[def_id].close()
             except Exception:
                 self.logger.warn(format_exc())
@@ -501,6 +505,9 @@ class BaseConnectionContainer(object):
                     if channel_def_id == def_id:
                         del self.channel_id_to_def_id[channel_id]
                         del self.channels[channel_id]
+
+            if delete_id:
+                self.logger.info('Deleted `%s` (%s)', delete_name, delete_id)
 
             return Response()
 

@@ -944,7 +944,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         func_map = self.generic_impl_func_map[msg['type_']]
         func = func_map[msg['action']]
-        return func(msg, *args, **kwargs)
+        return func#(msg, *args, **kwargs)
 
 # ################################################################################################################################
 
