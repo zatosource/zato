@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.SFTP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.sftp.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'buffer_size', 'bandwidth_limit', 'sftp_command', 'ping_command']);
+    $.fn.zato.data_table.setup_forms(['name', 'buffer_size', 'bandwidth_limit', 'sftp_command', 'ping_command', 'host']);
 })
 
 $.fn.zato.outgoing.sftp.create = function() {
