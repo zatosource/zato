@@ -15,6 +15,9 @@ from django import forms
 from zato.common import SFTP
 from zato.admin.web.forms import add_select
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
@@ -46,6 +49,19 @@ class CreateForm(forms.Form):
         add_select(self, 'log_level', SFTP.LOG_LEVEL(), needs_initial_select=False)
         add_select(self, 'force_ip_type', SFTP.IP_TYPE())
 
+# ################################################################################################################################
+# ################################################################################################################################
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class CommandShellForm(forms.Form):
+    data = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:70px'}), initial='ls .')
+    stdout = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:170px'}))
+    stderr = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:270px'}))
+
+# ################################################################################################################################
+# ################################################################################################################################
