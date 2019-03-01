@@ -31,13 +31,16 @@ class Execute(AdminService):
     """ Executes SFTP command(s) using a relevant connector.
     """
     class SimpleIO(AdminSIO):
-        input_required = 'name', 'data'
+        input_required = 'id', 'data'
         output_optional = 'response_time', 'stdout', 'stderr'
 
     def handle(self):
-        conn = self.out.sftp[self.request.input.name]
-        out = conn.execute(self.request.input.data)
-        self.response.payload = out.to_dict()
+        msg = self.request.input.deepcopy()
+        msg['action'] = OUTGOING.SFTP_EXECUTE.value
+        msg['cid'] = self.cid
+
+        out = self.server.connector_sftp.invoke_sftp_connector(msg)
+        self.response.payload = out.text
 
 # ################################################################################################################################
 # ################################################################################################################################

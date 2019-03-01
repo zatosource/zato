@@ -1431,6 +1431,7 @@ default_internal_modules = {
     'zato.server.service.internal.outgoing.sql': True,
     'zato.server.service.internal.outgoing.stomp': True,
     'zato.server.service.internal.outgoing.sap': True,
+    'zato.server.service.internal.outgoing.sftp': True,
     'zato.server.service.internal.outgoing.zmq': True,
     'zato.server.service.internal.pattern': True,
     'zato.server.service.internal.pickup': True,

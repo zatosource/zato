@@ -12,7 +12,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from datetime import datetime
 from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
-from itertools import count
 from logging import DEBUG
 from time import sleep
 from tempfile import NamedTemporaryFile
@@ -22,7 +21,7 @@ from traceback import format_exc
 from bunch import Bunch, bunchify
 
 # sh
-from sh import Command
+from sh import Command, ErrorReturnCode
 
 # Zato
 from zato.common import SFTP
@@ -81,7 +80,7 @@ class Output(object):
 class SFTPConnection(object):
     """ Wraps access to SFTP commands via command line.
     """
-    command_counter = count(1)
+    command_no = 0
 
     def __init__(self, logger, **config):
         self.logger = logger
@@ -147,11 +146,6 @@ class SFTPConnection(object):
         args.append('-l')
         args.append(self.bandwidth_limit)
 
-        # Bandwidth limit is always available but may map to an empty string
-        log_level = log_level_map[self.log_level]
-        if log_level:
-            args.append(log_level)
-
         # Preserving file and directory metadata is optional
         if self.should_preserve_meta:
             args.append('-p')
@@ -191,13 +185,13 @@ class SFTPConnection(object):
 
 # ################################################################################################################################
 
-    def execute(self, cid, data):
+    def execute(self, cid, data, log_level=SFTP.LOG_LEVEL.LEVEL4.id):
         """ Executes a single or multiple SFTP commands from the input 'data' string.
         """
         # Increment the command counter each time .execute is called
-        command_no = next(self.command_counter) # type: int
+        self.command_no += 1
 
-        self.logger.info('Executing cid:`%s` (%s; %s; %s), data:`%s`', cid, self.id, self.name, command_no, data)
+        self.logger.info('Executing cid:`%s` (%s; %s; %s), data:`%s`', cid, self.id, self.name, self.command_no, data)
 
         # Additional command arguments
         args = []
@@ -212,6 +206,11 @@ class SFTPConnection(object):
             args.append('-b')
             args.append(f.name)
 
+            # Logging is always available but may map to an empty string
+            log_level_mapped = log_level_map[log_level]
+            if log_level_mapped:
+                args.append(log_level_mapped)
+
             # Both username and host are optional but if they are provided, they must be the last arguments in the command
             if self.host:
                 if self.username:
@@ -221,14 +220,17 @@ class SFTPConnection(object):
 
             # Finally, execute all the commands
             out = self.command(*args)
-            return Output(cid, command_no, out.cmd, out.stdout, out.stderr)
+
+            return Output(cid, self.command_no, out.cmd, out.stdout, out.stderr)
 
 # ################################################################################################################################
 
     def connect(self):
         # We do not maintain long-running connections but we may still want to ping the remote end
         # to make sure we are actually able to connect to it.
-        self.ping()
+        out = self.ping()
+        self.logger.info('SFTP ping; name:`%s`, command:`%s`, stdout:`%s`, stderr:`%s`',
+            self.name, out.command, out.stdout, out.stderr)
 
 # ################################################################################################################################
 
@@ -239,7 +241,7 @@ class SFTPConnection(object):
 # ################################################################################################################################
 
     def ping(self, _utcnow=datetime.utcnow):
-        self.execute('ping-{}'.format(_utcnow().isoformat()), self.ping_command)
+        return self.execute('ping-{}'.format(_utcnow().isoformat()), self.ping_command)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -287,8 +289,25 @@ class SFTPConnectionContainer(BaseConnectionContainer):
 
 # ################################################################################################################################
 
-    def _on_OUTGOING_SFTP_EXECUTE(self, msg, is_reconnect=False):
-        self.logger.warn('QQQ %s', msg)
+    def _on_OUTGOING_SFTP_EXECUTE(self, msg, is_reconnect=False, _utcnow=datetime.utcnow):
+        out = {}
+        connection = self.connections[msg.id]
+        start_time = _utcnow()
+
+        try:
+            out = connection.execute(msg.cid, msg.data)
+        except ErrorReturnCode as e:
+            out['stdout'] = e.stdout
+            out['stderr'] = e.stderr
+        except Exception as e:
+            out['stderr'] = format_exc()
+        else:
+            out.update(to_dict())
+        finally:
+            out['command_no'] = connection.command_no
+            out['response_time'] = str(_utcnow() - start_time)
+
+        return Response(data=dumps(out))
 
 # ################################################################################################################################
 

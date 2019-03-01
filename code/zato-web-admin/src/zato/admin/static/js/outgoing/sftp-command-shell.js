@@ -9,10 +9,20 @@ $(document).ready(function() {
     var _callback = function(data, status, xhr){
 
         console.log('QQQ ' + data);
+        console.log('WWW ' + status);
 
         var success = status == 'success';
         var msg = success ? data.msg : data.responseText;
         $.fn.zato.user_message(success, msg);
+
+        if(success) {
+            if(data.stdout) {
+                $('#id_stdout').text(data.stdout);
+            };
+            if(data.stderr) {
+                $('#id_stderr').text(data.stderr);
+            }
+        }
     }
 
     var options = {
