@@ -35,6 +35,7 @@
             '_identity_file',
             'bandwidth_limit',
 
+            '_command_shell',
             '_edit',
             '_delete',
             '_ping',
@@ -106,6 +107,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
 
@@ -147,6 +149,7 @@
                         <td>{{ item.identity_file|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.bandwidth_limit|default:'<span class="form_hint">---</span>' }}</td>
 
+                        <td><a href="{% url "out-sftp-command-shell" item.id cluster_id item.name|slugify %}?name={{ item.name|urlencode:"" }}">Command shell</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.sftp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.sftp.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>

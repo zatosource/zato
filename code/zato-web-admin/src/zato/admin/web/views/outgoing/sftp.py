@@ -11,10 +11,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
+# Django
+from django.http import HttpResponse, HttpResponseServerError
+from django.template.response import TemplateResponse
+
 # Zato
 from zato.common import GENERIC
 from zato.admin.web.forms import ChangePasswordForm
-from zato.admin.web.forms.outgoing.sftp import CreateForm, EditForm
+from zato.admin.web.forms.outgoing.sftp import CommandShellForm, CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
     method_allowed, ping_connection
 from zato.common.odb.model import GenericConn
@@ -30,6 +34,7 @@ _sio_optional = 'is_active', 'host', 'port', 'username', 'password', 'identity_f
     'ssh_config_file', 'buffer_size', 'is_compression_enabled', 'bandwidth_limit', 'force_ip_type', 'should_flush', \
     'should_preserve_meta', 'ssh_options', 'sftp_command', 'ping_command'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Index(_Index):
@@ -54,6 +59,7 @@ class Index(_Index):
         }
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
@@ -74,11 +80,13 @@ class _CreateEdit(CreateEdit):
         return 'Successfully {} outgoing SFTP connection `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Create(_CreateEdit):
     url_name = 'out-sftp-create'
     service_name = 'zato.generic.connection.create'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
@@ -87,12 +95,14 @@ class Edit(_CreateEdit):
     service_name = 'zato.generic.connection.edit'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Delete(_Delete):
     url_name = 'out-sftp-delete'
     error_message = 'Could not delete outgoing SFTP connection'
     service_name = 'zato.generic.connection.delete'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
@@ -104,5 +114,28 @@ def ping(req, id, cluster_id):
 @method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.generic.connection.change-password')
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+def command_shell(req, id, cluster_id, name_slug):
+
+    return_data = {
+        'zato_clusters':req.zato.clusters,
+        'cluster_id':req.zato.cluster_id,
+        'req': req,
+        'conn_id': id,
+        'name_slug': name_slug,
+        'conn_name': req.GET['name'],
+        'form':CommandShellForm(),
+        }
+
+    return TemplateResponse(req, 'zato/outgoing/sftp-command-shell.html', return_data)
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def command_shell_action(req, id, cluster_id, name_slug):
+    return HttpResponse('Executed successfully, response time: QQQ')
 
 # ################################################################################################################################
