@@ -8,6 +8,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+import typing
+
+# ################################################################################################################################
+
+if typing.TYPE_CHECKING:
+    from zato.server.base.parallel import ParallelServer
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -15,7 +23,7 @@ class SFTPIPCFacade(object):
     """ Provides servers and services with access to SFTP resources.
     """
     def __init__(self, server, config):
-        # type: (object, dict) -> None
+        # type: (ParallelServer, dict) -> None
         self.server = server
         self.config = config
 
