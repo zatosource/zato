@@ -11,9 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
-# Django
-from django.http import HttpResponse, HttpResponseServerError
-
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.definition.jms_wmq import CreateForm, EditForm

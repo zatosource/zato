@@ -9,7 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, inspect, os, sys
+import logging
+import inspect
+import os
+import sys
+from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
 from inspect import isclass
@@ -71,6 +75,7 @@ from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
+from zato.server.connection.sftp import SFTPIPCFacade
 from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
@@ -219,9 +224,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Generic connections - WSX outconns
         self.outconn_wsx = {}
 
-        # Generic connections - SFTP
-        self.outconn_sftp = {}
-
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
@@ -285,9 +287,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # API keys
         self.update_apikeys()
 
-        # Request dispatcher - matches URLs, checks security and dispatches HTTP
-        # requests to services.
+        # SFTP - attach handles to connections to each ConfigDict now that all their configuration is ready
+        self.init_sftp()
 
+        # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io,
             return_tracebacks=self.server.return_tracebacks, default_error_message=self.server.default_error_message)
         self.request_dispatcher.url_data = URLData(
@@ -476,6 +479,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         config_list = self.worker_config.out_ftp.get_config_list()
         self.worker_config.out_ftp = FTPStore()
         self.worker_config.out_ftp.add_params(config_list)
+
+
+    def init_sftp(self):
+        """ Each outgoing SFTP connection requires a connection handle to be attached here,
+        later, in run-time, this is the 'conn' parameter available via self.out[name].conn.
+        """
+        for value in self.worker_config.out_sftp.values():
+            value['conn'] = SFTPIPCFacade(self.server, value['config'])
 
     def init_http_soap(self):
         """ Initializes plain HTTP/SOAP connections.
@@ -930,10 +941,36 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         outconn_wsx_map[_generic_msg.delete] = self._delete_generic_connection
 
         # Outgoing SFTP connections require for a different API to be called (provided by ParallelServer)
-        outconn_sftp_map[_generic_msg.create] = self.server.connector_sftp.invoke_connector
-        outconn_sftp_map[_generic_msg.edit]   = self.server.connector_sftp.invoke_connector
-        outconn_sftp_map[_generic_msg.delete] = self.server.connector_sftp.invoke_connector
-        outconn_sftp_map[_generic_msg.change_password] = self.server.connector_sftp.invoke_connector
+        outconn_sftp_map[_generic_msg.create] = self._on_outconn_sftp_create
+        outconn_sftp_map[_generic_msg.edit]   = self._on_outconn_sftp_edit
+        outconn_sftp_map[_generic_msg.delete] = self._on_outconn_sftp_delete
+
+# ################################################################################################################################
+
+    def _on_outconn_sftp_create(self, msg):
+        connector_msg = deepcopy(msg)
+        self.worker_config.out_sftp[msg.name] = msg
+        self.worker_config.out_sftp[msg.name].conn = SFTPIPCFacade(self.server, msg)
+        return self.server.connector_sftp.invoke_connector(connector_msg)
+
+# ################################################################################################################################
+
+    def _on_outconn_sftp_edit(self, msg):
+        connector_msg = deepcopy(msg)
+        del self.worker_config.out_sftp[msg.old_name]
+        return self._on_outconn_sftp_create(connector_msg)
+
+# ################################################################################################################################
+
+    def _on_outconn_sftp_delete(self, msg):
+        connector_msg = deepcopy(msg)
+        del self.worker_config.out_sftp[msg.name]
+        return self.server.connector_sftp.invoke_connector(connector_msg)
+
+# ################################################################################################################################
+
+    def _on_outconn_sftp_change_password(self, msg):
+        raise NotImplementedError('No password for SFTP connections can be set')
 
 # ################################################################################################################################
 
@@ -943,8 +980,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for instance, in the case of SFTP, it uses subprocesses and a different management API.
         """
         func_map = self.generic_impl_func_map[msg['type_']]
-        func = func_map[msg['action']]
-        return func#(msg, *args, **kwargs)
+        return func_map[msg['action']]
 
 # ################################################################################################################################
 
