@@ -83,6 +83,9 @@ class _CreateEdit(_BaseService):
             else:
                 model = self._new_zato_instance_with_cluster(ModelGenericConn)
 
+            # This will be needed in case this is a rename
+            old_name = model.name
+
             for key, value in conn_dict.items():
                 setattr(model, key, value)
 
@@ -94,6 +97,7 @@ class _CreateEdit(_BaseService):
             self.response.payload.id = instance.id
             self.response.payload.name = instance.name
 
+        data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value
         data['id'] = instance.id
         self.broker_client.publish(data)
