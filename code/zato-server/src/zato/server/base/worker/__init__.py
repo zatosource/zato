@@ -94,6 +94,15 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+# Type hints
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.base.parallel import ParallelServer
+    from zato.server.config import ConfigStore
+
+# ################################################################################################################################
+
 class _generic_msg:
     create          = BROKER_MSG_GENERIC.CONNECTION_CREATE.value
     edit            = BROKER_MSG_GENERIC.CONNECTION_EDIT.value
@@ -151,6 +160,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
     def __init__(self, worker_config=None, server=None):
+        # type: (ConfigStore, ParallelServer) -> None
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_ready = False
