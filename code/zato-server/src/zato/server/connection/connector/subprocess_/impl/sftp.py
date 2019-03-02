@@ -291,18 +291,18 @@ class SFTPConnectionContainer(BaseConnectionContainer):
 
     def _on_OUTGOING_SFTP_EXECUTE(self, msg, is_reconnect=False, _utcnow=datetime.utcnow):
         out = {}
-        connection = self.connections[msg.id]
+        connection = self.connections[msg.id] # type: SFTPConnection
         start_time = _utcnow()
 
         try:
-            out = connection.execute(msg.cid, msg.data)
+            result = connection.execute(msg.cid, msg.data, msg.log_level) # type: Output
         except ErrorReturnCode as e:
             out['stdout'] = e.stdout
             out['stderr'] = e.stderr
         except Exception as e:
             out['stderr'] = format_exc()
         else:
-            out.update(to_dict())
+            out.update(result.to_dict())
         finally:
             out['command_no'] = connection.command_no
             out['response_time'] = str(_utcnow() - start_time)

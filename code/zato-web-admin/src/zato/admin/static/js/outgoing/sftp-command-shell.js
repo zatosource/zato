@@ -33,6 +33,8 @@ $(document).ready(function() {
     };
 
     $('#command_shell_form').submit(function() {
+        $('#id_stdout').text('');
+        $('#id_stderr').text('');
         $(this).ajaxSubmit(options);
         return false;
     });

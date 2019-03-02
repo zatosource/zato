@@ -31,7 +31,7 @@ class Execute(AdminService):
     """ Executes SFTP command(s) using a relevant connector.
     """
     class SimpleIO(AdminSIO):
-        input_required = 'id', 'data'
+        input_required = 'id', 'data', 'log_level'
         output_optional = 'response_time', 'stdout', 'stderr'
 
     def handle(self):

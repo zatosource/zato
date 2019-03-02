@@ -22,7 +22,7 @@ from zato.common import GENERIC
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sftp import CommandShellForm, CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-    method_allowed, ping_connection
+    method_allowed, ping_connection, slugify
 from zato.common.odb.model import GenericConn
 
 # ################################################################################################################################
@@ -77,6 +77,10 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = True
         initial_input_dict['pool_size'] = 1
         initial_input_dict['sec_use_rbac'] = False
+
+    def post_process_return_data(self, return_data):
+        return_data['name_slug'] = slugify(return_data['name'])
+        return return_data
 
     def success_message(self, item):
         return 'Successfully {} outgoing SFTP connection `{}`'.format(self.verb, item.name)
@@ -144,14 +148,15 @@ def command_shell_action(req, id, cluster_id, name_slug):
             'cluster_id': req.zato.cluster_id,
             'id': id,
             'data': req.POST['data'],
+            'log_level': req.POST['log_level'],
         })
 
         if response.ok:
             data = response.data
             return HttpResponse(dumps({
                 'msg': 'Response time: {} (#{})'.format(data.response_time, data.command_no),
-                'stdout': data.get('stdout', '(None)'),
-                'stderr': data.get('stderr', '(None)'),
+                'stdout': data.get('stdout') or '(None)',
+                'stderr': data.get('stderr') or '(None)',
             }), content_type='application/javascript')
         else:
             raise Exception(response.details)
