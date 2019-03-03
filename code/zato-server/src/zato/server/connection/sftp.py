@@ -81,6 +81,34 @@ class SFTPInfo(object):
 
 # ################################################################################################################################
 
+    def to_dict(self, skip_last_modified=True):
+        # type: () -> dict
+
+        out = {
+            'type': self.type,
+            'name': self.name,
+            'size': self.size,
+            'size_human': self.size_human,
+            'owner': self.owner,
+            'group': self.group,
+            'permissions': self.permissions,
+            'permissions_oct': self.permissions_oct,
+            'is_file': self.is_file,
+            'is_directory': self.is_directory,
+            'is_symlink': self.is_symlink,
+            'is_other': self.is_other,
+
+            'last_modified_iso': self.last_modified_iso,
+        }
+
+        # We do not return it by default so as not to make JSON serializers wonder what to do with a Python object
+        if not skip_last_modified:
+            out['last_modified'] = self.last_modified
+
+        return out
+
+# ################################################################################################################################
+
     @property
     def is_file(self):
         # type: () -> bool
@@ -368,18 +396,32 @@ class SFTPIPCFacade(object):
 
 # ################################################################################################################################
 
-    def get_info(self, remote_path, log_level=SFTP.LOG_LEVEL.LEVEL0.id):
-        # type: (str) -> SFTPInfo
+    def _get_info(self, remote_path, log_level=0, needs_dot_entries=True):
+        # type: (str, int, bool) -> SFTPInfo
 
-        out = self.execute('ls -la {}'.format(remote_path), log_level=log_level)
+        options = '-la' if needs_dot_entries else '-l'
+        out = self.execute('ls {} {}'.format(options, remote_path), log_level=log_level)
 
         if out.stdout:
-            out = self._parse_ls_output(out.stdout)
-            return out[0]
+            out = self._parse_ls_output(out.stdout) # type: List[SFTPInfo]
+            return out
 
 # ################################################################################################################################
 
-    def exists(self, remote_path):
+    def get_info(self, remote_path, log_level=0):
+        out = self._get_info(remote_path, log_level)
+        if out:
+            # Replace resolved '.' directory names with what was given on input
+            # because they must point to the same thing.
+            out = out[0]
+            if out.type == EntryType.directory and out.name == '.':
+                out.name = remote_path
+
+            return out
+
+# ################################################################################################################################
+
+    def exists(self, remote_path, log_level=0):
         # type: (str) -> bool
 
         # The is_ok flag will be True only if the remote path points to an existing file or directory
@@ -387,98 +429,151 @@ class SFTPIPCFacade(object):
 
 # ################################################################################################################################
 
-    def is_file(self, remote_path):
+    def is_file(self, remote_path, log_level=0):
+        return self.get_info(remote_path, log_level).is_file
+
+# ################################################################################################################################
+
+    def is_directory(self, remote_path, log_level=0):
+        return self.get_info(remote_path, log_level).is_directory
+
+# ################################################################################################################################
+
+    def is_symlink(self, remote_path, log_level=0):
+        return self.get_info(remote_path, log_level).is_symlink
+
+# ################################################################################################################################
+
+    def delete(self, remote_path, log_level=0):
+        info = self.get_info(remote_path, log_level)
+
+        if info.is_directory:
+            return self.delete_directory(remote_path, log_level, False)
+
+        elif info.is_file:
+            return self.delete_file(remote_path, log_level, False)
+
+        elif info.is_symlink:
+            return self.delete_symlink(remote_path, log_level, False)
+
+        else:
+            raise ValueError('Unexpected entry type (delete) `{}`'.format(info.to_dict()))
+
+# ################################################################################################################################
+
+    def _remove(self, is_dir, remote_path, log_level):
+        command = 'rmdir' if is_dir else 'rm'
+        return self.execute('{} {}'.format(command, remote_path), log_level)
+
+# ################################################################################################################################
+
+    def _ensure_entry_type(self, remote_path, expected, log_level):
+        info = self.get_info(remote_path, log_level)
+        if not info.type == expected:
+            raise ValueError('Expected for `{}` to be `{}` instead of `{}` ({})'.format(
+                remote_path, expected, info.type, info.to_dict()))
+
+# ################################################################################################################################
+
+    def delete_file(self, remote_path, log_level=0, needs_check=True):
+        if needs_check:
+            self._ensure_entry_type(remote_path, EntryType.file, log_level)
+
+        return self._remove(False, remote_path, log_level)
+
+# ################################################################################################################################
+
+    def delete_directory(self, remote_path, log_level=0, needs_check=True):
+        if needs_check:
+            self._ensure_entry_type(remote_path, EntryType.directory, log_level)
+
+        return self._remove(True, remote_path, log_level)
+
+# ################################################################################################################################
+
+    def delete_symlink(self, remote_path, log_level=0, needs_check=True):
+        if needs_check:
+            self._ensure_entry_type(remote_path, EntryType.symlink, log_level)
+
+        return self._remove(False, remote_path, log_level)
+
+# ################################################################################################################################
+
+    def chmod(self, mode, remote_path, log_level=0):
+        return self.execute('chmod {} {}'.format(mode, remote_path), log_level)
+
+# ################################################################################################################################
+
+    def chown(self, owner, remote_path, log_level=0):
+        return self.execute('chown {} {}'.format(owner, remote_path), log_level)
+
+# ################################################################################################################################
+
+    def chgrp(self, group, remote_path, log_level=0):
+        return self.execute('chgrp {} {}'.format(owner, remote_path), log_level)
+
+# ################################################################################################################################
+
+    def create_symlink(self, from_path, to_path, log_level=0):
+        return self.execute('ln -s {} {}'.format(from_path, to_path), log_level)
+
+# ################################################################################################################################
+
+    def create_hardlink(self, from_path, to_path, log_level=0):
+        return self.execute('ln {} {}'.format(from_path, to_path), log_level)
+
+# ################################################################################################################################
+
+    def create_directory(self, remote_path, log_level=0):
+        return self.execute('mkdir {}'.format(remote_path), log_level)
+
+# ################################################################################################################################
+
+    def list(self, remote_path, log_level=0):
+        return self._get_info(remote_path, log_level, needs_dot_entries=False)
+
+# ################################################################################################################################
+# ********************************************************************************************************************************
+# ################################################################################################################################
+
+# ################################################################################################################################
+
+    def move(self, from_path, to_path, log_level=0):
+        return self.execute('rename {} {}'.format(from_path, to_path), log_level)
+
+    rename = move
+
+# ################################################################################################################################
+
+    def read(self, remote_path, log_level=0):
         pass
 
 # ################################################################################################################################
 
-    def is_symlink(self, remote_path):
+    def download(self, remote_path, local_path, log_level=0):
         pass
 
 # ################################################################################################################################
 
-    def is_directory(self, path):
+    def write(self, data, remote_path, overwrite=False, log_level=0):
         pass
 
 # ################################################################################################################################
 
-    def delete(self, remote_path):
+    def upload(self, local_path, remote_path, overwrite=False, log_level=0):
         pass
 
 # ################################################################################################################################
-
-    def delete_file(self, remote_path):
-        pass
-
 # ################################################################################################################################
 
-    def delete_directory(self, remote_path):
-        pass
+class MyService(Service):
+    def handle(self):
+        conn = self.out.sftp['local']
+        config = conn.config
 
-# ################################################################################################################################
+        api = SFTPIPCFacade(self.cid, self.server, config)
+        api.ping()
 
-    def read(self, remote_path):
-        pass
-
-# ################################################################################################################################
-
-    def list(self, remote_path):
-        pass
-
-# ################################################################################################################################
-
-    def chmod(self, remote_path):
-        pass
-
-# ################################################################################################################################
-
-    def chown(self, remote_path):
-        pass
-
-# ################################################################################################################################
-
-    def chgrp(self, remote_path):
-        pass
-
-# ################################################################################################################################
-
-    def create_file(self):
-        pass
-
-# ################################################################################################################################
-
-    def create_directory(self):
-        pass
-
-# ################################################################################################################################
-
-    def create_symlink(self):
-        pass
-
-# ################################################################################################################################
-
-    def move(self, source_path, target_path):
-        pass
-
-# ################################################################################################################################
-
-    def read(self, remote_path):
-        pass
-
-# ################################################################################################################################
-
-    def write(self, data, remote_path, overwrite=False):
-        pass
-
-# ################################################################################################################################
-
-    def download(self, remote_path, local_path):
-        pass
-
-# ################################################################################################################################
-
-    def upload(self, local_path, remote_path, overwrite=False):
-        pass
 
 # ################################################################################################################################
 # ################################################################################################################################
