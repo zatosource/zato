@@ -79,6 +79,14 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.base.parallel import ParallelServer
+
+# ################################################################################################################################
+
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
 # ################################################################################################################################
@@ -232,7 +240,7 @@ class Service(object):
         self.name = self.__class__.__service_name # Will be set through .get_name by Service Store
         self.impl_name = self.__class__.__service_impl_name # Ditto
         self.logger = _get_logger(self.name)
-        self.server = None
+        self.server = None         # type: ParallelServer
         self.broker_client = None
         self.channel = None
         self.cid = None
