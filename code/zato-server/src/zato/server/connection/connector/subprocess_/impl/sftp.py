@@ -25,6 +25,7 @@ from sh import Command, ErrorReturnCode
 
 # Zato
 from zato.common import SFTP
+from zato.common.sftp import SFTPOutput
 from zato.common.util.json_ import dumps
 from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
 from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
@@ -52,29 +53,6 @@ log_level_map = {
 }
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-class Output(object):
-    """ Represents output resulting from execution of SFTP command(s).
-    """
-    __slots__ = 'cid', 'command', 'command_no', 'stdout', 'stderr'
-
-    def __init__(self, cid, command_no, command, stdout, stderr):
-        self.cid = cid               # type: str
-        self.command_no = command_no # type: int
-        self.command = command       # type: str
-        self.stdout = stdout         # type: str
-        self.stderr = stderr         # type: str
-
-    def to_dict(self):
-        return {
-            'cid': self.cid,
-            'command': self.command,
-            'command_no': self.command_no,
-            'stdout': self.stdout,
-            'stderr': self.stderr,
-        }
-
 # ################################################################################################################################
 
 class SFTPConnection(object):
@@ -218,10 +196,26 @@ class SFTPConnection(object):
                 else:
                     args.append(self.host)
 
-            # Finally, execute all the commands
-            out = self.command(*args)
+            out = SFTPOutput(cid, self.command_no)
+            result = None
 
-            return Output(cid, self.command_no, out.cmd, out.stdout, out.stderr)
+            try:
+                # Finally, execute all the commands
+                result = self.command(*args)
+            except Exception:
+                out.is_ok = False
+                out.details = format_exc()
+                if result:
+                    out.command = result.cmd
+                    out.stdout = result.stdout
+                    out.stderr = result.stderr
+            else:
+                out.is_ok = True
+                out.command = result.cmd
+                out.stdout = result.stdout
+                out.stderr = result.stderr
+            finally:
+                return out
 
 # ################################################################################################################################
 
@@ -301,9 +295,11 @@ class SFTPConnectionContainer(BaseConnectionContainer):
             out['stderr'] = e.stderr
         except Exception as e:
             out['stderr'] = format_exc()
+            out['is_ok'] = False
         else:
             out.update(result.to_dict())
         finally:
+            out['cid'] = msg.cid
             out['command_no'] = connection.command_no
             out['response_time'] = str(_utcnow() - start_time)
 
