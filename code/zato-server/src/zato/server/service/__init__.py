@@ -85,6 +85,9 @@ import typing
 if typing.TYPE_CHECKING:
     from zato.server.base.parallel import ParallelServer
 
+    # For pyflakes
+    ParallelServer = ParallelServer
+
 # ################################################################################################################################
 
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
