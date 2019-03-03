@@ -18,7 +18,6 @@ from zato.common import MISC, SECRETS
 from zato.common.util import asbool
 from zato.common.util.sql import elems_with_opaque
 from zato.server.config import ConfigDict
-from zato.server.generic.connection import GenericConnection
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
 

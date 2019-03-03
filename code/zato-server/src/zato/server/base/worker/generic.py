@@ -9,8 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common import GENERIC as COMMON_GENERIC
-from zato.common.broker_message import GENERIC as BROKER_MSG_GENERIC
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
 

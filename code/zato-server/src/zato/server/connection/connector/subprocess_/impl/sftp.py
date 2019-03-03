@@ -9,16 +9,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
 from datetime import datetime
-from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_ACCEPTABLE, OK, responses, SERVICE_UNAVAILABLE
-from logging import DEBUG
-from time import sleep
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
 
 # Bunch
-from bunch import Bunch, bunchify
+from bunch import bunchify
 
 # sh
 from sh import Command, ErrorReturnCode
@@ -27,9 +23,6 @@ from sh import Command, ErrorReturnCode
 from zato.common import SFTP
 from zato.common.sftp import SFTPOutput
 from zato.common.util.json_ import dumps
-from zato.server.connection.jms_wmq.jms import WebSphereMQException, NoMessageAvailableException
-from zato.server.connection.jms_wmq.jms.connection import WebSphereMQConnection
-from zato.server.connection.jms_wmq.jms.core import TextMessage
 from zato.server.connection.connector.subprocess_.base import BaseConnectionContainer, Response
 
 # ################################################################################################################################

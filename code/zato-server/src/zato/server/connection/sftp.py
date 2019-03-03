@@ -40,6 +40,10 @@ if typing.TYPE_CHECKING:
     from typing import List
     from zato.server.base.parallel import ParallelServer
 
+    # For pyflakes
+    List = List
+    ParallelServer = ParallelServer
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -528,7 +532,7 @@ class SFTPIPCFacade(object):
 # ################################################################################################################################
 
     def chgrp(self, group, remote_path, log_level=0):
-        return self.execute('chgrp {} {}'.format(owner, remote_path), log_level)
+        return self.execute('chgrp {} {}'.format(group, remote_path), log_level)
 
 # ################################################################################################################################
 

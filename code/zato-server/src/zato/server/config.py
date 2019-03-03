@@ -26,7 +26,6 @@ from future.utils import itervalues
 from zato.common import SECRETS, ZATO_NONE
 from zato.common.util.config import resolve_value
 from zato.common.util.sql import ElemsWithOpaqueMaker
-from zato.server.generic.connection import GenericConnection
 
 # ################################################################################################################################
 

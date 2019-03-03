@@ -101,6 +101,10 @@ if typing.TYPE_CHECKING:
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigStore
 
+    # For pyflakes
+    ConfigStore = ConfigStore
+    ParallelServer = ParallelServer
+
 # ################################################################################################################################
 
 class _generic_msg:
