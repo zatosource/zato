@@ -12,9 +12,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from datetime import date, datetime
 from json import loads
 from logging import getLogger
+from tempfile import NamedTemporaryFile
 from time import strptime
 
-# humaniz
+# gevent
+from gevent.fileobject import FileObjectThread
+
+# humanize
 from humanize import naturalsize
 
 # Zato
@@ -197,6 +201,8 @@ class SFTPIPCFacade(object):
 
         if log_level > 0:
             logger.info('Response received, cid:`%s`, data:`%s`', self.cid, response)
+
+        logger.warn('TTT %s %s', response['is_ok'], raise_on_error)
 
         # Perhaps we are to raise an exception on an error encountered
         if not response['is_ok']:
@@ -396,11 +402,11 @@ class SFTPIPCFacade(object):
 
 # ################################################################################################################################
 
-    def _get_info(self, remote_path, log_level=0, needs_dot_entries=True):
+    def _get_info(self, remote_path, log_level=0, needs_dot_entries=True, raise_on_error=True):
         # type: (str, int, bool) -> SFTPInfo
 
         options = '-la' if needs_dot_entries else '-l'
-        out = self.execute('ls {} {}'.format(options, remote_path), log_level=log_level)
+        out = self.execute('ls {} {}'.format(options, remote_path), log_level, raise_on_error)
 
         if out.stdout:
             out = self._parse_ls_output(out.stdout) # type: List[SFTPInfo]
@@ -408,8 +414,8 @@ class SFTPIPCFacade(object):
 
 # ################################################################################################################################
 
-    def get_info(self, remote_path, log_level=0):
-        out = self._get_info(remote_path, log_level)
+    def get_info(self, remote_path, log_level=0, raise_on_error=True):
+        out = self._get_info(remote_path, log_level, raise_on_error=raise_on_error)
         if out:
             # Replace resolved '.' directory names with what was given on input
             # because they must point to the same thing.
@@ -444,8 +450,8 @@ class SFTPIPCFacade(object):
 
 # ################################################################################################################################
 
-    def delete(self, remote_path, log_level=0):
-        info = self.get_info(remote_path, log_level)
+    def delete(self, remote_path, log_level=0, _info=None):
+        info = _info or self.get_info(remote_path, log_level)
 
         if info.is_directory:
             return self.delete_directory(remote_path, log_level, False)
@@ -458,6 +464,18 @@ class SFTPIPCFacade(object):
 
         else:
             raise ValueError('Unexpected entry type (delete) `{}`'.format(info.to_dict()))
+
+# ################################################################################################################################
+
+    def delete_by_type(self, remote_path, type, log_level):
+        delete_func_map = {
+            EntryType.file: self.delete_file,
+            EntryType.directory: self.delete_directory,
+            EntryType.symlink: self.delete_symlink,
+        }
+
+        func = delete_func_map[type]
+        return func(remote_path, log_level, False)
 
 # ################################################################################################################################
 
@@ -533,10 +551,6 @@ class SFTPIPCFacade(object):
         return self._get_info(remote_path, log_level, needs_dot_entries=False)
 
 # ################################################################################################################################
-# ********************************************************************************************************************************
-# ################################################################################################################################
-
-# ################################################################################################################################
 
     def move(self, from_path, to_path, log_level=0):
         return self.execute('rename {} {}'.format(from_path, to_path), log_level)
@@ -545,23 +559,79 @@ class SFTPIPCFacade(object):
 
 # ################################################################################################################################
 
-    def read(self, remote_path, log_level=0):
-        pass
+    def download(self, remote_path, local_path, recursive=True, require_file=False, log_level=0):
+
+        # Make sure this is indeed a file
+        if require_file:
+            self._ensure_entry_type(remote_path, EntryType.file, log_level)
+
+        options = ' -r' if recursive else ''
+        return self.execute('get{} {} {}'.format(options, remote_path, local_path), log_level)
 
 # ################################################################################################################################
 
-    def download(self, remote_path, local_path, log_level=0):
-        pass
+    def download_file(self, remote_path, local_path, log_level=0):
+        return self.download(remote_path, local_path, require_file=True, log_level=log_level)
 
 # ################################################################################################################################
 
-    def write(self, data, remote_path, overwrite=False, log_level=0):
-        pass
+    def read(self, remote_path, mode='r+b', log_level=0):
+
+        # Download the file to a temporary location ..
+        with NamedTemporaryFile(mode, suffix='zato-sftp-read.txt') as local_path:
+            self.download_file(remote_path, local_path.name)
+
+            # .. and read it in using a separate thread so as not to block the event loop.
+            thread_file = FileObjectThread(local_path)
+            data = thread_file.read()
+            thread_file.close()
+
+            return data
 
 # ################################################################################################################################
 
-    def upload(self, local_path, remote_path, overwrite=False, log_level=0):
-        pass
+    def _overwrite_if_needed(self, remote_path, overwrite, log_level):
+        info = self.get_info(remote_path, log_level, raise_on_error=False)
+
+        # The remote location exists so we either need to delete it (overwrite=True) or raise an error (overwrite=False)
+        if info:
+            if overwrite:
+                self.delete_by_type[info.type](remote_path, log_level)
+            else:
+                raise ValueError('Cannot upload, location `{}` already exists ({})'.format(remote_path, info.to_dict()))
+
+# ################################################################################################################################
+
+    def upload(self, local_path, remote_path, recursive=True, overwrite=False, log_level=0, _needs_overwrite_check=True):
+
+        # Will raise an exception or delete the remote location, depending on what is needed
+        if _needs_overwrite_check:
+            self._overwrite_if_needed(remote_path, overwrite, log_level)
+
+        options = ' -r' if recursive else ''
+
+        return self.execute('put{} {} {}'.format(options, local_path, remote_path), log_level)
+
+# ################################################################################################################################
+
+    def write(self, data, remote_path, mode='w+b', overwrite=False, log_level=0):
+
+        # Will raise an exception or delete the remote location, depending on what is needed
+        self._overwrite_if_needed(remote_path, overwrite, log_level)
+
+        # A temporary file to write data to ..
+        with NamedTemporaryFile(mode, suffix='zato-sftp-write.txt') as local_path:
+
+            # .. wrap the file in separate thread so as not to block the event loop.
+            thread_file = FileObjectThread(local_path)
+            thread_file.write(data)
+
+            try:
+                # Data written out, we can now upload it to the remote location
+                self.upload(local_path.name, remote_path, False, overwrite, log_level, False)
+            finally:
+                # Now we can close the file too
+                thread_file.close()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -573,7 +643,6 @@ class MyService(Service):
 
         api = SFTPIPCFacade(self.cid, self.server, config)
         api.ping()
-
 
 # ################################################################################################################################
 # ################################################################################################################################
