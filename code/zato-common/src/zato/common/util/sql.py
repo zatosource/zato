@@ -254,3 +254,18 @@ def get_security_by_id(session, security_id):
            one()
 
 # ################################################################################################################################
+
+def get_instance_by_id(session, model_class, id):
+    return session.query(model_class).\
+           filter(model_class.id==id).\
+           one()
+
+# ################################################################################################################################
+
+def get_instance_by_name(session, model_class, type_, name):
+    return session.query(model_class).\
+           filter(model_class.type_==type_).\
+           filter(model_class.name==name).\
+           one()
+
+# ################################################################################################################################
