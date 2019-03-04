@@ -163,9 +163,9 @@ class SFTPInfo(object):
 class SFTPIPCFacade(object):
     """ Provides servers and services with access to SFTP resources.
     """
-    def __init__(self, cid, server, config):
-        # type: (str, ParallelServer, dict) -> None
-        self.cid = cid
+    def __init__(self, server, config):
+        # type: (ParallelServer, dict) -> None
+        self.cid = None # Not used for now
         self.server = server
         self.config = config
 
@@ -205,8 +205,6 @@ class SFTPIPCFacade(object):
 
         if log_level > 0:
             logger.info('Response received, cid:`%s`, data:`%s`', self.cid, response)
-
-        logger.warn('TTT %s %s', response['is_ok'], raise_on_error)
 
         # Perhaps we are to raise an exception on an error encountered
         if not response['is_ok']:
