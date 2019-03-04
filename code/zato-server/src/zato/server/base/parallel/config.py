@@ -104,6 +104,7 @@ class ConfigLoader(object):
         query = self.odb.get_definition_amqp_list(server.cluster.id, True)
         self.config.definition_amqp = ConfigDict.from_query('definition_amqp', query, decrypt_func=self.decrypt)
 
+        # IBM MQ
         query = self.odb.get_definition_wmq_list(server.cluster.id, True)
         self.config.definition_wmq = ConfigDict.from_query('definition_wmq', query, decrypt_func=self.decrypt)
 
@@ -162,9 +163,13 @@ class ConfigLoader(object):
         query = self.odb.get_out_sap_list(server.cluster.id, True)
         self.config.out_sap = ConfigDict.from_query('out_sap', query)
 
-         # Plain HTTP
+        # REST
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'plain_http', True)
         self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query, decrypt_func=self.decrypt)
+
+        # SFTP
+        query = self.odb.get_out_sftp_list(server.cluster.id, True)
+        self.config.out_sftp = ConfigDict.from_query('out_sftp', query, decrypt_func=self.decrypt, drop_opaque=True)
 
         # SOAP
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)

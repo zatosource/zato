@@ -70,24 +70,31 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
+    def _edit_generic_connection(self, msg, skip):
+        self._delete_generic_connection(msg)
+        self._create_generic_connection(msg, True, skip)
+
+# ################################################################################################################################
+
+    def ping_generic_connection(self, conn_id):
+        conn_dict, _ = self._find_conn_info(conn_id)
+
+        self.logger.info('About to ping generic connection `%s` (%s)', conn_dict.name, conn_dict.type_)
+        conn_dict.conn.ping()
+        self.logger.info('Generic connection `%s` ping successfully (%s)', conn_dict.name, conn_dict.type_)
+
+# ################################################################################################################################
+
     def reconnect_generic(self, conn_id):
         found_conn_dict, found_name = self._find_conn_info(conn_id)
         self.on_broker_msg_GENERIC_CONNECTION_EDIT(found_conn_dict, ['conn', 'parent'])
 
 # ################################################################################################################################
 
-    def on_broker_msg_GENERIC_CONNECTION_CREATE(self, msg):
-        self._create_generic_connection(msg, True)
+    def on_broker_msg_GENERIC_CONNECTION_CREATE(self, msg, *args, **kwargs):
+        func = self._get_generic_impl_func(msg)
+        func(msg)
 
-# ################################################################################################################################
-
-    def on_broker_msg_GENERIC_CONNECTION_DELETE(self, msg):
-        self._delete_generic_connection(msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_GENERIC_CONNECTION_EDIT(self, msg, skip=None):
-        self._delete_generic_connection(msg)
-        self._create_generic_connection(msg, True, skip)
+    on_broker_msg_GENERIC_CONNECTION_EDIT = on_broker_msg_GENERIC_CONNECTION_DELETE = on_broker_msg_GENERIC_CONNECTION_CREATE
 
 # ################################################################################################################################

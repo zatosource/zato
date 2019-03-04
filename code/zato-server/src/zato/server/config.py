@@ -179,7 +179,7 @@ class ConfigDict(object):
 # ################################################################################################################################
 
     @staticmethod
-    def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False, decrypt_func=None):
+    def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False, decrypt_func=None, drop_opaque=False):
         """ Return a new ConfigDict with items taken from an SQL query.
         """
         config_dict = ConfigDict(name)
@@ -228,8 +228,16 @@ class ConfigDict(object):
 
         # Post-process data before it is returned to resolve any opaque attributes
         for value in config_dict.values():
-            ElemsWithOpaqueMaker.process_config_dict(value['config'])
+            value_config = value['config']
+            if ElemsWithOpaqueMaker.has_opaque_data(value_config):
+                ElemsWithOpaqueMaker.process_config_dict(value_config, drop_opaque)
 
+        return config_dict
+
+# ################################################################################################################################
+
+    @staticmethod
+    def from_generic(config_dict):
         return config_dict
 
 # ################################################################################################################################
@@ -245,26 +253,26 @@ class ConfigStore(object):
             simple_io=ZATO_NONE, msg_ns=ZATO_NONE, json_pointer=ZATO_NONE, xpath=ZATO_NONE, pubsub_topics=ZATO_NONE):
 
         # Outgoing connections
-        self.out_ftp = out_ftp
-        self.out_odoo = out_odoo
-        self.out_plain_http = out_plain_http
-        self.out_soap = out_soap
-        self.out_sql = out_sql
-        self.out_stomp = out_stomp
-        self.out_sap = out_sap
+        self.out_ftp = out_ftp    # type: ConfigDict
+        self.out_odoo = out_odoo  # type: ConfigDict
+        self.out_plain_http = out_plain_http # type: ConfigDict
+        self.out_soap = out_soap    # type: ConfigDict
+        self.out_sql = out_sql      # type: ConfigDict
+        self.out_stomp = out_stomp  # type: ConfigDict
+        self.out_sap = out_sap      # type: ConfigDict
 
         # Local on-disk configuraion repository
-        self.repo_location = repo_location
+        self.repo_location = repo_location # type: str
 
         # Security definitions
-        self.basic_auth = basic_auth
-        self.wss = wss
+        self.basic_auth = basic_auth # type: ConfigDict
+        self.wss = wss # type: ConfigDict
 
         # URL security
-        self.url_sec = url_sec
+        self.url_sec = url_sec # type: ConfigDict
 
         # HTTP channels
-        self.http_soap = http_soap
+        self.http_soap = http_soap # type: ConfigDict
 
         # Configuration for broker clients
         self.broker_config = broker_config

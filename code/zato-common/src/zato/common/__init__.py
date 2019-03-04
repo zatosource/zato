@@ -1001,8 +1001,9 @@ class IPC:
         LENGTH = 2 # Length of either success or failure messages
 
     class CONNECTOR:
-        class IBM_MQ:
-            USERNAME = 'zato.connector.wmq'
+        class USERNAME:
+            IBM_MQ = 'zato.connector.wmq'
+            SFTP   = 'zato.connector.sftp'
 
 class WEB_SOCKET:
     class DEFAULT:
@@ -1071,6 +1072,38 @@ class GENERIC:
     class CONNECTION:
         class TYPE:
             OUTCONN_WSX = 'outconn-wsx'
+            OUTCONN_SFTP = 'outconn-sftp'
+
+class SFTP:
+    class DEFAULT:
+        BANDWIDTH_LIMIT = 10
+        BUFFER_SIZE = 32768
+        COMMAND_SFTP = 'sftp'
+        COMMAND_PING = 'ls .'
+        PORT = 22
+
+    class LOG_LEVEL:
+        LEVEL0 = NameId('0', '0')
+        LEVEL1 = NameId('1', '1')
+        LEVEL2 = NameId('2', '2')
+        LEVEL3 = NameId('3', '3')
+        LEVEL4 = NameId('4', '4')
+
+        def __iter__(self):
+            return iter((self.LEVEL0, self.LEVEL1, self.LEVEL2, self.LEVEL3, self.LEVEL4))
+
+        def is_valid(self, value):
+            return value in (elem.id for elem in self)
+
+    class IP_TYPE:
+        IPV4 = NameId('IPv4', 'ipv4')
+        IPV6 = NameId('IPv6', 'ipv6')
+
+        def __iter__(self):
+            return iter((self.IPV4, self.IPV6))
+
+        def is_valid(self, value):
+            return value in (elem.id for elem in self)
 
 class CONFIG_FILE:
     USER_DEFINED = 'user-defined'
@@ -1398,6 +1431,7 @@ default_internal_modules = {
     'zato.server.service.internal.outgoing.sql': True,
     'zato.server.service.internal.outgoing.stomp': True,
     'zato.server.service.internal.outgoing.sap': True,
+    'zato.server.service.internal.outgoing.sftp': True,
     'zato.server.service.internal.outgoing.zmq': True,
     'zato.server.service.internal.pattern': True,
     'zato.server.service.internal.pickup': True,

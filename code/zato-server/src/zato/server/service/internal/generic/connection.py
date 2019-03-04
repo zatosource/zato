@@ -9,9 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from contextlib import closing
 from copy import deepcopy
+from datetime import datetime
 from json import loads
 
 # Zato
+from zato.common import GENERIC as COMMON_GENERIC
 from zato.common.broker_message import GENERIC
 from zato.common.odb.model import GenericConn as ModelGenericConn
 from zato.common.odb.query.generic import connection_list
@@ -24,6 +26,7 @@ from zato.server.service.meta import DeleteMeta
 
 # Python 2/3 compatibility
 from past.builtins import basestring
+from six import add_metaclass
 
 # ################################################################################################################################
 
@@ -33,7 +36,9 @@ label = 'a generic connection'
 broker_message = GENERIC
 broker_message_prefix = 'CONNECTION_'
 list_func = None
+extra_delete_attrs = ['type_']
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _CreateEditSIO(AdminSIO):
@@ -43,6 +48,7 @@ class _CreateEditSIO(AdminSIO):
         'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id')
     force_empty_keys = True
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _CreateEdit(_BaseService):
@@ -77,6 +83,9 @@ class _CreateEdit(_BaseService):
             else:
                 model = self._new_zato_instance_with_cluster(ModelGenericConn)
 
+            # This will be needed in case this is a rename
+            old_name = model.name
+
             for key, value in conn_dict.items():
                 setattr(model, key, value)
 
@@ -88,10 +97,12 @@ class _CreateEdit(_BaseService):
             self.response.payload.id = instance.id
             self.response.payload.name = instance.name
 
+        data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value
         data['id'] = instance.id
         self.broker_client.publish(data)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -100,6 +111,7 @@ class Create(_CreateEdit):
     is_edit = False
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Edit(_CreateEdit):
     """ Updates an existing generic connection.
@@ -107,12 +119,14 @@ class Edit(_CreateEdit):
     is_edit = True
 
 # ################################################################################################################################
+# ################################################################################################################################
 
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
     """ Deletes a generic connection.
     """
-    __metaclass__ = DeleteMeta
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetList(AdminService):
@@ -148,6 +162,7 @@ class GetList(AdminService):
                         conn_dict[service_attr] = service_name
 
 # ################################################################################################################################
+# ################################################################################################################################
 
     def handle(self):
         out = {'_meta':{}, 'response':[]}
@@ -166,6 +181,7 @@ class GetList(AdminService):
         self.response.payload = dumps(out)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ChangePassword(ChangePasswordBase):
     """ Changes the secret (password) of a generic connection.
@@ -180,4 +196,36 @@ class ChangePassword(ChangePasswordBase):
             instance.secret = secret
         return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Ping(_BaseService):
+    """ Pings a generic connection.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = 'id',
+        output_required = 'info',
+        response_elem = None
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+
+            # To ensure that the input ID is correct
+            instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
+
+            # Different code paths will be taken depending on what kind of a generic connection this is
+            ping_func_dict = {
+                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.server.worker_store.ping_generic_connection,
+                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.server.connector_sftp.ping_sftp
+            }
+
+            ping_func = ping_func_dict[instance.type_]
+
+            start_time = datetime.utcnow()
+            ping_func(self.request.input.id)
+            response_time = datetime.utcnow() - start_time
+
+            self.response.payload.info = 'Connection pinged; response time: {}'.format(response_time)
+
+# ################################################################################################################################
 # ################################################################################################################################

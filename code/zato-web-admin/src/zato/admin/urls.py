@@ -41,9 +41,10 @@ from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import odoo as out_odoo
+from zato.admin.web.views.outgoing import sap as out_sap
+from zato.admin.web.views.outgoing import sftp as out_sftp
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import stomp as out_stomp
-from zato.admin.web.views.outgoing import sap as out_sap
 from zato.admin.web.views.outgoing import wsx as out_wsx
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
@@ -721,6 +722,30 @@ urlpatterns += [
         login_required(out_sap.change_password), name='out-sap-change-password'),
     url(r'^zato/outgoing/sap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_sap.ping), name='out-sap-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. SFTP
+
+    url(r'^zato/outgoing/sftp/$',
+        login_required(out_sftp.Index()), name=out_sftp.Index.url_name),
+    url(r'^zato/outgoing/sftp/create/$',
+        login_required(out_sftp.Create()), name=out_sftp.Create.url_name),
+    url(r'^zato/outgoing/sftp/edit/$',
+        login_required(out_sftp.Edit()), name=out_sftp.Edit.url_name),
+    url(r'^zato/outgoing/sftp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_sftp.Delete()), name=out_sftp.Delete.url_name),
+    url(r'^zato/outgoing/sftp/change-password/$',
+        login_required(out_sftp.change_password), name='out-sftp-change-password'),
+    url(r'^zato/outgoing/sftp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_sftp.ping), name='out-sftp-ping'),
+    url(r'^zato/outgoing/sftp/command-shell/(?P<id>.*)/cluster/(?P<cluster_id>.*)/(?P<name_slug>.*)/$',
+        login_required(out_sftp.command_shell), name='out-sftp-command-shell'),
+    url(r'^zato/outgoing/sftp/command-shell-action/(?P<id>.*)/cluster/(?P<cluster_id>.*)/(?P<name_slug>.*)/$',
+        login_required(out_sftp.command_shell_action), name='out-sftp-command-shell-action'),
     ]
 
 # ################################################################################################################################

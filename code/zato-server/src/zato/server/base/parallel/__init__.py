@@ -55,7 +55,8 @@ from zato.server.config import ConfigStore
 from zato.server.connection.server import Servers
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
-from zato.server.base.parallel.wmq import WMQIPC
+from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
+from zato.server.base.parallel.subprocess_.sftp import SFTPIPC
 from zato.server.pickup import PickupManager
 
 # ################################################################################################################################
@@ -63,11 +64,14 @@ from zato.server.pickup import PickupManager
 logger = logging.getLogger(__name__)
 kvdb_logger = logging.getLogger('zato_kvdb')
 
+# ################################################################################################################################
+
 megabyte = 10**6
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
+class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
     def __init__(self):
@@ -128,7 +132,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         self.pid = None
         self.sync_internal = None
         self.ipc_api = IPCAPI()
-        self.wmq_ipc_tcp_port = None
         self.fifo_response_buffer_size = None # Will be in megabytes
         self.is_first_worker = None
         self.shmem_size = -1.0
@@ -151,6 +154,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
         self.user_ctx_lock = gevent.lock.RLock()
+
+        # Connectors
+        self.connector_ibm_mq = IBMMQIPC(self)
+        self.connector_sftp   = SFTPIPC(self)
 
         self.access_logger = logging.getLogger('zato_access_log')
         self.access_logger_log = self.access_logger._log
@@ -390,7 +397,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
     def start_server(parallel_server, zato_deployment_key=None):
 
         # Easier to type
-        self = parallel_server
+        self = parallel_server # type: ParallelServer
 
         # This cannot be done in __init__ because each sub-process obviously has its own PID
         self.pid = os.getpid()
@@ -557,20 +564,25 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
             self.invoke_startup_services(is_first)
             spawn_greenlet(self.set_up_pickup)
 
-            # Set up IBM MQ connections if that component is enabled
+            # Set up subprocess-based IBM MQ connections if that component is enabled
             if self.fs_server_config.component_enabled.ibm_mq:
 
                 # Will block for a few seconds at most, until is_ok is returned
                 # which indicates that a connector started or not.
-                is_ok = self.start_ibm_mq_connector(int(self.fs_server_config.ibm_mq.ipc_tcp_start_port))
+                is_ok = self.connector_ibm_mq.start_ibm_mq_connector(int(self.fs_server_config.ibm_mq.ipc_tcp_start_port))
 
                 try:
                     if is_ok:
-                        self.create_initial_wmq_definitions(self.worker_store.worker_config.definition_wmq)
-                        self.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
-                        self.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
+                        self.connector_ibm_mq.create_initial_wmq_definitions(self.worker_store.worker_config.definition_wmq)
+                        self.connector_ibm_mq.create_initial_wmq_outconns(self.worker_store.worker_config.out_wmq)
+                        self.connector_ibm_mq.create_initial_wmq_channels(self.worker_store.worker_config.channel_wmq)
                 except Exception as e:
                     logger.warn('Could not create initial IBM MQ objects, e:`%s`', e)
+
+            # Set up subprocess-based SFTP connections
+            is_ok = self.connector_sftp.start_sftp_connector(int(self.fs_server_config.ibm_mq.ipc_tcp_start_port))
+            if is_ok:
+                self.connector_sftp.create_initial_sftp_outconns(self.worker_store.worker_config.out_sftp)
 
         else:
             self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_OTHER, kwargs={
@@ -946,4 +958,5 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler, WMQIPC):
         msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'package_id': package_id}
         self.broker_client.publish(msg)
 
+# ################################################################################################################################
 # ################################################################################################################################

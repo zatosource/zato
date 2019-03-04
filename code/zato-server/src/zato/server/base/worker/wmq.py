@@ -21,7 +21,7 @@ class WebSphereMQ(WorkerImpl):
 
     def _on_broker_msg_invoke_wmq_connector(self, msg):
         if self.server.is_first_worker:
-            self.server.invoke_wmq_connector(msg)
+            self.server.connector_ibm_mq.invoke_wmq_connector(msg)
 
     # Everything is delegated to connectors ..
     on_broker_msg_DEFINITION_WMQ_CREATE = _on_broker_msg_invoke_wmq_connector
