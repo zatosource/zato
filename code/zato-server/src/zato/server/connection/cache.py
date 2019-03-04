@@ -841,7 +841,7 @@ class CacheAPI(object):
             data['cache_name'] = cache_name
             data['source_worker_id'] = self.server.worker_id
 
-            key = data['key']
+            key = data.get('key')
             value = data.get('value')
 
             if isinstance(key, basestring):
