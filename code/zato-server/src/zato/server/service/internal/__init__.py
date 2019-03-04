@@ -129,8 +129,9 @@ class AdminService(Service):
         is_text = isinstance(payload, basestring)
         needs_meta = self.request.input.get('needs_meta', True)
 
-        if needs_meta and hasattr(self, '_search_tool') and not is_text:
-            payload.zato_meta = self._search_tool.output_meta
+        if needs_meta and hasattr(self, '_search_tool'):
+            if not is_text:
+                payload.zato_meta = self._search_tool.output_meta
 
         logger.info(
             'cid:`%s`, name:`%s`, response:`%r`', self.cid, self.name, replace_private_key(get_response_value(self.response)))

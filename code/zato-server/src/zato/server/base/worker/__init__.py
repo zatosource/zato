@@ -9,7 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, inspect, os, sys
+import logging
+import inspect
+import os
+import sys
+from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
 from inspect import isclass
@@ -45,9 +49,9 @@ from six import PY3
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common import broker_message, CHANNEL, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, SEC_DEF_TYPE, \
-     simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
-from zato.common.broker_message import code_to_name, SERVICE
+from zato.common import broker_message, CHANNEL, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, \
+     PUBSUB, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
@@ -71,6 +75,7 @@ from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
+from zato.server.connection.sftp import SFTPIPCFacade
 from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
@@ -89,11 +94,34 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+# Type hints
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.base.parallel import ParallelServer
+    from zato.server.config import ConfigStore
+
+    # For pyflakes
+    ConfigStore = ConfigStore
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+
+class _generic_msg:
+    create          = BROKER_MSG_GENERIC.CONNECTION_CREATE.value
+    edit            = BROKER_MSG_GENERIC.CONNECTION_EDIT.value
+    delete          = BROKER_MSG_GENERIC.CONNECTION_DELETE.value
+    change_password = BROKER_MSG_GENERIC.CONNECTION_CHANGE_PASSWORD.value
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GeventWorker(GunicornGeventWorker):
     def __init__(self, *args, **kwargs):
         self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
         super(GunicornGeventWorker, self).__init__(*args, **kwargs)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SyncWorker(GunicornSyncWorker):
@@ -124,6 +152,7 @@ def _get_base_classes():
     return tuple(out)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 _base_type = '_WorkerStoreBase'
 _base_type = _base_type if PY3 else _base_type.encode('utf8')
@@ -135,6 +164,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
     def __init__(self, worker_config=None, server=None):
+        # type: (ConfigStore, ParallelServer) -> None
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_ready = False
@@ -210,12 +240,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
-            GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
         }
 
         self._generic_conn_handler = {
-            GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
         }
+
+        # Maps message actions against generic connection types and their message handlers
+        self.generic_impl_func_map = {}
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
@@ -268,9 +301,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # API keys
         self.update_apikeys()
 
-        # Request dispatcher - matches URLs, checks security and dispatches HTTP
-        # requests to services.
+        # SFTP - attach handles to connections to each ConfigDict now that all their configuration is ready
+        self.init_sftp()
 
+        # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io,
             return_tracebacks=self.server.return_tracebacks, default_error_message=self.server.default_error_message)
         self.request_dispatcher.url_data = URLData(
@@ -297,6 +331,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_amqp()
 
         # Generic connections
+        self.init_generic_connections_config()
         self.init_generic_connections()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
@@ -458,6 +493,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         config_list = self.worker_config.out_ftp.get_config_list()
         self.worker_config.out_ftp = FTPStore()
         self.worker_config.out_ftp.add_params(config_list)
+
+
+    def init_sftp(self):
+        """ Each outgoing SFTP connection requires a connection handle to be attached here,
+        later, in run-time, this is the 'conn' parameter available via self.out[name].conn.
+        """
+        for value in self.worker_config.out_sftp.values():
+            value['conn'] = SFTPIPCFacade(self.server, value['config'])
 
     def init_http_soap(self):
         """ Initializes plain HTTP/SOAP connections.
@@ -891,7 +934,67 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def init_generic_connections(self):
         for config_dict in self.worker_config.generic_connection.values():
+
+            # Not all generic connections are created here
+            if config_dict['config']['type_'] != COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
+                continue
+
             self._create_generic_connection(bunchify(config_dict['config']))
+
+# ################################################################################################################################
+
+    def init_generic_connections_config(self):
+
+        # Local aliases
+        outconn_wsx_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX, {})
+        outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
+
+        # Outgoing WSX connections are pure generic objects that we can handle ourselves
+        outconn_wsx_map[_generic_msg.create] = self._create_generic_connection
+        outconn_wsx_map[_generic_msg.edit]   = self._edit_generic_connection
+        outconn_wsx_map[_generic_msg.delete] = self._delete_generic_connection
+
+        # Outgoing SFTP connections require for a different API to be called (provided by ParallelServer)
+        outconn_sftp_map[_generic_msg.create] = self._on_outconn_sftp_create
+        outconn_sftp_map[_generic_msg.edit]   = self._on_outconn_sftp_edit
+        outconn_sftp_map[_generic_msg.delete] = self._on_outconn_sftp_delete
+
+# ################################################################################################################################
+
+    def _on_outconn_sftp_create(self, msg):
+        connector_msg = deepcopy(msg)
+        self.worker_config.out_sftp[msg.name] = msg
+        self.worker_config.out_sftp[msg.name].conn = SFTPIPCFacade(self.server, msg)
+        return self.server.connector_sftp.invoke_connector(connector_msg)
+
+# ################################################################################################################################
+
+    def _on_outconn_sftp_edit(self, msg):
+        connector_msg = deepcopy(msg)
+        del self.worker_config.out_sftp[msg.old_name]
+        return self._on_outconn_sftp_create(connector_msg)
+
+# ################################################################################################################################
+
+    def _on_outconn_sftp_delete(self, msg):
+        connector_msg = deepcopy(msg)
+        del self.worker_config.out_sftp[msg.name]
+        return self.server.connector_sftp.invoke_connector(connector_msg)
+
+# ################################################################################################################################
+
+    def _on_outconn_sftp_change_password(self, msg):
+        raise NotImplementedError('No password for SFTP connections can be set')
+
+# ################################################################################################################################
+
+    def _get_generic_impl_func(self, msg, *args, **kwargs):
+        """ Returns a function/method to invoke depending on which generic connection type is given on input.
+        Required because some connection types (e.g. SFTP) are not managed via GenericConnection objects,
+        for instance, in the case of SFTP, it uses subprocesses and a different management API.
+        """
+        func_map = self.generic_impl_func_map[msg['type_']]
+        return func_map[msg['action']]
 
 # ################################################################################################################################
 

@@ -11,14 +11,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
-# Django
-from django.http import HttpResponse, HttpResponseServerError
-
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.definition.jms_wmq import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
-     Index as _Index, method_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
+     method_allowed, ping_connection
 from zato.common.odb.model import ConnDefWMQ
 
 logger = logging.getLogger(__name__)
@@ -73,10 +70,7 @@ class Delete(_Delete):
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.definition.jms-wmq.ping', id, 'Could not ping IBM MQ definition, e:`{}`')
-    if isinstance(ret, HttpResponseServerError):
-        return ret
-    return HttpResponse(ret.data.info)
+    return ping_connection(req, 'zato.definition.jms-wmq.ping', id, 'IBM MQ definition')
 
 @method_allowed('POST')
 def change_password(req):

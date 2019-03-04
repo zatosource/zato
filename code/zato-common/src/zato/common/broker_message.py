@@ -207,6 +207,13 @@ class OUTGOING(Constants):
     STOMP_DELETE = ValueConstant('')
     STOMP_CHANGE_PASSWORD = ValueConstant('')
 
+    SFTP_CREATE = ValueConstant('')
+    SFTP_EDIT = ValueConstant('')
+    SFTP_DELETE = ValueConstant('')
+    SFTP_CHANGE_PASSWORD = ValueConstant('')
+    SFTP_EXECUTE = ValueConstant('')
+    SFTP_PING = ValueConstant('')
+
 class CHANNEL(Constants):
     code_start = 101000
 

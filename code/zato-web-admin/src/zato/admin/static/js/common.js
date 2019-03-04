@@ -103,6 +103,7 @@ $.namespace('zato.outgoing.odoo');
 $.namespace('zato.outgoing.sql');
 $.namespace('zato.outgoing.stomp');
 $.namespace('zato.outgoing.sap');
+$.namespace('zato.outgoing.sftp');
 $.namespace('zato.outgoing.wsx');
 $.namespace('zato.outgoing.zmq');
 $.namespace('zato.pattern.delivery');

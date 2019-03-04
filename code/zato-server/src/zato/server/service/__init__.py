@@ -79,6 +79,17 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.base.parallel import ParallelServer
+
+    # For pyflakes
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
 # ################################################################################################################################
@@ -232,7 +243,7 @@ class Service(object):
         self.name = self.__class__.__service_name # Will be set through .get_name by Service Store
         self.impl_name = self.__class__.__service_impl_name # Ditto
         self.logger = _get_logger(self.name)
-        self.server = None
+        self.server = None         # type: ParallelServer
         self.broker_client = None
         self.channel = None
         self.cid = None
@@ -274,6 +285,7 @@ class Service(object):
             self._worker_store.vault_conn_api,
             SMSAPI(self._worker_store.sms_twilio_api) if self.component_enabled_sms else None,
             self._worker_config.out_sap,
+            self._worker_config.out_sftp,
         )
 
     @staticmethod

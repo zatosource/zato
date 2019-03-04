@@ -131,22 +131,36 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
                 attempts += 1
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ElemsWithOpaqueMaker(object):
     def __init__(self, elems):
         self.elems = elems
 
+# ################################################################################################################################
+
     @staticmethod
-    def _set_opaque(elem):
-        opaque = elem.get(GENERIC.ATTR_NAME)
-        opaque = loads(opaque) if opaque else {}
-        elem.update(opaque)
+    def get_opaque_data(elem):
+        return elem.get(GENERIC.ATTR_NAME)
+
+    has_opaque_data = get_opaque_data
 
 # ################################################################################################################################
 
     @staticmethod
-    def process_config_dict(config):
-        ElemsWithOpaqueMaker._set_opaque(config)
+    def _set_opaque(elem, drop_opaque=False):
+        opaque = ElemsWithOpaqueMaker.get_opaque_data(elem)
+        opaque = loads(opaque) if opaque else {}
+        elem.update(opaque)
+
+        if drop_opaque:
+            del elem[GENERIC.ATTR_NAME]
+
+# ################################################################################################################################
+
+    @staticmethod
+    def process_config_dict(config, drop_opaque=False):
+        ElemsWithOpaqueMaker._set_opaque(config, drop_opaque)
 
 # ################################################################################################################################
 
@@ -186,6 +200,7 @@ class ElemsWithOpaqueMaker(object):
         else:
             return self._process_elems([], self.elems)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 def elems_with_opaque(elems):
@@ -236,6 +251,21 @@ def set_instance_opaque_attrs(instance, input, skip=None, only=None, _zato_skip=
 def get_security_by_id(session, security_id):
     return session.query(SecurityBase).\
            filter(SecurityBase.id==security_id).\
+           one()
+
+# ################################################################################################################################
+
+def get_instance_by_id(session, model_class, id):
+    return session.query(model_class).\
+           filter(model_class.id==id).\
+           one()
+
+# ################################################################################################################################
+
+def get_instance_by_name(session, model_class, type_, name):
+    return session.query(model_class).\
+           filter(model_class.type_==type_).\
+           filter(model_class.name==name).\
            one()
 
 # ################################################################################################################################

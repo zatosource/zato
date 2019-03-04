@@ -119,7 +119,8 @@ class ZatoMiddleware(object):
             req.zato.search_form = SearchForm(req.zato.clusters, req.GET)
 
             if not req.user.is_anonymous():
-                req.zato.user_profile = get_user_profile(req.user)
+                needs_logging = not req.get_full_path().endswith(('.js', '.css', '.png'))
+                req.zato.user_profile = get_user_profile(req.user, needs_logging)
             else:
                 req.zato.user_profile = None
         except Exception:
