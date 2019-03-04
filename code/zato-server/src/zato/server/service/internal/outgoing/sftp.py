@@ -8,9 +8,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from contextlib import closing
 
 # Zato
 from zato.common.broker_message import OUTGOING
+from zato.common.odb.model import GenericConn as ModelGenericConn
+from zato.common.util.sql import get_instance_by_id
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -21,15 +25,19 @@ class Execute(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = 'id', 'data', 'log_level'
-        output_optional = 'response_time', 'stdout', 'stderr'
+        output_optional = 'response_time', 'stdout', 'stderr', 'command_no'
+        response_elem = None
 
     def handle(self):
         msg = self.request.input.deepcopy()
         msg['action'] = OUTGOING.SFTP_EXECUTE.value
         msg['cid'] = self.cid
 
-        out = self.server.connector_sftp.invoke_sftp_connector(msg)
-        self.response.payload = out.text
+        with closing(self.odb.session()) as session:
+            instance = get_instance_by_id(session, ModelGenericConn, self.request.input.id)
+            conn = self.out.sftp[instance.name].conn
+            response = conn.execute(self.request.input.data, self.request.input.log_level)
+            self.response.payload = response.to_dict()
 
 # ################################################################################################################################
 # ################################################################################################################################
