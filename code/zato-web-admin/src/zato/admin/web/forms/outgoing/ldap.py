@@ -12,14 +12,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common import LDAP
 from zato.admin.web.forms import add_select
+from zato.common import LDAP, TLS
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    get_info = forms.ChoiceField(widget=forms.Select())
+    get_info = forms.ChoiceField(widget=forms.Select(), initial=LDAP.GET_INFO.SCHEMA.id)
     ip_mode = forms.ChoiceField(widget=forms.Select())
 
     use_tls = forms.BooleanField(required=False, widget=forms.CheckboxInput())
@@ -28,14 +28,14 @@ class CreateForm(forms.Form):
 
     server_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
 
-    pool_name = forms.CharField(widget=forms.TextInput(attrs={'style':'display:table-cell'}))
+    pool_name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:29%'}))
     pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_SIZE)
     pool_exhaust_timeout = forms.CharField(
         widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_EXHAUST_TIMEOUT)
     pool_keep_alive = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_KEEP_ALIVE)
     pool_max_cycles = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_MAX_CYCLES)
     pool_lifetime = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_LIFETIME)
-    pool_ha_strategy = forms.ChoiceField(widget=forms.Select())
+    pool_ha_strategy = forms.ChoiceField(widget=forms.Select(), initial=LDAP.POOL_HA_STRATEGY.ROUND_ROBIN.id)
 
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:40%'}))
 
@@ -52,8 +52,9 @@ class CreateForm(forms.Form):
     tls_private_key_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     tls_cert_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     tls_ca_certs_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_version = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
-    tls_ciphers = forms.CharField(widget=forms.TextInput(attrs={'style':'width:70%'}), initial=LDAP.DEFAULT.CIPHERS)
+    tls_version = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=TLS.DEFAULT)
+    tls_ciphers = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=LDAP.DEFAULT.CIPHERS)
+    tls_validate = forms.ChoiceField(widget=forms.Select(), initial=TLS.CERT_VALIDATE.CERT_REQUIRED.id)
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
@@ -63,6 +64,7 @@ class CreateForm(forms.Form):
         add_select(self, 'auto_bind', LDAP.AUTO_BIND(), needs_initial_select=False)
         add_select(self, 'pool_ha_strategy', LDAP.POOL_HA_STRATEGY(), needs_initial_select=False)
         add_select(self, 'auth_type', LDAP.AUTH_TYPE(), needs_initial_select=False)
+        add_select(self, 'tls_validate', TLS.CERT_VALIDATE(), needs_initial_select=False)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

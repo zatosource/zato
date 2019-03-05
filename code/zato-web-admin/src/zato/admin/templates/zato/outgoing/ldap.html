@@ -223,6 +223,11 @@
                                 HA strategy
                                 {{ create_form.pool_ha_strategy }}
                                 </label>
+                                |
+                                <label>
+                                Get info
+                                {{ create_form.get_info }}
+                                </label>
                             </td>
                         </tr>
 
@@ -275,9 +280,65 @@
                                 </label>
                                 |
                                 <label>
+                                Version
+                                {{ create_form.tls_version }}
+                                </label>
+                                |
+                                <label>
+                                Validate
+                                {{ create_form.tls_validate }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
                                 Ciphers
+                                <br/>
                                 {{ create_form.tls_ciphers }}
                                 </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Private key file
+                                <br/>
+                                {{ create_form.tls_private_key_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Certificate file
+                                <br/>
+                                {{ create_form.tls_cert_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                CA certificates file
+                                <br/>
+                                {{ create_form.tls_ca_certs_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Servers</td>
+                            <td>
+                                {{ create_form.server_list }}
                             </td>
                         </tr>
 

@@ -1066,6 +1066,16 @@ class TLS:
     DIR_CA_CERTS = 'ca-certs'
     DIR_KEYS_CERTS = 'keys-certs'
 
+    DEFAULT = 'SSLv23'
+
+    class CERT_VALIDATE:
+        CERT_NONE     = NameId('Disabled', 'CERT_NONE')
+        CERT_OPTIONAL = NameId('Optional', 'CERT_OPTIONAL')
+        CERT_REQUIRED = NameId('Required', 'CERT_REQUIRED')
+
+        def __iter__(self):
+            return iter((self.CERT_NONE, self.CERT_OPTIONAL, self.CERT_REQUIRED))
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1252,50 +1262,50 @@ class LDAP:
         POOL_SIZE = 10
 
     class AUTH_TYPE:
-        NTLM   = NameId('NTLM')
-        SIMPLE = NameId('SIMPLE')
+        NTLM   = NameId('NTLM', 'NTLM')
+        SIMPLE = NameId('Simple', 'SIMPLE')
 
         def __iter__(self):
             return iter((self.SIMPLE, self.NTLM))
 
     class AUTO_BIND:
-        AUTO_BIND_NONE            = NameId('AUTO_BIND_NONE')
-        AUTO_BIND_NO_TLS          = NameId('AUTO_BIND_NO_TLS')
-        AUTO_BIND_TLS_AFTER_BIND  = NameId('AUTO_BIND_TLS_AFTER_BIND')
-        AUTO_BIND_TLS_BEFORE_BIND = NameId('AUTO_BIND_TLS_BEFORE_BIND')
+        AUTO_BIND_NONE            = NameId('None', 'AUTO_BIND_NONE')
+        AUTO_BIND_NO_TLS          = NameId('No TLS', 'AUTO_BIND_NO_TLS')
+        AUTO_BIND_TLS_AFTER_BIND  = NameId('TLS after bind', 'AUTO_BIND_TLS_AFTER_BIND')
+        AUTO_BIND_TLS_BEFORE_BIND = NameId('TLS before bind', 'AUTO_BIND_TLS_BEFORE_BIND')
 
         def __iter__(self):
             return iter((self.AUTO_BIND_NONE, self.AUTO_BIND_NO_TLS, self.AUTO_BIND_TLS_AFTER_BIND,
                 self.AUTO_BIND_TLS_BEFORE_BIND))
 
     class GET_INFO:
-        ALL    = NameId('ALL')
-        DSA    = NameId('DSA')
-        NONE   = NameId('NONE')
-        SCHEMA = NameId('SCHEMA')
-        OFFLINE_EDIR_8_8_8  = NameId('OFFLINE_EDIR_8_8_8')
-        OFFLINE_AD_2012_R2  = NameId('OFFLINE_AD_2012_R2')
-        OFFLINE_SLAPD_2_4   = NameId('OFFLINE_SLAPD_2_4')
-        OFFLINE_DS389_1_3_3 = NameId('OFFLINE_DS389_1_3_3')
+        ALL    = NameId('All', 'ALL')
+        DSA    = NameId('DSA', 'DSA')
+        NONE   = NameId('None', 'NONE')
+        SCHEMA = NameId('Schema', 'SCHEMA')
+        OFFLINE_EDIR_8_8_8  = NameId('EDIR 8.8.8', 'OFFLINE_EDIR_8_8_8')
+        OFFLINE_AD_2012_R2  = NameId('AD 2012.R2', 'OFFLINE_AD_2012_R2')
+        OFFLINE_SLAPD_2_4   = NameId('SLAPD 2.4', 'OFFLINE_SLAPD_2_4')
+        OFFLINE_DS389_1_3_3 = NameId('DS 389.1.3.3', 'OFFLINE_DS389_1_3_3')
 
         def __iter__(self):
-            return iter((self.ALL, self.DSA, self.NONE, self.SCHEMA,
+            return iter((self.NONE, self.ALL, self.SCHEMA, self.DSA,
                 self.OFFLINE_EDIR_8_8_8, self.OFFLINE_AD_2012_R2, self.OFFLINE_SLAPD_2_4, self.OFFLINE_DS389_1_3_3))
 
     class IP_MODE:
-        IP_V4_ONLY        = NameId('IP_V4_ONLY')
-        IP_V6_ONLY        = NameId('IP_V6_ONLY')
-        IP_V4_PREFERRED   = NameId('IP_V4_PREFERRED')
-        IP_V6_PREFERRED   = NameId('IP_V6_PREFERRED')
-        IP_SYSTEM_DEFAULT = NameId('IP_SYSTEM_DEFAULT')
+        IP_V4_ONLY        = NameId('Only IPv4', 'IP_V4_ONLY')
+        IP_V6_ONLY        = NameId('Only IPv6', 'IP_V6_ONLY')
+        IP_V4_PREFERRED   = NameId('Prefer IPv4', 'IP_V4_PREFERRED')
+        IP_V6_PREFERRED   = NameId('Prefer IPv6', 'IP_V6_PREFERRED')
+        IP_SYSTEM_DEFAULT = NameId('System default', 'IP_SYSTEM_DEFAULT')
 
         def __iter__(self):
             return iter((self.IP_V4_ONLY, self.IP_V6_ONLY, self.IP_V4_PREFERRED, self.IP_V6_PREFERRED, self.IP_SYSTEM_DEFAULT))
 
     class POOL_HA_STRATEGY:
-        FIRST       = NameId('FIRST')
-        RANDOM      = NameId('RANDOM')
-        ROUND_ROBIN = NameId('ROUND_ROBIN')
+        FIRST       = NameId('First', 'FIRST')
+        RANDOM      = NameId('Random', 'RANDOM')
+        ROUND_ROBIN = NameId('Round robin', 'ROUND_ROBIN')
 
         def __iter__(self):
             return iter((self.FIRST, self.RANDOM, self.ROUND_ROBIN))
