@@ -23,34 +23,37 @@ class CreateForm(forms.Form):
     ip_mode = forms.ChoiceField(widget=forms.Select())
 
     use_tls = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    connect_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:5%'}), initial=LDAP.DEFAULT.CONNECT_TIMEOUT)
+    connect_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.CONNECT_TIMEOUT)
     auto_bind = forms.ChoiceField(widget=forms.Select())
 
-    pool_name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:5%'}), initial=LDAP.DEFAULT.POOL_SIZE)
+    server_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
+
+    pool_name = forms.CharField(widget=forms.TextInput(attrs={'style':'display:table-cell'}))
+    pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_SIZE)
     pool_exhaust_timeout = forms.CharField(
-        widget=forms.TextInput(attrs={'style':'width:5%'}), initial=LDAP.DEFAULT.POOL_EXHAUST_TIMEOUT)
-    pool_keep_alive = forms.CharField(widget=forms.TextInput(attrs={'style':'width:5%'}), initial=LDAP.DEFAULT.POOL_KEEP_ALIVE)
-    pool_max_cycles = forms.CharField(widget=forms.TextInput(attrs={'style':'width:5%'}), initial=LDAP.DEFAULT.POOL_MAX_CYCLES)
-    pool_lifetime = forms.CharField(widget=forms.TextInput(attrs={'style':'width:5%'}), initial=LDAP.DEFAULT.POOL_LIFETIME)
+        widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_EXHAUST_TIMEOUT)
+    pool_keep_alive = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_KEEP_ALIVE)
+    pool_max_cycles = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_MAX_CYCLES)
+    pool_lifetime = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_LIFETIME)
     pool_ha_strategy = forms.ChoiceField(widget=forms.Select())
 
-    uername = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:40%'}))
 
     auth_type = forms.ChoiceField(widget=forms.Select())
     use_sasl_external = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     is_read_only = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    should_collect_usage = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_stats_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     should_check_names = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     use_auto_range = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     should_return_empty_attrs = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
+    is_tls_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     tls_private_key_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     tls_cert_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     tls_ca_certs_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     tls_version = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
-    tls_ciphers = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_ciphers = forms.CharField(widget=forms.TextInput(attrs={'style':'width:70%'}), initial=LDAP.DEFAULT.CIPHERS)
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
