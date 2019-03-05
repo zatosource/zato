@@ -42,14 +42,9 @@ class Index(_Index):
         output_repeated = True
 
     def handle(self):
-        if self.req.zato.get('client'):
-            security_list = self.get_sec_def_list('basic_auth').def_items
-        else:
-            security_list = []
-
         return {
-            'create_form': CreateForm(security_list, req=self.req),
-            'edit_form': EditForm(security_list, prefix='edit', req=self.req),
+            'create_form': CreateForm(),
+            'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm()
         }
 

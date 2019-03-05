@@ -156,52 +156,131 @@
                 <form action="{% url "out-ldap-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:18%">Name</td>
+                            <td style="vertical-align:middle;width:8%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Options</td>
+                            <td style="vertical-align:middle"></td>
                             <td>
+
                                 <label>
                                 Active
                                 {{ create_form.is_active }}
                                 </label>
                                 |
                                 <label>
-                                Is remote end Zato
-                                {{ create_form.is_zato }}
+                                R/O
+                                {{ create_form.is_read_only }}
                                 </label>
                                 |
                                 <label>
-                                Auto-reconnect
-                                {{ create_form.has_auto_reconnect }}
+                                Stats
+                                {{ create_form.is_stats_enabled }}
+                                </label>
+                                |
+                                <label>
+                                Auto-rng
+                                {{ create_form.use_auto_range }}
+                                </label>
+                                |
+                                <label>
+                                Chk. names
+                                {{ create_form.should_check_names }}
+                                </label>
+                                |
+                                <label>
+                                Emp. attrs
+                                {{ create_form.should_return_empty_attrs }}
                                 </label>
                             </td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Address</td>
-                            <td>{{ create_form.address }}</td>
+                            <td style="vertical-align:middle">Pool</td>
+                            <td>
+                                <label>
+                                Name
+                                {{ create_form.pool_name }}
+                                </label>
+                                |
+                                <label>
+                                Size
+                                {{ create_form.pool_size }}
+                                </label>
+                                |
+                                <label>
+                                Max. cycles
+                                {{ create_form.pool_max_cycles }}
+                                </label>
+                            </td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">On connect service</td>
-                            <td>{{ create_form.on_connect_service_name }}</td>
+                            <td></td>
+                            <td>
+                                <label>
+                                HA strategy
+                                {{ create_form.pool_ha_strategy }}
+                                </label>
+                            </td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">On message service</td>
-                            <td>{{ create_form.on_message_service_name }}</td>
+                            <td>Timeout</td>
+                            <td>
+                                <label>
+                                Connection
+                                {{ create_form.connect_timeout }}
+                                </label>
+                                |
+                                <label>
+                                Exhaust
+                                {{ create_form.pool_exhaust_timeout }}
+                                </label>
+                                |
+                                <label>
+                                Keep-alive
+                                {{ create_form.pool_keep_alive }}
+                                </label>
+                            </td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">On close service</td>
-                            <td>{{ create_form.on_close_service_name }}</td>
+                            <td>Auth</td>
+                            <td>
+                                <label>
+                                User
+                                {{ create_form.username }}
+                                </label>
+                                |
+                                <label>
+                                Type
+                                {{ create_form.auth_type }}
+                                </label>
+                                |
+                                <label>
+                                SASL EXT.
+                                {{ create_form.use_sasl_external }}
+                                </label>
+                            </td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Security</td>
-                            <td>{{ create_form.security_def }}</td>
+                            <td style="vertical-align:middle">TLS</td>
+                            <td>
+                                <label>
+                                Enabled
+                                {{ create_form.is_tls_enabled }}
+                                </label>
+                                |
+                                <label>
+                                Ciphers
+                                {{ create_form.tls_ciphers }}
+                                </label>
+                            </td>
                         </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Pub/sub<br/>subscriptions</td>
-                            <td>{{ create_form.subscription_list }}</td>
-                        </tr>
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
