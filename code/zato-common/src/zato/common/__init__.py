@@ -1071,8 +1071,64 @@ class GENERIC:
 
     class CONNECTION:
         class TYPE:
+            OUTCONN_LDAP = 'outconn-ldap'
             OUTCONN_WSX = 'outconn-wsx'
             OUTCONN_SFTP = 'outconn-sftp'
+
+class LDAP:
+
+    class DEFAULT:
+        CONNECT_TIMEOUT  = 20
+        POOL_EXHAUST_TIMEOUT = 30
+        POOL_KEEP_ALIVE = 30
+        POOL_LIFETIME = 3600
+        POOL_MAX_CYCLES  = 5
+        POOL_SIZE = 10
+
+    class AUTH_TYPE:
+        NTLM   = 'NTLM'
+        SIMPLE = 'SIMPLE'
+
+    class AUTO_BIND:
+        AUTO_BIND_NONE            = 'AUTO_BIND_NONE'
+        AUTO_BIND_NO_TLS          = 'AUTO_BIND_NO_TLS'
+        AUTO_BIND_TLS_AFTER_BIND  = 'AUTO_BIND_TLS_AFTER_BIND'
+        AUTO_BIND_TLS_BEFORE_BIND = 'AUTO_BIND_TLS_BEFORE_BIND'
+
+    class GET_INFO:
+        ALL    = 'ALL'
+        DSA    = 'DSA'
+        NONE   = 'NONE'
+        SCHEMA = 'SCHEMA'
+        OFFLINE_EDIR_8_8_8  = 'OFFLINE_EDIR_8_8_8'
+        OFFLINE_AD_2012_R2  = 'OFFLINE_AD_2012_R2'
+        OFFLINE_SLAPD_2_4   = 'OFFLINE_SLAPD_2_4'
+        OFFLINE_DS389_1_3_3 = 'OFFLINE_DS389_1_3_3'
+
+        def __iter__(self):
+            return iter((self.ALL, self.DSA, self.NONE, self.SCHEMA,
+                self.OFFLINE_EDIR_8_8_8, self.OFFLINE_AD_2012_R2, self.OFFLINE_SLAPD_2_4, self.OFFLINE_DS389_1_3_3))
+
+        def __iter__(self):
+            return iter((self.FIRST, self.RANDOM, self.ROUND_ROBIN))
+
+    class IP_MODE:
+        IP_V4_ONLY        = 'IP_V4_ONLY'
+        IP_V6_ONLY        = 'IP_V6_ONLY'
+        IP_V4_PREFERRED   = 'IP_V4_PREFERRED'
+        IP_V6_PREFERRED   = 'IP_V6_PREFERRED'
+        IP_SYSTEM_DEFAULT = 'IP_SYSTEM_DEFAULT'
+
+        def __iter__(self):
+            return iter((self.IP_V4_ONLY, self.IP_V6_ONLY, self.IP_V4_PREFERRED, self.IP_V6_PREFERRED, self.IP_SYSTEM_DEFAULT))
+
+    class POOL_HA_STRATEGY:
+        FIRST       = 'FIRST'
+        RANDOM      = 'RANDOM'
+        ROUND_ROBIN = 'ROUND_ROBIN'
+
+        def __iter__(self):
+            return iter((self.FIRST, self.RANDOM, self.ROUND_ROBIN))
 
 class SFTP:
     class DEFAULT:
