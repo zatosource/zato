@@ -117,12 +117,6 @@ def ping(req, id, cluster_id):
 
 # ################################################################################################################################
 
-@method_allowed('POST')
-def change_password(req):
-    return _change_password(req, 'zato.generic.connection.change-password')
-
-# ################################################################################################################################
-
 @method_allowed('GET')
 def command_shell(req, id, cluster_id, name_slug):
 
