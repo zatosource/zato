@@ -91,7 +91,7 @@ class CreateForm(forms.Form):
     def __init__(self, req, data_list, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)
 
-        add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE(), needs_initial_select=False, skip=skip_endpoint_types)
+        add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE, needs_initial_select=False, skip=skip_endpoint_types)
         add_select(self, 'service_id', data_list.service_list)
 
         add_select(self, 'out_amqp_id', data_list.out_amqp_list)
