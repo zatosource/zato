@@ -1271,8 +1271,8 @@ class LDAP:
     class AUTO_BIND:
         AUTO_BIND_NONE            = NameId('None', 'AUTO_BIND_NONE')
         AUTO_BIND_NO_TLS          = NameId('No TLS', 'AUTO_BIND_NO_TLS')
-        AUTO_BIND_TLS_AFTER_BIND  = NameId('TLS after bind', 'AUTO_BIND_TLS_AFTER_BIND')
-        AUTO_BIND_TLS_BEFORE_BIND = NameId('TLS before bind', 'AUTO_BIND_TLS_BEFORE_BIND')
+        AUTO_BIND_TLS_AFTER_BIND  = NameId('Bind -> TLS', 'AUTO_BIND_TLS_AFTER_BIND')
+        AUTO_BIND_TLS_BEFORE_BIND = NameId('TLS -> Bind', 'AUTO_BIND_TLS_BEFORE_BIND')
 
         def __iter__(self):
             return iter((self.AUTO_BIND_NONE, self.AUTO_BIND_NO_TLS, self.AUTO_BIND_TLS_AFTER_BIND,

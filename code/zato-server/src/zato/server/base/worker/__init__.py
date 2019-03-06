@@ -67,7 +67,6 @@ from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
-from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
@@ -81,6 +80,8 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
      OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
+from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
+from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.pubsub import PubSub
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
@@ -235,15 +236,20 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Caches
         self.cache_api = CacheAPI(self.server)
 
+        # Generic connections - LDAP outconns
+        self.outconn_ldap = {}
+
         # Generic connections - WSX outconns
         self.outconn_wsx = {}
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
         }
 
         self._generic_conn_handler = {
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
         }
 
@@ -936,7 +942,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for config_dict in self.worker_config.generic_connection.values():
 
             # Not all generic connections are created here
-            if config_dict['config']['type_'] != COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX:
+            if config_dict['config']['type_'] == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP:
                 continue
 
             self._create_generic_connection(bunchify(config_dict['config']))
@@ -946,18 +952,24 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def init_generic_connections_config(self):
 
         # Local aliases
-        outconn_wsx_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX, {})
+        outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
+        outconn_wsx_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX, {})
 
-        # Outgoing WSX connections are pure generic objects that we can handle ourselves
-        outconn_wsx_map[_generic_msg.create] = self._create_generic_connection
-        outconn_wsx_map[_generic_msg.edit]   = self._edit_generic_connection
-        outconn_wsx_map[_generic_msg.delete] = self._delete_generic_connection
+        # LDAP connections are pure generic objects that we can handle ourselves
+        outconn_ldap_map[_generic_msg.create] = self._create_generic_connection
+        outconn_ldap_map[_generic_msg.edit]   = self._edit_generic_connection
+        outconn_ldap_map[_generic_msg.delete] = self._delete_generic_connection
 
         # Outgoing SFTP connections require for a different API to be called (provided by ParallelServer)
         outconn_sftp_map[_generic_msg.create] = self._on_outconn_sftp_create
         outconn_sftp_map[_generic_msg.edit]   = self._on_outconn_sftp_edit
         outconn_sftp_map[_generic_msg.delete] = self._on_outconn_sftp_delete
+
+        # Outgoing WSX connections are pure generic objects that we can handle ourselves
+        outconn_wsx_map[_generic_msg.create] = self._create_generic_connection
+        outconn_wsx_map[_generic_msg.edit]   = self._edit_generic_connection
+        outconn_wsx_map[_generic_msg.delete] = self._delete_generic_connection
 
 # ################################################################################################################################
 

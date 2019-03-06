@@ -223,7 +223,8 @@ class ConfigLoader(object):
 
         # OpenStack Swift
         query = self.odb.get_notif_cloud_openstack_swift_list(server.cluster.id, True)
-        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift', query, decrypt_func=self.decrypt)
+        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift',
+            query, decrypt_func=self.decrypt)
 
         # SQL
         query = self.odb.get_notif_sql_list(server.cluster.id, True)

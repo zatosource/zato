@@ -24,24 +24,54 @@
         return [
             '_numbering',
             '_selection',
+
             'name',
             '_is_active',
-            'address',
-            '_is_zato',
-            '_on_connect_service',
-            '_on_message_service',
-            '_on_close_service',
+            '_address_list'
+            'username'
+
+            'auth_type',
+            '_use_tls'
+
+            '_change_password',
             '_edit',
             '_delete',
+
             'id',
             'is_active',
-            'is_zato',
-            'on_connect_service_name',
-            'on_message_service_name',
-            'on_close_service_name',
-            'security_def',
-            'subscription_list',
-            'has_auto_reconnect',
+
+            'get_info',
+            'ip_mode',
+            'connect_timeout',
+            'auto_bind',
+
+            'server_list',
+            'pool_size',
+            'pool_exhaust_timeout',
+            'pool_keep_alive',
+
+            'pool_max_cycles',
+            'pool_lifetime',
+            'pool_ha_strategy',
+            'use_tls',
+
+            'pool_name',
+            'use_sasl_external',
+            'is_read_only',
+            'is_stats_enabled',
+
+            'should_check_names',
+            'use_auto_range',
+            'should_return_empty_attrs',
+            'is_tls_enabled',
+
+            'tls_private_key_file',
+            'tls_cert_file',
+            'tls_ca_certs_file',
+            'tls_version',
+
+            'tls_ciphers',
+            'tls_validate'
         ]
     }
     </script>
@@ -220,13 +250,18 @@
                             <td></td>
                             <td>
                                 <label>
-                                HA strategy
+                                HA
                                 {{ create_form.pool_ha_strategy }}
                                 </label>
                                 |
                                 <label>
-                                Get info
+                                Info
                                 {{ create_form.get_info }}
+                                </label>
+                                |
+                                <label>
+                                Auto-bnd
+                                {{ create_form.auto_bind }}
                                 </label>
                             </td>
                         </tr>
@@ -285,7 +320,7 @@
                                 </label>
                                 |
                                 <label>
-                                Validate
+                                Cert. validation
                                 {{ create_form.tls_validate }}
                                 </label>
                             </td>
