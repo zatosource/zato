@@ -1068,6 +1068,15 @@ class TLS:
 
     DEFAULT = 'SSLv23'
 
+    class VERSION:
+        SSLv23  = NameId('SSLv23')
+        TLSv1   = NameId('TLSv1')
+        TLSv1_1 = NameId('TLSv1_1')
+        TLSv1_2 = NameId('TLSv1_2')
+
+        def __iter__(self):
+            return iter((self.SSLv23, self.TLSv1, self.TLSv1_1, self.TLSv1_2))
+
     class CERT_VALIDATE:
         CERT_NONE     = NameId('Disabled', 'CERT_NONE')
         CERT_OPTIONAL = NameId('Optional', 'CERT_OPTIONAL')
