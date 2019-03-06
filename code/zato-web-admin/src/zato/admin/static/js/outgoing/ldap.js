@@ -40,50 +40,71 @@ $.fn.zato.outgoing.ldap.data_table.new_row = function(item, data, include_tr) {
     var is_active = item.is_active == true;
     var is_zato = item.is_zato == true;
     var has_auto_reconnect = item.has_auto_reconnect == true;
+    var use_sasl_external = item.use_sasl_external == true;
+    var is_read_only = item.is_read_only == true;
+    var is_stats_enabled = item.is_stats_enabled == true;
+    var should_check_names = item.should_check_names == true;
+    var use_auto_range = item.use_auto_range == true;
+    var should_return_empty_attrs = item.should_return_empty_attrs == true;
+    var is_tls_enabled = item.is_tls_enabled == true;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
+
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.address);
-    row += String.format('<td>{0}</td>', is_zato ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', item.address_list);
+    row += String.format('<td>{0}</td>', item.username);
 
-    if(data.on_connect_service_name) {
-        row += String.format('<td>{0}</td>',
-            String.format("<a href='/zato/service/overview/{0}/?cluster={1}'>{0}</a>",
-            data.on_connect_service_name, item.cluster_id));
-    }
-    else {
-        row += $.fn.zato.empty_table_cell;
-    }
+    row += String.format('<td>{0}</td>', item.auth_type);
+    row += String.format('<td>{0}</td>', is_tls_enabled ? 'Yes' : 'No');
 
-    if(data.on_message_service_name) {
-        row += String.format('<td>{0}</td>',
-            String.format("<a href='/zato/service/overview/{0}/?cluster={1}'>{0}</a>",
-            data.on_message_service_name, item.cluster_id));
-    }
-    else {
-        row += $.fn.zato.empty_table_cell;
-    }
-
-    if(data.on_close_service_name) {
-        row += String.format('<td>{0}</td>',
-            String.format("<a href='/zato/service/overview/{0}/?cluster={1}'>{0}</a>",
-            data.on_close_service_name, item.cluster_id));
-    }
-    else {
-        row += $.fn.zato.empty_table_cell;
-    }
-
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.ldap.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.ldap.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
+
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
-    row += String.format("<td class='ignore'>{0}</td>", is_zato);
-    row += String.format("<td class='ignore'>{0}</td>", item.on_connect_service_id);
-    row += String.format("<td class='ignore'>{0}</td>", item.security_def);
-    row += String.format("<td class='ignore'>{0}</td>", item.subscription_list);
-    row += String.format("<td class='ignore'>{0}</td>", has_auto_reconnect);
+
+    // 1 -->
+    'get_info',
+    'ip_mode',
+    'connect_timeout',
+    'auto_bind',
+
+    // 2 -->
+    'server_list',
+    'pool_size',
+    'pool_exhaust_timeout',
+    'pool_keep_alive',
+
+    // 3 -->
+    'pool_max_cycles',
+    'pool_lifetime',
+    'pool_ha_strategy',
+
+    // 4 -->
+    'pool_name',
+    'use_sasl_external',
+    'is_read_only',
+    'is_stats_enabled',
+
+    // 5 -->
+    'should_check_names',
+    'use_auto_range',
+    'should_return_empty_attrs',
+    'is_tls_enabled',
+
+    // 6 -->
+    'tls_private_key_file',
+    'tls_cert_file',
+    'tls_ca_certs_file',
+    'tls_version',
+
+    // 7 -->
+    'tls_ciphers',
+    'tls_validate'
 
     if(include_tr) {
         row += '</tr>';
