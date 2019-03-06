@@ -81,7 +81,16 @@ class Generic(WorkerImpl):
 
         self.logger.info('About to ping generic connection `%s` (%s)', conn_dict.name, conn_dict.type_)
         conn_dict.conn.ping()
-        self.logger.info('Generic connection `%s` ping successfully (%s)', conn_dict.name, conn_dict.type_)
+        self.logger.info('Generic connection `%s` pinged successfully (%s)', conn_dict.name, conn_dict.type_)
+
+# ################################################################################################################################
+
+    def _change_password_generic_connection(self, msg):
+
+        self.logger.warn('CONN DICT %s', self.generic_conn_api)
+
+        conn_dict, _ = self._find_conn_info(msg['id'])
+        conn_dict.conn.change_password(msg)
 
 # ################################################################################################################################
 
@@ -95,6 +104,8 @@ class Generic(WorkerImpl):
         func = self._get_generic_impl_func(msg)
         func(msg)
 
-    on_broker_msg_GENERIC_CONNECTION_EDIT = on_broker_msg_GENERIC_CONNECTION_DELETE = on_broker_msg_GENERIC_CONNECTION_CREATE
+    on_broker_msg_GENERIC_CONNECTION_EDIT            = on_broker_msg_GENERIC_CONNECTION_CREATE
+    on_broker_msg_GENERIC_CONNECTION_DELETE          = on_broker_msg_GENERIC_CONNECTION_CREATE
+    on_broker_msg_GENERIC_CONNECTION_CHANGE_PASSWORD = on_broker_msg_GENERIC_CONNECTION_CREATE
 
 # ################################################################################################################################

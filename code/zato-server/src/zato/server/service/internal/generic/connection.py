@@ -194,7 +194,8 @@ class ChangePassword(ChangePasswordBase):
     def handle(self):
         def _auth(instance, secret):
             instance.secret = secret
-        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value)
+        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value,
+            publish_instance_attrs=['type_'])
 
 # ################################################################################################################################
 # ################################################################################################################################
