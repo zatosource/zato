@@ -27,49 +27,56 @@
 
             'name',
             '_is_active',
-            '_address_list'
+            '_server_list'
             'username'
 
             'auth_type',
-            '_use_tls'
+            '_is_tls_enabled'
 
             '_change_password',
             '_edit',
             '_delete',
+            '_ping',
 
             'id',
             'is_active',
 
+            {% comment %} 1 {% endcomment %}
             'get_info',
             'ip_mode',
             'connect_timeout',
             'auto_bind',
 
+            {% comment %} 2 {% endcomment %}
             'server_list',
             'pool_size',
             'pool_exhaust_timeout',
             'pool_keep_alive',
 
+            {% comment %} 3 {% endcomment %}
             'pool_max_cycles',
             'pool_lifetime',
             'pool_ha_strategy',
-            'use_tls',
 
+            {% comment %} 4 {% endcomment %}
             'pool_name',
             'use_sasl_external',
             'is_read_only',
             'is_stats_enabled',
 
+            {% comment %} 5 {% endcomment %}
             'should_check_names',
             'use_auto_range',
             'should_return_empty_attrs',
             'is_tls_enabled',
 
+            {% comment %} 6 {% endcomment %}
             'tls_private_key_file',
             'tls_cert_file',
             'tls_ca_certs_file',
             'tls_version',
 
+            {% comment %} 7 {% endcomment %}
             'tls_ciphers',
             'tls_validate'
         ]
@@ -103,22 +110,61 @@
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Address</a></th>
-                        <th><a href="#">Is Zato</a></th>
-                        <th><a href="#">On connect</a></th>
-                        <th><a href="#">On message</a></th>
-                        <th><a href="#">On close</a></th>
+                        <th><a href="#">Servers</a></th>
+                        <th><a href="#">Username</a></th>
+
+                        <th><a href="#">Auth type</a></th>
+                        <th><a href="#">Use TLS</a></th>
+
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 2 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 7 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -127,46 +173,61 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
+
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.address }}</td>
-                        <td>{{ item.is_zato|yesno:'Yes,No' }}</td>
+                        <td>{{ item.server_list }}</td>
+                        <td>{{ item.username }}</td>
 
-                        <td>
-                            {% if item.on_connect_service_name %}
-                                <a href="{% url "service-overview" item.on_connect_service_name %}?cluster={{ cluster_id }}">{{ item.on_connect_service_name }}</a>
-                            {% else %}
-                                <span class="form_hint">---</span>
-                            {% endif %}
-                        </td>
+                        <td>{{ item.auth_type }}</td>
+                        <td>{{ item.is_tls_enabled|yesno:'Yes,No' }}</td>
 
-                        <td>
-                            {% if item.on_message_service_name %}
-                                <a href="{% url "service-overview" item.on_message_service_name %}?cluster={{ cluster_id }}">{{ item.on_message_service_name }}</a>
-                            {% else %}
-                                <span class="form_hint">---</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if item.on_close_service_name %}
-                                <a href="{% url "service-overview" item.on_close_service_name %}?cluster={{ cluster_id }}">{{ item.on_close_service_name }}</a>
-                            {% else %}
-                                <span class="form_hint">---</span>
-                            {% endif %}
-                        </td>
-
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.ldap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.ldap.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.is_zato }}</td>
-                        <td class='ignore'>{{ item.on_connect_service_name }}</td>
-                        <td class='ignore'>{{ item.on_message_service_name }}</td>
-                        <td class='ignore'>{{ item.on_close_service_name }}</td>
-                        <td class='ignore'>{{ item.security_def }}</td>
-                        <td class='ignore'>{{ item.subscription_list }}</td>
-                        <td class='ignore'>{{ item.has_auto_reconnect }}</td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td class='ignore'>{{ item.get_info }}</td>
+                        <td class='ignore'>{{ item.ip_mode }}</td>
+                        <td class='ignore'>{{ item.connect_timeout }}</td>
+                        <td class='ignore'>{{ item.auto_bind }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td class='ignore'>{{ item.server_list }}</td>
+                        <td class='ignore'>{{ item.pool_size }}</td>
+                        <td class='ignore'>{{ item.pool_exhaust_timeout }}</td>
+                        <td class='ignore'>{{ item.pool_keep_alive }}</td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td class='ignore'>{{ item.pool_max_cycles }}</td>
+                        <td class='ignore'>{{ item.pool_lifetime }}</td>
+                        <td class='ignore'>{{ item.pool_ha_strategy }}</td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td class='ignore'>{{ item.pool_name }}</td>
+                        <td class='ignore'>{{ item.use_sasl_external }}</td>
+                        <td class='ignore'>{{ item.is_read_only }}</td>
+                        <td class='ignore'>{{ item.is_stats_enabled }}</td>
+
+                        {% comment %} 5 {% endcomment %}
+                        <td class='ignore'>{{ item.should_check_names }}</td>
+                        <td class='ignore'>{{ item.use_auto_range }}</td>
+                        <td class='ignore'>{{ item.should_return_empty_attrs }}</td>
+
+                        {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.tls_private_key_file }}</td>
+                        <td class='ignore'>{{ item.tls_cert_file }}</td>
+                        <td class='ignore'>{{ item.tls_ca_certs_file }}</td>
+                        <td class='ignore'>{{ item.tls_version }}</td>
+
+                        {% comment %} 7 {% endcomment %}
+                        <td class='ignore'>{{ item.tls_ciphers }}</td>
+                        <td class='ignore'>{{ item.tls_validate }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}

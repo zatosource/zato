@@ -22,7 +22,6 @@ class CreateForm(forms.Form):
     get_info = forms.ChoiceField(widget=forms.Select(), initial=LDAP.GET_INFO.SCHEMA.id)
     ip_mode = forms.ChoiceField(widget=forms.Select())
 
-    use_tls = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     connect_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.CONNECT_TIMEOUT)
     auto_bind = forms.ChoiceField(widget=forms.Select())
 
