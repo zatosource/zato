@@ -960,6 +960,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         outconn_ldap_map[_generic_msg.create] = self._create_generic_connection
         outconn_ldap_map[_generic_msg.edit]   = self._edit_generic_connection
         outconn_ldap_map[_generic_msg.delete] = self._delete_generic_connection
+        outconn_ldap_map[_generic_msg.change_password] = self._change_password_generic_connection
 
         # Outgoing SFTP connections require for a different API to be called (provided by ParallelServer)
         outconn_sftp_map[_generic_msg.create] = self._on_outconn_sftp_create
