@@ -68,43 +68,43 @@ $.fn.zato.outgoing.ldap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", is_active);
 
     // 1 -->
-    'get_info',
-    'ip_mode',
-    'connect_timeout',
-    'auto_bind',
+    row += String.format("<td class='ignore'>{0}</td>", item.get_info);
+    row += String.format("<td class='ignore'>{0}</td>", item.ip_mode);
+    row += String.format("<td class='ignore'>{0}</td>", item.connect_timeout);
+    row += String.format("<td class='ignore'>{0}</td>", item.auto_bind);
 
     // 2 -->
-    'server_list',
-    'pool_size',
-    'pool_exhaust_timeout',
-    'pool_keep_alive',
+    row += String.format("<td class='ignore'>{0}</td>", item.server_list);
+    row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
+    row += String.format("<td class='ignore'>{0}</td>", item.pool_exhaust_timeout);
+    row += String.format("<td class='ignore'>{0}</td>", item.pool_keep_alive);
 
     // 3 -->
-    'pool_max_cycles',
-    'pool_lifetime',
-    'pool_ha_strategy',
+    row += String.format("<td class='ignore'>{0}</td>", item.pool_max_cycles);
+    row += String.format("<td class='ignore'>{0}</td>", item.pool_lifetime);
+    row += String.format("<td class='ignore'>{0}</td>", item.pool_ha_strategy);
 
     // 4 -->
-    'pool_name',
-    'use_sasl_external',
-    'is_read_only',
-    'is_stats_enabled',
+    row += String.format("<td class='ignore'>{0}</td>", item.pool_name);
+    row += String.format("<td class='ignore'>{0}</td>", use_sasl_external ? 'Yes' : 'No');
+    row += String.format("<td class='ignore'>{0}</td>", is_read_only ? 'Yes' : 'No');
+    row += String.format("<td class='ignore'>{0}</td>", is_stats_enabled ? 'Yes' : 'No');
 
     // 5 -->
-    'should_check_names',
-    'use_auto_range',
-    'should_return_empty_attrs',
-    'is_tls_enabled',
+    row += String.format("<td class='ignore'>{0}</td>", should_check_names ? 'Yes' : 'No');
+    row += String.format("<td class='ignore'>{0}</td>", use_auto_range ? 'Yes' : 'No');
+    row += String.format("<td class='ignore'>{0}</td>", should_return_empty_attrs ? 'Yes' : 'No');
+    row += String.format("<td class='ignore'>{0}</td>", is_tls_enabled ? 'Yes' : 'No');
 
     // 6 -->
-    'tls_private_key_file',
-    'tls_cert_file',
-    'tls_ca_certs_file',
-    'tls_version',
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_private_key_file);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_cert_file);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_ca_certs_file);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_version);
 
     // 7 -->
-    'tls_ciphers',
-    'tls_validate'
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_ciphers);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_validate);
 
     if(include_tr) {
         row += '</tr>';

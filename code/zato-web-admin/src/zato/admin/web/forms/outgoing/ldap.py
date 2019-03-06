@@ -51,7 +51,7 @@ class CreateForm(forms.Form):
     tls_private_key_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     tls_cert_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     tls_ca_certs_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_version = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=TLS.DEFAULT)
+    tls_version = forms.ChoiceField(widget=forms.Select(), initial=TLS.DEFAULT)
     tls_ciphers = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=LDAP.DEFAULT.CIPHERS)
     tls_validate = forms.ChoiceField(widget=forms.Select(), initial=TLS.CERT_VALIDATE.CERT_REQUIRED.id)
 
@@ -63,6 +63,7 @@ class CreateForm(forms.Form):
         add_select(self, 'auto_bind', LDAP.AUTO_BIND(), needs_initial_select=False)
         add_select(self, 'pool_ha_strategy', LDAP.POOL_HA_STRATEGY(), needs_initial_select=False)
         add_select(self, 'auth_type', LDAP.AUTH_TYPE(), needs_initial_select=False)
+        add_select(self, 'tls_version', TLS.VERSION(), needs_initial_select=False)
         add_select(self, 'tls_validate', TLS.CERT_VALIDATE(), needs_initial_select=False)
 
 class EditForm(CreateForm):

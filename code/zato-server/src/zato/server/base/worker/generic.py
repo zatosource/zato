@@ -70,7 +70,7 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _edit_generic_connection(self, msg, skip):
+    def _edit_generic_connection(self, msg, skip=None):
         self._delete_generic_connection(msg)
         self._create_generic_connection(msg, True, skip)
 
