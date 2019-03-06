@@ -18,7 +18,8 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.LDAP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.ldap.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'address', 'security_def']);
+    $.fn.zato.data_table.setup_forms(['name', 'username', 'server_list', 'pool_size', 'pool_exhaust_timeout',
+        'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime']);
 })
 
 $.fn.zato.outgoing.ldap.create = function() {

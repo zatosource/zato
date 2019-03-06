@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
-from zato.common import GENERIC
+from zato.common import GENERIC, LDAP
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.ldap import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
@@ -35,10 +35,12 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'type_')
-        output_required = ('id', 'name', 'address')
-        output_optional = ('is_active', 'is_zato',
-            'on_connect_service_id', 'on_connect_service_name', 'on_message_service_id', 'on_message_service_name',
-            'on_close_service_id', 'on_close_service_name', 'subscription_list', 'security_def', 'has_auto_reconnect')
+        output_required = ('id', 'name', 'is_active', 'get_info', 'ip_mode', 'connect_timeout', 'auto_bind', 'server_list',
+            'pool_size', 'pool_exhaust_timeout', 'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime', 'pool_ha_strategy',
+            'username', 'auth_type')
+        output_optional = ('is_active', 'use_tls', 'pool_name', 'use_sasl_external', 'is_read_only', 'is_stats_enabled',
+            'should_check_names', 'use_auto_range', 'should_return_empty_attrs', 'is_tls_enabled', 'tls_private_key_file',
+            'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate')
         output_repeated = True
 
     def handle(self):
@@ -54,25 +56,21 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'is_zato', 'address', 'on_connect_service_name', 'on_message_service_name',
-            'on_close_service_name', 'subscription_list', 'security_def', 'has_auto_reconnect')
+        input_required = ('name', 'get_info', 'ip_mode', 'connect_timeout', 'auto_bind', 'server_list', 'pool_size',
+            'pool_exhaust_timeout', 'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime', 'pool_ha_strategy', 'username',
+            'auth_type')
+        input_optional = ('is_active', 'use_tls', 'pool_name', 'use_sasl_external', 'is_read_only', 'is_stats_enabled',
+            'should_check_names', 'use_auto_range', 'should_return_empty_attrs', 'is_tls_enabled', 'tls_private_key_file',
+            'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate')
         output_required = ('id', 'name')
 
     def populate_initial_input_dict(self, initial_input_dict):
-        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_WSX
+        initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_LDAP
+        initial_input_dict['ip_mode'] = LDAP.IP_MODE.IP_SYSTEM_DEFAULT.id
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outconn'] = True
-        initial_input_dict['pool_size'] = 1
         initial_input_dict['sec_use_rbac'] = False
-
-    def post_process_return_data(self, return_data):
-
-        for name in ('connect', 'message', 'close'):
-            field_name = 'on_{}_service_name'.format(name)
-            return_data[field_name] = self.input_dict.get(field_name)
-
-        return return_data
 
     def success_message(self, item):
         return 'Successfully {} outgoing LDAP connection `{}`'.format(self.verb, item.name)
