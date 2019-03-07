@@ -9,12 +9,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import ssl
 from codecs import encode
 from logging import getLogger
 from traceback import format_exc
 
 # ldap3
-from ldap3 import Connection, Server, ServerPool, SYNC
+from ldap3 import Connection, Server, ServerPool, SYNC, Tls
 
 # Zato
 from zato.common.util import spawn_greenlet
@@ -56,6 +57,27 @@ class LDAPClient(object):
         # All servers in our pool, even if there is only one
         servers = []
 
+        # TLS is optional
+        if self.config.is_tls_enabled:
+
+            tls_validate = getattr(ssl, self.config.tls_validate)
+            tls_version = getattr(ssl, 'PROTOCOL_{}'.format(self.config.tls_version))
+
+            tls_config = {
+                'local_private_key_file': self.config.tls_private_key_file or None,
+                'local_certificate_file': self.config.tls_cert_file or None,
+                'validate': tls_validate or None,
+                'version': tls_version,
+                'ca_certs_file': self.config.tls_ca_certs_file or None,
+                'ciphers': self.config.tls_ciphers,
+            }
+
+            logger.warn('QQQ %s', tls_config)
+
+            tls = Tls(**tls_config)
+        else:
+            tls = None
+
         for server_info in self.config.server_list: # type: str
 
             # Configuration for each server
@@ -65,6 +87,7 @@ class LDAPClient(object):
                 'get_info': self.config.get_info,
                 'connect_timeout': self.config.connect_timeout,
                 'mode': self.config.ip_mode,
+                'tls': tls
             }
 
             # Create a server object and append it to the list given to the pool later on
