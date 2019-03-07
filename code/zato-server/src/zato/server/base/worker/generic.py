@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
+from zato.common.util import asbool
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
 
@@ -61,6 +62,9 @@ class Generic(WorkerImpl):
         item_dict.queue_build_cap = self.server.fs_server_config.misc.queue_build_cap
         item_dict.auth_url = msg.address
 
+        # Normalize the contents of the configuration message
+        self.generic_normalize_config(item_dict)
+
         config_attr = self.generic_conn_api[item.type_]
         wrapper = self._generic_conn_handler[item.type_]
 
@@ -86,9 +90,6 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def _change_password_generic_connection(self, msg):
-
-        self.logger.warn('CONN DICT %s', self.generic_conn_api)
-
         conn_dict, _ = self._find_conn_info(msg['id'])
         conn_dict.conn.change_password(msg)
 
@@ -107,5 +108,29 @@ class Generic(WorkerImpl):
     on_broker_msg_GENERIC_CONNECTION_EDIT            = on_broker_msg_GENERIC_CONNECTION_CREATE
     on_broker_msg_GENERIC_CONNECTION_DELETE          = on_broker_msg_GENERIC_CONNECTION_CREATE
     on_broker_msg_GENERIC_CONNECTION_CHANGE_PASSWORD = on_broker_msg_GENERIC_CONNECTION_CREATE
+
+# ################################################################################################################################
+
+    def _generic_normalize_config_outconn_ldap(self, config):
+
+        config.pool_max_cycles = int(config.pool_max_cycles)
+        config.pool_keep_alive = int(config.pool_keep_alive)
+        config.server_list = [elem.strip() for elem in config.server_list.splitlines()]
+        config.use_auto_range = asbool(config.use_auto_range)
+        config.use_sasl_external = asbool(config.use_sasl_external)
+        config.use_tls = asbool(config.use_tls)
+
+# ################################################################################################################################
+
+    def generic_normalize_config(self, config):
+
+        # Normalize type name to one that can potentially point to a method of ours
+        type_ = config['type_'] # type: str
+        preprocess_type = type_.replace('-', '_')
+
+        # Check if there is such a method and if so, invoke it to preprocess the message
+        func = getattr(self, '_generic_normalize_config_{}'.format(preprocess_type), None)
+        if func:
+            func(config)
 
 # ################################################################################################################################
