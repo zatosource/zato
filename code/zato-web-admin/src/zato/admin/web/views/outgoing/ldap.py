@@ -40,7 +40,7 @@ class Index(_Index):
             'username', 'auth_type')
         output_optional = ('is_active', 'use_tls', 'pool_name', 'use_sasl_external', 'is_read_only', 'is_stats_enabled',
             'should_check_names', 'use_auto_range', 'should_return_empty_attrs', 'is_tls_enabled', 'tls_private_key_file',
-            'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate')
+            'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate', 'sasl_mechanism')
         output_repeated = True
 
     def handle(self):
@@ -61,7 +61,7 @@ class _CreateEdit(CreateEdit):
             'auth_type')
         input_optional = ('is_active', 'use_tls', 'pool_name', 'use_sasl_external', 'is_read_only', 'is_stats_enabled',
             'should_check_names', 'use_auto_range', 'should_return_empty_attrs', 'is_tls_enabled', 'tls_private_key_file',
-            'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate')
+            'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate', 'sasl_mechanism')
         output_required = ('id', 'name')
 
     def populate_initial_input_dict(self, initial_input_dict):

@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.LDAP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.ldap.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'username', 'server_list', 'pool_size', 'pool_exhaust_timeout',
+    $.fn.zato.data_table.setup_forms(['name', 'server_list', 'pool_size', 'pool_exhaust_timeout',
         'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime']);
 })
 
@@ -40,7 +40,6 @@ $.fn.zato.outgoing.ldap.data_table.new_row = function(item, data, include_tr) {
     var is_active = item.is_active == true;
     var is_zato = item.is_zato == true;
     var has_auto_reconnect = item.has_auto_reconnect == true;
-    var use_sasl_external = item.use_sasl_external == true;
     var is_read_only = item.is_read_only == true;
     var is_stats_enabled = item.is_stats_enabled == true;
     var should_check_names = item.should_check_names == true;
@@ -53,7 +52,7 @@ $.fn.zato.outgoing.ldap.data_table.new_row = function(item, data, include_tr) {
 
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.address_list);
+    row += String.format('<td>{0}</td>', item.server_list);
     row += String.format('<td>{0}</td>', item.username);
 
     row += String.format('<td>{0}</td>', item.auth_type);
@@ -73,6 +72,8 @@ $.fn.zato.outgoing.ldap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.connect_timeout);
     row += String.format("<td class='ignore'>{0}</td>", item.auto_bind);
 
+    console.log('QQQ ' + item.server_list);
+
     // 2 -->
     row += String.format("<td class='ignore'>{0}</td>", item.server_list);
     row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
@@ -86,7 +87,7 @@ $.fn.zato.outgoing.ldap.data_table.new_row = function(item, data, include_tr) {
 
     // 4 -->
     row += String.format("<td class='ignore'>{0}</td>", item.pool_name);
-    row += String.format("<td class='ignore'>{0}</td>", use_sasl_external ? 'Yes' : 'No');
+    row += String.format("<td class='ignore'>{0}</td>", item.sasl_mechanism);
     row += String.format("<td class='ignore'>{0}</td>", is_read_only ? 'Yes' : 'No');
     row += String.format("<td class='ignore'>{0}</td>", is_stats_enabled ? 'Yes' : 'No');
 

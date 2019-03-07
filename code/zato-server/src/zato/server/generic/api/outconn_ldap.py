@@ -18,6 +18,7 @@ from bunch import bunchify
 
 # ldap3
 from ldap3 import ALL, Connection, EXTERNAL, NTLM, Server, ServerPool, SYNC
+from ldap3.operation import bind
 
 # Zato
 from zato.common.util import spawn_greenlet
@@ -92,7 +93,6 @@ class LDAPClient(object):
             'auto_bind': self.config.auto_bind,
             'auto_range': self.config.use_auto_range,
             'client_strategy': SYNC,
-            'sasl_mechanism': EXTERNAL if self.config.use_sasl_external else None,
             'check_names': self.config.should_check_names,
             'collect_usage': self.config.is_stats_enabled,
             'read_only': self.config.is_read_only,
@@ -102,6 +102,10 @@ class LDAPClient(object):
             'return_empty_attributes': self.config.should_return_empty_attrs,
             'pool_keepalive': self.config.pool_keep_alive,
         }
+
+        if self.config.sasl_mechanism:
+            conn_config['sasl_mechanism'] = self.config.sasl_mechanism
+            conn_config['sasl_credentials'] = self.config.sasl_credentials
 
         # Finally, create the connection objet
         self.impl = Connection(**conn_config)
