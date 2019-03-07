@@ -113,7 +113,7 @@ class LDAPClient(object):
 
 # ################################################################################################################################
 
-    def delete(self):
+    def zato_delete_impl(self):
         self.impl.unbind()
 
 # ################################################################################################################################
@@ -121,6 +121,34 @@ class LDAPClient(object):
     def ping(self):
         logger.info('Pinging LDAP `%s`', self.config.server_list)
         out = self.impl.abandon(0)
+
+# ################################################################################################################################
+
+# Public API
+
+    def add(self, *args, **kwargs):
+        return self.impl.add(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        return self.impl.delete(*args, **kwargs)
+
+    def modify(self, *args, **kwargs):
+        return self.impl.modify(*args, **kwargs)
+
+    def modify_dn(self, *args, **kwargs):
+        return self.impl.modify_dn(*args, **kwargs)
+
+    def search(self, *args, **kwargs):
+        return self.impl.search(*args, **kwargs)
+
+    def compare(self, *args, **kwargs):
+        return self.impl.compare(*args, **kwargs)
+
+    def abandon(self, *args, **kwargs):
+        return self.impl.abandon(*args, **kwargs)
+
+    def extended(self, *args, **kwargs):
+        return self.impl.extended(*args, **kwargs)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -153,4 +181,5 @@ class OutconnLDAPWrapper(Wrapper):
         else:
             self.client.put_client(conn)
 
+# ################################################################################################################################
 # ################################################################################################################################
