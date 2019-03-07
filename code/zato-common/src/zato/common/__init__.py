@@ -1263,11 +1263,11 @@ class LDAP:
 
     class DEFAULT:
         CIPHERS = 'ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS'
-        CONNECT_TIMEOUT  = 20
-        POOL_EXHAUST_TIMEOUT = 30
+        CONNECT_TIMEOUT  = 10
+        POOL_EXHAUST_TIMEOUT = 5
         POOL_KEEP_ALIVE = 30
         POOL_LIFETIME = 3600
-        POOL_MAX_CYCLES  = 5
+        POOL_MAX_CYCLES  = 1
         POOL_SIZE = 10
 
     class AUTH_TYPE:
@@ -1278,14 +1278,14 @@ class LDAP:
             return iter((self.SIMPLE, self.NTLM))
 
     class AUTO_BIND:
-        AUTO_BIND_NONE            = NameId('None', 'AUTO_BIND_NONE')
-        AUTO_BIND_NO_TLS          = NameId('No TLS', 'AUTO_BIND_NO_TLS')
-        AUTO_BIND_TLS_AFTER_BIND  = NameId('Bind -> TLS', 'AUTO_BIND_TLS_AFTER_BIND')
-        AUTO_BIND_TLS_BEFORE_BIND = NameId('TLS -> Bind', 'AUTO_BIND_TLS_BEFORE_BIND')
+        DEFAULT         = NameId('Default', 'DEFAULT')
+        NO_TLS          = NameId('No TLS', 'NO_TLS')
+        NONE            = NameId('None', 'NONE')
+        TLS_AFTER_BIND  = NameId('Bind -> TLS', 'TLS_AFTER_BIND')
+        TLS_BEFORE_BIND = NameId('TLS -> Bind', 'TLS_BEFORE_BIND')
 
         def __iter__(self):
-            return iter((self.AUTO_BIND_NONE, self.AUTO_BIND_NO_TLS, self.AUTO_BIND_TLS_AFTER_BIND,
-                self.AUTO_BIND_TLS_BEFORE_BIND))
+            return iter((self.DEFAULT, self.NONE, self.NO_TLS, self.TLS_AFTER_BIND, self.TLS_BEFORE_BIND))
 
     class GET_INFO:
         ALL    = NameId('All', 'ALL')

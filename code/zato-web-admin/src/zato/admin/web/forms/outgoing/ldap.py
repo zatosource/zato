@@ -23,7 +23,7 @@ class CreateForm(forms.Form):
     ip_mode = forms.ChoiceField(widget=forms.Select())
 
     connect_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.CONNECT_TIMEOUT)
-    auto_bind = forms.ChoiceField(widget=forms.Select())
+    auto_bind = forms.ChoiceField(widget=forms.Select(), initial=LDAP.AUTO_BIND.DEFAULT)
 
     server_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
 
