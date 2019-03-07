@@ -1319,6 +1319,13 @@ class LDAP:
         def __iter__(self):
             return iter((self.FIRST, self.RANDOM, self.ROUND_ROBIN))
 
+    class SASL_MECHANISM:
+        GSSAPI = NameId('GSS-API', 'GSSAPI')
+        EXTERNAL = NameId('External', 'EXTERNAL')
+
+        def __iter__(self):
+            return iter((self.EXTERNAL, self.GSSAPI))
+
 # ################################################################################################################################
 # ################################################################################################################################
 

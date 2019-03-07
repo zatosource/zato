@@ -36,10 +36,10 @@ class CreateForm(forms.Form):
     pool_lifetime = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=LDAP.DEFAULT.POOL_LIFETIME)
     pool_ha_strategy = forms.ChoiceField(widget=forms.Select(), initial=LDAP.POOL_HA_STRATEGY.ROUND_ROBIN.id)
 
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:40%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     auth_type = forms.ChoiceField(widget=forms.Select())
-    use_sasl_external = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    sasl_mechanism = forms.ChoiceField(widget=forms.Select())
 
     is_read_only = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_stats_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
@@ -63,6 +63,7 @@ class CreateForm(forms.Form):
         add_select(self, 'auto_bind', LDAP.AUTO_BIND(), needs_initial_select=False)
         add_select(self, 'pool_ha_strategy', LDAP.POOL_HA_STRATEGY(), needs_initial_select=False)
         add_select(self, 'auth_type', LDAP.AUTH_TYPE(), needs_initial_select=False)
+        add_select(self, 'sasl_mechanism', LDAP.SASL_MECHANISM(), needs_initial_select=True)
         add_select(self, 'tls_version', TLS.VERSION(), needs_initial_select=False)
         add_select(self, 'tls_validate', TLS.CERT_VALIDATE(), needs_initial_select=False)
 

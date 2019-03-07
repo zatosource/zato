@@ -12,7 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from bunch import Bunch
 
 # Zato
-from zato.common.util import asbool
+from zato.common import LDAP
+from zato.common.util import as_bool, parse_simple_type
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
 
@@ -78,7 +79,16 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def _edit_generic_connection(self, msg, skip=None):
+
+        # Find and store connection password/secret for later use
+        conn_dict, _ = self._find_conn_info(msg['id'])
+        secret = conn_dict['secret']
+
+        # Delete the connection
         self._delete_generic_connection(msg)
+
+        # Recreate it now but make sure to include the secret too
+        msg['secret'] = secret
         self._create_generic_connection(msg, True, skip)
 
 # ################################################################################################################################
@@ -94,7 +104,6 @@ class Generic(WorkerImpl):
 
     def _change_password_generic_connection(self, msg):
         conn_dict, _ = self._find_conn_info(msg['id'])
-        #conn_dict.conn.change_password(msg)
 
         # Create a new message without live Python objects
         edit_msg = Bunch()
@@ -128,9 +137,14 @@ class Generic(WorkerImpl):
 
         config.pool_max_cycles = int(config.pool_max_cycles)
         config.pool_keep_alive = int(config.pool_keep_alive)
-        config.use_auto_range = asbool(config.use_auto_range)
-        config.use_sasl_external = asbool(config.use_sasl_external)
-        config.use_tls = asbool(config.use_tls)
+        config.use_auto_range = as_bool(config.use_auto_range)
+        config.use_tls = as_bool(config.use_tls)
+
+        # If GSS-API SASL method is used, the username may be a set of credentials actually
+        if config.sasl_mechanism == LDAP.SASL_MECHANISM.GSSAPI.id:
+            config.sasl_credentials = [parse_simple_type(elem.strip() for elem in (config.username or '').split())]
+        else:
+            config.sasl_credentials = None
 
         # Initially, this will be a string but during ChangePassword we are reusing
         # the same configuration object in which case it will be already a list.

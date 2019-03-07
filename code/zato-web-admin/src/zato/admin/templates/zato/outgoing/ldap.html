@@ -60,7 +60,7 @@
 
             {% comment %} 4 {% endcomment %}
             'pool_name',
-            'use_sasl_external',
+            'sasl_mechanism',
             'is_read_only',
             'is_stats_enabled',
 
@@ -114,7 +114,7 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Servers</a></th>
-                        <th><a href="#">Username</a></th>
+                        <th><a href="#">Credentials</a></th>
 
                         <th><a href="#">Auth type</a></th>
                         <th><a href="#">Use TLS</a></th>
@@ -210,7 +210,7 @@
 
                         {% comment %} 4 {% endcomment %}
                         <td class='ignore'>{{ item.pool_name }}</td>
-                        <td class='ignore'>{{ item.use_sasl_external }}</td>
+                        <td class='ignore'>{{ item.sasl_mechanism }}</td>
                         <td class='ignore'>{{ item.is_read_only }}</td>
                         <td class='ignore'>{{ item.is_stats_enabled }}</td>
 
@@ -353,18 +353,23 @@
                             <td>Auth</td>
                             <td>
                                 <label>
-                                User
-                                {{ create_form.username }}
-                                </label>
-                                |
-                                <label>
                                 Type
                                 {{ create_form.auth_type }}
-                                </label>
+                                <label>
                                 |
                                 <label>
-                                SASL EXT.
-                                {{ create_form.use_sasl_external }}
+                                SASL
+                                {{ create_form.sasl_mechanism }}
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Creds.
+                            </td>
+                            <td>
+                                <label>
+                                {{ create_form.username }}
                                 </label>
                             </td>
                         </tr>
@@ -561,18 +566,23 @@
                             <td>Auth</td>
                             <td>
                                 <label>
-                                User
-                                {{ edit_form.username }}
-                                </label>
-                                |
-                                <label>
                                 Type
                                 {{ edit_form.auth_type }}
-                                </label>
+                                <label>
                                 |
                                 <label>
-                                SASL EXT.
-                                {{ edit_form.use_sasl_external }}
+                                SASL
+                                {{ edit_form.sasl_mechanism }}
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Creds.
+                            </td>
+                            <td>
+                                <label>
+                                {{ edit_form.username }}
                                 </label>
                             </td>
                         </tr>
