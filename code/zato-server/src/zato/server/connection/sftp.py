@@ -25,7 +25,6 @@ from humanize import naturalsize
 from zato.common import SFTP
 from zato.common.broker_message import OUTGOING
 from zato.common.sftp import SFTPOutput
-from zato.server.service import Service
 
 # ################################################################################################################################
 
