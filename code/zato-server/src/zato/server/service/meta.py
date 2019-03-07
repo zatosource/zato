@@ -390,7 +390,7 @@ class DeleteMeta(AdminServiceMeta):
                         attrs.instance_hook(self, input, instance, attrs)
 
                     session.delete(instance)
-                    session.commit()
+                    #session.commit()
                 except Exception:
                     msg = 'Could not delete {}, e:`%s`'.format(attrs.label)
                     self.logger.error(msg, format_exc())

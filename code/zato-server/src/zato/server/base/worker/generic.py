@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.common.util import asbool
 from zato.server.base.worker.common import WorkerImpl
@@ -91,7 +94,17 @@ class Generic(WorkerImpl):
 
     def _change_password_generic_connection(self, msg):
         conn_dict, _ = self._find_conn_info(msg['id'])
-        conn_dict.conn.change_password(msg)
+        #conn_dict.conn.change_password(msg)
+
+        # Create a new message without live Python objects
+        edit_msg = Bunch()
+        for key, value in conn_dict.items():
+            if key in ('conn', 'parent'):
+                continue
+            edit_msg[key] = value
+
+        # Now, edit the connection which will actually delete it and create again
+        self._edit_generic_connection(edit_msg)
 
 # ################################################################################################################################
 
@@ -115,10 +128,14 @@ class Generic(WorkerImpl):
 
         config.pool_max_cycles = int(config.pool_max_cycles)
         config.pool_keep_alive = int(config.pool_keep_alive)
-        config.server_list = [elem.strip() for elem in config.server_list.splitlines()]
         config.use_auto_range = asbool(config.use_auto_range)
         config.use_sasl_external = asbool(config.use_sasl_external)
         config.use_tls = asbool(config.use_tls)
+
+        # Initially, this will be a string but during ChangePassword we are reusing
+        # the same configuration object in which case it will be already a list.
+        if not isinstance(config.server_list, list):
+            config.server_list = [elem.strip() for elem in config.server_list.splitlines()]
 
 # ################################################################################################################################
 
