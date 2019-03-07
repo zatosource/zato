@@ -142,14 +142,20 @@ class Generic(WorkerImpl):
 
         # If GSS-API SASL method is used, the username may be a set of credentials actually
         if config.sasl_mechanism == LDAP.SASL_MECHANISM.GSSAPI.id:
-            config.sasl_credentials = [parse_simple_type(elem.strip() for elem in (config.username or '').split())]
+            sasl_credentials = []
+            if config.username:
+                for elem in config.username.split():
+                    elem = elem.strip()
+                    elem = parse_simple_type(elem)
+                    sasl_credentials.append(elem)
+            config.sasl_credentials = sasl_credentials
         else:
             config.sasl_credentials = None
 
         # Initially, this will be a string but during ChangePassword we are reusing
         # the same configuration object in which case it will be already a list.
         if not isinstance(config.server_list, list):
-            config.server_list = [elem.strip() for elem in config.server_list.splitlines()]
+            config.server_list = [server.strip() for server in config.server_list.splitlines()]
 
 # ################################################################################################################################
 

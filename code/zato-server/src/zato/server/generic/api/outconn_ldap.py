@@ -13,12 +13,8 @@ from codecs import encode
 from logging import getLogger
 from traceback import format_exc
 
-# Bunch
-from bunch import bunchify
-
 # ldap3
-from ldap3 import ALL, Connection, EXTERNAL, NTLM, Server, ServerPool, SYNC
-from ldap3.operation import bind
+from ldap3 import Connection, Server, ServerPool, SYNC
 
 # Zato
 from zato.common.util import spawn_greenlet
@@ -124,7 +120,7 @@ class LDAPClient(object):
 
     def ping(self):
         logger.info('Pinging LDAP `%s`', self.config.server_list)
-        out = self.impl.abandon(0)
+        self.impl.abandon(0)
 
 # ################################################################################################################################
 
