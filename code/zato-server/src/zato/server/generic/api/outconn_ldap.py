@@ -72,6 +72,13 @@ class LDAPClient(object):
         # By default, we are not connected anywhere
         self.is_connected = False
 
+        # Initialize in a separate greenlet so as not to block the main one
+        # if the remote server is slow to respond.
+        spawn_greenlet(self._init, timeout=2)
+
+# ################################################################################################################################
+
+    def _init(self):
         # Try to ping the remote end
         self.ping()
 
