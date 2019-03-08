@@ -17,7 +17,7 @@ from paste.util.converters import asbool
 
 # Zato
 from zato.common import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
+     GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
@@ -127,6 +127,7 @@ class GetList(_BaseGet):
             self.response.payload[:] = self.get_data(session)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class _CreateEdit(AdminService, _HTTPSOAPService):
     def add_tls_ca_cert(self, input, sec_tls_ca_cert_id):
@@ -135,18 +136,43 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
                 filter(TLSCACert.id==sec_tls_ca_cert_id).\
                 one()[0]
 
-    def ensure_channel_is_unique(self, session, url_path, soap_action, cluster_id):
-        existing_one = session.query(HTTPSOAP.id).\
+# ################################################################################################################################
+
+    def _raise_error(self, name, url_path, http_accept, http_method, soap_action, source):
+        msg = 'Such a channel already exists ({}); url_path:`{}`, http_accept:`{}`, http_method:`{}`, soap_action:`{}` (src:{})'
+        raise Exception(msg.format(name, url_path, http_accept, http_method, soap_action, source))
+
+# ################################################################################################################################
+
+    def ensure_channel_is_unique(self, session, url_path, http_accept, http_method, soap_action, cluster_id):
+        existing_ones = session.query(HTTPSOAP).\
             filter(HTTPSOAP.cluster_id==cluster_id).\
             filter(HTTPSOAP.url_path==url_path).\
             filter(HTTPSOAP.soap_action==soap_action).\
             filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
-            first()
+            all()
 
-        if existing_one:
-            raise Exception('Such a channel already exists, url_path:`{}`, soap_action:`{}`, cluster_id:`{}`'.format(
-                url_path, soap_action, cluster_id))
+        # At least one channel with this kind of basic information already exists
+        # but it is possible that it requires different HTTP headers (e.g. Accept, Method)
+        # so we need to check each one manually.
+        if existing_ones:
+            for item in existing_ones:
+                opaque = parse_instance_opaque_attr(item)
+                item_http_accept = opaque.get('http_accept')
 
+                # Raise an exception if the existing channel's method is equal to ours
+                # but only if they use different Accept headers.
+                if http_method:
+                    if item.method == http_method:
+                        if item_http_accept == http_accept:
+                            self._raise_error(item.name, url_path, http_accept, http_method, soap_action, 'chk1')
+
+                # Similar, but from the Accept header's perspective
+                if item_http_accept == http_accept:
+                    if item.method == http_method:
+                        self._raise_error(item.name, url_path, http_accept, http_method, soap_action, 'chk2')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -201,7 +227,8 @@ class Create(_CreateEdit):
 
             # Make sure this combination of channel parameters does not exist already
             if input.connection == CONNECTION.CHANNEL:
-                self.ensure_channel_is_unique(session, input.url_path, input.soap_action, input.cluster_id)
+                self.ensure_channel_is_unique(session,
+                    input.url_path, input.http_accept, input.method, input.soap_action, input.cluster_id)
 
             try:
 
@@ -344,7 +371,7 @@ class Edit(_CreateEdit):
                 old_name = item.name
                 old_url_path = item.url_path
                 old_soap_action = item.soap_action
-                old_http_accept = opaque.http_accept
+                old_http_accept = opaque.get('http_accept')
 
                 item.name = input.name
                 item.is_active = input.is_active
