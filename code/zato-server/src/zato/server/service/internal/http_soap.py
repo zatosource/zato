@@ -19,11 +19,11 @@ from paste.util.converters import asbool
 from zato.common import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
-from zato.common.util.sql import get_security_by_id, elems_with_opaque, set_instance_opaque_attrs
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.util.json_ import dumps
+from zato.common.util.sql import get_security_by_id, elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
@@ -338,9 +338,14 @@ class Edit(_CreateEdit):
 
             try:
                 item = session.query(HTTPSOAP).filter_by(id=input.id).one()
+
+                opaque = parse_instance_opaque_attr(item)
+
                 old_name = item.name
                 old_url_path = item.url_path
                 old_soap_action = item.soap_action
+                old_http_accept = opaque.http_accept
+
                 item.name = input.name
                 item.is_active = input.is_active
                 item.host = input.host
@@ -401,6 +406,7 @@ class Edit(_CreateEdit):
                 input.old_name = old_name
                 input.old_url_path = old_url_path
                 input.old_soap_action = old_soap_action
+                input.old_http_accept = old_http_accept
                 input.update(sec_info)
 
                 if item.sec_tls_ca_cert_id and item.sec_tls_ca_cert_id != ZATO_NONE:
@@ -416,7 +422,7 @@ class Edit(_CreateEdit):
                 self.response.payload.name = item.name
 
             except Exception:
-                self.logger.error('Object could not be updated, e:`{}`' % format_exc())
+                self.logger.error('Object could not be updated, e:`{}`'.format(format_exc()))
                 session.rollback()
 
                 raise
@@ -456,7 +462,7 @@ class Delete(AdminService, _HTTPSOAPService):
 
             except Exception:
                 session.rollback()
-                self.logger.error('Object could not be deleted, e:`{}`', format_exc())
+                self.logger.error('Object could not be deleted, e:`{}`'.format(format_exc()))
 
                 raise
 

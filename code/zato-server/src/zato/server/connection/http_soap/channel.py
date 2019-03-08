@@ -33,7 +33,7 @@ from six import PY3
 from past.builtins import basestring
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
+from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, HTTP_SOAP, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.util import payload_from_request
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
@@ -44,6 +44,11 @@ from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
 _has_debug = logger.isEnabledFor(logging.DEBUG)
+
+# ################################################################################################################################
+
+any_http = HTTP_SOAP.ACCEPT.ANY
+any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 
 # ################################################################################################################################
 
@@ -94,7 +99,7 @@ soap_error = """<?xml version='1.0' encoding='UTF-8'?>
 
 # ################################################################################################################################
 
-response_404 = b'CID:`{}` Unknown URL:`{}` or SOAP action:`{}`'
+response_404 = 'URL not found `{}` (Method:{}; Accept:{}; CID:{})'
 
 # ################################################################################################################################
 
@@ -195,7 +200,8 @@ class RequestDispatcher(object):
 
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
-        _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile):
+        _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _any_http=any_http,
+        _any_internal=any_internal):
         """ Base method for dispatching incoming HTTP/SOAP messages. If the security
         configuration is one of the technical account or HTTP basic auth,
         the security validation is being performed. Otherwise, that step
@@ -209,10 +215,12 @@ class RequestDispatcher(object):
         else:
             soap_action = ''
 
-        http_accept = wsgi_environ.get('HTTP_ACCEPT') or 'any'
-        if http_accept == '*/*':
-            http_accept = 'any'
+        http_accept = wsgi_environ.get('HTTP_ACCEPT') or any_http
+        logger.warn('WWW %s', http_accept)
+        http_accept = http_accept.replace('*', 'any').replace('/', 'HTTP_SEP')
         http_accept = http_accept if isinstance(http_accept, unicode) else http_accept.decode('utf8')
+
+        logger.warn('RRR %s', http_accept)
 
         # Can we recognize this combination of URL path and SOAP action at all?
         # This gives us the URL info and security data - but note that here
@@ -349,7 +357,8 @@ class RequestDispatcher(object):
 
         # This is 404, no such URL path and SOAP action is not known either.
         else:
-            response = response_404.format(cid, path_info.encode('utf8'), soap_action)
+            response = _response_404.format(path_info.encode('utf8'),
+                wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
             wsgi_environ['zato.http.response.status'] = _status_not_found
 
             logger.error(response)
@@ -486,7 +495,8 @@ class RequestHandler(object):
         service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name)
         if not is_active:
             logger.warn('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
-            raise NotFound(cid, _response_404.format(cid, path_info, soap_action))
+            raise NotFound(cid, _response_404.format(
+                path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid))
 
         if channel_item.merge_url_params_req:
             channel_params = self.create_channel_params(url_match, channel_item, wsgi_environ, raw_request, post_data)
