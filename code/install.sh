@@ -4,7 +4,8 @@ set -e
 set -o pipefail
 shopt -s compat31
 
-PY_BINARY="python2.7"
+# Default python binary
+PY_BINARY="python"
 
 # Taken from https://stackoverflow.com/a/14203146
 OPTIND=1
@@ -18,6 +19,34 @@ while getopts "p:" opt; do
 done
 shift $((OPTIND-1))
 [ "${1:-}" = "--" ] && shift
+
+
+
+#
+# Run an OS-specific installer
+#
+
+# Not installed?
+if ! [ -x "$(command -v $PY_BINARY)" ]; then
+  if [ "$(type -p apt-get)" ]
+  then
+      sudo apt-get update
+      sudo apt-get install -y --reinstall ${PY_BINARY}
+  elif [ "$(type -p yum)" ]
+  then
+      sudo yum update
+      sudo yum install -y ${PY_BINARY}
+  elif [ "$(type -p apk)" ]
+  then
+      sudo apk add ${PY_BINARY}
+  elif [ "$(uname -s)" = "Darwin" ]
+  then
+      brew install  $PY_BINARY
+  else
+      echo "install.sh: Unsupported OS: could not detect OS X, apt-get, yum, or apk." >&2
+      exit 1
+  fi
+fi
 
 # Confirm such a Python version is accessible
 if ! [ -x "$(command -v $PY_BINARY)" ]; then
