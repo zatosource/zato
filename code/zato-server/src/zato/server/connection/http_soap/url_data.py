@@ -1220,8 +1220,11 @@ class URLData(CyURLData, OAuthDataStore):
         """ Deletes a channel, both its core data and the related security definition. Clears relevant
         entry in URL cache. Returns the deleted data.
         """
-        old_match_target = '{}{}{}'.format(
-            msg.get('old_soap_action'), MISC.SEPARATOR, msg.get('old_url_path'))
+        old_match_target = get_match_target({
+            'http_accept': msg.get('old_http_accept'),
+            'soap_action': msg.get('old_soap_action'),
+            'url_path': msg.get('old_url_path'),
+        })
 
         # In case of an internal error, we won't have the match all
         match_idx = ZATO_NONE

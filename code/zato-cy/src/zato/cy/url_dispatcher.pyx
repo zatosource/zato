@@ -133,7 +133,9 @@ cdef class CyURLData(object):
         cdef dict item
         cdef object item_bunch
         cdef unicode target
-        cdef unicode target_cache_key = (url_path + soap_action) if has_soap_action else url_path
+
+        cdef unicode target_cache_key = http_accept
+        target_cache_key+= (url_path + soap_action) if has_soap_action else url_path
 
         try:
             target = self.url_target_cache[target_cache_key]
@@ -149,6 +151,7 @@ cdef class CyURLData(object):
 
             for item in self.channel_data:
                 matcher = item['match_target_compiled']
+                logger.warn('QQQ %s %s', target, matcher)
                 if needs_user and matcher.is_internal:
                     continue
 

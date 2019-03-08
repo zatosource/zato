@@ -30,8 +30,8 @@ from sqlalchemy.sql.expression import true
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, GENERIC, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, \
-     ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
+     SERVER_UP_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
@@ -545,7 +545,7 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_url_security(self, cluster_id, connection=None, any_http=MISC.HTTP_SOAP_ACCEPT_ANY):
+    def get_url_security(self, cluster_id, connection=None, any_internal=HTTP_SOAP.ACCEPT.ANY_INTERNAL):
         """ Returns the security configuration of HTTP URLs.
         """
         with closing(self.session()) as session:
@@ -572,7 +572,7 @@ class ODBManager(SessionWrapper):
 
             for item in elems_with_opaque(q):
                 target = get_match_target({
-                    'http_accept': item.get('http_accept') or 'any',
+                    'http_accept': item.get('http_accept') or any_internal,
                     'soap_action': item.soap_action,
                     'url_path': item.url_path,
                 })
