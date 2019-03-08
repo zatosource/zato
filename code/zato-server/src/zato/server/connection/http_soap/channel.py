@@ -209,11 +209,16 @@ class RequestDispatcher(object):
         else:
             soap_action = ''
 
+        http_accept = wsgi_environ.get('HTTP_ACCEPT') or 'any'
+        if http_accept == '*/*':
+            http_accept = 'any'
+        http_accept = http_accept if isinstance(http_accept, unicode) else http_accept.decode('utf8')
+
         # Can we recognize this combination of URL path and SOAP action at all?
         # This gives us the URL info and security data - but note that here
         # we still haven't validated credentials, only matched the URL.
         # Credentials are checked in a call to self.url_data.check_security
-        url_match, channel_item = self.url_data.match(path_info, soap_action, bool(soap_action))
+        url_match, channel_item = self.url_data.match(path_info, soap_action, http_accept, bool(soap_action))
 
         if _has_debug and channel_item:
             logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))

@@ -65,7 +65,7 @@ class HTTPHandler(object):
         try:
             payload = self.request_dispatcher_dispatch(cid, request_ts_utc, wsgi_environ, self.worker_store) or b''
 
-        # Any exception at this point must be our fault
+        # Any exception at this point must be a server-side error
         except Exception:
             tb = format_exc()
             wsgi_environ['zato.http.response.status'] = b'%s %s' % (INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])

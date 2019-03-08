@@ -37,6 +37,7 @@ target_separator = ':::'
 _internal_url_path_indicator = '{}/zato/'.format(target_separator)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 cdef class Matcher(object):
     """ Matches incoming URL paths in requests received against the pattern it's configured to react to.
@@ -104,6 +105,7 @@ cdef class Matcher(object):
                 return dict(zip(self.group_names, groups))
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 cdef class CyURLData(object):
 
@@ -121,7 +123,7 @@ cdef class CyURLData(object):
 
 # ################################################################################################################################
 
-    cpdef tuple match(self, unicode url_path, unicode soap_action, bint has_soap_action,
+    cpdef tuple match(self, unicode url_path, unicode soap_action, unicode http_accept, bint has_soap_action,
         unicode _target_separator=target_separator, _bunchify=bunchify, _log_trace1=logger.log, _trace1=TRACE1):
         """ Attemps to match the combination of SOAPt Action and URL path against
         the list of HTTP channel targets.
@@ -136,7 +138,7 @@ cdef class CyURLData(object):
         try:
             target = self.url_target_cache[target_cache_key]
         except KeyError:
-            target = '%s%s%s' % (soap_action, _target_separator, url_path)
+            target = '%s%s%s%s%s' % (soap_action, _target_separator, http_accept, _target_separator, url_path)
             has_target_in_cache = False
 
         # Return from cache if already seen
@@ -170,49 +172,4 @@ cdef class CyURLData(object):
             return None, None
 
 # ################################################################################################################################
-
-    def get_item(self, url_path, soap_action):
-        match_target = '{}{}{}'.format(soap_action, target_separator, url_path)
-        item = {}
-        item['name'] = url_path[1:].replace('/', '.') + ('soap' if soap_action else '')
-        item['match_target'] = match_target
-        item['match_target_compiled'] = Matcher(item['match_target'])
-
-        return item
-
-    def set_up_test_data(self):
-
-        channel_data = []
-
-        # We always add /zato/ping
-        channel_data.append(self.get_item('/zato/ping', ''))
-
-        prefixes = ('channel', 'definition', 'http-soap', 'kvdb', 'outgoing', 'scheduler', 'security', 'server',
-            'service', 'stats')
-        soap_actions = ('soap', '')
-        for prefix in prefixes:
-            for soap_action in soap_actions:
-                url_path = '/zato/{}/{}'.format(prefix, str(uuid4()).replace('-', '/'))
-                channel_data.append(self.get_item(url_path, soap_action))
-
-        self.channel_data = tuple(sorted(channel_data, key=itemgetter('name')))
-
 # ################################################################################################################################
-
-def run():
-
-    url_data = CyURLData()
-    url_data.set_up_test_data()
-
-    #print(url_data.channel_data)
-
-    iters = 100000
-    start = datetime.utcnow()
-
-    for x in xrange(iters):
-        url_data.match('/zato/ping', '', False)
-
-    print(datetime.utcnow() - start)
-
-if __name__ == '__main__':
-    run()
