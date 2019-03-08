@@ -216,11 +216,8 @@ class RequestDispatcher(object):
             soap_action = ''
 
         http_accept = wsgi_environ.get('HTTP_ACCEPT') or any_http
-        logger.warn('WWW %s', http_accept)
         http_accept = http_accept.replace('*', 'any').replace('/', 'HTTP_SEP')
         http_accept = http_accept if isinstance(http_accept, unicode) else http_accept.decode('utf8')
-
-        logger.warn('RRR %s', http_accept)
 
         # Can we recognize this combination of URL path and SOAP action at all?
         # This gives us the URL info and security data - but note that here
