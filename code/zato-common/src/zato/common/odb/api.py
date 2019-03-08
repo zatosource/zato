@@ -41,6 +41,7 @@ from zato.common.odb.query import generic as query_generic
 from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
      parse_tls_channel_security_definition
 from zato.common.util.sql import elems_with_opaque
+from zato.common.util.url_dispatcher import get_match_target
 
 # ################################################################################################################################
 
@@ -544,7 +545,7 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_url_security(self, cluster_id, connection=None):
+    def get_url_security(self, cluster_id, connection=None, any_http=MISC.HTTP_SOAP_ACCEPT_ANY):
         """ Returns the security configuration of HTTP URLs.
         """
         with closing(self.session()) as session:
@@ -569,8 +570,12 @@ class ODBManager(SessionWrapper):
             for c in q.statement.columns:
                 columns[c.name] = None
 
-            for item in q.all():
-                target = '{}{}{}'.format(item.soap_action, MISC.SEPARATOR, item.url_path)
+            for item in elems_with_opaque(q):
+                target = get_match_target({
+                    'http_accept': item.get('http_accept') or 'any',
+                    'soap_action': item.soap_action,
+                    'url_path': item.url_path,
+                })
 
                 result[target] = Bunch()
                 result[target].is_active = item.is_active
