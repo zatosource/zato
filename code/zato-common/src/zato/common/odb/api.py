@@ -30,7 +30,7 @@ from sqlalchemy.sql.expression import true
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
+from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
      SERVER_UP_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
