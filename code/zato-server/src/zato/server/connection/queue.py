@@ -81,7 +81,6 @@ class ConnectionQueue(object):
 
         try:
             while self.keep_connecting and not self.queue.full():
-
                 gevent.sleep(0.5)
                 now = datetime.utcnow()
 
@@ -173,7 +172,13 @@ class Wrapper(object):
             for item in self.client.queue.queue:
                 try:
                     logger.info('Deleting connection from queue for `%s`', self.config.name)
-                    item.delete()
+
+                    # Some connections (e.g. LDAP) want to expose .delete to user API
+                    # which conflicts with our own needs.
+                    delete_func = getattr(item, 'zato_delete_impl', None)
+                    if not delete_func:
+                        delete_func = getattr(item, 'delete', None)
+                    delete_func()
                 except Exception:
                     logger.warn('Could not delete connection from queue for `%s`, e:`%s`', self.config.name, format_exc())
 

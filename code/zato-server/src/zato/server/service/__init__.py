@@ -286,6 +286,7 @@ class Service(object):
             SMSAPI(self._worker_store.sms_twilio_api) if self.component_enabled_sms else None,
             self._worker_config.out_sap,
             self._worker_config.out_sftp,
+            self._worker_store.outconn_ldap,
         )
 
     @staticmethod

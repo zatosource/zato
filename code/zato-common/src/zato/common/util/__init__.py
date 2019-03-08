@@ -164,7 +164,7 @@ def is_method(class_, func=isfunction if PY3 else ismethod):
 
 # (c) 2005 Ian Bicking and contributors; written for Paste (http://pythonpaste.org)
 # Licensed under the MIT license: http://www.opensource.org/licenses/mit-license.php
-def asbool(obj):
+def as_bool(obj):
     if isinstance(obj, (str, unicode)):
         obj = obj.strip().lower()
         if obj in ['true', 'yes', 'on', 'y', 't', '1']:
@@ -176,7 +176,7 @@ def asbool(obj):
                 "String is not true/false: %r" % obj)
     return bool(obj)
 
-def aslist(obj, sep=None, strip=True):
+def as_list(obj, sep=None, strip=True):
     if isinstance(obj, (str, unicode)):
         lst = obj.split(sep)
         if strip:
@@ -188,6 +188,9 @@ def aslist(obj, sep=None, strip=True):
         return []
     else:
         return [obj]
+
+asbool = as_bool
+aslist = as_list
 
 # ################################################################################################################################
 
@@ -993,6 +996,31 @@ def register_diag_handlers():
 
 # ################################################################################################################################
 
+def parse_simple_type(value, convert_bool=True):
+    if convert_bool:
+        try:
+            value = is_boolean(value)
+        except VdtTypeError:
+            # It's cool, not a boolean
+            pass
+
+    try:
+        value = is_integer(value)
+    except VdtTypeError:
+        # OK, not an integer
+        pass
+
+    # Could be a dict or another simple type then
+    try:
+        value = literal_eval(value)
+    except Exception:
+        pass
+
+    # Either parsed out or as it was received
+    return value
+
+# ################################################################################################################################
+
 def parse_extra_into_dict(lines, convert_bool=True):
     """ Creates a dictionary out of key=value lines.
     """
@@ -1010,25 +1038,7 @@ def parse_extra_into_dict(lines, convert_bool=True):
 
                 key, value = line
                 value = value.strip()
-
-                if convert_bool:
-                    try:
-                        value = is_boolean(value)
-                    except VdtTypeError:
-                        # It's cool, not a boolean
-                        pass
-
-                try:
-                    value = is_integer(value)
-                except VdtTypeError:
-                    # OK, not an integer
-                    pass
-
-                # Could be a dict or another simple type then
-                try:
-                    value = literal_eval(value)
-                except Exception:
-                    pass
+                value = parse_simple_type(value, convert_bool)
 
                 # OK, let's just treat it as string
                 _extra[key.strip()] = value
