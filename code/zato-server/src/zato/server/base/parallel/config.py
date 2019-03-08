@@ -9,8 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from contextlib import closing
 import os
+from contextlib import closing
+from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
@@ -21,6 +22,11 @@ from zato.server.config import ConfigDict
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
 
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ConfigLoader(object):
@@ -223,7 +229,8 @@ class ConfigLoader(object):
 
         # OpenStack Swift
         query = self.odb.get_notif_cloud_openstack_swift_list(server.cluster.id, True)
-        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift', query, decrypt_func=self.decrypt)
+        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift',
+            query, decrypt_func=self.decrypt)
 
         # SQL
         query = self.odb.get_notif_sql_list(server.cluster.id, True)
@@ -499,4 +506,5 @@ class ConfigLoader(object):
     def _after_init_non_accepted(self, server):
         raise NotImplementedError("This Zato version doesn't support join states other than ACCEPTED")
 
+# ################################################################################################################################
 # ################################################################################################################################

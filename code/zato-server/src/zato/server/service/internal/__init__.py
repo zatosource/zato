@@ -197,8 +197,7 @@ class ChangePasswordBase(AdminService):
     class SimpleIO(AdminSIO):
         input_required = (Int('id'), 'password1', 'password2')
 
-    def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL,
-                *args, **kwargs):
+    def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *args, **kwargs):
 
         with closing(self.odb.session()) as session:
             password1 = self.request.input.get('password1', '')
@@ -218,17 +217,17 @@ class ChangePasswordBase(AdminService):
                 if password1_decrypted != password2_decrypted:
                     raise Exception('Passwords need to be the same')
 
-                auth = session.query(class_).\
+                instance = session.query(class_).\
                     filter(class_.id==self.request.input.id).\
                     one()
 
-                auth_func(auth, password1)
+                auth_func(instance, password1)
 
-                session.add(auth)
+                session.add(instance)
                 session.commit()
 
                 if msg_type:
-                    name = name_func(auth) if name_func else auth.name
+                    name = name_func(instance) if name_func else instance.name
 
                     self.request.input.action = action
                     self.request.input.name = name
@@ -236,7 +235,7 @@ class ChangePasswordBase(AdminService):
                     self.request.input.salt = kwargs.get('salt')
 
                     for attr in kwargs.get('publish_instance_attrs', []):
-                        self.request.input[attr] = getattr(auth, attr, ZATO_NONE)
+                        self.request.input[attr] = getattr(instance, attr, ZATO_NONE)
 
                     self.broker_client.publish(self.request.input, msg_type=msg_type)
 

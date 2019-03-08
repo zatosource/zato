@@ -73,7 +73,10 @@ class _CreateEdit(_BaseService):
                 data[key] = self._convert_sio_elem(key, value)
 
         conn = GenericConnection.from_dict(data)
-        conn.secret = self.server.encrypt(self.crypto.generate_secret())
+
+        # Make sure not to overwrite the seceret in Edit
+        if not self.is_edit:
+            conn.secret = self.server.encrypt('auto.generated.{}'.format(self.crypto.generate_secret()))
         conn_dict = conn.to_sql_dict()
 
         with closing(self.server.odb.session()) as session:
@@ -194,7 +197,8 @@ class ChangePassword(ChangePasswordBase):
     def handle(self):
         def _auth(instance, secret):
             instance.secret = secret
-        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value)
+        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value,
+            publish_instance_attrs=['type_'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -215,8 +219,9 @@ class Ping(_BaseService):
 
             # Different code paths will be taken depending on what kind of a generic connection this is
             ping_func_dict = {
+                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.server.worker_store.ping_generic_connection,
+                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.server.connector_sftp.ping_sftp,
                 COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.server.worker_store.ping_generic_connection,
-                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.server.connector_sftp.ping_sftp
             }
 
             ping_func = ping_func_dict[instance.type_]
