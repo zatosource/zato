@@ -15,7 +15,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # ldap3
-from ldap3 import Connection, Server, ServerPool, SYNC, Tls
+from ldap3 import Connection as ldap3_Connection, Server, ServerPool, SYNC, Tls
 
 # Zato
 from zato.common.util import spawn_greenlet
@@ -80,7 +80,7 @@ class LDAPClient(object):
 
 # ################################################################################################################################
 
-    def connect(self):
+    def get_conn_config(self):
 
         # All servers in our pool, even if there is only one
         servers = []
@@ -153,12 +153,19 @@ class LDAPClient(object):
             conn_config['sasl_mechanism'] = self.config.sasl_mechanism
             conn_config['sasl_credentials'] = self.config.sasl_credentials
 
-        # Finally, create the connection objet
+    def connect(self):
+
+        # Obtain connection configuration ..
+        conn_config = self.get_conn_config()
+
+        # .. create the connection objet
         conn = Connection(**conn_config)
 
+        # .. bind only if we are to be active.
         if self.config.is_active:
             conn.bind()
 
+        # Finally, return the connection object
         return conn
 
 # ################################################################################################################################
@@ -170,6 +177,13 @@ class LDAPClient(object):
 
     def get(self):
         return ConnectionWrapper(self)
+
+# ################################################################################################################################
+
+    def check_credentials(self, user_data, secret):
+        conn_config = self.get_conn_config()
+        conn_config['username'] = user_data
+        conn_config['secret'] = secret
 
 # ################################################################################################################################
 
