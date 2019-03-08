@@ -78,11 +78,13 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _edit_generic_connection(self, msg, skip=None):
+    def _edit_generic_connection(self, msg, skip=None, secret=None):
 
         # Find and store connection password/secret for later use
-        conn_dict, _ = self._find_conn_info(msg['id'])
-        secret = conn_dict['secret']
+        # if we do not have it already and we will if we are called from ChangePassword.
+        if not secret:
+            conn_dict, _ = self._find_conn_info(msg.id)
+            secret = conn_dict['secret']
 
         # Delete the connection
         self._delete_generic_connection(msg)
@@ -113,7 +115,7 @@ class Generic(WorkerImpl):
             edit_msg[key] = value
 
         # Now, edit the connection which will actually delete it and create again
-        self._edit_generic_connection(edit_msg)
+        self._edit_generic_connection(edit_msg, secret=msg.password)
 
 # ################################################################################################################################
 
@@ -134,6 +136,8 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def _generic_normalize_config_outconn_ldap(self, config):
+
+        self.logger.warn('NORM %s', config)
 
         config.pool_max_cycles = int(config.pool_max_cycles)
         config.pool_keep_alive = int(config.pool_keep_alive)
