@@ -63,6 +63,11 @@ class Generic(WorkerImpl):
         item = GenericConnection.from_bunch(msg)
         item_dict = item.to_dict(True)
 
+        for key in msg:
+            if key not in item_dict:
+                if key != 'action':
+                    item_dict[key] = msg[key]
+
         item_dict.queue_build_cap = self.server.fs_server_config.misc.queue_build_cap
         item_dict.auth_url = msg.address
 
@@ -136,8 +141,6 @@ class Generic(WorkerImpl):
 # ################################################################################################################################
 
     def _generic_normalize_config_outconn_ldap(self, config):
-
-        self.logger.warn('NORM %s', config)
 
         config.pool_max_cycles = int(config.pool_max_cycles)
         config.pool_keep_alive = int(config.pool_keep_alive)
