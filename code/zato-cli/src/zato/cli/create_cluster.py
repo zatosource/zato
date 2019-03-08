@@ -510,8 +510,11 @@ class Create(ZatoCommand):
         self.add_crypto_endpoints(session, cluster)
         self.add_pubsub_sec_endpoints(session, cluster)
 
-        # For IBM MQ connections / connectors
+        # IBM MQ connections / connectors
         self.add_internal_callback_wmq(session, cluster)
+
+        # SFTP connections / connectors
+        self.add_sftp_credentials(session, cluster)
 
         # SSO
         self.add_sso_endpoints(session, cluster)
@@ -1040,16 +1043,24 @@ class Create(ZatoCommand):
         impl_name = 'zato.server.service.internal.channel.jms_wmq.OnMessageReceived'
         service = Service(None, 'zato.channel.jms-wmq.on-message-received', True, impl_name, True, cluster)
 
-        wmq_username = IPC.CONNECTOR.IBM_MQ.USERNAME
-        wmq_sec = HTTPBasicAuth(None, wmq_username, True, wmq_username, 'Zato IBM MQ', new_password(), cluster)
+        username = IPC.CONNECTOR.USERNAME.IBM_MQ
+        sec = HTTPBasicAuth(None, username, True, username, 'Zato IBM MQ', new_password(), cluster)
 
         channel = HTTPSOAP(None, 'zato.internal.callback.wmq', True, True, 'channel', 'plain_http', None,
             '/zato/internal/callback/wmq',
-            None, '', None, None, security=wmq_sec, service=service, cluster=cluster)
+            None, '', None, None, security=sec, service=service, cluster=cluster)
 
-        session.add(wmq_sec)
+        session.add(sec)
         session.add(service)
         session.add(channel)
+
+# ################################################################################################################################
+
+    def add_sftp_credentials(self, session, cluster):
+        username = IPC.CONNECTOR.USERNAME.SFTP
+        sec = HTTPBasicAuth(None, username, True, username, 'Zato SFTP', new_password(), cluster)
+
+        session.add(sec)
 
 # ################################################################################################################################
 
