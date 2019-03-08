@@ -90,6 +90,8 @@ class LDAPClient(object):
                 'tls': tls
             }
 
+            logger.warn('QQQ %s', server_config)
+
             # Create a server object and append it to the list given to the pool later on
             servers.append(Server(**server_config))
 
@@ -120,6 +122,7 @@ class LDAPClient(object):
             'pool_lifetime': self.config.pool_lifetime,
             'return_empty_attributes': self.config.should_return_empty_attrs,
             'pool_keepalive': self.config.pool_keep_alive,
+            'raise_exceptions': True,
         }
 
         if self.config.sasl_mechanism:
