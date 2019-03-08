@@ -73,7 +73,10 @@ class _CreateEdit(_BaseService):
                 data[key] = self._convert_sio_elem(key, value)
 
         conn = GenericConnection.from_dict(data)
-        conn.secret = self.server.encrypt(self.crypto.generate_secret())
+
+        # Make sure not to overwrite the seceret in Edit
+        if not self.is_edit:
+            conn.secret = self.server.encrypt('auto.generated.{}'.format(self.crypto.generate_secret()))
         conn_dict = conn.to_sql_dict()
 
         with closing(self.server.odb.session()) as session:

@@ -81,7 +81,6 @@ class ConnectionQueue(object):
 
         try:
             while self.keep_connecting and not self.queue.full():
-
                 gevent.sleep(0.5)
                 now = datetime.utcnow()
 

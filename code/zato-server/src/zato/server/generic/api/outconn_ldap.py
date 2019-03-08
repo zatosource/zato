@@ -39,6 +39,28 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ConnectionWrapper(object):
+    def __init__(self, client):
+        # type: (LDAPClient) -> None
+        self.client = client
+        self.conn = None # type: Connection
+
+    def __enter__(self):
+        try:
+            self.conn = self.client.connect()
+        except Exception:
+            logger.warn('Could not obtain a connection to `%s` (%s)', self.client.config.server_list, self.client.config.name)
+            raise
+        else:
+            return self.conn
+
+    def __exit__(self, type, value, traceback):
+        if self.conn:
+            self.conn.unbind()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class LDAPClient(object):
     """ A client through which outgoing LDAP messages can be sent.
     """
@@ -46,13 +68,19 @@ class LDAPClient(object):
         # type: (Bunch) -> None
 
         self.config = config
+
+        # By default, we are not connected anywhere
         self.is_connected = False
-        self.impl = None # type: Connection
-        spawn_greenlet(self._init, timeout=2)
+
+        # Try to ping the remote end
+        self.ping()
+
+        # If we are here it means that ping succeeded so we can assume the connection's configuration is good
+        self.is_connected = True
 
 # ################################################################################################################################
 
-    def _init(self):
+    def connect(self):
 
         # All servers in our pool, even if there is only one
         servers = []
@@ -72,8 +100,6 @@ class LDAPClient(object):
                 'ciphers': self.config.tls_ciphers,
             }
 
-            logger.warn('QQQ %s', tls_config)
-
             tls = Tls(**tls_config)
         else:
             tls = None
@@ -89,8 +115,6 @@ class LDAPClient(object):
                 'mode': self.config.ip_mode,
                 'tls': tls
             }
-
-            logger.warn('QQQ %s', server_config)
 
             # Create a server object and append it to the list given to the pool later on
             servers.append(Server(**server_config))
@@ -118,7 +142,7 @@ class LDAPClient(object):
             'collect_usage': self.config.is_stats_enabled,
             'read_only': self.config.is_read_only,
             'pool_name': self.config.pool_name or encode(self.config.name),
-            'pool_size': self.config.pool_size,
+            'pool_size': 1,
             'pool_lifetime': self.config.pool_lifetime,
             'return_empty_attributes': self.config.should_return_empty_attrs,
             'pool_keepalive': self.config.pool_keep_alive,
@@ -130,51 +154,29 @@ class LDAPClient(object):
             conn_config['sasl_credentials'] = self.config.sasl_credentials
 
         # Finally, create the connection objet
-        self.impl = Connection(**conn_config)
+        conn = Connection(**conn_config)
 
-        # If we are active, bind and run a ping query immediately to check if any server is actually available
         if self.config.is_active:
-            self.impl.bind()
-            self.ping()
+            conn.bind()
+
+        return conn
 
 # ################################################################################################################################
 
     def zato_delete_impl(self):
-        self.impl.unbind()
+        pass # Not implemented by LDAP connections
+
+# ################################################################################################################################
+
+    def get(self):
+        return ConnectionWrapper(self)
 
 # ################################################################################################################################
 
     def ping(self):
         logger.info('Pinging LDAP `%s`', self.config.server_list)
-        self.impl.abandon(0)
-
-# ################################################################################################################################
-
-# Public API
-
-    def add(self, *args, **kwargs):
-        return self.impl.add(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        return self.impl.delete(*args, **kwargs)
-
-    def modify(self, *args, **kwargs):
-        return self.impl.modify(*args, **kwargs)
-
-    def modify_dn(self, *args, **kwargs):
-        return self.impl.modify_dn(*args, **kwargs)
-
-    def search(self, *args, **kwargs):
-        return self.impl.search(*args, **kwargs)
-
-    def compare(self, *args, **kwargs):
-        return self.impl.compare(*args, **kwargs)
-
-    def abandon(self, *args, **kwargs):
-        return self.impl.abandon(*args, **kwargs)
-
-    def extended(self, *args, **kwargs):
-        return self.impl.extended(*args, **kwargs)
+        with self.get() as conn:
+            conn.abandon(0)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -184,12 +186,8 @@ class OutconnLDAPWrapper(Wrapper):
     """
     def __init__(self, config, server):
         config.parent = self
+        config.auth_url = config.server_list
         super(OutconnLDAPWrapper, self).__init__(config, 'outgoing LDAP', server)
-
-# ################################################################################################################################
-
-    def change_password(self, msg):
-        logger.warn('QQQ %s', msg)
 
 # ################################################################################################################################
 
