@@ -85,7 +85,7 @@ class _BaseGet(AdminService):
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
             'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type',
-            'content_encoding', Boolean('match_slash'))
+            'content_encoding', Boolean('match_slash'), 'http_accept')
 
 # ################################################################################################################################
 
@@ -159,7 +159,7 @@ class Create(_CreateEdit):
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
-            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'))
+            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -293,7 +293,7 @@ class Edit(_CreateEdit):
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
-            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'))
+            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept')
         output_required = ('id', 'name')
 
     def handle(self):

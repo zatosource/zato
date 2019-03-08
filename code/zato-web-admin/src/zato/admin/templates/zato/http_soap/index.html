@@ -77,6 +77,7 @@
             'timeout',
             'sec_tls_ca_cert_id',
             'match_slash',
+            'http_accept',
 
             {% ifequal connection 'outgoing' %}
                 'ping_method',
@@ -187,6 +188,7 @@
                         <th class='ignore'>&nbsp;</th> {% comment %} timeout {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} sec_tls_ca_cert_id {% endcomment %}
                         <th class='ignore'>&nbsp;</th> {% comment %} match_slash {% endcomment %}
+                        <th class='ignore'>&nbsp;</th> {% comment %} http_accept {% endcomment %}
 
                         <!-- 24,25,26,27 -->
                         {% ifequal connection 'outgoing' %}
@@ -291,6 +293,7 @@
                         <td class='ignore'>{{ item.timeout }}</td>
                         <td class='ignore'>{{ item.sec_tls_ca_cert_id }}</td>
                         <td class='ignore'>{{ item.match_slash }}</td>
+                        <td class='ignore'>{{ item.http_accept|default:"" }}</td>
 
                         <!-- 24,25,26,27 -->
                         {% ifequal connection 'outgoing' %}
@@ -348,7 +351,9 @@
 
                         <tr>
                             <td style="vertical-align:middle">Active</td>
-                            <td>{{ create_form.is_active }}</td>
+                            <td>
+                                {{ create_form.is_active }}
+                            </td>
                         </tr>
 
                         {% ifequal connection 'outgoing' %}
@@ -399,15 +404,15 @@
                                     Encoding
                                     {{ create_form.content_encoding }}
                                 </label>
+                                |
+                                <label>
+                                    Data format
+                                    {{ create_form.data_format }}
+                                </label>
                             </td>
                         </tr>
 
                         {% endifequal %}
-
-                        <tr>
-                            <td style="vertical-align:middle">Data format</td>
-                            <td>{{ create_form.data_format }}</td>
-                        </tr>
 
                         {% ifequal transport 'soap' %}
                         <tr>
@@ -470,7 +475,13 @@
 
                         <tr>
                             <td style="vertical-align:middle">Security<br/>definition</td>
-                            <td>{{ create_form.security }}</td>
+                            <td>
+                                {{ create_form.security }}
+                                |
+                                <label>RBAC
+                                {{ create_form.has_rbac }}
+                                </label>
+                            </td>
                         </tr>
 
                         {% ifequal connection 'channel' %}
@@ -484,8 +495,10 @@
                             </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">RBAC enabled</td>
-                            <td>{{ create_form.has_rbac }}</td>
+                            <td style="vertical-align:middle">Accept header</td>
+                            <td>
+                                {{ create_form.http_accept }}
+                            </td>
                         </tr>
                         {% endifequal %}
 
@@ -523,7 +536,9 @@
 
                         <tr>
                             <td style="vertical-align:middle">Active</td>
-                            <td>{{ edit_form.is_active }}</td>
+                            <td>
+                                {{ edit_form.is_active }}
+                            </td>
                         </tr>
 
                         {% ifequal connection 'outgoing' %}
@@ -573,14 +588,14 @@
                                     Encoding
                                     {{ edit_form.content_encoding }}
                                 </label>
+                                |
+                                <label>
+                                    Data format
+                                    {{ edit_form.data_format }}
+                                </label>
                             </td>
                         </tr>
                         {% endifequal %}
-
-                        <tr>
-                            <td style="vertical-align:middle">Data format</td>
-                            <td>{{ edit_form.data_format }}</td>
-                        </tr>
 
                         {% ifequal transport 'soap' %}
                         <tr>
@@ -644,24 +659,33 @@
 
                         <tr>
                             <td style="vertical-align:middle">Security<br/>definition</td>
-                            <td>{{ edit_form.security }}</td>
+                            <td>
+                                {{ edit_form.security }}
+                                |
+                                <label>RBAC
+                                {{ edit_form.has_rbac }}
+                                </label>
+                            </td>
                         </tr>
 
                         {% ifequal connection 'channel' %}
                         <tr>
-                            <td style="vertical-align:middle">Cache</td>
-                            <td>{{ edit_form.cache_id }}
+                        <td style="vertical-align:middle">Cache</td>
+                        <td>
+                            {{ edit_form.cache_id }}
                             |
                             <label>
                             Expiry
                             {{ edit_form.cache_expiry }}
                             </label>
                             <span class="form_hint">(in minutes, 0=unlimited)</span>
+                        </td>
+                        <tr>
+                            <td style="vertical-align:middle">Accept header</td>
+                            <td>
+                                {{ edit_form.http_accept }}
                             </td>
                         </tr>
-                        <tr>
-                            <td style="vertical-align:middle">RBAC enabled</td>
-                            <td>{{ edit_form.has_rbac }}</td>
                         </tr>
                         {% endifequal %}
 
