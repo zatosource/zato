@@ -15,7 +15,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # ldap3
-from ldap3 import Connection as ldap3_Connection, Server, ServerPool, SYNC, Tls
+from ldap3 import Connection, Server, ServerPool, SYNC, Tls
 
 # Zato
 from zato.common.util import spawn_greenlet
@@ -153,10 +153,12 @@ class LDAPClient(object):
             conn_config['sasl_mechanism'] = self.config.sasl_mechanism
             conn_config['sasl_credentials'] = self.config.sasl_credentials
 
-    def connect(self):
+        return conn_config
+
+    def connect(self, conn_config=None):
 
         # Obtain connection configuration ..
-        conn_config = self.get_conn_config()
+        conn_config = conn_config or self.get_conn_config()
 
         # .. create the connection objet
         conn = Connection(**conn_config)
@@ -180,10 +182,28 @@ class LDAPClient(object):
 
 # ################################################################################################################################
 
-    def check_credentials(self, user_data, secret):
+    def check_credentials(self, user_data, secret, raise_on_error=True):
+
+        # Build a new connection definition dictionary with input credentials ..
         conn_config = self.get_conn_config()
-        conn_config['username'] = user_data
-        conn_config['secret'] = secret
+        conn_config['user'] = user_data
+        conn_config['password'] = secret
+
+        # .. and try to connect to the remote end.
+        conn = None
+        try:
+            conn = self.connect(conn_config)
+            conn.abandon(0)
+        except Exception:
+            if raise_on_error:
+                raise
+            else:
+                return False
+        else:
+            return True
+        finally:
+            if conn:
+                conn.unbind()
 
 # ################################################################################################################################
 
