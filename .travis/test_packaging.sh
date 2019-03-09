@@ -28,7 +28,7 @@ normalize() {
 }
 
 cat code/requirements.txt | normalize > /tmp/declared.txt
-run /tmp/zato/code/bin/pip freeze | normalize > /tmp/installed.txt
+run bash -c "source /tmp/zato/code/bin/activate > /dev/null ;/tmp/zato/code/bin/pip freeze" | normalize > /tmp/installed.txt
 
 echo
 echo
