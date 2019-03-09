@@ -32,8 +32,19 @@ git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
 
 # SciPy builds require NumPy available in setup.py, so install it separately.
 pip install numpy==1.14.0
-pip install -r requirements.txt
-pip install -r _req_py$EXTRA_REQ_VERSION.txt
+pip install -r requirements.txt --upgrade && pip freeze > requirements_$EXTRA_REQ_VERSION.txt
+echo "=============================================="
+echo "===requirements_$EXTRA_REQ_VERSION.txtaaaaa==="
+echo "=============================================="
+cat requirements_$EXTRA_REQ_VERSION.txt
+
+echo "=============================================="
+pip install -r _req_py$EXTRA_REQ_VERSION.txt && pip freeze > requirements_req_py_$EXTRA_REQ_VERSION.txt
+echo "================================================"
+echo "===requirements_req_py_$EXTRA_REQ_VERSION.txt==="
+echo "================================================"
+cat requirements_req_py_$EXTRA_REQ_VERSION.txt
+echo "================================================"
 
 # zato-common must be first.
 pip install \
