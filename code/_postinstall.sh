@@ -25,11 +25,6 @@ else
     HAS_PYTHON2=0
     HAS_PYTHON3=1
     EXTRA_REQ_VERSION=3
-
-    # Python3 customizations
-    sed -i -e '/enum34/d' \
-      -e 's/ipython==0.13.2/ipython==7.3.0/' \
-      requirements.txt
 fi
 
 # Stamp the release hash.
@@ -37,7 +32,7 @@ git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
 
 # SciPy builds require NumPy available in setup.py, so install it separately.
 $(type -p $PY_BINARY) -m pip install numpy==1.14.0
-# pip install pipdeptree
+$(type -p $PY_BINARY) -m pip install pipdeptree
 $(type -p $PY_BINARY) -m pip install -r requirements.txt
 $(type -p $PY_BINARY) -m pip install -r _req_py$EXTRA_REQ_VERSION.txt
 
@@ -96,3 +91,6 @@ then
     patch -p0 -d eggs < patches/anyjson/__init__.py.diff
     patch -p0 -d eggs < patches/oauth/oauth.py.diff
 fi
+
+# Show installed package versions and dependecies
+pipdeptree
