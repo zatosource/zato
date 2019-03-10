@@ -35,7 +35,24 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
   elif [ "$(type -p yum)" ]
   then
       sudo yum update -y
-      sudo yum install -y ${PY_BINARY}
+      if [[ $PY_BINARY != python2* ]];then
+        # Python3 customizations
+        PY_V=3
+        sudo yum install -y centos-release-scl-rh
+        sudo yum-config-manager --enable centos-sclo-rh-testing
+
+        # On RHEL, enable RHSCL and RHSCL-beta repositories for you system:
+        sudo yum-config-manager --enable rhel-server-rhscl-7-rpms
+        sudo yum-config-manager --enable rhel-server-rhscl-beta-7-rpms
+
+        # 2. Install the collection:
+        sudo yum install -y rh-python36
+
+        # 3. Start using software collections:
+        scl enable rh-python36 bash
+      else
+        sudo yum install -y ${PY_BINARY}
+      fi
   elif [ "$(type -p apk)" ]
   then
       sudo apk add ${PY_BINARY}

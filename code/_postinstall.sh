@@ -27,7 +27,9 @@ else
     EXTRA_REQ_VERSION=3
 
     # Python3 customizations
-    sed -i -e '/enum34/d' requirements.txt
+    sed -i -e '/enum34/d' \
+      -e 's/ipython==0.13.2/ipython==7.3.0/' \
+      requirements.txt
 fi
 
 # Stamp the release hash.
