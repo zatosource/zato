@@ -62,6 +62,7 @@ jsonschema==2.3.0
 keyring==3.7
 keyutils==0.5
 kombu==4.2.1
+ldap3==2.5.2
 lxml==3.7.3
 Mako==0.9.0
 markdown==2.6.7
