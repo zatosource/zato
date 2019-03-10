@@ -37,8 +37,12 @@ fi
 
 #curl https://bootstrap.pypa.io/get-pip.py | sudo $PY_BINARY
 curl https://bootstrap.pypa.io/get-pip.py | sudo $(type -p $PY_BINARY)
-# sudo $PY_BINARY -m pip install -U setuptools virtualenv==15.1.0
-sudo $PY_BINARY -m pip install -U virtualenv==15.1.0
+
+if [[ "$EUID" -ne 0 ]];then
+  sudo $(type -p $PY_BINARY) -m pip install -U virtualenv==15.1.0
+else
+  $(type -p $PY_BINARY) -m pip install -U virtualenv==15.1.0
+fi
 
 $PY_BINARY -m virtualenv .
 source ./bin/activate
