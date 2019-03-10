@@ -32,7 +32,6 @@ dill==0.2.5
 Django==1.9.7
 docformatter==0.8
 elasticsearch==0.4.5
-enum34==1.0
 ephem==3.7.6.0
 faker==0.7.18
 flake8==2.1.0
@@ -53,11 +52,9 @@ hvac==0.2.16
 idna==2.6
 imbox==0.6
 ipaddress==1.0.16
-ipython==0.13.2
+ipython
 iso8601==0.1.10
 jdatetime==1.8.1
-jsonpatch==1.5
-jsonpointer==1.3
 jsonschema==2.3.0
 keyring==3.7
 keyutils==0.5

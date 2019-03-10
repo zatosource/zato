@@ -31,12 +31,13 @@ fi
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
 
 # SciPy builds require NumPy available in setup.py, so install it separately.
-pip install numpy==1.14.0
-pip install -r requirements.txt
-pip install -r _req_py$EXTRA_REQ_VERSION.txt
+$(type -p $PY_BINARY) -m pip install numpy==1.14.0
+$(type -p $PY_BINARY) -m pip install pipdeptree
+$(type -p $PY_BINARY) -m pip install -r requirements.txt
+$(type -p $PY_BINARY) -m pip install -r _req_py$EXTRA_REQ_VERSION.txt
 
 # zato-common must be first.
-pip install \
+$(type -p $PY_BINARY) -m pip install \
     -e ./zato-common \
     -e ./zato-agent \
     -e ./zato-broker \
@@ -73,7 +74,7 @@ patch -p0 -d eggs < patches/gunicorn/arbiter.py.diff
 patch -p0 -d eggs < patches/gunicorn/glogging.py.diff
 patch -p0 -d eggs < patches/gunicorn/workers/base.py.diff
 patch -p0 -d eggs < patches/hvac/__init__.py.diff
-patch -p0 -d eggs < patches/jsonpointer/jsonpointer.py.diff
+[[ $PY_BINARY == python2* ]] && patch -p0 -d eggs < patches/jsonpointer/jsonpointer.py.diff
 patch -p0 -d eggs < patches/outbox/outbox.py.diff
 patch -p0 -d eggs < patches/outbox/outbox.py2.diff
 patch -p0 -d eggs < patches/outbox/outbox.py3.diff
@@ -90,3 +91,6 @@ then
     patch -p0 -d eggs < patches/anyjson/__init__.py.diff
     patch -p0 -d eggs < patches/oauth/oauth.py.diff
 fi
+
+# Show installed package versions and dependecies
+pipdeptree
