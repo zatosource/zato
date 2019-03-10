@@ -31,13 +31,13 @@ fi
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
 
 # SciPy builds require NumPy available in setup.py, so install it separately.
-pip install numpy==1.14.0
+$(type -p $PY_BINARY) -m pip install numpy==1.14.0
 # pip install pipdeptree
-pip install -r requirements.txt
-pip install -r _req_py$EXTRA_REQ_VERSION.txt
+$(type -p $PY_BINARY) -m pip install -r requirements.txt
+$(type -p $PY_BINARY) -m pip install -r _req_py$EXTRA_REQ_VERSION.txt
 
 # zato-common must be first.
-pip install \
+$(type -p $PY_BINARY) -m pip install \
     -e ./zato-common \
     -e ./zato-agent \
     -e ./zato-broker \
