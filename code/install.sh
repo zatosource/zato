@@ -34,7 +34,7 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
       sudo apt-get install -y --reinstall ${PY_BINARY}
   elif [ "$(type -p yum)" ]
   then
-      sudo yum update
+      sudo yum update -y
       sudo yum install -y ${PY_BINARY}
   elif [ "$(type -p apk)" ]
   then
