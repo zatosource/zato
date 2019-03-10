@@ -28,6 +28,7 @@ else
 
     # Python3 customizations
     sed -i -e 's/jsonpatch==1.5/jsonpatch/' \
+      -e 's/jsonpointer==1.3/jsonpointer==1.14/' \
       requirements.txt
 fi
 
