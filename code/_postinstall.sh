@@ -25,11 +25,6 @@ else
     HAS_PYTHON2=0
     HAS_PYTHON3=1
     EXTRA_REQ_VERSION=3
-
-    # Python3 customizations
-    sed -i -e 's/jsonpatch==1.5/jsonpatch/' \
-      -e 's/jsonpointer==1.3/jsonpointer==1.14/' \
-      requirements.txt
 fi
 
 # Stamp the release hash.
