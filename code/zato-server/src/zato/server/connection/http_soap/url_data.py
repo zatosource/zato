@@ -1221,6 +1221,7 @@ class URLData(CyURLData, OAuthDataStore):
         entry in URL cache. Returns the deleted data.
         """
         old_match_target = get_match_target({
+            'http_method': msg.get('old_http_method'),
             'http_accept': msg.get('old_http_accept'),
             'soap_action': msg.get('old_soap_action'),
             'url_path': msg.get('old_url_path'),

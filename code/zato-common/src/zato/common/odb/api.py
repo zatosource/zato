@@ -573,6 +573,7 @@ class ODBManager(SessionWrapper):
             for item in elems_with_opaque(q):
                 target = get_match_target({
                     'http_accept': item.get('http_accept'),
+                    'http_method': item.get('http_method'),
                     'soap_action': item.soap_action,
                     'url_path': item.url_path,
                 })
