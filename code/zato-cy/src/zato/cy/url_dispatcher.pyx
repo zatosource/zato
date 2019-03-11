@@ -31,6 +31,7 @@ logger = getLogger(__name__)
 # Redefined from zato.common so that they can be kept on C level
 TRACE1 = 6
 target_separator = ':::'
+unused_marker = 'unused'
 
 # ################################################################################################################################
 
@@ -151,6 +152,10 @@ cdef class CyURLData(object):
             needs_user = not url_path.startswith('/zato')
 
             for item in self.channel_data:
+
+                if '111' in target:
+                    logger.warn('QQQ %s %s', target, item['match_target_compiled'])
+
                 matcher = item['match_target_compiled']
                 if needs_user and matcher.is_internal:
                     continue

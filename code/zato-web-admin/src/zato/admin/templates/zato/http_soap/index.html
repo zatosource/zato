@@ -58,7 +58,7 @@
             {% endifequal %}
 
             {% ifequal connection 'channel' %}
-                'method',
+                '_method',
                 'service',
                 'content_encoding',
             {% endifequal %}
@@ -90,6 +90,7 @@
                 'merge_url_params_req',
                 'url_params_pri',
                 'params_pri',
+                'method',
             {% endifequal %}
 
             '_edit',
@@ -198,11 +199,12 @@
                             <th class='ignore'>&nbsp;</th> {% comment %} content_type {% endcomment %}
                         {% endifequal %}
 
-                        <!-- 28,29,30 -->
+                        <!-- 28,29,30,30a -->
                         {% ifequal connection 'channel' %}
                             <th class='ignore'>&nbsp;</th> {% comment %} merge_url_params_req {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} url_params_pri {% endcomment %}
                             <th class='ignore'>&nbsp;</th> {% comment %} params_pri {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} method {% endcomment %}
                         {% endifequal %}
 
                         <!-- 31,32 -->
@@ -270,7 +272,7 @@
 
                         <!-- 12,13,13a -->
                         {% ifequal connection 'channel' %}
-                            <td>{{ item.method }}</td>
+                            <td>{{ item.method|default:'<span class="form_hint">---</span>' }}</td>
                             <td class='ignore'>{{ item.service_name }}</td>
                             <td class='ignore'>{{ item.content_encoding|default:'' }}</td>
                         {% endifequal %}
@@ -303,11 +305,12 @@
                             <td class='ignore'>{{ item.content_type }}</td>
                         {% endifequal %}
 
-                        <!-- 28,29,30 -->
+                        <!-- 28,29,30,30a -->
                         {% ifequal connection 'channel' %}
                             <td class='ignore'>{{ item.merge_url_params_req }}</td>
                             <td class='ignore'>{{ item.url_params_pri }}</td>
                             <td class='ignore'>{{ item.params_pri }}</td>
+                            <td class='ignore'>{{ item.method|default:"" }}</td>
                         {% endifequal %}
 
                         <!-- 31,32 -->

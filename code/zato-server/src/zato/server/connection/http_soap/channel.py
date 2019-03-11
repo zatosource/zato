@@ -216,7 +216,7 @@ class RequestDispatcher(object):
             soap_action = ''
 
         http_accept = wsgi_environ.get('HTTP_ACCEPT') or any_http
-        http_accept = http_accept.replace('*', 'any').replace('/', 'HTTP_SEP')
+        http_accept = http_accept.replace('*', _any_internal).replace('/', 'HTTP_SEP')
         http_accept = http_accept if isinstance(http_accept, unicode) else http_accept.decode('utf8')
 
         # Can we recognize this combination of URL path and SOAP action at all?
