@@ -371,6 +371,7 @@ class Edit(_CreateEdit):
                 old_name = item.name
                 old_url_path = item.url_path
                 old_soap_action = item.soap_action
+                old_method = item.method
                 old_http_accept = opaque.get('http_accept')
 
                 item.name = input.name
@@ -471,10 +472,14 @@ class Delete(AdminService, _HTTPSOAPService):
                     filter(HTTPSOAP.id==self.request.input.id).\
                     one()
 
+                opaque = parse_instance_opaque_attr(item)
+
                 old_name = item.name
                 old_transport = item.transport
                 old_url_path = item.url_path
                 old_soap_action = item.soap_action
+                old_method = item.method
+                old_http_accept = opaque.get('http_accept')
 
                 session.delete(item)
                 session.commit()
@@ -484,8 +489,14 @@ class Delete(AdminService, _HTTPSOAPService):
                 else:
                     action = OUTGOING.HTTP_SOAP_DELETE.value
 
-                self.notify_worker_threads({'name':old_name, 'transport':old_transport,
-                    'old_url_path':old_url_path, 'old_soap_action':old_soap_action}, action)
+                self.notify_worker_threads({
+                    'name':old_name,
+                    'transport':old_transport,
+                    'old_url_path':old_url_path,
+                    'old_soap_action':old_soap_action,
+                    'old_method': old_method,
+                    'old_http_accept': old_http_accept,
+                }, action)
 
             except Exception:
                 session.rollback()
