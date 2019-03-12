@@ -1211,6 +1211,10 @@ class URLData(CyURLData, OAuthDataStore):
         Clears out URL cache for that entry, if it existed at all.
         """
         match_target = get_match_target(msg)
+
+        if '111' in msg['url_path']:
+            logger.warn('YYY %s', msg)
+
         self.channel_data.append(self._channel_item_from_msg(msg, match_target, old_data))
         self.url_sec[match_target] = self._sec_info_from_msg(msg)
         self.url_path_cache.pop(match_target, None)

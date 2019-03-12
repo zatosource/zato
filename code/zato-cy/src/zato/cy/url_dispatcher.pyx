@@ -78,6 +78,10 @@ cdef class Matcher(object):
 # ################################################################################################################################
 
     cdef _set_up_matcher(self, unicode pattern):
+
+        if '111' in pattern:
+            logger.warn('WWW %s', pattern)
+
         orig_groups = self._brace_pattern.findall(pattern)
         groups = (elem.replace('{', '').replace('}', '') for elem in orig_groups)
         groups = [[elem, self._elem_re_template.format(elem)] for elem in groups]
@@ -124,8 +128,9 @@ cdef class CyURLData(object):
 
 # ################################################################################################################################
 
-    cpdef tuple match(self, unicode url_path, unicode soap_action, unicode http_accept, bint has_soap_action,
-        unicode _target_separator=target_separator, _bunchify=bunchify, _log_trace1=logger.log, _trace1=TRACE1):
+    cpdef tuple match(self, unicode url_path, unicode soap_action, unicode http_method, unicode http_accept,
+        bint has_soap_action, unicode sep=target_separator, _bunchify=bunchify, _log_trace1=logger.log,
+        _trace1=TRACE1):
         """ Attemps to match the combination of SOAPt Action and URL path against
         the list of HTTP channel targets.
         """
@@ -136,13 +141,22 @@ cdef class CyURLData(object):
         cdef unicode target
 
         cdef unicode target_cache_key = ''
+        target_cache_key += http_method
         target_cache_key += http_accept
         target_cache_key += (url_path + soap_action) if has_soap_action else url_path
 
         try:
             target = self.url_target_cache[target_cache_key]
         except KeyError:
-            target = '%s%s%s%s%s' % (soap_action, _target_separator, http_accept, _target_separator, url_path)
+            target = '%s%s%s%s%s%s%s' % (
+                soap_action,
+                sep,
+                http_method,
+                sep,
+                http_accept,
+                sep,
+                url_path
+            )
             has_target_in_cache = False
 
         # Return from cache if already seen
@@ -153,14 +167,17 @@ cdef class CyURLData(object):
 
             for item in self.channel_data:
 
-                if '111' in target:
-                    logger.warn('QQQ %s %s', target, item['match_target_compiled'])
-
                 matcher = item['match_target_compiled']
                 if needs_user and matcher.is_internal:
                     continue
 
                 match = matcher.match(target)
+
+                if '111' in target:
+                    logger.warn('RRR-01 %s', target)
+                    logger.warn('RRR-02 %s', item['match_target_compiled'])
+                    logger.warn('RRR-03 %s', match)
+
                 if match is not None:
                     if self.has_trace1:
                         _log_trace1(_trace1, 'Matched target:`%s` with:`%r`', target, item)
