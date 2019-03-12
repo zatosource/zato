@@ -42,6 +42,17 @@ from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.connection.http_soap.url_data import URLData
+
+    # For pyflakes
+    URLData = URLData
+
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 _has_debug = logger.isEnabledFor(logging.DEBUG)
 
@@ -164,11 +175,15 @@ class RequestDispatcher(object):
     """
     def __init__(self, url_data=None, security=None, request_handler=None, simple_io_config=None, return_tracebacks=None,
             default_error_message=None, http_methods_allowed=None):
+        # type: (URLData, object, object, dict, bool, unicode, list)
+
         self.url_data = url_data
         self.security = security
+
         self.request_handler = request_handler
         self.simple_io_config = simple_io_config
         self.return_tracebacks = return_tracebacks
+
         self.default_error_message = default_error_message
         self.http_methods_allowed = http_methods_allowed
 

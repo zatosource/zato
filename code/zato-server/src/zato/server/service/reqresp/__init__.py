@@ -192,6 +192,8 @@ class Request(SIOConverter):
 
         required_params = {}
 
+        logger.warn('BBB %s', required_list)
+
         if required_list:
 
             required_list = required_list if isinstance(required_list, _sio_container) else [required_list]

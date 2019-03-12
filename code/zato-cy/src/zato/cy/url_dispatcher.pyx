@@ -173,10 +173,12 @@ cdef class CyURLData(object):
 
                 match = matcher.match(target)
 
-                if '111' in target:
-                    logger.warn('RRR-01 %s', target)
-                    logger.warn('RRR-02 %s', item['match_target_compiled'])
-                    logger.warn('RRR-03 %s', match)
+                if '/zato/ping' in target:
+                    if '/zato/ping' in item['match_target_compiled'].pattern:
+                        logger.warn('RRR-01 %s', target)
+                        logger.warn('RRR-02 %s', item['match_target_compiled'])
+                        logger.warn('RRR-03 %s', match)
+                        logger.warn('')
 
                 if match is not None:
                     if self.has_trace1:
