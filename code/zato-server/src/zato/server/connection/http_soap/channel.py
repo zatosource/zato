@@ -163,13 +163,14 @@ class RequestDispatcher(object):
     """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
     """
     def __init__(self, url_data=None, security=None, request_handler=None, simple_io_config=None, return_tracebacks=None,
-            default_error_message=None):
+            default_error_message=None, http_methods_allowed=None):
         self.url_data = url_data
         self.security = security
         self.request_handler = request_handler
         self.simple_io_config = simple_io_config
         self.return_tracebacks = return_tracebacks
         self.default_error_message = default_error_message
+        self.http_methods_allowed = http_methods_allowed
 
 # ################################################################################################################################
 
@@ -202,25 +203,28 @@ class RequestDispatcher(object):
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
         _accept_any_internal=accept_any_internal):
-        """ Base method for dispatching incoming HTTP/SOAP messages. If the security
-        configuration is one of the technical account or HTTP basic auth,
-        the security validation is being performed. Otherwise, that step
-        is postponed until a concrete transport-specific handler is invoked.
-        """
-        # Needed in later steps
-        path_info = wsgi_environ['PATH_INFO'] if PY3 else wsgi_environ['PATH_INFO'].decode('utf8')
 
-        if _http_soap_action in wsgi_environ:
-            soap_action = self._handle_quotes_soap_action(wsgi_environ[_http_soap_action])
-        else:
-            soap_action = ''
-
+        # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
         http_method = http_accept if isinstance(http_method, unicode) else http_method.decode('utf8')
 
         http_accept = wsgi_environ.get('HTTP_ACCEPT') or _accept_any_http
         http_accept = http_accept.replace('*', _accept_any_internal).replace('/', 'HTTP_SEP')
         http_accept = http_accept if isinstance(http_accept, unicode) else http_accept.decode('utf8')
+
+        # Needed in later steps
+        path_info = wsgi_environ['PATH_INFO'] if PY3 else wsgi_environ['PATH_INFO'].decode('utf8')
+
+        # Immediately reject the request if it is not a support HTTP method, no matter what channel
+        # it would have otherwise matched.
+        if http_method not in self.http_methods_allowed:
+            wsgi_environ['zato.http.response.status'] = _status_method_not_allowed
+            return client_json_error(cid, 'Unsupported HTTP method')
+
+        if _http_soap_action in wsgi_environ:
+            soap_action = self._handle_quotes_soap_action(wsgi_environ[_http_soap_action])
+        else:
+            soap_action = ''
 
         # Can we recognize this combination of URL path and SOAP action at all?
         # This gives us the URL info and security data - but note that here

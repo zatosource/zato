@@ -74,13 +74,14 @@ class HTTPHandler(object):
             payload = error_msg if self.return_tracebacks else self.default_error_message
             raise
 
-        channel_item = wsgi_environ['zato.channel_item']
+        channel_item = wsgi_environ.get('zato.channel_item')
 
         if channel_item:
             # For access log
             channel_name = channel_item.get('name', '-')
         else:
-            # 404 Not Found since we cannot find the channel
+            # 404 because could not find the channel, or
+            # 405 because this was an invalid HTTP method
             channel_name = '-'
 
         start_response(wsgi_environ['zato.http.response.status'], iteritems(wsgi_environ['zato.http.response.headers']))

@@ -159,6 +159,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.connector_ibm_mq = IBMMQIPC(self)
         self.connector_sftp   = SFTPIPC(self)
 
+        # HTTP methods allowed as a Python list
+        self.http_methods_allowed = []
+
+        # As above, but as a regular expression pattern
+        self.http_methods_allowed_re = ''
+
         self.access_logger = logging.getLogger('zato_access_log')
         self.access_logger_log = self.access_logger._log
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)
@@ -519,6 +525,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: self.worker_store.on_broker_msg,
         }
+
+        # Configure which HTTP methods can be invoked via REST or SOAP channels
+        methods_allowed = self.fs_server_config.http.methods_allowed
+        methods_allowed = methods_allowed if isinstance(methods_allowed, list) else [methods_allowed]
+        self.http_methods_allowed.extend(methods_allowed)
+
+        # As above, as a regular expression to be used in pattern matching
+        self.http_methods_allowed_re = '|'.join(self.http_methods_allowed)
 
         self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks, self.get_lua_programs())
         self.worker_store.set_broker_client(self.broker_client)
