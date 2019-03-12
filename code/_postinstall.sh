@@ -16,7 +16,7 @@ PY_BINARY=$1
 
 # If it starts with "python2" then we install extra pip dependencies for Python 2.7,
 # otherwise, extra dependencies for Python 3.x will be installed.
-if [[ "$($PY_BINARY -c 'import platform; print(platform.python_version().split(".")[0])')" == "2" ]]
+if [[ $PY_BINARY == python2* ]]
 then
     HAS_PYTHON2=1
     HAS_PYTHON3=0
@@ -31,13 +31,13 @@ fi
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
 
 # SciPy builds require NumPy available in setup.py, so install it separately.
-$(type -p $PY_BINARY) -m pip install numpy==1.14.0
-$(type -p $PY_BINARY) -m pip install pipdeptree
-$(type -p $PY_BINARY) -m pip install -r requirements.txt
-$(type -p $PY_BINARY) -m pip install -r _req_py$EXTRA_REQ_VERSION.txt
+pip install numpy==1.14.0
+# pip install pipdeptree
+pip install -r requirements.txt
+pip install -r _req_py$EXTRA_REQ_VERSION.txt
 
 # zato-common must be first.
-$(type -p $PY_BINARY) -m pip install \
+pip install \
     -e ./zato-common \
     -e ./zato-agent \
     -e ./zato-broker \
@@ -74,7 +74,7 @@ patch -p0 -d eggs < patches/gunicorn/arbiter.py.diff
 patch -p0 -d eggs < patches/gunicorn/glogging.py.diff
 patch -p0 -d eggs < patches/gunicorn/workers/base.py.diff
 patch -p0 -d eggs < patches/hvac/__init__.py.diff
-[[ $PY_BINARY == python2* ]] && patch -p0 -d eggs < patches/jsonpointer/jsonpointer.py.diff
+patch -p0 -d eggs < patches/jsonpointer/jsonpointer.py.diff
 patch -p0 -d eggs < patches/outbox/outbox.py.diff
 patch -p0 -d eggs < patches/outbox/outbox.py2.diff
 patch -p0 -d eggs < patches/outbox/outbox.py3.diff
@@ -91,6 +91,3 @@ then
     patch -p0 -d eggs < patches/anyjson/__init__.py.diff
     patch -p0 -d eggs < patches/oauth/oauth.py.diff
 fi
-
-# Show installed package versions and dependecies
-pipdeptree
