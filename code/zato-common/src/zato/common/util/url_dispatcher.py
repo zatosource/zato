@@ -37,10 +37,6 @@ def get_match_target(config, sep=MISC.SEPARATOR, accept_any_http=accept_any_http
     http_accept = config.get('http_accept') or accept_any_http
     http_accept = http_accept.replace('*', '{}'.format(accept_any_internal)).replace('/', 'HTTP_SEP')
 
-    out = '%s%s%s%s%s%s%s' % (config['soap_action'], sep, http_method, sep, http_accept, sep, config['url_path'])
-
-    logger.warn('RRR %s', out)
-
-    return out
+    return '%s%s%s%s%s%s%s' % (config['soap_action'], sep, http_method, sep, http_accept, sep, config['url_path'])
 
 # ################################################################################################################################
