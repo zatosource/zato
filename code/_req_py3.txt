@@ -10,5 +10,3 @@ python-ldap==3.1.0
 python-swiftclient==3.6.0
 git+https://github.com/tonyseek/simple-rbac.git@048d4170b8cbeb65b7bf88be3bd26385bfc449fa#egg=simple-rbac
 stompest==2.3.0
-jsonpatch==1.23
-jsonpointer==1.14
