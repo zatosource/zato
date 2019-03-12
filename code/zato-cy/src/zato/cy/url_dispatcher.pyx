@@ -79,9 +79,6 @@ cdef class Matcher(object):
 
     cdef _set_up_matcher(self, unicode pattern):
 
-        if '111' in pattern:
-            logger.warn('WWW %s', pattern)
-
         orig_groups = self._brace_pattern.findall(pattern)
         groups = (elem.replace('{', '').replace('}', '') for elem in orig_groups)
         groups = [[elem, self._elem_re_template.format(elem)] for elem in groups]
@@ -172,13 +169,6 @@ cdef class CyURLData(object):
                     continue
 
                 match = matcher.match(target)
-
-                if '/zato/ping' in target:
-                    if '/zato/ping' in item['match_target_compiled'].pattern:
-                        logger.warn('RRR-01 %s', target)
-                        logger.warn('RRR-02 %s', item['match_target_compiled'])
-                        logger.warn('RRR-03 %s', match)
-                        logger.warn('')
 
                 if match is not None:
                     if self.has_trace1:

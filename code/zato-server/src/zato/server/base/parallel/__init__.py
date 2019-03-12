@@ -473,9 +473,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         http_methods_allowed_re = '|'.join(self.http_methods_allowed)
         self.http_methods_allowed_re = '({})'.format(http_methods_allowed_re)
 
-        logger.warn('GGG %s', self.http_methods_allowed)
-        logger.warn('GGG %s', self.http_methods_allowed_re)
-
         # Reads in all configuration from ODB
         self.worker_store = WorkerStore(self.config, self)
         self.worker_store.invoke_matcher.read_config(self.fs_server_config.invoke_patterns_allowed)
