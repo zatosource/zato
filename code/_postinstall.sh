@@ -16,7 +16,7 @@ PY_BINARY=$1
 
 # If it starts with "python2" then we install extra pip dependencies for Python 2.7,
 # otherwise, extra dependencies for Python 3.x will be installed.
-if [[ $PY_BINARY == python2* ]]
+if [[ "$($PY_BINARY -c 'import platform; print(platform.python_version().split(".")[0])')" == "2" ]]
 then
     HAS_PYTHON2=1
     HAS_PYTHON3=0
