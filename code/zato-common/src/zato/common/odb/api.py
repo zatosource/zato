@@ -45,6 +45,17 @@ from zato.common.util.url_dispatcher import get_match_target
 
 # ################################################################################################################################
 
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.base.parallel import ParallelServer
+
+    # For pyflakes
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
@@ -417,9 +428,11 @@ class _Server(object):
 class ODBManager(SessionWrapper):
     """ Manages connections to a given component's Operational Database.
     """
-    def __init__(self, well_known_data=None, token=None, crypto_manager=None, server_id=None, server_name=None, cluster_id=None,
-            pool=None, decrypt_func=None):
+    def __init__(self, parallel_server=None, well_known_data=None, token=None, crypto_manager=None, server_id=None,
+            server_name=None, cluster_id=None, pool=None, decrypt_func=None):
+        # type: (ParallelServer, unicode, unicode, object, int, unicode, int, object, object)
         super(ODBManager, self).__init__()
+        self.parallel_server = parallel_server
         self.well_known_data = well_known_data
         self.token = token
         self.crypto_manager = crypto_manager
@@ -576,7 +589,7 @@ class ODBManager(SessionWrapper):
                     'http_method': item.get('method'),
                     'soap_action': item.soap_action,
                     'url_path': item.url_path,
-                })
+                }, http_methods_allowed_re=self.parallel_server.http_methods_allowed_re)
 
                 result[target] = Bunch()
                 result[target].is_active = item.is_active

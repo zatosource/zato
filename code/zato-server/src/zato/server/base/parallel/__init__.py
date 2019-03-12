@@ -464,6 +464,18 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     self.cluster.name, self.pid, 's' if use_tls else '', self.preferred_address,
             self.port)
 
+        # Configure which HTTP methods can be invoked via REST or SOAP channels
+        methods_allowed = self.fs_server_config.http.methods_allowed
+        methods_allowed = methods_allowed if isinstance(methods_allowed, list) else [methods_allowed]
+        self.http_methods_allowed.extend(methods_allowed)
+
+        # As above, as a regular expression to be used in pattern matching
+        http_methods_allowed_re = '|'.join(self.http_methods_allowed)
+        self.http_methods_allowed_re = '({})'.format(http_methods_allowed_re)
+
+        logger.warn('GGG %s', self.http_methods_allowed)
+        logger.warn('GGG %s', self.http_methods_allowed_re)
+
         # Reads in all configuration from ODB
         self.worker_store = WorkerStore(self.config, self)
         self.worker_store.invoke_matcher.read_config(self.fs_server_config.invoke_patterns_allowed)
@@ -525,14 +537,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: self.worker_store.on_broker_msg,
         }
-
-        # Configure which HTTP methods can be invoked via REST or SOAP channels
-        methods_allowed = self.fs_server_config.http.methods_allowed
-        methods_allowed = methods_allowed if isinstance(methods_allowed, list) else [methods_allowed]
-        self.http_methods_allowed.extend(methods_allowed)
-
-        # As above, as a regular expression to be used in pattern matching
-        self.http_methods_allowed_re = '|'.join(self.http_methods_allowed)
 
         self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks, self.get_lua_programs())
         self.worker_store.set_broker_client(self.broker_client)
