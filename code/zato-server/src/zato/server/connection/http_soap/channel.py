@@ -47,8 +47,8 @@ _has_debug = logger.isEnabledFor(logging.DEBUG)
 
 # ################################################################################################################################
 
-any_http = HTTP_SOAP.ACCEPT.ANY
-any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
+accept_any_http = HTTP_SOAP.ACCEPT.ANY
+accept_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 
 # ################################################################################################################################
 
@@ -200,8 +200,8 @@ class RequestDispatcher(object):
 
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
-        _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _any_http=any_http,
-        _any_internal=any_internal):
+        _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
+        _accept_any_internal=accept_any_internal):
         """ Base method for dispatching incoming HTTP/SOAP messages. If the security
         configuration is one of the technical account or HTTP basic auth,
         the security validation is being performed. Otherwise, that step
@@ -215,15 +215,18 @@ class RequestDispatcher(object):
         else:
             soap_action = ''
 
-        http_accept = wsgi_environ.get('HTTP_ACCEPT') or any_http
-        http_accept = http_accept.replace('*', _any_internal).replace('/', 'HTTP_SEP')
+        http_method = wsgi_environ['REQUEST_METHOD']
+        http_method = http_accept if isinstance(http_method, unicode) else http_method.decode('utf8')
+
+        http_accept = wsgi_environ.get('HTTP_ACCEPT') or _accept_any_http
+        http_accept = http_accept.replace('*', _accept_any_internal).replace('/', 'HTTP_SEP')
         http_accept = http_accept if isinstance(http_accept, unicode) else http_accept.decode('utf8')
 
         # Can we recognize this combination of URL path and SOAP action at all?
         # This gives us the URL info and security data - but note that here
         # we still haven't validated credentials, only matched the URL.
         # Credentials are checked in a call to self.url_data.check_security
-        url_match, channel_item = self.url_data.match(path_info, soap_action, http_accept, bool(soap_action))
+        url_match, channel_item = self.url_data.match(path_info, soap_action, http_method, http_accept, bool(soap_action))
 
         if _has_debug and channel_item:
             logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))
@@ -243,18 +246,11 @@ class RequestDispatcher(object):
                     logger.warn('url_data:`%s` is not active, raising NotFound', sorted(url_match.items()))
                     raise NotFound(cid, 'Channel inactive')
 
-                expected_method = channel_item['method']
-                if expected_method:
-                    actual_method = wsgi_environ['REQUEST_METHOD']
-                    if expected_method != actual_method:
-                        logger.warn(
-                            'Expected `%s` instead of `%s` for `%s`', expected_method, actual_method, channel_item['url_path'])
-                        raise MethodNotAllowed(cid, 'Method `{}` is not allowed here'.format(actual_method))
-
                 # Need to read security info here so we know if POST needs to be
                 # parsed. If so, we do it here and reuse it in other places
                 # so it doesn't have to be parsed two or more times.
                 post_data = {}
+
                 sec = self.url_data.url_sec[channel_item['match_target']]
 
                 if sec.sec_def != ZATO_NONE or sec.sec_use_rbac is True:
