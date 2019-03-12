@@ -34,10 +34,6 @@ def get_match_target(config, sep=MISC.SEPARATOR, accept_any_http=accept_any_http
     if not http_method:
         http_method = '[A-Z]{3,12}'
 
-    if '111' in config['url_path']:
-        logger.warn('AAA %s', config)
-        logger.warn('SSS %s', http_method)
-
     http_accept = config.get('http_accept') or accept_any_http
     http_accept = http_accept.replace('*', '{}'.format(accept_any_internal)).replace('/', 'HTTP_SEP')
 
