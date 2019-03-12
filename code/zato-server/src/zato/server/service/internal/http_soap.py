@@ -371,7 +371,7 @@ class Edit(_CreateEdit):
                 old_name = item.name
                 old_url_path = item.url_path
                 old_soap_action = item.soap_action
-                old_method = item.method
+                old_http_method = item.method
                 old_http_accept = opaque.get('http_accept')
 
                 item.name = input.name
@@ -434,6 +434,7 @@ class Edit(_CreateEdit):
                 input.old_name = old_name
                 input.old_url_path = old_url_path
                 input.old_soap_action = old_soap_action
+                input.old_http_method = old_http_method
                 input.old_http_accept = old_http_accept
                 input.update(sec_info)
 
@@ -478,7 +479,7 @@ class Delete(AdminService, _HTTPSOAPService):
                 old_transport = item.transport
                 old_url_path = item.url_path
                 old_soap_action = item.soap_action
-                old_method = item.method
+                old_http_method = item.method
                 old_http_accept = opaque.get('http_accept')
 
                 session.delete(item)
@@ -494,7 +495,7 @@ class Delete(AdminService, _HTTPSOAPService):
                     'transport':old_transport,
                     'old_url_path':old_url_path,
                     'old_soap_action':old_soap_action,
-                    'old_method': old_method,
+                    'old_http_method': old_http_method,
                     'old_http_accept': old_http_accept,
                 }, action)
 
