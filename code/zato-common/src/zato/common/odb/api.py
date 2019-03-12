@@ -30,8 +30,8 @@ from sqlalchemy.sql.expression import true
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, GENERIC, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, \
-     ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
+     SERVER_UP_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
@@ -41,6 +41,18 @@ from zato.common.odb.query import generic as query_generic
 from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
      parse_tls_channel_security_definition
 from zato.common.util.sql import elems_with_opaque
+from zato.common.util.url_dispatcher import get_match_target
+
+# ################################################################################################################################
+
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.base.parallel import ParallelServer
+
+    # For pyflakes
+    ParallelServer = ParallelServer
 
 # ################################################################################################################################
 
@@ -416,9 +428,11 @@ class _Server(object):
 class ODBManager(SessionWrapper):
     """ Manages connections to a given component's Operational Database.
     """
-    def __init__(self, well_known_data=None, token=None, crypto_manager=None, server_id=None, server_name=None, cluster_id=None,
-            pool=None, decrypt_func=None):
+    def __init__(self, parallel_server=None, well_known_data=None, token=None, crypto_manager=None, server_id=None,
+            server_name=None, cluster_id=None, pool=None, decrypt_func=None):
+        # type: (ParallelServer, unicode, unicode, object, int, unicode, int, object, object)
         super(ODBManager, self).__init__()
+        self.parallel_server = parallel_server
         self.well_known_data = well_known_data
         self.token = token
         self.crypto_manager = crypto_manager
@@ -544,7 +558,7 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_url_security(self, cluster_id, connection=None):
+    def get_url_security(self, cluster_id, connection=None, any_internal=HTTP_SOAP.ACCEPT.ANY_INTERNAL):
         """ Returns the security configuration of HTTP URLs.
         """
         with closing(self.session()) as session:
@@ -569,8 +583,13 @@ class ODBManager(SessionWrapper):
             for c in q.statement.columns:
                 columns[c.name] = None
 
-            for item in q.all():
-                target = '{}{}{}'.format(item.soap_action, MISC.SEPARATOR, item.url_path)
+            for item in elems_with_opaque(q):
+                target = get_match_target({
+                    'http_accept': item.get('http_accept'),
+                    'http_method': item.get('method'),
+                    'soap_action': item.soap_action,
+                    'url_path': item.url_path,
+                }, http_methods_allowed_re=self.parallel_server.http_methods_allowed_re)
 
                 result[target] = Bunch()
                 result[target].is_active = item.is_active

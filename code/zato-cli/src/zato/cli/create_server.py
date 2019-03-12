@@ -139,6 +139,9 @@ return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
 
+[http]
+methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
+
 [ibm_mq]
 ipc_tcp_start_port=34567
 

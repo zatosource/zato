@@ -22,7 +22,7 @@ coverage==3.7.1
 crontab==0.20
 cryptography==2.2.2
 Cython==0.27.3
-cytoolz==0.8.2
+cytoolz==0.9.0.1
 datadiff==1.1.5
 dateparser==0.5.1
 davis==0.1
