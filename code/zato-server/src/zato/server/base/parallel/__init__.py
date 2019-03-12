@@ -159,6 +159,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.connector_ibm_mq = IBMMQIPC(self)
         self.connector_sftp   = SFTPIPC(self)
 
+        # HTTP methods allowed as a Python list
+        self.http_methods_allowed = []
+
+        # As above, but as a regular expression pattern
+        self.http_methods_allowed_re = ''
+
         self.access_logger = logging.getLogger('zato_access_log')
         self.access_logger_log = self.access_logger._log
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)
@@ -457,6 +463,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         logger.info('Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`', self.name,
                     self.cluster.name, self.pid, 's' if use_tls else '', self.preferred_address,
             self.port)
+
+        # Configure which HTTP methods can be invoked via REST or SOAP channels
+        methods_allowed = self.fs_server_config.http.methods_allowed
+        methods_allowed = methods_allowed if isinstance(methods_allowed, list) else [methods_allowed]
+        self.http_methods_allowed.extend(methods_allowed)
+
+        # As above, as a regular expression to be used in pattern matching
+        http_methods_allowed_re = '|'.join(self.http_methods_allowed)
+        self.http_methods_allowed_re = '({})'.format(http_methods_allowed_re)
 
         # Reads in all configuration from ODB
         self.worker_store = WorkerStore(self.config, self)

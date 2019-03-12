@@ -15,9 +15,10 @@ from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import MISC, SECRETS
+from zato.common import SECRETS
 from zato.common.util import asbool
 from zato.common.util.sql import elems_with_opaque
+from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
@@ -332,7 +333,7 @@ class ConfigLoader(object):
             for key in item.keys():
                 hs_item[key] = getattr(item, key)
 
-            hs_item['match_target'] = '{}{}{}'.format(hs_item['soap_action'], MISC.SEPARATOR, hs_item['url_path'])
+            hs_item['match_target'] = get_match_target(hs_item, http_methods_allowed_re=self.http_methods_allowed_re)
             hs_item['match_target_compiled'] = Matcher(hs_item['match_target'], hs_item.get('match_slash', ''))
 
             http_soap.append(hs_item)

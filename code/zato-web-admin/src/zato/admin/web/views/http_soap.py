@@ -70,6 +70,7 @@ def _get_edit_create_message(params, prefix=''):
         'url_path': params[prefix + 'url_path'],
         'merge_url_params_req': bool(params.get(prefix + 'merge_url_params_req')),
         'match_slash': bool(params.get(prefix + 'match_slash')),
+        'http_accept': params[prefix + 'http_accept'],
         'url_params_pri': params.get(prefix + 'url_params_pri', URL_PARAMS_PRIORITY.DEFAULT),
         'params_pri': params.get(prefix + 'params_pri', PARAMS_PRIORITY.DEFAULT),
         'serialization_type': params.get(prefix + 'serialization_type', HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id),
@@ -210,6 +211,9 @@ def index(req):
             if match_slash == '':
                 match_slash = True
 
+            # New in 3.1
+            http_accept = item.get('http_accept') or ''
+
             item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection,
                     transport, item.host, item.url_path, item.method, item.soap_action,
                     item.soap_version, item.data_format, item.ping_method,
@@ -218,7 +222,7 @@ def index(req):
                     service_name=item.service_name, security_id=security_id, has_rbac=item.has_rbac,
                     security_name=security_name, content_type=item.content_type,
                     cache_id=item.cache_id, cache_name=cache_name, cache_type=item.cache_type, cache_expiry=item.cache_expiry,
-                    content_encoding=item.content_encoding, match_slash=match_slash)
+                    content_encoding=item.content_encoding, match_slash=match_slash, http_accept=http_accept)
             items.append(item)
 
     return_data = {'zato_clusters':req.zato.clusters,
