@@ -25,7 +25,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from io import StringIO
+from io import BytesIO
 from logging import DEBUG, getLogger
 from struct import pack, unpack
 from xml.sax.saxutils import escape
@@ -51,7 +51,7 @@ logger = getLogger('zato_ibm_mq')
 # ################################################################################################################################
 
 # Some WMQ constants are not exposed by pymqi.
-_WMQ_MQRFH_VERSION_2 = '\x00\x00\x00\x02'
+_WMQ_MQRFH_VERSION_2 = b'\x00\x00\x00\x02'
 _WMQ_DEFAULT_ENCODING = 273
 _WMQ_DEFAULT_ENCODING_WIRE_FORMAT = pack('!l', _WMQ_DEFAULT_ENCODING)
 
@@ -60,10 +60,10 @@ _WMQ_DEFAULT_CCSID = 1208
 _WMQ_DEFAULT_CCSID_WIRE_FORMAT = pack('!l', _WMQ_DEFAULT_CCSID)
 
 # From cmqc.h
-_WMQ_MQFMT_RF_HEADER_2 = 'MQHRF2  '
+_WMQ_MQFMT_RF_HEADER_2 = b'MQHRF2  '
 
 # MQRFH_NO_FLAGS_WIRE is in cmqc.h
-_WMQ_MQRFH_NO_FLAGS_WIRE_FORMAT = '\x00\x00\x00\x00'
+_WMQ_MQRFH_NO_FLAGS_WIRE_FORMAT = b'\x00\x00\x00\x00'
 
 # Java documentation says '214748364.7 seconds'.
 _WMQ_MAX_EXPIRY_TIME = 214748364.7
@@ -345,7 +345,7 @@ class WebSphereMQConnection(object):
         destination = self._strip_prefixes_from_destination(destination)
 
         # Will consist of an MQRFH2 header and the actual business payload.
-        buff = StringIO()
+        buff = BytesIO()
 
         # Build the message descriptor (MQMD)
         md = self._build_md(message)
@@ -358,7 +358,7 @@ class WebSphereMQConnection(object):
             buff.write(mqrfh2jms)
 
         if message.text is not None:
-            buff.write(message.text)
+            buff.write(message.text.encode('utf8') if isinstance(message.text, unicode) else message.text)
 
         body = buff.getvalue()
         buff.close()
@@ -858,7 +858,7 @@ class MQRFH2JMS(object):
 
         total_header_length += variable_part_length
 
-        buff = StringIO()
+        buff = BytesIO()
 
         buff.write(CMQC.MQRFH_STRUC_ID)
         buff.write(_WMQ_MQRFH_VERSION_2)
