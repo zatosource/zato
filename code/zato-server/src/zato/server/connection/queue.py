@@ -161,6 +161,9 @@ class Wrapper(object):
             else:
                 logger.info('Skip building inactive connection queue for `%s` (%s)', self.client.conn_name, self.client.conn_type)
 
+    # Not all connection types will be queue-based
+    build_wrapper = build_queue
+
 # ################################################################################################################################
 
     def delete(self):

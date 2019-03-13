@@ -79,7 +79,7 @@ class Generic(WorkerImpl):
 
         config_attr[msg.name] = item_dict
         config_attr[msg.name].conn = wrapper(item_dict, self.server)
-        config_attr[msg.name].conn.build_queue()
+        config_attr[msg.name].conn.build_wrapper()
 
 # ################################################################################################################################
 
