@@ -50,15 +50,15 @@ class CreateForm(forms.Form):
     tls_version = forms.ChoiceField(widget=forms.Select(), initial=TLS.DEFAULT)
     tls_validate = forms.ChoiceField(widget=forms.Select(), initial=TLS.CERT_VALIDATE.CERT_REQUIRED.id)
     tls_pem_passphrase = forms.CharField(widget=forms.HiddenInput(attrs={'style':'width:100%'}))
-    tls_match_hostname = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    tls_match_hostname_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     compressor_list = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
     zlib_level = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}))
 
-    concern_write_to = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}))
-    concern_write_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initia)
-    concern_write_journal_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    concern_write_fsync_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    write_to = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}))
+    write_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}))
+    write_journal_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    write_fsync_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     read_pref_type = forms.ChoiceField(widget=forms.Select())
     read_pref_tag_list = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
@@ -68,7 +68,6 @@ class CreateForm(forms.Form):
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        add_select(self, 'get_info', MONGODB.GET_INFO(), needs_initial_select=False)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
