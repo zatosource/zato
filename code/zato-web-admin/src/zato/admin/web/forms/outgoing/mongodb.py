@@ -49,8 +49,8 @@ class CreateForm(WithTLSForm):
 
     write_to_replica = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=default.WRITE_TO_REPLICA)
     write_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=default.WRITE_TIMEOUT)
-    write_journal_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    write_fsync_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_write_journal_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_write_fsync_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     read_pref_type = forms.ChoiceField(widget=forms.Select(), initial=MONGODB.READ_PREF.PRIMARY.id)
     read_pref_tag_list = forms.CharField(widget=forms.TextInput(attrs={'style':'width:23%'}))

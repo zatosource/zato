@@ -498,11 +498,10 @@ server_conf.odb.password={zato_odb_password}
 simple_io_conf_contents = """
 [int]
 exact=id
-suffix=_count, _id, _size, _timeout
+suffix=_count, _id, _size, _size_min, _size_max, _timeout
 
 [bool]
 prefix=by_, has_, is_, may_, needs_, should_
-suffix=_is_enabled
 
 [secret]
 exact=auth_data, auth_token, password, password1, password2, secret, secret_key, tls_pem_passphrase, token

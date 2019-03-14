@@ -18,8 +18,8 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.MongoDB;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.mongodb.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'server_list', 'pool_size', 'pool_exhaust_timeout',
-        'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime']);
+    $.fn.zato.data_table.setup_forms(['name', 'server_list', 'pool_size_max', 'connect_timeout',
+        'socket_timeout', 'server_select_timeout', 'wait_queue_timeout', 'max_idle_time', 'hb_frequency']);
 })
 
 $.fn.zato.outgoing.mongodb.create = function() {
@@ -38,14 +38,11 @@ $.fn.zato.outgoing.mongodb.data_table.new_row = function(item, data, include_tr)
     }
 
     var is_active = item.is_active == true;
-    var is_zato = item.is_zato == true;
-    var has_auto_reconnect = item.has_auto_reconnect == true;
-    var is_read_only = item.is_read_only == true;
-    var is_stats_enabled = item.is_stats_enabled == true;
-    var should_check_names = item.should_check_names == true;
-    var use_auto_range = item.use_auto_range == true;
-    var should_return_empty_attrs = item.should_return_empty_attrs == true;
     var is_tls_enabled = item.is_tls_enabled == true;
+    var is_tz_aware = item.is_tz_aware == true;
+    var is_write_journal_enabled = item.is_write_journal_enabled == true;
+    var is_write_fsync_enabled = item.is_write_fsync_enabled == true;
+    var is_tls_match_hostname_enabled = item.is_tls_match_hostname_enabled == true;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -53,9 +50,9 @@ $.fn.zato.outgoing.mongodb.data_table.new_row = function(item, data, include_tr)
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.server_list);
-    row += String.format('<td>{0}</td>', item.username);
 
-    row += String.format('<td>{0}</td>', item.auth_type);
+    row += String.format('<td>{0}</td>', item.username ? item.username : $.fn.zato.empty_value);
+    row += String.format('<td>{0}</td>', item.app_name ? item.app_name : $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', is_tls_enabled ? 'Yes' : 'No');
 
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
@@ -67,45 +64,56 @@ $.fn.zato.outgoing.mongodb.data_table.new_row = function(item, data, include_tr)
     row += String.format("<td class='ignore'>{0}</td>", is_active);
 
     // 1 -->
-    row += String.format("<td class='ignore'>{0}</td>", item.get_info);
-    row += String.format("<td class='ignore'>{0}</td>", item.ip_mode);
+    row += String.format("<td class='ignore'>{0}</td>", item.pool_size_max);
     row += String.format("<td class='ignore'>{0}</td>", item.connect_timeout);
-    row += String.format("<td class='ignore'>{0}</td>", item.auto_bind);
-
-    console.log('QQQ ' + item.server_list);
+    row += String.format("<td class='ignore'>{0}</td>", item.socket_timeout);
+    row += String.format("<td class='ignore'>{0}</td>", item.server_select_timeout);
 
     // 2 -->
-    row += String.format("<td class='ignore'>{0}</td>", item.server_list);
-    row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
-    row += String.format("<td class='ignore'>{0}</td>", item.pool_exhaust_timeout);
-    row += String.format("<td class='ignore'>{0}</td>", item.pool_keep_alive);
+    row += String.format("<td class='ignore'>{0}</td>", item.wait_queue_timeout);
+    row += String.format("<td class='ignore'>{0}</td>", item.max_idle_time);
+    row += String.format("<td class='ignore'>{0}</td>", item.hb_frequency);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_active);
 
     // 3 -->
-    row += String.format("<td class='ignore'>{0}</td>", item.pool_max_cycles);
-    row += String.format("<td class='ignore'>{0}</td>", item.pool_lifetime);
-    row += String.format("<td class='ignore'>{0}</td>", item.pool_ha_strategy);
+    row += String.format("<td class='ignore'>{0}</td>", item.username ? item.username : '');
+    row += String.format("<td class='ignore'>{0}</td>", item.app_name ? item.app_name : '');
+    row += String.format("<td class='ignore'>{0}</td>", item.replica_set);
+    row += String.format("<td class='ignore'>{0}</td>", item.auth_source);
 
     // 4 -->
-    row += String.format("<td class='ignore'>{0}</td>", item.pool_name);
-    row += String.format("<td class='ignore'>{0}</td>", item.sasl_mechanism);
-    row += String.format("<td class='ignore'>{0}</td>", is_read_only ? 'Yes' : 'No');
-    row += String.format("<td class='ignore'>{0}</td>", is_stats_enabled ? 'Yes' : 'No');
+    row += String.format("<td class='ignore'>{0}</td>", item.auth_mechanism);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_tz_aware);
+    row += String.format("<td class='ignore'>{0}</td>", item.document_class);
+    row += String.format("<td class='ignore'>{0}</td>", item.compressor_list);
 
     // 5 -->
-    row += String.format("<td class='ignore'>{0}</td>", should_check_names ? 'Yes' : 'No');
-    row += String.format("<td class='ignore'>{0}</td>", use_auto_range ? 'Yes' : 'No');
-    row += String.format("<td class='ignore'>{0}</td>", should_return_empty_attrs ? 'Yes' : 'No');
-    row += String.format("<td class='ignore'>{0}</td>", is_tls_enabled ? 'Yes' : 'No');
+    row += String.format("<td class='ignore'>{0}</td>", item.zlib_level);
+    row += String.format("<td class='ignore'>{0}</td>", item.write_to_replica);
+    row += String.format("<td class='ignore'>{0}</td>", item.write_timeout);
+    row += String.format("<td class='ignore'>{0}</td>", item.is_write_journal_enabled);
 
     // 6 -->
+    row += String.format("<td class='ignore'>{0}</td>", item.is_write_fsync_enabled);
+    row += String.format("<td class='ignore'>{0}</td>", item.read_pref_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.read_pref_tag_list);
+    row += String.format("<td class='ignore'>{0}</td>", item.read_pref_max_stale);
+
+    // 7 -->
+    row += String.format("<td class='ignore'>{0}</td>", item.is_tls_enabled);
     row += String.format("<td class='ignore'>{0}</td>", item.tls_private_key_file);
     row += String.format("<td class='ignore'>{0}</td>", item.tls_cert_file);
     row += String.format("<td class='ignore'>{0}</td>", item.tls_ca_certs_file);
-    row += String.format("<td class='ignore'>{0}</td>", item.tls_version);
 
-    // 7 -->
-    row += String.format("<td class='ignore'>{0}</td>", item.tls_ciphers);
+    // 8 -->
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_crl_file);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_version);
     row += String.format("<td class='ignore'>{0}</td>", item.tls_validate);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_pem_passphrase);
+
+    // 9 -->
+    row += String.format("<td class='ignore'>{0}</td>", item.is_tls_match_hostname_enabled);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_ciphers);
 
     if(include_tr) {
         row += '</tr>';

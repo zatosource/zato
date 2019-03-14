@@ -27,10 +27,10 @@
 
             'name',
             '_is_active',
-            '_server_list',
-            'username',
+            'server_list',
 
-            'auth_type',
+            '_username',
+            '_app_name',
             '_is_tls_enabled',
 
             '_change_password',
@@ -42,43 +42,56 @@
             'is_active',
 
             {% comment %} 1 {% endcomment %}
-            'get_info',
-            'ip_mode',
+            'pool_size_max',
             'connect_timeout',
-            'auto_bind',
+            'socket_timeout',
+            'server_select_timeout',
 
             {% comment %} 2 {% endcomment %}
-            'server_list',
-            'pool_size',
-            'pool_exhaust_timeout',
-            'pool_keep_alive',
+            'wait_queue_timeout',
+            'max_idle_time',
+            'hb_frequency',
+            'is_active',
 
             {% comment %} 3 {% endcomment %}
-            'pool_max_cycles',
-            'pool_lifetime',
-            'pool_ha_strategy',
+            'username',
+            'app_name',
+            'replica_set',
+            'auth_source',
 
             {% comment %} 4 {% endcomment %}
-            'pool_name',
-            'sasl_mechanism',
-            'is_read_only',
-            'is_stats_enabled',
+            'auth_mechanism',
+            'is_tz_aware',
+            'document_class',
+            'compressor_list',
 
             {% comment %} 5 {% endcomment %}
-            'should_check_names',
-            'use_auto_range',
-            'should_return_empty_attrs',
-            'is_tls_enabled',
+            'zlib_level',
+            'write_to_replica',
+            'write_timeout',
+            'is_write_journal_enabled',
 
             {% comment %} 6 {% endcomment %}
+            'is_write_fsync_enabled',
+            'read_pref_type',
+            'read_pref_tag_list',
+            'read_pref_max_stale',
+
+            {% comment %} 7 {% endcomment %}
+            'is_tls_enabled',
             'tls_private_key_file',
             'tls_cert_file',
             'tls_ca_certs_file',
-            'tls_version',
 
-            {% comment %} 7 {% endcomment %}
+            {% comment %} 8 {% endcomment %}
+            'tls_crl_file',
+            'tls_version',
+            'tls_validate',
+            'tls_pem_passphrase',
+
+            {% comment %} 9 {% endcomment %}
+            'is_tls_match_hostname_enabled',
             'tls_ciphers',
-            'tls_validate'
         ]
     }
     </script>
@@ -114,9 +127,9 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Servers</a></th>
-                        <th><a href="#">Credentials</a></th>
 
-                        <th><a href="#">Auth type</a></th>
+                        <th><a href="#">Username</a></th>
+                        <th><a href="#">App name</a></th>
                         <th><a href="#">Use TLS</a></th>
 
                         <th>&nbsp;</th>
@@ -165,6 +178,20 @@
                         {% comment %} 7 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 8 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 9 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -178,9 +205,9 @@
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.server_list }}</td>
-                        <td>{{ item.username }}</td>
+                        <td>{{ item.username|default:"<span class='form_hint'>---</span>" }}</td>
 
-                        <td>{{ item.auth_type }}</td>
+                        <td>{{ item.app_name|default:"<span class='form_hint'>---</span>" }}</td>
                         <td>{{ item.is_tls_enabled|yesno:'Yes,No' }}</td>
 
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
@@ -192,43 +219,56 @@
                         <td class='ignore'>{{ item.is_active }}</td>
 
                         {% comment %} 1 {% endcomment %}
-                        <td class='ignore'>{{ item.get_info }}</td>
-                        <td class='ignore'>{{ item.ip_mode }}</td>
+                        <td class='ignore'>{{ item.pool_size_max }}</td>
                         <td class='ignore'>{{ item.connect_timeout }}</td>
-                        <td class='ignore'>{{ item.auto_bind }}</td>
+                        <td class='ignore'>{{ item.socket_timeout }}</td>
+                        <td class='ignore'>{{ item.server_select_timeout }}</td>
 
                         {% comment %} 2 {% endcomment %}
-                        <td class='ignore'>{{ item.server_list }}</td>
-                        <td class='ignore'>{{ item.pool_size }}</td>
-                        <td class='ignore'>{{ item.pool_exhaust_timeout }}</td>
-                        <td class='ignore'>{{ item.pool_keep_alive }}</td>
+                        <td class='ignore'>{{ item.wait_queue_timeout }}</td>
+                        <td class='ignore'>{{ item.max_idle_time }}</td>
+                        <td class='ignore'>{{ item.hb_frequency }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
 
                         {% comment %} 3 {% endcomment %}
-                        <td class='ignore'>{{ item.pool_max_cycles }}</td>
-                        <td class='ignore'>{{ item.pool_lifetime }}</td>
-                        <td class='ignore'>{{ item.pool_ha_strategy }}</td>
+                        <td class='ignore'>{{ item.username|default:"" }}</td>
+                        <td class='ignore'>{{ item.app_name|default:"" }}</td>
+                        <td class='ignore'>{{ item.replica_set }}</td>
+                        <td class='ignore'>{{ item.auth_source }}</td>
 
                         {% comment %} 4 {% endcomment %}
-                        <td class='ignore'>{{ item.pool_name }}</td>
-                        <td class='ignore'>{{ item.sasl_mechanism }}</td>
-                        <td class='ignore'>{{ item.is_read_only }}</td>
-                        <td class='ignore'>{{ item.is_stats_enabled }}</td>
+                        <td class='ignore'>{{ item.auth_mechanism }}</td>
+                        <td class='ignore'>{{ item.is_tz_aware }}</td>
+                        <td class='ignore'>{{ item.document_class }}</td>
+                        <td class='ignore'>{{ item.compressor_list }}</td>
 
                         {% comment %} 5 {% endcomment %}
-                        <td class='ignore'>{{ item.should_check_names }}</td>
-                        <td class='ignore'>{{ item.use_auto_range }}</td>
-                        <td class='ignore'>{{ item.should_return_empty_attrs }}</td>
-                        <td class='ignore'>{{ item.is_tls_enabled }}</td>
+                        <td class='ignore'>{{ item.zlib_level }}</td>
+                        <td class='ignore'>{{ item.write_to_replica }}</td>
+                        <td class='ignore'>{{ item.write_timeout }}</td>
+                        <td class='ignore'>{{ item.is_write_journal_enabled }}</td>
 
                         {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.is_write_fsync_enabled }}</td>
+                        <td class='ignore'>{{ item.read_pref_type }}</td>
+                        <td class='ignore'>{{ item.read_pref_tag_list }}</td>
+                        <td class='ignore'>{{ item.read_pref_max_stale }}</td>
+
+                        {% comment %} 7 {% endcomment %}
+                        <td class='ignore'>{{ item.is_tls_enabled }}</td>
                         <td class='ignore'>{{ item.tls_private_key_file }}</td>
                         <td class='ignore'>{{ item.tls_cert_file }}</td>
                         <td class='ignore'>{{ item.tls_ca_certs_file }}</td>
-                        <td class='ignore'>{{ item.tls_version }}</td>
 
-                        {% comment %} 7 {% endcomment %}
-                        <td class='ignore'>{{ item.tls_ciphers }}</td>
+                        {% comment %} 8 {% endcomment %}
+                        <td class='ignore'>{{ item.tls_crl_file }}</td>
+                        <td class='ignore'>{{ item.tls_version }}</td>
                         <td class='ignore'>{{ item.tls_validate }}</td>
+                        <td class='ignore'>{{ item.tls_pem_passphrase }}</td>
+
+                        {% comment %} 9 {% endcomment %}
+                        <td class='ignore'>{{ item.is_tls_match_hostname_enabled }}</td>
+                        <td class='ignore'>{{ item.tls_ciphers }}</td>
 
                     </tr>
                 {% endfor %}
@@ -391,12 +431,12 @@
                                 |
                                 <label>
                                 Req. journal
-                                {{ create_form.write_journal_is_enabled }}
+                                {{ create_form.is_write_journal_enabled }}
                                 </label>
                                 |
                                 <label>
                                 Req. fsync
-                                {{ create_form.write_fsync_is_enabled }}
+                                {{ create_form.is_write_fsync_enabled }}
                                 </label>
                             </td>
                         </tr>
@@ -458,7 +498,7 @@
                                 |
                                 <label>
                                 Match hosts
-                                {{ create_form.tls_match_hostname_is_enabled }}
+                                {{ create_form.is_tls_match_hostname_enabled }}
                                 </label>
                             </td>
                         </tr>
@@ -615,6 +655,7 @@
                         </tr>
 
                         <tr class="timeout-block hidden">
+                            <td></td>
                             <td>
                                 <label>
                                 Connection
@@ -639,7 +680,15 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Compressor</td>
+                            <td style="vertical-align:middle">
+                            Compressor
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.compressor-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="compressor-block hidden">
+                            <td></td>
                             <td>
                                 <label>
                                 List
@@ -654,7 +703,15 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Write</td>
+                            <td style="vertical-align:middle">
+                            Write
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.write-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="write-block hidden">
+                            <td></td>
                             <td>
                                 <label>
                                 To repl.
@@ -668,18 +725,26 @@
                                 |
                                 <label>
                                 Req. journal
-                                {{ edit_form.write_journal_is_enabled }}
+                                {{ edit_form.is_write_journal_enabled }}
                                 </label>
                                 |
                                 <label>
                                 Req. fsync
-                                {{ edit_form.write_fsync_is_enabled }}
+                                {{ edit_form.is_write_fsync_enabled }}
                                 </label>
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Read pref.</td>
+                            <td style="vertical-align:middle">
+                            Read pref.
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.read-pref-block')">Toggle options</a>
+                            </td>
+                        </tr>
+                        <tr class="read-pref-block hidden">
+                            <td></td>
                             <td>
                                 <label>
                                 Type
@@ -727,7 +792,7 @@
                                 |
                                 <label>
                                 Match hosts
-                                {{ edit_form.tls_match_hostname_is_enabled }}
+                                {{ edit_form.is_tls_match_hostname_enabled }}
                                 </label>
                             </td>
                         </tr>
@@ -793,7 +858,6 @@
                                 {{ edit_form.server_list }}
                             </td>
                         </tr>
-
 
                         <tr>
                             <td colspan="2" style="text-align:right">
