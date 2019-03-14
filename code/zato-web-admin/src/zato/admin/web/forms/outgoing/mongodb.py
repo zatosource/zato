@@ -12,22 +12,24 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_select
+from zato.admin.web.forms import add_select, WithTLSForm
 from zato.common import MONGODB, TLS
+
+from pymongo import MongoClient
 
 default = MONGODB.DEFAULT
 timeout = default.TIMEOUT
 
-class CreateForm(forms.Form):
+class CreateForm(WithTLSForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    app_name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    app_name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
     replica_set = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
 
-    auth_source = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
-    auth_mechanism = forms.ChoiceField(widget=forms.Select())
+    auth_source = forms.CharField(widget=forms.TextInput(attrs={'style':'width:15%'}), initial=default.AUTH_SOURCE)
+    auth_mechanism = forms.ChoiceField(widget=forms.Select(), initial=MONGODB.AUTH_MECHANISM.SCRAM_SHA_256.id)
 
     pool_size_max = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=default.POOL_SIZE_MAX)
 
@@ -37,37 +39,29 @@ class CreateForm(forms.Form):
     wait_queue_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=timeout.WAIT_QUEUE)
 
     max_idle_time = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=default.MAX_IDLE_TIME)
-    hb_frequency = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=default.TIMEOUT)
+    hb_frequency = forms.CharField(widget=forms.TextInput(attrs={'style':'width:8%'}), initial=default.HB_FREQUENCY)
 
     is_tz_aware = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    document_class = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-
-    is_tls_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    tls_private_key_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_cert_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_ca_certs_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_crl_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_version = forms.ChoiceField(widget=forms.Select(), initial=TLS.DEFAULT)
-    tls_validate = forms.ChoiceField(widget=forms.Select(), initial=TLS.CERT_VALIDATE.CERT_REQUIRED.id)
-    tls_pem_passphrase = forms.CharField(widget=forms.HiddenInput(attrs={'style':'width:100%'}))
-    tls_match_hostname_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    document_class = forms.CharField(widget=forms.TextInput(attrs={'style':'width:40%'}))
 
     compressor_list = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
-    zlib_level = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}))
+    zlib_level = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=default.ZLIB_LEVEL)
 
-    write_to = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}))
-    write_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}))
-    write_journal_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    write_to_replica = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=default.WRITE_TO_REPLICA)
+    write_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=default.WRITE_TIMEOUT)
+    write_journal_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     write_fsync_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    read_pref_type = forms.ChoiceField(widget=forms.Select())
-    read_pref_tag_list = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
+    read_pref_type = forms.ChoiceField(widget=forms.Select(), initial=MONGODB.READ_PREF.PRIMARY.id)
+    read_pref_tag_list = forms.CharField(widget=forms.TextInput(attrs={'style':'width:23%'}))
     read_pref_max_stale = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=default.MAX_STALENESS)
 
-    server_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
+    server_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:70px'}))
 
-    def __init__(self, prefix=None, post_data=None):
-        super(CreateForm, self).__init__(post_data, prefix=prefix)
+    def __init__(self, *args, **kwargs):
+        super(CreateForm, self).__init__(*args, **kwargs)
+        add_select(self, 'auth_mechanism', MONGODB.AUTH_MECHANISM(), needs_initial_select=False)
+        add_select(self, 'read_pref_type', MONGODB.READ_PREF(), needs_initial_select=False)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

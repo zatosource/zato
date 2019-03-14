@@ -53,12 +53,12 @@ try:
     execfile(_version_py, _locals)
     version = 'Zato {}'.format(_locals['version'])
 except IOError:
-    version = '3.0.0'
+    version = '3.1.0'
 
 version = '{}-py{}.{}.{}'.format(version, py_version_info.major, py_version_info.minor, py_version_info.micro)
 
-# The namespace for use in all Zato's own services.
-zato_namespace = 'https://zato.io/ns/20130518'
+# XML namespace for use in all Zato's own services.
+zato_namespace = 'https://zato.io/ns/v1'
 zato_ns_map = {None: zato_namespace}
 
 # SQL ODB
@@ -1080,7 +1080,11 @@ class TLS:
     DIR_CA_CERTS = 'ca-certs'
     DIR_KEYS_CERTS = 'keys-certs'
 
-    DEFAULT = 'SSLv23'
+    class DEFAULT:
+        VERSION = 'SSLv23'
+        CIPHERS = 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:' \
+                  'ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:' \
+                  'ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256'
 
     class VERSION:
         SSLv23  = NameId('SSLv23')
@@ -1276,7 +1280,6 @@ class GENERIC:
 class LDAP:
 
     class DEFAULT:
-        CIPHERS = 'ECDH+AESGCM:ECDH+CHACHA20:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS'
         CONNECT_TIMEOUT  = 10
         POOL_EXHAUST_TIMEOUT = 5
         POOL_KEEP_ALIVE = 30
@@ -1344,20 +1347,46 @@ class LDAP:
 # ################################################################################################################################
 
 class MONGODB:
+
     class DEFAULT:
-        HB_FREQUENCY = 10
-        MAX_IDLE_TIME = 600
-        MAX_STALENESS = -1
-        POOL_SIZE_MIN = 0
-        POOL_SIZE_MAX = 5
-        WRITE_CONCERN = 1
-        WRITE_TIMEOUT = 5
+        AUTH_SOURCE      = 'admin'
+        HB_FREQUENCY     = 10
+        MAX_IDLE_TIME    = 600
+        MAX_STALENESS    = -1
+        POOL_SIZE_MIN    = 0
+        POOL_SIZE_MAX    = 5
+        WRITE_TO_REPLICA = 0
+        WRITE_TIMEOUT    = 5
+        ZLIB_LEVEL       = -1
 
         class TIMEOUT:
             CONNECT = 10
             SERVER_SELECT  = 5
             SOCKET  = 30
             WAIT_QUEUE  = 10
+
+            'primary',
+            'primaryPreferred',
+            'secondary',
+            'secondaryPreferred',
+            'nearest',
+
+    class READ_PREF:
+        PRIMARY = NameId('Primary', 'primary')
+        PRIMARY_PREFERRED = NameId('Primary pref.', 'primaryPreferred')
+        SECONDARY = NameId('Secondary', 'secondary')
+        SECONDARY_PREFERRED = NameId('Secondary pref.', 'secondaryPreferred')
+        NEAREST = NameId('Nearest', 'nearest')
+
+        def __iter__(self):
+            return iter((self.PRIMARY, self.PRIMARY_PREFERRED, self.SECONDARY, self.SECONDARY_PREFERRED, self.NEAREST))
+
+    class AUTH_MECHANISM:
+        SCRAM_SHA_1 = NameId('SCRAM-SHA-1')
+        SCRAM_SHA_256 = NameId('SCRAM-SHA-256')
+
+        def __iter__(self):
+            return iter((self.SCRAM_SHA_1, self.SCRAM_SHA_256))
 
 # ################################################################################################################################
 # ################################################################################################################################
