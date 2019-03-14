@@ -15,7 +15,7 @@ from django import forms
 from future.utils import iteritems
 
 # Zato
-from zato.common import DELEGATED_TO_RBAC, SIMPLE_IO, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common import DELEGATED_TO_RBAC, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
 
 # ################################################################################################################################
 
@@ -161,6 +161,7 @@ def add_select_from_service(form, req, service_name, field_names, by_id=True):
             field.choices.append([id_attr, item.name])
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SearchForm(forms.Form):
 
@@ -197,6 +198,7 @@ class SearchForm(forms.Form):
         self.initial['cluster'] = (data.get('cluster') or [''])[0]
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ChangePasswordForm(forms.Form):
     password1 = forms.CharField(widget=forms.PasswordInput(
@@ -204,6 +206,7 @@ class ChangePasswordForm(forms.Form):
     password2 = forms.CharField(widget=forms.PasswordInput(
         attrs={'class':'required validate-password-confirm', 'style':'width:100%'}))
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class DataFormatForm(forms.Form):
@@ -219,8 +222,32 @@ class DataFormatForm(forms.Form):
             self.fields['data_format'].choices.append([code, name])
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class UploadForm(forms.Form):
     file = forms.FileField(widget=forms.FileInput(attrs={'size':'70'}))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WithTLSForm(forms.Form):
+
+    is_tls_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    tls_private_key_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_cert_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_ca_certs_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_crl_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_version = forms.ChoiceField(widget=forms.Select(), initial=TLS.DEFAULT.VERSION)
+    tls_validate = forms.ChoiceField(widget=forms.Select(), initial=TLS.CERT_VALIDATE.CERT_REQUIRED.id)
+    tls_pem_passphrase = forms.CharField(widget=forms.PasswordInput(attrs={'style':'width:100%'}))
+    tls_match_hostname_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    tls_ciphers = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=TLS.DEFAULT.CIPHERS)
+
+    def __init__(self, prefix=None, post_data=None):
+        super(WithTLSForm, self).__init__(post_data, prefix=prefix)
+
+        add_select(self, 'tls_version', TLS.VERSION(), needs_initial_select=False)
+        add_select(self, 'tls_validate', TLS.CERT_VALIDATE(), needs_initial_select=False)
+
+# ################################################################################################################################
 # ################################################################################################################################
