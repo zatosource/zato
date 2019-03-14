@@ -1271,8 +1271,9 @@ class GENERIC:
     class CONNECTION:
         class TYPE:
             OUTCONN_LDAP = 'outconn-ldap'
-            OUTCONN_WSX = 'outconn-wsx'
+            OUTCONN_MONGODB = 'outconn-mongodb'
             OUTCONN_SFTP = 'outconn-sftp'
+            OUTCONN_WSX = 'outconn-wsx'
 
 # ################################################################################################################################
 # ################################################################################################################################

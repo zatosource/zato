@@ -35,12 +35,17 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'type_')
-        output_required = ('id', 'name', 'is_active', 'get_info', 'ip_mode', 'connect_timeout', 'auto_bind', 'server_list',
-            'pool_size', 'pool_exhaust_timeout', 'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime', 'pool_ha_strategy',
-            'username', 'auth_type')
-        output_optional = ('is_active', 'use_tls', 'pool_name', 'use_sasl_external', 'is_read_only', 'is_stats_enabled',
-            'should_check_names', 'use_auto_range', 'should_return_empty_attrs', 'is_tls_enabled', 'tls_private_key_file',
-            'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate', 'sasl_mechanism')
+
+        output_required = ('id', 'name', 'server_list', 'pool_size_max', 'connect_timeout',
+        'socket_timeout', 'server_select_timeout', 'wait_queue_timeout', 'max_idle_time', 'hb_frequency')
+
+        output_optional = ('is_active',  'username', 'app_name', 'replica_set', 'auth_source',  'auth_mechanism',
+            'is_tz_aware',  'document_class', 'compressor_list', 'zlib_level', 'write_to_replica', 'write_timeout',
+            'is_write_journal_enabled', 'is_write_fsync_enabled', 'read_pref_type', 'read_pref_tag_list',
+            'read_pref_max_stale', 'is_tls_enabled', 'tls_private_key_file', 'tls_cert_file', 'tls_ca_certs_file',
+            'tls_crl_file', 'tls_version', 'tls_validate', 'tls_pem_passphrase', 'is_tls_match_hostname_enabled',
+            'tls_ciphers')
+
         output_repeated = True
 
     def handle(self):
@@ -56,21 +61,31 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'get_info', 'ip_mode', 'connect_timeout', 'auto_bind', 'server_list', 'pool_size',
-            'pool_exhaust_timeout', 'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime', 'pool_ha_strategy', 'username',
-            'auth_type')
-        input_optional = ('is_active', 'use_tls', 'pool_name', 'use_sasl_external', 'is_read_only', 'is_stats_enabled',
-            'should_check_names', 'use_auto_range', 'should_return_empty_attrs', 'is_tls_enabled', 'tls_private_key_file',
-            'tls_cert_file', 'tls_ca_certs_file', 'tls_version', 'tls_ciphers', 'tls_validate', 'sasl_mechanism')
-        output_required = ('id', 'name')
+        input_required = ('name', 'server_list', 'pool_size_max', 'connect_timeout',
+        'socket_timeout', 'server_select_timeout', 'wait_queue_timeout', 'max_idle_time', 'hb_frequency')
+
+        input_optional = ('is_active',  'username', 'app_name', 'replica_set', 'auth_source',  'auth_mechanism',
+            'is_tz_aware',  'document_class', 'compressor_list', 'zlib_level', 'write_to_replica', 'write_timeout',
+            'is_write_journal_enabled', 'is_write_fsync_enabled', 'read_pref_type', 'read_pref_tag_list',
+            'read_pref_max_stale', 'is_tls_enabled', 'tls_private_key_file', 'tls_cert_file', 'tls_ca_certs_file',
+            'tls_crl_file', 'tls_version', 'tls_validate', 'tls_pem_passphrase', 'is_tls_match_hostname_enabled',
+            'tls_ciphers')
+
+        output_required = 'id', 'name'
 
     def populate_initial_input_dict(self, initial_input_dict):
         initial_input_dict['type_'] = GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB
-        initial_input_dict['ip_mode'] = MONGODB.IP_MODE.IP_SYSTEM_DEFAULT.id
         initial_input_dict['is_internal'] = False
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outconn'] = True
         initial_input_dict['sec_use_rbac'] = False
+        initial_input_dict['pool_size'] = -1 # We use pool_size_max from opaque attributes
+
+    def on_after_set_input(self):
+        # Convert to integers, as expected by MongoDB driver
+        for name in 'hb_frequency', 'max_idle_time', 'write_to_replica', 'read_pref_max_stale', 'zlib_level':
+            value = self.input[name]
+            self.input[name] = int(value)
 
     def success_message(self, item):
         return 'Successfully {} outgoing MongoDB connection `{}`'.format(self.verb, item.name)

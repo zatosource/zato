@@ -74,6 +74,8 @@ class Generic(WorkerImpl):
         # Normalize the contents of the configuration message
         self.generic_normalize_config(item_dict)
 
+        return
+
         config_attr = self.generic_conn_api[item.type_]
         wrapper = self._generic_conn_handler[item.type_]
 

@@ -240,7 +240,7 @@ class WithTLSForm(forms.Form):
     tls_version = forms.ChoiceField(widget=forms.Select(), initial=TLS.DEFAULT.VERSION)
     tls_validate = forms.ChoiceField(widget=forms.Select(), initial=TLS.CERT_VALIDATE.CERT_REQUIRED.id)
     tls_pem_passphrase = forms.CharField(widget=forms.PasswordInput(attrs={'style':'width:100%'}))
-    tls_match_hostname_is_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_tls_match_hostname_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     tls_ciphers = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=TLS.DEFAULT.CIPHERS)
 
     def __init__(self, prefix=None, post_data=None):

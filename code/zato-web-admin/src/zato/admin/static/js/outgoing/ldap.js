@@ -38,7 +38,6 @@ $.fn.zato.outgoing.ldap.data_table.new_row = function(item, data, include_tr) {
     }
 
     var is_active = item.is_active == true;
-    var is_zato = item.is_zato == true;
     var has_auto_reconnect = item.has_auto_reconnect == true;
     var is_read_only = item.is_read_only == true;
     var is_stats_enabled = item.is_stats_enabled == true;
