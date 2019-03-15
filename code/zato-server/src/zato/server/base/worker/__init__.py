@@ -81,6 +81,7 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
+from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.pubsub import PubSub
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
@@ -239,17 +240,22 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Generic connections - LDAP outconns
         self.outconn_ldap = {}
 
+        # Generic connections - MongoDB
+        self.outconn_mongodb = {}
+
         # Generic connections - WSX outconns
         self.outconn_wsx = {}
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
         }
 
         self._generic_conn_handler = {
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
         }
 
@@ -946,7 +952,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             if config_dict['config']['type_'] == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP:
                 continue
 
-            self._create_generic_connection(bunchify(config_dict['config']))
+            self._create_generic_connection(bunchify(config_dict['config']), raise_exc=False)
 
 # ################################################################################################################################
 
@@ -954,6 +960,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Local aliases
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
+        outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
         outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
         outconn_wsx_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX, {})
 
@@ -962,6 +969,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         outconn_ldap_map[_generic_msg.edit]   = self._edit_generic_connection
         outconn_ldap_map[_generic_msg.delete] = self._delete_generic_connection
         outconn_ldap_map[_generic_msg.change_password] = self._change_password_generic_connection
+
+        # Outgoing WSX connections are pure generic objects that we can handle ourselves
+        outconn_mongodb_map[_generic_msg.create] = self._create_generic_connection
+        outconn_mongodb_map[_generic_msg.edit]   = self._edit_generic_connection
+        outconn_mongodb_map[_generic_msg.delete] = self._delete_generic_connection
 
         # Outgoing SFTP connections require for a different API to be called (provided by ParallelServer)
         outconn_sftp_map[_generic_msg.create] = self._on_outconn_sftp_create

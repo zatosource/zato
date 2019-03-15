@@ -41,6 +41,7 @@ from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import ldap as out_ldap
+from zato.admin.web.views.outgoing import mongodb as out_mongodb
 from zato.admin.web.views.outgoing import odoo as out_odoo
 from zato.admin.web.views.outgoing import sap as out_sap
 from zato.admin.web.views.outgoing import sftp as out_sftp
@@ -703,6 +704,26 @@ urlpatterns += [
         login_required(out_ldap.change_password), name='out-ldap-change-password'),
     url(r'^zato/outgoing/ldap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_ldap.ping), name='out-ldap-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. MongoDB
+
+    url(r'^zato/outgoing/mongodb/$',
+        login_required(out_mongodb.Index()), name=out_mongodb.Index.url_name),
+    url(r'^zato/outgoing/mongodb/create/$',
+        login_required(out_mongodb.Create()), name=out_mongodb.Create.url_name),
+    url(r'^zato/outgoing/mongodb/edit/$',
+        login_required(out_mongodb.Edit()), name=out_mongodb.Edit.url_name),
+    url(r'^zato/outgoing/mongodb/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_mongodb.Delete()), name=out_mongodb.Delete.url_name),
+    url(r'^zato/outgoing/mongodb/change-password/$',
+        login_required(out_mongodb.change_password), name='out-mongodb-change-password'),
+    url(r'^zato/outgoing/mongodb/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_mongodb.ping), name='out-mongodb-ping'),
     ]
 
 # ################################################################################################################################

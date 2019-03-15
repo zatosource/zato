@@ -614,16 +614,6 @@ def ping_connection(req, service, connection_id, connection_type='{}'):
     ret = id_only_service(req, service, connection_id, 'Could not ping {}, e:`{{}}`'.format(connection_type))
     if isinstance(ret, HttpResponseServerError):
         return ret
-
-    print()
-    print()
-
-    print(111, ret)
-    print(222, ret.data)
-
-    print()
-    print()
-
     return HttpResponse(ret.data.info)
 
 # ################################################################################################################################
