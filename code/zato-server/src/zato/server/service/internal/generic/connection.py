@@ -89,7 +89,9 @@ class _CreateEdit(_BaseService):
             # This will be needed in case this is a rename
             old_name = model.name
 
-            for key, value in conn_dict.items():
+            for key, value in sorted(conn_dict.items()):
+                if key == 'secret':
+                    continue
                 setattr(model, key, value)
 
             session.add(model)
