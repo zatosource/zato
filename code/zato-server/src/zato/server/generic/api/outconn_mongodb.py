@@ -69,7 +69,7 @@ class OutconnMongoDBWrapper(Wrapper):
             'readPreferenceTags': self.config.read_pref_tag_list or '',
             'maxStalenessSeconds': self.config.read_pref_max_stale,
             'username': self.config.username,
-            'password': self.config.secret or '{}.{}'.format(self.__class__.__name__, uuid4().hex),
+            'password': self.config.secret or self.config.get('password') or '{}.{}'.format(self.__class__.__name__, uuid4().hex),
             'authSource': self.config.auth_source,
             'authMechanism': self.config.auth_mechanism,
         })
