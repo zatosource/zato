@@ -92,6 +92,7 @@
             {% comment %} 9 {% endcomment %}
             'is_tls_match_hostname_enabled',
             'tls_ciphers',
+            'should_retry_write',
         ]
     }
     </script>
@@ -191,7 +192,6 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -269,6 +269,7 @@
                         {% comment %} 9 {% endcomment %}
                         <td class='ignore'>{{ item.is_tls_match_hostname_enabled }}</td>
                         <td class='ignore'>{{ item.tls_ciphers }}</td>
+                        <td class='ignore'>{{ item.should_retry_write }}</td>
 
                     </tr>
                 {% endfor %}
@@ -433,11 +434,14 @@
                                 Req. journal
                                 {{ create_form.is_write_journal_enabled }}
                                 </label>
-                                |
                                 <label>
-                                Req. fsync
+                                fsync
                                 {{ create_form.is_write_fsync_enabled }}
                                 </label>
+                                |
+                                <label>
+                                Retry
+                                {{ create_form.should_retry_write }}
                             </td>
                         </tr>
 
@@ -727,11 +731,14 @@
                                 Req. journal
                                 {{ edit_form.is_write_journal_enabled }}
                                 </label>
-                                |
                                 <label>
-                                Req. fsync
+                                fsync
                                 {{ edit_form.is_write_fsync_enabled }}
                                 </label>
+                                |
+                                <label>
+                                Retry
+                                {{ edit_form.should_retry_write }}
                             </td>
                         </tr>
 

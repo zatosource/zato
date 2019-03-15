@@ -66,7 +66,7 @@ class _CreateEdit(CreateEdit):
 
         input_optional = ('is_active',  'username', 'app_name', 'replica_set', 'auth_source',  'auth_mechanism',
             'is_tz_aware',  'document_class', 'compressor_list', 'zlib_level', 'write_to_replica', 'write_timeout',
-            'is_write_journal_enabled', 'is_write_fsync_enabled', 'read_pref_type', 'read_pref_tag_list',
+            'is_write_journal_enabled', 'is_write_fsync_enabled', 'should_retry_write', 'read_pref_type', 'read_pref_tag_list',
             'read_pref_max_stale', 'is_tls_enabled', 'tls_private_key_file', 'tls_cert_file', 'tls_ca_certs_file',
             'tls_crl_file', 'tls_version', 'tls_validate', 'tls_pem_passphrase', 'is_tls_match_hostname_enabled',
             'tls_ciphers')
@@ -79,7 +79,7 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_channel'] = False
         initial_input_dict['is_outconn'] = True
         initial_input_dict['sec_use_rbac'] = False
-        initial_input_dict['pool_size'] = -1 # We use pool_size_max from opaque attributes
+        initial_input_dict['pool_size'] = 1 # We use pool_size_max from opaque attributes
 
     def on_after_set_input(self):
         # Convert to integers, as expected by MongoDB driver

@@ -21,8 +21,11 @@ from gevent.queue import Empty, Queue
 # A set of utilities for constructing greenlets-safe outgoing connection objects.
 # Used, for instance, in SOAP Suds and OpenStack Swift outconns.
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _Connection(object):
@@ -50,12 +53,14 @@ class _Connection(object):
             self.queue.put(self.client)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ConnectionQueue(object):
     """ Holds connections to resources. Each time it's called a connection is fetched from its underlying queue
     assuming any connection is still available.
     """
     def __init__(self, pool_size, queue_build_cap, conn_name, conn_type, address, add_client_func):
+
         self.queue = Queue(pool_size)
         self.queue_build_cap = queue_build_cap
         self.conn_name = conn_name
@@ -131,9 +136,10 @@ class ConnectionQueue(object):
         gevent.spawn(self._build_queue)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Wrapper(object):
-    """ Base class for connections wrappers.
+    """ Base class for queue-based connections wrappers.
     """
     def __init__(self, config, conn_type, server=None):
         self.conn_type = conn_type
@@ -185,4 +191,5 @@ class Wrapper(object):
                 except Exception:
                     logger.warn('Could not delete connection from queue for `%s`, e:`%s`', self.config.name, format_exc())
 
+# ################################################################################################################################
 # ################################################################################################################################
