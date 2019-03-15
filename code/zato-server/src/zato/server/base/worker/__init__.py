@@ -80,6 +80,7 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
      OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
+from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
@@ -237,10 +238,13 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Caches
         self.cache_api = CacheAPI(self.server)
 
+        # Generic connections - Kafka definitions
+        self.def_kafka = {}
+
         # Generic connections - LDAP outconns
         self.outconn_ldap = {}
 
-        # Generic connections - MongoDB
+        # Generic connections - MongoDB outconns
         self.outconn_mongodb = {}
 
         # Generic connections - WSX outconns
@@ -248,12 +252,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
+            COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
         }
 
         self._generic_conn_handler = {
+            COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
@@ -959,10 +965,16 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def init_generic_connections_config(self):
 
         # Local aliases
+        def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
         outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
         outconn_wsx_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX, {})
+
+        # Kafka definitions are pure generic objects that we can handle ourselves
+        def_kafka_map[_generic_msg.create] = self._create_generic_connection
+        def_kafka_map[_generic_msg.edit]   = self._edit_generic_connection
+        def_kafka_map[_generic_msg.delete] = self._delete_generic_connection
 
         # LDAP connections are pure generic objects that we can handle ourselves
         outconn_ldap_map[_generic_msg.create] = self._create_generic_connection
