@@ -1392,7 +1392,7 @@ class KAFKA:
 
     class DEFAULT:
         BROKER_VERSION = '0.9.0'
-        SERVER_LIST    = '127.0.0.1:27017'
+        SERVER_LIST    = '127.0.0.1:2181'
 
         class TIMEOUT:
             SOCKET = 30

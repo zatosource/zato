@@ -165,7 +165,8 @@ class Wrapper(object):
                 except Exception:
                     logger.warn('Could not build client queue `%s`', format_exc())
             else:
-                logger.info('Skip building inactive connection queue for `%s` (%s)', self.client.conn_name, self.client.conn_type)
+                logger.info('Skipped building an inactive connection queue for `%s` (%s)',
+                    self.client.conn_name, self.client.conn_type)
 
     # Not all connection types will be queue-based
     build_wrapper = build_queue

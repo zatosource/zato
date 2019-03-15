@@ -10,16 +10,26 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import getLogger
-from uuid import uuid4
-
-# Bunch
-from bunch import bunchify
+from traceback import format_exc
 
 # PyKafka
-from pykafka import KafkaClient
+from pykafka import KafkaClient, SslConfig
 
 # Zato
 from zato.server.connection.wrapper import Wrapper
+
+# ################################################################################################################################
+
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # PyKafka
+    from pykafka.broker import Broker
+
+    # For pyflakes
+    Broker = Broker
 
 # ################################################################################################################################
 
@@ -31,66 +41,51 @@ logger = getLogger(__name__)
 class DefKafkaWrapper(Wrapper):
     """ Wraps a Kafka connection client.
     """
+    wrapper_type = 'Kafka definition'
+
     def __init__(self, *args, **kwargs):
         super(DefKafkaWrapper, self).__init__(*args, **kwargs)
         self.client = None  # type: KafkaClient
 
 # ################################################################################################################################
 
-    def _init(self):
+    def _init_impl(self):
 
-        logger.warn('QQQ %s', self.config)
-
-        return
-
-        if not self.config.is_active:
-            logger.info('Skipped building an inactive Kafka connection `%s`', self.config.name)
-
-        # Configuration of the underlying client
-        client_config = bunchify({
-            'host': self.config.server_list.splitlines(),
-            'tz_aware': self.config.is_tz_aware,
-            'connect': True,
-            'maxPoolSize': self.config.pool_size_max,
-            'minPoolSize': 0,
-            'maxIdleTimeMS': self.config.max_idle_time * 1000,
-            'socketTimeoutMS': self.config.socket_timeout * 1000,
-            'connectTimeoutMS': self.config.connect_timeout * 1000,
-            'serverSelectionTimeoutMS': self.config.server_select_timeout * 1000,
-            'waitQueueTimeoutMS': self.config.wait_queue_timeout * 1000,
-            'heartbeatFrequencyMS': self.config.hb_frequency * 1000,
-            'appname': self.config.app_name,
-            'retryWrites': self.config.should_retry_write,
-            'zlibCompressionLevel': self.config.zlib_level,
-            'w': self.config.write_to_replica,
-            'wtimeout': self.config.write_timeout,
-            'j': self.config.is_write_journal_enabled,
-            'fsync': self.config.is_write_fsync_enabled,
-            'replicaSet': self.config.replica_set,
-            'readPreference': self.config.read_pref_type,
-            'readPreferenceTags': self.config.read_pref_tag_list or '',
-            'maxStalenessSeconds': self.config.read_pref_max_stale,
-            'username': self.config.username,
-            'password': self.config.secret or self.config.get('password') or '{}.{}'.format(self.__class__.__name__, uuid4().hex),
-            'authSource': self.config.auth_source,
-            'authMechanism': self.config.auth_mechanism,
-        })
-
-        if self.config.document_class:
-            client_config.document_class = self.config.document_class
-
-        if self.config.compressor_list:
-            client_config.compressors = self.config.compressor_list
-
+        # TLS is optional
         if self.config.is_tls_enabled:
-            client_config.ssl = self.config.is_tls_enabled
-            client_config.ssl_certfile = self.config.tls_cert_file
-            client_config.ssl_keyfile = self.config.tls_private_key_file
-            client_config.ssl_pem_passphrase = self.config.tls_pem_passphrase
-            client_config.ssl_cert_reqs = self.config.tls_validate
-            client_config.ssl_ca_certs = self.config.tls_ca_certs_file
-            client_config.ssl_crlfile = self.config.tls_crl_file
-            client_config.ssl_match_hostname = self.config.is_tls_match_hostname_enabled
+            tls_config = SslConfig(**{
+                'certfile': self.config.tls_cert_file,
+                'keyfile': self.config.tls_private_key_file,
+                'password': self.config.tls_pem_passphrase,
+                'cafile': self.config.tls_ca_certs_file,
+            })
+        else:
+            tls_config = None
+
+        # Our server list needs to be reformatted in accordance with what KafkaClient expects
+        # and it may be turned into a Kafka or ZooKeeper server list.
+
+        server_list = self.config.server_list.splitlines()
+        server_list = ','.join(server_list)
+
+        if self.config.should_use_zookeeper:
+            hosts = None
+            zookeeper_hosts = server_list
+        else:
+            hosts = server_list
+            zookeeper_hosts = None
+
+        client_config = {
+            'hosts': hosts,
+            'zookeeper_hosts': zookeeper_hosts,
+            'socket_timeout_ms': self.config.socket_timeout * 1000,
+            'offsets_channel_socket_timeout_ms': self.config.offset_timeout * 1000,
+            'use_greenlets': True,
+            'exclude_internal_topics': self.config.should_exclude_internal_topics,
+            'source_address': self.config.source_address or '',
+            'ssl_config': tls_config,
+            'broker_version': self.config.broker_version,
+        }
 
         # Create the actual connection object
         self.client = KafkaClient(**client_config)
@@ -101,13 +96,16 @@ class DefKafkaWrapper(Wrapper):
 # ################################################################################################################################
 
     def _delete(self):
-        #self.client.clo.close()
-        logger.warn('EEE DELETE called %s', self.config.name)
+        for elem in self.client.brokers.values(): # type: Broker
+            try:
+                elem._connection.disconnect()
+            except Exception:
+                logger.warn('Could not disconnect `%s` from `%r`, e:`%s`', elem, self.config, format_exc())
 
 # ################################################################################################################################
 
     def _ping(self):
-        logger.warn('EEE PING called %s', self.config.name)
+        self.client.cluster.fetch_api_versions()
 
 # ################################################################################################################################
 # ################################################################################################################################

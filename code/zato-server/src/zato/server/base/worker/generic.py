@@ -175,6 +175,10 @@ class Generic(WorkerImpl):
         # Check if there is such a method and if so, invoke it to preprocess the message
         func = getattr(self, '_generic_normalize_config_{}'.format(preprocess_type), None)
         if func:
-            func(config)
+            try:
+                func(config)
+            except Exception:
+                self.logger.warn('Could not invoke `%s` with `%r`', func, config)
+                raise
 
 # ################################################################################################################################
