@@ -221,7 +221,7 @@ class RequestDispatcher(object):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
-        http_method = http_accept if isinstance(http_method, unicode) else http_method.decode('utf8')
+        http_method = http_method if isinstance(http_method, unicode) else http_method.decode('utf8')
 
         http_accept = wsgi_environ.get('HTTP_ACCEPT') or _accept_any_http
         http_accept = http_accept.replace('*', _accept_any_internal).replace('/', 'HTTP_SEP')
