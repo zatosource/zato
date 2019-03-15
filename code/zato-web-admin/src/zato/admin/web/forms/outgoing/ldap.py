@@ -12,10 +12,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_select
-from zato.common import LDAP, TLS
+from zato.admin.web.forms import add_select, WithTLSForm
+from zato.common import LDAP
 
-class CreateForm(forms.Form):
+class CreateForm(WithTLSForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
@@ -47,16 +47,8 @@ class CreateForm(forms.Form):
     use_auto_range = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     should_return_empty_attrs = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    is_tls_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    tls_private_key_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_cert_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_ca_certs_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    tls_version = forms.ChoiceField(widget=forms.Select(), initial=TLS.DEFAULT)
-    tls_ciphers = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=LDAP.DEFAULT.CIPHERS)
-    tls_validate = forms.ChoiceField(widget=forms.Select(), initial=TLS.CERT_VALIDATE.CERT_REQUIRED.id)
-
-    def __init__(self, prefix=None, post_data=None):
-        super(CreateForm, self).__init__(post_data, prefix=prefix)
+    def __init__(self, *args, **kwargs):
+        super(CreateForm, self).__init__(*args, **kwargs)
 
         add_select(self, 'get_info', LDAP.GET_INFO(), needs_initial_select=False)
         add_select(self, 'ip_mode', LDAP.IP_MODE(), needs_initial_select=False)
@@ -64,8 +56,6 @@ class CreateForm(forms.Form):
         add_select(self, 'pool_ha_strategy', LDAP.POOL_HA_STRATEGY(), needs_initial_select=False)
         add_select(self, 'auth_type', LDAP.AUTH_TYPE(), needs_initial_select=False)
         add_select(self, 'sasl_mechanism', LDAP.SASL_MECHANISM(), needs_initial_select=True)
-        add_select(self, 'tls_version', TLS.VERSION(), needs_initial_select=False)
-        add_select(self, 'tls_validate', TLS.CERT_VALIDATE(), needs_initial_select=False)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

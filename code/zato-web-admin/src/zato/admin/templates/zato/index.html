@@ -167,6 +167,7 @@
                                 <li class='wide'><a href="{% url "out-ftp" %}?cluster={{ cluster_id|default:'' }}">FTP</a></li>
                                 <li class='wide'><a href="{% url "out-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
                                 <li class='wide'><a href="{% url "out-ldap" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-ldap">LDAP</a></li>
+                                <li class='wide'><a href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-mongodb">MongoDB</a></li>
                                 <li class='wide'><a href="{% url "out-odoo" %}?cluster={{ cluster_id|default:'' }}">Odoo</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http">REST</a></li>
                                 <li class='wide'><a href="{% url "out-sap" %}?cluster={{ cluster_id|default:'' }}">SAP RFC</a></li>

@@ -220,6 +220,7 @@ class Ping(_BaseService):
             # Different code paths will be taken depending on what kind of a generic connection this is
             ping_func_dict = {
                 COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.server.worker_store.ping_generic_connection,
+                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.server.worker_store.ping_generic_connection,
                 COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.server.connector_sftp.ping_sftp,
                 COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.server.worker_store.ping_generic_connection,
             }
