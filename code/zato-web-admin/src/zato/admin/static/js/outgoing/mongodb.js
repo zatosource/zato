@@ -114,6 +114,7 @@ $.fn.zato.outgoing.mongodb.data_table.new_row = function(item, data, include_tr)
     // 9 -->
     row += String.format("<td class='ignore'>{0}</td>", item.is_tls_match_hostname_enabled);
     row += String.format("<td class='ignore'>{0}</td>", item.tls_ciphers);
+    row += String.format("<td class='ignore'>{0}</td>", item.should_retry_write);
 
     if(include_tr) {
         row += '</tr>';

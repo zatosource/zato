@@ -29,7 +29,7 @@ class CreateForm(WithTLSForm):
     replica_set = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
 
     auth_source = forms.CharField(widget=forms.TextInput(attrs={'style':'width:15%'}), initial=default.AUTH_SOURCE)
-    auth_mechanism = forms.ChoiceField(widget=forms.Select(), initial=MONGODB.AUTH_MECHANISM.SCRAM_SHA_256.id)
+    auth_mechanism = forms.ChoiceField(widget=forms.Select(), initial=MONGODB.AUTH_MECHANISM.SCRAM_SHA_1.id)
 
     pool_size_max = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=default.POOL_SIZE_MAX)
 
@@ -51,12 +51,13 @@ class CreateForm(WithTLSForm):
     write_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=default.WRITE_TIMEOUT)
     is_write_journal_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_write_fsync_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    should_retry_write = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     read_pref_type = forms.ChoiceField(widget=forms.Select(), initial=MONGODB.READ_PREF.PRIMARY.id)
     read_pref_tag_list = forms.CharField(widget=forms.TextInput(attrs={'style':'width:23%'}))
     read_pref_max_stale = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=default.MAX_STALENESS)
 
-    server_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:70px'}))
+    server_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:70px'}), initial=default.SERVER_LIST)
 
     def __init__(self, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)
@@ -66,3 +67,4 @@ class CreateForm(WithTLSForm):
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     tls_match_hostname = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    should_retry_write = forms.BooleanField(required=False, widget=forms.CheckboxInput())

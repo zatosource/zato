@@ -52,7 +52,7 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def _create_generic_connection(self, msg, needs_roundtrip=False, skip=None):
+    def _create_generic_connection(self, msg, needs_roundtrip=False, skip=None, raise_exc=True):
 
         # This roundtrip is needed to re-format msg in the format the underlying .from_bunch expects
         # in case this is a broker message rather than a startup one.
@@ -73,8 +73,6 @@ class Generic(WorkerImpl):
 
         # Normalize the contents of the configuration message
         self.generic_normalize_config(item_dict)
-
-        return
 
         config_attr = self.generic_conn_api[item.type_]
         wrapper = self._generic_conn_handler[item.type_]
