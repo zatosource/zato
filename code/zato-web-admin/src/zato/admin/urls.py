@@ -30,6 +30,7 @@ from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
 from zato.admin.web.views import config_file
 from zato.admin.web.views.definition import amqp_ as def_amqp
 from zato.admin.web.views.definition import cassandra as def_cassandra
+from zato.admin.web.views.definition import kafka as def_kafka
 from zato.admin.web.views.definition import jms_wmq as def_wmq
 from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
@@ -605,6 +606,26 @@ urlpatterns += [
         login_required(def_cassandra.Delete()), name=def_cassandra.Delete.url_name),
     url(r'^zato/definition/cassandra/change-password/$',
         login_required(def_cassandra.change_password), name='definition-cassandra-change-password'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. Kafka
+
+    url(r'^zato/definition/kafka/$',
+        login_required(def_kafka.Index()), name=def_kafka.Index.url_name),
+    url(r'^zato/definition/kafka/create/$',
+        login_required(def_kafka.Create()), name=def_kafka.Create.url_name),
+    url(r'^zato/definition/kafka/edit/$',
+        login_required(def_kafka.Edit()), name=def_kafka.Edit.url_name),
+    url(r'^zato/definition/kafka/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(def_kafka.Delete()), name=def_kafka.Delete.url_name),
+    url(r'^zato/definition/kafka/change-password/$',
+        login_required(def_kafka.change_password), name='definition-kafka-change-password'),
+    url(r'^zato/definition/kafka/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(def_kafka.ping), name='definition-wmq-ping'),
     ]
 
 # ################################################################################################################################
