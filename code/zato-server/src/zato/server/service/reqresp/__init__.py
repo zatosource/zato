@@ -495,10 +495,10 @@ class Outgoing(object):
     in fact is a thin wrapper around data fetched from the service's self.worker_store.
     """
     __slots__ = ('amqp', 'ftp', 'ibm_mq', 'jms_wmq', 'wmq', 'odoo', 'plain_http', 'soap', 'sql', 'stomp', 'zmq', 'wsx', 'vault',
-        'sms', 'sap', 'sftp', 'ldap')
+        'sms', 'sap', 'sftp', 'ldap', 'mongodb')
 
     def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, stomp=None, zmq=None,
-            wsx=None, vault=None, sms=None, sap=None, sftp=None, ldap=None):
+            wsx=None, vault=None, sms=None, sap=None, sftp=None, ldap=None, mongodb=None):
         self.amqp = amqp
         self.ftp = ftp
         self.ibm_mq = self.wmq = self.jms_wmq = jms_wmq # Backward compat with 2.0, self.ibm_mq is now preferred
@@ -514,6 +514,7 @@ class Outgoing(object):
         self.sap = sap
         self.sftp = sftp
         self.ldap = ldap
+        self.mongodb = mongodb
 
 class AWS(object):
     def __init__(self, s3=None):

@@ -83,10 +83,14 @@ logger = logging.getLogger(__name__)
 import typing
 
 if typing.TYPE_CHECKING:
+
+    # Zato
+    from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
 
     # For pyflakes
     ParallelServer = ParallelServer
+    WorkerStore = WorkerStore
 
 # ################################################################################################################################
 
@@ -210,7 +214,7 @@ class Service(object):
     search = None
     amqp = AMQPFacade()
 
-    _worker_store = None
+    _worker_store = None  # type: WorkerStore
     _worker_config = None
     _msg_ns_store = None
     _ns_store = None
@@ -287,6 +291,7 @@ class Service(object):
             self._worker_config.out_sap,
             self._worker_config.out_sftp,
             self._worker_store.outconn_ldap,
+            self._worker_store.outconn_mongodb
         )
 
     @staticmethod
