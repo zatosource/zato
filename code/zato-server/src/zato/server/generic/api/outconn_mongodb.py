@@ -49,7 +49,7 @@ class OutconnMongoDBWrapper(Wrapper):
             'connect': True,
             'maxPoolSize': self.config.pool_size_max,
             'minPoolSize': 0,
-            'maxIdleTimeMS': self.config.max_idle_time,
+            'maxIdleTimeMS': self.config.max_idle_time * 1000,
             'socketTimeoutMS': self.config.socket_timeout * 1000,
             'connectTimeoutMS': self.config.connect_timeout * 1000,
             'serverSelectionTimeoutMS': self.config.server_select_timeout * 1000,
