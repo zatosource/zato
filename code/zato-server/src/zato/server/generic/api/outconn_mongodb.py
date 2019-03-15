@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import getLogger
-from traceback import format_exc
 from uuid import uuid4
 
 # Bunch
@@ -20,7 +19,6 @@ from bunch import bunchify
 from pymongo import MongoClient
 
 # Zato
-from zato.common.util import spawn_greenlet
 from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
