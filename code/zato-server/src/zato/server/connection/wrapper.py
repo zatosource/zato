@@ -13,6 +13,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # gevent
+from gevent import spawn
 from gevent.lock import RLock
 
 # Zato
@@ -45,6 +46,8 @@ if typing.TYPE_CHECKING:
 class Wrapper(object):
     """ Base class for non-queue based connections wrappers.
     """
+    wrapper_type = '<undefined-Wrapper>'
+
     def __init__(self, config, server=None):
         # type: (Bunch, ParallelServer)
         self.config = config
@@ -57,14 +60,27 @@ class Wrapper(object):
 # ################################################################################################################################
 
     def build_wrapper(self):
+
+        if not self.config.is_active:
+            logger.info('Skipped building an inactive %s `%s`', self.wrapper_type, self.config.name)
+            return
+
+        # Connection is active, we can try to build it in background
+        spawn(self._init)
+
+# ################################################################################################################################
+
+    def _init(self):
+        # We use this double spawn method to be able to catch NotImplementedError immediately
+        # in case subclasses do not implement self._init_impl.
         try:
-            spawn_greenlet(self._init, timeout=2)
+            spawn_greenlet(self._init_impl, timeout=60)
         except Exception:
             logger.warn('Could not initialize `%s` connection, e:`%s`', self.config.name, format_exc())
 
 # ################################################################################################################################
 
-    def _init(self):
+    def _init_impl(self):
         raise NotImplementedError('Must be implemented in subclasses (_init; {!r})'.format(self.config))
 
 # ################################################################################################################################

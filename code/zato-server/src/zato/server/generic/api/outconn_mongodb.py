@@ -31,16 +31,15 @@ logger = getLogger(__name__)
 class OutconnMongoDBWrapper(Wrapper):
     """ Wraps a MongoDB connection client.
     """
+    wrapper_type = 'MongoDB connection'
+
     def __init__(self, *args, **kwargs):
         super(OutconnMongoDBWrapper, self).__init__(*args, **kwargs)
         self.client = None  # type: MongoClient
 
 # ################################################################################################################################
 
-    def _init(self):
-
-        if not self.config.is_active:
-            logger.info('Skipped building an inactive MongoDB connection `%s`', self.config.name)
+    def _init_impl(self):
 
         # Configuration of the underlying client
         client_config = bunchify({

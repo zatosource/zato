@@ -71,6 +71,7 @@ $.fn.zato.definition.kafka.data_table.new_row = function(item, data, include_tr)
 
     // 3 -->
     row += String.format("<td class='ignore'>{0}</td>", item.tls_pem_passphrase);
+    row += String.format("<td class='ignore'>{0}</td>", item.source_address);
 
     if(include_tr) {
         row += '</tr>';

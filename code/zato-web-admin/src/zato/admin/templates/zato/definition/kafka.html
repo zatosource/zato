@@ -30,7 +30,7 @@
             'server_list',
 
             '_should_use_zookeeper',
-            'source_address',
+            '_source_address',
             'broker_version',
 
             '_edit',
@@ -54,6 +54,7 @@
 
             {% comment %} 3 {% endcomment %}
             'tls_pem_passphrase',
+            'source_address',
 
         ]
     }
@@ -106,6 +107,17 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -145,6 +157,7 @@
 
                         {% comment %} 3 {% endcomment %}
                         <td class='ignore'>{{ item.tls_pem_passphrase }}</td>
+                        <td class='ignore'>{{ item.source_address }}</td>
 
                     </tr>
                 {% endfor %}
