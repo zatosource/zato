@@ -118,7 +118,7 @@
 
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.server_list }}</td>
+                        <td>{{ item.server_list|linebreaksbr }}</td>
 
                         <td>{{ item.should_use_zookeeper|yesno:'Yes,No' }}</td>
                         <td>{{ item.source_address|default:"<span class='form_hint'>---</span>" }}</td>

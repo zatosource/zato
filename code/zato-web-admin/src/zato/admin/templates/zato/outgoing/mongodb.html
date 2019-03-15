@@ -204,7 +204,7 @@
 
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.server_list }}</td>
+                        <td>{{ item.server_list|linebreaksbr }}</td>
                         <td>{{ item.username|default:"<span class='form_hint'>---</span>" }}</td>
 
                         <td>{{ item.app_name|default:"<span class='form_hint'>---</span>" }}</td>
