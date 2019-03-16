@@ -1271,6 +1271,7 @@ class GENERIC:
     class CONNECTION:
         class TYPE:
             DEF_KAFKA = 'def-kafka'
+            OUTCONN_IM_SLACK = 'outconn-im-slack'
             OUTCONN_LDAP = 'outconn-ldap'
             OUTCONN_MONGODB = 'outconn-mongodb'
             OUTCONN_SFTP = 'outconn-sftp'
