@@ -13,6 +13,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # gevent
+from gevent import spawn
 from gevent.lock import RLock
 
 # Zato
@@ -45,26 +46,58 @@ if typing.TYPE_CHECKING:
 class Wrapper(object):
     """ Base class for non-queue based connections wrappers.
     """
+    wrapper_type = '<undefined-Wrapper>'
+
     def __init__(self, config, server=None):
         # type: (Bunch, ParallelServer)
         self.config = config
         self.config.username_pretty = self.config.username or '(None)'
         self.server = server
-        self.client = None
+        self._client = None
         self.delete_requested = False
+        self.is_connected = False
         self.update_lock = RLock()
+
+    @property
+    def client(self):
+        if not self._client:
+            self.build_wrapper(False)
+        return self._client
 
 # ################################################################################################################################
 
-    def build_wrapper(self):
+    def build_wrapper(self, should_spawn=True):
+
+        if not self.config.is_active:
+            logger.info('Skipped building an inactive %s `%s`', self.wrapper_type, self.config.name)
+            return
+
+        # If we are to build the wrapper, it means that we are not connected at this time
+        self.is_connected = False
+
+        # Connection is active (config.is_active) so we can try to build it ..
+
+        # .. in background ..
+        if should_spawn:
+            spawn(self._init)
+
+        # .. or in a blocking manner
+        else:
+            self._init_impl()
+
+# ################################################################################################################################
+
+    def _init(self):
+        # We use this double spawn method to be able to catch NotImplementedError immediately
+        # in case subclasses do not implement self._init_impl.
         try:
-            spawn_greenlet(self._init, timeout=2)
+            spawn_greenlet(self._init_impl, timeout=45)
         except Exception:
             logger.warn('Could not initialize `%s` connection, e:`%s`', self.config.name, format_exc())
 
 # ################################################################################################################################
 
-    def _init(self):
+    def _init_impl(self):
         raise NotImplementedError('Must be implemented in subclasses (_init; {!r})'.format(self.config))
 
 # ################################################################################################################################

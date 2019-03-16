@@ -1151,7 +1151,7 @@ class STOMP:
         CLIENT_INDIVIDUAL = NameId('client-individual', 'client-individual')
 
     class DEFAULT:
-        ADDRESS = 'localhost:61613'
+        ADDRESS = '127.0.0.1:61613'
         PROTOCOL = '1.0'
         TIMEOUT = 10 # In seconds
         USERNAME = 'guest'
@@ -1270,6 +1270,7 @@ class GENERIC:
 
     class CONNECTION:
         class TYPE:
+            DEF_KAFKA = 'def-kafka'
             OUTCONN_LDAP = 'outconn-ldap'
             OUTCONN_MONGODB = 'outconn-mongodb'
             OUTCONN_SFTP = 'outconn-sftp'
@@ -1356,7 +1357,7 @@ class MONGODB:
         MAX_STALENESS    = -1
         POOL_SIZE_MIN    = 0
         POOL_SIZE_MAX    = 5
-        SERVER_LIST      = 'localhost:27017'
+        SERVER_LIST      = '127.0.0.1:27017'
         WRITE_TO_REPLICA = 0
         WRITE_TIMEOUT    = 5
         ZLIB_LEVEL       = -1
@@ -1366,12 +1367,6 @@ class MONGODB:
             SERVER_SELECT  = 5
             SOCKET  = 30
             WAIT_QUEUE  = 10
-
-            'primary',
-            'primaryPreferred',
-            'secondary',
-            'secondaryPreferred',
-            'nearest',
 
     class READ_PREF:
         PRIMARY = NameId('Primary', 'primary')
@@ -1389,6 +1384,19 @@ class MONGODB:
 
         def __iter__(self):
             return iter((self.SCRAM_SHA_1, self.SCRAM_SHA_256))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class KAFKA:
+
+    class DEFAULT:
+        BROKER_VERSION = '0.9.0'
+        SERVER_LIST    = '127.0.0.1:2181'
+
+        class TIMEOUT:
+            SOCKET = 1
+            OFFSETS = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
