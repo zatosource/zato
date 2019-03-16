@@ -111,7 +111,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.cluster_id = None
         self.kvdb = None
         self.startup_jobs = None
-        self.worker_store = None
+        self.worker_store = None # type: WorkerStore
         self.request_dispatcher_dispatch = None
         self.deployment_lock_expires = None
         self.deployment_lock_timeout = None
