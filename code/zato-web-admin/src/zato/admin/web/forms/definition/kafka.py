@@ -25,10 +25,10 @@ class CreateForm(WithTLSForm):
     should_use_zookeeper = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     should_exclude_internal_topics = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    socket_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=timeout.SOCKET)
-    offset_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=timeout.OFFSETS)
+    socket_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:7%'}), initial=timeout.SOCKET)
+    offset_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:7%'}), initial=timeout.OFFSETS)
 
-    source_address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    source_address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:19%'}))
     broker_version = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=default.BROKER_VERSION)
 
     server_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:70px'}), initial=default.SERVER_LIST)

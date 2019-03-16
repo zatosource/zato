@@ -71,7 +71,7 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% with has_generic="1" generic_type="outconn-kafka" %}
+{% with has_generic="1" generic_type="def-kafka" %}
     {% include "zato/search-form.html" with page_prompt="Show definitions" %}
 {% endwith %}
 
@@ -211,7 +211,7 @@
                             </td>
                             <td>
                                 <label>
-                                Socket
+                                Socket <span class="form_hint">(x3)</span>
                                 {{ create_form.socket_timeout }}
                                 </label>
                                 <label>
@@ -348,7 +348,7 @@
                             </td>
                             <td>
                                 <label>
-                                Socket
+                                Socket <span class="form_hint">(x3)</span>
                                 {{ edit_form.socket_timeout }}
                                 </label>
                                 <label>

@@ -48,6 +48,23 @@ from zato.common.util.json_ import dumps
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service
 from zato.server.service.internal import AdminService
 
+# ################################################################################################################################
+
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # Zato
+    from zato.common.odb.api import ODBManager
+    from zato.server.base.parallel import ParallelServer
+
+    # For pyflakes
+    ODBManager = ODBManager
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+
 # For pyflakes
 Any = Any
 List = List
@@ -121,6 +138,7 @@ class DeploymentInfo(object):
 # ################################################################################################################################
 
 def set_up_class_attributes(class_, service_store=None, name=None):
+    # type: (Service, ServiceStore, unicode)
     class_.add_http_method_handlers()
 
     # Set up enforcement of what other services a given service can invoke
@@ -152,6 +170,8 @@ def set_up_class_attributes(class_, service_store=None, name=None):
         class_._out_plain_http = service_store.server.worker_store.worker_config.out_plain_http
         class_.amqp.invoke = service_store.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat
         class_.amqp.invoke_async = class_.amqp.send = service_store.server.worker_store.amqp_invoke_async
+
+        class_.definition.kafka = service_store.server.worker_store.def_kafka
 
         class_._worker_store = service_store.server.worker_store
         class_._worker_config = service_store.server.worker_store.worker_config
@@ -269,10 +289,11 @@ class ServiceStore(object):
     """ A store of Zato services.
     """
     def __init__(self, services=None, odb=None, server=None):
-        self.services = services          # type: dict
-        self.odb = odb                    # type: Any
-        self.server = server              # type: Any
-        self.max_batch_size = 0           # type: int
+        # type: (dict, ODBManager, ParallelServer)
+        self.services = services
+        self.odb = odb
+        self.server = server
+        self.max_batch_size = 0
         self.id_to_impl_name = {}
         self.impl_name_to_id = {}
         self.name_to_impl_name = {}

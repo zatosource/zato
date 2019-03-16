@@ -186,8 +186,20 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Which targets this server supports
         self.target_matcher = Matcher()
 
-        # To speed up look-ups
+        # To expedite look-ups
         self._simple_types = simple_types
+
+        # Generic connections - Kafka definitions
+        self.def_kafka = {}
+
+        # Generic connections - LDAP outconns
+        self.outconn_ldap = {}
+
+        # Generic connections - MongoDB outconns
+        self.outconn_mongodb = {}
+
+        # Generic connections - WSX outconns
+        self.outconn_wsx = {}
 
 # ################################################################################################################################
 
@@ -237,18 +249,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Caches
         self.cache_api = CacheAPI(self.server)
-
-        # Generic connections - Kafka definitions
-        self.def_kafka = {}
-
-        # Generic connections - LDAP outconns
-        self.outconn_ldap = {}
-
-        # Generic connections - MongoDB outconns
-        self.outconn_mongodb = {}
-
-        # Generic connections - WSX outconns
-        self.outconn_wsx = {}
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
