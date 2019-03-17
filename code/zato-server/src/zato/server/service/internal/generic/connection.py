@@ -220,15 +220,12 @@ class Ping(_BaseService):
             instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
 
             # Different code paths will be taken depending on what kind of a generic connection this is
-            ping_func_dict = {
-                COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.server.worker_store.ping_generic_connection,
-                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.server.worker_store.ping_generic_connection,
-                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.server.worker_store.ping_generic_connection,
-                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.server.connector_sftp.ping_sftp,
-                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.server.worker_store.ping_generic_connection,
+            custom_ping_func_dict = {
+                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.server.connector_sftp.ping_sftp
             }
 
-            ping_func = ping_func_dict[instance.type_]
+            # Most connections use a generic ping function, unless overridden on a case-by-case basis, like with SFTP
+            ping_func = custom_ping_func_dict.get(instance.type_, self.server.worker_store.ping_generic_connection)
 
             start_time = datetime.utcnow()
             ping_func(self.request.input.id)

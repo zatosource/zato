@@ -182,7 +182,7 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         req.zato.client.invoke(service_name, input_dict)
 
     except Exception:
-        msg = 'Password could not be changed, e:`{}`'.format(format_exc())
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
