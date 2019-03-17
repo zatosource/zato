@@ -93,7 +93,7 @@ class Wrapper(object):
         try:
             spawn_greenlet(self._init_impl, timeout=45)
         except Exception:
-            logger.warn('Could not initialize `%s` connection, e:`%s`', self.config.name, format_exc())
+            logger.warn('Could not initialize %s `%s`, e:`%s`', self.wrapper_type, self.config.name, format_exc())
 
 # ################################################################################################################################
 

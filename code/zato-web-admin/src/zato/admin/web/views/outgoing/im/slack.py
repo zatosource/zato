@@ -91,7 +91,7 @@ class Delete(_Delete):
 
 @method_allowed('POST')
 def change_password(req):
-    return _change_password(req, 'zato.generic.connection.change-password')
+    return _change_password(req, 'zato.generic.connection.change-password', success_msg='Token updated')
 
 # ################################################################################################################################
 

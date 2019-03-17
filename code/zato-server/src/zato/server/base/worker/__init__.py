@@ -81,6 +81,7 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
+from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
@@ -201,6 +202,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Generic connections - WSX outconns
         self.outconn_wsx = {}
 
+        # Generic connections - IM Slack
+        self.outconn_im_slack = {}
+
 # ################################################################################################################################
 
     def init(self):
@@ -253,6 +257,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: self.outconn_im_slack,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
@@ -260,6 +265,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         self._generic_conn_handler = {
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: OutconnIMSlackWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
@@ -966,37 +972,39 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Local aliases
         def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
+        outconn_im_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
         outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
         outconn_wsx_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX, {})
 
-        # Kafka definitions are pure generic objects that we can handle ourselves
-        def_kafka_map[_generic_msg.create] = self._create_generic_connection
-        def_kafka_map[_generic_msg.edit]   = self._edit_generic_connection
-        def_kafka_map[_generic_msg.delete] = self._delete_generic_connection
+        # These generic connections are regular - they use common API methods for such connections
+        regular_maps = [
+            def_kafka_map,
+            outconn_im_slack_map,
+            outconn_ldap_map,
+            outconn_mongodb_map,
+            outconn_wsx_map,
+        ]
 
-        # LDAP connections are pure generic objects that we can handle ourselves
-        outconn_ldap_map[_generic_msg.create] = self._create_generic_connection
-        outconn_ldap_map[_generic_msg.edit]   = self._edit_generic_connection
-        outconn_ldap_map[_generic_msg.delete] = self._delete_generic_connection
-        outconn_ldap_map[_generic_msg.change_password] = self._change_password_generic_connection
+        password_maps = [
+            outconn_im_slack_map,
+            outconn_ldap_map,
+            outconn_mongodb_map,
+        ]
 
-        # Outgoing MongoDB connections are pure generic objects that we can handle ourselves
-        outconn_mongodb_map[_generic_msg.create] = self._create_generic_connection
-        outconn_mongodb_map[_generic_msg.edit]   = self._edit_generic_connection
-        outconn_mongodb_map[_generic_msg.delete] = self._delete_generic_connection
-        outconn_mongodb_map[_generic_msg.change_password] = self._change_password_generic_connection
+        for regular_item in regular_maps:
+            regular_item[_generic_msg.create] = self._create_generic_connection
+            regular_item[_generic_msg.edit]   = self._edit_generic_connection
+            regular_item[_generic_msg.delete] = self._delete_generic_connection
+
+        for password_item in password_maps:
+            password_item[_generic_msg.change_password] = self._change_password_generic_connection
 
         # Outgoing SFTP connections require for a different API to be called (provided by ParallelServer)
         outconn_sftp_map[_generic_msg.create] = self._on_outconn_sftp_create
         outconn_sftp_map[_generic_msg.edit]   = self._on_outconn_sftp_edit
         outconn_sftp_map[_generic_msg.delete] = self._on_outconn_sftp_delete
-
-        # Outgoing WSX connections are pure generic objects that we can handle ourselves
-        outconn_wsx_map[_generic_msg.create] = self._create_generic_connection
-        outconn_wsx_map[_generic_msg.edit]   = self._edit_generic_connection
-        outconn_wsx_map[_generic_msg.delete] = self._delete_generic_connection
 
 # ################################################################################################################################
 
