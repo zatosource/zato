@@ -49,7 +49,7 @@ has_debug = logger.isEnabledFor(DEBUG)
 
 class HTTPSAdapter(requests.adapters.HTTPAdapter):
     """ An adapter which exposes a method for clearing out the underlying pool. Useful with HTTPS as it allows to update TLS
-    material on fly.
+    material on the fly.
     """
     def clear_pool(self):
         self.poolmanager.clear()
