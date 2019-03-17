@@ -50,7 +50,8 @@ from zato.server.pattern.fanout import FanOut
 from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.pattern.parallel import ParallelExec
 from zato.server.pubsub import PubSub
-from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, IBMMQRequestData, Outgoing, Request, Response
+from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, IBMMQRequestData, InstantMessaging, Outgoing, \
+     Request, Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Date, DateTime, Dict, Float, ForceType, Integer, List, \
@@ -206,6 +207,7 @@ class Service(object):
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
     cloud = Cloud()
     definition = Definition()
+    im = InstantMessaging()
     odb = None
     kvdb = None
     pubsub = None # type: PubSub
