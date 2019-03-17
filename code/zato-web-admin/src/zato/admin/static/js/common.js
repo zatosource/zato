@@ -100,6 +100,8 @@ $.namespace('zato.notif.sql');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.ftp');
+$.namespace('zato.outgoing.im');
+$.namespace('zato.outgoing.im.slack');
 $.namespace('zato.outgoing.jms_wmq');
 $.namespace('zato.outgoing.mongodb');
 $.namespace('zato.outgoing.kafka');
