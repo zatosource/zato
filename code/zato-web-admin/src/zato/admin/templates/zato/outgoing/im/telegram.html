@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Slack outconns{% endblock %}
+{% block html_title %}Telegram outconns{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -16,8 +16,8 @@
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
-    {% comment %} Slack {% endcomment %}
-    <script type="text/javascript" src="/static/js/outgoing/im/slack.js"></script>
+    {% comment %} Telegram {% endcomment %}
+    <script type="text/javascript" src="/static/js/outgoing/im/telegram.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -28,8 +28,9 @@
             'name',
             '_is_active',
 
-            'http_proxy_list',
-            'https_proxy_list',
+            'address',
+            '_http_proxy_list',
+            '_https_proxy_list',
 
             '_change_password',
             '_edit',
@@ -40,6 +41,8 @@
             'is_active',
 
             {% comment %} 1 {% endcomment %}
+            'connect_timeout',
+            'invoke_timeout',
             'http_proxy_list',
             'https_proxy_list',
         ]
@@ -49,7 +52,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Outgoing Slack connections</h2>
+<h2 class="zato">Outgoing Telegram connections</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -57,13 +60,13 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% with has_generic="1" generic_type="outconn-im-slack" %}
+{% with has_generic="1" generic_type="outconn-im-telegram" %}
     {% include "zato/search-form.html" with page_prompt="Show outgoing connections" %}
 {% endwith %}
 
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.outgoing.im.slack.create()">Create a new outgoing Slack connection</a>
+            <a href="javascript:$.fn.zato.outgoing.im.telegram.create()">Create a new outgoing Telegram connection</a>
         </div>
 
 
@@ -77,6 +80,7 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
 
+                        <th><a href="#">Address</a></th>
                         <th><a href="#">HTTP proxy</a></th>
                         <th><a href="#">HTTPS proxy</a></th>
 
@@ -91,6 +95,8 @@
                         {% comment %} 1 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -103,18 +109,22 @@
 
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+
+                        <td>{{ item.address }}</td>
                         <td>{{ item.http_proxy_list|linebreaksbr|default:"<span class='form_hint'>---</span>" }}</td>
                         <td>{{ item.https_proxy_list|linebreaksbr|default:"<span class='form_hint'>---</span>" }}</td>
 
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change token')">Change token</a></td>
-                        <td><a href="javascript:$.fn.zato.outgoing.im.slack.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.outgoing.im.slack.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.im.telegram.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.im.telegram.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
 
                         {% comment %} 1 {% endcomment %}
+                        <td class='ignore'>{{ item.connect_timeout }}</td>
+                        <td class='ignore'>{{ item.invoke_timeout }}</td>
                         <td class='ignore'>{{ item.http_proxy_list|default:"" }}</td>
                         <td class='ignore'>{{ item.https_proxy_list|default:"" }}</td>
 
@@ -122,7 +132,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='14'>No results</td>
+                        <td colspan='17'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -134,7 +144,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "out-im-slack-create" %}" method="post" id="create-form">
+                <form action="{% url "out-im-telegram-create" %}" method="post" id="create-form">
                     <table class="form-data">
 
                         <tr>
@@ -149,13 +159,35 @@
                                 Active
                                 {{ create_form.is_active }}
                                 </label>
+                                |
+                                Timeouts
+                                <span class="form_hint">(s)</span>
+
+                                <label>
+                                Connect
+                                {{ create_form.connect_timeout }}
+                                </label>
+
+                                <label>
+                                Invoke
+                                {{ create_form.invoke_timeout }}
+                                </label>
                         </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Address</td>
+                            <td>
+                                {{ create_form.address }}
+                            </td>
+                        </tr>
+
                         <tr>
                             <td style="vertical-align:middle">HTTP proxy</td>
                             <td>
                                 {{ create_form.http_proxy_list }}
                             </td>
                         </tr>
+
                         <tr>
                             <td style="vertical-align:middle">HTTPS proxy</td>
                             <td>
@@ -177,22 +209,43 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "out-im-slack-edit" %}" method="post" id="edit-form">
+                <form action="{% url "out-im-telegram-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
 
                         <tr>
                             <td style="vertical-align:middle;width:8%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
+
                         <tr>
                             <td style="vertical-align:middle"></td>
                             <td>
-
                                 <label>
                                 Active
                                 {{ edit_form.is_active }}
                                 </label>
+                                |
+                                Timeouts
+                                <span class="form_hint">(s)</span>
+
+                                <label>
+                                Connect
+                                {{ edit_form.connect_timeout }}
+                                </label>
+
+                                <label>
+                                Invoke
+                                {{ edit_form.invoke_timeout }}
+                                </label>
                         </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Address</td>
+                            <td>
+                                {{ edit_form.address }}
+                            </td>
+                        </tr>
+
                         <tr>
                             <td style="vertical-align:middle">HTTP proxy</td>
                             <td>
@@ -219,10 +272,9 @@
             </div>
         </div>
 
-
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "out-im-slack-change-password" %}" method="post" id="change_password-form">
+                <form action="{% url "out-im-telegram-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:15%">Name</td>

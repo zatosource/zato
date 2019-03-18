@@ -41,6 +41,7 @@ from zato.admin.web.views.notif import sql as notif_sql
 from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing.im import slack as out_im_slack
+from zato.admin.web.views.outgoing.im import telegram as out_im_telegram
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import mongodb as out_mongodb
@@ -1220,6 +1221,24 @@ urlpatterns += [
         login_required(out_im_slack.change_password), name='out-im-slack-change-password'),
     url(r'^zato/outgoing/im/slack/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_im_slack.ping), name='out-im-slack-ping'),
+    ]
+
+urlpatterns += [
+
+    # .. Telegram
+
+    url(r'^zato/outgoing/im/telegram/$',
+        login_required(out_im_telegram.Index()), name=out_im_telegram.Index.url_name),
+    url(r'^zato/outgoing/im/telegram/create/$',
+        login_required(out_im_telegram.Create()), name=out_im_telegram.Create.url_name),
+    url(r'^zato/outgoing/im/telegram/edit/$',
+        login_required(out_im_telegram.Edit()), name=out_im_telegram.Edit.url_name),
+    url(r'^zato/outgoing/im/telegram/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_im_telegram.Delete()), name=out_im_telegram.Delete.url_name),
+    url(r'^zato/outgoing/im/telegram/change-password/$',
+        login_required(out_im_telegram.change_password), name='out-im-telegram-change-password'),
+    url(r'^zato/outgoing/im/telegram/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_im_telegram.ping), name='out-im-telegram-ping'),
     ]
 
 # ################################################################################################################################

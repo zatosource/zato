@@ -173,6 +173,7 @@ def set_up_class_attributes(class_, service_store=None, name=None):
 
         class_.definition.kafka = service_store.server.worker_store.def_kafka
         class_.im.slack = service_store.server.worker_store.outconn_im_slack
+        class_.im.telegram = service_store.server.worker_store.outconn_im_telegram
 
         class_._worker_store = service_store.server.worker_store
         class_._worker_config = service_store.server.worker_store.worker_config
