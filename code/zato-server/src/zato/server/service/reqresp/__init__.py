@@ -562,11 +562,12 @@ class Definition(object):
 class InstantMessaging(object):
     """ A container for Instant Messaging connections, e.g. Slack or Telegram.
     """
-    __slots__ = 'slack',
+    __slots__ = 'slack', 'telegram'
 
-    def __init__(self, slack=None):
-        # type: (dict)
+    def __init__(self, slack=None, telegram=None):
+        # type: (dict, dict)
         self.slack = slack
+        self.telegram = telegram
 
 # ################################################################################################################################
 # ################################################################################################################################
