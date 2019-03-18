@@ -95,10 +95,12 @@ class Get(_BaseGet):
     class SimpleIO(_BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_request'
         response_elem = 'zato_http_soap_get_response'
-        input_required = ('cluster_id', 'id')
+        input_required = 'cluster_id'
+        input_optional = 'id', 'name'
 
     def handle(self):
         with closing(self.odb.session()) as session:
+            self.request.input.require_any('id', 'name')
             self.response.payload = http_soap(session, self.request.input.cluster_id, self.request.input.id)
 
 # ################################################################################################################################
