@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -47,22 +47,28 @@ def delete_msg_delivered(session, cluster_id, topic_id):
 def delete_msg_expired(session, cluster_id, topic_id, now):
     """ Deletes all expired messages from all topics.
     """
-    return session.query(PubSubMessage).\
-        filter(PubSubMessage.topic_id==topic_id).\
+    q = session.query(PubSubMessage).\
         filter(PubSubMessage.cluster_id==cluster_id).\
-        filter(PubSubMessage.expiration_time<=now).\
-        delete()
+        filter(PubSubMessage.expiration_time<=now)
+
+    if topic_id:
+        q = q.filter(PubSubMessage.topic_id==topic_id)
+
+    return q.delete()
 
 # ################################################################################################################################
 
 def _delete_enq_msg_by_status(session, cluster_id, topic_id, status):
     """ Deletes all messages already delivered or the ones that have been explicitly marked for deletion from delivery queues.
     """
-    return session.query(PubSubEndpointEnqueuedMessage).\
+    q = session.query(PubSubEndpointEnqueuedMessage).\
         filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id).\
-        filter(PubSubEndpointEnqueuedMessage.topic_id==topic_id).\
-        filter(PubSubEndpointEnqueuedMessage.delivery_status==status).\
-        delete()
+        filter(PubSubEndpointEnqueuedMessage.delivery_status==status)
+
+    if topic_id:
+        q = q.filter(PubSubEndpointEnqueuedMessage.topic_id==topic_id)
+
+    return q.delete()
 
 # ################################################################################################################################
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,13 +15,18 @@ from traceback import format_exc
 # gevent
 from gevent.lock import RLock
 
-# openerp-client-lib
-import openerplib
-
 # Zato
 from zato.common import SECRETS
 from zato.common.util import ping_odoo
 from zato.server.connection.queue import ConnectionQueue
+
+# Python 2/3 compatibility
+from six import PY2
+
+if PY2:
+    import openerplib as client_lib
+else:
+    import odoolib as client_lib
 
 # ################################################################################################################################
 
@@ -54,7 +59,7 @@ class OdooWrapper(object):
 
     def add_client(self):
 
-        conn = openerplib.get_connection(hostname=self.config.host, protocol=self.config.protocol, port=self.config.port,
+        conn = client_lib.get_connection(hostname=self.config.host, protocol=self.config.protocol, port=self.config.port,
             database=self.config.database, login=self.config.user, password=self.config.password)
 
         try:

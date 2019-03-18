@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -69,8 +69,8 @@ class Create(AdminService):
                 session.add(auth)
                 session.commit()
 
-            except Exception, e:
-                msg = 'Could not create an NTLM definition, e:[{e}]'.format(e=format_exc(e))
+            except Exception:
+                msg = 'Could not create an NTLM definition, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
                 session.rollback()
 
@@ -116,8 +116,8 @@ class Edit(AdminService):
                 session.add(definition)
                 session.commit()
 
-            except Exception, e:
-                msg = 'Could not update the NTLM definition, e:[{e}]'.format(e=format_exc(e))
+            except Exception:
+                msg = 'Could not update the NTLM definition, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
                 session.rollback()
 
@@ -163,8 +163,8 @@ class Delete(AdminService):
 
                 session.delete(auth)
                 session.commit()
-            except Exception, e:
-                msg = 'Could not delete the NTLM definition, e:[{e}]'.format(e=format_exc(e))
+            except Exception:
+                msg = 'Could not delete the NTLM definition, e:`{}`'.format(format_exc())
                 self.logger.error(msg)
                 session.rollback()
 

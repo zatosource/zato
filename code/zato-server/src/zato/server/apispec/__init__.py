@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,6 +21,10 @@ from docformatter import format_docstring
 
 # markdown
 from markdown import markdown
+
+# Python 2/3 compatibility
+from future.utils import iteritems
+from past.builtins import basestring
 
 # Zato
 from zato.common import APISPEC
@@ -313,7 +317,7 @@ class Generator(object):
             out['services'].append(item.toDict())
 
         # For each namespace, add copy of its services
-        for ns_name, ns_info in out['namespaces'].iteritems():
+        for ns_name, ns_info in iteritems(out['namespaces']):
             for service in out['services']:
                 if service['namespace_name'] == ns_name:
                     out['namespaces'][ns_name]['services'].append(deepcopy(service))
@@ -331,7 +335,7 @@ class Generator(object):
 
     def parse(self):
 
-        for impl_name, details in self.service_store_services.iteritems():
+        for impl_name, details in iteritems(self.service_store_services):
 
             details = bunchify(details)
             _should_include = self._should_handle(details.name, self.include)
@@ -343,15 +347,15 @@ class Generator(object):
             info = ServiceInfo(details.name, details.service_class, self.simple_io_config)
             self.services[info.name] = info
 
-        for name, info in self.services.iteritems():
+        for name, info in iteritems(self.services):
             self.invokes[name] = info.invokes
 
-        for source, targets in self.invokes.iteritems():
+        for source, targets in iteritems(self.invokes):
             for target in targets:
                 sources = self.invoked_by.setdefault(target, [])
                 sources.append(source)
 
-        for name, info in self.services.iteritems():
+        for name, info in iteritems(self.services):
             info.invoked_by = self.invoked_by.get(name, [])
 
 # ################################################################################################################################

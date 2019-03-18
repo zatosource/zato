@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -15,7 +15,7 @@ import logging
 from zato.common import GENERIC
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.wsx import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.odb.model import GenericConn
 
 # ################################################################################################################################
@@ -58,8 +58,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'is_zato', 'address', 'on_connect_service_id', 'on_message_service_id',
-            'on_close_service_id', 'subscription_list', 'security_def', 'has_auto_reconnect')
+        input_required = ('name', 'is_active', 'is_zato', 'address', 'on_connect_service_name', 'on_message_service_name',
+            'on_close_service_name', 'subscription_list', 'security_def', 'has_auto_reconnect')
         output_required = ('id', 'name')
 
     def populate_initial_input_dict(self, initial_input_dict):
@@ -73,13 +73,8 @@ class _CreateEdit(CreateEdit):
     def post_process_return_data(self, return_data):
 
         for name in ('connect', 'message', 'close'):
-            id_field_name = 'on_{}_service_id'.format(name)
-            service_id = self.input_dict.get(id_field_name)
-
-            if service_id:
-                response = id_only_service(self.req, 'zato.service.get-by-id', service_id, initial={'cluster_id':self.cluster_id})
-                name_field_name = 'on_{}_service_name'.format(name)
-                return_data[name_field_name] = response.data['name']
+            field_name = 'on_{}_service_name'.format(name)
+            return_data[field_name] = self.input_dict.get(field_name)
 
         return return_data
 

@@ -3,7 +3,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 """
-Copyright (C) 2018 Zato Source s.r.o. https://zato.io
+Copyright (C) 2019 Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,7 +12,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import subprocess
 from datetime import datetime, timedelta
-from json import dumps, loads
+from json import loads
+from socket import error as SocketError
 from traceback import format_exc
 from uuid import uuid4
 
@@ -26,9 +27,13 @@ from six.moves.http_client import OK
 # ws4py
 from ws4py.client.geventclient import WebSocketClient
 
+# Zato
+from zato.common.util import spawn_greenlet
+from zato.common.util.json_ import dumps
+
 # ################################################################################################################################
 
-logger = logging.getLogger('zato_ws_client')
+logger = logging.getLogger('zato.wsx_client')
 
 # ################################################################################################################################
 
@@ -188,10 +193,11 @@ class ResponseToZato(MessageToZato):
 class _WSClient(WebSocketClient):
     """ A low-level subclass of around ws4py's WebSocket client functionality.
     """
-    def __init__(self, on_connected_callback, on_message_callback, on_error_callback, *args, **kwargs):
+    def __init__(self, on_connected_callback, on_message_callback, on_error_callback, on_closed_callback, *args, **kwargs):
         self.on_connected_callback = on_connected_callback
         self.on_message_callback = on_message_callback
         self.on_error_callback = on_error_callback
+        self.on_closed_callback = on_closed_callback
         super(_WSClient, self).__init__(*args, **kwargs)
 
     def opened(self):
@@ -203,6 +209,10 @@ class _WSClient(WebSocketClient):
     def unhandled_error(self, error):
         spawn(self.on_error_callback, error)
 
+    def closed(self, code, reason=None):
+        super(_WSClient, self).closed(code, reason)
+        self.on_closed_callback(code, reason)
+
 # ################################################################################################################################
 
 class Client(object):
@@ -210,11 +220,12 @@ class Client(object):
     """
     def __init__(self, config):
         self.config = config
-        self.conn = _WSClient(self.on_connected, self.on_message, self.on_error, self.config.address)
+        self.conn = _WSClient(self.on_connected, self.on_message, self.on_error, self.on_closed, self.config.address)
         self.keep_running = True
         self.is_authenticated = False
         self.auth_token = None
         self.on_request_callback = self.config.on_request_callback
+        self.on_closed_callback = self.config.on_closed_callback
 
         # Keyed by IDs of requests sent from this client to Zato
         self.requests_sent = {}
@@ -318,6 +329,13 @@ class Client(object):
 
 # ################################################################################################################################
 
+    def on_closed(self, code, reason=None):
+        logger.info('Closed WSX client connection to `%s` (remote code:%s reason:%s)', self.config.address, code, reason)
+        if self.on_closed_callback:
+            self.on_closed_callback(code, reason)
+
+# ################################################################################################################################
+
     def on_error(self, error):
         """ Invoked for each unhandled error in the lower-level ws4py library.
         """
@@ -325,13 +343,43 @@ class Client(object):
 
 # ################################################################################################################################
 
-    def _run(self):
-        self.conn.connect()
+    def _run(self, max_wait=10):
+
+        needs_connect = True
+        start = now = datetime.utcnow()
+
+        # In the first few seconds, do not warn about socket errors in case
+        # the other end is intrinsically slow to connect to.
+        warn_from = start + timedelta(seconds=3)
+        use_warn = False
+
+        # Wait for max_wait seconds until we have the connection
+        until = now + timedelta(seconds=max_wait)
+
+        while needs_connect and now < until:
+            try:
+                self.conn.connect()
+            except SocketError as e:
+
+                if use_warn:
+                    log_func = logger.warn
+                else:
+                    if now >= warn_from:
+                        log_func = logger.warn
+                        use_warn = True
+                    else:
+                        log_func = logger.debug
+
+                log_func('Socket error caught `%s` while connecting to WSX `%s`', e, self.config.address)
+                sleep(2)
+                now = datetime.utcnow()
+            else:
+                needs_connect = False
 
 # ################################################################################################################################
 
-    def run(self, max_wait=2):
-        spawn(self._run)
+    def run(self, max_wait=20):
+        spawn_greenlet(self._run, timeout=10)
 
         now = datetime.utcnow()
         until = now + timedelta(seconds=max_wait)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,30 +12,36 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
+from zato.common import NO_DEFAULT_VALUE
 from zato.server.store import BaseAPI, BaseStore
+
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ZMQFacade(object):
-    """ A ZeroMQ facade for services so they aren't aware that sending ZMQ
-    messages actually requires us to use the Zato broker underneath.
+    """ A ZeroMQ message API for services.
     """
-    def __init__(self, server):
-        self.server = server
+    def __init__(self, zmq_out_api):
+        self.zmq_out_api = zmq_out_api
 
 # ################################################################################################################################
 
     def __getitem__(self, name):
-        return self.server.worker_store.zmq_out_api.connectors[name]
+        return self.zmq_out_api.connectors[name]
 
 # ################################################################################################################################
 
     def send(self, msg, out_name, *args, **kwargs):
         """ Preserved for backwards-compatibility with Zato < 3.0.
         """
-        conn = self.server.worker_store.zmq_out_api.connectors[out_name]
+        if self.zmq_out_api == NO_DEFAULT_VALUE:
+            raise ValueError('ZeroMQ connections are disabled - ensure that component_enabled.zeromq in server.conf is True')
+
+        conn = self.zmq_out_api.connectors[out_name]
         conn.send(msg, *args, **kwargs)
 
 # ################################################################################################################################
@@ -47,13 +53,20 @@ class ZMQFacade(object):
         return self
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ZMQAPI(BaseAPI):
     """ API to obtain ZeroMQ connections through.
     """
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ZMQConnStore(BaseStore):
     """ Stores outgoing connections to ZeroMQ.
     """
     def create_impl(self, config, config_no_sensitive):
         pass
+
+# ################################################################################################################################
+# ################################################################################################################################

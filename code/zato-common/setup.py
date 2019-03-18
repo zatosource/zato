@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,14 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from setuptools import setup, find_packages
 
-try:
-    curdir = os.path.dirname(os.path.abspath(__file__))
-    _version_py = os.path.normpath(os.path.join(curdir, '..', '.version.py'))
-    _locals = {}
-    execfile(_version_py, _locals)
-    version = _locals['version']
-except IOError:
-    version = '2.0.3.4'
+version = '3.1.1'
 
 def parse_requirements(requirements):
     ignored = ['#', 'setuptools', '-e']

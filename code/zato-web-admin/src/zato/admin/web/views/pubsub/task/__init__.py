@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -64,8 +64,6 @@ class Index(_Index):
     def handle_return_data(self, return_data):
 
         for item in return_data['items']:
-
-            print(333, item.id, item.is_active, item.sub_key)
 
             item.id = fs_safe_name('{}-{}'.format(item.thread_id, item.object_id))
 

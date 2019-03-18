@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -26,7 +26,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import locale
 from binascii import hexlify
 from string import Template
-from cStringIO import StringIO
+from io import StringIO
+
+# Python 2/3 compatibility
+from past.builtins import basestring, unicode
+from zato.common.py23_ import pickle_dumps
 
 # Zato
 from zato.server.connection.jms_wmq.jms import DEFAULT_DELIVERY_MODE, BaseException
@@ -143,6 +147,7 @@ class JMSTemplate(object):
 # ################################################################################################################################
 
 class TextMessage(object):
+
     def __init__(self, text=None, jms_correlation_id=None, jms_delivery_mode=None, jms_destination=None, jms_expiration=None,
         jms_message_id=None, jms_priority=None, jms_redelivered=None, jms_reply_to=None, jms_timestamp=None,
         max_chars_printed=100):
@@ -160,6 +165,7 @@ class TextMessage(object):
         self.max_chars_printed = max_chars_printed
         self.put_date = None
         self.put_time = None
+        self.mqmd = None
 
 # ################################################################################################################################
 
@@ -175,6 +181,7 @@ class TextMessage(object):
             'destination':self.jms_destination,
             'reply_to':self.jms_reply_to,
             'redelivered':self.jms_redelivered,
+            'mqmd': pickle_dumps(self.mqmd)
         }
 
 # ################################################################################################################################

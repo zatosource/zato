@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -126,7 +126,7 @@ class Connector(object):
                 while not self.is_connected:
                     try:
                         self._start()
-                    except Exception, e:
+                    except Exception:
 
                         # Ok, we are not connected but it's possible that self.keep_connecting is already False,
                         # for instance, because someone deleted us even before we connected to the remote end.
@@ -136,7 +136,7 @@ class Connector(object):
                             return
 
                         logger.warn('Caught %s exception `%s` (id:%s) (`%s` %s)',
-                            self.type, format_exc(e), self.id_self, self.name, self.get_log_details())
+                            self.type, format_exc(), self.id_self, self.name, self.get_log_details())
                         sleep(2)
 
                     # We go here if ._start did not set self.is_conneted to True.
@@ -208,7 +208,7 @@ class Connector(object):
         with self.lock:
             if self.is_inactive:
                 raise Inactive('Connection `{}` is inactive ({})'.format(self.name, self.type))
-            self._send(msg, *args, **kwargs)
+            return self._send(msg, *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -259,8 +259,8 @@ class Connector(object):
                     spawn_greenlet(self._spawn_start)
                 else:
                     self._start_loop()
-            except Exception, e:
-                logger.warn(format_exc(e))
+            except Exception:
+                logger.warn(format_exc())
 
 # ################################################################################################################################
 

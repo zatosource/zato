@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import sys
 from decimal import Decimal
 from time import sleep
-from unittest import TestCase
+from unittest import main as unittest_main, TestCase
 from uuid import uuid4
 
 # Zato
 from zato.cache import Cache, KeyExpiredError
+from zato.common.py23_ import maxint
 
 # ################################################################################################################################
 
@@ -425,7 +425,7 @@ class CacheTestCace(TestCase):
         # This fails because expected3 is > than max_item_size
         try:
             c.set(key3, expected3, 0.0, None)
-        except ValueError, e:
+        except ValueError as e:
             self.assertEquals(e.message, 'Value too long 7 > 6')
         else:
             self.fail('Expected aValueError to be raised')
@@ -434,7 +434,7 @@ class CacheTestCace(TestCase):
 
     def test_max_item_size_number_value(self):
 
-        key1, expected1 = 'key1', sys.maxint
+        key1, expected1 = 'key1', maxint
         key2, expected2 = 'key2', 10.0 ** 10
         key3, expected3 = 'key3', Decimal(2.2 ** 2.2)
         key4, expected4 = 'key4', 123.45j+6789
@@ -479,5 +479,10 @@ class CacheTestCace(TestCase):
 
         returned1 = c.get(key1, None, False)
         self.assertIs(returned1, expected1)
+
+# ################################################################################################################################
+
+if __name__ == '__main__':
+    unittest_main()
 
 # ################################################################################################################################

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,13 +10,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import itertools
-from urlparse import urlparse
 
 # ipaddress
 from ipaddress import ip_address, ip_network
 
 # netifaces
 from netifaces import AF_INET, ifaddresses as net_ifaddresses, interfaces as net_ifaces
+
+# Python 2/3 compatibility
+from builtins import bytes
+from future.moves.urllib.parse import urlparse
+from six import PY2
 
 # ################################################################################################################################
 
@@ -40,10 +44,11 @@ def ip_list_from_interface(interface, allow_loopback=False):
 
     if af_inet:
         _addresses = [elem.get('addr') for elem in af_inet]
-        _addresses = [elem.decode('utf-8') for elem in _addresses if elem]
+
+        if PY2:
+            _addresses = [elem.decode('utf8') for elem in _addresses]
 
         for address in _addresses:
-
             address = ip_address(address)
             if address.is_loopback and not allow_loopback:
                 continue
@@ -78,7 +83,7 @@ def get_preferred_ip(base_bind, user_prefs):
     current_ifaces.sort()
 
     current_addresses = [net_ifaddresses(elem).get(AF_INET) for elem in current_ifaces]
-    current_addresses = [[elem.get('addr').decode('utf-8') for elem in x] for x in current_addresses if x]
+    current_addresses = [[elem.get('addr') for elem in x] for x in current_addresses if x]
     current_addresses = list(itertools.chain.from_iterable(current_addresses))
 
     # Preferences broken out into interfacs and network ranges/IP addresses
@@ -98,7 +103,7 @@ def get_preferred_ip(base_bind, user_prefs):
     # or through a network range.
     for current in current_addresses:
         for preferred in pref_networks:
-            if ip_address(current) in preferred:
+            if ip_address(current.decode('utf8') if isinstance(current, bytes) else current) in preferred:
                 return current
 
     # Ok, still nothing, so we need to find something ourselves

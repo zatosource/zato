@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps
 from traceback import format_exc
 
 # Django
@@ -23,6 +22,7 @@ from zato.admin.web.forms.channel.web_socket import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common import ZATO_NONE
 from zato.common.odb.model import ChannelWebSocket
+from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
 
@@ -73,6 +73,8 @@ class Index(_Index):
     def on_before_append_item(self, item):
         if item.security_id:
             item.security_id = '{}/{}'.format(item.sec_type, item.security_id)
+        else:
+            item.security_id = ZATO_NONE
         return item
 
     def handle(self):

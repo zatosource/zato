@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -42,20 +42,20 @@ def has_subscription(session, cluster_id, topic_id, endpoint_id):
 def add_wsx_subscription(session, cluster_id, is_internal, sub_key, ext_client_id, ws_channel_id, sub_id):
     """ Adds an object representing a subscription of a WebSockets client.
     """
-    ws_sub = WebSocketSubscription()
-    ws_sub.is_internal = is_internal or False
-    ws_sub.sub_key = sub_key
-    ws_sub.ext_client_id = ext_client_id
-    ws_sub.channel_id = ws_channel_id
-    ws_sub.cluster_id = cluster_id
-    ws_sub.subscription_id = sub_id
-    session.add(ws_sub)
+    wsx_sub = WebSocketSubscription()
+    wsx_sub.is_internal = is_internal or False
+    wsx_sub.sub_key = sub_key
+    wsx_sub.ext_client_id = ext_client_id
+    wsx_sub.channel_id = ws_channel_id
+    wsx_sub.cluster_id = cluster_id
+    wsx_sub.subscription_id = sub_id
+    session.add(wsx_sub)
 
-    return ws_sub
+    return wsx_sub
 
 # ################################################################################################################################
 
-def add_subscription(session, cluster_id, ctx):
+def add_subscription(session, cluster_id, sub_key, ctx):
     """ Adds an object representing a subscription regardless of the underlying protocol.
     """
     # Common
@@ -67,7 +67,7 @@ def add_subscription(session, cluster_id, ctx):
     ps_sub.is_internal = ctx.is_internal
     ps_sub.is_staging_enabled = ctx.is_staging_enabled
     ps_sub.creation_time = ctx.creation_time
-    ps_sub.sub_key = ctx.sub_key
+    ps_sub.sub_key = sub_key
     ps_sub.sub_pattern_matched = ctx.sub_pattern_matched
     ps_sub.has_gd = ctx.has_gd
     ps_sub.active_status = ctx.active_status

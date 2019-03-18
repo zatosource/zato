@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
-from exceptions import IOError, OSError
 from logging import getLogger
 from socket import error as socket_error
 from traceback import format_exc
@@ -24,6 +23,10 @@ from gevent import sleep, spawn
 # Kombu
 from kombu import Connection, Consumer as _Consumer, pools, Queue
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, Transport
+
+# Python 2/3 compatibility
+from future.utils import itervalues
+from past.builtins import xrange
 
 # Zato
 from zato.common import AMQP, CHANNEL, SECRET_SHADOW, version
@@ -85,7 +88,7 @@ class _AMQPProducers(object):
         return self.pool[self.conn].acquire(*args, **kwargs)
 
     def stop(self):
-        for pool in self.pool.itervalues():
+        for pool in itervalues(self.pool):
             pool.connections.force_close_all()
 
 # ################################################################################################################################
@@ -107,8 +110,8 @@ class Consumer(object):
     def _on_amqp_message(self, body, msg):
         try:
             return self.on_amqp_message(body, msg, self.name, self.config)
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
 # ################################################################################################################################
 
@@ -133,11 +136,11 @@ class Consumer(object):
                         self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))
                 consumer.qos(prefetch_size=0, prefetch_count=self.config.prefetch_count, apply_global=False)
                 consumer.consume()
-            except Exception, e:
+            except Exception:
                 err_conn_attempts += 1
                 noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
                 logger.info('Could not create an AMQP consumer for channel `%s` (%s %s so far), e:`%s`',
-                    self.name, err_conn_attempts, noun, format_exc(e))
+                    self.name, err_conn_attempts, noun, format_exc())
 
                 # It's fine to sleep for a longer time because if this exception happens it means that we cannot connect
                 # to the server at all, which will likely mean that it is down,
@@ -183,22 +186,22 @@ class Consumer(object):
                         consumer = self._get_consumer()
 
                 # Special-case AMQP-level connection errors and recreate the connection if any is caught.
-                except AMQPConnectionError, e:
-                    logger.warn('Caught AMQP connection error in mainloop e:`%s`', format_exc(e))
+                except AMQPConnectionError:
+                    logger.warn('Caught AMQP connection error in mainloop e:`%s`', format_exc())
                     if connection:
                         connection.close()
                         consumer = self._get_consumer()
 
                 # Regular network-level errors - assume the AMQP connection is still fine and treat it
                 # as an opportunity to perform the heartbeat.
-                except conn_errors, e:
+                except conn_errors:
 
                     try:
                         connection.heartbeat_check()
-                    except Exception, e:
+                    except Exception:
                         hb_errors_so_far += 1
                         if hb_errors_so_far % log_every == 0:
-                            logger.warn('Exception in heartbeat (%s so far), e:`%s`', hb_errors_so_far, format_exc(e))
+                            logger.warn('Exception in heartbeat (%s so far), e:`%s`', hb_errors_so_far, format_exc())
 
                         # Ok, we've lost the connection, set the flag to False and sleep for some time then.
                         if not connection:
@@ -223,8 +226,8 @@ class Consumer(object):
                 connection.close()
             self.is_stopped = True # Set to True if we break out of the main loop.
 
-        except Exception, e:
-            logger.warn('Unrecoverable exception in consumer, e:`%s`', format_exc(e))
+        except Exception:
+            logger.warn('Unrecoverable exception in consumer, e:`%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -266,7 +269,7 @@ class ConnectorAMQP(Connector):
 
     def _get_conn_class(self, suffix):
         """ Subclasses below are needed so as to be able to return per-greenlet/thread/process/definition
-        information in an AMQO connection's zato.* properties and, except for zato.version,
+        information in an AMQP connection's zato.* properties and, except for zato.version,
         this information is not available on module level hence the classes are declared here,
         in particular, we need access to self.config.name and suffix which are available only in run-time.
         """
@@ -360,7 +363,7 @@ class ConnectorAMQP(Connector):
     def create_channels(self):
         """ Sets up AMQP consumers for all channels.
         """
-        for config in self.channels.itervalues():
+        for config in itervalues(self.channels):
             self._enrich_channel_config(config)
 
             for x in xrange(config.pool_size):
@@ -373,7 +376,7 @@ class ConnectorAMQP(Connector):
         because self.outconns entries are already available.
         """
         with self.lock:
-            for config in self.outconns.itervalues():
+            for config in itervalues(self.outconns):
                 self._create_producers(config)
 
 # ################################################################################################################################
@@ -408,11 +411,11 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def _stop_producers(self):
-        for producer in self._producers.itervalues():
+        for producer in itervalues(self._producers):
             try:
                 producer.stop()
-            except Exception, e:
-                logger.warn('Could not stop AMQP producer `%s`, e:`%s`', producer.name, format_exc(e))
+            except Exception:
+                logger.warn('Could not stop AMQP producer `%s`, e:`%s`', producer.name, format_exc())
             else:
                 logger.info('Stopped producer for outconn `%s` in AMQP connector `%s`', producer.name, self.config.name)
 
@@ -570,7 +573,7 @@ class ConnectorAMQP(Connector):
         # Dictionary of kwargs is built based on user input falling back to the defaults
         # as specified in the outgoing connection's configuration.
         properties = properties or {}
-        kwargs = {'exchange':exchange, 'routing_key':routing_key}
+        kwargs = {'exchange':exchange, 'routing_key':routing_key, 'mandatory':kwargs.get('mandatory')}
 
         for key in _default_out_keys:
             # The last 'or None' is needed because outconn_config[key] may return '' which is considered

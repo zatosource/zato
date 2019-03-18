@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,9 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from copy import deepcopy
-from cStringIO import StringIO
 from csv import DictWriter
 from datetime import datetime
+from io import StringIO
 from traceback import format_exc
 
 # anyjson
@@ -566,8 +566,8 @@ def settings(req):
             request = {'cluster_id':req.zato.cluster.id, 'name': mapping.job_name}
             try:
                 response = req.zato.client.invoke('zato.scheduler.job.get-by-name', request)
-            except Exception, e:
-                logger.warn(format_exc(e))
+            except Exception:
+                logger.warn(format_exc())
                 return_data['has_scheduler_jobs'] = False
                 break
             if response.has_data:

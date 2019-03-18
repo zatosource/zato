@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from setuptools import setup, find_packages
 
-version = '3.0.2'
+version = '3.1.1'
 
 long_description = description = 'Python API client for Zato - ESB, SOA, REST, APIs and Cloud Integrations in Python (https://zato.io)'
 
@@ -39,7 +39,7 @@ setup(
       install_requires = parse_requirements(
           os.path.join(os.path.dirname(os.path.realpath(__file__)), 'requirements.txt')),
 
-      keywords=('soa eai esb middleware messaging queueing asynchronous integration performance http zeromq framework events agile broker messaging server jms enterprise python middleware clustering amqp nosql websphere mq wmq mqseries ibm amqp zmq'),
+      keywords=('soa microservices esb middleware messaging queueing asynchronous integration performance http zeromq framework events agile broker messaging server jms enterprise python middleware clustering amqp nosql websphere mq wmq mqseries ibm amqp zmq eai'),
       classifiers = [
           'Development Status :: 5 - Production/Stable',
           'Environment :: Console',
@@ -54,8 +54,8 @@ setup(
           'Natural Language :: English',
           'Operating System :: OS Independent',
           'Programming Language :: C',
-          'Programming Language :: Python :: 2 :: Only',
           'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3',
           'Operating System :: POSIX :: Linux',
           'Operating System :: MacOS :: MacOS X',
           'Topic :: Communications',

@@ -1,0 +1,108 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Pub/sub dict {{ dict_name }}{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_key',
+            '_length',
+            '_id_list',
+            {% ifequal dict_name "topics" %}
+            '_events',
+            {% endifequal %}
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pub/sub dict {{ dict_name }} {{ server_name }}:{{ server_pid }}</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:5%">&nbsp;</th>
+
+                        <th><a href="#">Key</a></th>
+                        <th><a href="#">Length</a></th>
+                        <th><a href="#">ID list</a></th>
+
+                        {% ifequal dict_name "topics" %}
+                        <th></th>
+                        {% endifequal %}
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+
+                        <td>
+                            {% if key_url_name %}
+                                <a href="{% url key_url_name %}?cluster={{ cluster_id }}&amp;query={{ item.key }}">{{ item.key }}</a>
+                            {% else %}
+                                {{ item.key }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url values_url_name dict_name cluster_id server_name server_pid %}?key={{ item.key }}">{{ item.key_len }}</a>
+                            ({{ item.is_list|yesno:"t,f" }})
+                        </td>
+                        <td>
+                            {% for id_elem in item.id_list %}
+                                {{ id_elem }}
+                                {% if forloop.counter|divisibleby:"3" %}
+                                <br/>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+
+                        {% ifequal dict_name "topics" %}
+                        <td>
+                            <a href="#">Events</a>
+                        </td>
+                        {% endifequal %}
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='16'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

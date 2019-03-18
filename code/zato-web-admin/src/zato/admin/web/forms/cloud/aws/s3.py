@@ -38,7 +38,7 @@ class CreateForm(forms.Form):
         add_security_select(self, security_list, False, 'security_id', False)
 
         self.fields['storage_class'].choices = []
-        for name in CLOUD.AWS.S3.STORAGE_CLASS:
+        for name in CLOUD.AWS.S3.STORAGE_CLASS():
             self.fields['storage_class'].choices.append([name, name])
 
 class EditForm(CreateForm):

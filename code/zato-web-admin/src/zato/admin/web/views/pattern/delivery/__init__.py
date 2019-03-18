@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,11 +10,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps, loads
+from json import loads
 from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.admin.web import from_utc_to_user, from_user_to_utc
@@ -22,6 +25,7 @@ from zato.admin.web.forms.pattern.delivery.definition import InstanceListForm
 from zato.admin.web.views import CreateEdit, Index as _Index, get_js_dt_format, method_allowed
 from zato.common import DELIVERY_STATE
 from zato.common.model import DeliveryItem
+from zato.common.util.json_ import dumps
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +55,7 @@ class Details(_Index):
     def _handle_item(self, item):
         self.item = _drop_utc(item, self.req)
         self.item.args = '\n'.join('{}'.format(elem) for elem in loads(self.item.args))
-        self.item.kwargs = '\n'.join('{}={}'.format(k,v) for k, v in loads(self.item.kwargs).items())
+        self.item.kwargs = '\n'.join('{}={}'.format(k, v) for k, v in iteritems(loads(self.item.kwargs)))
         if self.item.payload:
             self.item.payload_len = len(self.item.payload)
 
@@ -144,8 +148,8 @@ def _update_many(req, cluster_id, service, success_msg, failure_msg):
 
         return HttpResponse(dumps({'message':success_msg}))
 
-    except Exception, e:
-        msg = '{}, e:[{}]'.format(failure_msg, format_exc(e))
+    except Exception:
+        msg = '{}, e:`{}`'.format(failure_msg, format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -34,7 +34,7 @@ class InvokeRetry(Service):
 
         try:
             response = self.invoke(self.req_bunch.target, *self.req_bunch.args, **self.req_bunch.kwargs)
-        except Exception, e:
+        except Exception as e:
             msg = retry_failed_msg(
                 (self.req_bunch.retry_repeats-remaining)+1, self.req_bunch.retry_repeats,
                 self.req_bunch.target, self.req_bunch.retry_seconds, self.req_bunch.orig_cid, e)
