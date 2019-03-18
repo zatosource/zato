@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -17,7 +17,7 @@ from json import loads
 from bunch import bunchify
 
 # SQLAlchemy
-from sqlalchemy import func, not_
+from sqlalchemy import and_, func, not_, or_
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import case
 
@@ -63,9 +63,17 @@ class _SearchWrapper(object):
         if where is not _not_given:
             q = q.filter(where)
         else:
+
+            # If there are multiple filters, they are by default OR-joined
+            # to ease in look ups over more than one column.
+            filter_op = and_ if config.get('filter_op') == 'and' else or_
+            filters = []
+
             for filter_by in config.get('filter_by', []):
                 for criterion in config.get('query', []):
-                    q = q.filter(filter_by.contains(criterion))
+                    filters.append(filter_by.contains(criterion))
+
+            q = q.filter(filter_op(*filters))
 
         # Total number of results
         total_q = q.statement.with_only_columns([func.count()]).order_by(None)
@@ -1573,25 +1581,32 @@ def web_socket_client_by_pub_id(session, pub_client_id):
 
 # ################################################################################################################################
 
-def web_socket_client_by_ext_id(session, ext_client_id):
+def web_socket_client_by_ext_id(session, ext_client_id, needs_one_or_none=False):
     """ An individual WebSocket connection by its external client ID.
     """
-    return session.query(
+    query = session.query(
         WebSocketClient,
         ChannelWebSocket.id.label('channel_id'),
         ChannelWebSocket.name.label('channel_name')
         ).\
         filter(WebSocketClient.ext_client_id==ext_client_id).\
-        outerjoin(ChannelWebSocket, ChannelWebSocket.id==WebSocketClient.channel_id).\
-        one_or_none()
+        outerjoin(ChannelWebSocket, ChannelWebSocket.id==WebSocketClient.channel_id)
+
+    return query.one_or_none() if needs_one_or_none else query.all()
 
 # ################################################################################################################################
 
-def web_socket_clients_by_server_id(session, server_id):
+def web_socket_clients_by_server_id(session, server_id, server_pid):
     """ A list of WebSocket clients attached to a particular server by the latter's ID.
     """
-    return session.query(WebSocketClient).\
+    query = session.query(WebSocketClient).\
         filter(WebSocketClient.server_id==server_id)
+
+    if server_pid:
+        query = query.\
+            filter(WebSocketClient.server_proc_pid==server_pid)
+
+    return query
 
 # ################################################################################################################################
 

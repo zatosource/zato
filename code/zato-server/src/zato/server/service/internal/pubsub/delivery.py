@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from json import dumps
+# Python 2/3 compatibility
+from future.utils import itervalues
 
 # Zato
 from zato.common import HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, URL_TYPE
@@ -17,6 +17,7 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.pubsub import HandleNewMessageCtx
 from zato.server.pubsub.task import PubSubTool
+from zato.common.util.json_ import dumps
 from zato.server.service import Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -125,7 +126,7 @@ class DeliverMessage(AdminService):
     def _deliver_amqp(self, msg, subscription, _ignored_impl_getter):
 
         # Ultimately we should use impl_getter to get the outconn
-        for value in self.server.worker_store.worker_config.out_amqp.itervalues():
+        for value in itervalues(self.server.worker_store.worker_config.out_amqp):
             if value['config']['id'] == subscription.config.out_amqp_id:
 
                 data = self._get_data_from_message(msg)
@@ -177,7 +178,7 @@ class GetServerPIDForSubKey(AdminService):
     def handle(self):
         sub_key = self.request.input.sub_key
         try:
-            server = self.pubsub.get_delivery_server_by_sub_key(sub_key, False)
+            server = self.pubsub.get_delivery_server_by_sub_key(sub_key, needs_lock=False)
         except KeyError:
             self._raise_bad_request(sub_key)
         else:

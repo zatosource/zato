@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from contextlib import closing
 from traceback import format_exc
+
+# Python 2/3 compatibility
+from past.builtins import basestring
 
 # Zato
 from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
@@ -106,7 +109,7 @@ class AdminService(Service):
 # ################################################################################################################################
 
     def handle(self, *args, **kwargs):
-        raise NotImplementedError('Should be overridden by subclasses')
+        raise NotImplementedError('Should be overridden by subclasses (AdminService.handle)')
 
 # ################################################################################################################################
 
@@ -121,12 +124,14 @@ class AdminService(Service):
 # ################################################################################################################################
 
     def after_handle(self):
+
         payload = self.response.payload
-        is_basestring = isinstance(payload, basestring)
+        is_text = isinstance(payload, basestring)
         needs_meta = self.request.input.get('needs_meta', True)
 
-        if needs_meta and hasattr(self, '_search_tool') and not is_basestring:
-            payload.zato_meta = self._search_tool.output_meta
+        if needs_meta and hasattr(self, '_search_tool'):
+            if not is_text:
+                payload.zato_meta = self._search_tool.output_meta
 
         logger.info(
             'cid:`%s`, name:`%s`, response:`%r`', self.cid, self.name, replace_private_key(get_response_value(self.response)))
@@ -134,7 +139,7 @@ class AdminService(Service):
 # ################################################################################################################################
 
     def get_data(self, *args, **kwargs):
-        raise NotImplementedError('Should be overridden by subclasses')
+        raise NotImplementedError('Should be overridden by subclasses (AdminService.get_data)')
 
 # ################################################################################################################################
 
@@ -192,8 +197,7 @@ class ChangePasswordBase(AdminService):
     class SimpleIO(AdminSIO):
         input_required = (Int('id'), 'password1', 'password2')
 
-    def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL,
-                *args, **kwargs):
+    def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *args, **kwargs):
 
         with closing(self.odb.session()) as session:
             password1 = self.request.input.get('password1', '')
@@ -213,17 +217,17 @@ class ChangePasswordBase(AdminService):
                 if password1_decrypted != password2_decrypted:
                     raise Exception('Passwords need to be the same')
 
-                auth = session.query(class_).\
+                instance = session.query(class_).\
                     filter(class_.id==self.request.input.id).\
                     one()
 
-                auth_func(auth, password1)
+                auth_func(instance, password1)
 
-                session.add(auth)
+                session.add(instance)
                 session.commit()
 
                 if msg_type:
-                    name = name_func(auth) if name_func else auth.name
+                    name = name_func(instance) if name_func else instance.name
 
                     self.request.input.action = action
                     self.request.input.name = name
@@ -231,7 +235,7 @@ class ChangePasswordBase(AdminService):
                     self.request.input.salt = kwargs.get('salt')
 
                     for attr in kwargs.get('publish_instance_attrs', []):
-                        self.request.input[attr] = getattr(auth, attr, ZATO_NONE)
+                        self.request.input[attr] = getattr(instance, attr, ZATO_NONE)
 
                     self.broker_client.publish(self.request.input, msg_type=msg_type)
 

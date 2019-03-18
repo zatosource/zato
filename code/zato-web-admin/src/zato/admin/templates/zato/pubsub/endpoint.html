@@ -18,7 +18,7 @@
     <script type="text/python" src="/static/brython/zato/common.py"></script>
 
     <script type="text/javascript">
-    window.zato_dyn_form_default = 'websockets';
+    window.zato_dyn_form_default = 'wsx';
     window.zato_dyn_form_elem_name = 'endpoint_type';
     window.zato_dyn_form_rows = {
         'amqp': [],
@@ -31,7 +31,7 @@
         'smtp': [],
         'soap': [],
         'sql': [],
-        'websockets': ['ws_channel_id'],
+        'wsx': ['ws_channel_id'],
     }
     window.zato_dyn_form_in_use = {{ in_use|safe }}
     </script>
@@ -123,14 +123,14 @@
                         </td>
                         <td>
                             {% if 'pub' in item.role %}
-                                <a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}">Topics</a>
+                                <a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}?cluster={{ cluster_id }}">Topics</a>
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if 'sub' in item.role %}
-                                <a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.name|slugify %}">Queues</a>
+                                <a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.name|slugify %}?cluster={{ cluster_id }}">Queues</a>
                             {% else %}
                                 <span class="form_hint">---</span>
                             {% endif %}

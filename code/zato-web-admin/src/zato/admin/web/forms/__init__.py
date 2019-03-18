@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,13 +11,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Django
 from django import forms
 
+# Python 2/3 compatibility
+from future.utils import iteritems
+
 # Zato
-from zato.common import DELEGATED_TO_RBAC, SIMPLE_IO, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common import DELEGATED_TO_RBAC, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
 
 # ################################################################################################################################
 
 INITIAL_CHOICES_DICT = {'': '----------'}
-INITIAL_CHOICES = INITIAL_CHOICES_DICT.items()[0]
+INITIAL_CHOICES = list(iteritems(INITIAL_CHOICES_DICT))[0]
 
 # ################################################################################################################################
 
@@ -27,9 +30,9 @@ SELECT_SERVICE_FIELDS = [
     'service',
     'hook_service_id',
     'hook_service_name',
-    'on_connect_service_id',
-    'on_message_service_id',
-    'on_close_service_id',
+    'on_connect_service_name',
+    'on_message_service_name',
+    'on_close_service_name',
 ]
 
 # ################################################################################################################################
@@ -158,6 +161,7 @@ def add_select_from_service(form, req, service_name, field_names, by_id=True):
             field.choices.append([id_attr, item.name])
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SearchForm(forms.Form):
 
@@ -177,7 +181,7 @@ class SearchForm(forms.Form):
         #
 
         if len(clusters) == 1:
-            initial = dict(data.iteritems())
+            initial = dict(iteritems(data))
             initial.update({'cluster':clusters[0].id})
             self.zato_auto_submit = True
         else:
@@ -194,6 +198,7 @@ class SearchForm(forms.Form):
         self.initial['cluster'] = (data.get('cluster') or [''])[0]
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ChangePasswordForm(forms.Form):
     password1 = forms.CharField(widget=forms.PasswordInput(
@@ -201,6 +206,7 @@ class ChangePasswordForm(forms.Form):
     password2 = forms.CharField(widget=forms.PasswordInput(
         attrs={'class':'required validate-password-confirm', 'style':'width:100%'}))
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class DataFormatForm(forms.Form):
@@ -212,12 +218,36 @@ class DataFormatForm(forms.Form):
         self.fields['data_format'].choices = []
         self.fields['data_format'].choices.append(INITIAL_CHOICES)
 
-        for code, name in (self.data_formats_allowed or SIMPLE_IO.COMMON_FORMAT).iteritems():
+        for code, name in iteritems(self.data_formats_allowed or SIMPLE_IO.COMMON_FORMAT):
             self.fields['data_format'].choices.append([code, name])
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class UploadForm(forms.Form):
     file = forms.FileField(widget=forms.FileInput(attrs={'size':'70'}))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WithTLSForm(forms.Form):
+
+    is_tls_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    tls_private_key_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_cert_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_ca_certs_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_crl_file = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_version = forms.ChoiceField(widget=forms.Select(), initial=TLS.DEFAULT.VERSION)
+    tls_validate = forms.ChoiceField(widget=forms.Select(), initial=TLS.CERT_VALIDATE.CERT_REQUIRED.id)
+    tls_pem_passphrase = forms.CharField(widget=forms.PasswordInput(attrs={'style':'width:100%'}))
+    is_tls_match_hostname_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    tls_ciphers = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=TLS.DEFAULT.CIPHERS)
+
+    def __init__(self, prefix=None, post_data=None):
+        super(WithTLSForm, self).__init__(post_data, prefix=prefix)
+
+        add_select(self, 'tls_version', TLS.VERSION(), needs_initial_select=False)
+        add_select(self, 'tls_validate', TLS.CERT_VALIDATE(), needs_initial_select=False)
+
+# ################################################################################################################################
 # ################################################################################################################################

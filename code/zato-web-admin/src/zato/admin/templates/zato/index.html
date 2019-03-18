@@ -49,9 +49,9 @@
 {% block body %}
     <div>
         <div id="hd">
-            <div id="console-header">&nbsp;<a href="https://zato.io/?v={{ zato_version|cut:"Zato " }}" id="logo-link"><img src="/static/gfx/logo.png" alt="Zato logo" style="vertical-align:middle"/><span id="logo">Zato</span></a>
+            <div id="console-header">&nbsp;<a href="https://zato.io/?v={{ zato_version|cut:"Zato " }}" id="logo-link"><img src="/static/gfx/logo.png" alt="Zato logo" style="vertical-align:middle;padding-top:2px;padding-bottom:2px"/></a>
             {% if user.is_authenticated %}
-                <span id="logout">
+                <span id="logout" style="padding-top:10px">
                     <a class="top" href="{% url "account-settings-basic" %}">My settings</a>
                     <a class="top"  href="{% url "logout" %}">Log out ({{ user.username }})</a>
                 </span>
@@ -145,6 +145,7 @@
                             <ul>
                                 <li class='wide'><a href="{% url "def-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
                                 <li class='wide'><a href="{% url "def-cassandra" %}?cluster={{ cluster_id|default:'' }}">Cassandra</a></li>
+                                <li class='wide'><a href="{% url "definition-kafka" %}?cluster={{ cluster_id|default:'' }}&amp;type_=def-kafka">Kafka</a></li>
                                 <li class='wide'><a href="{% url "definition-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
                             </ul>
                         </li>
@@ -166,9 +167,12 @@
                                 <li class='wide'><a href="{% url "out-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
                                 <li class='wide'><a href="{% url "out-ftp" %}?cluster={{ cluster_id|default:'' }}">FTP</a></li>
                                 <li class='wide'><a href="{% url "out-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">IBM MQ</a></li>
+                                <li class='wide'><a href="{% url "out-ldap" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-ldap">LDAP</a></li>
+                                <li class='wide'><a href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-mongodb">MongoDB</a></li>
                                 <li class='wide'><a href="{% url "out-odoo" %}?cluster={{ cluster_id|default:'' }}">Odoo</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http">REST</a></li>
                                 <li class='wide'><a href="{% url "out-sap" %}?cluster={{ cluster_id|default:'' }}">SAP RFC</a></li>
+                                <li class='wide'><a href="{% url "out-sftp" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-sftp">SFTP</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
                                 <li class='wide'><a href="{% url "out-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
                                 <li class='wide'><a href="{% url "out-wsx" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-wsx">WebSockets</a></li>
@@ -204,6 +208,12 @@
                             <span class="like-a">Queries &rarr;</span>
                             <ul>
                                 <li class='wide'><a href="{% url "query-cassandra" %}?cluster={{ cluster_id|default:'' }}">Cassandra</a></li>
+                            </ul>
+                        </li>
+                        <li>
+                            <span class="like-a">IM &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url "out-im-slack" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-im-slack">Slack</a></li>
                             </ul>
                         </li>
                         <li>
@@ -251,7 +261,14 @@
                         <li><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:'' }}">Topics</a></li>
                         <li><a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id|default:'' }}">Endpoints</a></li>
                         <li><a href="{% url "pubsub-subscription" %}?cluster={{ cluster_id|default:'' }}">Subscriptions</a></li>
-                        <li><a href="{% url "pubsub-task-delivery-server" %}?cluster={{ cluster_id|default:'' }}">Tasks</a></li>
+
+                        <li>
+                            <span class="like-a">Tasks &rarr;</span>
+                            <ul>
+                                <li><a href="{% url "pubsub-task-delivery-server" %}?cluster={{ cluster_id|default:'' }}">Delivery</a></li>
+                                <li><a href="{% url "pubsub-task-main" %}?cluster={{ cluster_id|default:'' }}">Sync</a></li>
+                            </ul>
+                        </li>
                     </ul>
                 </li>
 

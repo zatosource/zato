@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,11 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
-from httplib import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import getLogger
 from threading import current_thread
 from traceback import format_exc
-from urlparse import urlparse
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -30,6 +29,10 @@ from rapidjson import loads
 from ws4py.websocket import WebSocket as _WebSocket
 from ws4py.server.geventserver import WSGIServer
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
+
+# Python 2/3 compatibility
+from future.moves.urllib.parse import urlparse
+from past.builtins import basestring
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
@@ -51,7 +54,7 @@ logger_zato = getLogger('zato')
 
 # ################################################################################################################################
 
-http404 = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
+http404 = '{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
 
 # ################################################################################################################################
 
@@ -75,7 +78,7 @@ class HookCtx(object):
     __slots__ = ('hook_type', 'config', 'pub_client_id', 'ext_client_id', 'ext_client_name', 'connection_time', 'user_data',
         'forwarded_for', 'forwarded_for_fqdn', 'peer_address', 'peer_host', 'peer_fqdn', 'peer_conn_info_pretty', 'msg')
 
-    def __init__(self, hook_type, **kwargs):
+    def __init__(self, hook_type, *args, **kwargs):
         self.hook_type = hook_type
         for name in self.__slots__:
             if name != 'hook_type':
@@ -426,7 +429,7 @@ class WebSocket(_WebSocket):
 
     def parse_json(self, data, _create_session=WEB_SOCKET.ACTION.CREATE_SESSION, _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
 
-        parsed = loads(data)
+        parsed = loads(data.decode('utf8'))
         msg = ClientMessage()
 
         meta = parsed.get('meta', {})
@@ -841,8 +844,8 @@ class WebSocket(_WebSocket):
 
             logger.info('Response returned cid:`%s`, time:`%s`', cid, _now()-now)
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
 # ################################################################################################################################
 
@@ -964,7 +967,7 @@ class WebSocket(_WebSocket):
         # Pretend it's an actual response from the client,
         # we cannot use in_reply_to because pong messages are 1:1 copies of ping ones.
         # TODO: Use lxml for XML eventually but for now we are always using JSON
-        self.responses_received[_loads(msg.data)['meta']['id']] = True
+        self.responses_received[_loads(msg.data.decode('utf8'))['meta']['id']] = True
 
         # Since we received a pong response, it means that the peer is connected,
         # in which case we update its pub/sub metadata.
@@ -1110,7 +1113,7 @@ class ChannelWebSocket(Connector):
     def _start(self):
         self.server = WebSocketServer(self.config, self.auth_func, self.on_message_callback)
         self.is_connected = True
-        self.server.serve_forever()
+        self.server.start()
 
     def _stop(self):
         self.server.stop(3)

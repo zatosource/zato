@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,12 +11,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from copy import deepcopy
 from datetime import datetime
-from json import dumps
 from traceback import format_exc
 from uuid import uuid4
 
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
+
+# Python 2/3 compatibility
+from future.utils import iteritems
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
@@ -25,7 +27,10 @@ from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
 from zato.common.pubsub import new_sub_key
 from zato.common.util import get_http_json_channel, get_http_soap_channel
+from zato.common.util.json_ import dumps
 from zato.common.util.time_ import utcnow_as_ms
+
+# ################################################################################################################################
 
 zato_services = {
 
@@ -444,6 +449,11 @@ zato_services = {
 
 # ################################################################################################################################
 
+def new_password():
+    return uuid4().hex
+
+# ################################################################################################################################
+
 class Create(ZatoCommand):
     """ Creates a new Zato cluster in the ODB
     """
@@ -480,11 +490,11 @@ class Create(ZatoCommand):
                 args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password'), cluster)
         session.add(admin_invoke_sec)
 
-        pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', uuid4().hex, cluster)
+        pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', new_password(), cluster)
         session.add(pubapi_sec)
 
         internal_invoke_sec = HTTPBasicAuth(None, 'zato.internal.invoke', True, 'zato.internal.invoke.user',
-            'Zato internal invoker', uuid4().hex, cluster)
+            'Zato internal invoker', new_password(), cluster)
         session.add(internal_invoke_sec)
 
         self.add_default_rbac_permissions(session, cluster)
@@ -500,18 +510,21 @@ class Create(ZatoCommand):
         self.add_crypto_endpoints(session, cluster)
         self.add_pubsub_sec_endpoints(session, cluster)
 
-        # For IBM MQ connections / connectors
+        # IBM MQ connections / connectors
         self.add_internal_callback_wmq(session, cluster)
+
+        # SFTP connections / connectors
+        self.add_sftp_credentials(session, cluster)
 
         # SSO
         self.add_sso_endpoints(session, cluster)
 
         try:
             session.commit()
-        except IntegrityError, e:
+        except IntegrityError as e:
             msg = 'SQL IntegrityError caught `{}`'.format(e.message)
             if self.verbose:
-                msg += '\nDetails:`{}`'.format(format_exc(e).decode('utf-8'))
+                msg += '\nDetails:`{}`'.format(format_exc().decode('utf-8'))
                 self.logger.error(msg)
             self.logger.error(msg)
             session.rollback()
@@ -542,7 +555,7 @@ class Create(ZatoCommand):
         # HTTPSOAP + services
         #
 
-        for name, impl_name in zato_services.iteritems():
+        for name, impl_name in iteritems(zato_services):
 
             service = Service(None, name, True, impl_name, True, cluster)
             session.add(service)
@@ -589,7 +602,7 @@ class Create(ZatoCommand):
         }
 
         for password in passwords:
-            passwords[password] = uuid4().hex
+            passwords[password] = new_password()
 
         ping_impl_name = 'zato.server.service.internal.Ping'
         ping_service_name = 'zato.ping'
@@ -712,7 +725,7 @@ class Create(ZatoCommand):
         role = RBACRole(name=role_name, parent=root_rbac_role, cluster=cluster)
         session.add(role)
 
-        auth = HTTPBasicAuth(None, account_name, True, account_name, realm, uuid4().hex, cluster)
+        auth = HTTPBasicAuth(None, account_name, True, account_name, realm, new_password(), cluster)
         session.add(auth)
 
         client_role_def = MISC.SEPARATOR.join(('sec_def', 'basic_auth', account_name))
@@ -867,10 +880,10 @@ class Create(ZatoCommand):
             'zato.cache.builtin.pubapi.set-contains-any':    'zato.server.service.internal.cache.builtin.pubapi.SetContainsAny',
         }
 
-        sec = HTTPBasicAuth(None, 'zato.default.cache.client', True, 'zato.cache', 'Zato cache', uuid4().hex, cluster)
+        sec = HTTPBasicAuth(None, 'zato.default.cache.client', True, 'zato.cache', 'Zato cache', new_password(), cluster)
         session.add(sec)
 
-        for name, impl_name in service_to_impl.iteritems():
+        for name, impl_name in iteritems(service_to_impl):
 
             service = Service(None, name, True, impl_name, True, cluster)
             session.add(service)
@@ -904,10 +917,10 @@ class Create(ZatoCommand):
             'zato.crypto.generate-password':  'zato.server.service.internal.crypto.GeneratePassword',
         }
 
-        sec = HTTPBasicAuth(None, 'zato.default.crypto.client', True, 'zato.crypto', 'Zato crypto', uuid4().hex, cluster)
+        sec = HTTPBasicAuth(None, 'zato.default.crypto.client', True, 'zato.crypto', 'Zato crypto', new_password(), cluster)
         session.add(sec)
 
-        for name, impl_name in service_to_impl.iteritems():
+        for name, impl_name in iteritems(service_to_impl):
 
             service = Service(None, name, True, impl_name, True, cluster)
             session.add(service)
@@ -923,11 +936,11 @@ class Create(ZatoCommand):
 
     def add_pubsub_sec_endpoints(self, session, cluster):
 
-        sec_demo = HTTPBasicAuth(None, 'zato.pubsub.demo.secdef', True, 'zato.pubsub.demo', 'Zato pub/sub demo', uuid4().hex, cluster)
+        sec_demo = HTTPBasicAuth(None, 'zato.pubsub.demo.secdef', True, 'zato.pubsub.demo', 'Zato pub/sub demo', new_password(), cluster)
         session.add(sec_demo)
 
         sec_default_internal = HTTPBasicAuth(None, 'zato.pubsub.internal.secdef', True, 'zato.pubsub.internal',
-            'Zato pub/sub internal', uuid4().hex, cluster)
+            'Zato pub/sub internal', new_password(), cluster)
         session.add(sec_default_internal)
 
         impl_name1 = 'zato.server.service.internal.pubsub.pubapi.TopicService'
@@ -1030,16 +1043,24 @@ class Create(ZatoCommand):
         impl_name = 'zato.server.service.internal.channel.jms_wmq.OnMessageReceived'
         service = Service(None, 'zato.channel.jms-wmq.on-message-received', True, impl_name, True, cluster)
 
-        wmq_username = IPC.CONNECTOR.IBM_MQ.USERNAME
-        wmq_sec = HTTPBasicAuth(None, wmq_username, True, wmq_username, 'Zato IBM MQ', uuid4().hex, cluster)
+        username = IPC.CONNECTOR.USERNAME.IBM_MQ
+        sec = HTTPBasicAuth(None, username, True, username, 'Zato IBM MQ', new_password(), cluster)
 
         channel = HTTPSOAP(None, 'zato.internal.callback.wmq', True, True, 'channel', 'plain_http', None,
             '/zato/internal/callback/wmq',
-            None, '', None, None, security=wmq_sec, service=service, cluster=cluster)
+            None, '', None, None, security=sec, service=service, cluster=cluster)
 
-        session.add(wmq_sec)
+        session.add(sec)
         session.add(service)
         session.add(channel)
+
+# ################################################################################################################################
+
+    def add_sftp_credentials(self, session, cluster):
+        username = IPC.CONNECTOR.USERNAME.SFTP
+        sec = HTTPBasicAuth(None, username, True, username, 'Zato SFTP', new_password(), cluster)
+
+        session.add(sec)
 
 # ################################################################################################################################
 

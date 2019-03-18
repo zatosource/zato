@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -35,7 +35,7 @@ class Dispatcher(object):
 
     def listen_for_updates(self, msg, callback, **opaque):
         with self.lock:
-            for name, value in msg.iteritems():
+            for name, value in msg.items():
                 for update in UPDATES:
                     if update in name:
                         self._listen(value.value, callback, **opaque)

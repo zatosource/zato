@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,8 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from itertools import chain
-from json import dumps, loads
-from logging import getLogger
+from json import loads
+from logging import DEBUG, getLogger
+from traceback import format_exc
 
 # Bunch
 from bunch import bunchify
@@ -24,13 +25,16 @@ from sqlalchemy.exc import InternalError as SAInternalError
 
 # Zato
 from zato.common import GENERIC, SEARCH
-from zato.common.odb.model import Base
+from zato.common.odb.model import Base, SecurityBase
+from zato.common.util.json_ import dumps
 from zato.common.util.search import SearchResults
 
 # ################################################################################################################################
 
 logger_zato = getLogger('zato')
 logger_pubsub = getLogger('zato_pubsub')
+
+has_debug = logger_zato.isEnabledFor(DEBUG) or logger_pubsub.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -67,7 +71,8 @@ def search(search_func, config, filter_by, session=None, cluster_id=None, *args,
         'cur_page': cur_page,
         'page_size': page_size,
         'filter_by': filter_by,
-        'where': kwargs.get('where')
+        'where': kwargs.get('where'),
+        'filter_op': kwargs.get('filter_op')
     }
 
     query = config.get('query')
@@ -87,21 +92,30 @@ def search(search_func, config, filter_by, session=None, cluster_id=None, *args,
 
 def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
     cid = cid or None
-    is_ok = False
     attempts = 0
 
-    while not is_ok:
-        attempts = 1
+    while True:
+        attempts += 1
+
+        if has_debug:
+            logger_zato.info('In sql_op_with_deadlock_retry, %s %s %s %s %r %r', attempts, cid, name, func, args, kwargs)
 
         try:
             # Call the SQL function that will possibly result in a deadlock
             func(*args, **kwargs)
+
+            if has_debug:
+                logger_zato.info('In sql_op_with_deadlock_retry, returning True')
 
             # This will return only if there is no exception in calling the SQL function
             return True
 
         # Catch deadlocks - it may happen because both this function and delivery tasks update the same tables
         except SAInternalError as e:
+
+            if has_debug:
+                logger_zato.info('Caught SAInternalError `%s` `%s`', cid, format_exc())
+
             if _deadlock_code not in e.message:
                 raise
             else:
@@ -117,22 +131,36 @@ def sql_op_with_deadlock_retry(cid, name, func, *args, **kwargs):
                 attempts += 1
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ElemsWithOpaqueMaker(object):
     def __init__(self, elems):
         self.elems = elems
 
+# ################################################################################################################################
+
     @staticmethod
-    def _set_opaque(elem):
-        opaque = elem.get(GENERIC.ATTR_NAME)
-        opaque = loads(opaque) if opaque else {}
-        elem.update(opaque)
+    def get_opaque_data(elem):
+        return elem.get(GENERIC.ATTR_NAME)
+
+    has_opaque_data = get_opaque_data
 
 # ################################################################################################################################
 
     @staticmethod
-    def process_config_dict(config):
-        ElemsWithOpaqueMaker._set_opaque(config)
+    def _set_opaque(elem, drop_opaque=False):
+        opaque = ElemsWithOpaqueMaker.get_opaque_data(elem)
+        opaque = loads(opaque) if opaque else {}
+        elem.update(opaque)
+
+        if drop_opaque:
+            del elem[GENERIC.ATTR_NAME]
+
+# ################################################################################################################################
+
+    @staticmethod
+    def process_config_dict(config, drop_opaque=False):
+        ElemsWithOpaqueMaker._set_opaque(config, drop_opaque)
 
 # ################################################################################################################################
 
@@ -173,12 +201,21 @@ class ElemsWithOpaqueMaker(object):
             return self._process_elems([], self.elems)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 def elems_with_opaque(elems):
     """ Turns a list of SQLAlchemy elements into a list of Bunch instances,
     each possibly with its opaque elements already extracted to the level of each Bunch.
     """
     return ElemsWithOpaqueMaker(elems).get()
+
+# ################################################################################################################################
+
+def parse_instance_opaque_attr(instance):
+    opaque = getattr(instance, GENERIC.ATTR_NAME)
+    opaque = loads(opaque)
+    ElemsWithOpaqueMaker.process_config_dict(opaque)
+    return bunchify(opaque)
 
 # ################################################################################################################################
 
@@ -216,5 +253,27 @@ def set_instance_opaque_attrs(instance, input, skip=None, only=None, _zato_skip=
     # Set generic attributes for instance
     if instance_opaque_attrs is not None:
         setattr(instance, GENERIC.ATTR_NAME, dumps(instance_opaque_attrs))
+
+# ################################################################################################################################
+
+def get_security_by_id(session, security_id):
+    return session.query(SecurityBase).\
+           filter(SecurityBase.id==security_id).\
+           one()
+
+# ################################################################################################################################
+
+def get_instance_by_id(session, model_class, id):
+    return session.query(model_class).\
+           filter(model_class.id==id).\
+           one()
+
+# ################################################################################################################################
+
+def get_instance_by_name(session, model_class, type_, name):
+    return session.query(model_class).\
+           filter(model_class.type_==type_).\
+           filter(model_class.name==name).\
+           one()
 
 # ################################################################################################################################

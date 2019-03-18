@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,20 +9,25 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from contextlib import closing
 import os
-
-# Paste
-from paste.util.converters import asbool
+from contextlib import closing
+from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import MISC, SECRETS
+from zato.common import SECRETS
+from zato.common.util import asbool
 from zato.common.util.sql import elems_with_opaque
+from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
 
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ConfigLoader(object):
@@ -106,6 +111,7 @@ class ConfigLoader(object):
         query = self.odb.get_definition_amqp_list(server.cluster.id, True)
         self.config.definition_amqp = ConfigDict.from_query('definition_amqp', query, decrypt_func=self.decrypt)
 
+        # IBM MQ
         query = self.odb.get_definition_wmq_list(server.cluster.id, True)
         self.config.definition_wmq = ConfigDict.from_query('definition_wmq', query, decrypt_func=self.decrypt)
 
@@ -164,9 +170,13 @@ class ConfigLoader(object):
         query = self.odb.get_out_sap_list(server.cluster.id, True)
         self.config.out_sap = ConfigDict.from_query('out_sap', query)
 
-         # Plain HTTP
+        # REST
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'plain_http', True)
         self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query, decrypt_func=self.decrypt)
+
+        # SFTP
+        query = self.odb.get_out_sftp_list(server.cluster.id, True)
+        self.config.out_sftp = ConfigDict.from_query('out_sftp', query, decrypt_func=self.decrypt, drop_opaque=True)
 
         # SOAP
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)
@@ -220,7 +230,8 @@ class ConfigLoader(object):
 
         # OpenStack Swift
         query = self.odb.get_notif_cloud_openstack_swift_list(server.cluster.id, True)
-        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift', query, decrypt_func=self.decrypt)
+        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift',
+            query, decrypt_func=self.decrypt)
 
         # SQL
         query = self.odb.get_notif_sql_list(server.cluster.id, True)
@@ -322,7 +333,7 @@ class ConfigLoader(object):
             for key in item.keys():
                 hs_item[key] = getattr(item, key)
 
-            hs_item['match_target'] = '{}{}{}'.format(hs_item['soap_action'], MISC.SEPARATOR, hs_item['url_path'])
+            hs_item['match_target'] = get_match_target(hs_item, http_methods_allowed_re=self.http_methods_allowed_re)
             hs_item['match_target_compiled'] = Matcher(hs_item['match_target'], hs_item.get('match_slash', ''))
 
             http_soap.append(hs_item)
@@ -353,6 +364,13 @@ class ConfigLoader(object):
         self.config.simple_io['int_parameters'] = int_exact if isinstance(int_exact, list) else [int_exact]
         self.config.simple_io['int_parameter_suffixes'] = int_suffix if isinstance(int_suffix, list) else [int_suffix]
         self.config.simple_io['bool_parameter_prefixes'] = bool_prefix if isinstance(bool_prefix, list) else [bool_prefix]
+
+        # Maintain backward-compatibility with pre-3.1 versions that did not specify any particular encoding
+        bytes_to_str = self.sio_config.get('bytes_to_str')
+        if not bytes_to_str:
+            bytes_to_str = {'encoding': None}
+
+        self.config.simple_io['bytes_to_str'] = bytes_to_str
 
         # Pub/sub
         self.config.pubsub = Bunch()
@@ -467,6 +485,7 @@ class ConfigLoader(object):
         odb_data.extra = parallel_server.odb_data['extra']
         odb_data.engine = parallel_server.odb_data['engine']
         odb_data.token = parallel_server.fs_server_config.main.token
+
         odb_data.is_odb = True
 
         if odb_data.engine != 'sqlite':
@@ -488,4 +507,5 @@ class ConfigLoader(object):
     def _after_init_non_accepted(self, server):
         raise NotImplementedError("This Zato version doesn't support join states other than ACCEPTED")
 
+# ################################################################################################################################
 # ################################################################################################################################

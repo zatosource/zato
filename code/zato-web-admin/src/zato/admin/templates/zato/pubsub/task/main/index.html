@@ -1,0 +1,131 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Pub/sub sync{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+
+            '_server',
+            '_main',
+            '_sub',
+            '_dict',
+            '_ps_tools',
+            '_meta',
+            '_events',
+
+            'name',
+            'pid'
+
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Pub/sub sync</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+    {% include "zato/search-form.html" with page_prompt="Show sync tasks "%}
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:5%">&nbsp;</th>
+
+                        <th><a href="#">Server</a></th>
+                        <th><a href="#">Main</a></th>
+
+                        <th><a href="#">Sub</a></th>
+                        <th><a href="#">Dict</a></th>
+                        <th><a href="#">PS tools</a></th>
+                        <th><a href="#">Meta</a></th>
+
+                        <th></th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td>
+                            <span title="Server name and PID">{{ item.server_name }}:{{ item.server_pid }}</span>
+                        </td>
+                        <td>
+                            <span title="Keep running?">kr:{{ item.keep_running|yesno:"t,f" }}</span>,
+                            <span title="# of messages published">pubcnt:{{ item.msg_pub_counter }}</span>
+                        </td>
+
+                        <td>
+                            <span title="Subscriptions by topic name">sub-t:<a href="{% url "pubsub-task-main-subscription-dict-keys" "subscriptions_by_topic" item.cluster_id item.server_name item.server_pid %}?key_url_name=pubsub-topic">{{ item.subscriptions_by_topic }}</a></span>,
+                            <span title="Subscriptions by sub_key">sub-sk:<a href="{% url "pubsub-task-main-subscription-dict-keys" "subscriptions_by_sub_key" item.cluster_id item.server_name item.server_pid %}">{{ item.subscriptions_by_sub_key }}</a></span>,
+                            <span title="Sub key servers by sub_key">sks:<a href="{% url "pubsub-task-main-subscription-dict-keys" "sub_key_servers" item.cluster_id item.server_name item.server_pid %}">{{ item.sub_key_servers }}</a></span>
+                        </td>
+                        <td>
+                            <span title="Endpoints by ID">endp:<a href="{% url "pubsub-task-main-subscription-dict-keys" "endpoints" item.cluster_id item.server_name item.server_pid %}">{{ item.endpoints }}</a></span>,
+                            <span title="Topics by ID">topics:<a href="{% url "pubsub-task-main-subscription-dict-keys" "topics" item.cluster_id item.server_name item.server_pid %}">{{ item.topics }}</a></span>,
+                            <span title="Security definition ID to endpoint ID">sec-endp-id:<az href="#">{{ item.sec_id_to_endpoint_id }}</a></span>,
+                            <span title="WSX channel ID to endpoint ID">wsx-endp-id:<az href="#">{{ item.ws_channel_id_to_endpoint_id }}</a></span>,
+                            <span title="Service ID to endpoint ID">srv-endp-id:<az href="#">{{ item.service_id_to_endpoint_id }}</a></span>
+                        </td>
+                        <td>
+                            <span title="PubSub tools by sub_key">pst-sk:<az href="#">{{ item.pubsub_tool_by_sub_key }}</a></span>,
+                            <span title="PubSub tools">pst:<az href="#">{{ item.pubsub_tools }}</a></span>
+                        </td>
+
+                        <td>
+                            <span title="">hsme</span>:{{ item.has_meta_endpoint|yesno:"t,f" }},
+                            <span title="">frq</span>:{{ item.endpoint_meta_store_frequency }},
+                            <span title="">len</span>:{{ item.endpoint_meta_data_len }},
+                            <span title="">hist</span>:{{ item.endpoint_meta_max_history }}
+                        </td>
+
+                        <td>
+                            <a href="{% url "pubsub-task-event-list" item.cluster_id item.server_name item.server_pid %}?cluster={{ item.cluster_id }}">Events</a>
+                        </td>
+
+                        <td class='ignore'>{{ item.server_name }}</td>
+                        <td class='ignore'>{{ item.server_pid }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='16'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

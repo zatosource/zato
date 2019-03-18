@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from datetime import datetime
 from getpass import getuser
 from socket import gethostname
+
+# SQLAlchemy
+from sqlalchemy.dialects.postgresql.base import PGTypeCompiler
 
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts
@@ -41,6 +44,21 @@ class Create(ZatoCommand):
             return self.SYS_ERROR.ODB_EXISTS
 
         else:
+
+            # This is needed so that PubSubMessage.data can continue to use length
+            # in the column's specification which in itself is needed for MySQL to use LONGTEXT.
+
+            def _render_string_type(self, type_, name):
+
+                text = name
+                if type_.length and name != 'TEXT':
+                    text += "(%d)" % type_.length
+                if type_.collation:
+                    text += ' COLLATE "%s"' % type_.collation
+                return text
+
+            PGTypeCompiler._render_string_type = _render_string_type
+
             Base.metadata.create_all(engine)
 
             state = ZatoInstallState(None, VERSION, datetime.now(), gethostname(), getuser())

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from logging import getLogger
 from traceback import format_exc
+
+# Python 2/3 compatibility
+from six import add_metaclass
 
 # Zato
 from zato.common import DATA_FORMAT
@@ -55,6 +58,11 @@ logger_pubsub = getLogger('zato_pubsub.srv')
 
 # ################################################################################################################################
 
+def _get_hook_service(self):
+    return self.server.fs_server_config.get('wsx', {}).get('hook_service', '')
+
+# ################################################################################################################################
+
 def broker_message_hook(self, input, instance, attrs, service_type):
     input.source_server = self.server.get_full_name()
     input.config_cid = 'channel.web_socket.{}.{}.{}'.format(service_type, input.source_server, self.cid)
@@ -67,13 +75,14 @@ def broker_message_hook(self, input, instance, attrs, service_type):
         input.sec_type = full_data.sec_type
         input.sec_name = full_data.sec_name
         input.vault_conn_default_auth_method = full_data.vault_conn_default_auth_method
+        input.hook_service = _get_hook_service(self)
 
 # ################################################################################################################################
 
 def instance_hook(self, input, instance, attrs):
 
     if attrs.is_create_edit:
-        instance.hook_service = self.server.fs_server_config.get('wsx', {}).get('hook_service', '')
+        instance.hook_service = _get_hook_service(self)
         instance.is_out = False
         instance.service = attrs._meta_session.query(ServiceModel).\
             filter(ServiceModel.name==input.service_name).\
@@ -90,24 +99,27 @@ def response_hook(self, input, _ignored_instance, attrs, service_type):
 
 # ################################################################################################################################
 
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = ChannelWebSocket.name,
-    __metaclass__ = GetListMeta
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
 # ################################################################################################################################
 
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+    pass
 
 # ################################################################################################################################
 
@@ -115,9 +127,8 @@ class Start(Service):
     """ Starts a WebSocket channel.
     """
     class SimpleIO(object):
-        input_required = tuple(Edit.SimpleIO.input_required) + ('id', 'config_cid')
-        input_optional = tuple(Edit.SimpleIO.input_optional) + (
-            Int('bind_port'), 'service_name', 'sec_name', 'sec_type', 'vault_conn_default_auth_method')
+        input_required = 'id', 'config_cid'
+        input_optional = Int('bind_port'), 'service_name', 'sec_name', 'sec_type', 'vault_conn_default_auth_method'
         request_elem = 'zato_channel_web_socket_start_request'
         response_elem = 'zato_channel_web_socket_start_response'
 

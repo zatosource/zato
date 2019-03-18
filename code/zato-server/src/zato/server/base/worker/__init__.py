@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,7 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, inspect, os, sys
+import logging
+import inspect
+import os
+import sys
+from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
 from inspect import isclass
@@ -19,7 +23,6 @@ from tempfile import gettempdir
 from threading import RLock
 from time import sleep
 from traceback import format_exc
-from urlparse import urlparse
 from uuid import uuid4
 
 # Bunch
@@ -37,12 +40,18 @@ import gevent
 from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
+# Python 2/3 compatibility
+from future.utils import iterkeys
+from future.moves.urllib.parse import urlparse
+from past.builtins import basestring
+from six import PY3
+
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common import broker_message, CHANNEL, GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, PUBSUB, SEC_DEF_TYPE, \
-     simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
-from zato.common.broker_message import code_to_name, SERVICE
+from zato.common import broker_message, CHANNEL, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, \
+     PUBSUB, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
@@ -58,7 +67,6 @@ from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
-from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
@@ -66,11 +74,17 @@ from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
+from zato.server.connection.sftp import SFTPIPCFacade
 from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
+from zato.server.generic.api.def_kafka import DefKafkaWrapper
+from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
+from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
+from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
+from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.pubsub import PubSub
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
@@ -84,11 +98,34 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+# Type hints
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.base.parallel import ParallelServer
+    from zato.server.config import ConfigStore
+
+    # For pyflakes
+    ConfigStore = ConfigStore
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+
+class _generic_msg:
+    create          = BROKER_MSG_GENERIC.CONNECTION_CREATE.value
+    edit            = BROKER_MSG_GENERIC.CONNECTION_EDIT.value
+    delete          = BROKER_MSG_GENERIC.CONNECTION_DELETE.value
+    change_password = BROKER_MSG_GENERIC.CONNECTION_CHANGE_PASSWORD.value
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GeventWorker(GunicornGeventWorker):
     def __init__(self, *args, **kwargs):
         self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
         super(GunicornGeventWorker, self).__init__(*args, **kwargs)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SyncWorker(GunicornSyncWorker):
@@ -119,14 +156,19 @@ def _get_base_classes():
     return tuple(out)
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+_base_type = '_WorkerStoreBase'
+_base_type = _base_type if PY3 else _base_type.encode('utf8')
 
 # Dynamically adds as base classes everything found in current directory that subclasses WorkerImpl
-_WorkerStoreBase = type(b'_WorkerStoreBase', _get_base_classes(), {})
+_WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 
 class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
     def __init__(self, worker_config=None, server=None):
+        # type: (ConfigStore, ParallelServer) -> None
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_ready = False
@@ -145,8 +187,23 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Which targets this server supports
         self.target_matcher = Matcher()
 
-        # To speed up look-ups
+        # To expedite look-ups
         self._simple_types = simple_types
+
+        # Generic connections - Kafka definitions
+        self.def_kafka = {}
+
+        # Generic connections - LDAP outconns
+        self.outconn_ldap = {}
+
+        # Generic connections - MongoDB outconns
+        self.outconn_mongodb = {}
+
+        # Generic connections - WSX outconns
+        self.outconn_wsx = {}
+
+        # Generic connections - IM Slack
+        self.outconn_im_slack = {}
 
 # ################################################################################################################################
 
@@ -197,17 +254,25 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Caches
         self.cache_api = CacheAPI(self.server)
 
-        # Generic connections - WSX outconns
-        self.outconn_wsx = {}
-
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
-            GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
+            COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: self.outconn_im_slack,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
         }
 
         self._generic_conn_handler = {
-            GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
+            COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: OutconnIMSlackWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
         }
+
+        # Maps message actions against generic connection types and their message handlers
+        self.generic_impl_func_map = {}
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
@@ -260,11 +325,13 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # API keys
         self.update_apikeys()
 
-        # Request dispatcher - matches URLs, checks security and dispatches HTTP
-        # requests to services.
+        # SFTP - attach handles to connections to each ConfigDict now that all their configuration is ready
+        self.init_sftp()
 
+        # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io,
-            return_tracebacks=self.server.return_tracebacks, default_error_message=self.server.default_error_message)
+            return_tracebacks=self.server.return_tracebacks, default_error_message=self.server.default_error_message,
+            http_methods_allowed=self.server.http_methods_allowed)
         self.request_dispatcher.url_data = URLData(
             self, self.worker_config.http_soap,
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
@@ -289,6 +356,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_amqp()
 
         # Generic connections
+        self.init_generic_connections_config()
         self.init_generic_connections()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
@@ -421,7 +489,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def yield_outconn_http_config_dicts(self):
         for transport in('soap', 'plain_http'):
             config_dict = getattr(self.worker_config, 'out_' + transport)
-            for name in config_dict.keys(): # Must use .keys() explicitly so that config_dict can be changed during iteration
+            for name in list(iterkeys(config_dict)): # Must use list explicitly so config_dict can be changed during iteration
                 yield config_dict, config_dict[name]
 
 # ################################################################################################################################
@@ -450,6 +518,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         config_list = self.worker_config.out_ftp.get_config_list()
         self.worker_config.out_ftp = FTPStore()
         self.worker_config.out_ftp.add_params(config_list)
+
+
+    def init_sftp(self):
+        """ Each outgoing SFTP connection requires a connection handle to be attached here,
+        later, in run-time, this is the 'conn' parameter available via self.out[name].conn.
+        """
+        for value in self.worker_config.out_sftp.values():
+            value['conn'] = SFTPIPCFacade(self.server, value['config'])
 
     def init_http_soap(self):
         """ Initializes plain HTTP/SOAP connections.
@@ -539,8 +615,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 self._cassandra_connections_ready[v.config.id] = False
                 self.update_cassandra_conn(v.config)
                 self.cassandra_api.create_def(k, v.config, self._on_cassandra_connection_established)
-            except Exception, e:
-                logger.warn('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -559,8 +635,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for k, v in self.worker_config.cassandra_query.items():
             try:
                 gevent.spawn(self._init_cassandra_query, self.cassandra_query_api.create, k, v.config)
-            except Exception, e:
-                logger.warn('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -569,14 +645,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for k, v in self.worker_config.out_stomp.items():
             try:
                 self.stomp_outconn_api.create_def(k, v.config)
-            except Exception, e:
-                logger.warn('Could not create a Stomp outgoing connection `%s`, e:`%s`', k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create a Stomp outgoing connection `%s`, e:`%s`', k, format_exc())
 
         for k, v in self.worker_config.channel_stomp.items():
             try:
                 self.stomp_channel_api.create_def(k, v.config, stomp_channel_main_loop, self)
-            except Exception, e:
-                logger.warn('Could not create a Stomp channel `%s`, e:`%s`', k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create a Stomp channel `%s`, e:`%s`', k, format_exc())
 
 # ################################################################################################################################
 
@@ -585,8 +661,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self._update_queue_build_cap(v.config)
             try:
                 api.create(k, v.config)
-            except Exception, e:
-                logger.warn('Could not create {} connection `%s`, e:`%s`'.format(name), k, format_exc(e))
+            except Exception:
+                logger.warn('Could not create {} connection `%s`, e:`%s`'.format(name), k, format_exc())
 
 # ################################################################################################################################
 
@@ -883,7 +959,89 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def init_generic_connections(self):
         for config_dict in self.worker_config.generic_connection.values():
-            self._create_generic_connection(bunchify(config_dict['config']))
+
+            # Not all generic connections are created here
+            if config_dict['config']['type_'] == COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP:
+                continue
+
+            self._create_generic_connection(bunchify(config_dict['config']), raise_exc=False)
+
+# ################################################################################################################################
+
+    def init_generic_connections_config(self):
+
+        # Local aliases
+        def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
+        outconn_im_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK, {})
+        outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
+        outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
+        outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
+        outconn_wsx_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX, {})
+
+        # These generic connections are regular - they use common API methods for such connections
+        regular_maps = [
+            def_kafka_map,
+            outconn_im_slack_map,
+            outconn_ldap_map,
+            outconn_mongodb_map,
+            outconn_wsx_map,
+        ]
+
+        password_maps = [
+            outconn_im_slack_map,
+            outconn_ldap_map,
+            outconn_mongodb_map,
+        ]
+
+        for regular_item in regular_maps:
+            regular_item[_generic_msg.create] = self._create_generic_connection
+            regular_item[_generic_msg.edit]   = self._edit_generic_connection
+            regular_item[_generic_msg.delete] = self._delete_generic_connection
+
+        for password_item in password_maps:
+            password_item[_generic_msg.change_password] = self._change_password_generic_connection
+
+        # Outgoing SFTP connections require for a different API to be called (provided by ParallelServer)
+        outconn_sftp_map[_generic_msg.create] = self._on_outconn_sftp_create
+        outconn_sftp_map[_generic_msg.edit]   = self._on_outconn_sftp_edit
+        outconn_sftp_map[_generic_msg.delete] = self._on_outconn_sftp_delete
+
+# ################################################################################################################################
+
+    def _on_outconn_sftp_create(self, msg):
+        connector_msg = deepcopy(msg)
+        self.worker_config.out_sftp[msg.name] = msg
+        self.worker_config.out_sftp[msg.name].conn = SFTPIPCFacade(self.server, msg)
+        return self.server.connector_sftp.invoke_connector(connector_msg)
+
+# ################################################################################################################################
+
+    def _on_outconn_sftp_edit(self, msg):
+        connector_msg = deepcopy(msg)
+        del self.worker_config.out_sftp[msg.old_name]
+        return self._on_outconn_sftp_create(connector_msg)
+
+# ################################################################################################################################
+
+    def _on_outconn_sftp_delete(self, msg):
+        connector_msg = deepcopy(msg)
+        del self.worker_config.out_sftp[msg.name]
+        return self.server.connector_sftp.invoke_connector(connector_msg)
+
+# ################################################################################################################################
+
+    def _on_outconn_sftp_change_password(self, msg):
+        raise NotImplementedError('No password for SFTP connections can be set')
+
+# ################################################################################################################################
+
+    def _get_generic_impl_func(self, msg, *args, **kwargs):
+        """ Returns a function/method to invoke depending on which generic connection type is given on input.
+        Required because some connection types (e.g. SFTP) are not managed via GenericConnection objects,
+        for instance, in the case of SFTP, it uses subprocesses and a different management API.
+        """
+        func_map = self.generic_impl_func_map[msg['type_']]
+        return func_map[msg['action']]
 
 # ################################################################################################################################
 
@@ -1557,7 +1715,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 path = '{}.{}'.format(no_ext, ext)
                 try:
                     os.remove(path)
-                except OSError, e:
+                except OSError as e:
                     if e.errno != ENOENT:
                         raise
 
@@ -2075,15 +2233,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         try:
             response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=msg.data_format)
             status = success
-        except Exception, e:
-            response = format_exc(e)
+        except Exception:
+            response = format_exc()
             status = failure
         finally:
             data = '{};{}'.format(status, response)
 
         try:
             with open(msg.reply_to_fifo, 'wb') as fifo:
-                fifo.write(data)
+                fifo.write(data if isinstance(data, bytes) else data.encode('utf'))
         except Exception:
             logger.warn('Could not write to FIFO, m:`%s`, r:`%s`, s:`%s`, e:`%s`', msg, response, status, format_exc())
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -12,19 +12,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from contextlib import closing
 from copy import deepcopy
-from cStringIO import StringIO
 from datetime import datetime
+from io import StringIO
 from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
 from traceback import format_exc
 
-# Spring Python
-from springpython.context import DisposableObject
-
 # SQLAlchemy
-from sqlalchemy import create_engine, event
-from sqlalchemy.exc import IntegrityError, ProgrammingError
+from sqlalchemy import and_, create_engine, event, select
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
@@ -34,8 +30,8 @@ from sqlalchemy.sql.expression import true
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, \
-     ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
+     SERVER_UP_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
@@ -45,6 +41,18 @@ from zato.common.odb.query import generic as query_generic
 from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
      parse_tls_channel_security_definition
 from zato.common.util.sql import elems_with_opaque
+from zato.common.util.url_dispatcher import get_match_target
+
+# ################################################################################################################################
+
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.base.parallel import ParallelServer
+
+    # For pyflakes
+    ParallelServer = ParallelServer
 
 # ################################################################################################################################
 
@@ -52,11 +60,19 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+ServiceTable = Service.__table__
+ServiceTableInsert = ServiceTable.insert
+
+DeployedServiceTable = DeployedService.__table__
+DeployedServiceInsert = DeployedServiceTable.insert
+DeployedServiceDelete = DeployedServiceTable.delete
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 # Based on https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/WriteableTuple
 
 class WritableKeyedTuple(object):
-
-# ################################################################################################################################
 
     def __init__(self, elem):
         object.__setattr__(self, '_elem', elem)
@@ -89,6 +105,7 @@ class WritableKeyedTuple(object):
         return 'WritableKeyedTuple(%s)' % (', '.join('%r=%r' % (key, value) for (key, value) in inner + outer))
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class WritableTupleQuery(Query):
 
@@ -101,6 +118,7 @@ class WritableTupleQuery(Query):
         else:
             return it
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class SessionWrapper(object):
@@ -119,9 +137,9 @@ class SessionWrapper(object):
 
         try:
             self.pool.ping(self.fs_sql_config)
-        except Exception, e:
+        except Exception:
             msg = 'Could not ping:`%s`, session will be left uninitialized, e:`%s`'
-            self.logger.warn(msg, name, format_exc(e))
+            self.logger.warn(msg, name, format_exc())
         else:
             if use_scoped_session:
                 self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
@@ -221,8 +239,8 @@ class SQLConnectionPool(object):
             try:
                 session = mxServerSession(config_data=config_data)
                 odbc = session.open()
-            except OperationalError, e:
-                self.logger.warn('SQL connection could not be created, caught mxODBC exception, e:`%s`', format_exc(e))
+            except OperationalError:
+                self.logger.warn('SQL connection could not be created, caught mxODBC exception, e:`%s`', format_exc())
             else:
                 url = '{engine}://{username}:{password}@{db_name}'.format(**config)
                 return create_engine(url, module=odbc, **extra)
@@ -300,12 +318,11 @@ class SQLConnectionPool(object):
 
 # ################################################################################################################################
 
-class PoolStore(DisposableObject):
+class PoolStore(object):
     """ A main class for accessing all of the SQL connection pools. Each server
     thread has its own store.
     """
     def __init__(self, sql_conn_class=SQLConnectionPool):
-        super(PoolStore, self).__init__()
         self.sql_conn_class = sql_conn_class
         self._lock = RLock()
         self.wrappers = {}
@@ -385,8 +402,8 @@ class PoolStore(DisposableObject):
 
 # ################################################################################################################################
 
-    def destroy(self):
-        """ Invoked when Spring Python's container is releasing the store.
+    def cleanup_on_stop(self):
+        """ Invoked when the server is stopping.
         """
         with self._lock:
             for name, wrapper in self.wrappers.items():
@@ -411,9 +428,11 @@ class _Server(object):
 class ODBManager(SessionWrapper):
     """ Manages connections to a given component's Operational Database.
     """
-    def __init__(self, well_known_data=None, token=None, crypto_manager=None, server_id=None, server_name=None, cluster_id=None,
-            pool=None, decrypt_func=None):
+    def __init__(self, parallel_server=None, well_known_data=None, token=None, crypto_manager=None, server_id=None,
+            server_name=None, cluster_id=None, pool=None, decrypt_func=None):
+        # type: (ParallelServer, unicode, unicode, object, int, unicode, int, object, object)
         super(ODBManager, self).__init__()
+        self.parallel_server = parallel_server
         self.well_known_data = well_known_data
         self.token = token
         self.crypto_manager = crypto_manager
@@ -441,6 +460,7 @@ class ODBManager(SessionWrapper):
 
         with closing(self.session()) as session:
             try:
+
                 server = session.query(Server).\
                        filter(Server.token == self.token).\
                        one()
@@ -538,7 +558,7 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_url_security(self, cluster_id, connection=None):
+    def get_url_security(self, cluster_id, connection=None, any_internal=HTTP_SOAP.ACCEPT.ANY_INTERNAL):
         """ Returns the security configuration of HTTP URLs.
         """
         with closing(self.session()) as session:
@@ -563,8 +583,13 @@ class ODBManager(SessionWrapper):
             for c in q.statement.columns:
                 columns[c.name] = None
 
-            for item in q.all():
-                target = '{}{}{}'.format(item.soap_action, MISC.SEPARATOR, item.url_path)
+            for item in elems_with_opaque(q):
+                target = get_match_target({
+                    'http_accept': item.get('http_accept'),
+                    'http_method': item.get('method'),
+                    'soap_action': item.soap_action,
+                    'url_path': item.url_path,
+                }, http_methods_allowed_re=self.parallel_server.http_methods_allowed_re)
 
                 result[target] = Bunch()
                 result[target].is_active = item.is_active
@@ -637,37 +662,50 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def add_service(self, name, impl_name, is_internal, deployment_time, details, source_info, service_info=None):
-        """ Adds information about the server's service into the ODB.
+    def get_basic_data_service_list(self):
+        """ Returns basic information about all the services in ODB.
         """
-        try:
-            if service_info:
-                service_id = service_info['id']
+        with closing(self.session()) as session:
 
-            else:
-                service = Service(None, name, True, impl_name, is_internal, self.cluster)
-                self._session.add(service)
-                try:
-                    self._session.commit()
-                    service_id = service.id
-                except(IntegrityError, ProgrammingError):
-                    logger.log(TRACE1, 'IntegrityError (Service), e:`%s`', format_exc().decode('utf-8'))
-                    self._session.rollback()
+            query = select([
+                ServiceTable.c.id,
+                ServiceTable.c.name,
+                ServiceTable.c.impl_name,
+            ]).where(
+                ServiceTable.c.cluster_id==self.cluster_id
+            )
 
-                    service_id = self._session.query(Service).\
-                        join(Cluster, Service.cluster_id==Cluster.id).\
-                        filter(Service.name==name).\
-                        filter(Cluster.id==self.cluster.id).\
-                        one().id
+            return session.execute(query).\
+                fetchall()
 
-            self.add_deployed_service(deployment_time, details, service_id, source_info)
+# ################################################################################################################################
 
-            if not service_info:
-                return service.id, service.is_active, service.slow_threshold
+    def get_basic_data_deployed_service_list(self):
+        """ Returns basic information about all the deployed services in ODB.
+        """
+        with closing(self.session()) as session:
 
-        except Exception:
-            logger.error('Could not add service, name:`%s`, e:`%s`', name, format_exc().decode('utf-8'))
-            self._session.rollback()
+            query = select([
+                ServiceTable.c.name,
+            ]).where(and_(
+                DeployedServiceTable.c.service_id==ServiceTable.c.id,
+                DeployedServiceTable.c.server_id==self.server_id
+            ))
+
+            return session.execute(query).\
+                fetchall()
+
+# ################################################################################################################################
+
+    def add_services(self, session, data):
+        # type: (List[dict]) -> None
+        session.execute(ServiceTableInsert().values(data))
+
+# ################################################################################################################################
+
+    def add_deployed_services(self, session, data):
+        # type: (List[dict]) -> None
+        session.execute(DeployedServiceInsert().values(data))
 
 # ################################################################################################################################
 
@@ -675,46 +713,11 @@ class ODBManager(SessionWrapper):
         """ Removes all the deployed services from a server.
         """
         with closing(self.session()) as session:
-            session.query(DeployedService).\
-                filter(DeployedService.server_id==server_id).\
-                delete()
+            session.execute(
+                DeployedServiceDelete().\
+                where(DeployedService.server_id==server_id)
+            )
             session.commit()
-
-# ################################################################################################################################
-
-    def add_deployed_service(self, deployment_time, details, service_id, source_info):
-        """ Adds information about the server's deployed service into the ODB.
-        """
-        try:
-            ds = DeployedService(deployment_time, details, self.server.id, service_id,
-                source_info.source, source_info.path, source_info.hash, source_info.hash_method)
-            self._session.add(ds)
-            try:
-                self._session.commit()
-            except(IntegrityError, ProgrammingError):
-
-                logger.log(TRACE1, 'IntegrityError (DeployedService), e:`%s`', format_exc().decode('utf-8'))
-                self._session.rollback()
-
-                ds = self._session.query(DeployedService).\
-                    filter(DeployedService.service_id==service_id).\
-                    filter(DeployedService.server_id==self.server.id).\
-                    one()
-
-                ds.deployment_time = deployment_time
-                ds.details = details
-                ds.source = source_info.source
-                ds.source_path = source_info.path
-                ds.source_hash = source_info.hash
-                ds.source_hash_method = source_info.hash_method
-
-                self._session.add(ds)
-                self._session.commit()
-
-        except Exception:
-            msg = 'Could not add DeployedService, e:`{}`'.format(format_exc().decode('utf-8'))
-            logger.error(msg)
-            self._session.rollback()
 
 # ################################################################################################################################
 
@@ -1128,6 +1131,14 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.out_sap_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_out_sftp_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of outgoing SAP RFC connections.
+        """
+        with closing(self.session()) as session:
+            return query_generic.connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, needs_columns)
 
 # ################################################################################################################################
 

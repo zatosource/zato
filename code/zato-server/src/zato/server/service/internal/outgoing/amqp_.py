@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -102,8 +102,8 @@ class Create(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                self.logger.error('Could not create an outgoing AMQP connection, e:`%s`', format_exc(e))
+            except Exception:
+                self.logger.error('Could not create an outgoing AMQP connection, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -173,8 +173,8 @@ class Edit(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
-            except Exception, e:
-                self.logger.error('Could not update the outgoing AMQP connection, e:`%s`', format_exc(e))
+            except Exception:
+                self.logger.error('Could not update the outgoing AMQP connection, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -211,9 +211,9 @@ class Delete(AdminService):
                     'def_name':def_name,
                 })
 
-            except Exception, e:
+            except Exception:
                 session.rollback()
-                self.logger.error('Could not delete the outgoing AMQP connection, e:`%s`', format_exc(e))
+                self.logger.error('Could not delete the outgoing AMQP connection, e:`%s`', format_exc())
 
                 raise
 

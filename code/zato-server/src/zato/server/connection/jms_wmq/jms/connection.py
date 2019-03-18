@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -23,7 +25,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from cStringIO import StringIO
+from io import BytesIO
 from logging import DEBUG, getLogger
 from struct import pack, unpack
 from xml.sax.saxutils import escape
@@ -31,6 +33,10 @@ from time import time, mktime, strptime, altzone
 from threading import RLock
 from traceback import format_exc
 import xml.etree.ElementTree as etree
+
+# Python 2/3 compatibility
+from future.utils import iteritems
+from past.builtins import basestring, long, unicode
 
 # Zato
 from zato.common.util.wmq import unhexlify_wmq_id
@@ -45,7 +51,7 @@ logger = getLogger('zato_ibm_mq')
 # ################################################################################################################################
 
 # Some WMQ constants are not exposed by pymqi.
-_WMQ_MQRFH_VERSION_2 = '\x00\x00\x00\x02'
+_WMQ_MQRFH_VERSION_2 = b'\x00\x00\x00\x02'
 _WMQ_DEFAULT_ENCODING = 273
 _WMQ_DEFAULT_ENCODING_WIRE_FORMAT = pack('!l', _WMQ_DEFAULT_ENCODING)
 
@@ -54,10 +60,10 @@ _WMQ_DEFAULT_CCSID = 1208
 _WMQ_DEFAULT_CCSID_WIRE_FORMAT = pack('!l', _WMQ_DEFAULT_CCSID)
 
 # From cmqc.h
-_WMQ_MQFMT_RF_HEADER_2 = 'MQHRF2  '
+_WMQ_MQFMT_RF_HEADER_2 = b'MQHRF2  '
 
 # MQRFH_NO_FLAGS_WIRE is in cmqc.h
-_WMQ_MQRFH_NO_FLAGS_WIRE_FORMAT = '\x00\x00\x00\x00'
+_WMQ_MQRFH_NO_FLAGS_WIRE_FORMAT = b'\x00\x00\x00\x00'
 
 # Java documentation says '214748364.7 seconds'.
 _WMQ_MAX_EXPIRY_TIME = 214748364.7
@@ -86,15 +92,15 @@ del(_msd, _msgbody)
 
 class WebSphereMQConnection(object):
 
-    def __init__(self, queue_manager=None, channel=None, host=None, port=None, username=None,
+    def __init__(self, _ignored_logger, queue_manager=None, channel=None, host=None, port=None, username=None,
         password=None, cache_open_send_queues=True, cache_open_receive_queues=True, use_shared_connections=True,
         dynamic_queue_template='SYSTEM.DEFAULT.MODEL.QUEUE', ssl=False, ssl_cipher_spec=None, ssl_key_repository=None,
         needs_mcd=True, needs_jms=False, max_chars_printed=100):
 
         # TCP-level settings
-        self.queue_manager = queue_manager or ''
+        self.queue_manager = queue_manager.encode('utf8') or ''
         self.channel = channel.encode('utf8')
-        self.host = host.encode('utf8')
+        self.host = host
         self.port = port
 
         # Credentials
@@ -173,7 +179,7 @@ class WebSphereMQConnection(object):
                     self._open_receive_queues_cache.clear()
                     self._open_dynamic_queues_cache.clear()
                     logger.info('Caches cleared')
-                except Exception, e:
+                except Exception:
                     try:
                         logger.error('Could not clear caches, e:`%s`' % format_exc())
                     except:
@@ -182,10 +188,10 @@ class WebSphereMQConnection(object):
                     logger.info('Disconnecting from queue manager `%s`' % self.queue_manager)
                     self.mgr.disconnect()
                     logger.info('Disconnected from queue manager `%s`' % self.queue_manager)
-                except Exception, e:
+                except Exception:
                     try:
                         msg = 'Could not disconnect from queue manager `%s`, e:`%s`'
-                        logger.error(msg % (self.queue_manager, format_exc(e)))
+                        logger.error(msg % (self.queue_manager, format_exc()))
                     except Exception:
                         pass
 
@@ -263,7 +269,7 @@ class WebSphereMQConnection(object):
             try:
                 self.mgr.connect_with_options(self.queue_manager, cd=cd, opts=connect_options, user=self.username,
                     password=self.password, **kwargs)
-            except self.mq.MQMIError, e:
+            except self.mq.MQMIError as e:
                 exc = WebSphereMQException(e, e.comp, e.reason)
                 raise exc
             else:
@@ -339,7 +345,7 @@ class WebSphereMQConnection(object):
         destination = self._strip_prefixes_from_destination(destination)
 
         # Will consist of an MQRFH2 header and the actual business payload.
-        buff = StringIO()
+        buff = BytesIO()
 
         # Build the message descriptor (MQMD)
         md = self._build_md(message)
@@ -352,7 +358,7 @@ class WebSphereMQConnection(object):
             buff.write(mqrfh2jms)
 
         if message.text is not None:
-            buff.write(message.text.encode('utf-8'))
+            buff.write(message.text.encode('utf8') if isinstance(message.text, unicode) else message.text)
 
         body = buff.getvalue()
         buff.close()
@@ -361,7 +367,7 @@ class WebSphereMQConnection(object):
 
         try:
             queue.put(body, md)
-        except self.mq.MQMIError, e:
+        except self.mq.MQMIError as e:
             logger.error('MQMIError in queue.put, comp:`%s`, reason:`%s`' % (e.comp, e.reason))
             exc = WebSphereMQException(e, e.comp, e.reason)
             raise exc
@@ -425,7 +431,7 @@ class WebSphereMQConnection(object):
 
             return self._build_text_message(md, message)
 
-        except self.mq.MQMIError, e:
+        except self.mq.MQMIError as e:
             if e.reason == self.CMQC.MQRC_NO_MSG_AVAILABLE:
                 text = 'No message available for destination:`%s`, wait_interval:`%s` ms' % (destination, wait_interval)
                 raise NoMessageAvailableException(text)
@@ -520,6 +526,7 @@ class WebSphereMQConnection(object):
 
         # Create a message instance ..
         text_message = TextMessage()
+        text_message.mqmd = md
 
         if usr_folder:
             for attr_name, attr_value in usr_folder.items():
@@ -581,7 +588,7 @@ class WebSphereMQConnection(object):
             self.CMQC.MQRO_DISCARD_MSG: 'Discard_Msg',
         }
 
-        for report_name, jms_header_name in md_report_to_jms.iteritems():
+        for report_name, jms_header_name in iteritems(md_report_to_jms):
             report_value = md.Report & report_name
             if report_value:
                 header_value = report_value
@@ -851,7 +858,7 @@ class MQRFH2JMS(object):
 
         total_header_length += variable_part_length
 
-        buff = StringIO()
+        buff = BytesIO()
 
         buff.write(CMQC.MQRFH_STRUC_ID)
         buff.write(_WMQ_MQRFH_VERSION_2)

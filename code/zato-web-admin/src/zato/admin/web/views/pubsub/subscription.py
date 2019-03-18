@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -63,7 +63,7 @@ class Index(_Index):
         create_form = None
         edit_form = None
 
-        for endpoint_type in PUBSUB.ENDPOINT_TYPE:
+        for endpoint_type in PUBSUB.ENDPOINT_TYPE():
             select_data_target[endpoint_type.id] = []
 
         if self.req.zato.cluster_id:

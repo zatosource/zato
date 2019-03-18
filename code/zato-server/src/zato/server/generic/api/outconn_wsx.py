@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -121,6 +121,7 @@ class ZatoWSXClient(_BaseWSXClient):
         self._zato_client_config.client_id = 'wsx.out.{}'.format(new_cid(8))
         self._zato_client_config.address = self.config.address
         self._zato_client_config.on_request_callback = self.on_message_cb
+        self._zato_client_config.on_closed_callback = self.on_close_cb
 
         if self.config.get('username'):
             self._zato_client_config.username = self.config.username
@@ -168,7 +169,7 @@ class WSXClient(object):
     def __init__(self, config):
         self.config = config
         self.is_connected = False
-        spawn_greenlet(self._init)
+        spawn_greenlet(self._init, timeout=2)
 
     def _init(self):
         _impl_class = ZatoWSXClient if self.config.is_zato else _NonZatoWSXClient
@@ -250,6 +251,7 @@ class OutconnWSXWrapper(Wrapper):
 # ################################################################################################################################
 
     def _should_handle_close_cb(self, code, reason):
+
         if reason != ZATO_NONE:
             if not self.delete_requested:
                 return True
@@ -281,6 +283,11 @@ class OutconnWSXWrapper(Wrapper):
                 except Exception:
                     logger.warn('Could not reconnect WebSocket `%s` to `%s`, e:`%s`',
                         self.config.name, self.config.address, format_exc())
+
+        else:
+            # Do not handle it but log information so as not to overlook the event
+            logger.info('WSX `%s` (%s) ignoring close event code:`%s` reason:`%s`',
+                self.config.name, self.config.address, code, reason)
 
 # ################################################################################################################################
 

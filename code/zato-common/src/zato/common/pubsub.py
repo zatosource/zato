@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -185,5 +185,35 @@ class HookCtx(object):
         self.msg = msg
         self.soap_suds_client
         self.response = None
+
+# ################################################################################################################################
+
+# PubSub's attributes listed separately for ease of making them part of SimpleIO definitions
+pubsub_main_data = 'cluster_id', 'server_name', 'server_pid', 'server_api_address', 'keep_running', 'subscriptions_by_topic', \
+    'subscriptions_by_sub_key', 'sub_key_servers', 'endpoints', 'topics', 'sec_id_to_endpoint_id', \
+    'ws_channel_id_to_endpoint_id', 'service_id_to_endpoint_id', 'topic_name_to_id', 'pub_buffer_gd', 'pub_buffer_non_gd', \
+    'pubsub_tool_by_sub_key', 'pubsub_tools', 'sync_backlog', 'msg_pub_counter', 'has_meta_endpoint', \
+    'endpoint_meta_store_frequency', 'endpoint_meta_data_len', 'endpoint_meta_max_history', 'data_prefix_len', \
+    'data_prefix_short_len'
+
+# ################################################################################################################################
+
+class dict_keys:
+    endpoint = 'id', 'name', 'endpoint_type', 'role', 'is_active', 'is_internal', 'topic_patterns', \
+        'pub_topic_patterns', 'sub_topic_patterns'
+
+    subscription = 'id', 'creation_time', 'sub_key', 'endpoint_id', 'endpoint_name', 'topic_id', 'topic_name', \
+        'sub_pattern_matched', 'task_delivery_interval', 'unsub_on_wsx_close', 'ext_client_id'
+
+    topic = 'id', 'name', 'is_active', 'is_internal', 'max_depth_gd', 'max_depth_non_gd', 'has_gd', 'depth_check_freq',\
+        'pub_buffer_size_gd', 'task_delivery_interval', 'meta_store_frequency', 'task_sync_interval', 'msg_pub_counter', \
+        'msg_pub_counter_gd', 'msg_pub_counter_non_gd', 'last_synced', 'sync_has_gd_msg', 'sync_has_non_gd_msg', \
+        'gd_pub_time_max'
+
+    sks = 'sub_key', 'cluster_id', 'server_name', 'server_pid', 'endpoint_type', 'channel_name', 'pub_client_id', \
+        'ext_client_id', 'wsx_info', 'creation_time', 'endpoint_id'
+
+all_dict_keys = dict_keys.endpoint + dict_keys.subscription + dict_keys.topic + dict_keys.sks
+all_dict_keys = list(set(all_dict_keys))
 
 # ################################################################################################################################

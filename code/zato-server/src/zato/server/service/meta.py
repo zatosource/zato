@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -225,17 +225,17 @@ class AdminServiceMeta(type):
                     sio_elem.extend(attrs.create_edit_input_required_extra)
 
                 # Sorts and removes duplicates
-                setattr(SimpleIO, _name, sorted(list(set(sio_elem))))
+                setattr(SimpleIO, _name, list(set(sio_elem)))
 
         for skip_name in attrs.skip_output_params:
             for attr_names in chain([SimpleIO.output_required, SimpleIO.output_optional]):
                 if skip_name in attr_names:
                     attr_names.remove(skip_name)
 
-        SimpleIO.input_required = tuple(sorted(SimpleIO.input_required))
-        SimpleIO.input_optional = tuple(sorted(SimpleIO.input_optional))
-        SimpleIO.output_required = tuple(sorted(SimpleIO.output_required))
-        SimpleIO.output_optional = tuple(sorted(SimpleIO.output_optional))
+        SimpleIO.input_required = tuple(SimpleIO.input_required)
+        SimpleIO.input_optional = tuple(SimpleIO.input_optional)
+        SimpleIO.output_required = tuple(SimpleIO.output_required)
+        SimpleIO.output_optional = tuple(SimpleIO.output_optional)
 
         return SimpleIO
 
@@ -334,9 +334,9 @@ class CreateEditMeta(AdminServiceMeta):
                     session.add(instance)
                     session.commit()
 
-                except Exception, e:
+                except Exception:
                     msg = 'Could not {} the object, e:`%s`'.format(verb)
-                    logger.error(msg, format_exc(e))
+                    logger.error(msg, format_exc())
                     session.rollback()
                     raise
                 else:
@@ -391,9 +391,9 @@ class DeleteMeta(AdminServiceMeta):
 
                     session.delete(instance)
                     session.commit()
-                except Exception, e:
+                except Exception:
                     msg = 'Could not delete {}, e:`%s`'.format(attrs.label)
-                    self.logger.error(msg, format_exc(e))
+                    self.logger.error(msg, format_exc())
                     session.rollback()
 
                     raise

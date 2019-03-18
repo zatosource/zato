@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -136,7 +136,7 @@ def validate_haproxy_config(config_data, haproxy_command):
     try:
         with NamedTemporaryFile(prefix='zato-tmp') as tf:
 
-            tf.write(config_data)
+            tf.write(config_data.encode('utf8'))
             tf.flush()
 
             common_msg = 'config_file:`{}`'
@@ -148,7 +148,7 @@ def validate_haproxy_config(config_data, haproxy_command):
             command = [haproxy_command, '-c', '-f', tf.name]
             timeouting_popen(command, HAPROXY_VALIDATE_TIMEOUT, timeout_msg, rc_non_zero_msg, common_msg)
 
-    except Exception, e:
-        msg = 'Caught an exception, e:`{}`'.format(format_exc(e))
+    except Exception:
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
         logger.error(msg)
         raise Exception(msg)

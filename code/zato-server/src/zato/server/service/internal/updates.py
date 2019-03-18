@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from errno import ENETUNREACH
-from httplib import OK
+from http.client import OK
 from json import loads
 from traceback import format_exc
 
@@ -92,8 +92,8 @@ class CheckUpdates(Service):
                 # We can sleep for 1 day and then check again
                 sleep(day)
 
-        except Exception, e:
-            self.logger.warn(format_exc(e))
+        except Exception:
+            self.logger.warn(format_exc())
 
 # ################################################################################################################################
 
@@ -140,7 +140,7 @@ class CheckUpdates(Service):
     def _get_current(self, _url_info, self_major, self_version):
         try:
             response = requests_get(_url_info.format(self_major), params={'v':self_version})
-        except ConnectionError, e:
+        except ConnectionError as e:
             # We ignore ENETUNREACH because it simply means that we could not connect to the server,
             # which is fine, e.g. no Internet connectivity is allowed in that system.
             if e.errno != ENETUNREACH:

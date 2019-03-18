@@ -2,12 +2,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+
+# Python 2/3 compatibility
+from future.standard_library import install_aliases
+install_aliases()
 
 # stdlib
 import argparse
@@ -241,6 +245,15 @@ def get_parser():
     migrate.add_argument('path', help='Path to a Zato component')
     migrate.set_defaults(command='migrate')
     add_opts(migrate, migrate_mod.Migrate.opts)
+
+    #
+    # reset-totp-key
+    #
+    reset_totp_key = subs.add_parser('reset-totp-key',
+        description=web_admin_auth_mod.ResetTOTPKey.__doc__, parents=[base_parser])
+    reset_totp_key.add_argument('path', help='Path to web-admin')
+    reset_totp_key.set_defaults(command='reset_totp_key')
+    add_opts(reset_totp_key, web_admin_auth_mod.ResetTOTPKey.opts)
 
     #
     # quickstart

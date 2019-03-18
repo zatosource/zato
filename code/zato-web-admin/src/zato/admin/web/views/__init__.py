@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -10,12 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from base64 import b64encode
 from datetime import datetime, timedelta
 from itertools import chain
 from traceback import format_exc
-
-# anyjson
-from json import dumps
 
 # bunch
 from bunch import Bunch
@@ -27,11 +25,16 @@ from django.template.response import TemplateResponse
 # pytz
 from pytz import UTC
 
+# Python 2/3 compatibility
+from future.utils import iterkeys
+from past.builtins import basestring
+
 # Zato
 from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
 from zato.common import SEC_DEF_TYPE_NAME, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.util import get_lb_client as _get_lb_client
+from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
 
@@ -56,7 +59,8 @@ def parse_response_data(response):
     """ Parses out data and metadata out an internal API call response.
     """
     meta = response.data.pop('_meta', None)
-    data = response.data[response.data.keys()[0]]
+    keys = list(iterkeys(response.data))
+    data = response.data[keys[0]]
     return data, meta
 
 # ################################################################################################################################
@@ -178,7 +182,7 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         req.zato.client.invoke(service_name, input_dict)
 
     except Exception:
-        msg = 'Password could not be changed, e:`{}`'.format(format_exc())
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
@@ -282,7 +286,7 @@ class Index(_BaseView):
     """ A base class upon which other index views are based.
     """
     url_name = 'url_name-must-be-defined-in-a-subclass'
-    template = 'template-must-be-defined-in-a-subclass'
+    template = 'template-must-be-defined-in-a-subclass-or-get-template-name'
 
     output_class = None
 
@@ -298,7 +302,7 @@ class Index(_BaseView):
         and that all the required parameters were given in GET request. cluster_id doesn't have to be in GET,
         'cluster' will suffice.
         """
-        input_elems = self.req.GET.keys() + self.req.zato.args.keys()
+        input_elems = list(iterkeys(self.req.GET)) + list(iterkeys(self.req.zato.args))
 
         if not self.cluster_id:
             return False
@@ -324,6 +328,11 @@ class Index(_BaseView):
     def get_initial_input(self):
         return {}
 
+    def get_template_name(self):
+        """ May be overridden by subclasses to dynamically decide which template to use,
+        otherwise self.template will be employed.
+        """
+
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
@@ -337,6 +346,7 @@ class Index(_BaseView):
         and fills it in with received attributes.
         """
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
+
         for msg_item in item_list:
             item = self.output_class()
             for name in names:
@@ -345,7 +355,14 @@ class Index(_BaseView):
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:
                     setattr(item, name, value)
-            self.items.append(self.on_before_append_item(item))
+            item = self.on_before_append_item(item)
+
+            if isinstance(item, (list, tuple)):
+                func = self.items.extend
+            else:
+                func = self.items.append
+
+            func(item)
 
     def _handle_item(self, item):
         pass
@@ -378,7 +395,8 @@ class Index(_BaseView):
                     if output_repeated:
                         if isinstance(response.data, dict):
                             response.data.pop('_meta', None)
-                            data = response.data[response.data.keys()[0]]
+                            keys = list(iterkeys(response.data))
+                            data = response.data[keys[0]]
                         else:
                             data = response.data
                         self._handle_item_list(data)
@@ -406,13 +424,15 @@ class Index(_BaseView):
 
             return_data = self.handle_return_data(return_data)
 
-            return TemplateResponse(req, self.template, return_data)
+            logger.info('Index data for frontend `%s`', return_data)
 
-        except Exception, e:
-            return HttpResponseServerError(format_exc(e))
+            return TemplateResponse(req, self.get_template_name() or self.template, return_data)
+
+        except Exception:
+            return HttpResponseServerError(format_exc())
 
     def handle(self, req=None, *args, **kwargs):
-        raise NotImplementedError('Must be overloaded by a subclass')
+        return {}
 
 # ################################################################################################################################
 
@@ -451,13 +471,17 @@ class CreateEdit(_BaseView):
 
             self.input_dict.update(input_dict)
 
-            logger.debug(
-                'Request input dict `%r` out of `%r`, `%r`, `%r`, `%r`, `%r`', self.input_dict,
-                self.SimpleIO.input_required, self.SimpleIO.input_optional, self.input, self.req.GET, self.req.POST)
+            logger.info('Request self.input_dict %s', self.input_dict)
+            logger.info('Request self.SimpleIO.input_required %s', self.SimpleIO.input_required)
+            logger.info('Request self.SimpleIO.input_optional %s', self.SimpleIO.input_optional)
+            logger.info('Request self.input %s', self.input)
+            logger.info('Request self.req.GET %s', self.req.GET)
+            logger.info('Request self.req.POST %s', self.req.POST)
 
-            logger.debug('Sending `%s` to `%s`', self.input_dict, self.service_name)
+            logger.info('Sending `%s` to `%s`', self.input_dict, self.service_name)
 
             response = self.req.zato.client.invoke(self.service_name, self.input_dict)
+
             if response.ok:
                 return_data = {
                     'message': self.success_message(response.data)
@@ -477,16 +501,16 @@ class CreateEdit(_BaseView):
 
                 self.post_process_return_data(return_data)
 
-                logger.debug('CreateEdit data for frontend `%s`', return_data)
+                logger.info('CreateEdit data for frontend `%s`', return_data)
 
                 return HttpResponse(dumps(return_data), content_type='application/javascript')
             else:
-                msg = 'response:[{}], details.response.details:[{}]'.format(response, response.details)
+                msg = 'response:`{}`, details.response.details:`{}`'.format(response, response.details)
                 logger.error(msg)
                 raise ZatoException(msg=msg)
 
-        except Exception, e:
-            return HttpResponseServerError(format_exc(e))
+        except Exception:
+            return HttpResponseServerError(format_exc())
 
     def success_message(self, item):
         raise NotImplementedError('Must be implemented by a subclass')
@@ -517,8 +541,8 @@ class BaseCallView(_BaseView):
             input_dict.update(initial_input_dict)
             req.zato.client.invoke(self.service_name or self.get_service_name(), input_dict)
             return HttpResponse()
-        except Exception, e:
-            msg = '{}, e:`{}`'.format(self.error_message, format_exc(e))
+        except Exception:
+            msg = '{}, e:`{}`'.format(self.error_message, format_exc())
             logger.error(msg)
             return HttpResponseServerError(msg)
 
@@ -544,8 +568,8 @@ class SecurityList(object):
         return iter(self.def_items)
 
     def append(self, def_item):
-        value = b'{0}/{1}'.format(def_item.sec_type, def_item.id)
-        label = b'{0}/{1}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
+        value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
+        label = '{0}/{1}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
         self.def_items.append((value, label))
 
     @staticmethod
@@ -571,6 +595,8 @@ def id_only_service(req, service, id, error_template='{}', initial=None):
         if initial:
             request.update(initial)
 
+        logger.info('Sending `%s` to `%s` (id_only_service)', request, service)
+
         result = req.zato.client.invoke(service, request)
 
         if not result.ok:
@@ -584,11 +610,19 @@ def id_only_service(req, service, id, error_template='{}', initial=None):
 
 # ################################################################################################################################
 
+def ping_connection(req, service, connection_id, connection_type='{}'):
+    ret = id_only_service(req, service, connection_id, 'Could not ping {}, e:`{{}}`'.format(connection_type))
+    if isinstance(ret, HttpResponseServerError):
+        return ret
+    return HttpResponse(ret.data.info)
+
+# ################################################################################################################################
+
 def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_template='', content_type='application/javascript',
         extra=None):
     try:
         req.zato.client.invoke(service, input_dict)
-    except Exception, e:
+    except Exception as e:
         return HttpResponseServerError(e.message, content_type=content_type)
     else:
         response = {'msg': ok_msg}
@@ -602,14 +636,16 @@ def upload_to_server(req, cluster_id, service, error_msg_template):
     try:
         input_dict = {
             'cluster_id': cluster_id,
-            'payload': req.read().encode('base64'),
+            'payload': b64encode(req.read()),
             'payload_name': req.GET['qqfile']
         }
         req.zato.client.invoke(service, input_dict)
 
         return HttpResponse(dumps({'success': True}))
 
-    except Exception, e:
-        msg = error_msg_template.format(format_exc(e))
+    except Exception:
+        msg = error_msg_template.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+# ################################################################################################################################

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,12 +11,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 
+# Python 2/3 compatibility
+from six import add_metaclass
+
 # Zato
 from zato.common.broker_message import RBAC
 from zato.common.odb.model import RBACRole, RBACPermission, RBACRolePermission, Service
 from zato.common.odb.query import rbac_role_permission_list
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+
+# ################################################################################################################################
 
 elem = 'security_rbac_role_permission'
 model = RBACRolePermission
@@ -30,6 +35,8 @@ create_edit_rewrite = ['id']
 skip_input_params = ['name']
 extra_delete_attrs = ['role_id', 'service_id', 'perm_id']
 check_existing_one = False
+
+# ################################################################################################################################
 
 def get_extra(service, role_id, service_id, perm_id):
 
@@ -46,6 +53,8 @@ def get_extra(service, role_id, service_id, perm_id):
 
         return '{}:::{}::{}'.format(role.name, _service.name, perm.name), role.name, _service.name, perm.name
 
+# ################################################################################################################################
+
 def instance_hook(self, input, instance, attrs):
     with closing(self.odb.session()) as session:
 
@@ -59,6 +68,8 @@ def instance_hook(self, input, instance, attrs):
             filter(RBACPermission.id==input.perm_id).one()
 
     instance.name = '{}:::{}::{}'.format(role.name, _service.name, perm.name)
+
+# ################################################################################################################################
 
 def response_hook(self, input, instance, attrs, service_type):
 
@@ -89,12 +100,19 @@ def response_hook(self, input, instance, attrs, service_type):
         self.response.payload.service_name = _service.name
         self.response.payload.perm_name = perm.name
 
+# ################################################################################################################################
+
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = RBACRole.name,
-    __metaclass__ = GetListMeta
 
+# ################################################################################################################################
+
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
+
+# ################################################################################################################################
 
 class Edit(AdminService):
     """ This service is a no-op added only for API completeness.
@@ -102,5 +120,10 @@ class Edit(AdminService):
     def handle(self):
         pass
 
+# ################################################################################################################################
+
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+    pass
+
+# ################################################################################################################################

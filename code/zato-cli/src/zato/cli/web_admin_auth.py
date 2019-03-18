@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,20 +9,27 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import json, os, sys
+import json
+import os
+import sys
 from traceback import format_exc
 
+# PyOTP
+import pyotp
+
 # Zato
+from zato.admin.web.util import set_user_profile_totp_key
 from zato.admin.zato_settings import update_globals
 from zato.cli import ManageCommand
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _WebAdminAuthCommand(ManageCommand):
     def _prepare(self, args):
         os.chdir(os.path.abspath(args.path))
         base_dir = os.path.join(self.original_dir, args.path)
-        config = json.loads(open(os.path.join(base_dir, './config/repo/web-admin.conf')).read())
+        config = json.loads(open(os.path.join(base_dir, '.', 'config/repo/web-admin.conf')).read())
         config['config_dir'] = os.path.abspath(args.path)
         update_globals(config, base_dir)
 
@@ -35,6 +42,7 @@ class _WebAdminAuthCommand(ManageCommand):
         self.reset_logger(args, True)
         self.logger.info('OK')
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class CreateUser(_WebAdminAuthCommand):
@@ -104,12 +112,13 @@ class CreateUser(_WebAdminAuthCommand):
 
         try:
             Command().handle(interactive=self.is_interactive, **options)
-        except Exception, e:
-            self.logger.error('Could not create the user, details: `%s`', format_exc(e))
+        except Exception:
+            self.logger.error('Could not create the user, details: `%s`', format_exc())
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
         else:
             self._ok(args)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class UpdatePassword(_WebAdminAuthCommand):
@@ -145,4 +154,62 @@ class UpdatePassword(_WebAdminAuthCommand):
         if not called_from_wrapper:
             self._ok(args)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ResetTOTPKey(_WebAdminAuthCommand):
+    """ Resets a user's TOTP secret key and returns it.
+    """
+    opts = [
+        {'name': 'username', 'help': 'Username to reset the TOTP secret key of'},
+        {'name': '--key', 'help': 'Key to use'},
+        {'name': '--key-label', 'help': 'Label to apply to the key'},
+    ]
+
+    def before_execute(self, args):
+        super(ResetTOTPKey, self).before_execute(args)
+        self._prepare(args)
+
+    def execute(self, args):
+
+        # If there was a key given on input, we need to validate it,
+        # this report an erorr if the key cannot be used.
+        if args.key:
+            totp = pyotp.TOTP(args.key)
+            totp.now()
+
+            # If we are here, it means that the key was valid
+            key = args.key
+        else:
+            key = pyotp.random_base32()
+
+        from zato.admin.web.models import User
+        from zato.admin.web.util import get_user_profile
+        from zato.admin.zato_settings import zato_secret_key
+        self.reset_logger(args, True)
+
+        try:
+            user = User.objects.get(username=args.username)
+        except User.DoesNotExist:
+            self.logger.warn('No such user `%s` found in `%s`', args.username, args.path)
+            return
+
+        # Here we know we have the user and key for sure, now we need to get the person's profile
+        user_profile = get_user_profile(user)
+
+        # Everything is ready, we can reset the key ..
+        opaque_attrs = set_user_profile_totp_key(user_profile, zato_secret_key, key, args.key_label)
+
+        # .. and save the modified profile.
+        user_profile.opaque1 = json.dumps(opaque_attrs)
+        user_profile.save()
+
+        # Log the key only if it was not given on input. Otherwise the user is expected to know it already
+        # and may perhaps want not to disclose it.
+        if self.args.key:
+            self.logger.info('OK')
+        else:
+            self.logger.info(key)
+
+# ################################################################################################################################
 # ################################################################################################################################

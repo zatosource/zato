@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -608,7 +608,7 @@ class HTTPSOAP(Base):
             timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None,
             cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None, content_type=None,
             cache_id=None, cache_type=None, cache_expiry=None, cache_name=None, content_encoding=None, match_slash=None,
-            opaque=None, **kwargs):
+            http_accept=None, opaque=None, **kwargs):
         super(HTTPSOAP, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -646,6 +646,7 @@ class HTTPSOAP(Base):
         self.cache_name = cache_name # Not used by the DB
         self.content_encoding = content_encoding
         self.match_slash = match_slash # Not used by the DB
+        self.http_accept = http_accept # Not used by the DB
         self.opaque1 = opaque
 
 # ################################################################################################################################
@@ -2339,7 +2340,8 @@ class PubSubMessage(Base):
     expiration_time = Column(Numeric(20, 7, asdecimal=False), nullable=True)
     last_updated = Column(Numeric(20, 7, asdecimal=False), nullable=True)
 
-    data = Column(Text(), nullable=False)
+    data = Column(Text(2 * 10 ** 9), nullable=False) # 2 GB to prompt a promotion to LONGTEXT under MySQL
+
     data_prefix = Column(Text(), nullable=False)
     data_prefix_short = Column(String(200), nullable=False)
     data_format = Column(String(200), nullable=False, server_default=PUBSUB.DEFAULT.DATA_FORMAT)

@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
 
 # -*- coding: utf-8 -*-
 
@@ -6,7 +13,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from datetime import datetime, timedelta
-from json import dumps, loads
+from json import loads
 from logging import getLogger
 from traceback import format_exc
 
@@ -14,9 +21,13 @@ from traceback import format_exc
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 
+# Python 2/3 compatibility
+from past.builtins import basestring
+
 # Zato
 from zato.common.audit import audit_pii
 from zato.common.odb.model import SSOAttr as AttrModel, SSOSession
+from zato.common.util.json_ import dumps
 from zato.sso import status_code, ValidationError
 
 # ################################################################################################################################

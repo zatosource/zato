@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -77,22 +77,22 @@ def _create_edit(req, verb, item, form_class, prefix=''):
 
             try:
                 item.lb_config = get_lb_client(item).get_config()
-            except Exception, e:
+            except Exception:
                 item.lb_config = None
-                msg = "Exception caught while fetching the load balancer's config, e:[{0}]".format(format_exc(e))
+                msg = "Exception caught while fetching the load balancer's config, e:`{}`".format(format_exc())
                 logger.error(msg)
 
             return _edit_create_response(item, verb)
 
-        except Exception, e:
-            msg = 'Exception caught, e:[{0}]'.format(format_exc(e))
+        except Exception:
+            msg = 'Exception caught, e:`{}`'.format(format_exc())
             logger.error(msg)
 
             return HttpResponseServerError(msg)
 
-    except Exception, e:
+    except Exception:
         req.zato.odb.rollback()
-        return HttpResponseServerError(str(format_exc(e)))
+        return HttpResponseServerError(str(format_exc()))
 
 def _get_server_data(client, server_name):
     """ Gets the server's state as seen by the load balancer.
@@ -159,9 +159,8 @@ def index(req):
             # Assign the flags indicating whether servers are DOWN or in the MAINT mode.
             set_servers_state(item, client)
 
-        except Exception, e:
-            msg = 'Could not invoke agent, client:[{client!r}], e:[{e}]'.format(client=client,
-                                                                e=format_exc(e))
+        except Exception:
+            msg = 'Could not invoke agent, client:`{!r}`, e:`{}`'.format(client, format_exc())
             logger.error(msg)
             item.lb_config = None
 
@@ -200,8 +199,8 @@ def get_servers_state(req, cluster_id):
     # Assign the flags indicating whether servers are DOWN or in the MAINT mode.
     try:
         set_servers_state(cluster, client)
-    except Exception, e:
-        msg = "Failed to invoke the load-balancer's agent and set the state of servers, e:[{e}]".format(e=format_exc(e))
+    except Exception:
+        msg = 'Failed to invoke the load-balancer\'s agent and set the state of servers, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -239,8 +238,8 @@ def servers(req):
         server_data_dict = client.get_server_data_dict()
         bck_http_plain = client.get_config()['backend']['bck_http_plain']
         lb_client_invoked = True
-    except Exception, e:
-        logger.error(format_exc(e))
+    except Exception:
+        logger.error(format_exc())
         lb_client_invoked = False
 
     if lb_client_invoked:
@@ -293,8 +292,8 @@ def servers_edit(req):
             response.data.up_status, response.data.up_mod_date,
             req.zato.cluster_id, req.zato.user_profile, fetch_lb_data)
 
-    except Exception, e:
-        return HttpResponseServerError(format_exc(e))
+    except Exception:
+        return HttpResponseServerError(format_exc())
 
 @method_allowed('POST')
 def servers_add_remove_lb(req, action, server_id):

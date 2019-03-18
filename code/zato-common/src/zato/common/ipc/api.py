@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,9 +14,9 @@ import logging
 import os
 import stat
 import tempfile
-from cStringIO import StringIO
 from datetime import datetime, timedelta
 from fcntl import fcntl
+from io import StringIO
 from traceback import format_exc
 from uuid import uuid4
 
@@ -25,6 +25,9 @@ from gevent import sleep
 
 # pyrapidjson
 from rapidjson import loads
+
+# Python 2/3 compatibility
+from builtins import bytes
 
 # Zato
 from zato.common import IPC
@@ -102,7 +105,7 @@ class IPCAPI(object):
 
 # ################################################################################################################################
 
-    def _get_response(self, fifo, buffer_size, read_size=21, fifo_ignore_err=fifo_ignore_err, empty=('', None)):
+    def _get_response(self, fifo, buffer_size, read_size=21, fifo_ignore_err=fifo_ignore_err, empty=('', b'', None)):
 
         try:
             buff = StringIO()
@@ -114,7 +117,7 @@ class IPCAPI(object):
 
             while data not in empty:
                 data = os.read(fifo, read_size)
-                buff.write(data)
+                buff.write(data.decode('utf8') if isinstance(data, bytes) else data)
 
             response = buff.getvalue()
 
@@ -129,7 +132,7 @@ class IPCAPI(object):
 
             return is_success, response
 
-        except OSError, e:
+        except OSError as e:
             if e.errno not in fifo_ignore_err:
                 raise
 
@@ -152,7 +155,7 @@ class IPCAPI(object):
             if is_async:
                 return
 
-            response = None
+            is_success, response = False, None
 
             try:
 
@@ -180,8 +183,8 @@ class IPCAPI(object):
 
             return is_success, response
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
         finally:
             os.remove(fifo_path)
 

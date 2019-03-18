@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -109,7 +109,7 @@ class AMQP(WorkerImpl):
 
 # ################################################################################################################################
 
-    def amqp_invoke(self, msg, out_name, exchange='/', routing_key=None, properties=None, headers=None):
+    def amqp_invoke(self, msg, out_name, exchange='/', routing_key=None, properties=None, headers=None, **kwargs):
         """ Invokes a remote AMQP broker sending it a message with the specified routing key to an exchange through
         a named outgoing connection. Optionally, lower-level details can be provided in properties and they will be
         provided directly to the underlying AMQP library (kombu). Headers are AMQP headers attached to each message.
@@ -117,13 +117,13 @@ class AMQP(WorkerImpl):
         with self.update_lock:
             def_name = self.amqp_out_name_to_def[out_name]
 
-        return self.amqp_api.invoke(def_name, out_name, msg, exchange, routing_key, properties, headers)
+        return self.amqp_api.invoke(def_name, out_name, msg, exchange, routing_key, properties, headers, **kwargs)
 
     def _amqp_invoke_async(self, *args, **kwargs):
         try:
             self.amqp_invoke(*args, **kwargs)
-        except Exception, e:
-            logger.warn(format_exc(e))
+        except Exception:
+            logger.warn(format_exc())
 
     def amqp_invoke_async(self, *args, **kwargs):
         spawn_greenlet(self._amqp_invoke_async, *args, **kwargs)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -9,16 +9,18 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-#import os
 from contextlib import closing
 from datetime import datetime, timedelta
-#from glob import glob
 from logging import getLogger
 
+# Python 2/3 compatibility
+from future.utils import iteritems
+
 # Zato
-#from zato.common import CONFIG_FILE
 from zato.common import WEB_SOCKET
+from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, WebSocketClient, WebSocketClientPubSubKeys
+from zato.common.util.pubsub import get_topic_sub_keys_from_sub_keys
 from zato.common.util import parse_extra_into_dict
 from zato.common.util.time_ import datetime_from_ms, utcnow_as_ms
 from zato.server.service.internal import AdminService
@@ -32,6 +34,7 @@ logger_pubsub = getLogger('zato_pubsub.srv')
 
 SubscriptionTable = PubSubSubscription.__table__
 SubscriptionDelete = SubscriptionTable.delete
+SubscriptionSelect = SubscriptionTable.select
 
 WSXChannelTable = ChannelWebSocket.__table__
 
@@ -43,7 +46,6 @@ WSXClientSelect = WSXClientTable.select
 
 class _msg:
     initial = 'Cleaning up old WSX connections; now:`%s`, md:`%s`, ma:`%s`'
-    not_found = 'Did not find any WSX connections to clean up'
     found = 'Found %d WSX connection%s to clean up'
     cleaning = 'Cleaning up WSX connection %d/%d; %s'
     cleaned_up = 'Cleaned up WSX connection %d/%d; %s'
@@ -78,6 +80,15 @@ class CleanupWSXPubSub(AdminService):
     """
     name = 'pub.zato.channel.web-socket.cleanup-wsx-pub-sub'
 
+    def _run_max_allowed_query(self, session, query, channel_name, max_allowed):
+        return session.execute(
+            query.\
+            where(SubscriptionTable.c.ws_channel_id==WSXChannelTable.c.id).\
+            where(SubscriptionTable.c.cluster_id==self.server.cluster_id).\
+            where(WSXChannelTable.c.name==channel_name).\
+            where(SubscriptionTable.c.last_interaction_time < max_allowed)
+        )
+
     def handle(self, _msg='Cleaning up WSX pub/sub, channel:`%s`, now:`%s (%s)`, md:`%s`, ma:`%s` (%s)'):
 
         # We receive a multi-line list of WSX channel name -> max timeout accepted on input
@@ -101,16 +112,26 @@ class CleanupWSXPubSub(AdminService):
                 now_as_iso = datetime_from_ms(now * 1000)
                 max_allowed_as_iso = datetime_from_ms(max_allowed * 1000)
 
-                self.logger.info(_msg, channel_name, now_as_iso, now, max_delta, max_allowed_as_iso, max_allowed)
-                logger_pubsub.info(_msg, channel_name, now_as_iso, now, max_delta, max_allowed_as_iso, max_allowed)
+                # Get all sub_keys that are about to be deleted - retrieving them from the DELETE
+                # statement below is not portable so we do it manually first.
+                items = self._run_max_allowed_query(session, SubscriptionSelect(), channel_name, max_allowed)
+                sub_key_list = [item.sub_key for item in items]
 
-                # Delete old connections for that channel
-                session.execute(
-                    SubscriptionDelete().\
-                    where(SubscriptionTable.c.ws_channel_id==WSXChannelTable.c.id).\
-                    where(WSXChannelTable.c.name==channel_name).\
-                    where(SubscriptionTable.c.last_interaction_time < max_allowed)
-                )
+                if sub_key_list:
+                    self.logger.debug(_msg, channel_name, now_as_iso, now, max_delta, max_allowed_as_iso, max_allowed)
+                    logger_pubsub.info(_msg, channel_name, now_as_iso, now, max_delta, max_allowed_as_iso, max_allowed)
+
+                # First we need a list of topics to which sub_keys were related - required by broker messages.
+                topic_sub_keys = get_topic_sub_keys_from_sub_keys(session, self.server.cluster_id, sub_key_list)
+
+                # Now, delete old connections for that channel from SQL
+                self._run_max_allowed_query(session, SubscriptionDelete(), channel_name, max_allowed)
+
+                # Next, notify processes about deleted subscriptions to allow to update in-RAM structures
+                self.broker_client.publish({
+                    'topic_sub_keys': topic_sub_keys,
+                    'action': PUBSUB.SUBSCRIPTION_DELETE.value,
+                })
 
             # Commit all deletions
             session.commit()
@@ -181,9 +202,8 @@ class CleanupWSX(AdminService):
             # Find the old connections now
             result = self._find_old_wsx_connections(session, max_allowed)
 
-        # Nothing to do, log the message and we can return
+        # Nothing to do, we can return
         if not result:
-            self._issue_log_msg(_msg.not_found)
             return
 
         # At least one old connection was found
@@ -203,7 +223,7 @@ class CleanupWSX(AdminService):
         suffix = '' if len_found == 1 else 's'
         self._issue_log_msg(_msg.found, len_found, suffix)
 
-        for idx, (pub_client_id, wsx) in enumerate(wsx_clients.iteritems(), 1):
+        for idx, (pub_client_id, wsx) in enumerate(iteritems(wsx_clients), 1):
 
             # All subscription keys for that WSX, we are adding it here
             # so that below, for logging purposes, we are able to say

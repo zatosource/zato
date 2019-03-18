@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -31,6 +31,9 @@ from six import string_types
 
 # SQLAlchemy
 from sqlalchemy import create_engine
+
+# Python 2/3 compatibility
+from past.builtins import basestring, cmp, xrange
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
@@ -348,12 +351,12 @@ class ServiceTestCase(TestCase):
 
         instance.get_data = get_data
 
-        for attr_name, mock_path_data_list in mock_data.iteritems():
+        for attr_name, mock_path_data_list in mock_data.items():
             setattr(instance, attr_name, Mock())
             attr = getattr(instance, attr_name)
 
             for mock_path_data in mock_path_data_list:
-                for path, value in mock_path_data.iteritems():
+                for path, value in mock_path_data.items():
                     split = path.split('.')
                     new_path = '.return_value.'.join(elem for elem in split) + '.return_value'
                     attr.configure_mock(**{new_path:value})
@@ -364,7 +367,7 @@ class ServiceTestCase(TestCase):
             instance.broker_client.publish = broker_client_publish
 
         def set_response_func(*args, **kwargs):
-            print(111, args, kwargs)
+            pass
 
         instance.handle()
         #instance.update_handle(
@@ -373,7 +376,7 @@ class ServiceTestCase(TestCase):
         return instance
 
     def _check_sio_request_input(self, instance, request_data):
-        for k, v in request_data.iteritems():
+        for k, v in request_data.items():
             self.assertEquals(getattr(instance.request.input, k), v)
 
         sio_keys = set(getattr(instance.SimpleIO, 'input_required', []))

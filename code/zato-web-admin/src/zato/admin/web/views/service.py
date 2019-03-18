@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 import json as stdlib_json
+from base64 import b64decode
 from collections import namedtuple
 from datetime import datetime
 from traceback import format_exc
@@ -45,13 +46,19 @@ from validate import is_boolean
 from zato.admin.web import from_utc_to_user, last_hour_start_stop
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
-from zato.common import DATA_FORMAT, SourceInfo, ZATO_NONE
+from zato.common import DATA_FORMAT, SourceCodeInfo, ZATO_NONE
 from zato.common.odb.model import Service
+
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+
 ExposedThrough = namedtuple('ExposedThrough', ['id', 'name', 'url'])
 DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details'])
+
+# ################################################################################################################################
 
 class SlowResponse(object):
     def __init__(self, cid=None, service_name=None, threshold=None, req_ts=None,
@@ -67,10 +74,14 @@ class SlowResponse(object):
         self.req_html = req_html
         self.resp_html = resp_html
 
+# ################################################################################################################################
+
 data_format_lexer = {
     'json': JSONLexer,
     'xml': MakoXmlLexer
 }
+
+# ################################################################################################################################
 
 def known_data_format(data):
     data_format = None
@@ -86,11 +97,15 @@ def known_data_format(data):
 
     return data_format
 
+# ################################################################################################################################
+
 def get_public_wsdl_url(cluster, service_name):
     """ Returns an address under which a service's WSDL is publically available.
     """
     return 'http://{}:{}/zato/wsdl?service={}&cluster_id={}'.format(cluster.lb_host,
         cluster.lb_port, service_name, cluster.id)
+
+# ################################################################################################################################
 
 def _get_channels(client, cluster, id, channel_type):
     """ Returns a list of channels of a given type for the given service.
@@ -118,6 +133,8 @@ def _get_channels(client, cluster, id, channel_type):
 
     return out
 
+# ################################################################################################################################
+
 def _get_service(req, name):
     """ Returns service details by its name.
     """
@@ -135,6 +152,8 @@ def _get_service(req, name):
 
     return service
 
+# ################################################################################################################################
+
 def get_pretty_print(value, data_format):
     if data_format == 'xml':
         parser = etree.XMLParser(remove_blank_text=True)
@@ -143,6 +162,8 @@ def get_pretty_print(value, data_format):
     else:
         value = loads(value)
         return stdlib_json.dumps(value, sort_keys=True, indent=2)
+
+# ################################################################################################################################
 
 class Index(_Index):
     """ A view for listing the services along with their basic statistics.
@@ -166,9 +187,13 @@ class Index(_Index):
             'edit_form': EditForm(prefix='edit')
         }
 
+# ################################################################################################################################
+
 @method_allowed('POST')
 def create(req):
     pass
+
+# ################################################################################################################################
 
 class Edit(CreateEdit):
     method_allowed = 'POST'
@@ -181,7 +206,9 @@ class Edit(CreateEdit):
         output_required = ('id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted')
 
     def success_message(self, item):
-        return 'Successfully {0} the service [{1}]'.format(self.verb, item.name)
+        return 'Successfully {} service `{}`'.format(self.verb, item.name)
+
+# ################################################################################################################################
 
 @method_allowed('GET')
 def overview(req, service_name):
@@ -253,6 +280,8 @@ def overview(req, service_name):
 
     return TemplateResponse(req, 'zato/service/overview.html', return_data)
 
+# ################################################################################################################################
+
 @method_allowed('GET')
 def source_info(req, service_name):
 
@@ -267,11 +296,11 @@ def source_info(req, service_name):
     if response.has_data:
         service.id = response.data.service_id
 
-        source = response.data.source.decode('base64').decode('utf-8') if response.data.source else ''
+        source = b64decode(response.data.source) if response.data.source else ''
         if source:
             source_html = highlight(source, PythonLexer(stripnl=False), HtmlFormatter(linenos='table'))
 
-            service.source_info = SourceInfo()
+            service.source_info = SourceCodeInfo()
             service.source_info.source = source
             service.source_info.source_html = source_html
             service.source_info.path = response.data.source_path
@@ -286,6 +315,8 @@ def source_info(req, service_name):
 
     return TemplateResponse(req, 'zato/service/source-info.html', return_data)
 
+# ################################################################################################################################
+
 @method_allowed('GET')
 def request_response(req, service_name):
     service = Service(name=service_name)
@@ -298,7 +329,8 @@ def request_response(req, service_name):
 
     service_response = req.zato.client.invoke('zato.service.get-request-response', input_dict)
     if service_response.ok:
-        request = (service_response.data.sample_req if service_response.data.sample_req else '').decode('base64')
+        request = b64decode(service_response.data.sample_req if service_response.data.sample_req else '')
+        request = request.decode('utf8')
         request_data_format = known_data_format(request)
         if request_data_format:
             if pretty_print:
@@ -306,7 +338,8 @@ def request_response(req, service_name):
             service.sample_req_html = highlight(request, data_format_lexer[request_data_format](),
                 HtmlFormatter(linenos='table'))
 
-        response = (service_response.data.sample_resp if service_response.data.sample_resp else '').decode('base64')
+        response = b64decode(service_response.data.sample_resp if service_response.data.sample_resp else '')
+        response = response.decode('utf8')
         response_data_format = known_data_format(response)
         if response_data_format:
             if pretty_print:
@@ -339,6 +372,8 @@ def request_response(req, service_name):
 
     return TemplateResponse(req, 'zato/service/request-response.html', return_data)
 
+# ################################################################################################################################
+
 @method_allowed('POST')
 def request_response_configure(req, service_name, cluster_id):
     try:
@@ -350,21 +385,27 @@ def request_response_configure(req, service_name, cluster_id):
         req.zato.client.invoke('zato.service.configure-request-response', input_dict)
         return HttpResponse('Saved successfully')
 
-    except Exception, e:
-        msg = 'Could not update the configuration, e:[{e}]'.format(e=format_exc(e))
+    except Exception:
+        msg = 'Could not update the configuration, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+# ################################################################################################################################
 
 class Delete(_Delete):
     url_name = 'service-delete'
     error_message = 'Could not delete the service'
     service_name = 'zato.service.delete'
 
+# ################################################################################################################################
+
 @method_allowed('POST')
 def package_upload(req, cluster_id):
     """ Handles a service package file upload.
     """
     return upload_to_server(req, cluster_id, 'zato.service.upload-package', 'Could not upload the service package, e:`{}`')
+
+# ################################################################################################################################
 
 @method_allowed('POST')
 def last_stats(req, service_id, cluster_id):
@@ -391,12 +432,13 @@ def last_stats(req, service_id, cluster_id):
 
                 return_data[key] = value if value != ZATO_NONE else '0'
 
-    except Exception, e:
-        msg = 'Caught an exception while invoking zato.service.get-by-service, e:[{}]'.format(format_exc(e))
+    except Exception:
+        msg = 'Caught an exception while invoking zato.service.get-by-service, e:`{}`'.format(format_exc())
         logger.error(msg)
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
 
+# ################################################################################################################################
 
 @method_allowed('GET')
 def slow_response(req, service_name):
@@ -423,6 +465,8 @@ def slow_response(req, service_name):
         }
 
     return TemplateResponse(req, 'zato/service/slow-response.html', return_data)
+
+# ################################################################################################################################
 
 @method_allowed('GET')
 def slow_response_details(req, cid, service_name):
@@ -464,6 +508,13 @@ def slow_response_details(req, cid, service_name):
                         setattr(item, attr_name, highlight(value,
                              data_format_lexer[data_format](), HtmlFormatter(linenos='table')))
 
+                    else:
+                        # Regular raw value
+                        setattr(item, name, value)
+
+                        # We do not have an HTML version but we need to populate it anyway for pretty-print toggling
+                        setattr(item, name + '_html', value)
+
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'service': service,
@@ -472,6 +523,8 @@ def slow_response_details(req, cid, service_name):
         }
 
     return TemplateResponse(req, 'zato/service/slow-response-details.html', return_data)
+
+# ################################################################################################################################
 
 @method_allowed('GET')
 def invoker(req, service_name):
@@ -482,6 +535,8 @@ def invoker(req, service_name):
         }
 
     return TemplateResponse(req, 'zato/service/invoker.html', return_data)
+
+# ################################################################################################################################
 
 @method_allowed('POST')
 def invoke(req, name, cluster_id):
@@ -495,9 +550,8 @@ def invoke(req, name, cluster_id):
 
         response = req.zato.client.invoke(name, **input_dict)
 
-    except Exception, e:
-        msg = 'Could not invoke the service. name:[{}], cluster_id:[{}], e:[{}]'.format(
-            name, cluster_id, format_exc(e))
+    except Exception:
+        msg = 'Could not invoke the service. name:`{}`, cluster_id:`{}`, e:`{}`'.format(name, cluster_id, format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
@@ -506,5 +560,7 @@ def invoke(req, name, cluster_id):
                 return HttpResponse(response.inner_service_response or '(None)')
             else:
                 return HttpResponseServerError(response.details)
-        except Exception, e:
-            return HttpResponseServerError(format_exc(e))
+        except Exception:
+            return HttpResponseServerError(format_exc())
+
+# ################################################################################################################################

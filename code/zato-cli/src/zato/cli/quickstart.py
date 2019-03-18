@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -319,7 +319,7 @@ class Create(ZatoCommand):
         web_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'web-admin')
         scheduler_crypto_loc = CryptoMaterialLocation(ca_path, 'scheduler1')
 
-        self.logger.info('[{}/{}] Certificate authority created'.format(next_step.next(), total_steps))
+        self.logger.info('[{}/{}] Certificate authority created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -327,9 +327,9 @@ class Create(ZatoCommand):
         # 2) ODB
         #
         if create_odb.Create(args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
-            self.logger.info('[{}/{}] ODB schema already exists'.format(next_step.next(), total_steps))
+            self.logger.info('[{}/{}] ODB schema already exists'.format(next(next_step), total_steps))
         else:
-            self.logger.info('[{}/{}] ODB schema created'.format(next_step.next(), total_steps))
+            self.logger.info('[{}/{}] ODB schema created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -345,7 +345,7 @@ class Create(ZatoCommand):
         create_cluster_args.admin_invoke_password = admin_invoke_password
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False)
 
-        self.logger.info('[{}/{}] ODB initial data created'.format(next_step.next(), total_steps))
+        self.logger.info('[{}/{}] ODB initial data created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -371,13 +371,13 @@ class Create(ZatoCommand):
             create_server_args.jwt_secret = jwt_secret
             create_server_args.secret_key = secret_key
 
-            server_id = create_server.Create(create_server_args).execute(create_server_args, next_port.next(), False, True)
+            server_id = create_server.Create(create_server_args).execute(create_server_args, next(next_port), False, True)
 
             # We make the first server a delivery server for sample pub/sub topics.
             if idx == 0:
                 self._set_pubsub_server(args, server_id, cluster_name, '/zato/demo/sample')
 
-            self.logger.info('[{}/{}] server{} created'.format(next_step.next(), total_steps, name))
+            self.logger.info('[{}/{}] server{} created'.format(next(next_step), total_steps, name))
 
 # ################################################################################################################################
 
@@ -396,10 +396,10 @@ class Create(ZatoCommand):
 
         # Need to substract 1 because we've already called .next() twice
         # when creating servers above.
-        servers_port = next_port.next() - 1
+        servers_port = next(next_port) - 1
 
         create_lb.Create(create_lb_args).execute(create_lb_args, True, servers_port, False)
-        self.logger.info('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps))
+        self.logger.info('[{}/{}] Load-balancer created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -424,7 +424,7 @@ class Create(ZatoCommand):
         # Need to reset the logger here because executing the create_web_admin command
         # loads the web admin's logger which doesn't like that of ours.
         self.reset_logger(args, True)
-        self.logger.info('[{}/{}] Web admin created'.format(next_step.next(), total_steps))
+        self.logger.info('[{}/{}] Web admin created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -450,7 +450,7 @@ class Create(ZatoCommand):
         create_scheduler_args.cluster_id = cluster_id
 
         create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True)
-        self.logger.info('[{}/{}] Scheduler created'.format(next_step.next(), total_steps))
+        self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -495,11 +495,11 @@ class Create(ZatoCommand):
         os.chmod(zato_qs_stop_path, file_mod)
         os.chmod(zato_qs_restart_path, file_mod)
 
-        self.logger.info('[{}/{}] Management scripts created'.format(next_step.next(), total_steps))
+        self.logger.info('[{}/{}] Management scripts created'.format(next(next_step), total_steps))
         self.logger.info('Quickstart cluster {} created'.format(cluster_name))
 
         if admin_created:
-            self.logger.info('Web admin user:[admin], password:[{}]'.format(web_admin_password))
+            self.logger.info('Web admin user:[admin], password:[%s]', web_admin_password.decode('utf8'))
         else:
             self.logger.info('User [admin] already exists in the ODB')
 

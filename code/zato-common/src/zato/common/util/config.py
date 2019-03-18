@@ -1,16 +1,22 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
+
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import os
 
 # Bunch
 from bunch import Bunch
+
+# Python 2/3 compatibility
+from builtins import bytes
+from past.builtins import basestring
 
 # Zato
 from zato.common import SECRETS
@@ -23,6 +29,11 @@ def resolve_value(key, value, decrypt_func=None, _default=object(), _secrets=SEC
     # Skip non-resolvable items
     if not isinstance(value, basestring):
         return value
+
+    if not value:
+        return value
+
+    value = value.decode('utf8') if isinstance(value, bytes) else value
 
     # It may be an environment variable ..
     if value.startswith('$'):

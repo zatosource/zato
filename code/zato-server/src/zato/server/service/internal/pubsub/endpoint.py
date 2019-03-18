@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+
+# Python 2/3 compatibility
+from six import add_metaclass
 
 # stdlib
 from contextlib import closing
@@ -18,11 +21,11 @@ from zato.common.broker_message import PUBSUB
 from zato.common.exception import BadRequest, Conflict
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic
 from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, pubsub_endpoint_queue, \
-     pubsub_endpoint_queue_list_by_sub_keys, pubsub_messages_for_queue, server_by_id
+     pubsub_messages_for_queue, server_by_id
 from zato.common.odb.query.pubsub.endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id
 from zato.common.pubsub import msg_pub_attrs
-from zato.common.util.pubsub import make_short_msg_copy_from_msg
+from zato.common.util.pubsub import get_topic_sub_keys_from_sub_keys, make_short_msg_copy_from_msg
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -102,9 +105,9 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
 # ################################################################################################################################
 
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = PubSubEndpoint.name,
-    __metaclass__ = GetListMeta
 
 # ################################################################################################################################
 
@@ -155,13 +158,15 @@ class Create(AdminService):
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
 # ################################################################################################################################
 
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+    pass
 
 # ################################################################################################################################
 
@@ -266,7 +271,7 @@ class GetEndpointQueue(_GetEndpointQueue):
         with closing(self.odb.session()) as session:
             item = pubsub_endpoint_queue(session, self.request.input.cluster_id, self.request.input.id)
             item.creation_time = datetime_from_ms(item.creation_time * 1000.0)
-            if item.last_interaction_time:
+            if getattr(item, 'last_interaction_time', None):
                 item.last_interaction_time = datetime_from_ms(item.last_interaction_time * 1000.0)
             self.response.payload = item
             self._add_queue_depths(session, self.response.payload)
@@ -276,7 +281,7 @@ class GetEndpointQueue(_GetEndpointQueue):
 class GetEndpointQueueList(_GetEndpointQueue):
     """ Returns all queues to which a given endpoint is subscribed.
     """
-    _filter_by = PubSubTopic.name,
+    _filter_by = PubSubTopic.name, PubSubSubscription.sub_key
 
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'endpoint_id')
@@ -443,25 +448,24 @@ class DeleteEndpointQueue(AdminService):
             sub_key_list = [sub_key] # Otherwise, we already had sub_key_list on input so 'else' is not needed
 
         cluster_id = self.request.input.cluster_id
-        topic_sub_keys = {}
 
         with closing(self.odb.session()) as session:
 
             # First we need a list of topics to which sub_keys were related - required by broker messages.
-            for item in pubsub_endpoint_queue_list_by_sub_keys(session, cluster_id, sub_key_list):
-                sub_keys = topic_sub_keys.setdefault(item.topic_name, [])
-                sub_keys.append(item.sub_key)
+            topic_sub_keys = get_topic_sub_keys_from_sub_keys(session, cluster_id, sub_key_list)
 
             # Remove the subscription object which in turn cascades and removes all dependant objects
             session.query(PubSubSubscription).\
                 filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
                 filter(PubSubSubscription.sub_key.in_(sub_key_list)).\
                 delete(synchronize_session=False)
-            session.expire_all()
 
+            self.logger.info('Deleting subscriptions `%s`', topic_sub_keys)
+
+            session.expire_all()
             session.commit()
 
-        # Notify workers that this subscription needs to be deleted
+        # Notify workers about deleted subscription(s)
         self.broker_client.publish({
             'topic_sub_keys': topic_sub_keys,
             'action': PUBSUB.SUBSCRIPTION_DELETE.value,

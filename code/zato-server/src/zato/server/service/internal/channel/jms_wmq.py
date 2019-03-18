@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -16,6 +16,9 @@ from traceback import format_exc
 
 # Arrow
 from arrow import get as arrow_get
+
+# Python 2/3 compatibility
+from zato.common.py23_ import pickle_loads
 
 # Zato
 from zato.common import CHANNEL
@@ -237,6 +240,8 @@ class OnMessageReceived(AdminService):
             'put_date': msg['put_date'],
             'expiration': expiration,
             'reply_to': msg['reply_to'],
+            'data': data,
+            'mqmd': pickle_loads(msg['mqmd'].encode('utf8'))
         })
 
 # ################################################################################################################################

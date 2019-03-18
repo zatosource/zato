@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -19,6 +19,10 @@ from sqlalchemy import and_
 
 # TextBlob
 from textblob import TextBlob
+
+# Python 2/3 compatibility
+from future.utils import iteritems
+from past.builtins import basestring
 
 # Zato
 from zato.common import WEB_SOCKET
@@ -91,7 +95,7 @@ def notify_msg_browser(service, step):
         wsgi.append('{} {}'.format(key.lower(), value.lower()))
 
     for _sub_dict in _wsgi_sub_dicts:
-        for key, value in service.wsgi_environ[_sub_dict].items():
+        for key, value in iteritems(service.wsgi_environ[_sub_dict]):
             wsgi.append('{} {}'.format(key.lower(), value.lower()))
 
     channel_name = service.channel.name or 'invoker'

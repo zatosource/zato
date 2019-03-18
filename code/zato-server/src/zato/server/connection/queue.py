@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2012 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -21,8 +21,11 @@ from gevent.queue import Empty, Queue
 # A set of utilities for constructing greenlets-safe outgoing connection objects.
 # Used, for instance, in SOAP Suds and OpenStack Swift outconns.
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _Connection(object):
@@ -50,12 +53,14 @@ class _Connection(object):
             self.queue.put(self.client)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class ConnectionQueue(object):
     """ Holds connections to resources. Each time it's called a connection is fetched from its underlying queue
     assuming any connection is still available.
     """
     def __init__(self, pool_size, queue_build_cap, conn_name, conn_type, address, add_client_func):
+
         self.queue = Queue(pool_size)
         self.queue_build_cap = queue_build_cap
         self.conn_name = conn_name
@@ -81,7 +86,6 @@ class ConnectionQueue(object):
 
         try:
             while self.keep_connecting and not self.queue.full():
-
                 gevent.sleep(0.5)
                 now = datetime.utcnow()
 
@@ -132,9 +136,10 @@ class ConnectionQueue(object):
         gevent.spawn(self._build_queue)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Wrapper(object):
-    """ Base class for connections wrappers.
+    """ Base class for queue-based connections wrappers.
     """
     def __init__(self, config, conn_type, server=None):
         self.conn_type = conn_type
@@ -160,7 +165,11 @@ class Wrapper(object):
                 except Exception:
                     logger.warn('Could not build client queue `%s`', format_exc())
             else:
-                logger.info('Skip building inactive connection queue for `%s` (%s)', self.client.conn_name, self.client.conn_type)
+                logger.info('Skipped building an inactive connection queue for `%s` (%s)',
+                    self.client.conn_name, self.client.conn_type)
+
+    # Not all connection types will be queue-based
+    build_wrapper = build_queue
 
 # ################################################################################################################################
 
@@ -173,8 +182,15 @@ class Wrapper(object):
             for item in self.client.queue.queue:
                 try:
                     logger.info('Deleting connection from queue for `%s`', self.config.name)
-                    item.delete()
+
+                    # Some connections (e.g. LDAP) want to expose .delete to user API
+                    # which conflicts with our own needs.
+                    delete_func = getattr(item, 'zato_delete_impl', None)
+                    if not delete_func:
+                        delete_func = getattr(item, 'delete', None)
+                    delete_func()
                 except Exception:
                     logger.warn('Could not delete connection from queue for `%s`, e:`%s`', self.config.name, format_exc())
 
+# ################################################################################################################################
 # ################################################################################################################################

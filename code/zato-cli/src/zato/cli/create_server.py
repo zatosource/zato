@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -20,6 +20,9 @@ from cryptography.fernet import Fernet
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
+# Python 2/3 compatibility
+from six import PY3
+
 # Zato
 from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
 from zato.cli._apispec_default import apispec_files
@@ -28,6 +31,7 @@ from zato.common.crypto import well_known_data
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
 
+# ################################################################################################################################
 
 server_conf_dict = deepcopy(CONTENT_TYPE)
 server_conf_dict.deploy_internal = {}
@@ -50,7 +54,7 @@ gunicorn_proc_name=
 gunicorn_logger_class=
 gunicorn_graceful_timeout=1
 
-deployment_lock_expires=1073741824 # 2 ** 30 seconds ≅ 34 years
+deployment_lock_expires=1073741824 # 2 ** 30 seconds = +/- 34 years
 deployment_lock_timeout=180
 
 token=zato+secret://zato.server_conf.main.token
@@ -59,7 +63,7 @@ service_sources=./service-sources.txt
 [crypto]
 use_tls=False
 tls_protocol=TLSv1
-tls_ciphers=ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:HIGH:!aNULL:!eNULL:!EXP:!LOW:!MD5
+tls_ciphers=ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS
 tls_client_certs=optional
 priv_key_location=zato-server-priv-key.pem
 pub_key_location=zato-server-pub-key.pem
@@ -83,6 +87,7 @@ work_dir=../../work
 backup_history=100
 backup_format=bztar
 delete_after_pick_up=False
+max_batch_size=1000 # In kilobytes, default is 1 megabyte
 
 # These three are relative to work_dir
 current_work_dir=./hot-deploy/current
@@ -133,6 +138,9 @@ enforce_service_invokes=False
 return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
+
+[http]
+methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
 
 [ibm_mq]
 ipc_tcp_start_port=34567
@@ -276,7 +284,7 @@ sample_key=sample_value
 [deploy_internal]
 {deploy_internal}
 
-""".format(**server_conf_dict).encode('utf-8')
+""".format(**server_conf_dict)
 
 
 pickup_conf = """[json]
@@ -306,9 +314,10 @@ services=zato.pickup.log-csv
 topics=
 
 [user_conf]
-pickup_from=./config/repo/user-conf
+pickup_from=./pickup/incoming/user-conf
 patterns=*.conf
 parse_on_pickup=False
+delete_after_pickup=False
 services=zato.pickup.update-user-conf
 topics=
 
@@ -316,6 +325,7 @@ topics=
 pickup_from=./pickup/incoming/static
 patterns=*
 parse_on_pickup=False
+delete_after_pickup=False
 services=zato.pickup.update-static
 topics=
 """
@@ -473,12 +483,12 @@ Thanks for joining us. Here are a couple great ways to get started:
 Your Zato SSO team.
 """.strip()
 
-secrets_conf_template = b"""
+secrets_conf_template = """
 [secret_keys]
 key1={keys_key1}
 
 [zato]
-well_known_data={zato_well_known_data} # π number
+well_known_data={zato_well_known_data} # Pi number
 server_conf.kvdb.password={zato_kvdb_password}
 server_conf.main.token={zato_main_token}
 server_conf.misc.jwt_secret={zato_misc_jwt_secret}
@@ -488,13 +498,16 @@ server_conf.odb.password={zato_odb_password}
 simple_io_conf_contents = """
 [int]
 exact=id
-suffix=_count, _id, _size, _timeout
+suffix=_count, _id, _size, _size_min, _size_max, _timeout
 
 [bool]
 prefix=by_, has_, is_, may_, needs_, should_
 
 [secret]
-exact=auth_data, auth_token, password, password1, password2, secret_key, token
+exact=auth_data, auth_token, password, password1, password2, secret, secret_key, tls_pem_passphrase, token
+
+[bytes_to_str]
+encoding={bytes_to_str_encoding}
 """.lstrip()
 
 lua_zato_rename_if_exists = """
@@ -531,6 +544,7 @@ directories = (
     'pickup/incoming/json',
     'pickup/incoming/xml',
     'pickup/incoming/csv',
+    'pickup/incoming/user-conf',
     'pickup/processed/static',
     'pickup/processed/json',
     'pickup/processed/xml',
@@ -586,7 +600,7 @@ class Create(ZatoCommand):
         super(Create, self).__init__(args)
         self.target_dir = os.path.abspath(args.path)
         self.dirs_prepared = False
-        self.token = uuid.uuid4().hex
+        self.token = uuid.uuid4().hex.encode('utf8')
 
     def prepare_directories(self, show_output):
         if show_output:
@@ -636,7 +650,7 @@ class Create(ZatoCommand):
                 file_name = os.path.join(self.target_dir, file_name)
                 if show_output:
                     self.logger.debug('Creating {}'.format(file_name))
-                f = file(file_name, 'w')
+                f = open(file_name, 'w')
                 f.write(contents)
                 f.close()
 
@@ -693,19 +707,45 @@ class Create(ZatoCommand):
 
             secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')
             secrets_conf = open(secrets_conf_loc, 'w')
+
+            kvdb_password = args.kvdb_password or ''
+            kvdb_password = kvdb_password.encode('utf8')
+            kvdb_password = fernet1.encrypt(kvdb_password)
+            kvdb_password = kvdb_password.decode('utf8')
+
+            odb_password = args.odb_password or ''
+            odb_password = odb_password.encode('utf8')
+            odb_password = fernet1.encrypt(odb_password)
+            odb_password = odb_password.decode('utf8')
+
+            zato_well_known_data = fernet1.encrypt(well_known_data.encode('utf8'))
+            zato_well_known_data = zato_well_known_data.decode('utf8')
+
+            key1 = key1.decode('utf8')
+
+            zato_main_token = fernet1.encrypt(self.token)
+            zato_main_token = zato_main_token.decode('utf8')
+
+            zato_misc_jwt_secret = fernet1.encrypt(getattr(args, 'jwt_secret', Fernet.generate_key()))
+            zato_misc_jwt_secret = zato_misc_jwt_secret.decode('utf8')
+
             secrets_conf.write(secrets_conf_template.format(
                 keys_key1=key1,
-                zato_well_known_data=fernet1.encrypt(well_known_data),
-                zato_kvdb_password=fernet1.encrypt(args.kvdb_password) if args.kvdb_password else '',
-                zato_main_token=fernet1.encrypt(self.token),
-                zato_misc_jwt_secret=fernet1.encrypt(getattr(args, 'jwt_secret', Fernet.generate_key())),
-                zato_odb_password=fernet1.encrypt(args.odb_password) if args.odb_password else '',
+                zato_well_known_data=zato_well_known_data,
+                zato_kvdb_password=kvdb_password,
+                zato_main_token=zato_main_token,
+                zato_misc_jwt_secret=zato_misc_jwt_secret,
+                zato_odb_password=odb_password,
             ))
             secrets_conf.close()
 
+            bytes_to_str_encoding = 'utf8' if PY3 else ''
+
             simple_io_conf_loc = os.path.join(self.target_dir, 'config/repo/simple-io.conf')
             simple_io_conf = open(simple_io_conf_loc, 'w')
-            simple_io_conf.write(simple_io_conf_contents)
+            simple_io_conf.write(simple_io_conf_contents.format(
+                bytes_to_str_encoding=bytes_to_str_encoding
+            ))
             simple_io_conf.close()
 
             if show_output:
@@ -716,7 +756,7 @@ class Create(ZatoCommand):
                 full_path = os.path.join(self.target_dir, 'config/repo/static/sphinxdoc/apispec', file_path)
                 dir_name = os.path.dirname(full_path)
                 try:
-                    os.makedirs(dir_name, 0770)
+                    os.makedirs(dir_name, 0o770)
                 except OSError:
                     # That is fine, the directory must have already created in one of previous iterations
                     pass

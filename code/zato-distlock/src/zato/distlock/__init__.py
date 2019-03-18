@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2018, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -110,7 +110,7 @@ class Lock(object):
 
         # Compute lock_id in PostgreSQL's internal format which is a 64-bit integer (bigint)
         self.priv_id = str(hash('{}{}'.format(self.namespace, self.name)))
-        self.pub_id = pub_hash_func(self.priv_id).hexdigest()
+        self.pub_id = pub_hash_func(self.priv_id.encode('utf8')).hexdigest()
 
         # Try to acquire the lock
         self.acquired = self._acquire()
@@ -268,7 +268,7 @@ user={}
                 pid, current_name, current_ident, _utcnow().isoformat(), self.os_user_name,
             )
 
-        self.tmp_file.write(contents)
+        self.tmp_file.write(contents.encode('utf8'))
         self.tmp_file.flush()
 
         if _has_debug:
@@ -295,7 +295,7 @@ user={}
 
             try:
                 os.remove(self.tmp_file.name)
-            except OSError, e:
+            except OSError as e:
 
                 # ENOENT = No such file, this is fine, apparently another process beat us to that lock's deletion.
                 # But any other exception needs to be re-raised.
