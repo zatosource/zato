@@ -15,6 +15,7 @@ from logging import getLogger
 from slackclient import SlackClient
 
 # Zato
+from zato.common.util.http import get_proxy_config
 from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
@@ -39,23 +40,10 @@ class OutconnIMSlackWrapper(Wrapper):
 
         with self.update_lock:
 
-            # Proxy configuration, if any
-            if self.config.http_proxy_list or self.config.https_proxy_list:
-                proxy_config = {}
-
-                if self.config.http_proxy_list:
-                    proxy_config['http'] = self.config.http_proxy_list.splitlines()
-
-                if self.config.https_proxy_list:
-                    proxy_config['https'] = self.config.https_proxy_list.splitlines()
-
-            else:
-                proxy_config = None
-
             # Configuration of the underlying client
             client_config = {
                 'token': self.config.secret,
-                'proxies': proxy_config
+                'proxies': get_proxy_config(self.config)
             }
 
             # Create the actual connection object

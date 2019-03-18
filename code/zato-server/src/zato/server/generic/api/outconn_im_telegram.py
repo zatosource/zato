@@ -9,86 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from logging import getLogger
-
-# Slack
-from slackclient import SlackClient
-
-# Zato
-from zato.server.connection.wrapper import Wrapper
-
-# ################################################################################################################################
-
-logger = getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class OutconnIMSlackWrapper(Wrapper):
-    """ Wraps a Slack connection client.
-    """
-    wrapper_type = 'Slack connection'
-
-    def __init__(self, *args, **kwargs):
-        super(OutconnIMSlackWrapper, self).__init__(*args, **kwargs)
-        self._client = None  # type: SlackClient
-
-# ################################################################################################################################
-
-    def _init_impl(self):
-
-        with self.update_lock:
-
-            # Proxy configuration, if any
-            if self.config.http_proxy_list or self.config.https_proxy_list:
-                proxy_config = {}
-
-                if self.config.http_proxy_list:
-                    proxy_config['http'] = self.config.http_proxy_list.splitlines()
-
-                if self.config.https_proxy_list:
-                    proxy_config['https'] = self.config.https_proxy_list.splitlines()
-
-            else:
-                proxy_config = None
-
-            # Configuration of the underlying client
-            client_config = {
-                'token': self.config.secret,
-                'proxies': proxy_config
-            }
-
-            # Create the actual connection object
-            self._client = SlackClient(**client_config)
-
-            # Confirm the connection was established
-            self.ping()
-
-            # We can assume we are connected now
-            self.is_connected = True
-
-# ################################################################################################################################
-
-    def _delete(self):
-        if self._client.server.websocket:
-            self._client.server.websocket.close()
-
-# ################################################################################################################################
-
-    def _ping(self):
-        out = self._client.api_call('api.test')
-        if not out['ok']:
-            raise Exception(out['error'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-'''
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-# stdlib
 from http.client import OK
 from json import loads
 from logging import getLogger
@@ -100,18 +20,9 @@ from bunch import bunchify
 # Requests
 import requests
 
-# ################################################################################################################################
-
-# Type checking
-import typing
-
-if typing.TYPE_CHECKING:
-
-    # Requests
-    from requests.models import Response
-
-    # For pyflakes
-    Response = Response
+# Zato
+from zato.common.util.http import get_proxy_config
+from zato.server.connection.wrapper import Wrapper
 
 # ################################################################################################################################
 
@@ -121,9 +32,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 
-class TelegramAPI(object):
-    def __init__(self, address, token, connect_timeout, invoke_timeout):
-        # type: (unicode, unicode, int, int)
+class TelegramClient(object):
+    def __init__(self, address, token, connect_timeout, invoke_timeout, proxies):
+        # type: (unicode, unicode, int, int, dict)
 
         self.address = address.replace('{token}', token)
         self.token = token
@@ -131,6 +42,7 @@ class TelegramAPI(object):
         self.invoke_timeout = invoke_timeout
 
         self.session = requests.Session()
+        self.session.proxies = proxies
 
 # ################################################################################################################################
 
@@ -159,18 +71,54 @@ class TelegramAPI(object):
 # ################################################################################################################################
 
     def ping(self):
-        return self.invoke('getMe1')
+        return self.invoke('getMe')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-if __name__ == '__main__':
-    base_address = 'https://api.telegram.org/bot{token}/{method}'
-    token = '....'
-    connect_timeout = 5
-    invoke_timeout = 5
+class OutconnIMTelegramWrapper(Wrapper):
+    """ Wraps a Telegram connection client.
+    """
+    wrapper_type = 'Telegram connection'
 
-    api = TelegramAPI(base_address, token, connect_timeout, invoke_timeout)
-    out = api.ping()
-    print(111, out, type(out))
-'''
+    def __init__(self, *args, **kwargs):
+        super(OutconnIMTelegramWrapper, self).__init__(*args, **kwargs)
+        self._client = None  # type: TelegramClient
+
+# ################################################################################################################################
+
+    def _init_impl(self):
+
+        with self.update_lock:
+
+            # Configuration of the underlying client
+            client_config = {
+                'address': self.config.address,
+                'connect_timeout': self.config.connect_timeout,
+                'invoke_timeout': self.config.invoke_timeout,
+                'token': self.config.secret,
+                'proxies': get_proxy_config(self.config),
+            }
+
+            # Create the actual connection object
+            self._client = TelegramClient(**client_config)
+
+            # Confirm the connection was established
+            self.ping()
+
+            # We can assume we are connected now
+            self.is_connected = True
+
+# ################################################################################################################################
+
+    def _delete(self):
+        if self._client.server.websocket:
+            self._client.server.websocket.close()
+
+# ################################################################################################################################
+
+    def _ping(self):
+        return self._client.ping()
+
+# ################################################################################################################################
+# ################################################################################################################################
