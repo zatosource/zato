@@ -1272,6 +1272,7 @@ class GENERIC:
         class TYPE:
             DEF_KAFKA = 'def-kafka'
             OUTCONN_IM_SLACK = 'outconn-im-slack'
+            OUTCONN_IM_TELEGRAM = 'outconn-im-telegram'
             OUTCONN_LDAP = 'outconn-ldap'
             OUTCONN_MONGODB = 'outconn-mongodb'
             OUTCONN_SFTP = 'outconn-sftp'
@@ -1398,6 +1399,13 @@ class KAFKA:
         class TIMEOUT:
             SOCKET = 1
             OFFSETS = 10
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TELEGRAM:
+    class DEFAULT:
+        ADDRESS = 'https://api.telegram.org/bot{token}/{method}'
 
 # ################################################################################################################################
 # ################################################################################################################################
