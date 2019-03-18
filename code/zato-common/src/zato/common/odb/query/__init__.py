@@ -692,12 +692,19 @@ def http_soap_security_list(session, cluster_id, connection=None):
 
     return q
 
-def http_soap(session, cluster_id, id):
+def http_soap(session, cluster_id, id=None, name=None):
     """ An HTTP/SOAP connection.
     """
-    return _http_soap(session, cluster_id).\
-        filter(HTTPSOAP.id==id).\
-        one()
+    q = _http_soap(session, cluster_id)
+
+    if id:
+        q = q.filter(HTTPSOAP.id==id)
+    elif name:
+        q = q.filter(HTTPSOAP.name==name)
+    else:
+        raise Exception('Exactly one of \'id\' or \'name\' is required')
+
+    return q.one()
 
 @query_wrapper
 def http_soap_list(session, cluster_id, connection=None, transport=None, return_internal=True, needs_columns=False, **kwargs):
