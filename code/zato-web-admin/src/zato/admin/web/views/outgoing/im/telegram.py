@@ -35,7 +35,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'type_'
-        output_required = 'id', 'name'
+        output_required = 'id', 'name', 'address', 'connect_timeout', 'invoke_timeout'
         output_optional = 'is_active', 'http_proxy_list', 'https_proxy_list'
         output_repeated = True
 
@@ -52,7 +52,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name',
+        input_required = 'name', 'address', 'connect_timeout', 'invoke_timeout'
         input_optional = 'is_active', 'http_proxy_list', 'https_proxy_list'
         output_required = 'id', 'name'
 

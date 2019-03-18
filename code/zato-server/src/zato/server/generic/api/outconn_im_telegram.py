@@ -91,12 +91,14 @@ class OutconnIMTelegramWrapper(Wrapper):
 
         with self.update_lock:
 
+            #logger.warn('QQQ %r', self.config)
+
             # Configuration of the underlying client
             client_config = {
                 'address': self.config.address,
                 'connect_timeout': self.config.connect_timeout,
                 'invoke_timeout': self.config.invoke_timeout,
-                'token': self.config.secret,
+                'token': self.config.secret or '<default-empty-telegram-token>',
                 'proxies': get_proxy_config(self.config),
             }
 
@@ -112,8 +114,7 @@ class OutconnIMTelegramWrapper(Wrapper):
 # ################################################################################################################################
 
     def _delete(self):
-        if self._client.server.websocket:
-            self._client.server.websocket.close()
+        self._client.session.close()
 
 # ################################################################################################################################
 
