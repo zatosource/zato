@@ -17,11 +17,14 @@ def get_proxy_config(config):
     if config.http_proxy_list or config.https_proxy_list:
         proxy_config = {}
 
+        # For now, all proxies we produce are not lists but a single one,
+        # which can be revised if needed in the future.
+
         if config.http_proxy_list:
-            proxy_config['http'] = [elem.strip() for elem in config.http_proxy_list.splitlines()]
+            proxy_config['http'] = config.http_proxy_list.strip()
 
         if config.https_proxy_list:
-            proxy_config['https'] = [elem.strip() for elem in config.https_proxy_list.splitlines()]
+            proxy_config['https'] = config.https_proxy_list.strip()
 
         return proxy_config
 

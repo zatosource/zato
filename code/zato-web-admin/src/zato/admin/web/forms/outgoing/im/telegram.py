@@ -14,12 +14,20 @@ from django import forms
 # Zato
 from zato.common import TELEGRAM
 
+default = TELEGRAM.DEFAULT
+timeout = TELEGRAM.TIMEOUT
+
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    http_proxy_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:70px'}))
-    https_proxy_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:70px'}))
+    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=default.ADDRESS)
+
+    connect_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=timeout.CONNECT)
+    invoke_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:9%'}), initial=timeout.INVOKE)
+
+    http_proxy_list = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    https_proxy_list = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

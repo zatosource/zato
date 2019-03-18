@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Telegram;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.im.telegram.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name']);
+    $.fn.zato.data_table.setup_forms(['name', 'address', 'connect_timeout', 'invoke_timeout']);
 })
 
 $.fn.zato.outgoing.im.telegram.create = function() {
@@ -44,6 +44,7 @@ $.fn.zato.outgoing.im.telegram.data_table.new_row = function(item, data, include
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
 
+    row += String.format('<td>{0}</td>', item.address);
     row += String.format('<td>{0}</td>', item.http_proxy_list ? item.http_proxy_list : $.fn.zato.empty_value);
     row += String.format('<td>{0}</td>', item.https_proxy_list ? item.https_proxy_list : $.fn.zato.empty_value);
 
@@ -56,6 +57,8 @@ $.fn.zato.outgoing.im.telegram.data_table.new_row = function(item, data, include
     row += String.format("<td class='ignore'>{0}</td>", is_active);
 
     // 1 -->
+    row += String.format("<td class='ignore'>{0}</td>", item.connect_timeout);
+    row += String.format("<td class='ignore'>{0}</td>", item.invoke_timeout);
     row += String.format("<td class='ignore'>{0}</td>", item.http_proxy_list);
     row += String.format("<td class='ignore'>{0}</td>", item.https_proxy_list);
 

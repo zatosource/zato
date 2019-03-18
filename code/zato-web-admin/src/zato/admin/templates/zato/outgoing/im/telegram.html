@@ -28,8 +28,9 @@
             'name',
             '_is_active',
 
-            'http_proxy_list',
-            'https_proxy_list',
+            'address',
+            '_http_proxy_list',
+            '_https_proxy_list',
 
             '_change_password',
             '_edit',
@@ -40,6 +41,8 @@
             'is_active',
 
             {% comment %} 1 {% endcomment %}
+            'connect_timeout',
+            'invoke_timeout',
             'http_proxy_list',
             'https_proxy_list',
         ]
@@ -77,6 +80,7 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
 
+                        <th><a href="#">Address</a></th>
                         <th><a href="#">HTTP proxy</a></th>
                         <th><a href="#">HTTPS proxy</a></th>
 
@@ -91,6 +95,8 @@
                         {% comment %} 1 {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -103,6 +109,8 @@
 
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+
+                        <td>{{ item.address }}</td>
                         <td>{{ item.http_proxy_list|linebreaksbr|default:"<span class='form_hint'>---</span>" }}</td>
                         <td>{{ item.https_proxy_list|linebreaksbr|default:"<span class='form_hint'>---</span>" }}</td>
 
@@ -115,6 +123,8 @@
                         <td class='ignore'>{{ item.is_active }}</td>
 
                         {% comment %} 1 {% endcomment %}
+                        <td class='ignore'>{{ item.connect_timeout }}</td>
+                        <td class='ignore'>{{ item.invoke_timeout }}</td>
                         <td class='ignore'>{{ item.http_proxy_list|default:"" }}</td>
                         <td class='ignore'>{{ item.https_proxy_list|default:"" }}</td>
 
@@ -122,7 +132,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='14'>No results</td>
+                        <td colspan='17'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -149,15 +159,37 @@
                                 Active
                                 {{ create_form.is_active }}
                                 </label>
+                                |
+                                Timeouts
+                                <span class="form_hint">(s)</span>
+
+                                <label>
+                                Connect
+                                {{ create_form.connect_timeout }}
+                                </label>
+
+                                <label>
+                                Invoke
+                                {{ create_form.invoke_timeout }}
+                                </label>
                         </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Address</td>
+                            <td>
+                                {{ create_form.address }}
+                            </td>
+                        </tr>
+
                         <tr>
                             <td style="vertical-align:middle">HTTP proxy</td>
                             <td>
                                 {{ create_form.http_proxy_list }}
                             </td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">HTTP proxy</td>
+                            <td style="vertical-align:middle">HTTPS proxy</td>
                             <td>
                                 {{ create_form.https_proxy_list }}
                             </td>
@@ -184,15 +216,36 @@
                             <td style="vertical-align:middle;width:8%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
+
                         <tr>
                             <td style="vertical-align:middle"></td>
                             <td>
-
                                 <label>
                                 Active
                                 {{ edit_form.is_active }}
                                 </label>
+                                |
+                                Timeouts
+                                <span class="form_hint">(s)</span>
+
+                                <label>
+                                Connect
+                                {{ edit_form.connect_timeout }}
+                                </label>
+
+                                <label>
+                                Invoke
+                                {{ edit_form.invoke_timeout }}
+                                </label>
                         </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Address</td>
+                            <td>
+                                {{ edit_form.address }}
+                            </td>
+                        </tr>
+
                         <tr>
                             <td style="vertical-align:middle">HTTP proxy</td>
                             <td>
@@ -200,7 +253,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">HTTP proxy</td>
+                            <td style="vertical-align:middle">HTTPS proxy</td>
                             <td>
                                 {{ edit_form.https_proxy_list }}
                             </td>
@@ -218,7 +271,6 @@
                 </form>
             </div>
         </div>
-
 
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
