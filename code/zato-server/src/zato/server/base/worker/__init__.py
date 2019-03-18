@@ -82,6 +82,7 @@ from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
+from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
@@ -205,6 +206,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Generic connections - IM Slack
         self.outconn_im_slack = {}
 
+
+        # Generic connections - IM Telegram
+        self.outconn_im_telegram = {}
+
 # ################################################################################################################################
 
     def init(self):
@@ -258,6 +263,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.generic_conn_api = {
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: self.outconn_im_slack,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: self.outconn_im_telegram,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.outconn_wsx,
@@ -266,6 +272,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self._generic_conn_handler = {
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: OutconnIMSlackWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: OutconnIMTelegramWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: OutconnWSXWrapper
@@ -973,6 +980,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Local aliases
         def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
         outconn_im_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK, {})
+        outconn_im_telegram_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
         outconn_sftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP, {})
@@ -982,6 +990,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         regular_maps = [
             def_kafka_map,
             outconn_im_slack_map,
+            outconn_im_telegram_map,
             outconn_ldap_map,
             outconn_mongodb_map,
             outconn_wsx_map,
@@ -989,6 +998,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         password_maps = [
             outconn_im_slack_map,
+            outconn_im_telegram_map,
             outconn_ldap_map,
             outconn_mongodb_map,
         ]
