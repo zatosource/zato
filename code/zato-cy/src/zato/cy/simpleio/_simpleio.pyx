@@ -639,8 +639,9 @@ cdef class SIOList(object):
     def set_elems(self, elems):
         self.elems[:] = elems
 
-    def get_elem_names(self):
-        return sorted(elem.name for elem in self.elems)
+    def get_elem_names(self, use_sorted=False):
+        out = [elem.name for elem in self.elems]
+        return sorted(out) if use_sorted else out
 
 # ################################################################################################################################
 
@@ -683,18 +684,25 @@ cdef class SIODefinition(object):
         self.sio_default = sio_default
         self.skip_empty = skip_empty
 
-    cdef list get_input_pretty(self):
-        cdef list required = []
-        cdef list optional = []
-        cdef list out = []
+    cdef unicode get_elems_pretty(self, SIOList required_list, SIOList optional_list):
+        cdef unicode out = ''
+
+        if required_list.elems:
+            out += ', '.join(required_list.get_elem_names())
+
+        if optional_list.elems:
+            # Separate with a semicolon only if there is some required part to separate it from
+            if required_list.elems:
+                out += '; '
+            out += ', '.join('-' + elem for elem in optional_list.get_elem_names())
+
         return out
 
-    cdef list get_output_pretty(self):
-        cdef list required = []
-        cdef list optional = []
-        cdef list out = []
+    cdef unicode get_input_pretty(self):
+        return self.get_elems_pretty(self._input_required, self._input_optional)
 
-        return out
+    cdef unicode get_output_pretty(self):
+        return self.get_elems_pretty(self._output_required, self._output_optional)
 
     def __str__(self):
         return '<{} at {}, input:`{}`, output:`{}`>'.format(self.__class__.__name__, hex(id(self)),
