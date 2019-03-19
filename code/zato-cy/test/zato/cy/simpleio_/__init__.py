@@ -19,15 +19,11 @@ from bunch import bunchify
 # ConfigObj
 from configobj import ConfigObj
 
-# Python 2/3 compatibility
-from past.builtins import basestring
-
 # Zato
 from zato.cli.create_server import get_bytes_to_str_encoding, simple_io_conf_contents
 from zato.common.util.simpleio import get_sio_server_config
 
 # Zato - Cython
-from zato.bunch import Bunch
 from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################

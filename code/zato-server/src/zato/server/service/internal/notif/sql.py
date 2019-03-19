@@ -23,7 +23,6 @@ from zato.common import NOTIF as COMMON_NOTIF, SECRET_SHADOW
 from zato.common.broker_message import NOTIF
 from zato.common.odb.model import Cluster, NotificationSQL, SQLConnectionPool, Service
 from zato.common.odb.query import notif_sql_list
-from zato.common.util.simpleio import drop_sio_elems
 from zato.server.service.internal import AdminService
 from zato.server.service.internal.notif import NotifierService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta

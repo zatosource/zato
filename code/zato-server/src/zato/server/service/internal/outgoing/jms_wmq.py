@@ -16,7 +16,6 @@ from traceback import format_exc
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import ConnDefWMQ, OutgoingWMQ
 from zato.common.odb.query import out_wmq, out_wmq_list
-from zato.common.util.simpleio import drop_sio_elems
 from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
