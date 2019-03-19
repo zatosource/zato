@@ -81,6 +81,12 @@ def get_sio_server_config(sio_fs_config):
     sio_server_config.prefix_text = sio_fs_config.default.prefix_text
     sio_server_config.prefix_uuid = sio_fs_config.default.prefix_uuid
 
+    bytes_to_str_encoding = sio_fs_config.bytes_to_str.encoding
+    if not isinstance(bytes_to_str_encoding, unicode):
+        bytes_to_str_encoding = bytes_to_str_encoding.decode('utf8')
+
+    sio_server_config.bytes_to_str_encoding = bytes_to_str_encoding
+
     return sio_server_config
 
 # ################################################################################################################################
