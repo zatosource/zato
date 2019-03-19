@@ -23,6 +23,7 @@ from zato.common import NOTIF as COMMON_NOTIF, SECRET_SHADOW
 from zato.common.broker_message import NOTIF
 from zato.common.odb.model import Cluster, NotificationSQL, SQLConnectionPool, Service
 from zato.common.odb.query import notif_sql_list
+from zato.common.util.simpleio import drop_sio_elems
 from zato.server.service.internal import AdminService
 from zato.server.service.internal.notif import NotifierService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
@@ -39,7 +40,8 @@ list_func = notif_sql_list
 output_required_extra = ['service_name']
 create_edit_input_required_extra = ['service_name']
 create_edit_rewrite = ['service_name']
-skip_input_params = ('notif_type', 'service_id', 'get_data_patt', 'get_data', 'get_data_patt_neg', 'name_pattern_neg', 'name_pattern')
+skip_input_params = ('notif_type', 'service_id', 'get_data_patt', 'get_data', 'get_data_patt_neg', 'name_pattern_neg',
+    'name_pattern')
 skip_output_params = ('get_data', 'get_data_patt_neg', 'get_data_patt', 'name_pattern_neg', 'name_pattern')
 
 # ################################################################################################################################
