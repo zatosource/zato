@@ -983,8 +983,8 @@ cdef class CySimpleIO(object):
         shared_elems = set(elem.name for elem in required) & set(elem.name for elem in optional)
 
         if shared_elems:
-            raise ValueError('Elements in input_required and input_optional cannot be shared, found:`{}` in `{}`'.format(
-                sorted(elem.encode('utf8') for elem in shared_elems), class_))
+            raise ValueError('Elements in {}_required and {}_optional cannot be shared, found:`{}` in `{}`'.format(
+                    container, container, sorted(elem.encode('utf8') for elem in shared_elems), class_))
 
         # Everything is validated, we can actually set the lists of elements now
 

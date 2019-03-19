@@ -32,7 +32,7 @@ get_list_docs = 'built-in cache definitions'
 broker_message = CACHE
 broker_message_prefix = 'BUILTIN_'
 list_func = cache_builtin_list
-output_optional_extra = ['current_size', 'cache_id']
+output_optional_extra = ['current_size']
 
 # ################################################################################################################################
 
