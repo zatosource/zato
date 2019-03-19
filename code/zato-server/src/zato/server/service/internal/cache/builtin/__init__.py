@@ -19,7 +19,6 @@ from zato.common import CACHE as _COMMON_CACHE
 from zato.common.broker_message import CACHE
 from zato.common.odb.model import CacheBuiltin
 from zato.common.odb.query import cache_builtin_list
-from zato.common.util.simpleio import drop_sio_elems
 from zato.server.service import Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.cache import common_instance_hook

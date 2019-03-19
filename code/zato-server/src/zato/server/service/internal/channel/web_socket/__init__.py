@@ -23,7 +23,6 @@ from zato.common.odb.model import ChannelWebSocket, PubSubSubscription, PubSubTo
 from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service, web_socket_client, \
      web_socket_client_by_pub_id, web_socket_client_list, web_socket_sub_key_data_list
 from zato.common.util import is_port_taken
-from zato.common.util.simpleio import drop_sio_elems
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, DateTime, Int, Service
