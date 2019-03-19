@@ -41,6 +41,10 @@ from zato.server.service.internal.pubsub import common_sub_data
 
 # ################################################################################################################################
 
+logger_pubsub = getLogger('zato_pubsub.srv')
+
+# ################################################################################################################################
+
 # For pyflakes and code completion
 PubSub = PubSub
 Topic = Topic
@@ -48,11 +52,11 @@ WebSocket = WebSocket
 
 # ################################################################################################################################
 
-logger_pubsub = getLogger('zato_pubsub.srv')
-
-# ################################################################################################################################
-
 sub_broker_attrs = get_sa_model_columns(PubSubSubscription)
+
+sub_impl_input_optional = list(common_sub_data)
+sub_impl_input_optional.remove('is_internal')
+sub_impl_input_optional.remove('topic_name')
 
 # ################################################################################################################################
 
@@ -269,9 +273,9 @@ class SubscribeServiceImpl(_Subscribe):
     endpoint_type = None
 
     class SimpleIO(AdminSIO):
-        input_required = ('topic_name', 'is_internal')
-        input_optional = common_sub_data
-        output_optional = ('sub_key', 'queue_depth')
+        input_required = 'topic_name', 'is_internal'
+        input_optional = sub_impl_input_optional
+        output_optional = 'sub_key', 'queue_depth'
         default_value = None
 
 # ################################################################################################################################

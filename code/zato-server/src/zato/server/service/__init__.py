@@ -54,25 +54,26 @@ from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, IBMM
      Request, Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
-from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Date, DateTime, Dict, Float, ForceType, Integer, List, \
-     ListOfDicts, Nested, Opaque, Unicode, UTC
+from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
+     Opaque, Text, UTC, UUID
 
-# So pyflakes doesn't complain about names being imported but not used
+# For pyflakes
 AsIs = AsIs
 CSV = CSV
-Boolean = Boolean
+Bool = Bool
 Date = Date
 DateTime = DateTime
+Decimal = Decimal
+Bool = Bool
 Dict = Dict
+DictList = DictList
 Float = Float
-ForceType = ForceType
-Integer = Integer
+Int = Int
 List = List
-ListOfDicts = ListOfDicts
-Nested = Nested
 Opaque = Opaque
-Unicode = Unicode
+Text = Text
 UTC = UTC
+UUID = UUID
 
 # ################################################################################################################################
 
@@ -99,9 +100,13 @@ NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
 # ################################################################################################################################
 
-# Back compat
-Bool = Boolean
-Int = Integer
+# Backward compatibility
+Boolean = Bool
+Integer = Int
+ForceType = SIOElem
+ListOfDicts = DictList
+Nested = Opaque
+Unicode = Text
 
 # ################################################################################################################################
 

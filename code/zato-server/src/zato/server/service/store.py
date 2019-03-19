@@ -48,6 +48,9 @@ from zato.common.util.json_ import dumps
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service
 from zato.server.service.internal import AdminService
 
+# Zato - Cython
+from zato.simpleio import CySimpleIO
+
 # ################################################################################################################################
 
 # Type checking
@@ -198,6 +201,7 @@ def set_up_class_attributes(class_, service_store=None, name=None):
         class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
 
         # SimpleIO
+        CySimpleIO.attach_sio(service_store.server.sio_config, class_)
 
         # User management and SSO
         if service_store.server.is_sso_enabled:

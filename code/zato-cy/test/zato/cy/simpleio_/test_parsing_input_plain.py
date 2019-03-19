@@ -12,8 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.server.service import Service
 
 # Zato - Cython
-from test.zato.cy.simpleio_ import BaseTestCase
-from zato.simpleio import CySimpleIO
+from test.zato.cy.simpleio_ import BaseTestCase, CySimpleIO, test_class_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -26,7 +25,7 @@ class InputPlainParsingTestCase(BaseTestCase):
             input = 'abc', 'zxc', 'ghj', '-rrr', '-eee'
             output = 'abc2', 'zxc2', 'ghj2', '-rrr2', '-eee2'
 
-        sio = self.get_sio(SimpleIO)
+        sio = self.get_sio(SimpleIO, test_class_name)
 
         self.assertEquals(sio.definition._input_required.get_elem_names(), ['abc', 'ghj', 'zxc'])
         self.assertEquals(sio.definition._input_optional.get_elem_names(), ['eee', 'rrr'])
@@ -43,9 +42,9 @@ class InputPlainParsingTestCase(BaseTestCase):
             input_optional = 'zxc', 'abc', 'rty'
 
         with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
+            self.get_sio(SimpleIO, test_class_name)
 
-        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']`"
+        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']` in `<my-test-class>`"
         self.assertEquals(ctx.exception.message, expected)
 
 # ################################################################################################################################
