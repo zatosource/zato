@@ -66,6 +66,7 @@ from zato.common.repo import RepoManager
 from zato.common.util import absjoin, asbool, clear_locks, get_config, get_kvdb_config_for_log, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
+from zato.common.util.simpleio import get_sio_server_config
 from zato.server.base.parallel import ParallelServer
 from zato.server.service.store import ServiceStore
 from zato.server.startup_callable import StartupCallableTool
@@ -177,7 +178,10 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
+
     sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
+    sio_config = get_sio_server_config(sio_config)
+
     sso_config = get_config(repo_location, 'sso.conf', needs_user_config=False)
     normalize_sso_config(sso_config)
 

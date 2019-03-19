@@ -197,6 +197,8 @@ def set_up_class_attributes(class_, service_store=None, name=None):
         class_.component_enabled_invoke_matcher = service_store.server.fs_server_config.component_enabled.invoke_matcher
         class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
 
+        # SimpleIO
+
         # User management and SSO
         if service_store.server.is_sso_enabled:
             class_.sso = service_store.server.sso_api

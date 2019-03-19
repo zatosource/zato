@@ -10,10 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime
-from decimal import Decimal as decimal_Decimal, getcontext
-from json import dumps, loads
-from sys import maxint
-from unittest import TestCase
+from decimal import Decimal as decimal_Decimal
 from uuid import UUID as uuid_UUID, uuid4
 
 # dateutil
@@ -22,675 +19,21 @@ from dateutil.parser import parse as dt_parse
 # Zato
 from zato.common import DATA_FORMAT
 from zato.server.service import Service
-from zato.simpleio import backward_compat_default_value, AsIs, Bool, BoolConfig, CSV, CySimpleIO, Date, DateTime, Decimal, \
-     Dict, DictList, Float, Int, IntConfig, List, NotGiven, Opaque, SecretConfig, _SIOServerConfig, Text, UUID
+from zato.simpleio import backward_compat_default_value, AsIs, Bool, CSV, CySimpleIO, Date, DateTime, Decimal, \
+     Dict, DictList, Float, Int, List, NotGiven, Opaque, Text, UUID
 
 # Zato - Cython
-from zato.util_convert import false_values, to_bool, true_values
-from zato.bunch import Bunch, bunchify
+from test.zato.cy.simpleio_ import BaseTestCase
+from zato.bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _BaseTestCase(TestCase):
-
-    def setUp(self):
-        self.maxDiff = maxint
-
-    def get_server_config(self):
-
-        SIOServerConfig = _SIOServerConfig()
-        server_config = Bunch()
-
-        server_config.bool = Bunch()
-        server_config.bool.exact  = set()
-        server_config.bool.prefix = set(['by_', 'has_', 'is_', 'may_', 'needs_', 'should_'])
-        server_config.bool.suffix = set()
-
-        server_config.int = Bunch()
-        server_config.int.exact  = set(['id'])
-        server_config.int.prefix = set()
-        server_config.int.suffix = set(['_count', '_id', '_size', '_timeout'])
-
-        server_config.secret = Bunch()
-        server_config.secret.exact  = set(['id'])
-        server_config.secret.prefix = set(
-            ['auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'token'])
-        server_config.secret.suffix = set()
-
-        server_config.default = Bunch()
-
-        server_config.default.default_value = None
-        server_config.default.default_input_value = None
-        server_config.default.default_output_value = None
-
-        server_config.default.response_elem = None
-
-        server_config.default.input_required_name = 'input_required'
-        server_config.default.input_optional_name = 'input_optional'
-        server_config.default.output_required_name = 'output_required'
-        server_config.default.output_optional_name = 'output_optional'
-
-        server_config.default.skip_empty_keys = False
-        server_config.default.skip_empty_request_keys = False
-        server_config.default.skip_empty_response_keys = False
-
-        server_config.default.prefix_as_is = 'a'
-        server_config.default.prefix_bool = 'b'
-        server_config.default.prefix_csv = 'c'
-        server_config.default.prefix_date = 'date'
-        server_config.default.prefix_date_time = 'dt'
-        server_config.default.prefix_dict = 'd'
-        server_config.default.prefix_dict_list = 'dl'
-        server_config.default.prefix_float = 'f'
-        server_config.default.prefix_int = 'i'
-        server_config.default.prefix_list = 'l'
-        server_config.default.prefix_opaque = 'o'
-        server_config.default.prefix_text = 't'
-        server_config.default.prefix_uuid = 'u'
-
-        bool_config = BoolConfig()
-        bool_config.exact = server_config.bool.exact
-        bool_config.prefixes = server_config.bool.prefix
-        bool_config.suffixes = server_config.bool.suffix
-
-        int_config = IntConfig()
-        int_config.exact = server_config.int.exact
-        int_config.prefixes = server_config.int.prefix
-        int_config.suffixes = server_config.int.suffix
-
-        secret_config = SecretConfig()
-        secret_config.exact = server_config.secret.exact
-        secret_config.prefixes = server_config.secret.prefix
-        secret_config.suffixes = server_config.secret.suffix
-
-        SIOServerConfig.bool_config = bool_config
-        SIOServerConfig.int_config = int_config
-        SIOServerConfig.secret_config = secret_config
-
-        SIOServerConfig.input_required_name = server_config.default.input_required_name
-        SIOServerConfig.input_optional_name = server_config.default.input_optional_name
-        SIOServerConfig.output_required_name = server_config.default.output_required_name
-        SIOServerConfig.output_optional_name = server_config.default.output_optional_name
-        SIOServerConfig.default_value = server_config.default.default_value
-        SIOServerConfig.default_input_value = server_config.default.default_input_value
-        SIOServerConfig.default_output_value = server_config.default.default_output_value
-
-        SIOServerConfig.response_elem = server_config.default.response_elem
-
-        SIOServerConfig.skip_empty_keys = server_config.default.skip_empty_keys
-        SIOServerConfig.skip_empty_request_keys = server_config.default.skip_empty_request_keys
-        SIOServerConfig.skip_empty_response_keys = server_config.default.skip_empty_response_keys
-
-        SIOServerConfig.prefix_as_is = server_config.default.prefix_as_is
-        SIOServerConfig.prefix_bool = server_config.default.prefix_bool
-        SIOServerConfig.prefix_csv = server_config.default.prefix_csv
-        SIOServerConfig.prefix_date = server_config.default.prefix_date
-        SIOServerConfig.prefix_date_time = server_config.default.prefix_date_time
-        SIOServerConfig.prefix_dict = server_config.default.prefix_dict
-        SIOServerConfig.prefix_dict_list = server_config.default.prefix_dict_list
-        SIOServerConfig.prefix_float = server_config.default.prefix_float
-        SIOServerConfig.prefix_int = server_config.default.prefix_int
-        SIOServerConfig.prefix_list = server_config.default.prefix_list
-        SIOServerConfig.prefix_opaque = server_config.default.prefix_opaque
-        SIOServerConfig.prefix_text = server_config.default.prefix_text
-        SIOServerConfig.prefix_uuid = server_config.default.prefix_uuid
-
-        return SIOServerConfig
-
-    def get_sio(self, declaration):
-
-        sio = CySimpleIO(self.get_server_config(), declaration)
-        sio.build()
-
-        return sio
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class InputOutputParsingTestCase(_BaseTestCase):
-
-    def xtest_no_input_output(self):
-
-        class SimpleIO:
-            pass
-
-        # Providing such a bare declaration should not raise an exceptions
-        self.get_sio(SimpleIO)
+class JSONInputParsing(BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_input_and_input_required_error(self):
-
-        class SimpleIO:
-            input = 'qwerty'
-            input_required = 'aaa', 'bbb'
-
-        # Cannot have both input and input_required on input
-        with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
-
-        expected = "Cannot provide input_required if input is given, input:`qwerty`, " \
-            "input_required:`(u'aaa', u'bbb')`, input_optional:`[]`"
-
-        self.assertEquals(ctx.exception.message, expected)
-
-# ################################################################################################################################
-
-    def xtest_input_and_input_optional_error(self):
-
-        class SimpleIO:
-            input = 'qwerty'
-            input_optional = 'aaa', 'bbb'
-
-        # Cannot have both input and input_required on input
-        with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
-
-        expected = "Cannot provide input_optional if input is given, input:`qwerty`, " \
-            "input_required:`[]`, input_optional:`(u'aaa', u'bbb')`"
-
-        self.assertEquals(ctx.exception.message, expected)
-
-# ################################################################################################################################
-
-    def xtest_input_and_input_required_optional_error(self):
-
-        class SimpleIO:
-            input = 'qwerty'
-            input_required = '123', '456'
-            input_optional = 'aaa', 'bbb'
-
-        # Cannot have both input and input_required on input
-        with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
-
-        expected = "Cannot provide input_required/input_optional if input is given, input:`qwerty`, " \
-            "input_required:`(u'123', u'456')`, input_optional:`(u'aaa', u'bbb')`"
-
-        self.assertEquals(ctx.exception.message, expected)
-
-# ################################################################################################################################
-
-    def xtest_output_and_output_required_error(self):
-
-        class SimpleIO:
-            output = 'qwerty'
-            output_required = 'aaa', 'bbb'
-
-        # Cannot have both output and output_required on output
-        with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
-
-        expected = "Cannot provide output_required if output is given, output:`qwerty`, " \
-            "output_required:`(u'aaa', u'bbb')`, output_optional:`[]`"
-
-        self.assertEquals(ctx.exception.message, expected)
-
-# ################################################################################################################################
-
-    def xtest_output_and_output_optional_error(self):
-
-        class SimpleIO:
-            output = 'qwerty'
-            output_optional = 'aaa', 'bbb'
-
-        # Cannot have both output and output_required on output
-        with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
-
-        expected = "Cannot provide output_optional if output is given, output:`qwerty`, " \
-            "output_required:`[]`, output_optional:`(u'aaa', u'bbb')`"
-
-        self.assertEquals(ctx.exception.message, expected)
-
-# ################################################################################################################################
-
-    def xtest_output_and_output_required_optional_error(self):
-
-        class SimpleIO:
-            output = 'qwerty'
-            output_required = '123', '456'
-            output_optional = 'aaa', 'bbb'
-
-        # Cannot have both output and output_required on output
-        with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
-
-        expected = "Cannot provide output_required/output_optional if output is given, output:`qwerty`, " \
-            "output_required:`(u'123', u'456')`, output_optional:`(u'aaa', u'bbb')`"
-
-        self.assertEquals(ctx.exception.message, expected)
-
-# ################################################################################################################################
-
-    def xtest_elem_sharing_not_allowed(self):
-
-        class SimpleIO:
-            input_required = 'abc', 'zxc', 'qwe'
-            input_optional = 'zxc', 'abc', 'rty'
-
-        with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
-
-        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']`"
-        self.assertEquals(ctx.exception.message, expected)
-
-# ################################################################################################################################
-
-    def xtest_default_input_value(self):
-
-        class SimpleIO:
-            input_required = 'abc', 'zxc', 'qwe'
-            input_optional = 'zxc', 'abc', 'rty'
-
-        with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
-
-        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']`"
-        self.assertEquals(ctx.exception.message, expected)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class InputPlainParsingTestCase(_BaseTestCase):
-
-    def xtest_convert_plain_into_required_optional(self):
-
-        class SimpleIO:
-            input = 'abc', 'zxc', 'ghj', '-rrr', '-eee'
-            output = 'abc2', 'zxc2', 'ghj2', '-rrr2', '-eee2'
-
-        sio = self.get_sio(SimpleIO)
-
-        self.assertEquals(sio.definition._input_required.get_elem_names(), ['abc', 'ghj', 'zxc'])
-        self.assertEquals(sio.definition._input_optional.get_elem_names(), ['eee', 'rrr'])
-
-        self.assertEquals(sio.definition._output_required.get_elem_names(), ['abc2', 'ghj2', 'zxc2'])
-        self.assertEquals(sio.definition._output_optional.get_elem_names(), ['eee2', 'rrr2'])
-
-# ################################################################################################################################
-
-    def xtest_elem_sharing_not_allowed_plain(self):
-
-        class SimpleIO:
-            input_required = 'abc', 'zxc', 'qwe', '-zxc', '-abc', '-rty'
-            input_optional = 'zxc', 'abc', 'rty'
-
-        with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
-
-        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']`"
-        self.assertEquals(ctx.exception.message, expected)
-
-# ################################################################################################################################
-
-    def xtest_elem_required_minus_is_insignificant(self):
-
-        class MyService(Service):
-            class SimpleIO:
-                input_required = 'aaa', 'bbb', 'ccc', '-ddd', '-eee'
-                output_required = 'qqq', 'www', '-eee', '-fff'
-
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
-
-        self.assertEquals(MyService._sio.definition._input_required.get_elem_names(), ['-ddd', '-eee', 'aaa', 'bbb', 'ccc'])
-        self.assertEquals(MyService._sio.definition._output_required.get_elem_names(), ['-eee', '-fff', 'qqq', 'www'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class AttachSIOTestCase(_BaseTestCase):
-    def xtest_attach_sio(self):
-
-        class MyService(Service):
-            class SimpleIO:
-                input = 'aaa', 'bbb', 'ccc', '-ddd', '-eee'
-                output = 'qqq', 'www', '-eee', '-fff'
-
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
-
-        self.assertEquals(MyService._sio.definition._input_required.get_elem_names(), ['aaa', 'bbb', 'ccc'])
-        self.assertEquals(MyService._sio.definition._input_optional.get_elem_names(), ['ddd', 'eee'])
-
-        self.assertEquals(MyService._sio.definition._output_required.get_elem_names(), ['qqq', 'www'])
-        self.assertEquals(MyService._sio.definition._output_optional.get_elem_names(), ['eee', 'fff'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class ElemsFromJSONTestCase(_BaseTestCase):
-
-# ################################################################################################################################
-
-    def _parse(self, sio_elem, data):
-        return sio_elem.parse_from[DATA_FORMAT.JSON](data)
-
-# ################################################################################################################################
-
-    def xtest_as_is(self):
-        sio = AsIs('myname')
-        data = object()
-        parsed = self._parse(sio, data)
-
-        self.assertIs(data, parsed)
-
-# ################################################################################################################################
-
-    def xtest_bool_true(self):
-        sio = AsIs('myname')
-
-        for data in true_values + tuple(elem.upper() for elem in true_values) + (True, 1, -1):
-            parsed = self._parse(sio, data)
-            self.assertTrue(parsed)
-
-# ################################################################################################################################
-
-    def xtest_bool_false(self):
-        sio = Bool('myname')
-
-        for data in false_values + tuple(elem.upper() for elem in false_values) + (False, 0):
-            parsed = self._parse(sio, data)
-            self.assertFalse(parsed)
-
-# ################################################################################################################################
-
-    def xtest_csv(self):
-        sio = CSV('myname')
-        data = 'q,w,e,r,t,Y,U,I,O,P'
-        parsed = self._parse(sio, data)
-        self.assertListEqual(parsed, data.split(','))
-
-# ################################################################################################################################
-
-    def xtest_date_valid(self):
-        sio = Date('myname')
-        year = 1999
-        month = 12
-        day = 31
-        data = '{}-{}-{}'.format(day, month, year)
-        parsed = self._parse(sio, data)
-
-        self.assertIsInstance(parsed, datetime)
-        self.assertEquals(parsed.year, year)
-        self.assertEquals(parsed.month, month)
-        self.assertEquals(parsed.day, day)
-
-# ################################################################################################################################
-
-    def xtest_date_invalid(self):
-        sio = Date('myname')
-        year = 1999
-        month = 77
-        day = 31
-        data = '{}-{}-{}'.format(day, month, year)
-
-        with self.assertRaises(ValueError) as ctx:
-            self._parse(sio, data)
-
-        expected = 'Could not parse `31-77-1999` as a Date object (month must be in 1..12)'
-        self.assertEquals(ctx.exception.message, expected)
-
-# ################################################################################################################################
-
-    def xtest_date_time_valid(self):
-        sio = DateTime('myname')
-        year = 1999
-        month = 12
-        day = 31
-        hour = 11
-        minute = 22
-        second = 33
-        data = '{}-{}-{}T{}:{}:{}.000Z'.format(day, month, year, hour, minute, second)
-        parsed = self._parse(sio, data)
-
-        self.assertIsInstance(parsed, datetime)
-        self.assertEquals(parsed.year, year)
-        self.assertEquals(parsed.month, month)
-        self.assertEquals(parsed.day, day)
-        self.assertEquals(parsed.hour, hour)
-        self.assertEquals(parsed.minute, minute)
-        self.assertEquals(parsed.second, second)
-
-# ################################################################################################################################
-
-    def xtest_date_time_invalid(self):
-        sio = DateTime('myname')
-        year = 1999
-        month = 12
-        day = 31
-        hour = 11
-        minute = 22
-        second = 99
-        data = '{}-{}-{}T{}:{}:{}.000Z'.format(day, month, year, hour, minute, second)
-
-        with self.assertRaises(ValueError) as ctx:
-            self._parse(sio, data)
-
-        expected = 'Could not parse `31-12-1999T11:22:99.000Z` as a DateTime object (second must be in 0..59)'
-        self.assertEquals(ctx.exception.message, expected)
-
-# ################################################################################################################################
-
-    def xtest_decimal(self):
-
-        sio = Decimal('mykey')
-
-        exponent = '123456789' * 30
-        data = '0.' + exponent
-        getcontext().prec = 37
-
-        parsed = self._parse(sio, data)
-
-        self.assertIsInstance(parsed, decimal_Decimal)
-        self.assertEquals(str(parsed), data)
-
-# ################################################################################################################################
-
-    def xtest_dict_without_key_names(self):
-
-        sio = Dict('mykey')
-
-        # Note that the dict will not expect any keys in particular on input because it has only a name and nothing else
-        data = {
-            'aaa': 'aaa-111',
-            'bbb': 'bbb-111',
-            'ccc': 'ccc-111',
-            'ddd': 'ddd-111',
-            'fff': 'fff-111'
-        }
-        parsed = self._parse(sio, data)
-
-        self.assertDictEqual(parsed, data)
-
-# ################################################################################################################################
-
-    def xtest_dict_with_key_names(self):
-
-        sio = Dict('mykey', 'aaa', 'bbb', 'ccc', '-ddd', '-eee')
-
-        # Note that 'eee' is optional hence it may be omitted and that 'fff' is not part of the dict's I/O definition
-        data = {
-            'aaa': 'aaa-111',
-            'bbb': 'bbb-111',
-            'ccc': 'ccc-111',
-            'ddd': 'ddd-111',
-            'fff': 'fff-111'
-        }
-        parsed = self._parse(sio, data)
-
-        self.assertDictEqual(parsed, {
-            'aaa': 'aaa-111',
-            'bbb': 'bbb-111',
-            'ccc': 'ccc-111',
-            'ddd': 'ddd-111',
-            'eee': NotGiven,
-        })
-
-# ################################################################################################################################
-
-    def xtest_dict_list_with_key_names(self):
-
-        sio = DictList('mykey')
-
-        data1 = {
-            'aaa': 'aaa-111',
-            'bbb': 'bbb-111',
-            'ccc': 'ccc-111',
-            'ddd': 'ddd-111',
-            'fff': 'fff-111'
-        }
-
-        data2 = {
-            'aaa': 'aaa-222',
-            'bbb': 'bbb-222',
-            'ccc': 'ccc-222',
-            'ddd': 'ddd-222',
-            'fff': 'fff-222'
-        }
-
-        data = [data1, data2]
-        parsed = self._parse(sio, data)
-
-        self.assertDictEqual(parsed[0], data1)
-        self.assertDictEqual(parsed[1], data2)
-
-# ################################################################################################################################
-
-    def xtest_dict_list_without_key_names(self):
-
-        sio = DictList('mykey', 'aaa', '-bbb', '-ccc')
-
-        data1 = {
-            'aaa': 'aaa-111',
-            'bbb': 'bbb-111',
-        }
-
-        data2 = {
-            'aaa': 'aaa-222',
-            'bbb': 'bbb-222',
-        }
-
-        expected1 = {
-            'aaa': 'aaa-111',
-            'bbb': 'bbb-111',
-            'ccc': NotGiven,
-        }
-
-        expected2 = {
-            'aaa': 'aaa-222',
-            'bbb': 'bbb-222',
-            'ccc': NotGiven,
-        }
-
-        data = [data1, data2]
-        parsed = self._parse(sio, data)
-
-        self.assertDictEqual(parsed[0], expected1)
-        self.assertDictEqual(parsed[1], expected2)
-
-# ################################################################################################################################
-
-    def xtest_list_from_list(self):
-        sio = List('myname')
-        data = ['q,w,e,r,t,Y,U,I,O,P']
-        parsed = self._parse(sio, data)
-        self.assertListEqual(parsed, data)
-
-# ################################################################################################################################
-
-    def xtest_float(self):
-        sio = Float('myname')
-        data = '1.23'
-        parsed = self._parse(sio, data)
-
-        self.assertIsInstance(parsed, float)
-        self.assertEquals(parsed, 1.23)
-
-# ################################################################################################################################
-
-    def xtest_int(self):
-        sio = Int('myname')
-        data = '12345678901234567890'
-        parsed = self._parse(sio, data)
-
-        self.assertIsInstance(parsed, (int, long))
-        self.assertEquals(parsed, int(data))
-
-# ################################################################################################################################
-
-    def xtest_list_from_tuple(self):
-        sio = List('myname')
-        data = tuple(['q,w,e,r,t,Y,U,I,O,P'])
-        parsed = self._parse(sio, data)
-
-        self.assertIsInstance(parsed, tuple)
-        self.assertEquals(parsed, data)
-
-# ################################################################################################################################
-
-    def xtest_list_from_string(self):
-        sio = List('myname')
-        data = 'abcdef'
-        parsed = self._parse(sio, data)
-
-        self.assertIsInstance(parsed, list)
-        self.assertEquals(parsed, [data])
-
-# ################################################################################################################################
-
-    def xtest_list_from_int(self):
-        sio = List('myname')
-        data = 123
-        parsed = self._parse(sio, data)
-
-        self.assertIsInstance(parsed, list)
-        self.assertEquals(parsed, [data])
-
-# ################################################################################################################################
-
-    def xtest_opaque(self):
-
-        class MyClass:
-            pass
-
-        sio = Opaque('myname')
-        data = MyClass()
-        parsed = self._parse(sio, data)
-
-        self.assertIsInstance(parsed, MyClass)
-        self.assertIs(parsed, data)
-
-# ################################################################################################################################
-
-    def xtest_text(self):
-
-        sio = Text('myname')
-        data = 123
-        parsed = self._parse(sio, data)
-
-        self.assertIsInstance(parsed, basestring)
-        self.assertEquals(parsed, unicode(data))
-
-# ################################################################################################################################
-
-    def xtest_uuid(self):
-
-        sio = UUID('myname')
-        data = 'e9c56bde-fab4-4adb-96c1-479c8246f308'
-        parsed = self._parse(sio, data)
-
-        self.assertIsInstance(parsed, uuid_UUID)
-        self.assertEquals(str(parsed), data)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class JSONInputParsing(_BaseTestCase):
-
-# ################################################################################################################################
-
-    def xtest_parse_basic_request(self):
+    def test_parse_basic_request(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -723,7 +66,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_all_elem_types_non_list(self):
+    def test_parse_all_elem_types_non_list(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -788,7 +131,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_all_elem_types_list(self):
+    def test_parse_all_elem_types_list(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -912,7 +255,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_default_with_default_input_value(self):
+    def test_parse_default_with_default_input_value(self):
 
         _default_bbb = 112233
         _default_fff = object()
@@ -949,11 +292,10 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_default_no_default_input_value(self):
+    def test_parse_default_no_default_input_value(self):
 
         _default_bbb = 112233
         _default_fff = object()
-        _default_input_value = object()
 
         class MyService(Service):
             class SimpleIO:
@@ -985,7 +327,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_default_backward_compat_default_input_value(self):
+    def test_parse_default_backward_compat_default_input_value(self):
 
         _default_bbb = 112233
         _default_fff = object()
@@ -1022,7 +364,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_default_all_elem_types(self):
+    def test_parse_default_all_elem_types(self):
 
         bbb = object()
         ccc = False
@@ -1071,7 +413,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_nested_dict_only_default_sio_level(self):
+    def test_parse_nested_dict_only_default_sio_level(self):
 
         _default_input_value = 'default-input-value'
 
@@ -1114,7 +456,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_nested_dict_customer_no_defaults(self):
+    def test_parse_nested_dict_customer_no_defaults(self):
 
         locality = Dict('locality', 'type', 'name')
         address = Dict('address', locality, 'street')
@@ -1151,7 +493,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_nested_dict_customer_deep_defaults_sio_level(self):
+    def test_parse_nested_dict_customer_deep_defaults_sio_level(self):
 
         locality = Dict('locality', '-type', '-name')
         address = Dict('address', locality, 'street')
@@ -1190,7 +532,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_nested_dict_customer_deep_defaults_elem_level(self):
+    def test_parse_nested_dict_customer_deep_defaults_elem_level(self):
 
         locality_default = object()
 
@@ -1231,7 +573,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_nested_dict_all_sio_elems(self):
+    def test_parse_nested_dict_all_sio_elems(self):
 
         locality = Dict('locality', Int('type'), Text('name'), AsIs('coords'), Decimal('geo_skip'), Float('geo_diff'))
         address = Dict('address', locality, UUID('street_id'), CSV('prefs'), DateTime('since'), List('types'), Opaque('opaque1'))
@@ -1286,7 +628,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_nested_dict_all_sio_elems_some_missing(self):
+    def test_parse_nested_dict_all_sio_elems_some_missing(self):
 
         _default_input_value = 'default-input-value'
         default_locality = 'default-locality'
@@ -1356,7 +698,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_top_level_skip_empty_input_true_no_force_empty_with_class(self):
+    def test_top_level_skip_empty_input_true_no_force_empty_with_class(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -1380,7 +722,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_top_level_skip_empty_input_true_no_force_empty_with_attribute(self):
+    def test_top_level_skip_empty_input_true_no_force_empty_with_attribute(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -1402,7 +744,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_top_level_skip_empty_input_true_with_force_empty_single(self):
+    def test_top_level_skip_empty_input_true_with_force_empty_single(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -1428,7 +770,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_top_level_skip_empty_input_true_with_force_empty_multiple(self):
+    def test_top_level_skip_empty_input_true_with_force_empty_multiple(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -1455,7 +797,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_top_level_skip_empty_input_single(self):
+    def test_top_level_skip_empty_input_single(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -1484,7 +826,7 @@ class JSONInputParsing(_BaseTestCase):
 
 # ################################################################################################################################
 
-    def xtest_top_level_skip_empty_input_multiple(self):
+    def test_top_level_skip_empty_input_multiple(self):
 
         class MyService(Service):
             class SimpleIO:
@@ -1509,36 +851,6 @@ class JSONInputParsing(_BaseTestCase):
             'eee': NotGiven,
             'fff': NotGiven,
         })
-
-# ################################################################################################################################
-
-    def test_top_level_skip_empty_output_true_no_force_empty_with_class(self):
-
-        class MyService(Service):
-            class SimpleIO:
-                output = 'aaa', 'bbb', '-ccc', '-ddd'
-
-                class SkipEmpty:
-                    output = True
-
-
-        CySimpleIO.attach_sio(self.get_server_config(), MyService)
-
-        data = Bunch()
-        data.aaa = 'aaa'
-        data.bbb = 'bbb'
-
-        output = MyService._sio#.parse_output(data, DATA_FORMAT.JSON)
-
-        print(output.definition)
-
-        '''
-        self.assertIsInstance(input, Bunch)
-        self.assertDictEqual(input, {
-            'aaa': 'aaa',
-            'bbb': 'bbb',
-        })
-        '''
 
 # ################################################################################################################################
 # ################################################################################################################################

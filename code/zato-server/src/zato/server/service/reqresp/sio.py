@@ -383,7 +383,12 @@ COMPLEX_VALUE = (AsIs, Dict, List, ListOfDicts, Nested)
 # ################################################################################################################################
 
 def is_bool(param, param_name, bool_parameter_prefixes, _Boolean=Boolean):
-    return any(param_name.startswith(prefix) for prefix in bool_parameter_prefixes) or isinstance(param, _Boolean)
+    if isinstance(param, _Boolean):
+        return True
+
+    for prefix in bool_parameter_prefixes:
+        if param_name.startswith(prefix):
+            return True
 
 # ################################################################################################################################
 
