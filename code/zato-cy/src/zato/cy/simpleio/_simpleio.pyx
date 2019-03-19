@@ -43,6 +43,11 @@ prefix_optional = '-'
 
 # ################################################################################################################################
 
+cdef class _ForceEmptyKeyMarker(object):
+    pass
+
+# ################################################################################################################################
+
 cdef class _NotGiven(object):
     """ Indicates that a particular value was not provided on input or output.
     """
@@ -112,8 +117,6 @@ cdef class SIOSkipEmpty(object):
                 skip_output_set.update(set(output_def))
 
         # Assign all computed values for runtime usage
-
-        logger.warn('QQQ %s', force_empty_output_set)
 
         self.empty_output_value = empty_output_value
         self.force_empty_input_set = set(force_empty_input_set or [])
@@ -772,6 +775,9 @@ cdef class CySimpleIO(object):
         # User-provided SimpleIO declaration, before parsing. This is parsed into self.definition.
         object user_declaration
 
+        # Kept for backward compatibility with 3.0
+        bint has_bool_force_empty_keys
+
 # ################################################################################################################################
 
     def __cinit__(self, SIOServerConfig server_config, object user_declaration):
@@ -791,6 +797,10 @@ cdef class CySimpleIO(object):
 
         # Note that to retain backward compatibility, it is force_empty_keys instead of force_empty_output_set
         raw_force_empty_output_set = getattr(user_declaration, 'force_empty_keys', NotGiven)
+        if raw_force_empty_output_set in (True, False):
+            self.has_bool_force_empty_keys = True
+        else:
+            self.has_bool_force_empty_keys = False # Initialize it explicitly
 
         # Again, quick input validation
         if (raw_force_empty_output_set is not NotGiven) and (class_skip_empty is not NotGiven):
@@ -802,6 +812,7 @@ cdef class CySimpleIO(object):
             output_def = NotGiven
             force_empty_input_set = NotGiven
             force_empty_output_set = raw_force_empty_output_set if raw_force_empty_output_set is not NotGiven else NotGiven
+
         else:
             empty_output_value = getattr(class_skip_empty, 'empty_output_value', InternalNotGiven)
 
@@ -826,6 +837,9 @@ cdef class CySimpleIO(object):
         if isinstance(force_empty_output_set, basestring):
             force_empty_output_set = [force_empty_output_set]
 
+        elif self.has_bool_force_empty_keys:
+            force_empty_output_set = [_ForceEmptyKeyMarker()]
+
         cpdef SIOSkipEmpty sio_skip_empty = SIOSkipEmpty(input_def, output_def, force_empty_input_set,
             force_empty_output_set, empty_output_value)
 
@@ -835,12 +849,22 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
+    cdef _resolve_bool_force_empty_keys(self):
+        self.definition.skip_empty.force_empty_output_set = set(self.definition._output_optional.get_elem_names())
+
+# ################################################################################################################################
+
     cpdef build(self, object class_):
         """ Parses a user-defined SimpleIO declaration (currently, a Python class)
         and populates all the internal structures as needed.
         """
         self._build_io_elems('input', class_)
         self._build_io_elems('output', class_)
+
+        # Now that we have all the elements, and if we have a definition using 'force_empty_keys = True' (or False),
+        # we need to turn the _ForceEmptyKeyMarker into an acutal list of elements to force into empty keys.
+        if self.has_bool_force_empty_keys:
+            self._resolve_bool_force_empty_keys()
 
 # ################################################################################################################################
 
