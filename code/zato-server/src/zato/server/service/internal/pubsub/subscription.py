@@ -32,6 +32,7 @@ from zato.common.odb.query.pubsub.subscribe import add_subscription, add_wsx_sub
 from zato.common.odb.query.pubsub.subscription import pubsub_subscription_list_by_endpoint_id_no_search
 from zato.common.pubsub import new_sub_key
 from zato.common.util import get_sa_model_columns, make_repr
+from zato.common.util.simpleio import drop_sio_elems
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic
@@ -274,7 +275,7 @@ class SubscribeServiceImpl(_Subscribe):
 
     class SimpleIO(AdminSIO):
         input_required = 'topic_name', 'is_internal'
-        input_optional = sub_impl_input_optional
+        input_optional = drop_sio_elems(common_sub_data, 'is_internal', 'topic_name')
         output_optional = 'sub_key', 'queue_depth'
         default_value = None
 

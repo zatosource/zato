@@ -72,7 +72,7 @@ def get_columns_to_visit(columns, is_required):
 
     return out
 
-def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_cluster_id):
+def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_cluster_id, class_=None):
 
     # This can be either a list or an SQLAlchemy object
     elems = attrs.get(elems_name) or []
@@ -184,7 +184,7 @@ def update_attrs(cls, name, attrs):
 class AdminServiceMeta(type):
 
     @staticmethod
-    def get_sio(attrs, name, input_required=None, output_required=None, is_list=True):
+    def get_sio(attrs, name, input_required=None, output_required=None, is_list=True, class_=None):
 
         _BaseClass = GetListAdminSIO if is_list else AdminSIO
 
@@ -218,7 +218,8 @@ class AdminServiceMeta(type):
 
                 sio_elem = getattr(SimpleIO, _name)
                 has_cluster_id = 'cluster_id' in sio_elem
-                sio_to_add = get_io(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id)
+                sio_to_add = get_io(
+                    attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, has_cluster_id, class_=class_)
                 sio_elem.extend(sio_to_add)
 
                 if attrs.is_create_edit and is_required:
@@ -275,7 +276,7 @@ class CreateEditMeta(AdminServiceMeta):
         attrs = update_attrs(cls, name, attrs)
         verb = 'Creates' if attrs.is_create else 'Updates'
         cls.__doc__ = '{} {}.'.format(verb, attrs.label)
-        cls.SimpleIO = CreateEditMeta.get_sio(attrs, name)
+        cls.SimpleIO = CreateEditMeta.get_sio(attrs, name, is_list=False, class_=cls)
         cls.handle = CreateEditMeta.handle(attrs)
         return super(CreateEditMeta, cls).__init__(cls)
 
