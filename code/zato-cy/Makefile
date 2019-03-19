@@ -20,4 +20,4 @@ simpleio:
 
 simpleio-test:
 	$(MAKE) build
-	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/test_simpleio.py -s
+	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/simpleio_/*.py -s

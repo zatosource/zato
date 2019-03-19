@@ -572,7 +572,7 @@ cdef class SecretConfig(ConfigItem):
 
 # ################################################################################################################################
 
-cdef class _SIOServerConfig(object):
+cdef class SIOServerConfig(object):
     """ Contains global SIO configuration. Each service's _sio attribute
     will refer to this object so as to have only one place where all the global configuration is kept.
     """
@@ -716,7 +716,7 @@ cdef class CySimpleIO(object):
     """
     cdef:
         # Server-wide configuration
-        _SIOServerConfig server_config
+        SIOServerConfig server_config
 
         # Current service's configuration, after parsing
         public SIODefinition definition
@@ -726,7 +726,7 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    def __cinit__(self, _SIOServerConfig server_config, object user_declaration):
+    def __cinit__(self, SIOServerConfig server_config, object user_declaration):
 
         input_value = getattr(user_declaration, 'default_input_value', InternalNotGiven)
         output_value = getattr(user_declaration, 'default_output_value', InternalNotGiven)
@@ -929,7 +929,6 @@ cdef class CySimpleIO(object):
         """ Given a service class, the method extracts its user-defined SimpleIO definition
         and attaches the Cython-based one to the class's _sio attribute.
         """
-
         # Get the user-defined SimpleIO definition
         user_sio = getattr(class_, 'SimpleIO', None)
 

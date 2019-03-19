@@ -357,13 +357,15 @@ class ConfigLoader(object):
         # but actual code paths require the pre-3.0 format so let's prepare it here.
         self.config.simple_io = ConfigDict('simple_io', Bunch())
 
-        int_exact = self.sio_config.int.exact
-        int_suffix = self.sio_config.int.suffix
-        bool_prefix = self.sio_config.bool.prefix
+        raise Exception(self.sio_config.int_config)
 
-        self.config.simple_io['int_parameters'] = int_exact if isinstance(int_exact, list) else [int_exact]
-        self.config.simple_io['int_parameter_suffixes'] = int_suffix if isinstance(int_suffix, list) else [int_suffix]
-        self.config.simple_io['bool_parameter_prefixes'] = bool_prefix if isinstance(bool_prefix, list) else [bool_prefix]
+        int_exact = self.sio_config.int_config.exact
+        int_suffix = self.sio_config.int_config.suffix
+        bool_prefix = self.sio_config.bool_config.prefix
+
+        self.config.simple_io['int_parameters'] = int_exact
+        self.config.simple_io['int_parameter_suffixes'] = int_suffix
+        self.config.simple_io['bool_parameter_prefixes'] = bool_prefix
 
         # Maintain backward-compatibility with pre-3.1 versions that did not specify any particular encoding
         bytes_to_str = self.sio_config.get('bytes_to_str')
