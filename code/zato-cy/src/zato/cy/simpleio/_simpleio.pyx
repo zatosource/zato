@@ -605,6 +605,9 @@ cdef class SIOServerConfig(object):
         public unicode prefix_text      # t
         public unicode prefix_uuid      # u
 
+        # Python 2/3 compatibility
+        public unicode bytes_to_str_encoding
+
         # Global variables, can be always overridden on a per-declaration basis
         public object skip_empty_keys
         public object skip_empty_request_keys
