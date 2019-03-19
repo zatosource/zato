@@ -54,7 +54,7 @@ class ValidationException(ZatoException):
 
 # ################################################################################################################################
 
-class ForceType(object):
+class SIOElem(object):
     """ Forces a SimpleIO element to use a specific data type.
     """
     def __init__(self, name, *args, **kwargs):
@@ -127,7 +127,7 @@ class ForceType(object):
 
 # ################################################################################################################################
 
-class AsIs(ForceType):
+class AsIs(SIOElem):
     """ The object won't be converted by SimpleIO machinery even though normally
     it would've been, for instance, because its name is 'user_id' and should've
     been converted over to an int.
@@ -139,7 +139,7 @@ class AsIs(ForceType):
 
 # ################################################################################################################################
 
-class Boolean(ForceType):
+class Boolean(SIOElem):
     """ Gets transformed into a bool object.
     """
     def from_json(self, value, *ignored):
@@ -149,7 +149,7 @@ class Boolean(ForceType):
 
 # ################################################################################################################################
 
-class CSV(ForceType):
+class CSV(SIOElem):
     """ Gets transformed into a comma separated list of items.
     """
     def from_json(self, value, *ignored):
@@ -164,7 +164,7 @@ class CSV(ForceType):
 
 # ################################################################################################################################
 
-class Dict(ForceType):
+class Dict(SIOElem):
     """ JSON dictionary or a key/value in XML.
     """
     def from_json(self, value, *ignored):
@@ -194,7 +194,7 @@ class Dict(ForceType):
 
 # ################################################################################################################################
 
-class Float(ForceType):
+class Float(SIOElem):
     """ Gets transformed into a float object.
     """
     def from_json(self, value, *ignored):
@@ -207,7 +207,7 @@ class Float(ForceType):
 
 # ################################################################################################################################
 
-class Integer(ForceType):
+class Integer(SIOElem):
     """ Gets transformed into an int object.
     """
     def from_json(self, value, *ignored):
@@ -217,7 +217,7 @@ class Integer(ForceType):
 
 # ################################################################################################################################
 
-class List(ForceType):
+class List(SIOElem):
     """ Transformed into a list of items in JSON or a list of <item> elems in XML.
     """
     def from_json(self, value, *ignored):
@@ -238,7 +238,7 @@ class List(ForceType):
 
 # ################################################################################################################################
 
-class ListOfDicts(ForceType):
+class ListOfDicts(SIOElem):
     """ Transformed into a list of dictionaries in JSON or a list of
      <my_list_of_dicts>
       <item_dict>
@@ -286,8 +286,8 @@ class ListOfDicts(ForceType):
 
 # ################################################################################################################################
 
-class Opaque(ForceType):
-    """ Allows for embedding arbitrary sub-elements, including simple strings, ForceType or other Nested elements.
+class Opaque(SIOElem):
+    """ Allows for embedding arbitrary sub-elements, including simple strings, SIOElem or other Nested elements.
     """
 
     def from_json(self, value, *ignored):
@@ -302,7 +302,7 @@ Nested = Opaque
 
 # ################################################################################################################################
 
-class Unicode(ForceType):
+class Unicode(SIOElem):
     """ Gets transformed into a unicode object.
     """
     def from_json(self, value, *ignored):
@@ -312,7 +312,7 @@ class Unicode(ForceType):
 
 # ################################################################################################################################
 
-class UTC(ForceType):
+class UTC(SIOElem):
     """ Will have the timezone part removed.
     """
     def from_json(self, value, *ignored):
@@ -322,7 +322,7 @@ class UTC(ForceType):
 
 # ################################################################################################################################
 
-class Date(ForceType):
+class Date(SIOElem):
     """ Serializes an object to a date string if it is not a string already.
     """
     def __init__(self, name, format='%Y-%m-%d', *args, **kwargs):
@@ -341,7 +341,7 @@ class Date(ForceType):
 
 # ################################################################################################################################
 
-class DateTime(ForceType):
+class DateTime(SIOElem):
     """ Serializes an object to a datetime string if it is not a string already.
     """
     def __init__(self, name, format='iso', *args, **kwargs):
@@ -405,7 +405,7 @@ def is_secret(param_name, _secrets_params=SECRETS.PARAMS):
 # ################################################################################################################################
 
 def resolve_default_value(param, default_value):
-    if isinstance(param, ForceType):
+    if isinstance(param, SIOElem):
 
         # Use the per-element's default value ..
         value = param.default
@@ -416,7 +416,7 @@ def resolve_default_value(param, default_value):
             # .. use the SimpleIO-level default value, but only if it is not missing either.
             value = default_value if default_value != NO_DEFAULT_VALUE else ''
 
-    # Not a ForceType wrapper, default to an empty string in this case.
+    # Not a SIOElem wrapper, default to an empty string in this case.
     else:
         value = ''
 
@@ -443,7 +443,7 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
             return value
 
         if value is not None:
-            if isinstance(param, ForceType):
+            if isinstance(param, SIOElem):
                 if value == '':
                     value = _resolve_output_value(param, force_empty_keys)
                 else:
@@ -536,7 +536,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
     encrypt_secrets, params_priority):
     """ Converts request parameters from any data format supported into Python objects.
     """
-    param_name = param.name if isinstance(param, ForceType) else param
+    param_name = param.name if isinstance(param, SIOElem) else param
 
     # First thing is to find out if we have parameters in channel_params. If so and they have priority
     # over payload, we don't look further. If they don't have priority, whether the value from channel_params
@@ -578,7 +578,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
                     raise ParsingException(cid, msg)
             else:
                 # Not required and not provided on input either in msg or channel params
-                # so we can use an empty string, but with ForceType elements in particular,
+                # so we can use an empty string, but with SIOElem elements in particular,
                 # we want to use their optional default value so as not to assume anything about input data.
                 value = resolve_default_value(param, default_value)
 

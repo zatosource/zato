@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from test.zato.cy.simpleio_ import BaseTestCase
+from test.zato.cy.simpleio_ import BaseTestCase, test_class_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,8 +21,8 @@ class InputOutputParsingTestCase(BaseTestCase):
         class SimpleIO:
             pass
 
-        # Providing such a bare declaration should not raise an exceptions
-        self.get_sio(SimpleIO)
+        # Providing such a bare declaration should not raise an exception
+        self.get_sio(SimpleIO, test_class_name)
 
 # ################################################################################################################################
 
@@ -34,7 +34,7 @@ class InputOutputParsingTestCase(BaseTestCase):
 
         # Cannot have both input and input_required on input
         with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
+            self.get_sio(SimpleIO, test_class_name)
 
         expected = "Cannot provide input_required if input is given, input:`qwerty`, " \
             "input_required:`(u'aaa', u'bbb')`, input_optional:`[]`"
@@ -51,7 +51,7 @@ class InputOutputParsingTestCase(BaseTestCase):
 
         # Cannot have both input and input_required on input
         with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
+            self.get_sio(SimpleIO, test_class_name)
 
         expected = "Cannot provide input_optional if input is given, input:`qwerty`, " \
             "input_required:`[]`, input_optional:`(u'aaa', u'bbb')`"
@@ -69,7 +69,7 @@ class InputOutputParsingTestCase(BaseTestCase):
 
         # Cannot have both input and input_required on input
         with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
+            self.get_sio(SimpleIO, test_class_name)
 
         expected = "Cannot provide input_required/input_optional if input is given, input:`qwerty`, " \
             "input_required:`(u'123', u'456')`, input_optional:`(u'aaa', u'bbb')`"
@@ -86,7 +86,7 @@ class InputOutputParsingTestCase(BaseTestCase):
 
         # Cannot have both output and output_required on output
         with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
+            self.get_sio(SimpleIO, test_class_name)
 
         expected = "Cannot provide output_required if output is given, output:`qwerty`, " \
             "output_required:`(u'aaa', u'bbb')`, output_optional:`[]`"
@@ -103,7 +103,7 @@ class InputOutputParsingTestCase(BaseTestCase):
 
         # Cannot have both output and output_required on output
         with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
+            self.get_sio(SimpleIO, test_class_name)
 
         expected = "Cannot provide output_optional if output is given, output:`qwerty`, " \
             "output_required:`[]`, output_optional:`(u'aaa', u'bbb')`"
@@ -121,7 +121,7 @@ class InputOutputParsingTestCase(BaseTestCase):
 
         # Cannot have both output and output_required on output
         with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
+            self.get_sio(SimpleIO, test_class_name)
 
         expected = "Cannot provide output_required/output_optional if output is given, output:`qwerty`, " \
             "output_required:`(u'123', u'456')`, output_optional:`(u'aaa', u'bbb')`"
@@ -137,9 +137,9 @@ class InputOutputParsingTestCase(BaseTestCase):
             input_optional = 'zxc', 'abc', 'rty'
 
         with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
+            self.get_sio(SimpleIO, test_class_name)
 
-        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']`"
+        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']` in `<my-test-class>`"
         self.assertEquals(ctx.exception.message, expected)
 
 # ################################################################################################################################
@@ -151,9 +151,9 @@ class InputOutputParsingTestCase(BaseTestCase):
             input_optional = 'zxc', 'abc', 'rty'
 
         with self.assertRaises(ValueError) as ctx:
-            self.get_sio(SimpleIO)
+            self.get_sio(SimpleIO, test_class_name)
 
-        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']`"
+        expected = "Elements in input_required and input_optional cannot be shared, found:`['abc', 'zxc']` in `<my-test-class>`"
         self.assertEquals(ctx.exception.message, expected)
 
 # ################################################################################################################################

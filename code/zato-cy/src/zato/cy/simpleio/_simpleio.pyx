@@ -12,6 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import types
 from decimal import Decimal as decimal_Decimal
 from itertools import chain
+from logging import getLogger
+from traceback import format_exc
 from uuid import UUID as uuid_UUID
 
 # datetutil
@@ -23,6 +25,10 @@ from zato.util_convert import to_bool
 
 # Zato - Cython
 from zato.bunch import Bunch, bunchify
+
+# ################################################################################################################################
+
+logger = getLogger('zato')
 
 # ################################################################################################################################
 
@@ -107,6 +113,8 @@ cdef class SIOSkipEmpty(object):
 
         # Assign all computed values for runtime usage
 
+        logger.warn('QQQ %s', force_empty_output_set)
+
         self.empty_output_value = empty_output_value
         self.force_empty_input_set = set(force_empty_input_set or [])
         self.force_empty_output_set = set(force_empty_output_set or [])
@@ -138,6 +146,7 @@ cdef enum ElemType:
     list_         = 1000
     opaque        = 1100
     text          = 1200
+    utc           = 1250 # Deprecated, do not use
     uuid          = 1300
     user_defined  = 1_000_000
 
@@ -148,7 +157,7 @@ cdef class Elem(object):
     """
     cdef:
         ElemType _type
-        public unicode name
+        unicode _name
         public object user_default_value
         public object default_value
         public bint is_required
@@ -181,9 +190,30 @@ cdef class Elem(object):
         else:
             is_required = True
 
-        self.name = name
+        self.name = self._get_unicode_name(name)
         self.is_required = is_required
         self.user_default_value = self.default_value = kwargs.get('default', NotGiven)
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = self._get_unicode_name(name)
+
+# ################################################################################################################################
+
+    cdef unicode _get_unicode_name(self, object name):
+        if name:
+            if not isinstance(name, basestring):
+                logger.warn('Name `%s` should be a str/bytes/unicode object rather than `%s`', name, type(name))
+            if not isinstance(name, unicode):
+                name = name.decode('utf8')
+
+        return name
+
+# ################################################################################################################################
 
     def set_default_value(self, sio_default_value):
 
@@ -525,6 +555,21 @@ cdef class Text(Elem):
 
 # ################################################################################################################################
 
+cdef class UTC(Elem):
+    def __cinit__(self):
+        self._type = ElemType.utc
+
+    @staticmethod
+    def from_json_static(value, *args, **kwargs):
+        return value.replace('+00:00', '')
+
+    def from_json(self, value):
+        return Opaque.from_json_static(value)
+
+    from_xml = to_xml = from_json
+
+# ################################################################################################################################
+
 cdef class UUID(Elem):
 
     def __cinit__(self):
@@ -790,12 +835,12 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cpdef build(self):
+    cpdef build(self, object class_):
         """ Parses a user-defined SimpleIO declaration (currently, a Python class)
         and populates all the internal structures as needed.
         """
-        self._build_io_elems('input')
-        self._build_io_elems('output')
+        self._build_io_elems('input', class_)
+        self._build_io_elems('output', class_)
 
 # ################################################################################################################################
 
@@ -812,7 +857,7 @@ cdef class CySimpleIO(object):
 
 # ################################################################################################################################
 
-    cdef _build_io_elems(self, container):
+    cdef _build_io_elems(self, container, class_):
         """ Returns I/O elems, e.g. input or input_required but first ensures that only correct elements are given in SimpleIO,
         e.g. if input is on input then input_required or input_optional cannot be.
         """
@@ -912,8 +957,8 @@ cdef class CySimpleIO(object):
         shared_elems = set(elem.name for elem in required) & set(elem.name for elem in optional)
 
         if shared_elems:
-            raise ValueError('Elements in input_required and input_optional cannot be shared, found:`{}`'.format(
-                sorted(elem.encode('utf8') for elem in shared_elems)))
+            raise ValueError('Elements in input_required and input_optional cannot be shared, found:`{}` in `{}`'.format(
+                sorted(elem.encode('utf8') for elem in shared_elems), class_))
 
         # Everything is validated, we can actually set the lists of elements now
 
@@ -932,17 +977,22 @@ cdef class CySimpleIO(object):
         """ Given a service class, the method extracts its user-defined SimpleIO definition
         and attaches the Cython-based one to the class's _sio attribute.
         """
-        # Get the user-defined SimpleIO definition
-        user_sio = getattr(class_, 'SimpleIO', None)
+        try:
+            # Get the user-defined SimpleIO definition
+            user_sio = getattr(class_, 'SimpleIO', None)
 
-        # This class does not use SIO so we can just return immediately
-        if not user_sio:
-            return
+            # This class does not use SIO so we can just return immediately
+            if not user_sio:
+                return
 
-        # Attach the Cython object representing the parsed user definition
-        cy_simple_io = CySimpleIO(server_config, user_sio)
-        cy_simple_io.build()
-        class_._sio = cy_simple_io
+            # Attach the Cython object representing the parsed user definition
+            cy_simple_io = CySimpleIO(server_config, user_sio)
+            cy_simple_io.build(class_)
+            class_._sio = cy_simple_io
+
+        except Exception:
+            logger.warn('Could not attach SimpleIO to class `%s`, e:`%s`', class_, format_exc())
+            raise
 
 # ################################################################################################################################
 

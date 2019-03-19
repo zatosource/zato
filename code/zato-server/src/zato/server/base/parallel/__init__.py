@@ -61,6 +61,17 @@ from zato.server.pickup import PickupManager
 
 # ################################################################################################################################
 
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.simpleio import SIOServerConfig
+
+    # For pyflakes
+    SIOServerConfig = SIOServerConfig
+
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 kvdb_logger = logging.getLogger('zato_kvdb')
 
@@ -100,7 +111,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.pickup_config = None
         self.logging_config = None
         self.logging_conf_path = None
-        self.sio_config = None
+        self.sio_config = None # type: SIOServerConfig
         self.sso_config = None
         self.connector_server_grace_time = None
         self.id = None

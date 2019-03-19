@@ -16,7 +16,6 @@ clean:
 
 simpleio:
 	$(MAKE) build
-	py $(CURDIR)/src/zato/cy/run_sio.py
 
 simpleio-test:
 	$(MAKE) build
