@@ -172,6 +172,11 @@ loggers:
         handlers: [stdout, ibm_mq]
         qualname: zato_ibm_mq
         propagate: false
+    zato_notif_sql:
+        level: INFO
+        handlers: [stdout, notif_sql]
+        qualname: zato_notif_sql
+        propagate: false
 
 handlers:
     default:
@@ -266,6 +271,13 @@ handlers:
         formatter: default
         class: logging.handlers.RotatingFileHandler
         filename: './logs/ibm-mq.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    notif_sql:
+        formatter: default
+        class: logging.handlers.RotatingFileHandler
+        filename: './logs/notif-sql.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
