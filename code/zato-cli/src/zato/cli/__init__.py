@@ -669,8 +669,13 @@ class ZatoCommand(object):
     def _copy_crypto(self, repo_dir, args, middle_part):
         for name in('pub-key', 'priv-key', 'cert', 'ca-certs'):
             arg_name = '{}_path'.format(name.replace('-', '_'))
-            full_path = os.path.join(repo_dir, 'zato-{}-{}.pem'.format(middle_part, name))
-            shutil.copyfile(os.path.abspath(getattr(args, arg_name)), full_path)
+            target_path = os.path.join(repo_dir, 'zato-{}-{}.pem'.format(middle_part, name))
+
+            source_path = getattr(args, arg_name, None)
+            if source_path:
+                source_path = os.path.abspath(source_path)
+                if os.path.exists(source_path):
+                    shutil.copyfile(source_path, target_path)
 
 # ################################################################################################################################
 
