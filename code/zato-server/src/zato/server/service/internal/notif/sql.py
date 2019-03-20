@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from datetime import datetime
+from logging import DEBUG, getLogger
 
 # SQLAlchemy
 from sqlalchemy.orm.exc import NoResultFound
@@ -26,6 +27,11 @@ from zato.common.odb.query import notif_sql_list
 from zato.server.service.internal import AdminService
 from zato.server.service.internal.notif import NotifierService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+
+# ################################################################################################################################
+
+logger_notif = getLogger('zato_notif_sql')
+has_debug = logger_notif.isEnabledFor(DEBUG)
 
 # ################################################################################################################################
 
@@ -91,6 +97,8 @@ class RunNotifier(NotifierService):
 
     def run_notifier_impl(self, config):
 
+        # To make it possible to save it to logs directly
+        config['password'] = SECRET_SHADOW
         out = []
 
         try:
@@ -100,19 +108,27 @@ class RunNotifier(NotifierService):
                     filter(SQLConnectionPool.cluster_id==self.server.cluster_id).\
                     one().name
         except NoResultFound:
-            config['password'] = SECRET_SHADOW
-            self.logger.info('Stopping notifier, could not find an SQL pool for config `%s`', config)
+            logger_notif('Stopping notifier, could not find an SQL pool for config `%s`', config)
             self.keep_running = False
             return
 
         with closing(self.outgoing.sql[def_name].session()) as session:
-            for row in session.execute(config.query).fetchall():
+            rows = session.execute(config.query).fetchall()
+            for row in rows:
                 dict_row = dict(row.items())
                 for k, v in dict_row.items():
                     if isinstance(v, datetime):
                         dict_row[k] = v.isoformat()
                 out.append(dict_row)
 
-            self.invoke_async(config.service_name, {'data':out})
+            if out:
+                msg = 'Executing `%s` in background with %d %s'
+                if has_debug:
+                    msg += ' ({})'.format(out)
+
+                len_out = len(out)
+                row_noun = 'row' if len_out == 1 else 'rows'
+                logger_notif.info(msg, config.service_name, len_out, row_noun)
+                self.invoke_async(config.service_name, {'data':out})
 
 # ################################################################################################################################

@@ -646,7 +646,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def invoke_startup_services(self, is_first):
         _invoke_startup_services('Parallel', 'startup_services_first_worker' if is_first else 'startup_services_any_worker',
-            self.fs_server_config, self.repo_location, self.broker_client, 'zato.notif.init-notifiers',
+            self.fs_server_config, self.repo_location, self.broker_client, None,
             is_sso_enabled=self.is_sso_enabled)
 
 # ################################################################################################################################
