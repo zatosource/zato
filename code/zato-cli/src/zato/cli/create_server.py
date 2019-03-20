@@ -586,12 +586,12 @@ class Create(ZatoCommand):
     opts = deepcopy(common_odb_opts)
     opts.extend(kvdb_opts)
 
-    opts.append({'name':'pub_key_path', 'help':"Path to the server's public key in PEM"})
-    opts.append({'name':'priv_key_path', 'help':"Path to the server's private key in PEM"})
-    opts.append({'name':'cert_path', 'help':"Path to the server's certificate in PEM"})
-    opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':"Server's name"})
+    opts.append({'name':'--pub_key_path', 'help':"Path to the server's public key in PEM"})
+    opts.append({'name':'--priv_key_path', 'help':"Path to the server's private key in PEM"})
+    opts.append({'name':'--cert_path', 'help':"Path to the server's certificate in PEM"})
+    opts.append({'name':'--ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
     opts.append({'name':'--secret_key', 'help':"Server's secret key (must be the same for all servers)"})
     opts.append({'name':'--jwt_secret', 'help':"Server's JWT secret (must be the same for all servers)"})
     opts.append({'name':'--http_port', 'help':"Server's HTTP port"})
@@ -640,10 +640,13 @@ class Create(ZatoCommand):
                 self.prepare_directories(show_output)
 
             repo_dir = os.path.join(self.target_dir, 'config', 'repo')
+
+            # Note that server crypto material is optional so if none was given on input
+            # this command will be a no-op.
             self.copy_server_crypto(repo_dir, args)
 
             if show_output:
-                self.logger.debug('Created a Bazaar repo in {}'.format(repo_dir))
+                self.logger.debug('Created a repo in {}'.format(repo_dir))
                 self.logger.debug('Creating files..')
 
             for file_name, contents in sorted(files.items()):
