@@ -245,8 +245,8 @@ class Create(ZatoCommand):
         1) CA and crypto material
         2) ODB
         3) ODB initial data
-        4) servers
-        5) load-balancer
+        4) Servers
+        5) Load-balancer
         6) Web admin
         7) Scheduler
         8) Scripts
@@ -254,18 +254,6 @@ class Create(ZatoCommand):
 
         if args.odb_type == 'sqlite':
             args.sqlite_path = os.path.abspath(os.path.join(args.path, 'zato.db'))
-
-        '''
-        cluster_id_args = Bunch()
-        cluster_id_args.odb_db_name = args.odb_db_name
-        cluster_id_args.odb_host = args.odb_host
-        cluster_id_args.odb_password = args.odb_password
-        cluster_id_args.odb_port = args.odb_port
-        cluster_id_args.odb_type = args.odb_type
-        cluster_id_args.odb_user = args.odb_user
-        cluster_id_args.postgresql_schema = args.postgresql_schema
-        cluster_id_args.sqlite_path = args.sqlite_path
-        '''
 
         next_step = count(1)
         next_port = count(http_plain_server_port)
