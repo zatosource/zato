@@ -14,7 +14,7 @@ from copy import deepcopy
 from logging import getLogger
 
 # gevent
-from gevent import sleep
+from gevent import sleep, spawn
 
 # Zato
 from zato.common import SECRET_SHADOW
@@ -103,7 +103,7 @@ class NotifierService(AdminService):
         self.environ['notif_sleep_interval'] = config.interval
 
         while self.keep_running:
-            spawn_greenlet(self.run_notifier, config, timeout=2)
+            spawn(self.run_notifier, config)
             sleep(self.environ['notif_sleep_interval'])
 
         self.logger.info('Stopped `%s` notifier `%s`', self.notif_type, config.name)

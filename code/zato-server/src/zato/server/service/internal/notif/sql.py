@@ -45,20 +45,22 @@ list_func = notif_sql_list
 output_required_extra = ['service_name']
 create_edit_input_required_extra = ['service_name']
 create_edit_rewrite = ['service_name']
-skip_input_params = ('notif_type', 'service_id', 'get_data_patt', 'get_data', 'get_data_patt_neg', 'name_pattern_neg', 'name_pattern')
-skip_output_params = ('get_data', 'get_data_patt_neg', 'get_data_patt', 'name_pattern_neg', 'name_pattern')
+skip_input_params = ('notif_type', 'service_id', 'get_data_patt', 'get_data', 'get_data_patt_neg',
+    'name_pattern_neg', 'name_pattern')
+skip_output_params = ('get_data', 'get_data_patt_neg', 'get_data_patt', 'name_pattern_neg', 'name_pattern', 'service_name')
 
 # ################################################################################################################################
 
 def instance_hook(service, input, instance, attrs):
     instance.notif_type = COMMON_NOTIF.TYPE.SQL
 
-    with closing(service.odb.session()) as session:
-        instance.service_id = session.query(Service).\
-            filter(Service.name==input.service_name).\
-            filter(Service.cluster_id==Cluster.id).\
-            filter(Service.cluster_id==input.cluster_id).\
-            one().id
+    if attrs.is_create_edit:
+        with closing(service.odb.session()) as session:
+            instance.service_id = session.query(Service).\
+                filter(Service.name==input.service_name).\
+                filter(Service.cluster_id==Cluster.id).\
+                filter(Service.cluster_id==input.cluster_id).\
+                one().id
 
 # ################################################################################################################################
 
