@@ -14,8 +14,6 @@ env:
   - MODE=packaging IMAGE=ubuntu:16.04 PY_VERSION=python3
   - MODE=packaging IMAGE=ubuntu:18.04
   - MODE=packaging IMAGE=ubuntu:18.04 PY_VERSION=python3
-  - MODE=packaging IMAGE=debian:7
-  - MODE=packaging IMAGE=debian:7 PY_VERSION=python3
   - MODE=packaging IMAGE=debian:8
   - MODE=packaging IMAGE=debian:8 PY_VERSION=python3
   - MODE=packaging IMAGE=debian:9
