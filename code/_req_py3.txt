@@ -8,5 +8,5 @@ pyaml==18.11.0
 pyprof2calltree==1.4.4
 python-ldap==3.1.0
 python-swiftclient==3.6.0
-git+https://github.com/tonyseek/simple-rbac.git@048d4170b8cbeb65b7bf88be3bd26385bfc449fa#egg=simple-rbac
+https://github.com/salmito/simple-rbac/archive/master.zip#egg=simple-rbac
 stompest==2.3.0
