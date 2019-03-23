@@ -49,7 +49,8 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
         sudo yum install -y rh-python36
 
         # 3. Start using software collections:
-        scl enable rh-python36 bash
+        # scl enable rh-python36 bash
+        source /opt/rh/rh-python36/enable
       else
         sudo yum install -y ${PY_BINARY}
       fi
