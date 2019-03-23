@@ -57,6 +57,10 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
   elif [ "$(type -p apk)" ]
   then
       sudo apk add ${PY_BINARY}
+      if [[ "${PY_BINARY}" == "python3" ]]
+      then
+          sudo apk add python3-dev
+      fi
   elif [ "$(uname -s)" = "Darwin" ]
   then
       brew install  $PY_BINARY
