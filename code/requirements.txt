@@ -110,7 +110,7 @@ python-editor==1.0.1
 python-glanceclient==0.12.0
 python-keyczar==0.71rc0
 python-keystoneclient==0.6.0
-python-memcached==1.58
+python-memcached==1.59
 python-novaclient==2.17.0
 python-ntlm==1.0.1
 pytz==2018.9
