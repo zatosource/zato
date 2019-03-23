@@ -6,7 +6,6 @@ https://github.com/dsuch/paodate/archive/master.zip#egg=paodate
 Paste==3.0.6
 pyaml==18.11.0
 pyprof2calltree==1.4.4
-python-ldap==3.1.0
 python-swiftclient==3.6.0
 https://github.com/salmito/simple-rbac/archive/master.zip#egg=simple-rbac
 stompest==2.3.0
