@@ -60,6 +60,8 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
       if [[ "${PY_BINARY}" == "python3" ]]
       then
           sudo apk add python3-dev
+      else
+          sudo apk add python-dev
       fi
   elif [ "$(uname -s)" = "Darwin" ]
   then
