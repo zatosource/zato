@@ -16,7 +16,7 @@ PY_BINARY=$1
 
 # If it starts with "python2" then we install extra pip dependencies for Python 2.7,
 # otherwise, extra dependencies for Python 3.x will be installed.
-if [[ $PY_BINARY == python2* ]]
+if [[ $(python -c 'import sys; print(sys.version_info[:][0])') -eq 2 ]]
 then
     HAS_PYTHON2=1
     HAS_PYTHON3=0
@@ -26,6 +26,7 @@ else
     HAS_PYTHON3=1
     EXTRA_REQ_VERSION=3
 fi
+
 
 # Stamp the release hash.
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
