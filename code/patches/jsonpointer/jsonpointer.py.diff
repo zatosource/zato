@@ -12,15 +12,6 @@
  
  class EndOfList(object):
      """ Result of accessing element "-" of a list """
-@@ -225,7 +230,7 @@
-                 return doc[part]
- 
-             except KeyError:
--                raise JsonPointerException("member '%s' not found in %s" % (part, doc))
-+                raise PathNotFoundException("member '%s' not found in %s" % (part, doc))
- 
-         elif isinstance(doc, list):
- 
 @@ -236,7 +241,7 @@
                  return doc[part]
  
