@@ -25,6 +25,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.expression import true
+from sqlalchemy.sql.type_api import TypeEngine
 
 # Bunch
 from bunch import Bunch
@@ -113,8 +114,19 @@ class WritableTupleQuery(Query):
         it = super(WritableTupleQuery, self).__iter__()
 
         columns_desc = self.column_descriptions
-        if len(columns_desc) > 1 or not isinstance(columns_desc[0]['type'], type):
+
+        first_type = columns_desc[0]['type']
+        len_columns_desc = len(columns_desc)
+
+        # This is a simple result of a query such as session.query(ObjectName).count()
+        if len_columns_desc == 1 and isinstance(first_type, TypeEngine):
+            return it
+
+        # A list of objects, e.g. from .all()
+        elif len_columns_desc > 1:
             return (WritableKeyedTuple(elem) for elem in it)
+
+        # Anything else
         else:
             return it
 
