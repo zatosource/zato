@@ -270,7 +270,8 @@ class RequestDispatcher(object):
                 # so it doesn't have to be parsed two or more times.
                 post_data = {}
 
-                sec = self.url_data.url_sec[channel_item['match_target']]
+                match_target = channel_item['match_target']
+                sec = self.url_data.url_sec[match_target]
 
                 if sec.sec_def != ZATO_NONE or sec.sec_use_rbac is True:
 
