@@ -1239,6 +1239,9 @@ class URLData(CyURLData, OAuthDataStore):
             'url_path': msg.get('old_url_path'),
         }, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
 
+        # Delete from URL cache
+        self._remove_from_cache(old_match_target)
+
         # In case of an internal error, we won't have the match all
         match_idx = ZATO_NONE
         for item in self.channel_data:
@@ -1253,9 +1256,6 @@ class URLData(CyURLData, OAuthDataStore):
 
         # Channel's security now
         del self.url_sec[old_match_target]
-
-        # Delete from URL cache
-        self._remove_from_cache(old_match_target)
 
         # Re-sort all elements to match against
         self.sort_channel_data()
