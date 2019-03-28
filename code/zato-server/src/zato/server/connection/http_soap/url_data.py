@@ -1224,7 +1224,8 @@ class URLData(CyURLData, OAuthDataStore):
         match_target = get_match_target(msg, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
         self.channel_data.append(self._channel_item_from_msg(msg, match_target, old_data))
         self.url_sec[match_target] = self._sec_info_from_msg(msg)
-        self.url_path_cache.pop(match_target, None)
+
+        self._remove_from_cache(match_target)
         self.sort_channel_data()
 
     def _delete_channel(self, msg):
@@ -1237,6 +1238,9 @@ class URLData(CyURLData, OAuthDataStore):
             'soap_action': msg.get('old_soap_action'),
             'url_path': msg.get('old_url_path'),
         }, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
+
+        # Delete from URL cache
+        self._remove_from_cache(old_match_target)
 
         # In case of an internal error, we won't have the match all
         match_idx = ZATO_NONE
@@ -1252,9 +1256,6 @@ class URLData(CyURLData, OAuthDataStore):
 
         # Channel's security now
         del self.url_sec[old_match_target]
-
-        # Delete from URL cache
-        self.url_path_cache.pop(old_match_target, None)
 
         # Re-sort all elements to match against
         self.sort_channel_data()
