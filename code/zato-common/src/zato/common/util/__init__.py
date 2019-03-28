@@ -206,7 +206,7 @@ def absjoin(base, path):
 # ################################################################################################################################
 
 def absolutize(path, base=''):
-    """ Turns a relative path to an absolute one or returns it as is if it's already absolute.
+    """ Turns a relative path into an absolute one or returns it as is if it's already absolute.
     """
     if not isabs(path):
         path = os.path.expanduser(path)

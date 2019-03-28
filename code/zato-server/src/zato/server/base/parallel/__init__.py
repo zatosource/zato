@@ -61,6 +61,19 @@ from zato.server.pickup import PickupManager
 
 # ################################################################################################################################
 
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # Zato
+    from zato.server.service.store import ServiceStore
+
+    # For pyflakes
+    ServiceStore = ServiceStore
+
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 kvdb_logger = logging.getLogger('zato_kvdb')
 
@@ -112,6 +125,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.kvdb = None
         self.startup_jobs = None
         self.worker_store = None # type: WorkerStore
+        self.service_store = None # type: ServiceStore
         self.request_dispatcher_dispatch = None
         self.deployment_lock_expires = None
         self.deployment_lock_timeout = None
@@ -482,6 +496,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
 
+        self.hot_deploy_config.pickup_dir = absolutize(self.fs_server_config.hot_deploy.pickup_dir, self.repo_location)
+
         self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(
             self.repo_location, self.fs_server_config.hot_deploy.work_dir))
 
@@ -699,7 +715,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         stanza = 'zato_internal_service_hot_deploy'
         stanza_config = Bunch({
-            'pickup_from': absolutize(self.fs_server_config.hot_deploy.pickup_dir, self.repo_location),
+            'pickup_from': self.hot_deploy_config.pickup_dir,
             'patterns': [globre.compile('*.py', globre.EXACT | IGNORECASE)],
             'read_on_pickup': False,
             'parse_on_pickup': False,

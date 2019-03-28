@@ -17,7 +17,7 @@ from datetime import datetime
 from functools import total_ordering
 from hashlib import sha256
 from importlib import import_module
-from inspect import isclass
+from inspect import getmodule, isclass
 from pickle import HIGHEST_PROTOCOL as highest_pickle_protocol
 from traceback import format_exc
 from typing import Any, List
@@ -429,7 +429,7 @@ class ServiceStore(object):
                     'is_active': self.services[impl_name]['is_active'],
                     'slow_threshold': self.services[impl_name]['slow_threshold'],
                     'fs_location': inspect.getfile(class_),
-                    'deployment_info': 'zzz'
+                    'deployment_info': '<todo>'
                 })
 
             # All set, write out the cache file
@@ -761,12 +761,17 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _should_deploy(self, name, item):
+    def _should_deploy(self, name, item, current_module):
         """ Is an object something we can deploy on a server?
         """
         if isclass(item) and hasattr(item, '__mro__') and hasattr(item, 'get_name'):
             if item is not Service and item is not AdminService and item is not PubSubHook:
                 if not hasattr(item, DONT_DEPLOY_ATTR_NAME) and not issubclass(item, ModelBase):
+
+                    # Do not deploy services that only happened to have been imported
+                    # in this module but are actually defined elsewhere.
+                    if getmodule(item) is not current_module:
+                        return False
 
                     service_name = item.get_name()
 
@@ -849,7 +854,7 @@ class ServiceStore(object):
                 with self.update_lock:
                     item = getattr(mod, name)
 
-                    if self._should_deploy(name, item):
+                    if self._should_deploy(name, item, mod):
                         if item.before_add_to_store(logger):
                             to_process.append(self._visit_class(mod, item, fs_location, is_internal))
                         else:
@@ -863,3 +868,66 @@ class ServiceStore(object):
             return to_process
 
 # ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+from shutil import copy as shutil_copy
+from inspect import getmro, getsourcefile
+
+# Bunch
+from bunch import bunchify
+
+# Zato
+from zato.server.service import Service
+
+class RedeployOnParentChange(Service):
+    name = 'aaa.redeploy.on.parent.change'
+    def handle(self):
+
+        # Local aliases
+        to_auto_deploy = []
+        service_store = self.server.service_store
+
+        # Information about the service that was deployed
+        deployed_service_name = self.request.raw_request.service_name
+        deployed_service_impl_name = self.request.raw_request.service_impl_name
+
+        # Iterate over all current services to check if any of them subclasses the service just deployed ..
+        for impl_name, service_info in service_store.services.items():
+
+            # .. skip the one just deployed ..
+            if impl_name == deployed_service_impl_name:
+                continue
+
+            # .. a Python class represening each service ..
+            service_class = service_info['service_class']
+
+            # .. get all parent classes of that ..
+            service_mro = getmro(service_class)
+
+            # .. try to find the deployed service amount parents ..
+            for base_class in service_mro:
+                if issubclass(base_class, Service) and (not base_class is Service):
+                    if base_class.get_name() == deployed_service_name:
+
+                        # .. if it was found, add it to the list of what needs to be auto-redeployed ..
+                        to_auto_deploy.append(service_info)
+
+        # We will not always have any services to redeploy
+        if to_auto_deploy:
+
+            # Inform users that we are to auto-redeploy services and why we are doing it
+            self.logger.info('Base service `%s` changed; auto-redeploying `%s`', deployed_service_name,
+                    sorted(item['name'] for item in to_auto_deploy))
+
+            # Go through each child service found and hot-deploy it
+            for item in to_auto_deploy:
+                module_path = getsourcefile(item['service_class'])
+                self.logger.warn('Copying `%s` to `%s`', module_path)
+
+                shutil_copy(module_path, '/home/dsuch/env/pjm1/server1/pickup/incoming/services')
+'''

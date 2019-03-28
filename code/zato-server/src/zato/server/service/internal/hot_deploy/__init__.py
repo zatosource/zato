@@ -50,8 +50,8 @@ class Create(AdminService):
             elif os.path.isdir(item):
                 shutil.rmtree(item)
             else:
-                msg = "Could not delete [{}], it's neither file nor a directory, stat:[{}]".format(item, os.stat(item))
-                self.logger.warn(msg)
+                msg = "Could not delete `%s`, it's neither file nor a directory, stat:`%s`"
+                self.logger.warn(msg, item, os.stat(item))
 
     def _backup_last(self, fs_now, current_work_dir, backup_format, last_backup_work_dir):
 
@@ -137,7 +137,11 @@ class Create(AdminService):
 
             msg = {}
             msg['cid'] = new_cid()
-            msg['id'] = service_id
+            msg['service_id'] = service_id
+            msg['service_name'] = service.name
+            msg['service_impl_name'] = service.impl_name
+            msg['source_server_name'] = self.server.name
+            msg['source_server_pid'] = self.server.pid
             msg['action'] = HOT_DEPLOY.AFTER_DEPLOY.value
 
             self.broker_client.publish(msg)
