@@ -1791,7 +1791,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Redeploy services that depended on the service just deployed.
         # Uses .get below because the feature is new in 3.1 which is why it is optional.
         if self.server.fs_server_config.hot_deploy.get('redeploy_on_parent_change', True):
-            self.invoke('aaa.redeploy.on.parent.change', msg)
+            self.server.service_store.redeploy_on_parent_changed(msg.service_name, msg.service_impl_name)
 
 # ################################################################################################################################
 

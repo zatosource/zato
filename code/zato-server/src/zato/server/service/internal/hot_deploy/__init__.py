@@ -140,8 +140,6 @@ class Create(AdminService):
             msg['service_id'] = service_id
             msg['service_name'] = service.name
             msg['service_impl_name'] = service.impl_name
-            msg['source_server_name'] = self.server.name
-            msg['source_server_pid'] = self.server.pid
             msg['action'] = HOT_DEPLOY.AFTER_DEPLOY.value
 
             self.broker_client.publish(msg)
