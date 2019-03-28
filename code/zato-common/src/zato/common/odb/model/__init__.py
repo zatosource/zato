@@ -608,7 +608,7 @@ class HTTPSOAP(Base):
             timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None,
             cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None, content_type=None,
             cache_id=None, cache_type=None, cache_expiry=None, cache_name=None, content_encoding=None, match_slash=None,
-            opaque=None, **kwargs):
+            http_accept=None, opaque=None, **kwargs):
         super(HTTPSOAP, self).__init__(**kwargs)
         self.id = id
         self.name = name
@@ -646,6 +646,7 @@ class HTTPSOAP(Base):
         self.cache_name = cache_name # Not used by the DB
         self.content_encoding = content_encoding
         self.match_slash = match_slash # Not used by the DB
+        self.http_accept = http_accept # Not used by the DB
         self.opaque1 = opaque
 
 # ################################################################################################################################

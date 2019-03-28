@@ -21,8 +21,7 @@ from django.template.response import TemplateResponse
 from zato.common import GENERIC
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sftp import CommandShellForm, CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-    method_allowed, ping_connection, slugify
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection, slugify
 from zato.common.odb.model import GenericConn
 
 # ################################################################################################################################
@@ -114,12 +113,6 @@ class Delete(_Delete):
 @method_allowed('POST')
 def ping(req, id, cluster_id):
     return ping_connection(req, 'zato.generic.connection.ping', id, 'SFTP connection')
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def change_password(req):
-    return _change_password(req, 'zato.generic.connection.change-password')
 
 # ################################################################################################################################
 

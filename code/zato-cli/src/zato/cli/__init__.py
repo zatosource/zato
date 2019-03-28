@@ -172,6 +172,11 @@ loggers:
         handlers: [stdout, ibm_mq]
         qualname: zato_ibm_mq
         propagate: false
+    zato_notif_sql:
+        level: INFO
+        handlers: [stdout, notif_sql]
+        qualname: zato_notif_sql
+        propagate: false
 
 handlers:
     default:
@@ -266,6 +271,13 @@ handlers:
         formatter: default
         class: logging.handlers.RotatingFileHandler
         filename: './logs/ibm-mq.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    notif_sql:
+        formatter: default
+        class: logging.handlers.RotatingFileHandler
+        filename: './logs/notif-sql.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
@@ -669,8 +681,13 @@ class ZatoCommand(object):
     def _copy_crypto(self, repo_dir, args, middle_part):
         for name in('pub-key', 'priv-key', 'cert', 'ca-certs'):
             arg_name = '{}_path'.format(name.replace('-', '_'))
-            full_path = os.path.join(repo_dir, 'zato-{}-{}.pem'.format(middle_part, name))
-            shutil.copyfile(os.path.abspath(getattr(args, arg_name)), full_path)
+            target_path = os.path.join(repo_dir, 'zato-{}-{}.pem'.format(middle_part, name))
+
+            source_path = getattr(args, arg_name, None)
+            if source_path:
+                source_path = os.path.abspath(source_path)
+                if os.path.exists(source_path):
+                    shutil.copyfile(source_path, target_path)
 
 # ################################################################################################################################
 

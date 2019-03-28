@@ -1,0 +1,727 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}LDAP outconns{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} LDAP {% endcomment %}
+    <script type="text/javascript" src="/static/js/outgoing/ldap.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            'name',
+            '_is_active',
+            '_server_list',
+            'username',
+
+            'auth_type',
+            '_is_tls_enabled',
+
+            '_change_password',
+            '_edit',
+            '_delete',
+            '_ping',
+
+            'id',
+            'is_active',
+
+            {% comment %} 1 {% endcomment %}
+            'get_info',
+            'ip_mode',
+            'connect_timeout',
+            'auto_bind',
+
+            {% comment %} 2 {% endcomment %}
+            'server_list',
+            'pool_size',
+            'pool_exhaust_timeout',
+            'pool_keep_alive',
+
+            {% comment %} 3 {% endcomment %}
+            'pool_max_cycles',
+            'pool_lifetime',
+            'pool_ha_strategy',
+
+            {% comment %} 4 {% endcomment %}
+            'pool_name',
+            'sasl_mechanism',
+            'is_read_only',
+            'is_stats_enabled',
+
+            {% comment %} 5 {% endcomment %}
+            'should_check_names',
+            'use_auto_range',
+            'should_return_empty_attrs',
+            'is_tls_enabled',
+
+            {% comment %} 6 {% endcomment %}
+            'tls_private_key_file',
+            'tls_cert_file',
+            'tls_ca_certs_file',
+            'tls_version',
+
+            {% comment %} 7 {% endcomment %}
+            'tls_ciphers',
+            'tls_validate'
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Outgoing LDAP connections</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% with has_generic="1" generic_type="outconn-ldap" %}
+    {% include "zato/search-form.html" with page_prompt="Show outgoing connections" %}
+{% endwith %}
+
+    {% if cluster_id %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.outgoing.ldap.create()">Create a new outgoing LDAP connection</a>
+        </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Servers</a></th>
+                        <th><a href="#">Credentials</a></th>
+
+                        <th><a href="#">Auth type</a></th>
+                        <th><a href="#">Use TLS</a></th>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 2 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 3 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 4 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 5 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 6 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 7 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.server_list|linebreaksbr }}</td>
+                        <td>{{ item.username }}</td>
+
+                        <td>{{ item.auth_type }}</td>
+                        <td>{{ item.is_tls_enabled|yesno:'Yes,No' }}</td>
+
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.ldap.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.ldap.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td class='ignore'>{{ item.get_info }}</td>
+                        <td class='ignore'>{{ item.ip_mode }}</td>
+                        <td class='ignore'>{{ item.connect_timeout }}</td>
+                        <td class='ignore'>{{ item.auto_bind }}</td>
+
+                        {% comment %} 2 {% endcomment %}
+                        <td class='ignore'>{{ item.server_list }}</td>
+                        <td class='ignore'>{{ item.pool_size }}</td>
+                        <td class='ignore'>{{ item.pool_exhaust_timeout }}</td>
+                        <td class='ignore'>{{ item.pool_keep_alive }}</td>
+
+                        {% comment %} 3 {% endcomment %}
+                        <td class='ignore'>{{ item.pool_max_cycles }}</td>
+                        <td class='ignore'>{{ item.pool_lifetime }}</td>
+                        <td class='ignore'>{{ item.pool_ha_strategy }}</td>
+
+                        {% comment %} 4 {% endcomment %}
+                        <td class='ignore'>{{ item.pool_name }}</td>
+                        <td class='ignore'>{{ item.sasl_mechanism }}</td>
+                        <td class='ignore'>{{ item.is_read_only }}</td>
+                        <td class='ignore'>{{ item.is_stats_enabled }}</td>
+
+                        {% comment %} 5 {% endcomment %}
+                        <td class='ignore'>{{ item.should_check_names }}</td>
+                        <td class='ignore'>{{ item.use_auto_range }}</td>
+                        <td class='ignore'>{{ item.should_return_empty_attrs }}</td>
+                        <td class='ignore'>{{ item.is_tls_enabled }}</td>
+
+                        {% comment %} 6 {% endcomment %}
+                        <td class='ignore'>{{ item.tls_private_key_file }}</td>
+                        <td class='ignore'>{{ item.tls_cert_file }}</td>
+                        <td class='ignore'>{{ item.tls_ca_certs_file }}</td>
+                        <td class='ignore'>{{ item.tls_version }}</td>
+
+                        {% comment %} 7 {% endcomment %}
+                        <td class='ignore'>{{ item.tls_ciphers }}</td>
+                        <td class='ignore'>{{ item.tls_validate }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='18'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "out-ldap-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:8%">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+
+                                <label>
+                                Active
+                                {{ create_form.is_active }}
+                                </label>
+                                |
+                                <label>
+                                R/O
+                                {{ create_form.is_read_only }}
+                                </label>
+                                |
+                                <label>
+                                Stats
+                                {{ create_form.is_stats_enabled }}
+                                </label>
+                                |
+                                <label>
+                                Auto-rng
+                                {{ create_form.use_auto_range }}
+                                </label>
+                                |
+                                <label>
+                                Chk. names
+                                {{ create_form.should_check_names }}
+                                </label>
+                                |
+                                <label>
+                                Emp. attrs
+                                {{ create_form.should_return_empty_attrs }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Pool</td>
+                            <td>
+                                <label>
+                                Name
+                                {{ create_form.pool_name }}
+                                </label>
+                                |
+                                <label>
+                                Size
+                                {{ create_form.pool_size }}
+                                </label>
+                                |
+                                <label>
+                                Max. cycles
+                                {{ create_form.pool_max_cycles }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+                                <label>
+                                HA
+                                {{ create_form.pool_ha_strategy }}
+                                </label>
+                                |
+                                <label>
+                                Info
+                                {{ create_form.get_info }}
+                                </label>
+                                |
+                                <label>
+                                Auto-bnd
+                                {{ create_form.auto_bind }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Timeout</td>
+                            <td>
+                                <label>
+                                Connection
+                                {{ create_form.connect_timeout }}
+                                </label>
+                                |
+                                <label>
+                                Exhaust
+                                {{ create_form.pool_exhaust_timeout }}
+                                </label>
+                                |
+                                <label>
+                                Keep-alive
+                                {{ create_form.pool_keep_alive }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Auth</td>
+                            <td>
+                                <label>
+                                Type
+                                {{ create_form.auth_type }}
+                                <label>
+                                |
+                                <label>
+                                SASL
+                                {{ create_form.sasl_mechanism }}
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Creds.
+                            </td>
+                            <td>
+                                <label>
+                                {{ create_form.username }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            TLS
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.tls-block')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td></td>
+                            <td>
+                                <label>
+                                On
+                                {{ create_form.is_tls_enabled }}
+                                </label>
+                                |
+                                <label>
+                                Version
+                                {{ create_form.tls_version }}
+                                </label>
+                                |
+                                <label>
+                                Cert. validation
+                                {{ create_form.tls_validate }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Ciphers
+                                <br/>
+                                {{ create_form.tls_ciphers }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Private key file
+                                <br/>
+                                {{ create_form.tls_private_key_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Certificate file
+                                <br/>
+                                {{ create_form.tls_cert_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                CA certificates file
+                                <br/>
+                                {{ create_form.tls_ca_certs_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Servers</td>
+                            <td>
+                                {{ create_form.server_list }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "out-ldap-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:8%">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+
+                                <label>
+                                Active
+                                {{ edit_form.is_active }}
+                                </label>
+                                |
+                                <label>
+                                R/O
+                                {{ edit_form.is_read_only }}
+                                </label>
+                                |
+                                <label>
+                                Stats
+                                {{ edit_form.is_stats_enabled }}
+                                </label>
+                                |
+                                <label>
+                                Auto-rng
+                                {{ edit_form.use_auto_range }}
+                                </label>
+                                |
+                                <label>
+                                Chk. names
+                                {{ edit_form.should_check_names }}
+                                </label>
+                                |
+                                <label>
+                                Emp. attrs
+                                {{ edit_form.should_return_empty_attrs }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Pool</td>
+                            <td>
+                                <label>
+                                Name
+                                {{ edit_form.pool_name }}
+                                </label>
+                                |
+                                <label>
+                                Size
+                                {{ edit_form.pool_size }}
+                                </label>
+                                |
+                                <label>
+                                Max. cycles
+                                {{ edit_form.pool_max_cycles }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td></td>
+                            <td>
+                                <label>
+                                HA
+                                {{ edit_form.pool_ha_strategy }}
+                                </label>
+                                |
+                                <label>
+                                Info
+                                {{ edit_form.get_info }}
+                                </label>
+                                |
+                                <label>
+                                Auto-bnd
+                                {{ edit_form.auto_bind }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Timeout</td>
+                            <td>
+                                <label>
+                                Connection
+                                {{ edit_form.connect_timeout }}
+                                </label>
+                                |
+                                <label>
+                                Exhaust
+                                {{ edit_form.pool_exhaust_timeout }}
+                                </label>
+                                |
+                                <label>
+                                Keep-alive
+                                {{ edit_form.pool_keep_alive }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>Auth</td>
+                            <td>
+                                <label>
+                                Type
+                                {{ edit_form.auth_type }}
+                                <label>
+                                |
+                                <label>
+                                SASL
+                                {{ edit_form.sasl_mechanism }}
+                                </label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Creds.
+                            </td>
+                            <td>
+                                <label>
+                                {{ edit_form.username }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                            TLS
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.tls-block')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td></td>
+                            <td>
+                                <label>
+                                On
+                                {{ edit_form.is_tls_enabled }}
+                                </label>
+                                |
+                                <label>
+                                Version
+                                {{ edit_form.tls_version }}
+                                </label>
+                                |
+                                <label>
+                                Cert. validation
+                                {{ edit_form.tls_validate }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Ciphers
+                                <br/>
+                                {{ edit_form.tls_ciphers }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Private key file
+                                <br/>
+                                {{ edit_form.tls_private_key_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Certificate file
+                                <br/>
+                                {{ edit_form.tls_cert_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr class="tls-block hidden">
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                CA certificates file
+                                <br/>
+                                {{ edit_form.tls_ca_certs_file }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Servers</td>
+                            <td>
+                                {{ edit_form.server_list }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "out-ldap-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Password</td>
+                            <td>{{ change_password_form.password1 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Confirm password</td>
+                            <td>{{ change_password_form.password2 }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

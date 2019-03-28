@@ -257,7 +257,7 @@ class Ping(AdminService):
     def handle(self):
 
         start_time = datetime.utcnow()
-        self.server.ping_wmq(self.request.input.id)
+        self.server.connector_ibm_mq.ping_wmq(self.request.input.id)
         response_time = datetime.utcnow() - start_time
 
         self.response.payload.info = 'Ping OK, took:`{}` s'.format(response_time.total_seconds())

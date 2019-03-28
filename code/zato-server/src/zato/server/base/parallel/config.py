@@ -9,18 +9,25 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from contextlib import closing
 import os
+from contextlib import closing
+from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import MISC, SECRETS
+from zato.common import SECRETS
 from zato.common.util import asbool
 from zato.common.util.sql import elems_with_opaque
+from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
 
+# ################################################################################################################################
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ConfigLoader(object):
@@ -223,7 +230,8 @@ class ConfigLoader(object):
 
         # OpenStack Swift
         query = self.odb.get_notif_cloud_openstack_swift_list(server.cluster.id, True)
-        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift', query, decrypt_func=self.decrypt)
+        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift',
+            query, decrypt_func=self.decrypt)
 
         # SQL
         query = self.odb.get_notif_sql_list(server.cluster.id, True)
@@ -325,7 +333,7 @@ class ConfigLoader(object):
             for key in item.keys():
                 hs_item[key] = getattr(item, key)
 
-            hs_item['match_target'] = '{}{}{}'.format(hs_item['soap_action'], MISC.SEPARATOR, hs_item['url_path'])
+            hs_item['match_target'] = get_match_target(hs_item, http_methods_allowed_re=self.http_methods_allowed_re)
             hs_item['match_target_compiled'] = Matcher(hs_item['match_target'], hs_item.get('match_slash', ''))
 
             http_soap.append(hs_item)
@@ -499,4 +507,5 @@ class ConfigLoader(object):
     def _after_init_non_accepted(self, server):
         raise NotImplementedError("This Zato version doesn't support join states other than ACCEPTED")
 
+# ################################################################################################################################
 # ################################################################################################################################

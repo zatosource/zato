@@ -53,12 +53,12 @@ try:
     execfile(_version_py, _locals)
     version = 'Zato {}'.format(_locals['version'])
 except IOError:
-    version = '3.0.0'
+    version = '3.1.0'
 
 version = '{}-py{}.{}.{}'.format(version, py_version_info.major, py_version_info.minor, py_version_info.micro)
 
-# The namespace for use in all Zato's own services.
-zato_namespace = 'https://zato.io/ns/20130518'
+# XML namespace for use in all Zato's own services.
+zato_namespace = 'https://zato.io/ns/v1'
 zato_ns_map = {None: zato_namespace}
 
 # SQL ODB
@@ -190,6 +190,9 @@ FALSE_TRUE = 'false_true'
 # If self.response.payload
 simple_types = (basestring, dict, list, tuple, bool, Number)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 # These are used by web-admin only because servers and scheduler use sql.conf
 ping_queries = {
     'db2': 'SELECT current_date FROM sysibm.sysdummy1',
@@ -201,6 +204,9 @@ ping_queries = {
     'sqlite': 'SELECT 1',
 }
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 # All URL types Zato understands.
 class URL_TYPE(object):
     SOAP = 'soap'
@@ -209,18 +215,30 @@ class URL_TYPE(object):
     def __iter__(self):
         return iter((self.SOAP, self.PLAIN_HTTP))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 # Whether WS-Security passwords are transmitted in clear-text or not.
 ZATO_WSS_PASSWORD_CLEAR_TEXT = Bunch(name='clear_text', label='Clear text')
 ZATO_WSS_PASSWORD_TYPES = {
     ZATO_WSS_PASSWORD_CLEAR_TEXT.name:ZATO_WSS_PASSWORD_CLEAR_TEXT.label,
 }
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 ZATO_FIELD_OPERATORS = {
     'is-equal-to': '==',
     'is-not-equal-to': '!=',
 }
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 ZMQ_OUTGOING_TYPES = ('PUSH', 'PUB')
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ZMQ:
 
@@ -271,10 +289,19 @@ class ZMQ:
         SERVICE_SOURCE_NAME.MDP01: MDP01_HUMAN,
     })
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 ZATO_ODB_POOL_NAME = 'ZATO_ODB'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 SOAP_VERSIONS = ('1.1', '1.2')
 SOAP_CHANNEL_VERSIONS = ('1.1',)
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class SEARCH:
     class ES:
@@ -294,6 +321,9 @@ class SEARCH:
             PAGE_SIZE = ValueConstant(50)
             PAGINATE_THRESHOLD = ValueConstant(PAGE_SIZE.value + 1)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SEC_DEF_TYPE:
     APIKEY = 'apikey'
     AWS = 'aws'
@@ -307,6 +337,9 @@ class SEC_DEF_TYPE:
     WSS = 'wss'
     VAULT = 'vault_conn_sec'
     XPATH_SEC = 'xpath_sec'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.APIKEY: 'API key',
@@ -323,10 +356,16 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.XPATH_SEC: 'XPath',
 }
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class AUTH_RESULT:
     class BASIC_AUTH:
         INVALID_PREFIX = 'invalid-prefix'
         NO_AUTH = 'no-auth'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 DEFAULT_STATS_SETTINGS = {
     'scheduler_per_minute_aggr_interval':60,
@@ -336,23 +375,38 @@ DEFAULT_STATS_SETTINGS = {
     'atttention_top_threshold':10,
 }
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class BATCH_DEFAULTS:
     PAGE_NO = 1
     SIZE = 25
     MAX_SIZE = 1000
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class MSG_SOURCE:
     DUPLEX = 'duplex'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class NameId(object):
     """ Wraps both an attribute's name and its ID.
     """
-    def __init__(self, name, id):
+    def __init__(self, name, id=None):
         self.name = name
-        self.id = id
+        self.id = id or name
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class NotGiven(object):
     pass # A marker for lazily-initialized attributes
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Attrs(type):
     """ A container for class attributes that can be queried for an existence
@@ -370,6 +424,9 @@ class Attrs(type):
 
         return attr in cls.attrs
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DATA_FORMAT(Attrs):
     DICT = 'dict'
     XML = 'xml'
@@ -382,6 +439,9 @@ class DATA_FORMAT(Attrs):
         # Note that DICT and other attributes aren't included because they're never exposed to external world as-is,
         # they may at most only used so that services can invoke each other directly
         return iter((self.XML, self.JSON, self.CSV, self.POST))
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
 class SIMPLE_IO:
@@ -398,17 +458,29 @@ class SIMPLE_IO:
     HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
     HTTP_SOAP_FORMAT[DATA_FORMAT.XML] = 'XML'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DEPLOYMENT_STATUS(Attrs):
     DEPLOYED = 'deployed'
     AWAITING_DEPLOYMENT = 'awaiting-deployment'
     IGNORED = 'ignored'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SERVER_JOIN_STATUS(Attrs):
     ACCEPTED = 'accepted'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class SERVER_UP_STATUS(Attrs):
     RUNNING = 'running'
     CLEAN_DOWN = 'clean-down'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class CACHE:
 
@@ -475,6 +547,9 @@ class CACHE:
         def __iter__(self):
             return iter((self.NO_SYNC, self.IN_BACKGROUND))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class KVDB(Attrs):
     SEPARATOR = ':::'
 
@@ -538,6 +613,9 @@ class KVDB(Attrs):
     ASYNC_INVOKE_PROCESSED_FLAG_PATTERN = 'zato:async-invoke-with-pattern:processed:{}:{}'
     ASYNC_INVOKE_PROCESSED_FLAG = '1'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SCHEDULER:
 
     class JOB_TYPE(Attrs):
@@ -548,6 +626,9 @@ class SCHEDULER:
     class ON_MAX_RUNS_REACHED:
         DELETE = 'delete'
         INACTIVATE = 'inactivate'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class CHANNEL(Attrs):
     AMQP = 'amqp'
@@ -576,9 +657,15 @@ class CHANNEL(Attrs):
     WORKER = 'worker'
     ZMQ = 'zmq'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class CONNECTION:
     CHANNEL = 'channel'
     OUTGOING = 'outgoing'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class INVOCATION_TARGET(Attrs):
     CHANNEL_AMQP = 'channel-amqp'
@@ -589,19 +676,8 @@ class INVOCATION_TARGET(Attrs):
     OUTCONN_ZMQ = 'outconn-zmq'
     SERVICE = 'service'
 
-class DELIVERY_HISTORY_ENTRY(Attrs):
-    ENTERED_IN_DOUBT = b'entered-in-doubt'
-    ENTERED_IN_PROGRESS = b'entered-in-progress'
-    ENTERED_CONFIRMED = b'entered-confirmed'
-    ENTERED_FAILED = b'entered-failed'
-    ENTERED_RETRY = b'entered-retry'
-    NONE = b'(None)'
-    SENT_FROM_SOURCE = b'sent-from-source'
-    SENT_FROM_SOURCE_RESUBMIT = b'sent-from-source-resubmit'
-    SENT_FROM_SOURCE_RESUBMIT_AUTO = b'sent-from-source-resubmit-auto'
-    TARGET_OK = b'target-ok'
-    TARGET_FAILURE = b'target-failure'
-    UPDATED = b'updated'
+# ################################################################################################################################
+# ################################################################################################################################
 
 class DELIVERY_STATE(Attrs):
     IN_DOUBT = 'in-doubt'
@@ -615,19 +691,21 @@ class DELIVERY_STATE(Attrs):
     FAILED = 'failed'
     UNKNOWN = 'unknown'
 
-class DELIVERY_COUNTERS(Attrs):
-    IN_DOUBT = 'in_doubt_count'
-    IN_PROGRESS = 'in_progress_count'
-    CONFIRMED = 'confirmed_count'
-    FAILED = 'failed_count'
-    TOTAL = 'total_count'
+# ################################################################################################################################
+# ################################################################################################################################
 
 class DELIVERY_CALLBACK_INVOKER(Attrs):
     SOURCE = 'source'
     TARGET = 'target'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class MISC:
     DEFAULT_HTTP_TIMEOUT=10
@@ -635,9 +713,29 @@ class MISC:
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HTTP_SOAP:
+
+    UNUSED_MARKER = 'unused'
+
+    class ACCEPT:
+        ANY = '*/*'
+        ANY_INTERNAL = 'haany'
+
+    class METHOD:
+        ANY_INTERNAL = 'hmany'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ADAPTER_PARAMS:
     APPLY_AFTER_REQUEST = 'apply-after-request'
     APPLY_BEFORE_REQUEST = 'apply-before-request'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class INFO_FORMAT:
     DICT = 'dict'
@@ -645,11 +743,17 @@ class INFO_FORMAT:
     JSON = 'json'
     YAML = 'yaml'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class MSG_MAPPER:
     DICT_TO_DICT = 'dict-to-dict'
     DICT_TO_XML = 'dict-to-xml'
     XML_TO_DICT = 'xml-to-dict'
     XML_TO_XML = 'xml-to-xml'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class CLOUD:
     class OPENSTACK:
@@ -679,6 +783,9 @@ class CLOUD:
                 POOL_SIZE = 5
                 PROVIDER = 'aws'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class URL_PARAMS_PRIORITY:
     PATH_OVER_QS = 'path-over-qs'
     QS_OVER_PATH = 'qs-over-path'
@@ -688,6 +795,9 @@ class URL_PARAMS_PRIORITY:
         def __iter__(self):
             return iter((self.PATH_OVER_QS, self.QS_OVER_PATH, self.DEFAULT))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class PARAMS_PRIORITY:
     CHANNEL_PARAMS_OVER_MSG = 'channel-params-over-msg'
     MSG_OVER_CHANNEL_PARAMS = 'msg-over-channel-params'
@@ -696,9 +806,15 @@ class PARAMS_PRIORITY:
     def __iter__(self):
         return iter((self.CHANNEL_PARAMS_OVER_MSG, self.MSG_OVER_CHANNEL_PARAMS, self.DEFAULT))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class NONCE_STORE:
     KEY_PATTERN = 'zato:nonce-store:{}:{}' # E.g. zato:nonce-store:oauth:27
     DEFAULT_MAX_LOG = 25000
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class MSG_PATTERN_TYPE:
     JSON_POINTER = NameId('JSONPointer', 'json-pointer')
@@ -707,6 +823,9 @@ class MSG_PATTERN_TYPE:
     def __iter__(self):
         return iter((self.JSON_POINTER, self.XPATH))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class HTTP_SOAP_SERIALIZATION_TYPE:
     STRING_VALUE = NameId('String', 'string')
     SUDS = NameId('Suds', 'suds')
@@ -714,6 +833,9 @@ class HTTP_SOAP_SERIALIZATION_TYPE:
 
     def __iter__(self):
         return iter((self.STRING_VALUE, self.SUDS))
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class PUBSUB:
 
@@ -857,6 +979,9 @@ class PUBSUB:
         META_ENDPOINT_PUB_KEY = 'zato.ps.meta.endpoint.pub.%s.%s'
         META_ENDPOINT_SUB_KEY = 'zato.ps.meta.endpoint.sub.%s.%s'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _PUBSUB_SUBSCRIBE_CLASS:
 
     classes = {
@@ -870,7 +995,13 @@ class _PUBSUB_SUBSCRIBE_CLASS:
     def get(name):
         return _PUBSUB_SUBSCRIBE_CLASS.classes[name]
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 PUBSUB.SUBSCRIBE_CLASS = _PUBSUB_SUBSCRIBE_CLASS
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 # Not to be made available externally yet.
 skip_endpoint_types = (
@@ -883,6 +1014,9 @@ skip_endpoint_types = (
     PUBSUB.ENDPOINT_TYPE.SQL.id,
     PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id, # This will never be made because WSX clients need to use APIs to subscribe
 )
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class EMAIL:
     class DEFAULT:
@@ -902,6 +1036,9 @@ class EMAIL:
             SSL = ValueConstant('ssl')
             STARTTLS = ValueConstant('starttls')
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class NOTIF:
     class DEFAULT:
         CHECK_INTERVAL = 5 # In seconds
@@ -912,6 +1049,9 @@ class NOTIF:
     class TYPE:
         OPENSTACK_SWIFT = 'openstack_swift'
         SQL = 'sql'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class CASSANDRA:
     class DEFAULT(Constants):
@@ -927,6 +1067,9 @@ class CASSANDRA:
         ENABLED_LZ4 = ValueConstant('enabled-lz4')
         ENABLED_SNAPPY = ValueConstant('enabled-snappy')
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TLS:
     # All the BEGIN/END blocks we don't want to store in logs.
     # Taken from https://github.com/openssl/openssl/blob/master/crypto/pem/pem.h
@@ -936,6 +1079,32 @@ class TLS:
     # Directories in a server's config/tls directory keeping the material
     DIR_CA_CERTS = 'ca-certs'
     DIR_KEYS_CERTS = 'keys-certs'
+
+    class DEFAULT:
+        VERSION = 'SSLv23'
+        CIPHERS = 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:' \
+                  'ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:' \
+                  'ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256'
+
+    class VERSION:
+        SSLv23  = NameId('SSLv23')
+        TLSv1   = NameId('TLSv1')
+        TLSv1_1 = NameId('TLSv1_1')
+        TLSv1_2 = NameId('TLSv1_2')
+
+        def __iter__(self):
+            return iter((self.SSLv23, self.TLSv1, self.TLSv1_1, self.TLSv1_2))
+
+    class CERT_VALIDATE:
+        CERT_NONE     = NameId('Disabled', 'CERT_NONE')
+        CERT_OPTIONAL = NameId('Optional', 'CERT_OPTIONAL')
+        CERT_REQUIRED = NameId('Required', 'CERT_REQUIRED')
+
+        def __iter__(self):
+            return iter((self.CERT_NONE, self.CERT_OPTIONAL, self.CERT_REQUIRED))
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ODOO:
 
@@ -955,10 +1124,16 @@ class ODOO:
         def __iter__(self):
             return iter((self.XML_RPC, self.XML_RPCS, self.JSON_RPC, self.JSON_RPCS))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SAP:
     class DEFAULT:
         INSTANCE = '00'
         POOL_SIZE = 1
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class STOMP:
 
@@ -976,11 +1151,14 @@ class STOMP:
         CLIENT_INDIVIDUAL = NameId('client-individual', 'client-individual')
 
     class DEFAULT:
-        ADDRESS = 'localhost:61613'
+        ADDRESS = '127.0.0.1:61613'
         PROTOCOL = '1.0'
         TIMEOUT = 10 # In seconds
         USERNAME = 'guest'
         ACK_MODE = 'client-individual'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 CONTENT_TYPE = Bunch(
     JSON = 'application/json',
@@ -988,6 +1166,9 @@ CONTENT_TYPE = Bunch(
     SOAP11 = 'text/xml',
     SOAP12 = 'application/soap+xml; charset=utf-8',
 )
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class IPC:
 
@@ -1004,6 +1185,9 @@ class IPC:
         class USERNAME:
             IBM_MQ = 'zato.connector.wmq'
             SFTP   = 'zato.connector.sftp'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class WEB_SOCKET:
     class DEFAULT:
@@ -1033,14 +1217,23 @@ class WEB_SOCKET:
         ON_DISCONNECTED = 'wsx_on_disconnected'
         ON_PUBSUB_RESPONSE = 'wsx_on_pubsub_response'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class APISPEC:
     OPEN_API_V3 = 'openapi_v3'
     SOAP_12 = 'soap_12'
     NAMESPACE_NULL = ''
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class PADDING:
     LEFT = 'left'
     RIGHT = 'right'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class AMQP:
     class DEFAULT:
@@ -1055,6 +1248,9 @@ class AMQP:
         def __iter__(self):
             return iter((self.ACK, self.REJECT))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SERVER_STARTUP:
     class PHASE:
         FS_CONFIG_ONLY = 'fs-config-only'
@@ -1066,13 +1262,157 @@ class SERVER_STARTUP:
         IN_PROCESS_OTHER = 'in-process-other'
         AFTER_STARTED = 'after-started'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GENERIC:
     ATTR_NAME = 'opaque1'
 
     class CONNECTION:
         class TYPE:
-            OUTCONN_WSX = 'outconn-wsx'
+            DEF_KAFKA = 'def-kafka'
+            OUTCONN_IM_SLACK = 'outconn-im-slack'
+            OUTCONN_IM_TELEGRAM = 'outconn-im-telegram'
+            OUTCONN_LDAP = 'outconn-ldap'
+            OUTCONN_MONGODB = 'outconn-mongodb'
             OUTCONN_SFTP = 'outconn-sftp'
+            OUTCONN_WSX = 'outconn-wsx'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LDAP:
+
+    class DEFAULT:
+        CONNECT_TIMEOUT  = 10
+        POOL_EXHAUST_TIMEOUT = 5
+        POOL_KEEP_ALIVE = 30
+        POOL_LIFETIME = 3600
+        POOL_MAX_CYCLES  = 1
+        POOL_SIZE = 10
+
+    class AUTH_TYPE:
+        NTLM   = NameId('NTLM', 'NTLM')
+        SIMPLE = NameId('Simple', 'SIMPLE')
+
+        def __iter__(self):
+            return iter((self.SIMPLE, self.NTLM))
+
+    class AUTO_BIND:
+        DEFAULT         = NameId('Default', 'DEFAULT')
+        NO_TLS          = NameId('No TLS', 'NO_TLS')
+        NONE            = NameId('None', 'NONE')
+        TLS_AFTER_BIND  = NameId('Bind -> TLS', 'TLS_AFTER_BIND')
+        TLS_BEFORE_BIND = NameId('TLS -> Bind', 'TLS_BEFORE_BIND')
+
+        def __iter__(self):
+            return iter((self.DEFAULT, self.NONE, self.NO_TLS, self.TLS_AFTER_BIND, self.TLS_BEFORE_BIND))
+
+    class GET_INFO:
+        ALL    = NameId('All', 'ALL')
+        DSA    = NameId('DSA', 'DSA')
+        NONE   = NameId('None', 'NONE')
+        SCHEMA = NameId('Schema', 'SCHEMA')
+        OFFLINE_EDIR_8_8_8  = NameId('EDIR 8.8.8', 'OFFLINE_EDIR_8_8_8')
+        OFFLINE_AD_2012_R2  = NameId('AD 2012.R2', 'OFFLINE_AD_2012_R2')
+        OFFLINE_SLAPD_2_4   = NameId('SLAPD 2.4', 'OFFLINE_SLAPD_2_4')
+        OFFLINE_DS389_1_3_3 = NameId('DS 389.1.3.3', 'OFFLINE_DS389_1_3_3')
+
+        def __iter__(self):
+            return iter((self.NONE, self.ALL, self.SCHEMA, self.DSA,
+                self.OFFLINE_EDIR_8_8_8, self.OFFLINE_AD_2012_R2, self.OFFLINE_SLAPD_2_4, self.OFFLINE_DS389_1_3_3))
+
+    class IP_MODE:
+        IP_V4_ONLY        = NameId('Only IPv4', 'IP_V4_ONLY')
+        IP_V6_ONLY        = NameId('Only IPv6', 'IP_V6_ONLY')
+        IP_V4_PREFERRED   = NameId('Prefer IPv4', 'IP_V4_PREFERRED')
+        IP_V6_PREFERRED   = NameId('Prefer IPv6', 'IP_V6_PREFERRED')
+        IP_SYSTEM_DEFAULT = NameId('System default', 'IP_SYSTEM_DEFAULT')
+
+        def __iter__(self):
+            return iter((self.IP_V4_ONLY, self.IP_V6_ONLY, self.IP_V4_PREFERRED, self.IP_V6_PREFERRED, self.IP_SYSTEM_DEFAULT))
+
+    class POOL_HA_STRATEGY:
+        FIRST       = NameId('First', 'FIRST')
+        RANDOM      = NameId('Random', 'RANDOM')
+        ROUND_ROBIN = NameId('Round robin', 'ROUND_ROBIN')
+
+        def __iter__(self):
+            return iter((self.FIRST, self.RANDOM, self.ROUND_ROBIN))
+
+    class SASL_MECHANISM:
+        GSSAPI = NameId('GSS-API', 'GSSAPI')
+        EXTERNAL = NameId('External', 'EXTERNAL')
+
+        def __iter__(self):
+            return iter((self.EXTERNAL, self.GSSAPI))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MONGODB:
+
+    class DEFAULT:
+        AUTH_SOURCE      = 'admin'
+        HB_FREQUENCY     = 10
+        MAX_IDLE_TIME    = 600
+        MAX_STALENESS    = -1
+        POOL_SIZE_MIN    = 0
+        POOL_SIZE_MAX    = 5
+        SERVER_LIST      = '127.0.0.1:27017'
+        WRITE_TO_REPLICA = 0
+        WRITE_TIMEOUT    = 5
+        ZLIB_LEVEL       = -1
+
+        class TIMEOUT:
+            CONNECT = 10
+            SERVER_SELECT  = 5
+            SOCKET  = 30
+            WAIT_QUEUE  = 10
+
+    class READ_PREF:
+        PRIMARY = NameId('Primary', 'primary')
+        PRIMARY_PREFERRED = NameId('Primary pref.', 'primaryPreferred')
+        SECONDARY = NameId('Secondary', 'secondary')
+        SECONDARY_PREFERRED = NameId('Secondary pref.', 'secondaryPreferred')
+        NEAREST = NameId('Nearest', 'nearest')
+
+        def __iter__(self):
+            return iter((self.PRIMARY, self.PRIMARY_PREFERRED, self.SECONDARY, self.SECONDARY_PREFERRED, self.NEAREST))
+
+    class AUTH_MECHANISM:
+        SCRAM_SHA_1 = NameId('SCRAM-SHA-1')
+        SCRAM_SHA_256 = NameId('SCRAM-SHA-256')
+
+        def __iter__(self):
+            return iter((self.SCRAM_SHA_1, self.SCRAM_SHA_256))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class KAFKA:
+
+    class DEFAULT:
+        BROKER_VERSION = '0.9.0'
+        SERVER_LIST    = '127.0.0.1:2181'
+
+        class TIMEOUT:
+            SOCKET = 1
+            OFFSETS = 10
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TELEGRAM:
+    class DEFAULT:
+        ADDRESS = 'https://api.telegram.org/bot{token}/{method}'
+
+    class TIMEOUT:
+        CONNECT = 5
+        INVOKE = 10
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class SFTP:
     class DEFAULT:
@@ -1105,15 +1445,24 @@ class SFTP:
         def is_valid(self, value):
             return value in (elem.id for elem in self)
 
+    # ################################################################################################################################
+    # ################################################################################################################################
+
 class CONFIG_FILE:
     USER_DEFINED = 'user-defined'
 
-# Need to use such a constant because we can sometimes be interested in setting
+# We need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
 PLACEHOLDER = 'zato_placeholder'
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 ZATO_INFO_FILE = '.zato-info'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class SECRETS:
 
@@ -1125,6 +1474,9 @@ class SECRETS:
 
     # Zato secret (configuration)
     URL_PREFIX = 'zato+secret://'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):
@@ -1153,11 +1505,17 @@ class path(object):
             else:
                 return None
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class zato_path(path):
     def __init__(self, path, raise_on_not_found=False, text_only=False):
         super(zato_path, self).__init__(path, raise_on_not_found, zato_namespace, text_only)
         self.children_only = True
         self.children_only_idx = 1 # 0 is zato_env
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ZatoException(Exception):
     """ Base class for all Zato custom exceptions.
@@ -1173,17 +1531,29 @@ class ZatoException(Exception):
 
     __str__ = __repr__
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ClientSecurityException(ZatoException):
     """ An exception for signalling errors stemming from security problems
     on the client side, such as invalid username or password.
     """
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class ConnectionException(ZatoException):
     """ Encountered a problem with an external connections, such as to AMQP brokers.
     """
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class TimeoutException(ConnectionException):
     pass
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class StatusAwareException(ZatoException):
     """ Raised when the underlying error condition can be easily expressed
@@ -1198,13 +1568,22 @@ class StatusAwareException(ZatoException):
         return '<{} at {} cid:`{}`, status:`{}`, msg:`{}`>'.format(
             self.__class__.__name__, hex(id(self)), self.cid, self.status, self.msg)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class HTTPException(StatusAwareException):
     pass
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class ParsingException(ZatoException):
     """ Raised when the error is to do with parsing of documents, such as an input
     XML document.
     """
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class NoDistributionFound(ZatoException):
     """ Raised when an attempt is made to import services from a Distutils2 archive
@@ -1213,12 +1592,18 @@ class NoDistributionFound(ZatoException):
     def __init__(self, path):
         super(NoDistributionFound, self).__init__(None, 'No Disutils distribution in path:[{}]'.format(path))
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Inactive(ZatoException):
     """ Raised when an attempt was made to use an inactive resource, such
     as an outgoing connection or a channel.
     """
     def __init__(self, name):
         super(Inactive, self).__init__(None, '`{}` is inactive'.format(name))
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class SourceCodeInfo(object):
     """ A bunch of attributes dealing the service's source code.
@@ -1233,6 +1618,9 @@ class SourceCodeInfo(object):
         self.hash = None        # type: text
         self.hash_method = None # type: text
         self.server_name = None # type: text
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class StatsElem(object):
     """ A single element of a statistics query result concerning a particular service.
@@ -1335,6 +1723,7 @@ class StatsElem(object):
         return bool(self.service_name) # Empty stats_elems won't have a service name set
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class SMTPMessage(object):
     def __init__(self, from_=None, to=None, subject='', body='', attachments=None, cc=None, bcc=None, is_html=False, headers=None,
@@ -1354,6 +1743,9 @@ class SMTPMessage(object):
     def attach(self, name, contents):
         self.attachments.append({'name':name, 'contents':contents})
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class IMAPMessage(object):
     def __init__(self, uid, conn, data):
         self.uid = uid
@@ -1371,6 +1763,7 @@ class IMAPMessage(object):
         self.conn.mark_seen(self.uid)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class WebSphereMQCallData(object):
     """ Metadata for information returned by IBM MQ in response to underlying MQPUT calls.
@@ -1381,6 +1774,7 @@ class WebSphereMQCallData(object):
         self.msg_id = msg_id
         self.correlation_id = correlation_id
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 default_internal_modules = {
@@ -1491,4 +1885,5 @@ default_internal_modules = {
     'zato.server.service.internal.updates': True,
 }
 
+# ################################################################################################################################
 # ################################################################################################################################

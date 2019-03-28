@@ -33,7 +33,7 @@ from six import PY3
 from past.builtins import basestring
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
+from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, HTTP_SOAP, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.util import payload_from_request
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
@@ -42,8 +42,24 @@ from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.connection.http_soap.url_data import URLData
+
+    # For pyflakes
+    URLData = URLData
+
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 _has_debug = logger.isEnabledFor(logging.DEBUG)
+
+# ################################################################################################################################
+
+accept_any_http = HTTP_SOAP.ACCEPT.ANY
+accept_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 
 # ################################################################################################################################
 
@@ -94,7 +110,7 @@ soap_error = """<?xml version='1.0' encoding='UTF-8'?>
 
 # ################################################################################################################################
 
-response_404 = b'CID:`{}` Unknown URL:`{}` or SOAP action:`{}`'
+response_404 = 'URL not found `{}` (Method:{}; Accept:{}; CID:{})'
 
 # ################################################################################################################################
 
@@ -158,13 +174,18 @@ class RequestDispatcher(object):
     """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
     """
     def __init__(self, url_data=None, security=None, request_handler=None, simple_io_config=None, return_tracebacks=None,
-            default_error_message=None):
+            default_error_message=None, http_methods_allowed=None):
+        # type: (URLData, object, object, dict, bool, unicode, list)
+
         self.url_data = url_data
         self.security = security
+
         self.request_handler = request_handler
         self.simple_io_config = simple_io_config
         self.return_tracebacks = return_tracebacks
+
         self.default_error_message = default_error_message
+        self.http_methods_allowed = http_methods_allowed
 
 # ################################################################################################################################
 
@@ -195,14 +216,25 @@ class RequestDispatcher(object):
 
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
-        _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile):
-        """ Base method for dispatching incoming HTTP/SOAP messages. If the security
-        configuration is one of the technical account or HTTP basic auth,
-        the security validation is being performed. Otherwise, that step
-        is postponed until a concrete transport-specific handler is invoked.
-        """
+        _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
+        _accept_any_internal=accept_any_internal):
+
+        # Needed as one of the first steps
+        http_method = wsgi_environ['REQUEST_METHOD']
+        http_method = http_method if isinstance(http_method, unicode) else http_method.decode('utf8')
+
+        http_accept = wsgi_environ.get('HTTP_ACCEPT') or _accept_any_http
+        http_accept = http_accept.replace('*', _accept_any_internal).replace('/', 'HTTP_SEP')
+        http_accept = http_accept if isinstance(http_accept, unicode) else http_accept.decode('utf8')
+
         # Needed in later steps
         path_info = wsgi_environ['PATH_INFO'] if PY3 else wsgi_environ['PATH_INFO'].decode('utf8')
+
+        # Immediately reject the request if it is not a support HTTP method, no matter what channel
+        # it would have otherwise matched.
+        if http_method not in self.http_methods_allowed:
+            wsgi_environ['zato.http.response.status'] = _status_method_not_allowed
+            return client_json_error(cid, 'Unsupported HTTP method')
 
         if _http_soap_action in wsgi_environ:
             soap_action = self._handle_quotes_soap_action(wsgi_environ[_http_soap_action])
@@ -213,7 +245,7 @@ class RequestDispatcher(object):
         # This gives us the URL info and security data - but note that here
         # we still haven't validated credentials, only matched the URL.
         # Credentials are checked in a call to self.url_data.check_security
-        url_match, channel_item = self.url_data.match(path_info, soap_action, bool(soap_action))
+        url_match, channel_item = self.url_data.match(path_info, soap_action, http_method, http_accept, bool(soap_action))
 
         if _has_debug and channel_item:
             logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))
@@ -233,18 +265,11 @@ class RequestDispatcher(object):
                     logger.warn('url_data:`%s` is not active, raising NotFound', sorted(url_match.items()))
                     raise NotFound(cid, 'Channel inactive')
 
-                expected_method = channel_item['method']
-                if expected_method:
-                    actual_method = wsgi_environ['REQUEST_METHOD']
-                    if expected_method != actual_method:
-                        logger.warn(
-                            'Expected `%s` instead of `%s` for `%s`', expected_method, actual_method, channel_item['url_path'])
-                        raise MethodNotAllowed(cid, 'Method `{}` is not allowed here'.format(actual_method))
-
                 # Need to read security info here so we know if POST needs to be
                 # parsed. If so, we do it here and reuse it in other places
                 # so it doesn't have to be parsed two or more times.
                 post_data = {}
+
                 sec = self.url_data.url_sec[channel_item['match_target']]
 
                 if sec.sec_def != ZATO_NONE or sec.sec_use_rbac is True:
@@ -344,7 +369,8 @@ class RequestDispatcher(object):
 
         # This is 404, no such URL path and SOAP action is not known either.
         else:
-            response = response_404.format(cid, path_info.encode('utf8'), soap_action)
+            response = _response_404.format(path_info.encode('utf8'),
+                wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
             wsgi_environ['zato.http.response.status'] = _status_not_found
 
             logger.error(response)
@@ -481,7 +507,8 @@ class RequestHandler(object):
         service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name)
         if not is_active:
             logger.warn('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
-            raise NotFound(cid, _response_404.format(cid, path_info, soap_action))
+            raise NotFound(cid, _response_404.format(
+                path_info, wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid))
 
         if channel_item.merge_url_params_req:
             channel_params = self.create_channel_params(url_match, channel_item, wsgi_environ, raw_request, post_data)

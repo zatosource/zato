@@ -111,7 +111,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.cluster_id = None
         self.kvdb = None
         self.startup_jobs = None
-        self.worker_store = None
+        self.worker_store = None # type: WorkerStore
         self.request_dispatcher_dispatch = None
         self.deployment_lock_expires = None
         self.deployment_lock_timeout = None
@@ -158,6 +158,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Connectors
         self.connector_ibm_mq = IBMMQIPC(self)
         self.connector_sftp   = SFTPIPC(self)
+
+        # HTTP methods allowed as a Python list
+        self.http_methods_allowed = []
+
+        # As above, but as a regular expression pattern
+        self.http_methods_allowed_re = ''
 
         self.access_logger = logging.getLogger('zato_access_log')
         self.access_logger_log = self.access_logger._log
@@ -458,6 +464,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     self.cluster.name, self.pid, 's' if use_tls else '', self.preferred_address,
             self.port)
 
+        # Configure which HTTP methods can be invoked via REST or SOAP channels
+        methods_allowed = self.fs_server_config.http.methods_allowed
+        methods_allowed = methods_allowed if isinstance(methods_allowed, list) else [methods_allowed]
+        self.http_methods_allowed.extend(methods_allowed)
+
+        # As above, as a regular expression to be used in pattern matching
+        http_methods_allowed_re = '|'.join(self.http_methods_allowed)
+        self.http_methods_allowed_re = '({})'.format(http_methods_allowed_re)
+
         # Reads in all configuration from ODB
         self.worker_store = WorkerStore(self.config, self)
         self.worker_store.invoke_matcher.read_config(self.fs_server_config.invoke_patterns_allowed)
@@ -631,7 +646,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def invoke_startup_services(self, is_first):
         _invoke_startup_services('Parallel', 'startup_services_first_worker' if is_first else 'startup_services_any_worker',
-            self.fs_server_config, self.repo_location, self.broker_client, 'zato.notif.init-notifiers',
+            self.fs_server_config, self.repo_location, self.broker_client, None,
             is_sso_enabled=self.is_sso_enabled)
 
 # ################################################################################################################################
