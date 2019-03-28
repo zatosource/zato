@@ -4,7 +4,8 @@ set -e
 set -o pipefail
 shopt -s compat31
 
-PY_BINARY="python2.7"
+# Default python binary
+PY_BINARY="python"
 
 # Taken from https://stackoverflow.com/a/14203146
 OPTIND=1
@@ -18,6 +19,58 @@ while getopts "p:" opt; do
 done
 shift $((OPTIND-1))
 [ "${1:-}" = "--" ] && shift
+
+
+
+#
+# Run an OS-specific installer
+#
+
+# Not installed?
+if ! [ -x "$(command -v $PY_BINARY)" ]; then
+  if [ "$(type -p apt-get)" ]
+  then
+      sudo apt-get update
+      sudo apt-get install -y --reinstall ${PY_BINARY}
+  elif [ "$(type -p yum)" ]
+  then
+      sudo yum update -y
+      if [[ $PY_BINARY != python2* ]];then
+        # Python3 customizations
+        PY_V=3
+        sudo yum install -y centos-release-scl-rh
+        sudo yum-config-manager --enable centos-sclo-rh-testing
+
+        # On RHEL, enable RHSCL and RHSCL-beta repositories for you system:
+        sudo yum-config-manager --enable rhel-server-rhscl-7-rpms
+        sudo yum-config-manager --enable rhel-server-rhscl-beta-7-rpms
+
+        # 2. Install the collection:
+        sudo yum install -y rh-python36
+
+        # 3. Start using software collections:
+        # scl enable rh-python36 bash
+        source /opt/rh/rh-python36/enable
+      else
+        sudo yum install -y ${PY_BINARY}
+      fi
+  elif [ "$(type -p apk)" ]
+  then
+      sudo apk add ${PY_BINARY}
+      if [[ "${PY_BINARY}" == "python3" ]]
+      then
+          sudo apk add python3-dev
+      else
+          sudo apk add python-dev
+      fi
+  elif [ "$(uname -s)" = "Darwin" ]
+  then
+      brew install  $PY_BINARY
+  else
+      echo "install.sh: Unsupported OS: could not detect OS X, apt-get, yum, or apk." >&2
+      exit 1
+  fi
+fi
 
 # Confirm such a Python version is accessible
 if ! [ -x "$(command -v $PY_BINARY)" ]; then
