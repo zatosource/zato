@@ -88,6 +88,7 @@ backup_history=100
 backup_format=bztar
 delete_after_pick_up=False
 max_batch_size=1000 # In kilobytes, default is 1 megabyte
+redeploy_on_parent_change=True
 
 # These three are relative to work_dir
 current_work_dir=./hot-deploy/current
