@@ -73,7 +73,10 @@ class _CreateEdit(_BaseService):
                 data[key] = self._convert_sio_elem(key, value)
 
         conn = GenericConnection.from_dict(data)
-        conn.secret = self.server.encrypt(self.crypto.generate_secret())
+
+        # Make sure not to overwrite the seceret in Edit
+        if not self.is_edit:
+            conn.secret = self.server.encrypt('auto.generated.{}'.format(self.crypto.generate_secret()))
         conn_dict = conn.to_sql_dict()
 
         with closing(self.server.odb.session()) as session:
@@ -86,7 +89,9 @@ class _CreateEdit(_BaseService):
             # This will be needed in case this is a rename
             old_name = model.name
 
-            for key, value in conn_dict.items():
+            for key, value in sorted(conn_dict.items()):
+                if key == 'secret':
+                    continue
                 setattr(model, key, value)
 
             session.add(model)
@@ -194,7 +199,8 @@ class ChangePassword(ChangePasswordBase):
     def handle(self):
         def _auth(instance, secret):
             instance.secret = secret
-        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value)
+        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value,
+            publish_instance_attrs=['type_'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -214,12 +220,12 @@ class Ping(_BaseService):
             instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
 
             # Different code paths will be taken depending on what kind of a generic connection this is
-            ping_func_dict = {
-                COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_WSX: self.server.worker_store.ping_generic_connection,
+            custom_ping_func_dict = {
                 COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_SFTP: self.server.connector_sftp.ping_sftp
             }
 
-            ping_func = ping_func_dict[instance.type_]
+            # Most connections use a generic ping function, unless overridden on a case-by-case basis, like with SFTP
+            ping_func = custom_ping_func_dict.get(instance.type_, self.server.worker_store.ping_generic_connection)
 
             start_time = datetime.utcnow()
             ping_func(self.request.input.id)

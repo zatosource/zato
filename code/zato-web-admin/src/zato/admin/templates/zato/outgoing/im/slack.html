@@ -1,0 +1,258 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Slack outconns{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} Slack {% endcomment %}
+    <script type="text/javascript" src="/static/js/outgoing/im/slack.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            'name',
+            '_is_active',
+
+            'http_proxy_list',
+            'https_proxy_list',
+
+            '_change_password',
+            '_edit',
+            '_delete',
+            '_ping',
+
+            'id',
+            'is_active',
+
+            {% comment %} 1 {% endcomment %}
+            'http_proxy_list',
+            'https_proxy_list',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Outgoing Slack connections</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% with has_generic="1" generic_type="outconn-im-slack" %}
+    {% include "zato/search-form.html" with page_prompt="Show outgoing connections" %}
+{% endwith %}
+
+    {% if cluster_id %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.outgoing.im.slack.create()">Create a new outgoing Slack connection</a>
+        </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+
+                        <th><a href="#">HTTP proxy</a></th>
+                        <th><a href="#">HTTPS proxy</a></th>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} 1 {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.http_proxy_list|linebreaksbr|default:"<span class='form_hint'>---</span>" }}</td>
+                        <td>{{ item.https_proxy_list|linebreaksbr|default:"<span class='form_hint'>---</span>" }}</td>
+
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change token')">Change token</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.im.slack.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.im.slack.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+
+                        {% comment %} 1 {% endcomment %}
+                        <td class='ignore'>{{ item.http_proxy_list|default:"" }}</td>
+                        <td class='ignore'>{{ item.https_proxy_list|default:"" }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='14'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "out-im-slack-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:8%">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+
+                                <label>
+                                Active
+                                {{ create_form.is_active }}
+                                </label>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">HTTP proxy</td>
+                            <td>
+                                {{ create_form.http_proxy_list }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">HTTPS proxy</td>
+                            <td>
+                                {{ create_form.https_proxy_list }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "out-im-slack-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:8%">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+
+                                <label>
+                                Active
+                                {{ edit_form.is_active }}
+                                </label>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">HTTP proxy</td>
+                            <td>
+                                {{ edit_form.http_proxy_list }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">HTTPS proxy</td>
+                            <td>
+                                {{ edit_form.https_proxy_list }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "out-im-slack-change-password" %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle; width:15%">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Token</td>
+                            <td>{{ change_password_form.password1 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Confirm token</td>
+                            <td>{{ change_password_form.password2 }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

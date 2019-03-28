@@ -489,19 +489,20 @@ class SimpleIOPayload(SIOConverter):
             return top
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Outgoing(object):
-    """ A container for various outgoing connections a service can access. This
-    in fact is a thin wrapper around data fetched from the service's self.worker_store.
+    """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
+    fetched from the service's self.worker_store.
     """
     __slots__ = ('amqp', 'ftp', 'ibm_mq', 'jms_wmq', 'wmq', 'odoo', 'plain_http', 'soap', 'sql', 'stomp', 'zmq', 'wsx', 'vault',
-        'sms', 'sap', 'sftp')
+        'sms', 'sap', 'sftp', 'ldap', 'mongodb', 'def_kafka')
 
     def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, stomp=None, zmq=None,
-            wsx=None, vault=None, sms=None, sap=None, sftp=None):
+            wsx=None, vault=None, sms=None, sap=None, sftp=None, ldap=None, mongodb=None, def_kafka=None):
         self.amqp = amqp
         self.ftp = ftp
-        self.ibm_mq = self.wmq = self.jms_wmq = jms_wmq # Backward compat with 2.0, self.wmq is not preferred
+        self.ibm_mq = self.wmq = self.jms_wmq = jms_wmq # Backward compat with 2.0, self.ibm_mq is now preferred
         self.odoo = odoo
         self.plain_http = plain_http
         self.soap = soap
@@ -513,24 +514,62 @@ class Outgoing(object):
         self.sms = sms
         self.sap = sap
         self.sftp = sftp
+        self.ldap = ldap
+        self.mongodb = mongodb
+        self.def_kafka = None
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class AWS(object):
     def __init__(self, s3=None):
         self.s3 = s3
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class OpenStack(object):
     def __init__(self, swift=None):
         self.swift = swift
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Cloud(object):
     """ A container for cloud-related connections a service can establish.
     """
-    __slots__ = ('aws', 'openstack')
+    __slots__ = 'aws', 'openstack'
 
     def __init__(self, aws=None, openstack=None):
         self.aws = aws or AWS()
         self.openstack = openstack or OpenStack()
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Definition(object):
+    """ A container for connection definitions a service has access to.
+    """
+    __slots__ = 'kafka',
+
+    def __init__(self, kafka=None):
+        # type: (dict)
+        self.kafka = kafka
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class InstantMessaging(object):
+    """ A container for Instant Messaging connections, e.g. Slack or Telegram.
+    """
+    __slots__ = 'slack', 'telegram'
+
+    def __init__(self, slack=None, telegram=None):
+        # type: (dict, dict)
+        self.slack = slack
+        self.telegram = telegram
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Response(object):

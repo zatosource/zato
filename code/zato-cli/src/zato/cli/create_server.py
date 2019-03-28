@@ -63,7 +63,7 @@ service_sources=./service-sources.txt
 [crypto]
 use_tls=False
 tls_protocol=TLSv1
-tls_ciphers=ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:HIGH:!aNULL:!eNULL:!EXP:!LOW:!MD5
+tls_ciphers=ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS
 tls_client_certs=optional
 priv_key_location=zato-server-priv-key.pem
 pub_key_location=zato-server-pub-key.pem
@@ -138,6 +138,9 @@ enforce_service_invokes=False
 return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
+
+[http]
+methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
 
 [ibm_mq]
 ipc_tcp_start_port=34567
@@ -495,13 +498,13 @@ server_conf.odb.password={zato_odb_password}
 simple_io_conf_contents = """
 [int]
 exact=id
-suffix=_count, _id, _size, _timeout
+suffix=_count, _id, _size, _size_min, _size_max, _timeout
 
 [bool]
 prefix=by_, has_, is_, may_, needs_, should_
 
 [secret]
-exact=auth_data, auth_token, password, password1, password2, secret_key, token
+exact=auth_data, auth_token, password, password1, password2, secret, secret_key, tls_pem_passphrase, token
 
 [bytes_to_str]
 encoding={bytes_to_str_encoding}
@@ -583,12 +586,12 @@ class Create(ZatoCommand):
     opts = deepcopy(common_odb_opts)
     opts.extend(kvdb_opts)
 
-    opts.append({'name':'pub_key_path', 'help':"Path to the server's public key in PEM"})
-    opts.append({'name':'priv_key_path', 'help':"Path to the server's private key in PEM"})
-    opts.append({'name':'cert_path', 'help':"Path to the server's certificate in PEM"})
-    opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':"Server's name"})
+    opts.append({'name':'--pub_key_path', 'help':"Path to the server's public key in PEM"})
+    opts.append({'name':'--priv_key_path', 'help':"Path to the server's private key in PEM"})
+    opts.append({'name':'--cert_path', 'help':"Path to the server's certificate in PEM"})
+    opts.append({'name':'--ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
     opts.append({'name':'--secret_key', 'help':"Server's secret key (must be the same for all servers)"})
     opts.append({'name':'--jwt_secret', 'help':"Server's JWT secret (must be the same for all servers)"})
     opts.append({'name':'--http_port', 'help':"Server's HTTP port"})
@@ -637,10 +640,13 @@ class Create(ZatoCommand):
                 self.prepare_directories(show_output)
 
             repo_dir = os.path.join(self.target_dir, 'config', 'repo')
+
+            # Note that server crypto material is optional so if none was given on input
+            # this command will be a no-op.
             self.copy_server_crypto(repo_dir, args)
 
             if show_output:
-                self.logger.debug('Created a Bazaar repo in {}'.format(repo_dir))
+                self.logger.debug('Created a repo in {}'.format(repo_dir))
                 self.logger.debug('Creating files..')
 
             for file_name, contents in sorted(files.items()):

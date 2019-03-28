@@ -27,9 +27,23 @@ from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BR
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition, update_apikey_username_to_channel
 from zato.common.util.auth import on_basic_auth, on_wsse_pwd, WSSE
+from zato.common.util.url_dispatcher import get_match_target
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.jwt import JWT
 from zato.url_dispatcher import CyURLData, Matcher
+
+# ################################################################################################################################
+
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.base.worker import WorkerStore
+
+    # For pyflakes
+    WorkerStore = WorkerStore
+
+# ################################################################################################################################
 
 if PY2:
     from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
@@ -74,7 +88,7 @@ class URLData(CyURLData, OAuthDataStore):
                  vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
                  jwt_secret=None, vault_conn_api=None):
         super(URLData, self).__init__(channel_data)
-        self.worker = worker
+        self.worker = worker # type: WorkerStore
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
         self.jwt_config = jwt_config
@@ -1207,7 +1221,7 @@ class URLData(CyURLData, OAuthDataStore):
         """ Creates a new channel, both its core data and the related security definition.
         Clears out URL cache for that entry, if it existed at all.
         """
-        match_target = '{}{}{}'.format(msg.soap_action, MISC.SEPARATOR, msg.url_path)
+        match_target = get_match_target(msg, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
         self.channel_data.append(self._channel_item_from_msg(msg, match_target, old_data))
         self.url_sec[match_target] = self._sec_info_from_msg(msg)
         self.url_path_cache.pop(match_target, None)
@@ -1217,8 +1231,12 @@ class URLData(CyURLData, OAuthDataStore):
         """ Deletes a channel, both its core data and the related security definition. Clears relevant
         entry in URL cache. Returns the deleted data.
         """
-        old_match_target = '{}{}{}'.format(
-            msg.get('old_soap_action'), MISC.SEPARATOR, msg.get('old_url_path'))
+        old_match_target = get_match_target({
+            'http_method': msg.get('old_http_method'),
+            'http_accept': msg.get('old_http_accept'),
+            'soap_action': msg.get('old_soap_action'),
+            'url_path': msg.get('old_url_path'),
+        }, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
 
         # In case of an internal error, we won't have the match all
         match_idx = ZATO_NONE

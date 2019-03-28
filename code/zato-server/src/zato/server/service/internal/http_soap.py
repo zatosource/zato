@@ -19,11 +19,11 @@ from paste.util.converters import asbool
 from zato.common import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
-from zato.common.util.sql import get_security_by_id, elems_with_opaque, set_instance_opaque_attrs
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.util.json_ import dumps
+from zato.common.util.sql import get_security_by_id, elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
@@ -85,7 +85,7 @@ class _BaseGet(AdminService):
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
             'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type',
-            'content_encoding', Boolean('match_slash'))
+            'content_encoding', Boolean('match_slash'), 'http_accept')
 
 # ################################################################################################################################
 
@@ -95,10 +95,12 @@ class Get(_BaseGet):
     class SimpleIO(_BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_request'
         response_elem = 'zato_http_soap_get_response'
-        input_required = ('cluster_id', 'id')
+        input_required = 'cluster_id'
+        input_optional = 'id', 'name'
 
     def handle(self):
         with closing(self.odb.session()) as session:
+            self.request.input.require_any('id', 'name')
             self.response.payload = http_soap(session, self.request.input.cluster_id, self.request.input.id)
 
 # ################################################################################################################################
@@ -127,6 +129,7 @@ class GetList(_BaseGet):
             self.response.payload[:] = self.get_data(session)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class _CreateEdit(AdminService, _HTTPSOAPService):
     def add_tls_ca_cert(self, input, sec_tls_ca_cert_id):
@@ -135,18 +138,43 @@ class _CreateEdit(AdminService, _HTTPSOAPService):
                 filter(TLSCACert.id==sec_tls_ca_cert_id).\
                 one()[0]
 
-    def ensure_channel_is_unique(self, session, url_path, soap_action, cluster_id):
-        existing_one = session.query(HTTPSOAP.id).\
+# ################################################################################################################################
+
+    def _raise_error(self, name, url_path, http_accept, http_method, soap_action, source):
+        msg = 'Such a channel already exists ({}); url_path:`{}`, http_accept:`{}`, http_method:`{}`, soap_action:`{}` (src:{})'
+        raise Exception(msg.format(name, url_path, http_accept, http_method, soap_action, source))
+
+# ################################################################################################################################
+
+    def ensure_channel_is_unique(self, session, url_path, http_accept, http_method, soap_action, cluster_id):
+        existing_ones = session.query(HTTPSOAP).\
             filter(HTTPSOAP.cluster_id==cluster_id).\
             filter(HTTPSOAP.url_path==url_path).\
             filter(HTTPSOAP.soap_action==soap_action).\
             filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
-            first()
+            all()
 
-        if existing_one:
-            raise Exception('Such a channel already exists, url_path:`{}`, soap_action:`{}`, cluster_id:`{}`'.format(
-                url_path, soap_action, cluster_id))
+        # At least one channel with this kind of basic information already exists
+        # but it is possible that it requires different HTTP headers (e.g. Accept, Method)
+        # so we need to check each one manually.
+        if existing_ones:
+            for item in existing_ones:
+                opaque = parse_instance_opaque_attr(item)
+                item_http_accept = opaque.get('http_accept')
 
+                # Raise an exception if the existing channel's method is equal to ours
+                # but only if they use different Accept headers.
+                if http_method:
+                    if item.method == http_method:
+                        if item_http_accept == http_accept:
+                            self._raise_error(item.name, url_path, http_accept, http_method, soap_action, 'chk1')
+
+                # Similar, but from the Accept header's perspective
+                if item_http_accept == http_accept:
+                    if item.method == http_method:
+                        self._raise_error(item.name, url_path, http_accept, http_method, soap_action, 'chk2')
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Create(_CreateEdit):
@@ -159,7 +187,7 @@ class Create(_CreateEdit):
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
-            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'))
+            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -201,7 +229,8 @@ class Create(_CreateEdit):
 
             # Make sure this combination of channel parameters does not exist already
             if input.connection == CONNECTION.CHANNEL:
-                self.ensure_channel_is_unique(session, input.url_path, input.soap_action, input.cluster_id)
+                self.ensure_channel_is_unique(session,
+                    input.url_path, input.http_accept, input.method, input.soap_action, input.cluster_id)
 
             try:
 
@@ -293,7 +322,7 @@ class Edit(_CreateEdit):
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
-            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'))
+            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -338,9 +367,15 @@ class Edit(_CreateEdit):
 
             try:
                 item = session.query(HTTPSOAP).filter_by(id=input.id).one()
+
+                opaque = parse_instance_opaque_attr(item)
+
                 old_name = item.name
                 old_url_path = item.url_path
                 old_soap_action = item.soap_action
+                old_http_method = item.method
+                old_http_accept = opaque.get('http_accept')
+
                 item.name = input.name
                 item.is_active = input.is_active
                 item.host = input.host
@@ -401,6 +436,8 @@ class Edit(_CreateEdit):
                 input.old_name = old_name
                 input.old_url_path = old_url_path
                 input.old_soap_action = old_soap_action
+                input.old_http_method = old_http_method
+                input.old_http_accept = old_http_accept
                 input.update(sec_info)
 
                 if item.sec_tls_ca_cert_id and item.sec_tls_ca_cert_id != ZATO_NONE:
@@ -416,7 +453,7 @@ class Edit(_CreateEdit):
                 self.response.payload.name = item.name
 
             except Exception:
-                self.logger.error('Object could not be updated, e:`{}`' % format_exc())
+                self.logger.error('Object could not be updated, e:`{}`'.format(format_exc()))
                 session.rollback()
 
                 raise
@@ -438,10 +475,14 @@ class Delete(AdminService, _HTTPSOAPService):
                     filter(HTTPSOAP.id==self.request.input.id).\
                     one()
 
+                opaque = parse_instance_opaque_attr(item)
+
                 old_name = item.name
                 old_transport = item.transport
                 old_url_path = item.url_path
                 old_soap_action = item.soap_action
+                old_http_method = item.method
+                old_http_accept = opaque.get('http_accept')
 
                 session.delete(item)
                 session.commit()
@@ -451,12 +492,18 @@ class Delete(AdminService, _HTTPSOAPService):
                 else:
                     action = OUTGOING.HTTP_SOAP_DELETE.value
 
-                self.notify_worker_threads({'name':old_name, 'transport':old_transport,
-                    'old_url_path':old_url_path, 'old_soap_action':old_soap_action}, action)
+                self.notify_worker_threads({
+                    'name':old_name,
+                    'transport':old_transport,
+                    'old_url_path':old_url_path,
+                    'old_soap_action':old_soap_action,
+                    'old_http_method': old_http_method,
+                    'old_http_accept': old_http_accept,
+                }, action)
 
             except Exception:
                 session.rollback()
-                self.logger.error('Object could not be deleted, e:`{}`', format_exc())
+                self.logger.error('Object could not be deleted, e:`{}`'.format(format_exc()))
 
                 raise
 

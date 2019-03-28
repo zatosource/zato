@@ -50,7 +50,8 @@ from zato.server.pattern.fanout import FanOut
 from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.pattern.parallel import ParallelExec
 from zato.server.pubsub import PubSub
-from zato.server.service.reqresp import AMQPRequestData, Cloud, IBMMQRequestData, Outgoing, Request, Response
+from zato.server.service.reqresp import AMQPRequestData, Cloud, Definition, IBMMQRequestData, InstantMessaging, Outgoing, \
+     Request, Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Date, DateTime, Dict, Float, ForceType, Integer, List, \
@@ -83,10 +84,14 @@ logger = logging.getLogger(__name__)
 import typing
 
 if typing.TYPE_CHECKING:
+
+    # Zato
+    from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
 
     # For pyflakes
     ParallelServer = ParallelServer
+    WorkerStore = WorkerStore
 
 # ################################################################################################################################
 
@@ -201,6 +206,8 @@ class Service(object):
 
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
     cloud = Cloud()
+    definition = Definition()
+    im = InstantMessaging()
     odb = None
     kvdb = None
     pubsub = None # type: PubSub
@@ -210,7 +217,7 @@ class Service(object):
     search = None
     amqp = AMQPFacade()
 
-    _worker_store = None
+    _worker_store = None  # type: WorkerStore
     _worker_config = None
     _msg_ns_store = None
     _ns_store = None
@@ -286,6 +293,9 @@ class Service(object):
             SMSAPI(self._worker_store.sms_twilio_api) if self.component_enabled_sms else None,
             self._worker_config.out_sap,
             self._worker_config.out_sftp,
+            self._worker_store.outconn_ldap,
+            self._worker_store.outconn_mongodb,
+            self._worker_store.def_kafka,
         )
 
     @staticmethod

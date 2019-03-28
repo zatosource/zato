@@ -252,6 +252,9 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.kvdb = kvdb
     server.user_config = Bunch()
 
+    # Assigned here because it is a circular dependency
+    odb_manager.parallel_server = server
+
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
     server.crypto_manager = crypto_manager

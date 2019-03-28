@@ -182,7 +182,7 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         req.zato.client.invoke(service_name, input_dict)
 
     except Exception:
-        msg = 'Password could not be changed, e:`{}`'.format(format_exc())
+        msg = 'Caught an exception, e:`{}`'.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
@@ -614,16 +614,6 @@ def ping_connection(req, service, connection_id, connection_type='{}'):
     ret = id_only_service(req, service, connection_id, 'Could not ping {}, e:`{{}}`'.format(connection_type))
     if isinstance(ret, HttpResponseServerError):
         return ret
-
-    print()
-    print()
-
-    print(111, ret)
-    print(222, ret.data)
-
-    print()
-    print()
-
     return HttpResponse(ret.data.info)
 
 # ################################################################################################################################
