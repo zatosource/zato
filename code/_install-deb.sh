@@ -8,6 +8,10 @@ echo "*** Zato Ubuntu/Debian installation using $PY_BINARY ***"
 # comes to fetching the packages from repositories.
 sudo apt-get update
 
+if ! [ -x "$(command -v lsb_release)" ]; then
+  sudo apt-get install -y lsb-release
+fi
+
 # Debian 7.0 (Wheezy) requires the wheezy-backports repository.
 if [[ "$(lsb_release -sir)" =~ '^Debian.7\.' ]]
 then
@@ -21,7 +25,7 @@ sudo apt-get install -y \
     build-essential curl git haproxy libbz2-dev libev-dev libev4 libevent-dev \
     libffi-dev libkeyutils-dev libldap2-dev libmemcached-dev libpq-dev \
     libsasl2-dev libssl-dev libxml2-dev libxslt1-dev libyaml-dev openssl \
-    $PY_BINARY $PY_BINARY-dev python-pip swig uuid-dev uuid-runtime wget zlib1g-dev
+    $PY_BINARY $PY_BINARY-dev python-pip swig uuid-dev uuid-runtime wget zlib1g-dev lsb-release
 
 # On Debian and Ubuntu the binary goes to /usr/sbin/haproxy so we need to
 # symlink it to a directory that can be easily found on PATH so that starting
@@ -31,7 +35,10 @@ then
     sudo ln -sf /usr/sbin/haproxy /usr/bin/haproxy
 fi
 
-sudo -H $PY_BINARY -m pip install -U setuptools virtualenv==15.1.0
+#curl https://bootstrap.pypa.io/get-pip.py | sudo $PY_BINARY
+curl https://bootstrap.pypa.io/get-pip.py | sudo $(type -p $PY_BINARY)
+# sudo $PY_BINARY -m pip install -U setuptools virtualenv==15.1.0
+sudo $PY_BINARY -m pip install -U virtualenv==15.1.0
 
 $PY_BINARY -m virtualenv .
 source ./bin/activate
