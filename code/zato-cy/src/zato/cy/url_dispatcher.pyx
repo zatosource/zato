@@ -96,7 +96,7 @@ cdef class Matcher(object):
         # URL path contains /zato = this is a path to an internal service
         self.is_internal = _internal_url_path_indicator in self.pattern
 
-    cdef match(self, unicode value):
+    cpdef match(self, unicode value):
         cdef tuple groups
         m = self.match_func(value)
         if m:
@@ -114,7 +114,6 @@ cdef class CyURLData(object):
     cdef:
         public list channel_data
         public dict url_path_cache
-        dict url_target_cache
         bint has_trace1
 
     def __init__(self, channel_data=None):
@@ -122,6 +121,23 @@ cdef class CyURLData(object):
         self.url_path_cache = {}
         self.url_target_cache = {}
         self.has_trace1 = logger.isEnabledFor(TRACE1)
+
+# ################################################################################################################################
+
+    cpdef _remove_from_cache(self, unicode match_target):
+
+        targets_to_remove = []
+        cached_targets = self.url_path_cache.keys()
+
+        for target in cached_targets:
+            for item in self.channel_data:
+                matcher = item['match_target_compiled']
+                if matcher.pattern == match_target:
+                    if matcher.match(target) is not None:
+                        targets_to_remove.append(target)
+
+        for target in targets_to_remove:
+            del self.url_path_cache[target]
 
 # ################################################################################################################################
 
@@ -135,30 +151,25 @@ cdef class CyURLData(object):
         cdef Matcher matcher
         cdef dict item
         cdef object item_bunch
-        cdef unicode target
 
-        cdef unicode target_cache_key = ''
-        target_cache_key += http_method
-        target_cache_key += http_accept
-        target_cache_key += (url_path + soap_action) if has_soap_action else url_path
+        cdef unicode target = ''
+        target += soap_action
+        target += sep
+        target += http_method
+        target += sep
+        target += http_accept
+        target += sep
+        target += url_path
 
         try:
-            target = self.url_target_cache[target_cache_key]
+            self.url_target_cache[target]
         except KeyError:
-            target = '%s%s%s%s%s%s%s' % (
-                soap_action,
-                sep,
-                http_method,
-                sep,
-                http_accept,
-                sep,
-                url_path
-            )
             has_target_in_cache = False
 
         # Return from cache if already seen
         try:
-            return {}, self.url_path_cache[target]
+            ctx, channel_item = {}, self.url_path_cache[target]
+            return ctx, channel_item
         except KeyError:
             needs_user = not url_path.startswith('/zato')
 
@@ -174,14 +185,10 @@ cdef class CyURLData(object):
                     if self.has_trace1:
                         _log_trace1(_trace1, 'Matched target:`%s` with:`%r`', target, item)
 
-                    # Cache that target but only if it's a static URL without dynamic variables
-                    if (not has_target_in_cache) and matcher.is_static:
-                        self.url_target_cache[target_cache_key] = target
-
                     item_bunch = _bunchify(item)
 
-                    # Cache that URL if it's a static one, i.e. does not contain dynamically computed variables
-                    if matcher.is_static:
+                    # Cache that target but only if it's a static URL without dynamic variables
+                    if (not has_target_in_cache) and matcher.is_static:
                         self.url_path_cache[target] = item_bunch
 
                     return match, item_bunch
