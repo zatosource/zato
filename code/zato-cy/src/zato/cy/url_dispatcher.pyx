@@ -127,45 +127,17 @@ cdef class CyURLData(object):
     cpdef _remove_from_cache(self, unicode match_target):
 
         targets_to_remove = []
-
         cached_targets = self.url_path_cache.keys()
 
-        logger.warn('CACHED `%r`', cached_targets)
-
         for target in cached_targets:
-
-            if 'zzz' in target:
-                logger.warn('TARGET `%r`', target)
-
             for item in self.channel_data:
-
                 matcher = item['match_target_compiled']
-
                 if matcher.pattern == match_target:
-
-                    match = matcher.match(target)
-
-                    if 'zzz' in matcher.pattern:
-                        logger.warn('PATTERN-0 %r', matcher.pattern)
-                        logger.warn('PATTERN-1 %r', match_target)
-                        logger.warn('PATTERN-2 %r', target)
-                        logger.warn('PATTERN-3 %r', match)
-
-                    if match is not None:
-
+                    if matcher.match(target) is not None:
                         targets_to_remove.append(target)
-
-                        logger.warn('FOUND-0 `%s`', match_target)
-                        logger.warn('FOUND-1 %r', matcher.matcher)
-                        logger.warn('FOUND-2 %r', match)
-
-                        logger.warn('ZZZZZZZ %s %r', match_target, match)
 
         for target in targets_to_remove:
             del self.url_path_cache[target]
-
-        #found_in_url_path_cache = self.url_path_cache.pop(url_path, None)
-        #logger.warn('FOUND-1 %s %s', found_in_url_path_cache, url_path)
 
 # ################################################################################################################################
 
