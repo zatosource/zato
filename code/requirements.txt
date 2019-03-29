@@ -49,7 +49,7 @@ https://github.com/dsuch/dpath-python/archive/66a2f5ab.zip#egg=dpath
 globre==0.1.5
 humanize==0.5.1
 huTools==0.63
-hvac==0.2.16
+hvac==0.7.2
 idna==2.6
 imbox==0.6
 ipaddress==1.0.16
