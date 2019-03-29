@@ -76,22 +76,24 @@ UTC = UTC
 
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
-
-# ################################################################################################################################
-
 # Type checking
 import typing
 
 if typing.TYPE_CHECKING:
 
     # Zato
+    from zato.common.crypto import ServerCryptoManager
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
 
     # For pyflakes
     ParallelServer = ParallelServer
+    ServerCryptoManager = ServerCryptoManager
     WorkerStore = WorkerStore
+
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
@@ -236,7 +238,7 @@ class Service(object):
     sso = None
 
     # Crypto operations
-    crypto = None
+    crypto = None # type: ServerCryptoManager
 
     # Audit log
     audit_pii = None
