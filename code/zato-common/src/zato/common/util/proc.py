@@ -49,9 +49,18 @@ def get_executable():
 # ################################################################################################################################
 
 class _StdErr(object):
+
+    # Some log messages (like the ones produced by PyKafka) go to stderr but they are not really errors,
+    # in which case we need to ignore them.
+    ignored = [
+        'Could not load pykafka.rdkafka extension.'
+    ]
+
     def __init__(self, path, timeout):
         self.path = path
         self.timeout = timeout
+
+# ################################################################################################################################
 
     def wait_for_error(self):
         now = time()
@@ -60,10 +69,17 @@ class _StdErr(object):
             sleep(0.1)
             _stderr = open(self.path)
             _err = _stderr.read()
-            if _err:
+            if _err and (not self.should_ignore(_err)):
                 return _err
             else:
                 _stderr.close()
+
+# ################################################################################################################################
+
+    def should_ignore(self, err):
+        for item in self.ignored:
+            if err.endswith(item):
+                return True
 
 # ################################################################################################################################
 
@@ -93,8 +109,9 @@ def start_process(component_name, executable, run_in_fg, cli_options, extra_cli_
         # Wait a moment for any potential errors
         _err = _stderr.wait_for_error()
         if _err:
-            logger.warn(_err)
-            sys.exit(failed_to_start_err)
+            if 'Could not load pykafka.rdkafka extension.' not in _err:
+                logger.warn('Stderr received from program `%s` e:`%s`, kw:`%s`', program, _err, run_kwargs)
+                sys.exit(failed_to_start_err)
 
     except KeyboardInterrupt:
         if on_keyboard_interrupt:
