@@ -128,7 +128,8 @@ class Start(Service):
     """
     class SimpleIO(object):
         input_required = 'id', 'config_cid'
-        input_optional = Int('bind_port'), 'service_name', 'sec_name', 'sec_type', 'vault_conn_default_auth_method'
+        input_optional = Int('bind_port'), 'name', 'service_name', 'sec_name', 'sec_type', 'vault_conn_default_auth_method', \
+            'is_active', 'address'
         request_elem = 'zato_channel_web_socket_start_request'
         response_elem = 'zato_channel_web_socket_start_response'
 
