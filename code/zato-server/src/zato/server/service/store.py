@@ -860,6 +860,7 @@ class ServiceStore(object):
 
             # .. a Python class represening each service ..
             service_class = service_info['service_class']
+            service_module = getmodule(service_class)
 
             # .. get all parent classes of that ..
             service_mro = getmro(service_class)
@@ -868,6 +869,11 @@ class ServiceStore(object):
             for base_class in service_mro:
                 if issubclass(base_class, Service) and (not base_class is Service):
                     if base_class.get_name() == changed_service_name:
+
+                        # Do not deploy services that are defined in the same module their parent is
+                        # because that would be an infinite loop of auto-deployment.
+                        if getmodule(base_class) is service_module:
+                            continue
 
                         # .. if it was found, add it to the list of what needs to be auto-redeployed ..
                         to_auto_deploy.append(service_info)
