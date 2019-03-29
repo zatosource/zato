@@ -18,13 +18,18 @@ from zato.common.util import get_haproxy_agent_pidfile
 class Stop(ManageCommand):
     """ Stops a Zato component
     """
-    def signal(self, component_name, signal_name, signal_code, pidfile=None, component_dir=None):
+    def signal(self, component_name, signal_name, signal_code, pidfile=None, component_dir=None, ignore_missing=False):
         """ Sends a signal to a process known by its pidfile.
         """
         component_dir = component_dir or self.component_dir
         pidfile = pidfile or os.path.join(component_dir, 'pidfile')
 
         if not os.path.exists(pidfile):
+            if ignore_missing:
+                # No such pidfile - it may be a connector process and these are optional,
+                # in this case, we just simply return because there is not anything else for us to do.
+                return
+
             self.logger.error('No pidfile found in `%s`', pidfile)
             sys.exit(self.SYS_ERROR.FILE_MISSING)
 
@@ -43,6 +48,8 @@ class Stop(ManageCommand):
 
     def _on_server(self, *ignored):
         self.signal('Server', 'SIGTERM', signal.SIGTERM)
+        self.signal('IBM MQ connector', 'SIGTERM', signal.SIGTERM, 'pidfile-ibm-mq')
+        self.signal('SFTP connector', 'SIGTERM', signal.SIGTERM, 'pidfile-sftp')
 
     def stop_haproxy(self, component_dir):
 
