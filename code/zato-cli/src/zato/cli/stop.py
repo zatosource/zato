@@ -39,7 +39,7 @@ class Stop(ManageCommand):
             sys.exit(self.SYS_ERROR.NO_PID_FOUND)
 
         pid = int(pid)
-        self.logger.debug('\nWill now send `%s` to pid `%s` (as found in `%s`)\n', signal_name, pid, pidfile)
+        self.logger.debug('Sending `%s` to pid `%s` (found in `%s`)', signal_name, pid, pidfile)
 
         os.kill(pid, signal_code)
         os.remove(pidfile)
@@ -47,9 +47,13 @@ class Stop(ManageCommand):
         self.logger.info('%s `%s` shutting down', component_name, component_dir)
 
     def _on_server(self, *ignored):
+        pidfile_ibm_mq = os.path.join(self.component_dir, 'pidfile-ibm-mq')
+        pidfile_sftp = os.path.join(self.component_dir, 'pidfile-sftp')
+
+        self.signal('IBM MQ connector', 'SIGTERM', signal.SIGTERM, pidfile_ibm_mq, ignore_missing=True)
+        self.signal('SFTP connector', 'SIGTERM', signal.SIGTERM, pidfile_sftp, ignore_missing=True)
+
         self.signal('Server', 'SIGTERM', signal.SIGTERM)
-        self.signal('IBM MQ connector', 'SIGTERM', signal.SIGTERM, 'pidfile-ibm-mq')
-        self.signal('SFTP connector', 'SIGTERM', signal.SIGTERM, 'pidfile-sftp')
 
     def stop_haproxy(self, component_dir):
 

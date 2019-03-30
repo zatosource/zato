@@ -23,6 +23,7 @@ class SFTPIPC(SubprocessIPC):
     callback_suffix = 'sftp'
     ipc_config_name = 'zato-sftp'
     auth_username = IPC.CONNECTOR.USERNAME.SFTP
+    pidfile_suffix = 'sftp'
 
     connector_module = 'zato.server.connection.connector.subprocess_.impl.sftp'
 

@@ -257,6 +257,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
+    server.has_fg = options.get('fg')
     server.crypto_manager = crypto_manager
     server.odb_data = server_config.odb
     server.host = zato_gunicorn_app.zato_host

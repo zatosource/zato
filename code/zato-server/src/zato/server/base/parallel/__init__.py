@@ -155,6 +155,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.sso_api = None
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
+        self.has_fg = False
         self.startup_callable_tool = None
         self.default_internal_pubsub_endpoint_id = None
         self._hash_secret_method = None
