@@ -449,7 +449,9 @@ class SubscribeServiceImpl(_Subscribe):
                     #
                     # * If there are no subscribers and no messages in the topic then this is a no-op
                     #
-                    move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, sub_key, now)
+
+                    move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id,
+                        ctx.sub_pattern_matched, sub_key, now)
 
                     # Subscription's ID is available only now, after the session was flushed
                     sub_config.id = ps_sub.id
