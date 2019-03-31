@@ -36,7 +36,7 @@ msg_pub_attrs = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to
     'expiration', 'expiration_time', 'has_gd', 'delivery_status', 'size', 'published_by_id', 'topic_id',
     'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso',
     'recv_time', 'data_prefix_short', 'server_name', 'server_pid', 'pub_pattern_matched', 'sub_pattern_matched',
-    'delivery_count')
+    'delivery_count', 'user_ctx', 'zato_ctx')
 
 class MSG_PREFIX:
     GROUP_ID = 'zpsg'
@@ -104,6 +104,8 @@ class PubSubMessage(object):
         self.expiration_time_iso = None
         self.reply_to_sk = []
         self.deliver_to_sk = []
+        self.user_ctx = None
+        self.zato_ctx = None
         self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
         setattr(self, GENERIC.ATTR_NAME, None) # To make this class look more like an SQLAlchemy one
 
