@@ -807,6 +807,17 @@ class PubSubTool(object):
         """ Low-level implementation of add_non_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
         for msg in messages:
+
+            # Ignore messages that are replies meant to be delievered only to sub_keys
+            # other than current one. This may happen because PubSub.trigger_notify_pubsub_tasks
+            # sends non-GD messages to all sub_keys subscribed to topic, no matter what deliver_to_sk
+            # of a message is. This is the reason why we need to sort it out here. Eventually,
+            # PubSub.trigger_notify_pubsub_tasks should be changed to notify sub_keys if deliver_to_sk
+            # does not point to them.
+            if msg['deliver_to_sk']:
+                if sub_key not in msg['deliver_to_sk']:
+                    continue
+
             self.delivery_lists[sub_key].add(NonGDMessage(sub_key, self.server_name, self.server_pid, msg))
 
 # ################################################################################################################################
