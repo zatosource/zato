@@ -99,7 +99,7 @@ class Publish(AdminService):
         input_optional = (AsIs('data'), List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'),
             'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time', 'pub_pattern_matched',
             'security_id', 'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
-            Int('position_in_group'), 'endpoint_id', List('reply_to_sk'), List('deliver_to_sk'))
+            Int('position_in_group'), 'endpoint_id', List('reply_to_sk'), List('deliver_to_sk'), 'user_ctx', 'zato_ctx')
         output_optional = (AsIs('msg_id'), List('msg_id_list'))
 
 # ################################################################################################################################
@@ -159,6 +159,9 @@ class Publish(AdminService):
         reply_to_sk = input.get('reply_to_sk') or []
         deliver_to_sk = input.get('deliver_to_sk') or []
 
+        user_ctx = input.get('user_ctx')
+        zato_ctx = input.get('zato_ctx')
+
         ps_msg = PubSubMessage()
         ps_msg.topic = topic
         ps_msg.pub_msg_id = pub_msg_id
@@ -184,6 +187,8 @@ class Publish(AdminService):
         ps_msg.is_in_sub_queue = bool(subscriptions_by_topic)
         ps_msg.reply_to_sk = reply_to_sk
         ps_msg.deliver_to_sk = deliver_to_sk
+        ps_msg.user_ctx = user_ctx
+        ps_msg.zato_ctx = zato_ctx
 
         # Opaque attributes - we only need reply to sub_keys to be placed in there
         # but we do not do it unless we known that any such sub key was actually requested.
@@ -248,6 +253,7 @@ class Publish(AdminService):
             if msg:
                 msg_id_list.append(msg.pub_msg_id)
                 msg_as_dict = msg.to_dict()
+                self.logger.warn('QQQ %r', msg_as_dict)
                 target_list = gd_msg_list if msg.has_gd else non_gd_msg_list
                 target_list.append(msg_as_dict)
 

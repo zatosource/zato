@@ -2357,6 +2357,12 @@ class PubSubMessage(Base):
     # i.e. it can be said that it has been already transported to all subsriber queues (possibly to one only).
     is_in_sub_queue = Column(Boolean(), nullable=False, server_default=sa_false())
 
+    # User-defined arbitrary context data
+    user_ctx = Column(_JSON(), nullable=True)
+
+    # Zato-defined arbitrary context data
+    zato_ctx = Column(_JSON(), nullable=True)
+
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 

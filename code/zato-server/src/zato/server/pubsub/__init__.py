@@ -2370,6 +2370,8 @@ class PubSub(object):
         endpoint_id = kwargs.get('endpoint_id')
         reply_to_sk = kwargs.get('reply_to_sk')
         deliver_to_sk = kwargs.get('deliver_to_sk')
+        user_ctx = kwargs.get('user_ctx')
+        zato_ctx = kwargs.get('zato_ctx')
 
         response = self.invoke_service('zato.pubsub.publish.publish', {
             'topic_name': topic_name,
@@ -2387,6 +2389,8 @@ class PubSub(object):
             'endpoint_id': endpoint_id or self.server.default_internal_pubsub_endpoint_id,
             'reply_to_sk': reply_to_sk,
             'deliver_to_sk': deliver_to_sk,
+            'user_ctx': user_ctx,
+            'zato_ctx': zato_ctx,
         }, serialize=False)
 
         return response.response['msg_id']

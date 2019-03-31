@@ -577,6 +577,8 @@ class GDMessage(Message):
         self.topic_name = topic_name
         self.size = msg.size
         self.sub_pattern_matched = msg.sub_pattern_matched
+        self.user_ctx = msg.user_ctx
+        self.zato_ctx = msg.zato_ctx
 
         # Load opaque attributes, if any were provided on input
         opaque = getattr(msg, _gen_attr, None)
@@ -626,6 +628,8 @@ class NonGDMessage(Message):
         self.pub_pattern_matched = msg['pub_pattern_matched']
         self.reply_to_sk = msg['reply_to_sk']
         self.deliver_to_sk = msg['deliver_to_sk']
+        self.user_ctx = msg.get('user_ctx')
+        self.zato_ctx = msg.get('zato_ctx')
 
         # msg.sub_pattern_matched is a shared dictionary of patterns for each subscriber - we .pop from it
         # so as not to keep this dictionary's contents for no particular reason. Since there can be only
