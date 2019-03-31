@@ -253,7 +253,6 @@ class Publish(AdminService):
             if msg:
                 msg_id_list.append(msg.pub_msg_id)
                 msg_as_dict = msg.to_dict()
-                self.logger.warn('QQQ %r', msg_as_dict)
                 target_list = gd_msg_list if msg.has_gd else non_gd_msg_list
                 target_list.append(msg_as_dict)
 
