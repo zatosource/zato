@@ -20,7 +20,9 @@ from regex import compile as re_compile
 
 # Zato
 from zato.bunch import bunchify
-from zato.common import MISC, TRACE1
+from zato.common import HTTP_SOAP, MISC, TRACE1
+
+http_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 
 # ################################################################################################################################
 
@@ -78,6 +80,11 @@ cdef class Matcher(object):
 # ################################################################################################################################
 
     cdef _set_up_matcher(self, unicode pattern):
+
+        # HTTP Accept headers may in runtime come in a variety of forms
+        # including multiple key/values or their weights. In order to support it
+        # we treat */* as a pattern to catch any string possible in regexps.
+        pattern = pattern.replace('{}HTTP_SEP{}'.format(http_any_internal, http_any_internal), '.*')
 
         orig_groups = self._brace_pattern.findall(pattern)
         groups = (elem.replace('{', '').replace('}', '') for elem in orig_groups)

@@ -213,7 +213,9 @@ def elems_with_opaque(elems):
 
 def parse_instance_opaque_attr(instance):
     opaque = getattr(instance, GENERIC.ATTR_NAME)
-    opaque = loads(opaque)
+    opaque = loads(opaque) if opaque else None
+    if not opaque:
+        return {}
     ElemsWithOpaqueMaker.process_config_dict(opaque)
     return bunchify(opaque)
 
