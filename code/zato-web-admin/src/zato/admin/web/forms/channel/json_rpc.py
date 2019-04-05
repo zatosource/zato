@@ -19,8 +19,7 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     url_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     security = forms.ChoiceField(widget=forms.Select())
-    has_rbac = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    service_whitelist = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:50px'}))
+    service_whitelist = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:100px'}))
 
     def __init__(self, security_list=[], prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)

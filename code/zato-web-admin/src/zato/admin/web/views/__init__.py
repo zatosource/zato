@@ -440,7 +440,7 @@ class CreateEdit(_BaseView):
     """ Subclasses of this class will handle the creation/updates of Zato objects.
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super(CreateEdit, self).__init__()
         self.input = Bunch()
         self.input_dict = {}

@@ -37,7 +37,6 @@
             'is_active',
             'security',
             'service_whitelist',
-            'has_rbac'
         ]
     }
     </script>
@@ -79,7 +78,6 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -100,7 +98,6 @@
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.security }}</td>
                         <td class='ignore'>{{ item.service_whitelist }}</td>
-                        <td class='ignore'>{{ item.has_rbac }}</td>
 
                     </tr>
                 {% endfor %}
@@ -139,10 +136,6 @@
                             <td style="vertical-align:middle">Security<br/>definition</td>
                             <td>
                                 {{ create_form.security }}
-                                |
-                                <label>RBAC
-                                {{ create_form.has_rbac }}
-                                </label>
                             </td>
                         </tr>
 
@@ -188,11 +181,6 @@
                             <td style="vertical-align:middle">Security<br/>definition</td>
                             <td>
                                 {{ edit_form.security }}
-                                |
-                                <label>RBAC
-                                {{ edit_form.has_rbac }}
-                                </label>
-                            </td>
                         </tr>
 
                         <tr>
