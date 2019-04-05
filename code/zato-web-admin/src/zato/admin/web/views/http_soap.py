@@ -26,7 +26,7 @@ from zato.admin.web.views import get_http_channel_security_id, get_security_id_f
      id_only_service, method_allowed, parse_response_data, SecurityList
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
      HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, \
-     URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
+     URL_PARAMS_PRIORITY, URL_TYPE, ZatoException
 from zato.common import CACHE, MISC, SEC_DEF_TYPE
 from zato.common.odb.model import HTTPSOAP
 
