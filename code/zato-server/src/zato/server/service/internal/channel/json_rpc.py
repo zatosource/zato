@@ -16,7 +16,7 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
-get_attrs = 'id', 'name', 'is_active', 'url_path', 'sec_type', 'security_id', List('service_whitelist')
+get_attrs = 'id', 'name', 'is_active', 'url_path', 'sec_type', 'sec_use_rbac', 'security_id', List('service_whitelist')
 
 # ################################################################################################################################
 
