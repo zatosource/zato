@@ -18,12 +18,12 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     url_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    security = forms.ChoiceField(widget=forms.Select())
+    security_id = forms.ChoiceField(widget=forms.Select())
     service_whitelist = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:100px'}))
 
     def __init__(self, security_list=[], prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        add_security_select(self, security_list)
+        add_security_select(self, security_list, field_name='security_id')
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.JSONRPC;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.json_rpc.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'security', 'service_whitelist']);
+    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'security_id', 'service_whitelist']);
 })
 
 $.fn.zato.channel.json_rpc.create = function() {
@@ -47,7 +47,7 @@ $.fn.zato.channel.json_rpc.data_table.new_row = function(item, data, include_tr)
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.json_rpc.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.security);
+    row += String.format("<td class='ignore'>{0}</td>", item.security_id);
     row += String.format("<td class='ignore'>{0}</td>", item.service_whitelist);
 
     if(include_tr) {
