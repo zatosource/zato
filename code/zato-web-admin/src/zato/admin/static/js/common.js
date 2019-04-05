@@ -56,6 +56,7 @@ $.namespace('zato.cache.memcached');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.jms_wmq');
+$.namespace('zato.channel.json_rpc');
 $.namespace('zato.channel.kafka');
 $.namespace('zato.channel.stomp');
 $.namespace('zato.channel.wsx');
