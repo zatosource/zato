@@ -18,7 +18,8 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.channel.json_rpc import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, get_http_channel_security_id, get_security_id_from_select, \
+     Index as _Index, method_allowed
 from zato.common import ZATO_NONE
 from zato.common.util.json_ import dumps
 
@@ -49,17 +50,15 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'cluster_id', 'id', 'name', 'is_active', 'url_path', 'security_id', 'service_whitelist'
+        output_required = 'cluster_id', 'id', 'name', 'is_active', 'url_path', 'sec_type', 'sec_use_rbac', 'security_id', \
+            'service_whitelist'
         output_repeated = True
 
     def on_before_append_item(self, item):
 
         item.service_whitelist = '\n'.join(item.service_whitelist)
+        item.security_id = get_http_channel_security_id(item)
 
-        if item.security_id:
-            item.security_id = '{}/{}'.format(item.sec_type, item.security_id)
-        else:
-            item.security_id = ZATO_NONE
         return item
 
     def handle(self):
@@ -85,13 +84,9 @@ class _CreateEdit(CreateEdit):
         output_required = 'id', 'name'
 
     def on_after_set_input(self):
-        if self.input.security_id != ZATO_NONE:
-            self.input.security_id = int(self.input.security_id.split('/')[1])
-        else:
-            self.input.security_id = None
 
-        service_whitelist = self.input.service_whitelist.strip()
-        self.input.service_whitelist = service_whitelist.splitlines()
+        self.input.security_id = get_security_id_from_select(self.input, '', 'security_id')
+        self.input.service_whitelist = self.input.service_whitelist.strip().splitlines()
 
     def success_message(self, item):
         return 'WebSocket channel `{}` successfully {}'.format(item.name, self.verb)
