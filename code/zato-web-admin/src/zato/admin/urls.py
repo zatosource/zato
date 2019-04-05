@@ -936,11 +936,11 @@ urlpatterns += [
     url(r'^zato/channel/json-rpc/$',
         login_required(channel_json_rpc.Index()), name=channel_json_rpc.Index.url_name),
     url(r'^zato/channel/json-rpc/create/$',
-        login_required(channel_json_rpc.Create), name=channel_json_rpc.Create.url_name),
+        login_required(channel_json_rpc.Create()), name=channel_json_rpc.Create.url_name),
     url(r'^zato/channel/json-rpc/edit/$',
-        login_required(channel_json_rpc.Edit), name=channel_json_rpc.Edit.url_name),
+        login_required(channel_json_rpc.Edit()), name=channel_json_rpc.Edit.url_name),
     url(r'^zato/channel/json-rpc/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(channel_json_rpc.Delete), name=channel_json_rpc.Delete.url_name),
+        login_required(channel_json_rpc.Delete()), name=channel_json_rpc.Delete.url_name),
     ]
 
 # ################################################################################################################################
