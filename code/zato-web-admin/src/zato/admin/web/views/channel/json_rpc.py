@@ -10,18 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from traceback import format_exc
-
-# Django
-from django.http import HttpResponse, HttpResponseServerError
-from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.channel.json_rpc import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, get_http_channel_security_id, get_security_id_from_select, \
-     Index as _Index, method_allowed
-from zato.common import ZATO_NONE
-from zato.common.util.json_ import dumps
+     Index as _Index
 
 # ################################################################################################################################
 

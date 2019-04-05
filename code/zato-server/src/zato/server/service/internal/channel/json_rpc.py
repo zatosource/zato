@@ -80,11 +80,7 @@ class _CreateEdit(AdminService):
 
     def handle(self):
 
-        # Local aliases
-        input = self.request.input
-
         request = self.request.input.deepcopy()
-
         request.is_internal = False
         request.name = '{}.{}'.format(JSON_RPC.PREFIX.CHANNEL, request.name)
         request.connection = CONNECTION.CHANNEL
