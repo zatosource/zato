@@ -181,7 +181,7 @@ class Create(_CreateEdit):
                 first()
 
             if existing_one:
-                raise Exception('An object of that name `{}` already exists on this cluster'.format(input.name))
+                raise Exception('An object of that name `{}` already exists in this cluster'.format(input.name))
 
             # Is the service's name correct?
             service = session.query(Service).\
@@ -316,7 +316,9 @@ class Edit(_CreateEdit):
                 first()
 
             if existing_one:
-                raise Exception('An object of that name `{}` already exists on this cluster'.format(input.name))
+                raise Exception('An object of that input.name:`{}` already exists in this cluster ' \
+                '(input.connection:`{}` input.transport:`{}` input.id:`{}` existing_one.id:`{}`)'.format(
+                    input.name, input.connection, input.transport, input.id, existing_one.id))
 
             # Is the service's name correct?
             service = session.query(Service).\

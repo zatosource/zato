@@ -295,7 +295,6 @@ class ServiceStore(InitializingObject):
                     'fs_location': inspect.getfile(class_),
                 })
 
-
             # All set, write out the cache file
             f = open(cache_file_path, 'wb')
             f.write(dill_dumps(internal_cache))
