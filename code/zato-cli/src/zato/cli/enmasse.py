@@ -93,15 +93,26 @@ def populate_services_from_apispec(client, logger):
 
     by_prefix = {}  # { "zato.apispec": {"get-api-spec": { .. } } }
 
-    for service in response.data['namespaces']['']['services']:
+    for service in sorted(response.data['namespaces']['']['services']):
         prefix, _, name = service['name'].rpartition('.')
         methods = by_prefix.setdefault(prefix, {})
         methods[name] = service
 
+    # Services belonging here may not have all the CRUD methods and it is expected that they do not
+    allow_incomplete_methods = [
+        'zato.security',
+        'zato.security.rbac.client-role'
+    ]
+
     for prefix, methods in by_prefix.items():
-        # Ignore prefixes lacking "get-list", "create" and "edit" methods.
+
+        # Ignore prefixes lacking 'get-list', 'create' and 'edit' methods.
         if not all(n in methods for n in ('get-list', 'create', 'edit')):
-            continue
+
+            # RBAC client roles cannot be edited so it is fine that they lack the 'edit' method.
+            if prefix not in allow_incomplete_methods:
+                continue
+
         if prefix in IGNORE_PREFIXES:
             continue
 
@@ -184,16 +195,16 @@ class ServiceInfo(object):
 
         # Specifies a list of object dependencies:
         # field_name: {"dependent_type": "shortname", "dependent_field":
-        #  "fieldname", "empty_value": None, or e.g. ZATO_NO_SECURITY}
+        # "fieldname", "empty_value": None, or e.g. ZATO_NO_SECURITY}
         self.object_dependencies = object_dependencies or {}
 
-        #: Specifies a list of service dependencies. The field's value contains
-        #: the name of a service that must exist.
-        #:      field_name: {"only_if_field": "field_name" or None, "only_if_value": "value" or None}
+        # Specifies a list of service dependencies. The field's value contains
+        # the name of a service that must exist.
+        # field_name: {"only_if_field": "field_name" or None, "only_if_value": "value" or None}
         self.service_dependencies = service_dependencies or {}
 
         # List of field/value specifications that should be ignored during export:
-        #      field_name: value
+        # field_name: value
         self.export_filter = export_filter or {}
 
 # ################################################################################################################################
@@ -408,10 +419,13 @@ class Notice(object):
 
 class Results(object):
     def __init__(self, warnings=None, errors=None, service=None):
-        #: List of Warning instances.
+
+        # List of Warning instances
         self.warnings = warnings or []
-        #: List of Error instances.
+
+        # List of Error instances
         self.errors = errors or []
+
         self.service_name = service.get_name() if service else None
 
 # ################################################################################################################################
@@ -654,9 +668,7 @@ class ObjectImporter(object):
                 name = item.get('name')
                 if not name:
                     raw = (item_type, item)
-                    results.add_error(raw, ERROR_KEYS_MISSING,
-                        "{} has no 'name' key ({})",
-                        dict(item), item_type)
+                    results.add_error(raw, ERROR_KEYS_MISSING, '{} has no `name` key ({})', dict(item), item_type)
 
                 if item_type == 'http_soap':
                     connection = item.get('connection')
@@ -868,8 +880,8 @@ class ObjectManager(object):
             dep = self.find(info['dependent_type'], {'id': dep_id})
 
             if not dep:
-                raise Exception('Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`'.format(
-                    service_info.name, field_name, info['dependent_type'], dep_id, dep))
+                raise Exception('Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, ' \
+                    'item:`{}`'.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
             else:
                 item[field_name] = dep[info['dependent_field']]
 
@@ -926,10 +938,10 @@ class ObjectManager(object):
         service_name = service_info.get_service_name('get-list')
 
         if service_name is None:
-            self.logger.debug("Type {} has no 'get-list' service".format(service_info.name))
+            self.logger.info('Type `%s` has no `get-list` service (%s)', service_info, item_type)
             return
 
-        self.logger.debug("Invoking {} for {}".format(service_name, service_info.name))
+        self.logger.debug('Invoking %s for %s', service_name, service_info.name)
         response = self.client.invoke(service_name, {
             'cluster_id': self.client.cluster_id
         })
@@ -1099,8 +1111,8 @@ class InputParser(object):
 
 # ################################################################################################################################
 
-    def parse_items(self, dct, results):
-        for item_type, items in dct.items():
+    def parse_items(self, dict_, results):
+        for item_type, items in dict_.items():
             if item_type not in SERVICE_BY_NAME and item_type not in HTTP_SOAP_ITEM_TYPES:
                 raw = (item_type,)
                 results.add_error(raw, ERROR_UNKNOWN_ELEM, "Ignoring unknown element type {} in the input.", item_type)
