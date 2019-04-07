@@ -73,3 +73,4 @@ class GetList(AdminService):
                             continue
 
                     self.response.payload.append(definition)
+
