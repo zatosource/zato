@@ -498,7 +498,7 @@ class DependencyScanner(object):
 # ################################################################################################################################
 
     def find(self, item_type, fields):
-        if item_type == 'sec_def':
+        if item_type == 'def_sec':
             return self.find_sec(fields)
         lst = self.json.get(item_type, ())
         return find_first(lst, lambda item: dict_match(item, fields))
@@ -531,6 +531,8 @@ class DependencyScanner(object):
 
             value = item.get(dep_key)
             if value != dep_info.get('empty_value'):
+
+
                 dep = self.find(dep_info['dependent_type'], {dep_info['dependent_field']: value})
                 if dep is None:
                     key = (dep_info['dependent_type'], item[dep_key])
