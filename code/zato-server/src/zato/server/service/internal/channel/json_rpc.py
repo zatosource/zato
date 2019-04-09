@@ -39,6 +39,7 @@ class GetList(_GetBase):
         input_required = 'cluster_id'
         output_required = get_attrs
         output_repeated = True
+        response_elem = None
 
     def handle(self):
         out = []
