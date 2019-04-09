@@ -498,7 +498,7 @@ class DependencyScanner(object):
 # ################################################################################################################################
 
     def find(self, item_type, fields):
-        if item_type == 'sec_def':
+        if item_type == 'def_sec':
             return self.find_sec(fields)
         lst = self.json.get(item_type, ())
         return find_first(lst, lambda item: dict_match(item, fields))
@@ -531,6 +531,8 @@ class DependencyScanner(object):
 
             value = item.get(dep_key)
             if value != dep_info.get('empty_value'):
+
+
                 dep = self.find(dep_info['dependent_type'], {dep_info['dependent_field']: value})
                 if dep is None:
                     key = (dep_info['dependent_type'], item[dep_key])
@@ -560,15 +562,21 @@ class DependencyScanner(object):
 
 class ObjectImporter(object):
     def __init__(self, client, logger, object_mgr, json, ignore_missing):
-        #: Zato client.
+
+        # Zato client.
         self.client = client
+
         self.logger = logger
-        #: Validation result.
+
+        # Validation result.
         self.results = Results()
-        #: ObjectManager instance.
+
+        # ObjectManager instance.
         self.object_mgr = object_mgr
-        #: JSON to import.
+
+        # JSON to import.
         self.json = bunchify(json)
+
         self.ignore_missing = ignore_missing
 
 # ################################################################################################################################
@@ -769,7 +777,11 @@ class ObjectImporter(object):
 
         # Fetch an item from a cache of ODB object and assign its ID to item so that the Edit service knows what to update.
         if is_edit:
-            odb_item = self.object_mgr.find(def_type, {'name': item.name})
+            lookup_config = {'name': item.name}
+            if def_type == 'http_soap':
+                lookup_config['connection'] = item.connection
+                lookup_config['transport'] = item.transport
+            odb_item = self.object_mgr.find(def_type, lookup_config)
             item.id = odb_item.id
 
         for field_name, info in iteritems(service_info.object_dependencies):
@@ -780,6 +792,7 @@ class ObjectImporter(object):
                 item[info['id_field']] = dep_obj.id
 
         self.logger.debug("Invoking {} for {}".format(service_name, service_info.name))
+
         response = self.client.invoke(service_name, item)
         if response.ok:
             verb = 'Updated' if is_edit else 'Created'
