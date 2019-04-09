@@ -535,7 +535,7 @@ class DependencyScanner(object):
                 self.scan_item(item_type, item, results)
 
         if not self.ignore_missing:
-            for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing.items)):
+            for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing)):
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
                 raw = (missing_type, missing_name, dep_names, existing)
                 results.add_warning(
@@ -563,7 +563,7 @@ class ObjectImporter(object):
         service_info = SERVICE_BY_NAME[item_type]
         item_dict = dict(item)
 
-        for dep_field, dep_info in iteritems(service_info.service_dependencies.items):
+        for dep_field, dep_info in iteritems(service_info.service_dependencies):
             if not test_item(item, dep_info.get('condition')):
                 continue
 
@@ -592,7 +592,7 @@ class ObjectImporter(object):
                 results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB, "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
                                     missing_name, missing_type, dep_names)
 
-        for item_type, items in iteritems(self.json.items):
+        for item_type, items in iteritems(self.json):
             for item in items:
                 self.validate_service_required(item_type, item)
 
@@ -653,7 +653,7 @@ class ObjectImporter(object):
 
     def find_already_existing_odb_objects(self):
         results = Results()
-        for item_type, items in iteritems(self.json.items):
+        for item_type, items in iteritems(self.json):
             for item in items:
                 name = item.get('name')
                 if not name:
@@ -712,7 +712,7 @@ class ObjectImporter(object):
         #
         # Create new objects, again, definitions come first ..
         #
-        for item_type, items in iteritems(self.json.items):
+        for item_type, items in iteritems(self.json):
             if SERVICE_BY_NAME[item_type].is_security or 'def' in item_type:
                 new_defs.append({item_type: items})
             else:
@@ -722,7 +722,7 @@ class ObjectImporter(object):
         # .. actually create the objects now.
         #
         for elem in new_defs + new_other:
-            for item_type, attr_list in iteritems(elem.items):
+            for item_type, attr_list in iteritems(elem):
                 for attrs in attr_list:
 
                     if self.should_skip_item(item_type, attrs, False):
@@ -760,7 +760,7 @@ class ObjectImporter(object):
             odb_item = self.object_mgr.find(def_type, {'name': item.name})
             item.id = odb_item.id
 
-        for field_name, info in iteritems(service_info.object_dependencies.items):
+        for field_name, info in iteritems(service_info.object_dependencies):
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
                 dep_obj = self.object_mgr.find(info['dependent_type'], {
                     info['dependent_field']: item[field_name]
@@ -852,7 +852,7 @@ class ObjectManager(object):
         normalize_service_name(item)
         service_info = SERVICE_BY_NAME[item_type]
 
-        for field_name, info in iteritems(service_info.object_dependencies.items):
+        for field_name, info in iteritems(service_info.object_dependencies):
 
             if 'id_field' not in info:
                 continue
@@ -915,7 +915,7 @@ class ObjectManager(object):
 
     def delete_all(self):
         count = 0
-        for item_type, items in iteritems(self.objects.items):
+        for item_type, items in iteritems(self.objects):
             for item in items:
                 self.delete(item_type, item)
                 count += 1
@@ -1348,7 +1348,7 @@ class EnMasse(ManageCommand):
         results = Results()
         merged = copy.deepcopy(self.object_mgr.objects)
 
-        for json_key, json_elems in iteritems(self.json.items):
+        for json_key, json_elems in iteritems(self.json):
             if 'http' in json_key or 'soap' in json_key:
                 odb_key = 'http_soap'
             else:
