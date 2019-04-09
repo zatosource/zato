@@ -8,16 +8,25 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from json import dumps
+
+# Bunch
+from bunch import bunchify
+
 # Zato
 from zato.common import CONNECTION, DATA_FORMAT, JSON_RPC, URL_TYPE
+from zato.common.json_rpc import JSONRPCHandler, RequestContext
 from zato.common.odb.model import HTTPSOAP
 from zato.server.service import List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 get_attrs = 'id', 'name', 'is_active', 'url_path', 'sec_type', 'sec_use_rbac', 'security_id', List('service_whitelist')
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _BaseSimpleIO(AdminSIO):
@@ -25,11 +34,13 @@ class _BaseSimpleIO(AdminSIO):
     response_elem = None
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class _GetBase(AdminService):
     def pre_process_item(self, item):
         item['name'] = item['name'].replace(JSON_RPC.PREFIX.CHANNEL + '.', '', 1)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class GetList(_GetBase):
@@ -58,6 +69,7 @@ class GetList(_GetBase):
         self.response.payload[:] = out
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Get(AdminService):
     class SimpleIO(_BaseSimpleIO):
@@ -68,6 +80,7 @@ class Get(AdminService):
     def handle(self):
         self.response.payload = self.invoke('zato.http-soap.get', self.request.input, skip_response_elem=True)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _CreateEdit(AdminService):
@@ -98,10 +111,12 @@ class _CreateEdit(AdminService):
         self.response.payload.name = response['name']
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Create(_CreateEdit):
     target_service_suffix = 'create'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
@@ -111,6 +126,7 @@ class Edit(_CreateEdit):
         input_required = _CreateEdit.SimpleIO.input_required + ('id',)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Delete(AdminService):
     class SimpleIO(_BaseSimpleIO):
@@ -119,4 +135,26 @@ class Delete(AdminService):
     def handle(self):
         self.invoke('zato.http-soap.delete', self.request.input)
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class JSONRPCGateway(AdminService):
+    """ A gateway service via which JSON-RPC requests are accepted.
+    """
+    name = 'pub.zato.channel.json-rpc.gateway'
+
+    def handle(self):
+        channel_config = self.server.worker_store.request_dispatcher.url_data.get_channel_by_name(self.channel.name)
+
+        ctx = RequestContext()
+        ctx.cid = self.cid
+        ctx.message = self.request.payload
+        ctx.orig_message = self.request.raw_request
+
+        handler = JSONRPCHandler(bunchify(channel_config), self.invoke)
+        response = handler.handle(ctx)
+
+        self.response.payload = dumps(response)
+
+# ################################################################################################################################
 # ################################################################################################################################

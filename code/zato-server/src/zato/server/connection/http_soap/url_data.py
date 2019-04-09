@@ -22,7 +22,7 @@ from six import PY2
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import DATA_FORMAT, MISC, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
+from zato.common import CONNECTION, DATA_FORMAT, MISC, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition, update_apikey_username_to_channel
@@ -1122,15 +1122,21 @@ class URLData(CyURLData, OAuthDataStore):
         self.tls_key_cert_config[name] = Bunch()
         self.tls_key_cert_config[name].config = config
 
+# ################################################################################################################################
+
     def tls_key_cert_get(self, name):
         with self.url_sec_lock:
             return self.tls_key_cert_config.get(name)
+
+# ################################################################################################################################
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_CREATE(self, msg, *args):
         """ Creates a new TLS key/cert security definition.
         """
         with self.url_sec_lock:
             self._update_tls_key_cert(msg.name, msg)
+
+# ################################################################################################################################
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_EDIT(self, msg, *args):
         """ Updates an existing TLS key/cert security definition.
@@ -1140,12 +1146,23 @@ class URLData(CyURLData, OAuthDataStore):
             self._update_tls_key_cert(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.TLS_KEY_CERT)
 
+# ################################################################################################################################
+
     def on_broker_msg_SECURITY_TLS_KEY_CERT_DELETE(self, msg, *args):
         """ Deletes an TLS key/cert security definition.
         """
         with self.url_sec_lock:
             del self.tls_key_cert_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.TLS_KEY_CERT, True)
+
+# ################################################################################################################################
+
+    def get_channel_by_name(self, name, _channel=CONNECTION.CHANNEL):
+        # type: (unicode, unicode) -> dict
+        for item in self.channel_data:
+            if item['connection'] == _channel:
+                if item['name'] == name:
+                    return item
 
 # ################################################################################################################################
 
@@ -1195,6 +1212,8 @@ class URLData(CyURLData, OAuthDataStore):
 
         return channel_item
 
+# ################################################################################################################################
+
     def _sec_info_from_msg(self, msg):
         """ Creates a security info bunch out of an incoming CREATE_EDIT message.
         """
@@ -1217,6 +1236,8 @@ class URLData(CyURLData, OAuthDataStore):
 
         return sec_info
 
+# ################################################################################################################################
+
     def _create_channel(self, msg, old_data):
         """ Creates a new channel, both its core data and the related security definition.
         Clears out URL cache for that entry, if it existed at all.
@@ -1227,6 +1248,8 @@ class URLData(CyURLData, OAuthDataStore):
 
         self._remove_from_cache(match_target)
         self.sort_channel_data()
+
+# ################################################################################################################################
 
     def _delete_channel(self, msg):
         """ Deletes a channel, both its core data and the related security definition. Clears relevant
@@ -1261,6 +1284,8 @@ class URLData(CyURLData, OAuthDataStore):
         self.sort_channel_data()
 
         return old_data
+
+# ################################################################################################################################
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
@@ -1297,3 +1322,6 @@ class URLData(CyURLData, OAuthDataStore):
         pass
 
     on_broker_msg_SECURITY_TLS_CA_CERT_DELETE = on_broker_msg_SECURITY_TLS_CA_CERT_EDIT = on_broker_msg_SECURITY_TLS_CA_CERT_CREATE
+
+# ################################################################################################################################
+# ################################################################################################################################
