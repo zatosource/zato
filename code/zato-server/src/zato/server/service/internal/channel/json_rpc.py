@@ -9,14 +9,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import dumps
+from json import dumps, loads
+from traceback import format_exc
 
 # Bunch
 from bunch import bunchify
 
 # Zato
-from zato.common import CONNECTION, DATA_FORMAT, JSON_RPC, URL_TYPE
-from zato.common.json_rpc import JSONRPCHandler, RequestContext
+from zato.common import CONNECTION, JSON_RPC, URL_TYPE
+from zato.common.json_rpc import ErrorCtx, InternalError, ItemResponse, JSONRPCHandler, ParseError, RequestContext
 from zato.common.odb.model import HTTPSOAP
 from zato.server.service import List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -99,7 +100,6 @@ class _CreateEdit(AdminService):
         request.name = '{}.{}'.format(JSON_RPC.PREFIX.CHANNEL, request.name)
         request.connection = CONNECTION.CHANNEL
         request.transport = URL_TYPE.PLAIN_HTTP
-        request.data_format = DATA_FORMAT.JSON
         request.http_accept = 'application/json'
         request.method = 'POST'
         request.service = 'pub.zato.channel.json-rpc.gateway'
@@ -143,16 +143,49 @@ class JSONRPCGateway(AdminService):
     """
     name = 'pub.zato.channel.json-rpc.gateway'
 
+# ################################################################################################################################
+
+    def _get_json_rpc_message(self):
+        pass
+
+# ################################################################################################################################
+
     def handle(self):
-        channel_config = self.server.worker_store.request_dispatcher.url_data.get_channel_by_name(self.channel.name)
+        try:
+            channel_config = self.server.worker_store.request_dispatcher.url_data.get_channel_by_name(self.channel.name)
+            message = loads(self.request.payload)
 
-        ctx = RequestContext()
-        ctx.cid = self.cid
-        ctx.message = self.request.payload
-        ctx.orig_message = self.request.raw_request
+        except Exception as e:
 
-        handler = JSONRPCHandler(bunchify(channel_config), self.invoke)
-        response = handler.handle(ctx)
+            self.logger.warn('JSON-RPC error in `%s` (%s), e:`%s`', self.channel.name, self.cid, format_exc())
+
+            error_ctx = ErrorCtx()
+            error_ctx.cid = self.cid
+
+            # JSON parsing error
+            if isinstance(e, ValueError):
+                code = ParseError.code
+                message = 'Parsing error'
+            else:
+                code = InternalError.code
+                message = 'Message could not be handled'
+
+            error_ctx.code = code
+            error_ctx.message = message
+
+            out = ItemResponse()
+            out.error = error_ctx
+
+            response = out.to_dict()
+
+        else:
+            ctx = RequestContext()
+            ctx.cid = self.cid
+            ctx.message = message
+            ctx.orig_message = self.request.raw_request
+
+            handler = JSONRPCHandler(bunchify(channel_config), self.invoke)
+            response = handler.handle(ctx)
 
         self.response.payload = dumps(response)
 

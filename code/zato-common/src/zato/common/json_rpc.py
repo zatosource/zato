@@ -55,7 +55,7 @@ class RequestContext(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InvocationErrorCtx(object):
+class ErrorCtx(object):
     __slots__ = ('cid', 'code', 'message')
 
     def __init__(self):
@@ -84,7 +84,7 @@ class ItemResponse(object):
     def __init__(self):
         self.id = None     # type: int
         self.cid = None    # type: unicode
-        self.error = None  # type: InvocationErrorCtx
+        self.error = None  # type: ErrorCtx
         self.result = None # type: object
 
     def to_dict(self, _json_rpc_version=json_rpc_version_supported):
@@ -133,6 +133,12 @@ class MethodNotFound(JSONRPCBadRequest):
 
 class InternalError(JSONRPCException, InternalServerError):
     code = -32603
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ParseError(JSONRPCBadRequest):
+    code = -32700
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -240,14 +246,14 @@ class JSONRPCHandler(object):
             # We treat any exception at this point as an internal error
             logger.warn('JSON-RPC exception in `%s` (%s); msg:`%s`, e:`%s`', self.config.name, cid, orig_message, format_exc())
 
-            error_ctx = InvocationErrorCtx()
+            error_ctx = ErrorCtx()
             error_ctx.cid = cid
 
             if isinstance(e, JSONRPCException):
                 err_code = e.code
                 err_message = e.message
             else:
-                err_code = -3200
+                err_code = -32000
                 err_message = 'Message could not be handled'
 
             error_ctx.code = err_code
