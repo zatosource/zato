@@ -1445,8 +1445,16 @@ class SFTP:
         def is_valid(self, value):
             return value in (elem.id for elem in self)
 
-    # ################################################################################################################################
-    # ################################################################################################################################
+# ################################################################################################################################
+# ################################################################################################################################
+
+class JSON_RPC:
+    class PREFIX:
+        CHANNEL = 'json.rpc.channel'
+        OUTGOING = 'json.rpc.outconn'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class CONFIG_FILE:
     USER_DEFINED = 'user-defined'
@@ -1786,6 +1794,7 @@ default_internal_modules = {
     'zato.server.service.internal.cache.memcached': True,
     'zato.server.service.internal.channel.amqp_': True,
     'zato.server.service.internal.channel.jms_wmq': True,
+    'zato.server.service.internal.channel.json_rpc': True,
     'zato.server.service.internal.channel.stomp': False,
     'zato.server.service.internal.channel.web_socket': True,
     'zato.server.service.internal.channel.web_socket.cleanup': True,

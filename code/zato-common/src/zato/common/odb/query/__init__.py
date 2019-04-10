@@ -692,13 +692,13 @@ def http_soap_security_list(session, cluster_id, connection=None):
 
     return q
 
-def http_soap(session, cluster_id, id=None, name=None):
+def http_soap(session, cluster_id, item_id=None, name=None):
     """ An HTTP/SOAP connection.
     """
     q = _http_soap(session, cluster_id)
 
-    if id:
-        q = q.filter(HTTPSOAP.id==id)
+    if item_id:
+        q = q.filter(HTTPSOAP.id==item_id)
     elif name:
         q = q.filter(HTTPSOAP.name==name)
     else:

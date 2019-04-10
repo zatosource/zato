@@ -22,11 +22,11 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
-from zato.admin.web.views import get_security_id_from_select, get_tls_ca_cert_list, id_only_service, \
-     method_allowed, parse_response_data, SecurityList
+from zato.admin.web.views import get_http_channel_security_id, get_security_id_from_select, get_tls_ca_cert_list, \
+     id_only_service, method_allowed, parse_response_data, SecurityList
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
      HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, \
-     URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
+     URL_PARAMS_PRIORITY, URL_TYPE, ZatoException
 from zato.common import CACHE, MISC, SEC_DEF_TYPE
 from zato.common.odb.model import HTTPSOAP
 
@@ -192,14 +192,7 @@ def index(req):
                 else:
                     security_name = '<span class="form_hint">---</span>'
 
-            _security_id = item.security_id
-            if _security_id:
-                security_id = '{0}/{1}'.format(item.sec_type, _security_id)
-            else:
-                if item.sec_use_rbac:
-                    security_id = ZATO_SEC_USE_RBAC
-                else:
-                    security_id = ZATO_NONE
+            security_id = get_http_channel_security_id(item)
 
             if item.cache_id:
                 cache_name = '{}/{}'.format(CACHE_TYPE[item.cache_type], item.cache_name)

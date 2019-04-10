@@ -532,7 +532,7 @@ class ODBManager(SessionWrapper):
                 all()
 
             for item in server_services:
-                if item.name not in locally_deployed:
+                if item not in locally_deployed:
                     missing.append(item)
 
         return missing
