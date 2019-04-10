@@ -221,6 +221,15 @@ def parse_instance_opaque_attr(instance):
 
 # ################################################################################################################################
 
+def get_dict_with_opaque(instance):
+    opaque = parse_instance_opaque_attr(instance)
+    out = instance._asdict()
+    for k, v in opaque.items():
+        out[k] = v
+    return out
+
+# ################################################################################################################################
+
 def set_instance_opaque_attrs(instance, input, skip=None, only=None, _zato_skip=_zato_opaque_skip_attrs):
     """ Given an SQLAlchemy object instance and incoming SimpleIO-based input,
     populates all opaque values of that instance.

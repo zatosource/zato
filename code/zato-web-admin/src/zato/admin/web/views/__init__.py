@@ -440,7 +440,7 @@ class CreateEdit(_BaseView):
     """ Subclasses of this class will handle the creation/updates of Zato objects.
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super(CreateEdit, self).__init__()
         self.input = Bunch()
         self.input_dict = {}
@@ -647,5 +647,19 @@ def upload_to_server(req, cluster_id, service, error_msg_template):
         msg = error_msg_template.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+
+def get_http_channel_security_id(item):
+    _security_id = item.security_id
+    if _security_id:
+        security_id = '{0}/{1}'.format(item.sec_type, _security_id)
+    else:
+        if item.sec_use_rbac:
+            security_id = ZATO_SEC_USE_RBAC
+        else:
+            security_id = ZATO_NONE
+
+    return security_id
 
 # ################################################################################################################################

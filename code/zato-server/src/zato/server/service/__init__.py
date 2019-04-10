@@ -617,7 +617,12 @@ class Service(object):
                     if raise_timeout:
                         raise
             else:
-                return self.update_handle(*invoke_args, **kwargs)
+                out = self.update_handle(*invoke_args, **kwargs)
+                if kwargs.get('skip_response_elem'):
+                    response_elem = out.keys()[0]
+                    return out[response_elem]
+                else:
+                    return out
         except Exception:
             logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc())
             raise

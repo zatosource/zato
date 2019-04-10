@@ -23,8 +23,9 @@ from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
 from zato.common.util.json_ import dumps
-from zato.common.util.sql import get_security_by_id, elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
-from zato.server.service import Boolean, Integer
+from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
+     set_instance_opaque_attrs
+from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -85,7 +86,7 @@ class _BaseGet(AdminService):
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
             'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type',
-            'content_encoding', Boolean('match_slash'), 'http_accept')
+            'content_encoding', Boolean('match_slash'), 'http_accept', List('service_whitelist'))
 
 # ################################################################################################################################
 
@@ -101,12 +102,13 @@ class Get(_BaseGet):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.request.input.require_any('id', 'name')
-            self.response.payload = http_soap(session, self.request.input.cluster_id, self.request.input.id)
+            item = http_soap(session, self.request.input.cluster_id, self.request.input.id, self.request.input.name)
+            out = get_dict_with_opaque(item)
+            self.response.payload = out
 
 # ################################################################################################################################
 
 class GetList(_BaseGet):
-
     """ Returns a list of HTTP/SOAP connections.
     """
     _filter_by = HTTPSOAP.name,
@@ -187,7 +189,8 @@ class Create(_CreateEdit):
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
-            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept')
+            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept',
+            List('service_whitelist'))
         output_required = ('id', 'name')
 
     def handle(self):
@@ -322,7 +325,8 @@ class Edit(_CreateEdit):
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
-            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept')
+            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept',
+            List('service_whitelist'))
         output_required = ('id', 'name')
 
     def handle(self):
