@@ -21,6 +21,7 @@ from jsonschema.validators import validator_for
 
 # Zato
 from zato.common import CHANNEL
+from zato.common.json_rpc import ErrorCtx, JSONRPCBadRequest, ItemResponse
 
 # ################################################################################################################################
 
@@ -57,6 +58,16 @@ class ValidationException(Exception):
 class ValidationError(object):
     """ Base class for validation error-related classes.
     """
+    __slots__ = 'cid', 'error_msg', 'error_extra'
+
+    def __init__(self, cid, error_msg, error_extra=None):
+        # type: (unicode, unicode, dict)
+        self.cid = cid
+        self.error_msg = error_msg
+        self.error_extra = error_extra
+
+    def serialize(self):
+        raise NotImplementedError('Must be overridden in subclasses')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,6 +82,31 @@ class RESTError(ValidationError):
 class JSONRPCError(ValidationError):
     """ An error reporter that serializes JSON Schema validation errors into JSON-RPC responses.
     """
+    def serialize(self):
+        # type: () -> dict
+
+        error_ctx = ErrorCtx()
+        error_ctx.cid = self.cid
+
+        error_ctx.code = JSONRPCBadRequest.code
+        error_ctx.message = 'Invalid request'
+
+        # This may be optionally turned off
+        if self.error_msg:
+            error_ctx.message += ' {}'.format(self.error_msg)
+
+        out = ItemResponse()
+        out.id = self.error_extra['json_rpc_id']
+        out.error = error_ctx
+
+        return out.to_dict()
+
+# ################################################################################################################################
+
+channel_type_to_error_class = {
+    CHANNEL.HTTP_SOAP: RESTError,
+    CHANNEL.JSON_RPC: JSONRPCError,
+}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -79,7 +115,7 @@ class ValidationConfig(object):
     """ An individual set of configuration options - each object requiring validation (e.g. each channel)
     will have its own instance of this class assigned to its validator.
     """
-    __slots__ = 'is_enabled', 'object_type', 'object_name', 'schema_path', 'schema', 'validator', 'should_report_errors'
+    __slots__ = 'is_enabled', 'object_type', 'object_name', 'schema_path', 'schema', 'validator', 'should_return_err_details'
 
     def __init__(self):
         self.is_enabled = None   # type: bool
@@ -92,15 +128,31 @@ class ValidationConfig(object):
         self.schema_path = None # type: unicode
         self.schema = None      # type: dict
         self.validator = None   # type: object
-        self.should_report_errors = None # type: bool
+        self.should_return_err_details = None # type: bool
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Result(object):
+    __slots__ = 'is_ok', 'cid', 'error_msg', 'error_extra', 'object_type'
+
     def __init__(self):
-        self.is_ok = None # type: bool
-        self.error = None # type: unicode
+        self.is_ok = None        # type: bool
+        self.cid = None          # type: unicode
+        self.error_msg = None    # type: unicode
+        self.error_extra = None  # type: dict
+        self.object_type = None  # type: unicode
+
+    def __bool__(self):
+        return bool(self.is_ok)
+
+    __nonzero__ = __bool__
+
+    def get_error(self):
+        # type: () -> dict
+        ErrorClass = channel_type_to_error_class[self.object_type]
+        error = ErrorClass(self.cid, self.error_msg, self.error_extra) # type: ValidationError
+        return error.serialize()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -133,22 +185,32 @@ class Validator(object):
         # Everything is set up = we are initialized
         self.is_initialized = True
 
-    def validate(self, data, _validate=js_validate):
+    def validate(self, cid, data, _validate=js_validate):
         # type: (object, Callable) -> Result
 
         # Result we will return
-        out = Result()
+        result = Result()
+        result.cid = cid
 
         try:
             js_validate(data, self.config.schema, self.config.validator)
         except JSValidationError as e:
-            out.is_ok = False
-            if self.config.should_report_errors:
-                out.error = str(e)
-        else:
-            out.is_ok = True
 
-        return out
+            # These will be always used, no matter the object/channel type
+            result.is_ok = False
+            result.object_type = self.config.object_type
+
+            # This is optional because details of errors will not be always desirable to be returne
+            if self.config.should_return_err_details:
+                result.error_msg = str(e)
+
+            # This is applicable only to JSON-RPC
+            if self.config.object_type == CHANNEL.JSON_RPC:
+                result.error_extra = {'json_rpc_id': data.get('id')}
+        else:
+            result.is_ok = True
+
+        return result
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,13 +223,19 @@ if __name__ == '__main__':
     config.object_name = 'My Channel'
     config.object_type = CHANNEL.JSON_RPC
     config.schema_path = schema_path
+    config.should_return_err_details = True
 
     validator = Validator()
     validator.config = config
     validator.init()
 
-    data = {'aaa': 'bbb'}
-    validator.validate(data)
+    data = {'id': 'zzz', 'aaa': 'bbb'}
+    result = validator.validate(123, data)
+
+    if result:
+        print(111, 'OK')
+    else:
+        print(222, result.get_error())
 
 # ################################################################################################################################
 # ################################################################################################################################
