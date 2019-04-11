@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
-import logging
 from json import loads
 from logging import getLogger
 
@@ -42,8 +41,6 @@ if typing.TYPE_CHECKING:
 
 # ################################################################################################################################
 
-log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
-logging.basicConfig(level=logging.INFO, format=log_format)
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -66,6 +63,15 @@ class ValidationError(object):
         self.error_msg = error_msg
         self.error_extra = error_extra
 
+    def get_error_message(self):
+        # type: () -> unicode
+
+        out = 'Invalid request'
+        if self.error_msg:
+            out += '; {}'.format(self.error_msg)
+
+        return out
+
     def serialize(self):
         raise NotImplementedError('Must be overridden in subclasses')
 
@@ -75,6 +81,13 @@ class ValidationError(object):
 class RESTError(ValidationError):
     """ An error reporter that serializes JSON Schema validation errors into regular REST responses.
     """
+    def serialize(self):
+        # type: () -> dict
+        return {
+            'is_ok': False,
+            'cid': self.cid,
+            'message': self.get_error_message()
+        }
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -92,8 +105,7 @@ class JSONRPCError(ValidationError):
         error_ctx.message = 'Invalid request'
 
         # This may be optionally turned off
-        if self.error_msg:
-            error_ctx.message += ' {}'.format(self.error_msg)
+        error_ctx.message = self.get_error_message()
 
         out = ItemResponse()
         out.id = self.error_extra['json_rpc_id']
@@ -211,31 +223,6 @@ class Validator(object):
             result.is_ok = True
 
         return result
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if __name__ == '__main__':
-    schema_path = './schema1.json'
-
-    config = ValidationConfig()
-    config.is_enabled = True
-    config.object_name = 'My Channel'
-    config.object_type = CHANNEL.JSON_RPC
-    config.schema_path = schema_path
-    config.should_return_err_details = True
-
-    validator = Validator()
-    validator.config = config
-    validator.init()
-
-    data = {'id': 'zzz', 'aaa': 'bbb'}
-    result = validator.validate(123, data)
-
-    if result:
-        print(111, 'OK')
-    else:
-        print(222, result.get_error())
 
 # ################################################################################################################################
 # ################################################################################################################################
