@@ -78,8 +78,8 @@ class ValidationError(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RESTError(ValidationError):
-    """ An error reporter that serializes JSON Schema validation errors into regular REST responses.
+class DictError(ValidationError):
+    """ An error reporter that serializes JSON Schema validation errors into Python dict responses.
     """
     def serialize(self):
         # type: () -> dict
@@ -116,8 +116,9 @@ class JSONRPCError(ValidationError):
 # ################################################################################################################################
 
 channel_type_to_error_class = {
-    CHANNEL.HTTP_SOAP: RESTError,
+    CHANNEL.HTTP_SOAP: DictError,
     CHANNEL.JSON_RPC: JSONRPCError,
+    CHANNEL.SERVICE: DictError,
 }
 
 # ################################################################################################################################
@@ -181,7 +182,7 @@ class Validator(object):
 
     def init(self):
         if not os.path.exists(self.config.schema_path):
-            raise ValidationException('JSON schema not found `{}` ({})'.format(self.config.schema_path, self.config.object_name))
+            raise ValidationException('JSON schema not found `{}` ({})'.format(self.config.schema_path))
 
         # The file is sure to exist
         with open(self.config.schema_path) as f:
@@ -197,12 +198,16 @@ class Validator(object):
         # Everything is set up = we are initialized
         self.is_initialized = True
 
-    def validate(self, cid, data, _validate=js_validate):
+    def validate(self, cid, data, object_type=None, object_name=None, needs_err_details=None, _validate=js_validate):
         # type: (object, Callable) -> Result
 
         # Result we will return
         result = Result()
         result.cid = cid
+
+        object_type = object_type or self.config.object_type
+        object_name or self.config.object_name
+        needs_err_details or self.config.needs_err_details
 
         try:
             js_validate(data, self.config.schema, self.config.validator)
@@ -210,14 +215,14 @@ class Validator(object):
 
             # These will be always used, no matter the object/channel type
             result.is_ok = False
-            result.object_type = self.config.object_type
+            result.object_type = object_type
 
             # This is optional because details of errors will not be always desirable to be returne
-            if self.config.needs_err_details:
+            if needs_err_details:
                 result.error_msg = str(e)
 
             # This is applicable only to JSON-RPC
-            if self.config.object_type == CHANNEL.JSON_RPC:
+            if object_type == CHANNEL.JSON_RPC:
                 result.error_extra = {'json_rpc_id': data.get('id')}
         else:
             result.is_ok = True

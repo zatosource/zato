@@ -268,6 +268,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.logs_dir = os.path.join(server.base_dir, 'logs')
     server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
     server.static_dir = os.path.join(server.base_dir, 'config', 'repo', 'static')
+    server.json_schema_dir = os.path.join(server.base_dir, 'config', 'repo', 'schema', 'json-schema')
     server.fs_server_config = server_config
     server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
     server.pickup_config = pickup_config

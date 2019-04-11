@@ -83,10 +83,12 @@ if typing.TYPE_CHECKING:
 
     # Zato
     from zato.common.crypto import ServerCryptoManager
+    from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
 
     # For pyflakes
+    JSONSchemaValidator = JSONSchemaValidator
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
     WorkerStore = WorkerStore
@@ -245,6 +247,12 @@ class Service(object):
 
     # For invoking other servers directly
     servers = None
+
+    # By default, services do not use JSON Schema
+    json_schema = '' # type: unicode
+
+    # JSON Schema validator attached only if service declares a schema to use
+    _json_schema_validator = None # type: JSONSchemaValidator
 
     def __init__(self, _get_logger=logging.getLogger, _Bunch=Bunch, _Request=Request, _Response=Response,
             _DictNav=DictNav, _ListNav=ListNav, _Outgoing=Outgoing, _WMQFacade=WMQFacade, _ZMQFacade=ZMQFacade,

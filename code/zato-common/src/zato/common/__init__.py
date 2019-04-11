@@ -650,6 +650,7 @@ class CHANNEL(Attrs):
     PUBLISH = 'publish'
     SCHEDULER = 'scheduler'
     SCHEDULER_AFTER_ONE_TIME = 'scheduler-after-one-time'
+    SERVICE = 'service'
     STARTUP_SERVICE = 'startup-service'
     STOMP = 'stomp'
     URL_DATA = 'url-data'
