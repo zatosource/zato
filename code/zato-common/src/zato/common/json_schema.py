@@ -47,7 +47,17 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class ValidationException(Exception):
-    pass
+    def __init__(self, cid, object_type, object_name, needs_err_details, error_msg, error_msg_details):
+        # type: (unicode, unicode, unicode, bool, unicode, unicode)
+        self.cid = cid
+        self.object_type = object_type
+        self.object_name = object_name
+        self.needs_err_details = needs_err_details
+        self.error_msg = error_msg
+        self.error_msg_details = error_msg_details
+
+        super(ValidationException, self).__init__('JSON Schema validation error in `{}` ({}), e:`{}`'.format(
+            self.object_name, cid, self.error_msg))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,19 +65,20 @@ class ValidationException(Exception):
 class ValidationError(object):
     """ Base class for validation error-related classes.
     """
-    __slots__ = 'cid', 'error_msg', 'error_extra'
+    __slots__ = 'cid', 'needs_err_details', 'error_msg', 'error_extra'
 
-    def __init__(self, cid, error_msg, error_extra=None):
-        # type: (unicode, unicode, dict)
+    def __init__(self, cid, needs_err_details, error_msg, error_extra=None):
+        # type: (unicode, bool, unicode, dict)
         self.cid = cid
+        self.needs_err_details = needs_err_details
         self.error_msg = error_msg
         self.error_extra = error_extra
 
-    def get_error_message(self):
-        # type: () -> unicode
+    def get_error_message(self, needs_error_msg=False):
+        # type: (bool) -> unicode
 
         out = 'Invalid request'
-        if self.error_msg:
+        if needs_error_msg or self.needs_err_details:
             out += '; {}'.format(self.error_msg)
 
         return out
@@ -147,11 +158,12 @@ class ValidationConfig(object):
 # ################################################################################################################################
 
 class Result(object):
-    __slots__ = 'is_ok', 'cid', 'error_msg', 'error_extra', 'object_type'
+    __slots__ = 'is_ok', 'cid', 'needs_err_details', 'error_msg', 'error_extra', 'object_type'
 
     def __init__(self):
         self.is_ok = None        # type: bool
         self.cid = None          # type: unicode
+        self.needs_err_details = None # type: bool
         self.error_msg = None    # type: unicode
         self.error_extra = None  # type: dict
         self.object_type = None  # type: unicode
@@ -162,10 +174,10 @@ class Result(object):
     __nonzero__ = __bool__
 
     def get_error(self):
-        # type: () -> dict
+        # type: () -> ValidationError
         ErrorClass = channel_type_to_error_class[self.object_type]
-        error = ErrorClass(self.cid, self.error_msg, self.error_extra) # type: ValidationError
-        return error.serialize()
+        error = ErrorClass(self.cid, self.needs_err_details, self.error_msg, self.error_extra) # type: ValidationError
+        return error
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -198,8 +210,8 @@ class Validator(object):
         # Everything is set up = we are initialized
         self.is_initialized = True
 
-    def validate(self, cid, data, object_type=None, object_name=None, needs_err_details=None, _validate=js_validate):
-        # type: (object, Callable) -> Result
+    def validate(self, cid, data, object_type=None, object_name=None, needs_err_details=False, _validate=js_validate):
+        # type: (unicode, object, unicode, unicode, Callable) -> Result
 
         # Result we will return
         result = Result()
@@ -207,7 +219,7 @@ class Validator(object):
 
         object_type = object_type or self.config.object_type
         object_name or self.config.object_name
-        needs_err_details or self.config.needs_err_details
+        needs_err_details = needs_err_details or self.config.needs_err_details
 
         try:
             js_validate(data, self.config.schema, self.config.validator)
@@ -216,10 +228,8 @@ class Validator(object):
             # These will be always used, no matter the object/channel type
             result.is_ok = False
             result.object_type = object_type
-
-            # This is optional because details of errors will not be always desirable to be returne
-            if needs_err_details:
-                result.error_msg = str(e)
+            result.needs_err_details = needs_err_details
+            result.error_msg = str(e)
 
             # This is applicable only to JSON-RPC
             if object_type == CHANNEL.JSON_RPC:
