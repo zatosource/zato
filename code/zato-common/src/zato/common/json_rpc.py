@@ -26,12 +26,12 @@ if typing.TYPE_CHECKING:
     # stdlib
     from typing import Callable
 
-    # Bunch
-    from bunch import Bunch
+    # Zato
+    from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 
     # For pyflakes
-    Bunch = Bunch
     Callable = Callable
+    JSONSchemaValidationException = JSONSchemaValidationException
 
 # ################################################################################################################################
 
@@ -191,10 +191,14 @@ class JSONRPCItem(object):
 # ################################################################################################################################
 
 class JSONRPCHandler(object):
-    def __init__(self, config, invoke_func):
-        # type: (Bunch, Callable)
+    def __init__(self, config, invoke_func, JSONSchemaValidationException):
+        # type: (dict, Callable, JSONSchemaValidationException)
+
         self.config = config
         self.invoke_func = invoke_func
+
+        # Kept here and provided by the caller to remove circular imports between common/json_rpc.py and common/json_schema.py
+        self.JSONSchemaValidationException = JSONSchemaValidationException
 
 # ################################################################################################################################
 
@@ -243,18 +247,32 @@ class JSONRPCHandler(object):
             return out.to_dict() if item.needs_response else None
 
         except Exception as e:
-            # We treat any exception at this point as an internal error
-            logger.warn('JSON-RPC exception in `%s` (%s); msg:`%s`, e:`%s`', self.config.name, cid, orig_message, format_exc())
 
+            is_schema_error = isinstance(e, self.JSONSchemaValidationException)
             error_ctx = ErrorCtx()
             error_ctx.cid = cid
 
-            if isinstance(e, JSONRPCException):
-                err_code = e.code
-                err_message = e.message
+            # JSON Schema validator error
+            if is_schema_error:
+                err_code = InvalidRequest.code
+                err_message = e.error_msg_details if e.needs_err_details else e.error_msg
             else:
-                err_code = -32000
-                err_message = 'Message could not be handled'
+                # Any JSON-RPC error
+                if isinstance(e, JSONRPCException):
+                    err_code = e.code
+                    err_message = e.message
+
+                # Any other error
+                else:
+                    err_code = -32000
+                    err_message = 'Message could not be handled'
+
+            if is_schema_error:
+                logger.warn('JSON Schema validation error in JSON-RPC channel `%s` (%s); msg:`%s`, e:`%s`, details:`%s`',
+                    self.config.name, cid, orig_message, format_exc(), e.error_msg_details)
+            else:
+                logger.warn('JSON-RPC exception in `%s` (%s); msg:`%s`, e:`%s`',
+                    self.config.name, cid, orig_message, format_exc())
 
             error_ctx.code = err_code
             error_ctx.message = err_message
