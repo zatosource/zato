@@ -4,6 +4,7 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    {% include "zato/include/css/titlebar-padding.html" %}
 {% endblock %}
 
 {% block "extra_js" %}
@@ -18,7 +19,6 @@
 
     {% comment %} JSON-RPC {% endcomment %}
     <script type="text/javascript" src="/static/js/channel/json-rpc.js"></script>
-
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -37,6 +37,7 @@
             'is_active',
             'security_id',
             'service_whitelist',
+
         ]
     }
     </script>
@@ -54,12 +55,10 @@
 
 {% include "zato/search-form.html" with page_prompt="Show channels"%}
 
-
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.channel.json_rpc.create()">Create a new JSON-RPC channel</a>
         </div>
-
 
         <div id="markup">
             <table id="data-table">
