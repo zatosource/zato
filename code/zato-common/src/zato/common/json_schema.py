@@ -127,7 +127,7 @@ class ValidationConfig(object):
     """ An individual set of configuration options - each object requiring validation (e.g. each channel)
     will have its own instance of this class assigned to its validator.
     """
-    __slots__ = 'is_enabled', 'object_type', 'object_name', 'schema_path', 'schema', 'validator', 'should_return_err_details'
+    __slots__ = 'is_enabled', 'object_type', 'object_name', 'schema_path', 'schema', 'validator', 'needs_err_details'
 
     def __init__(self):
         self.is_enabled = None   # type: bool
@@ -140,7 +140,7 @@ class ValidationConfig(object):
         self.schema_path = None # type: unicode
         self.schema = None      # type: dict
         self.validator = None   # type: object
-        self.should_return_err_details = None # type: bool
+        self.needs_err_details = None # type: bool
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -213,7 +213,7 @@ class Validator(object):
             result.object_type = self.config.object_type
 
             # This is optional because details of errors will not be always desirable to be returne
-            if self.config.should_return_err_details:
+            if self.config.needs_err_details:
                 result.error_msg = str(e)
 
             # This is applicable only to JSON-RPC
