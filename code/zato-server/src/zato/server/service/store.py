@@ -213,11 +213,13 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def set_up_class_json_schema(self, class_):
-        # type: (Service)
+    def set_up_class_json_schema(self, class_, service_config=None):
+        # type: (Service, dict)
 
-        service_info = self.server.config.service[class_.name]
-        json_schema_config = get_service_config(service_info['config'], self.server)
+        logger.warn('QQQ %s', service_config)
+
+        service_config = service_config or self.server.config.service[class_.name]['config']
+        json_schema_config = get_service_config(service_config, self.server)
 
         # Make sure the schema points to an absolute path and that it exists
         if not os.path.isabs(class_.json_schema):
@@ -241,8 +243,7 @@ class ServiceStore(object):
         validator.config = config
         validator.init()
 
-        if validator.is_initialized:
-            class_._json_schema_validator = validator
+        class_._json_schema_validator = validator
 
 # ################################################################################################################################
 
@@ -345,10 +346,13 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def get_service_class_by_id(self, service_id):
+        if not isinstance(service_id, int):
+            service_id = int(service_id)
+
         try:
             impl_name = self.id_to_impl_name[service_id]
         except KeyError:
-            keys_found = sorted(repr(elem) for elem in self.id_to_impl_name.keys())
+            keys_found = sorted(self.id_to_impl_name)
             keys_found = [(elem, type(elem)) for elem in keys_found]
             raise KeyError('No such service_id key `{}` `({})` among `{}`'.format(repr(service_id), type(service_id), keys_found))
         else:

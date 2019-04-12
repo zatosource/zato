@@ -36,8 +36,14 @@ from zato.common.odb.query import service_list
 from zato.common.util import hot_deploy, payload_from_request
 from zato.common.util.json_ import dumps
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service import Boolean, Integer
+from zato.server.service import Boolean, Integer, Service as ZatoService
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
+
+# ################################################################################################################################
+
+# For pyflakes
+ZatoService = ZatoService
 
 # ################################################################################################################################
 
@@ -178,6 +184,12 @@ class Edit(AdminService):
                 service.slow_threshold = input.slow_threshold
 
                 set_instance_opaque_attrs(service, input)
+
+                # Configure JSON Schema validation if service has a schema assigned by user.
+                class_info = self.server.service_store.get_service_class_by_id(input.id) # type: dict
+                class_ = class_info['service_class'] # type: Service
+                if class_.json_schema:
+                    self.server.service_store.set_up_class_json_schema(class_, input)
 
                 session.add(service)
                 session.commit()
