@@ -255,7 +255,6 @@ class WithTLSForm(forms.Form):
 class WithJSONSchema(forms.Form):
     is_json_schema_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     needs_json_schema_err_details = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    json_schema_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%; margin-top:2px'}))
 
 # ################################################################################################################################
 # ################################################################################################################################

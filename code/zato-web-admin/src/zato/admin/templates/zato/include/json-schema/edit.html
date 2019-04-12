@@ -1,12 +1,6 @@
 <tr>
     <td style="vertical-align:middle"><label for="id_json_schema_path">Schema</label></td>
     <td>
-        <a href="javascript:$.fn.zato.toggle_visibility('.json-schema')">Toggle options</a>
-    </td>
-</tr>
-<tr class="json-schema hidden">
-    <td></td>
-    <td>
         <label>
         Enabled {{ edit_form.is_json_schema_enabled }}
         </label>
@@ -14,7 +8,5 @@
         <label>
         Return errors {{ edit_form.needs_json_schema_err_details }}
         </label>
-        <br/>
-        {{ edit_form.json_schema_path }}
     </td>
 </tr>

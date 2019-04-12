@@ -35,6 +35,7 @@ from past.builtins import basestring
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, HTTP_SOAP, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
+from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.util import payload_from_request
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized

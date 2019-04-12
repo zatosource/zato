@@ -772,8 +772,14 @@ def out_ftp_list(session, cluster_id, needs_columns=False):
 
 def _service(session, cluster_id):
     return session.query(
-        Service.id, Service.name, Service.is_active,
-        Service.impl_name, Service.is_internal, Service.slow_threshold).\
+        Service.id,
+        Service.name,
+        Service.is_active,
+        Service.impl_name,
+        Service.is_internal,
+        Service.slow_threshold,
+        Service.opaque1,
+        ).\
         filter(Cluster.id==Service.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(Service.name)
