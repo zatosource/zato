@@ -216,8 +216,6 @@ class ServiceStore(object):
     def set_up_class_json_schema(self, class_, service_config=None):
         # type: (Service, dict)
 
-        logger.warn('QQQ %s', service_config)
-
         service_config = service_config or self.server.config.service[class_.name]['config']
         json_schema_config = get_service_config(service_config, self.server)
 
