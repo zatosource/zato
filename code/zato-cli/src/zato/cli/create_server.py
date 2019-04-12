@@ -139,6 +139,7 @@ enforce_service_invokes=False
 return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
+return_json_schema_errors=False
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
@@ -559,6 +560,7 @@ directories = (
     'config/repo/lua',
     'config/repo/lua/internal',
     'config/repo/lua/user',
+    'config/repo/schema/json-schema',
     'config/repo/static',
     'config/repo/static/email',
     'config/repo/tls',

@@ -35,6 +35,7 @@ from past.builtins import basestring
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, HTTP_SOAP, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
+from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
 from zato.common.util import payload_from_request
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
@@ -345,8 +346,15 @@ class RequestDispatcher(object):
                         status = _status_too_many_requests
 
                 else:
-                    status_code = INTERNAL_SERVER_ERROR
-                    response = _format_exc if self.return_tracebacks else self.default_error_message
+
+                    if isinstance(e, JSONSchemaValidationException):
+                        status_code = _status_bad_request
+                        needs_prefix = False if e.needs_err_details else True
+                        response = JSONSchemaDictError(
+                            cid, e.needs_err_details, e.error_msg, needs_prefix=needs_prefix).serialize(True)
+                    else:
+                        status_code = INTERNAL_SERVER_ERROR
+                        response = _format_exc if self.return_tracebacks else self.default_error_message
 
                 # TODO: This should be configurable. Some people may want such
                 # things to be on DEBUG whereas for others ERROR will make most sense

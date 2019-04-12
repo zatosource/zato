@@ -18,6 +18,7 @@ from bunch import bunchify
 # Zato
 from zato.common import CONNECTION, JSON_RPC, URL_TYPE
 from zato.common.json_rpc import ErrorCtx, InternalError, ItemResponse, JSONRPCHandler, ParseError, RequestContext
+from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.odb.model import HTTPSOAP
 from zato.server.service import List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -166,9 +167,12 @@ class JSONRPCGateway(AdminService):
             if isinstance(e, ValueError):
                 code = ParseError.code
                 message = 'Parsing error'
+
+            # Any other error
             else:
                 code = InternalError.code
                 message = 'Message could not be handled'
+
 
             error_ctx.code = code
             error_ctx.message = message
@@ -184,9 +188,10 @@ class JSONRPCGateway(AdminService):
             ctx.message = message
             ctx.orig_message = self.request.raw_request
 
-            handler = JSONRPCHandler(bunchify(channel_config), self.invoke)
+            handler = JSONRPCHandler(bunchify(channel_config), self.invoke, JSONSchemaValidationException)
             response = handler.handle(ctx)
 
+        self.response.content_type = 'application/json'
         self.response.payload = dumps(response)
 
 # ################################################################################################################################

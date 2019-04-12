@@ -58,7 +58,7 @@ iso8601==0.1.10
 jdatetime==1.8.1
 jsonpatch==1.23
 jsonpointer==2.0
-jsonschema==2.3.0
+jsonschema==3.0.1
 keyring==3.7
 keyutils==0.5
 kombu==4.2.1
