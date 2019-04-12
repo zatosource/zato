@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
-from json import loads
+from json import dumps, loads
 from logging import getLogger
 
 # JSON Schema
@@ -87,21 +87,24 @@ class ValidationException(Exception):
 class ValidationError(object):
     """ Base class for validation error-related classes.
     """
-    __slots__ = 'cid', 'needs_err_details', 'error_msg', 'error_extra'
+    __slots__ = 'cid', 'needs_err_details', 'error_msg', 'error_extra', 'needs_prefix'
 
-    def __init__(self, cid, needs_err_details, error_msg, error_extra=None):
-        # type: (unicode, bool, unicode, dict)
+    def __init__(self, cid, needs_err_details, error_msg, error_extra=None, needs_prefix=True):
+        # type: (unicode, bool, unicode, dict, bool)
         self.cid = cid
         self.needs_err_details = needs_err_details
         self.error_msg = error_msg
         self.error_extra = error_extra
+        self.needs_prefix = needs_prefix
 
     def get_error_message(self, needs_error_msg=False):
         # type: (bool) -> unicode
 
-        out = 'Invalid request'
+        out = 'Invalid request' if self.needs_prefix else ''
         if needs_error_msg or self.needs_err_details:
-            out += '; {}'.format(self.error_msg)
+            if out:
+                out += '; '
+            out += self.error_msg
 
         return out
 
@@ -114,13 +117,15 @@ class ValidationError(object):
 class DictError(ValidationError):
     """ An error reporter that serializes JSON Schema validation errors into Python dict responses.
     """
-    def serialize(self):
-        # type: () -> dict
-        return {
+    def serialize(self, to_string=False):
+        # type: (bool) -> object
+        out = {
             'is_ok': False,
             'cid': self.cid,
             'message': self.get_error_message()
         }
+
+        return dumps(out) if to_string else out
 
 # ################################################################################################################################
 # ################################################################################################################################
