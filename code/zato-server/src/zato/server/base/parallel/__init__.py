@@ -103,9 +103,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.json_content_type = None
         self.service_modules = None # Set programmatically in Spring
         self.service_sources = None # Set in a config file
-        self.base_dir = None
-        self.tls_dir = None
-        self.static_dir = None
+        self.base_dir = None        # type: unicode
+        self.tls_dir = None         # type: unicode
+        self.static_dir = None      # type: unicode
+        self.json_schema_dir = None # type: unicode
         self.hot_deploy_config = None
         self.pickup = None
         self.fs_server_config = None

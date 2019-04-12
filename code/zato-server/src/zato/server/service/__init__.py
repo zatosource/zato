@@ -37,6 +37,7 @@ from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, NO_DEFAULT
      ZatoException, zato_no_op_marker
 from zato.common.broker_message import SERVICE
 from zato.common.exception import Reportable
+from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify
 from zato.server.connection import slow_response
@@ -81,12 +82,20 @@ import typing
 
 if typing.TYPE_CHECKING:
 
+    # stdlib
+    from typing import Callable
+
     # Zato
+    from zato.broker.client import BrokerClient
     from zato.common.crypto import ServerCryptoManager
+    from zato.common.json_schema import Validator as JSONSchemaValidator
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
 
     # For pyflakes
+    BrokerClient = BrokerClient
+    Callable = Callable
+    JSONSchemaValidator = JSONSchemaValidator
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
     WorkerStore = WorkerStore
@@ -245,6 +254,12 @@ class Service(object):
 
     # For invoking other servers directly
     servers = None
+
+    # By default, services do not use JSON Schema
+    json_schema = '' # type: unicode
+
+    # JSON Schema validator attached only if service declares a schema to use
+    _json_schema_validator = None # type: JSONSchemaValidator
 
     def __init__(self, _get_logger=logging.getLogger, _Bunch=Bunch, _Request=Request, _Response=Response,
             _DictNav=DictNav, _ListNav=ListNav, _Outgoing=Outgoing, _WMQFacade=WMQFacade, _ZMQFacade=ZMQFacade,
@@ -451,11 +466,24 @@ class Service(object):
 
         return name, target
 
-    def update_handle(self, set_response_func, service, raw_request, channel, data_format,
-            transport, server, broker_client, worker_store, cid, simple_io_config, _utcnow=datetime.utcnow,
-            _call_hook_with_service=call_hook_with_service, _call_hook_no_service=call_hook_no_service,
-            _CHANNEL_SCHEDULER=CHANNEL.SCHEDULER, _pattern_channels=(CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL),
-            *args, **kwargs):
+    def update_handle(self,
+        set_response_func, # type: Callable
+        service,       # type: Service
+        raw_request,   # type: object
+        channel,       # type: ChannelInfo
+        data_format,   # type: unicode
+        transport,     # type: unicode
+        server,        # type: ParallelServer
+        broker_client, # type: BrokerClient
+        worker_store,  # type: WorkerStore
+        cid,           # type: unicode
+        simple_io_config, # type: dict
+        _utcnow=datetime.utcnow,
+        _call_hook_with_service=call_hook_with_service,
+        _call_hook_no_service=call_hook_no_service,
+        _CHANNEL_SCHEDULER=CHANNEL.SCHEDULER,
+        _pattern_channels=(CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL),
+        *args, **kwargs):
 
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
@@ -491,6 +519,19 @@ class Service(object):
                 if service.server.component_enabled.stats:
                     service.usage = service.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, service.name))
                 service.invocation_time = _utcnow()
+
+                # Check if there is a JSON Schema validator attached to the service and if so,
+                # validate input before proceeding any further.
+                if service._json_schema_validator and service._json_schema_validator.is_initialized:
+                    validation_result = service._json_schema_validator.validate(cid, self.request.payload)
+                    if not validation_result:
+                        error = validation_result.get_error()
+
+                        error_msg = error.get_error_message()
+                        error_msg_details = error.get_error_message(True)
+
+                        raise JSONSchemaValidationException(cid, CHANNEL.SERVICE, service.name,
+                            error.needs_err_details, error_msg, error_msg_details)
 
                 # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
 
@@ -618,7 +659,7 @@ class Service(object):
                         raise
             else:
                 out = self.update_handle(*invoke_args, **kwargs)
-                if kwargs.get('skip_response_elem'):
+                if kwargs.get('skip_response_elem') and hasattr(out, 'keys'):
                     response_elem = out.keys()[0]
                     return out[response_elem]
                 else:
