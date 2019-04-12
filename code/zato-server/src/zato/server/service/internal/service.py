@@ -27,13 +27,14 @@ from future.moves.urllib.parse import parse_qs
 from past.builtins import basestring
 
 # Zato
-from zato.common import BROKER, KVDB, ZatoException
+from zato.common import BROKER, KVDB, NotGiven, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.exception import BadRequest
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.util import hot_deploy, payload_from_request
 from zato.common.util.json_ import dumps
+from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
@@ -51,10 +52,10 @@ class GetList(AdminService):
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
-        input_required = ('cluster_id', 'query')
-        input_optional = (Integer('cur_page'), Boolean('paginate'))
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'),
-            Integer('slow_threshold'))
+        input_required = 'cluster_id', 'query'
+        input_optional = Integer('cur_page'), Boolean('paginate')
+        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'), \
+            Integer('slow_threshold'), 'is_json_schema_enabled', 'needs_json_schema_err_details'
         output_repeated = True
         default_value = ''
 
@@ -64,9 +65,20 @@ class GetList(AdminService):
         internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
 
         out = []
-        for item in self._search(service_list, session, self.request.input.cluster_id, return_internal, False):
+        search_result = self._search(service_list, session, self.request.input.cluster_id, return_internal, False)
+        for item in elems_with_opaque(search_result):
             item.may_be_deleted = internal_del if item.is_internal else True
             item.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
+
+            # By default services are allowed to validate input using JSON Schema
+            item.is_json_schema_enabled = item.get('is_json_schema_enabled', True)
+
+            # Unless configured per each service separately, we use server defaults here
+            needs_json_schema_err_details = item.get('needs_json_schema_err_details', NotGiven)
+            if needs_json_schema_err_details is NotGiven:
+                needs_json_schema_err_details = self.server.fs_server_config.misc.return_json_schema_errors
+
+            item.needs_json_schema_err_details = needs_json_schema_err_details
 
             out.append(item)
 
@@ -156,8 +168,9 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_edit_request'
         response_elem = 'zato_service_edit_response'
-        input_required = ('id', 'is_active', Integer('slow_threshold'))
-        output_required = ('id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted'))
+        input_required = 'id', 'is_active', Integer('slow_threshold')
+        input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details'
+        output_required = 'id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted')
 
     def handle(self):
         input = self.request.input
@@ -166,6 +179,8 @@ class Edit(AdminService):
                 service = session.query(Service).filter_by(id=input.id).one()
                 service.is_active = input.is_active
                 service.slow_threshold = input.slow_threshold
+
+                set_instance_opaque_attrs(service, input)
 
                 session.add(service)
                 session.commit()

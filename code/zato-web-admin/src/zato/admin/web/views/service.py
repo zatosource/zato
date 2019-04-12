@@ -176,9 +176,10 @@ class Index(_Index):
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        input_optional = ('query',)
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage', 'slow_threshold')
+        input_required = 'cluster_id',
+        input_optional = 'query',
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage', 'slow_threshold'
+        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details'
         output_repeated = True
 
     def handle(self):
@@ -202,8 +203,9 @@ class Edit(CreateEdit):
     service_name = 'zato.service.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('id', 'is_active', 'slow_threshold')
-        output_required = ('id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted')
+        input_required = 'id', 'is_active', 'slow_threshold'
+        input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details'
+        output_required = 'id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted'
 
     def success_message(self, item):
         return 'Successfully {} service `{}`'.format(self.verb, item.name)
