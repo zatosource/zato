@@ -66,8 +66,8 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', data.impl_name);
     row += String.format('<td>{0}</td>', is_internal ? 'Yes' : 'No');
-    row += String.format('<td id="rate_1h_{0}"></td>', item.id);
-    row += String.format('<td id="mean_1h_{0}"></td>', item.id);
+    row += String.format('<td id="rate_1h_{0}">---</td>', item.id);
+    row += String.format('<td id="mean_1h_{0}">---</td>', item.id);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.service.edit('{0}')\">Edit</a>", data.id));
     if(data.may_be_deleted) {
         row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.service.delete_('{0}')\">Delete</a>", data.id));
