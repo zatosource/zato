@@ -42,7 +42,8 @@ except ImportError:
 
 # Zato
 from zato.common import CHANNEL, DONT_DEPLOY_ATTR_NAME, KVDB, SourceCodeInfo, TRACE1
-from zato.common.json_schema import ValidationConfig as JSONSchemaValidationConfig, Validator as JSONSchemaValidator
+from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
+     Validator as JSONSchemaValidator
 from zato.common.match import Matcher
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
@@ -215,24 +216,26 @@ class ServiceStore(object):
     def set_up_class_json_schema(self, class_):
         # type: (Service)
 
+        service_info = self.server.config.service[class_.name]
+        json_schema_config = get_service_config(service_info['config'], self.server)
+
         # Make sure the schema points to an absolute path and that it exists
         if not os.path.isabs(class_.json_schema):
             schema_path = os.path.join(self.server.json_schema_dir, class_.json_schema)
         else:
             schema_path = class_.json_schema
 
-        if os.path.exists(schema_path):
-            class_._json_schema_validator = JSONSchemaValidator
-        else:
+        if not os.path.exists(schema_path):
             logger.warn('Could not find JSON Schema for `%s` in `%s` (class_.json_schema=%s)',
                 class_.name, schema_path, class_.json_schema)
+            return
 
         config = JSONSchemaValidationConfig()
-        config.is_enabled = True
-        config.object_name = 'My Channel'
+        config.is_enabled = json_schema_config['is_json_schema_enabled']
+        config.object_name = class_.name
         config.object_type = CHANNEL.SERVICE
         config.schema_path = schema_path
-        config.needs_err_details = self.server.fs_server_config.misc.return_json_schema_errors
+        config.needs_err_details = json_schema_config['needs_json_schema_err_details']
 
         validator = JSONSchemaValidator()
         validator.config = config
