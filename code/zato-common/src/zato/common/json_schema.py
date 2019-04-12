@@ -19,7 +19,7 @@ from jsonschema.exceptions import ValidationError as JSValidationError
 from jsonschema.validators import validator_for
 
 # Zato
-from zato.common import CHANNEL
+from zato.common import CHANNEL, NotGiven
 from zato.common.json_rpc import ErrorCtx, JSONRPCBadRequest, ItemResponse
 
 # ################################################################################################################################
@@ -35,13 +35,35 @@ if typing.TYPE_CHECKING:
     # Bunch
     from bunch import Bunch
 
+    # Zato
+    from zato.server.base.parallel import ParallelServer
+
     # For pyflakes
     Bunch = Bunch
     Callable = Callable
+    ParallelServer = ParallelServer
 
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+
+def get_service_config(item, server):
+    # type: (Bunch, ParallelServer) -> dict
+
+    # By default services are allowed to validate input using JSON Schema
+    is_json_schema_enabled = item.get('is_json_schema_enabled', True)
+
+    # Unless configured per each service separately, we use server defaults here
+    needs_json_schema_err_details = item.get('needs_json_schema_err_details', NotGiven)
+    if needs_json_schema_err_details is NotGiven:
+        needs_json_schema_err_details = server.fs_server_config.misc.return_json_schema_errors
+
+    return {
+        'is_json_schema_enabled': is_json_schema_enabled,
+        'needs_json_schema_err_details': needs_json_schema_err_details
+    }
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -193,6 +215,12 @@ class Validator(object):
         self.config = None # type: ValidationConfig
 
     def init(self):
+
+        if not self.config.is_enabled:
+            logger.info('Skipped initialization of JSON Schema validation for `%s` (%s)',
+                self.config.object_name, self.config.object_type)
+            return
+
         if not os.path.exists(self.config.schema_path):
             raise ValidationException('JSON schema not found `{}` ({})'.format(self.config.schema_path))
 

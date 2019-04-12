@@ -27,9 +27,10 @@ from future.moves.urllib.parse import parse_qs
 from past.builtins import basestring
 
 # Zato
-from zato.common import BROKER, KVDB, NotGiven, ZatoException
+from zato.common import BROKER, KVDB, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.exception import BadRequest
+from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.util import hot_deploy, payload_from_request
@@ -70,15 +71,11 @@ class GetList(AdminService):
             item.may_be_deleted = internal_del if item.is_internal else True
             item.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
 
-            # By default services are allowed to validate input using JSON Schema
-            item.is_json_schema_enabled = item.get('is_json_schema_enabled', True)
+            # Attach JSON Schema validation configuration
+            json_schema_config = get_service_config(item, self.server)
 
-            # Unless configured per each service separately, we use server defaults here
-            needs_json_schema_err_details = item.get('needs_json_schema_err_details', NotGiven)
-            if needs_json_schema_err_details is NotGiven:
-                needs_json_schema_err_details = self.server.fs_server_config.misc.return_json_schema_errors
-
-            item.needs_json_schema_err_details = needs_json_schema_err_details
+            item.is_json_schema_enabled = json_schema_config['is_json_schema_enabled']
+            item.needs_json_schema_err_details = json_schema_config['needs_json_schema_err_details']
 
             out.append(item)
 

@@ -85,7 +85,7 @@ class ItemResponse(object):
         self.id = None     # type: int
         self.cid = None    # type: unicode
         self.error = None  # type: ErrorCtx
-        self.result = None # type: object
+        self.result = NotGiven # type: object
 
     def to_dict(self, _json_rpc_version=json_rpc_version_supported):
         # type: (unicode) -> dict
@@ -95,7 +95,7 @@ class ItemResponse(object):
             'id': self.id,
         }
 
-        if self.result:
+        if self.result is not NotGiven:
             out['result'] = self.result
         else:
             out['error'] = self.error.to_dict()

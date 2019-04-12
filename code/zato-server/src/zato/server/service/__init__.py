@@ -522,7 +522,7 @@ class Service(object):
 
                 # Check if there is a JSON Schema validator attached to the service and if so,
                 # validate input before proceeding any further.
-                if service._json_schema_validator:
+                if service._json_schema_validator and service._json_schema_validator.is_initialized:
                     validation_result = service._json_schema_validator.validate(cid, self.request.payload)
                     if not validation_result:
                         error = validation_result.get_error()
@@ -659,7 +659,7 @@ class Service(object):
                         raise
             else:
                 out = self.update_handle(*invoke_args, **kwargs)
-                if kwargs.get('skip_response_elem'):
+                if kwargs.get('skip_response_elem') and hasattr(out, 'keys'):
                     response_elem = out.keys()[0]
                     return out[response_elem]
                 else:
