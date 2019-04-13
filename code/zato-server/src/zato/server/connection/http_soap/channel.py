@@ -30,7 +30,7 @@ from regex import compile as regex_compile
 
 # Python 2/3 compatibility
 from six import PY3
-from past.builtins import basestring
+from past.builtins import basestring, unicode
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, HTTP_SOAP, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
