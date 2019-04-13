@@ -375,6 +375,9 @@ def resolve_secret_key(secret_key, _url_prefix=SECRETS.URL_PREFIX):
     # We always require a string
     secret_key = secret_key or ''
 
+    if secret_key and (not isinstance(_url_prefix, bytes)):
+        _url_prefix = _url_prefix.encode('utf8')
+
     # This is a direct value, to be used as-is
     if not secret_key.startswith(_url_prefix):
         return secret_key
