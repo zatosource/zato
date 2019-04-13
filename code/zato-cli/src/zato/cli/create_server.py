@@ -560,6 +560,7 @@ directories = (
     'config/repo/lua',
     'config/repo/lua/internal',
     'config/repo/lua/user',
+    'config/repo/schema',
     'config/repo/schema/json-schema',
     'config/repo/static',
     'config/repo/static/email',
