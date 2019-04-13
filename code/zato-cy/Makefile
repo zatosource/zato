@@ -25,5 +25,4 @@ rate-limit:
 	$(MAKE) build
 
 rate-limit-test:
-	$(MAKE) build
 	$(PY_DIR)/nosetests $(CURDIR)/test/zato/cy/rate_limit/*.py -s
