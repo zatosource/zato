@@ -146,10 +146,10 @@ class Create(ZatoCommand):
 
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
 
-    opts.append({'name':'pub_key_path', 'help':"Path to scheduler's public key in PEM"})
-    opts.append({'name':'priv_key_path', 'help':"Path to scheduler's private key in PEM"})
-    opts.append({'name':'cert_path', 'help':"Path to the admin's certificate in PEM"})
-    opts.append({'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
+    opts.append({'name':'--pub_key_path', 'help':"Path to scheduler's public key in PEM"})
+    opts.append({'name':'--priv_key_path', 'help':"Path to scheduler's private key in PEM"})
+    opts.append({'name':'--cert_path', 'help':"Path to the admin's certificate in PEM"})
+    opts.append({'name':'--ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
     opts.append({'name':'cluster_name', 'help':"Name of the cluster this scheduler will belong to"})
     opts.append({'name':'--cluster_id', 'help':"ID of the cluster this scheduler will belong to"})
     opts.append({'name':'--secret_key', 'help':"Scheduler's secret crypto key"})
