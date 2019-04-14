@@ -340,26 +340,30 @@ def to_form(_object):
 
 # ################################################################################################################################
 
-def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_file, timeout):
+def get_lb_client(is_tls_enabled, lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_file, timeout):
     """ Returns an SSL XML-RPC client to the load-balancer.
     """
-    from zato.agent.load_balancer.client import LoadBalancerAgentClient
+    from zato.agent.load_balancer.client import LoadBalancerAgentClient, TLSLoadBalancerAgentClient
 
-    agent_uri = 'https://{host}:{port}/RPC2'.format(host=lb_host, port=lb_agent_port)
+    http_proto = 'https' if is_tls_enabled else 'http'
+    agent_uri = '{}://{}:{}/RPC2'.format(http_proto, lb_host, lb_agent_port)
 
-    if sys.version_info >= (2, 7):
-        class Python27CompatTransport(SSLClientTransport):
-            def make_connection(self, host):
-                return CAValidatingHTTPSConnection(
-                    host, strict=self.strict, ca_certs=self.ca_certs,
-                    keyfile=self.keyfile, certfile=self.certfile, cert_reqs=self.cert_reqs,
-                    ssl_version=self.ssl_version, timeout=self.timeout)
-        transport = Python27CompatTransport
+    if is_tls_enabled:
+        if sys.version_info >= (2, 7):
+            class Python27CompatTransport(SSLClientTransport):
+                def make_connection(self, host):
+                    return CAValidatingHTTPSConnection(
+                        host, strict=self.strict, ca_certs=self.ca_certs,
+                        keyfile=self.keyfile, certfile=self.certfile, cert_reqs=self.cert_reqs,
+                        ssl_version=self.ssl_version, timeout=self.timeout)
+            transport = Python27CompatTransport
+        else:
+            transport = None
+
+        return TLSLoadBalancerAgentClient(
+            agent_uri, ssl_ca_certs, ssl_key_file, ssl_cert_file, transport=transport, timeout=timeout)
     else:
-        transport = None
-
-    return LoadBalancerAgentClient(
-        agent_uri, ssl_ca_certs, ssl_key_file, ssl_cert_file, transport=transport, timeout=timeout)
+        return LoadBalancerAgentClient(agent_uri)
 
 # ################################################################################################################################
 

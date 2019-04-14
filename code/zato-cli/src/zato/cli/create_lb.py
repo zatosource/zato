@@ -15,18 +15,19 @@ import os, uuid
 from zato.cli import common_logging_conf_contents, ZatoCommand
 from zato.common.defaults import http_plain_server_port
 
-config_template = """{
+config_template = """{{
   "haproxy_command": "haproxy",
   "host": "localhost",
   "port": 20151,
+  "is_tls_enabled": {is_tls_enabled},
   "keyfile": "./zato-lba-priv-key.pem",
   "certfile": "./zato-lba-cert.pem",
   "ca_certs": "./zato-lba-ca-certs.pem",
   "work_dir": "../",
-  "verify_fields": {},
+  "verify_fields": {{}},
   "log_config": "./logging.conf",
   "pid_file": "zato-lb-agent.pid"
-}
+}}
 """
 
 zato_config_template = """
@@ -127,7 +128,12 @@ class Create(ZatoCommand):
         log_path = os.path.abspath(os.path.join(repo_dir, '..', '..', 'logs', 'lb-agent.log')) # noqa
         stats_socket = os.path.join(self.target_dir, 'haproxy-stat.sock') # noqa
 
-        open(os.path.join(repo_dir, 'lb-agent.conf'), 'w').write(config_template) # noqa
+        is_tls_enabled = bool(args.get('priv_key_path'))
+        config = config_template.format(**{
+            'is_tls_enabled': 'true' if is_tls_enabled else 'false',
+        })
+
+        open(os.path.join(repo_dir, 'lb-agent.conf'), 'w').write(config) # noqa
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write((common_logging_conf_contents.format(log_path=log_path))) # noqa
 
         if use_default_backend:
