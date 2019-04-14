@@ -81,10 +81,10 @@ class Create(ZatoCommand):
 
     opts = deepcopy(common_odb_opts)
 
-    opts.append({'name':'pub_key_path', 'help':"Path to the web admin's public key in PEM"})
-    opts.append({'name':'priv_key_path', 'help':"Path to the web admin's private key in PEM"})
-    opts.append({'name':'cert_path', 'help':"Path to the web admin's certificate in PEM"})
-    opts.append({'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
+    opts.append({'name':'--pub_key_path', 'help':"Path to the web admin's public key in PEM"})
+    opts.append({'name':'--priv_key_path', 'help':"Path to the web admin's private key in PEM"})
+    opts.append({'name':'--cert_path', 'help':"Path to the web admin's certificate in PEM"})
+    opts.append({'name':'--ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
 
     opts += get_tech_account_opts()
 
