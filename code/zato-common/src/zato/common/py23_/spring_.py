@@ -136,7 +136,10 @@ class SSLServer(SimpleXMLRPCServer):
                  do_handshake_on_connect=True, suppress_ragged_eofs=True, ciphers=None,
                  log_requests=True, **kwargs):
 
-        SimpleXMLRPCServer.__init__(self, (host, port), requestHandler=RequestHandler)
+        if PY2:
+            SimpleXMLRPCServer.__init__(self, (host, port), requestHandler=RequestHandler)
+        else:
+            SimpleXMLRPCServer.__init__(self, (host, port))
 
         self.keyfile = keyfile
         self.certfile = certfile

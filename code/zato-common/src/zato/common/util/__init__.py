@@ -348,8 +348,6 @@ def get_lb_client(is_tls_enabled, lb_host, lb_agent_port, ssl_ca_certs, ssl_key_
     http_proto = 'https' if is_tls_enabled else 'http'
     agent_uri = '{}://{}:{}/RPC2'.format(http_proto, lb_host, lb_agent_port)
 
-    logger.warn('QQQ %s', agent_uri)
-
     if is_tls_enabled:
         if sys.version_info >= (2, 7):
             class Python27CompatTransport(SSLClientTransport):
