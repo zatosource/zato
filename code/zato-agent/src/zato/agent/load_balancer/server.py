@@ -111,7 +111,7 @@ class BaseLoadBalancerAgent(object):
 
     def _dispatch(self, method, params):
         try:
-            return SSLServer._dispatch(self, method, params)
+            return super(BaseLoadBalancerAgent, self)._dispatch(method, params)
         except Exception as e:
             logger.error(format_exc())
             raise e
