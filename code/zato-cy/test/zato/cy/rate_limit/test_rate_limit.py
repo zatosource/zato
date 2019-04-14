@@ -34,8 +34,27 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function
 
+# stdlib
+from ipaddress import ip_network
+
 # Python 2/3 compatibility
 from past.builtins import unicode
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Const:
+
+    from_any = '*'
+
+    class Unit:
+        minute = 'm'
+        hour   = 'h'
+        day    = 'd'
+
+    @staticmethod
+    def all_units():
+        return set([Const.Unit.minute, Const.Unit.hour, Const.Unit.day])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,7 +69,7 @@ class DefinitionItem(object):
         self.unit = None  # type: unicode
 
     def __repr__(self):
-        return '<{} at {}; cl:{}, f:{}, r:{}, u:{}>'.format(self.__class__.__name__, hex(id(self)), self.config_line,
+        return '<{} at {}; line:{}, from:{}, rate:{}, unit:{}>'.format(self.__class__.__name__, hex(id(self)), self.config_line,
             self.from_, self.rate, self.unit)
 
 # ################################################################################################################################
@@ -74,12 +93,18 @@ class DefinitionParser(object):
             from_, rate_info = line # type: unicode, unicode
 
             from_ = from_.strip()
-            rate_info = rate_info.strip()
 
+            if from_ != Const.from_any:
+                from_ = ip_network(from_)
+
+            rate_info = rate_info.strip()
             rate, unit = rate_info.split('/') # type: unicode, unicode
 
             rate = int(rate.strip())
             unit = unit.strip()
+
+            if unit not in Const.all_units():
+                raise ValueError('Unit `{}` is not one of `{}`'.format(unit, Unit.all))
 
             item = DefinitionItem()
             item.config_line = idx
@@ -96,7 +121,7 @@ class DefinitionParser(object):
 
         lines = self._get_lines(definition.strip())
 
-        print(111, lines)
+        print(999, lines)
 
 # ################################################################################################################################
 # ################################################################################################################################
