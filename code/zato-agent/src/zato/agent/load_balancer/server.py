@@ -32,7 +32,7 @@ from zato.agent.load_balancer.config import backend_template, config_from_string
 from zato.agent.load_balancer.haproxy_stats import HAProxyStats
 from zato.common import MISC, TRACE1, ZATO_OK
 from zato.common.haproxy import haproxy_stats, validate_haproxy_config
-from zato.common.py23_.spring_ import SSLServer
+from zato.common.py23_.spring_ import RequestHandler, SimpleXMLRPCServer, SSLServer
 from zato.common.repo import RepoManager
 from zato.common.util import get_lb_agent_json_config, timeouting_popen
 
@@ -47,7 +47,7 @@ haproxy_commands = {}
 for version, commands in haproxy_stats.items():
     haproxy_commands.update(commands)
 
-class LoadBalancerAgent(SSLServer):
+class LoadBalancerAgent(SimpleXMLRPCServer):
     def __init__(self, repo_dir):
 
         self.repo_dir = os.path.abspath(repo_dir)
@@ -74,11 +74,18 @@ class LoadBalancerAgent(SSLServer):
 
         RepoManager(self.repo_dir).ensure_repo_consistency()
 
-        SSLServer.__init__(self,
-            host=self.json_config['host'],
-            port=self.json_config['port'], keyfile=self.keyfile, certfile=self.certfile,
-            ca_certs=self.ca_certs, cert_reqs=ssl.CERT_REQUIRED,
-            verify_fields=self.verify_fields)
+        host = self.json_config['host']
+        port = self.json_config['port']
+
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+        if self.json_config['is_tls_enabled']:
+            SSLServer.__init__(self, host=host, port=port, keyfile=self.keyfile, certfile=self.certfile,
+                ca_certs=self.ca_certs, cert_reqs=ssl.CERT_REQUIRED, verify_fields=self.verify_fields)
+        else:
+            SimpleXMLRPCServer.__init__(self, (host, port))
+
+        self.register_functions()
 
     def _re_start_load_balancer(self, timeout_msg, rc_non_zero_msg, additional_params=[]):
         """ A common method for (re-)starting HAProxy.
