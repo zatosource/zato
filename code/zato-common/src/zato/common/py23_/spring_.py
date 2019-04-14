@@ -137,7 +137,6 @@ class SSLServer(SimpleXMLRPCServer):
                  log_requests=True, **kwargs):
 
         SimpleXMLRPCServer.__init__(self, (host, port), requestHandler=RequestHandler)
-        self.logger = logging.getLogger(self.__class__.__name__)
 
         self.keyfile = keyfile
         self.certfile = certfile
@@ -155,8 +154,6 @@ class SSLServer(SimpleXMLRPCServer):
         # 'verify_fields' is taken from kwargs to allow for adding more keywords
         # in future versions.
         self.verify_fields = kwargs.get("verify_fields")
-
-        self.register_functions()
 
     def get_request(self):
         """ Overridden from SocketServer.TCPServer.get_request, wraps the socket in
@@ -296,5 +293,5 @@ class SSLClient(ServerProxy):
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        # ################################################################################################################################
-        # ################################################################################################################################
+# ################################################################################################################################
+# ################################################################################################################################
