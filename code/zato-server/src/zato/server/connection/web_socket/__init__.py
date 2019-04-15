@@ -883,11 +883,15 @@ class WebSocket(_WebSocket):
         which is a timestamp object. If self.has_session_opened is not True by that time, connection to the remote end
         is closed.
         """
-        if self._wait_for_event(self.config.new_token_wait_time, lambda: self.has_session_opened):
-            return
+        try:
+            if self._wait_for_event(self.config.new_token_wait_time, lambda: self.has_session_opened):
+                return
 
-        # We get here if self.has_session_opened has not been set to True by self.create_session_by
-        self.on_forbidden('did not create session within {}s'.format(self.config.new_token_wait_time))
+            # We get here if self.has_session_opened has not been set to True by self.create_session_by
+            self.on_forbidden('did not create session within {}s'.format(self.config.new_token_wait_time))
+
+        except Exception:
+            logger.warn('Exception in WSX _ensure_session_created `%s`', format_exc())
 
 # ################################################################################################################################
 
@@ -944,7 +948,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def opened(self, _now=datetime.utcnow, _timedelta=timedelta):
+    def opened(self):
         logger.info('New connection from %s (%s) to %s (%s %s %s)', self._peer_address, self._peer_fqdn,
             self._local_address, self.config.name, self.python_id, self.sock)
 
