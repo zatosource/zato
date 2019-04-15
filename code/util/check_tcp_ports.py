@@ -15,7 +15,7 @@ def wait_for_ports(*data):
     """ Blocks until input TCP ports are free.
     """
     for port, component in data:
-        if not wait_until_port_free(port, 3):
+        if not wait_until_port_free(port, 10):
             print('Port taken {} ({})'.format(port, component))
 
 if __name__ == '__main__':
