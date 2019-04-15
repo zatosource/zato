@@ -231,12 +231,13 @@ class WebSocket(_WebSocket):
             self.forwarded_for_fqdn = WEB_SOCKET.DEFAULT.FQDN_UNKNOWN
 
         _peer_fqdn = WEB_SOCKET.DEFAULT.FQDN_UNKNOWN
+        self._peer_host = _peer_fqdn
 
         try:
             self._peer_host = socket.gethostbyaddr(_peer_address[0])[0]
             _peer_fqdn = socket.getfqdn(self._peer_host)
         except Exception:
-            logger.warn(format_exc())
+            logger.warn('WSX exception in FQDN lookup `%s`', format_exc())
         finally:
             self._peer_fqdn = _peer_fqdn
 
