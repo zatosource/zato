@@ -30,7 +30,7 @@ if __name__ == '__main__':
     if not options.get('fg', None):
         store_pidfile(component_dir, lba_config['pid_file'])
 
-    lba_class = TLSLoadBalancerAgent if lba_config['is_tls_enabled'] else LoadBalancerAgent
+    lba_class = TLSLoadBalancerAgent if lba_config.get('is_tls_enabled', True) else LoadBalancerAgent
 
     lba = lba_class(repo_dir)
     lba.start_load_balancer()
