@@ -36,6 +36,7 @@ config_template = """{{
   "port": {port},
   "db_type": "{db_type}",
   "log_config": "./config/repo/{log_config}",
+  "lb_agent_use_tls": {lb_agent_use_tls},
   "lb_use_tls": false,
   "lb_tls_verify": true,
   "zato_secret_key": "{zato_secret_key}",
@@ -81,10 +82,10 @@ class Create(ZatoCommand):
 
     opts = deepcopy(common_odb_opts)
 
-    opts.append({'name':'pub_key_path', 'help':"Path to the web admin's public key in PEM"})
-    opts.append({'name':'priv_key_path', 'help':"Path to the web admin's private key in PEM"})
-    opts.append({'name':'cert_path', 'help':"Path to the web admin's certificate in PEM"})
-    opts.append({'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
+    opts.append({'name':'--pub_key_path', 'help':"Path to the web admin's public key in PEM"})
+    opts.append({'name':'--priv_key_path', 'help':"Path to the web admin's private key in PEM"})
+    opts.append({'name':'--cert_path', 'help':"Path to the web admin's certificate in PEM"})
+    opts.append({'name':'--ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
 
     opts += get_tech_account_opts()
 
@@ -120,11 +121,19 @@ class Create(ZatoCommand):
         odb_password = args.odb_password or ''
         odb_password = odb_password.encode('utf8')
 
+        # If we have a CA's certificate then it implicitly means that there is some CA
+        # which tells us that we are to trust both the CA and the certificates that it issues,
+        # and the only certificate we are interested in is the one to the load-balancer.
+        # This is why, if we get ca_certs_path, it must be because we are to use TLS
+        # in communication with the load-balancer's agent.
+        lb_agent_use_tls = bool(args.get('ca_certs_path'))
+
         config = {
             'host': web_admin_host,
             'port': web_admin_port,
             'db_type': args.odb_type,
             'log_config': 'logging.conf',
+            'lb_agent_use_tls': 'true' if lb_agent_use_tls else 'false',
             'zato_secret_key':zato_secret_key,
             'well_known_data': cm.encrypt(well_known_data.encode('utf8')),
             'DATABASE_NAME': args.odb_db_name or args.sqlite_path,
