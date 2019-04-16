@@ -59,6 +59,18 @@ class Const:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ObjectInfo(object):
+    """ Information about an individual object covered by rate limiting.
+    """
+    __slots__ = 'type_', 'name'
+
+    def __init__(self):
+        self.type_ = None # type: unicode
+        self.name = None  # type: unicode
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DefinitionItem(object):
     __slots__ = 'config_line', 'from_', 'rate', 'unit'
 
@@ -75,6 +87,27 @@ class DefinitionItem(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class ObjectConfig(object):
+    """ A container for configuration pertaining to a particular object and its definition.
+    """
+    __slots__ = 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit'
+
+    def __init__(self):
+        self.object_info = None # type: ObjectInfo
+        self.definition = None  # type: list
+        self.has_from_any = None  # type: bool
+        self.from_any_rate = None # type: int
+        self.from_any_unit = None # type: unicode
+
+# ################################################################################################################################
+
+    def get_config_key(self):
+        # type: () -> unicode
+        return '{}:{}'.format(self.object_info.type_, self.object_info.name)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DefinitionParser(object):
     """ Parser for user-provided rate limiting definitions.
     """
@@ -82,6 +115,7 @@ class DefinitionParser(object):
         # type: (unicode) -> list
 
         out = []
+        definition = definition if isinstance(definition, unicode) else definition.decode('utf8')
 
         for idx, line in enumerate(definition.splitlines(), 1): # type: int, unicode
             line = line.strip()
@@ -117,16 +151,53 @@ class DefinitionParser(object):
         return out
 
     def parse(self, definition):
-        # type: (unicode)
+        # type: (unicode) -> list
+        return self._get_lines(definition.strip())
 
-        lines = self._get_lines(definition.strip())
+# ################################################################################################################################
+# ################################################################################################################################
 
-        print(999, lines)
+class RateLimiting(object):
+    """ Main API for the management of rate limiting functionality.
+    """
+    __slots__ = 'parser', 'config_store'
+
+    def __init__(self):
+        self.parser = DefinitionParser()
+        self.config_store = {}
+
+    def create(self, object_dict, definition):
+        # type: (dict, unicode)
+
+        info = ObjectInfo()
+        info.type_ = object_dict['type_']
+        info.name = object_dict['name']
+
+        parsed = self.parser.parse(definition)
+        def_first = parsed[0]
+        has_from_any = def_first.from_ == Const.from_any
+
+        config = ObjectConfig()
+        config.object_info = info
+        config.definition = parsed
+
+        if has_from_any:
+            config.has_from_any = has_from_any
+            config.from_any_rate = def_first.rate
+            config.from_any_unit = def_first.unit
+
+        self.config_store[config.get_config_key()] = config
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    object_dict = {
+        'id':    123,
+        'type_': 'http_soap',
+        'name':  'My Channel'
+    }
 
     definition = """
     * = 1/m
@@ -138,8 +209,10 @@ if __name__ == '__main__':
     127.0.0.1/32  = 33/d
     """
 
-    dp = DefinitionParser()
-    dp.parse(definition)
+    rate_limiting = RateLimiting()
+    rate_limiting.create(object_dict, definition)
+
+    print(111, rate_limiting.config_store)
 
 # ################################################################################################################################
 '''
