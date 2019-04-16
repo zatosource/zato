@@ -35,10 +35,21 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function
 
 # stdlib
+import logging
 from ipaddress import ip_network
+from logging import getLogger
+
+# gevent
+from gevent.lock import RLock
 
 # Python 2/3 compatibility
 from past.builtins import unicode
+
+# ################################################################################################################################
+
+log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+logging.basicConfig(level=logging.INFO, format=log_format)
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,20 +101,30 @@ class DefinitionItem(object):
 class ObjectConfig(object):
     """ A container for configuration pertaining to a particular object and its definition.
     """
-    __slots__ = 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit'
+    __slots__ = 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit', 'lock', 'current_idx', \
+        'is_limit_reached'
 
     def __init__(self):
-        self.object_info = None # type: ObjectInfo
-        self.definition = None  # type: list
+        self.current_idx = 0
+        self.object_info = None   # type: ObjectInfo
+        self.definition = None    # type: list
         self.has_from_any = None  # type: bool
         self.from_any_rate = None # type: int
         self.from_any_unit = None # type: unicode
+        self.is_limit_reached = False # type: bool
+        self.lock = RLock()
 
 # ################################################################################################################################
 
     def get_config_key(self):
         # type: () -> unicode
         return '{}:{}'.format(self.object_info.type_, self.object_info.name)
+
+# ################################################################################################################################
+
+    def check_limit(self, from_):
+        with self.lock:
+            pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -160,11 +181,14 @@ class DefinitionParser(object):
 class RateLimiting(object):
     """ Main API for the management of rate limiting functionality.
     """
-    __slots__ = 'parser', 'config_store'
+    __slots__ = 'parser', 'config_store', 'lock'
 
     def __init__(self):
         self.parser = DefinitionParser()
         self.config_store = {}
+        self.lock = RLock()
+
+# ################################################################################################################################
 
     def create(self, object_dict, definition):
         # type: (dict, unicode)
@@ -189,14 +213,43 @@ class RateLimiting(object):
         self.config_store[config.get_config_key()] = config
 
 # ################################################################################################################################
+
+    def check_limit(self, object_type, object_name, from_):
+        """ Checks if input object has already reached its allotted usage limit.
+        """
+        # type: (unicode, unicode, unicode)
+
+        with self.lock:
+            key = self._get_config_key(object_type, object_name)
+            config = self.config_store.get(key) # type: ObjectConfig
+
+        # It is possible that we do not have configuration for such an object,
+        # in which case we will log a warning.
+        if config:
+            with config.lock:
+                config.check_limit(from_)
+        else:
+            logger.warn('No such rate limiting object `%s` (%s)', object_name, object_type)
+
+# ################################################################################################################################
+
+    def _get_config_key(self, object_type, object_name):
+        # type: (unicode, unicode) -> unicode
+
+        return '{}:{}'.format(object_type, object_name)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
 
+    object_type = 'http_soap'
+    object_name = 'My Channel'
+
     object_dict = {
         'id':    123,
-        'type_': 'http_soap',
-        'name':  'My Channel'
+        'type_': object_type,
+        'name':  object_name
     }
 
     definition = """
@@ -212,7 +265,7 @@ if __name__ == '__main__':
     rate_limiting = RateLimiting()
     rate_limiting.create(object_dict, definition)
 
-    print(111, rate_limiting.config_store)
+    rate_limiting.check_limit(object_type, object_name, '127.0.0.1')
 
 # ################################################################################################################################
 '''
