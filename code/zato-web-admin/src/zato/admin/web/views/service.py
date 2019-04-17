@@ -396,7 +396,7 @@ def request_response_configure(req, service_name, cluster_id):
 
 class Delete(_Delete):
     url_name = 'service-delete'
-    error_message = 'Could not delete the service'
+    error_message = 'Service could not be deleted'
     service_name = 'zato.service.delete'
 
 # ################################################################################################################################
