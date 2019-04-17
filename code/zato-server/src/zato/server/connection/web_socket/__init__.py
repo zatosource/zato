@@ -55,6 +55,7 @@ logger_zato = getLogger('zato')
 # ################################################################################################################################
 
 http404 = '{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
+http404_bytes = http404.encode('latin1')
 
 # ################################################################################################################################
 
@@ -1028,7 +1029,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
 
         try:
             if environ['PATH_INFO'] != self.config.path:
-                start_response(http404, {})
+                start_response(http404_bytes, {})
                 return [error_response[NOT_FOUND][self.config.data_format]]
 
             super(WebSocketContainer, self).__call__(environ, start_response)
