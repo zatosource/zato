@@ -633,7 +633,7 @@ class Create(ZatoCommand):
 
         server = Server(cluster=cluster)
         server.name = args.server_name
-        server.token = self.token
+        server.token = self.token.decode('utf8')
         server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED
         server.last_join_mod_by = self._get_user_host()
         server.last_join_mod_date = datetime.utcnow()
