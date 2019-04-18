@@ -486,7 +486,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         if conn_soap and conn_suds:
             wrapper_config['queue_build_cap'] = float(self.server.fs_server_config.misc.queue_build_cap)
             wrapper = SudsSOAPWrapper(wrapper_config)
-            wrapper.build_client_queue()
+            if wrapper_config['is_active']:
+                wrapper.build_client_queue()
             return wrapper
 
         return HTTPSOAPWrapper(wrapper_config)
