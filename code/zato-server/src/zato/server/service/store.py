@@ -216,7 +216,8 @@ class ServiceStore(object):
     def set_up_class_json_schema(self, class_, service_config=None):
         # type: (Service, dict)
 
-        service_config = service_config or self.server.config.service[class_.name]['config']
+        class_name = class_.get_name()
+        service_config = service_config or self.server.config.service[class_name]['config']
         json_schema_config = get_service_config(service_config, self.server)
 
         # Make sure the schema points to an absolute path and that it exists
@@ -227,12 +228,12 @@ class ServiceStore(object):
 
         if not os.path.exists(schema_path):
             logger.warn('Could not find JSON Schema for `%s` in `%s` (class_.json_schema=%s)',
-                class_.name, schema_path, class_.json_schema)
+                class_name, schema_path, class_.json_schema)
             return
 
         config = JSONSchemaValidationConfig()
         config.is_enabled = json_schema_config['is_json_schema_enabled']
-        config.object_name = class_.name
+        config.object_name = class_name
         config.object_type = CHANNEL.SERVICE
         config.schema_path = schema_path
         config.needs_err_details = json_schema_config['needs_json_schema_err_details']
