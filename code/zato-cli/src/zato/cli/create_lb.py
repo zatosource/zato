@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, uuid
 
 # Zato
-from zato.cli import common_logging_conf_contents, ZatoCommand
+from zato.cli import common_logging_conf_contents, is_arg_given, ZatoCommand
 from zato.common.defaults import http_plain_server_port
 
 config_template = """{{
@@ -128,7 +128,7 @@ class Create(ZatoCommand):
         log_path = os.path.abspath(os.path.join(repo_dir, '..', '..', 'logs', 'lb-agent.log')) # noqa
         stats_socket = os.path.join(self.target_dir, 'haproxy-stat.sock') # noqa
 
-        is_tls_enabled = bool(args.get('priv_key_path'))
+        is_tls_enabled = is_arg_given(args, 'priv_key_path')
         config = config_template.format(**{
             'is_tls_enabled': 'true' if is_tls_enabled else 'false',
         })
