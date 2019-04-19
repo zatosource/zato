@@ -52,7 +52,7 @@ class Util(object):
 
         self.client.odb_session = session
 
-        # Sanity check
+        # Configuration check
         self.client.invoke('zato.ping')
 
 # ################################################################################################################################
