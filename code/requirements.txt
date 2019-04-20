@@ -70,7 +70,7 @@ MarkupSafe==1.0
 mccabe==0.2.1
 mock==1.0.1
 ndg-httpsclient==0.4.0
-netaddr==0.7.11
+netaddr==0.7.19
 netifaces==0.10.4
 newrelic==2.20.0.17
 nltk==3.2.1

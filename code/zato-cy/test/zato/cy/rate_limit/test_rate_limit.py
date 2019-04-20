@@ -32,24 +32,47 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
-from ipaddress import ip_network
+from datetime import datetime
 from logging import getLogger
+
+# datetutil
+from dateutil.relativedelta import relativedelta
 
 # gevent
 from gevent.lock import RLock
+
+# netaddr
+from netaddr import IPAddress, IPNetwork
 
 # Python 2/3 compatibility
 from past.builtins import unicode
 
 # ################################################################################################################################
 
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+    pass
+
+# ################################################################################################################################
+
 log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
 logging.basicConfig(level=logging.INFO, format=log_format)
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RateLimitingException(Exception):
+    pass
+
+class FromIPNotAllowed(Exception):
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,7 +110,7 @@ class DefinitionItem(object):
 
     def __init__(self):
         self.config_line = None # type: int
-        self.from_ = None # type: unicode
+        self.from_ = None # type: object
         self.rate = None  # type: int
         self.unit = None  # type: unicode
 
@@ -101,18 +124,24 @@ class DefinitionItem(object):
 class ObjectConfig(object):
     """ A container for configuration pertaining to a particular object and its definition.
     """
-    __slots__ = 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit', 'lock', 'current_idx', \
-        'is_limit_reached'
+    __slots__ = 'current_idx', 'lock', 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit', \
+        'is_limit_reached', 'ip_address_cache', 'current_period_func'
 
     def __init__(self):
         self.current_idx = 0
+        self.lock = RLock()
         self.object_info = None   # type: ObjectInfo
         self.definition = None    # type: list
         self.has_from_any = None  # type: bool
         self.from_any_rate = None # type: int
         self.from_any_unit = None # type: unicode
-        self.is_limit_reached = False # type: bool
-        self.lock = RLock()
+        self.ip_address_cache = {} # type: dict
+
+        self.current_period_func = {
+            Const.Unit.day: self._get_current_day,
+            Const.Unit.hour: self._get_current_hour,
+            Const.Unit.minute: self._get_current_minute,
+        }
 
 # ################################################################################################################################
 
@@ -122,9 +151,82 @@ class ObjectConfig(object):
 
 # ################################################################################################################################
 
-    def check_limit(self, from_):
+    def _get_rate_config_by_from(self, orig_from, _from_any=Const.from_any):
+        # type: (unicode, unicode) -> DefinitionItem
+
+        # First, periodically clear out the IP cache to limit its size to 1,000 items
+        if len(self.ip_address_cache) >= 1000:
+            self.ip_address_cache.clear()
+
+        from_ = self.ip_address_cache.setdefault(orig_from, IPAddress(orig_from)) # type: IPAddress
+        found = None
+
+        for line in self.definition: # type: DefinitionItem
+
+            # A catch-all * pattern
+            if line.from_ == _from_any:
+                found = line
+                break
+
+            # A network match
+            elif from_ in line.from_:
+                found = line
+                break
+
+        # We did not match any line from configuration
+        if not found:
+            raise FromIPNotAllowed('From IP address not allowed `{}`'.format(orig_from))
+
+        # We found a matching piece of from IP configuration
+        return found
+
+# ################################################################################################################################
+
+    def _get_current_day(self, now, _prefix=Const.Unit.day):
+        # type: (datetime, unicode) -> unicode
+        return '{}.{}-{:0>2}-{:0>2}'.format(_prefix, now.year, now.month, now.day)
+
+    def _get_current_hour(self, now, _prefix=Const.Unit.hour):
+        # type: (datetime, unicode) -> unicode
+        pass
+
+    def _get_current_minute(self, now, _prefix=Const.Unit.minute):
+        # type: (datetime, unicode) -> unicode
+        pass
+
+# ################################################################################################################################
+
+    def _check_limit(self, orig_from, network_found, rate, unit, _utcnow=datetime.utcnow):
+        # type: (unicode, int, unicode)
+
+        print(111, orig_from, network_found, rate, unit)
+
+        now = _utcnow()
+
+        current_period_func = self.current_period_func[unit]
+        period = current_period_func(now)
+
+        print(222, period)
+
+# ################################################################################################################################
+
+    def check_limit(self, orig_from):
+        # type: (unicode)
+
         with self.lock:
-            pass
+
+            if self.has_from_any:
+                rate = self.from_any_rate
+                unit = self.from_any_unit
+                network_found = Const.from_any
+            else:
+                found = self._get_rate_config_by_from(orig_from)
+                rate = found.rate
+                unit = found.unit
+                network_found = found.from_
+
+            # Now, check actual rate limits
+            self._check_limit(orig_from, network_found, rate, unit)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -148,9 +250,8 @@ class DefinitionParser(object):
             from_, rate_info = line # type: unicode, unicode
 
             from_ = from_.strip()
-
             if from_ != Const.from_any:
-                from_ = ip_network(from_)
+                from_ = IPNetwork(from_)
 
             rate_info = rate_info.strip()
             rate, unit = rate_info.split('/') # type: unicode, unicode
@@ -235,7 +336,6 @@ class RateLimiting(object):
 
     def _get_config_key(self, object_type, object_name):
         # type: (unicode, unicode) -> unicode
-
         return '{}:{}'.format(object_type, object_name)
 
 # ################################################################################################################################
@@ -253,12 +353,12 @@ if __name__ == '__main__':
     }
 
     definition = """
-    * = 1/m
-    * = 2/h
-    * = 3/d
+    10.0.0.0 = 1/m
+    #* = 2/h
+    #* = 3/d
 
     192.168.1.123 = 11/m
-    #10.210.0.0/18 = 22/h
+    10.210.0.0/18 = 22/h
     127.0.0.1/32  = 33/d
     """
 
