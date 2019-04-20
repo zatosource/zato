@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from future.utils import iteritems
 
 # Zato
-from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
+from zato.cli import common_odb_opts, get_tech_account_opts, is_arg_given, ZatoCommand
 from zato.common import CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE
 from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, \
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
@@ -465,6 +465,8 @@ class Create(ZatoCommand):
     opts.append({'name':'broker_host', 'help':"Redis host"})
     opts.append({'name':'broker_port', 'help':'Redis port'})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
+    opts.append({'name':'--skip-if-exists',
+        'help':'Return without raising an error if cluster already exists', 'action':'store_true'})
 
     opts += get_tech_account_opts('for web-admin instances to use')
 
@@ -472,6 +474,14 @@ class Create(ZatoCommand):
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
+
+        if engine.dialect.has_table(engine.connect(), 'install_state'):
+            if is_arg_given(args, 'skip-if-exists'):
+                if show_output:
+                    if self.verbose:
+                        self.logger.debug('Cluster already exists, skipped its creation')
+                    else:
+                        self.logger.info('OK')
 
         cluster = Cluster()
         cluster.name = args.cluster_name
