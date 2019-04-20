@@ -23,6 +23,7 @@ from gevent.lock import RLock
 from netaddr import IPAddress, IPNetwork
 
 # Python 2/3 compatibility
+from future.utils import iterkeys
 from past.builtins import unicode
 
 # ################################################################################################################################
@@ -120,6 +121,38 @@ class ObjectConfig(object):
             Const.Unit.hour: self._get_current_hour,
             Const.Unit.minute: self._get_current_minute,
         }
+
+# ################################################################################################################################
+
+    def cleanup(self):
+        """ Cleans up time periods that are no longer needed.
+        """
+        with self.lock:
+            now = datetime.utcnow()
+            current_minute = self._get_current_minute(now)
+            current_hour = self._get_current_hour(now)
+            current_day = self._get_current_day(now)
+
+            # We need a copy so as not to modify the dict in place
+            periods = list(iterkeys(self.by_period))
+            to_delete = set()
+
+            period_map = {
+                Const.Unit.minute: current_minute,
+                Const.Unit.hour: current_hour,
+                Const.Unit.day: current_day
+            }
+
+            for period in periods: # type: unicode
+                period_unit = period[0] # type: unicode # One of Const.Unit instances
+                current_period = period_map[period_unit]
+
+                # If this period is in the past, add it to the ones to be deleted
+                if period < current_period:
+                    to_delete.add(period)
+
+            for item in to_delete: # item: unicode
+                del self.by_period[item]
 
 # ################################################################################################################################
 
@@ -298,6 +331,13 @@ class RateLimiting(object):
         self.config_store = {}
         self.lock = RLock()
 
+
+# ################################################################################################################################
+
+    def _get_config_key(self, object_type, object_name):
+        # type: (unicode, unicode) -> unicode
+        return '{}:{}'.format(object_type, object_name)
+
 # ################################################################################################################################
 
     def create(self, object_dict, definition):
@@ -343,9 +383,12 @@ class RateLimiting(object):
 
 # ################################################################################################################################
 
-    def _get_config_key(self, object_type, object_name):
-        # type: (unicode, unicode) -> unicode
-        return '{}:{}'.format(object_type, object_name)
+    def cleanup(self):
+        """ Invoked periodically by the scheduler - goes through all configuration elements and cleans up
+        all time periods that are no longer needed.
+        """
+        for config in self.config_store.values(): # type: ObjectConfig
+            config.cleanup()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -377,6 +420,11 @@ if __name__ == '__main__':
     rate_limiting.create(object_dict, definition)
 
     rate_limiting.check_limit(cid, object_type, object_name, '127.0.0.1')
-    rate_limiting.check_limit(cid, object_type, object_name, '127.0.0.1')
+    #rate_limiting.check_limit(cid, object_type, object_name, '127.0.0.1')
+
+    import time
+    time.sleep(61)
+
+    rate_limiting.cleanup()
 
 # ################################################################################################################################
