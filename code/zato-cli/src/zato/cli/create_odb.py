@@ -27,7 +27,8 @@ class Create(ZatoCommand):
     """ Creates a new Zato ODB (Operational Database)
     """
     opts = common_odb_opts
-    opts.append({'name':'--skip-if-exists', 'help':"Return without raising an error if ODB already exists"})
+    opts.append({'name':'--skip-if-exists',
+        'help':'Return without raising an error if ODB already exists', 'action':'store_true'})
 
     def execute(self, args, show_output=True):
         engine = self._get_engine(args)

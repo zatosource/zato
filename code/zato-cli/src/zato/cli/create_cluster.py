@@ -465,7 +465,8 @@ class Create(ZatoCommand):
     opts.append({'name':'broker_host', 'help':"Redis host"})
     opts.append({'name':'broker_port', 'help':'Redis port'})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
-    opts.append({'name':'--skip-if-exists', 'help':"Return without raising an error if cluster already exists"})
+    opts.append({'name':'--skip-if-exists',
+        'help':'Return without raising an error if cluster already exists', 'action':'store_true'})
 
     opts += get_tech_account_opts('for web-admin instances to use')
 
