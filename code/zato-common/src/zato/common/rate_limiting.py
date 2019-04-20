@@ -165,6 +165,17 @@ class ObjectConfig(object):
 
 # ################################################################################################################################
 
+    def rewrite_rate_data(self, old_config):
+        """ Writes rate limiting information from old configuration to our own. Used by RateLimiting.edit action.
+        """
+        # type: (ObjectConfig)
+
+        # Already collected rate limits
+        self.by_period.clear()
+        self.by_period.update(old_config.by_period)
+
+# ################################################################################################################################
+
     def get_config_key(self):
         # type: () -> unicode
         return '{}:{}'.format(self.object_info.type_, self.object_info.name)
@@ -353,8 +364,14 @@ class RateLimiting(object):
 
 # ################################################################################################################################
 
-    def create(self, object_dict, definition):
-        # type: (dict, unicode)
+    def _get_config_by_object(self, object_type, object_name):
+        # type: (unicode, unicode) -> ObjectConfig
+        return self.config_store.get(self._get_config_key(object_type, object_name))
+
+# ################################################################################################################################
+
+    def _create_config(self, object_dict, definition):
+        # type: (dict, unicode) -> ObjectConfig
 
         info = ObjectInfo()
         info.type_ = object_dict['type_']
@@ -376,6 +393,13 @@ class RateLimiting(object):
             config.from_any_rate = def_first.rate
             config.from_any_unit = def_first.unit
 
+        return config
+
+# ################################################################################################################################
+
+    def create(self, object_dict, definition):
+        # type: (dict, unicode)
+        config = self._create_config(object_dict, definition)
         self.config_store[config.get_config_key()] = config
 
 # ################################################################################################################################
@@ -386,8 +410,7 @@ class RateLimiting(object):
         # type: (unicode, unicode, unicode, unicode)
 
         with self.lock:
-            key = self._get_config_key(object_type, object_name)
-            config = self.config_store.get(key) # type: ObjectConfig
+            config = self._get_config_by_object(object_type, object_name)
 
         # It is possible that we do not have configuration for such an object,
         # in which case we will log a warning.
@@ -396,6 +419,93 @@ class RateLimiting(object):
                 config.check_limit(cid, from_)
         else:
             logger.warn('No such rate limiting object `%s` (%s)', object_name, object_type)
+
+# ################################################################################################################################
+
+    def _delete(self, object_type, object_name, remove_parent):
+        """ Deletes configuration for input data, optionally deleting references to it from all objects that depended on it.
+        Must be called with self.lock held.
+        """
+        # type: (unicode, unicode, bool)
+
+        config_key = self._get_config_key(object_type, object_name)
+        del self.config_store[config_key]
+
+        if remove_parent:
+            self._set_new_parent(object_type, old_object_name, None, None)
+
+# ################################################################################################################################
+
+    def _set_new_parent(self, parent_type, old_parent_name, new_parent_type, new_parent_name):
+        """ Sets new parent for all configuration entries matching the old one. Must be called with self.lock held.
+        """
+        # type: (unicode, unicode, unicode, unicode)
+
+        for child_config in self.config_store.values(): # type: ObjectConfig
+            object_info = child_config.object_info
+
+            # This is our own config
+            if object_info.type_ == parent_type and object_info.name == old_parent_name:
+                continue
+
+            # This object has a parent, possibly it is our very configuration
+            if child_config.has_parent:
+
+                # Yes, this is our config ..
+                if child_config.parent_type == parent_type and child_config.parent_name == old_parent_name:
+
+                    # We typically want to change the parent's name but it is possible
+                    # that both type and name will be None (in case we are removing a parent from a child object)
+                    # which is why both are set here.
+                    child_config.parent_type = new_parent_type
+                    child_config.parent_name = new_parent_name
+
+# ################################################################################################################################
+
+    def edit(self, object_type, old_object_name, object_dict, definition):
+        """ Changes, in place, an existing configuration entry to input data.
+        """
+        # type: (unicode, unicode, dict, unicode)
+
+        # Note the whole of this operation is under self.lock to make sure the update is atomic
+        # from our callers' perspective.
+        with self.lock:
+            old_config = self._get_config_by_object(object_type, old_object_name)
+
+            if not old_config:
+                raise ValueError('Rate limiting object not found `{}` ({})'.format(old_object_name, object_type))
+
+            # Just to be sure we are doing the right thing, compare object types, old and new
+            if object_type != old_config.object_info.type_:
+                raise ValueError('Unexpected object_type, old:`{}`, new:`{}` ({}) ({})'.format(
+                    old_config.object_info.type_, object_type, old_object_name, object_dict))
+
+            # Now, create a new config object ..
+            new_config = self._create_config(object_dict, definition)
+
+            # .. move existing rate limiting data from the old config object to the new one
+            new_config.rewrite_rate_data(old_config)
+
+            # .. in case it was a rename ..
+            if old_config.object_info.name != new_config.object_info.name:
+
+                # .. make all child objects depend on the new name, in case it changed
+                self._set_new_parent(object_type, old_object_name, new_config.object_info.type_, new_config.object_info.name)
+
+                # First, delete the old configuration, but do not delete any objects that depended on it
+                # because we are just editing the former, not deleting it altogether.
+                self._delete(object_type, old_object_name, False)
+
+                #
+                self.config_store[new_config.get_config_key()] = new_config
+
+# ################################################################################################################################
+
+    def delete(self, object_type, object_name):
+        """ Deletes configuration for input object and clears out parent references to it.
+        """
+        with self.lock:
+            self._delete(object_type, object_name, True)
 
 # ################################################################################################################################
 
@@ -440,21 +550,21 @@ if __name__ == '__main__':
         127.0.0.1/32  = 6/m
         """
 
-    def get_user_config():
+    def get_user_config(name_suffix=''):
         return {
             'id': 111,
             'parent_type': None,
             'parent_name': None,
             'type_': 'sso_user',
-            'name': 'Joan Doe',
+            'name': 'Joan Doe' + name_suffix,
         }
 
-    def get_user_definition():
+    def get_user_definition(prefix=''):
         return """
         10.210.0.0/18 = 22/h
-        #127.0.0.1/32  = 1/m
+        #127.0.0.1/32  = {}1/m
         * = 2/m
-        """
+        """.format(prefix)
 
     user_config        = get_user_config()
     user_definition    = get_user_definition()
@@ -477,8 +587,11 @@ if __name__ == '__main__':
     cid = 456
     rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
 
-    cid = 789
-    rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
+    #cid = 789
+    #rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
+
+    rate_limiting.edit('sso_user', 'Joan Doe', get_user_config(' 3'), get_user_definition(3))
+    rate_limiting.edit('sso_user', 'Joan Doe', get_user_config(' 3'), get_user_definition(3))
 
     rate_limiting.cleanup()
 
