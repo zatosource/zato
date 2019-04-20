@@ -18,7 +18,7 @@ except ImportError:
 import os
 from copy import deepcopy
 
-from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_logging_conf_contents, common_odb_opts, is_arg_given, kvdb_opts, sql_conf_contents, ZatoCommand
 from zato.common.crypto import SchedulerCryptoManager, well_known_data
 from zato.common.odb.model import Cluster
 
@@ -230,7 +230,7 @@ class Create(ZatoCommand):
         secret_key = secret_key.decode('utf8')
 
         # We will use TLS only if we were given crypto material on input
-        use_tls = bool(args.get('priv_key_path'))
+        use_tls = is_arg_given(args, 'priv_key_path')
 
         config = {
             'odb_db_name': args.odb_db_name or args.sqlite_path,
