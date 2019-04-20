@@ -13,9 +13,6 @@ import logging
 from datetime import datetime
 from logging import getLogger
 
-# datetutil
-from dateutil.relativedelta import relativedelta
-
 # gevent
 from gevent.lock import RLock
 
@@ -334,8 +331,9 @@ class DefinitionParser(object):
                 rate = int(rate.strip())
                 unit = unit.strip()
 
-            if unit not in Const.all_units():
-                raise ValueError('Unit `{}` is not one of `{}`'.format(unit, Unit.all))
+            all_units = Const.all_units()
+            if unit not in all_units:
+                raise ValueError('Unit `{}` is not one of `{}`'.format(unit, all_units))
 
             item = DefinitionItem()
             item.config_line = idx
@@ -440,7 +438,7 @@ class RateLimiting(object):
         del self.config_store[config_key]
 
         if remove_parent:
-            self._set_new_parent(object_type, old_object_name, None, None)
+            self._set_new_parent(object_type, object_name, None, None)
 
 # ################################################################################################################################
 
@@ -600,6 +598,8 @@ if __name__ == '__main__':
 
     cid = 789
     rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
+
+    rate_limiting.delete('sso_user', 'Joan Doe 3')
 
     rate_limiting.cleanup()
 
