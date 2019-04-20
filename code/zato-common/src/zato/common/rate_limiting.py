@@ -58,6 +58,7 @@ class RateLimitReached(BaseException):
 class Const:
 
     from_any = '*'
+    rate_any = '*'
 
     class Unit:
         minute = 'm'
@@ -235,8 +236,8 @@ class ObjectConfig(object):
 
 # ################################################################################################################################
 
-    def _check_limit(self, cid, orig_from, network_found, rate, unit, _utcnow=datetime.utcnow):
-        # type: (unicode, unicode, int, unicode)
+    def _check_limit(self, cid, orig_from, network_found, rate, unit, _rate_any=Const.rate_any, _utcnow=datetime.utcnow):
+        # type: (unicode, unicode, unicode, object, unicode, unicode)
 
         # Local aliases
         now = _utcnow()
@@ -257,10 +258,13 @@ class ObjectConfig(object):
             'last_network': None,
         }) # type: dict
 
-        # We have reached the limit already ..
-        if network_dict['requests'] >= rate:
-            raise RateLimitReached('Max. rate limit of {}/{} reached; from:`{}`, network:`{}`; {} ({})'.format(
-                rate, unit, orig_from, network_found, self._format_last_info(network_dict), cid))
+        # Unless we are allowed to have any rate ..
+        if rate != _rate_any:
+
+            # We may have reached the limit already ..
+            if network_dict['requests'] >= rate:
+                raise RateLimitReached('Max. rate limit of {}/{} reached; from:`{}`, network:`{}`; {} ({})'.format(
+                    rate, unit, orig_from, network_found, self._format_last_info(network_dict), cid))
 
         # .. otherwise, we increase the counter and store metadata.
         else:
@@ -321,10 +325,14 @@ class DefinitionParser(object):
                 from_ = IPNetwork(from_)
 
             rate_info = rate_info.strip()
-            rate, unit = rate_info.split('/') # type: unicode, unicode
 
-            rate = int(rate.strip())
-            unit = unit.strip()
+            if rate_info == Const.rate_any:
+                rate = Const.rate_any
+                unit = Const.Unit.day # This is arbitrary but it does not matter because there is no rate limit in effect
+            else:
+                rate, unit = rate_info.split('/') # type: unicode, unicode
+                rate = int(rate.strip())
+                unit = unit.strip()
 
             if unit not in Const.all_units():
                 raise ValueError('Unit `{}` is not one of `{}`'.format(unit, Unit.all))
@@ -563,7 +571,7 @@ if __name__ == '__main__':
         return """
         10.210.0.0/18 = 22/h
         #127.0.0.1/32  = {}1/m
-        * = 2/m
+        * = *
         """.format(prefix)
 
     user_config        = get_user_config()
