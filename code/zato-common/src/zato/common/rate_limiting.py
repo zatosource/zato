@@ -6,32 +6,6 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from unittest import main as unittest_main, TestCase
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class RateLimitTestCace(TestCase):
-    pass
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if __name__ == '__main__':
-    unittest_main()
-
-# ################################################################################################################################
-
-'''
-# -*- coding: utf-8 -*-
-
-"""
-Copyright (C) 2019, Zato Source s.r.o. https://zato.io
-
-Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
-"""
-
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
@@ -68,10 +42,13 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class RateLimitingException(Exception):
+class BaseException(Exception):
     pass
 
-class FromIPNotAllowed(Exception):
+class FromIPNotAllowed(BaseException):
+    pass
+
+class RateLimitReached(BaseException):
     pass
 
 # ################################################################################################################################
@@ -125,7 +102,7 @@ class ObjectConfig(object):
     """ A container for configuration pertaining to a particular object and its definition.
     """
     __slots__ = 'current_idx', 'lock', 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit', \
-        'is_limit_reached', 'ip_address_cache', 'current_period_func'
+        'is_limit_reached', 'ip_address_cache', 'current_period_func', 'by_period'
 
     def __init__(self):
         self.current_idx = 0
@@ -136,6 +113,7 @@ class ObjectConfig(object):
         self.from_any_rate = None # type: int
         self.from_any_unit = None # type: unicode
         self.ip_address_cache = {} # type: dict
+        self.by_period = {}        # type: dict
 
         self.current_period_func = {
             Const.Unit.day: self._get_current_day,
@@ -182,36 +160,67 @@ class ObjectConfig(object):
 
 # ################################################################################################################################
 
-    def _get_current_day(self, now, _prefix=Const.Unit.day):
-        # type: (datetime, unicode) -> unicode
-        return '{}.{}-{:0>2}-{:0>2}'.format(_prefix, now.year, now.month, now.day)
+    def _get_current_day(self, now, _prefix=Const.Unit.day, _format='%Y-%m-%d'):
+        # type: (datetime, unicode, unicode) -> unicode
+        return '{}.{}'.format(_prefix, now.strftime(_format))
 
-    def _get_current_hour(self, now, _prefix=Const.Unit.hour):
-        # type: (datetime, unicode) -> unicode
-        pass
+    def _get_current_hour(self, now, _prefix=Const.Unit.hour, _format='%Y-%m-%dT%H'):
+        # type: (datetime, unicode, unicode) -> unicode
+        return '{}.{}'.format(_prefix, now.strftime(_format))
 
-    def _get_current_minute(self, now, _prefix=Const.Unit.minute):
-        # type: (datetime, unicode) -> unicode
-        pass
+    def _get_current_minute(self, now, _prefix=Const.Unit.minute, _format='%Y-%m-%dT%H:%M'):
+        # type: (datetime, unicode, unicode) -> unicode
+        return '{}.{}'.format(_prefix, now.strftime(_format))
 
 # ################################################################################################################################
 
-    def _check_limit(self, orig_from, network_found, rate, unit, _utcnow=datetime.utcnow):
-        # type: (unicode, int, unicode)
+    def _format_last_info(self, network_dict):
+        # type: (dict) -> unicode
 
-        print(111, orig_from, network_found, rate, unit)
+        return 'last_from:`{last_from}; last_request_time_utc:`{last_request_time_utc}; last_cid:`{last_cid}`;'.format(
+            **network_dict)
 
+# ################################################################################################################################
+
+    def _check_limit(self, cid, orig_from, network_found, rate, unit, _utcnow=datetime.utcnow):
+        # type: (unicode, unicode, int, unicode)
+
+        # Local aliases
         now = _utcnow()
 
+        # Get current period, e.g. current day, hour or minute
         current_period_func = self.current_period_func[unit]
         period = current_period_func(now)
 
-        print(222, period)
+        # Get or create a dictionary of requests information for current period
+        period_dict = self.by_period.setdefault(period, {}) # type: dict
+
+        # Get information about already stored requests for that network in current period
+        network_dict = period_dict.setdefault(network_found, {
+            'requests': 0,
+            'last_cid': None,
+            'last_request_time_utc': None,
+            'last_from': None,
+            'last_network': None,
+        }) # type: dict
+
+        # We have reached the limit already ..
+        if network_dict['requests'] >= rate:
+            raise RateLimitReached('Max. rate limit of {}/{} reached; from:`{}`, network:`{}`; {} ({})'.format(
+                rate, unit, orig_from, network_found, self._format_last_info(network_dict), cid))
+
+        # .. otherwise, we increase the counter and store metadata.
+        else:
+            network_dict['requests'] += 1
+            network_dict['last_cid'] = cid
+            network_dict['last_request_time_utc'] = now.isoformat()
+            network_dict['last_from'] = orig_from
+            network_dict['last_network'] = str(network_found)
 
 # ################################################################################################################################
 
-    def check_limit(self, orig_from):
-        # type: (unicode)
+    def check_limit(self, cid, orig_from):
+        # type: (unicode, unicode)
 
         with self.lock:
 
@@ -226,7 +235,7 @@ class ObjectConfig(object):
                 network_found = found.from_
 
             # Now, check actual rate limits
-            self._check_limit(orig_from, network_found, rate, unit)
+            self._check_limit(cid, orig_from, network_found, rate, unit)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -315,10 +324,10 @@ class RateLimiting(object):
 
 # ################################################################################################################################
 
-    def check_limit(self, object_type, object_name, from_):
+    def check_limit(self, cid, object_type, object_name, from_):
         """ Checks if input object has already reached its allotted usage limit.
         """
-        # type: (unicode, unicode, unicode)
+        # type: (unicode, unicode, unicode, unicode)
 
         with self.lock:
             key = self._get_config_key(object_type, object_name)
@@ -328,7 +337,7 @@ class RateLimiting(object):
         # in which case we will log a warning.
         if config:
             with config.lock:
-                config.check_limit(from_)
+                config.check_limit(cid, from_)
         else:
             logger.warn('No such rate limiting object `%s` (%s)', object_name, object_type)
 
@@ -343,6 +352,8 @@ class RateLimiting(object):
 
 if __name__ == '__main__':
 
+    cid = 'abc123'
+
     object_type = 'http_soap'
     object_name = 'My Channel'
 
@@ -354,18 +365,18 @@ if __name__ == '__main__':
 
     definition = """
     10.0.0.0 = 1/m
-    #* = 2/h
-    #* = 3/d
+    * = 1/m
+    * = 2/d
 
     192.168.1.123 = 11/m
     10.210.0.0/18 = 22/h
-    127.0.0.1/32  = 33/d
+    #127.0.0.1/32  = 1/d
     """
 
     rate_limiting = RateLimiting()
     rate_limiting.create(object_dict, definition)
 
-    rate_limiting.check_limit(object_type, object_name, '127.0.0.1')
+    rate_limiting.check_limit(cid, object_type, object_name, '127.0.0.1')
+    rate_limiting.check_limit(cid, object_type, object_name, '127.0.0.1')
 
 # ################################################################################################################################
-'''
