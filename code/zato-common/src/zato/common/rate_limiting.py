@@ -102,25 +102,34 @@ class DefinitionItem(object):
 class ObjectConfig(object):
     """ A container for configuration pertaining to a particular object and its definition.
     """
-    __slots__ = 'current_idx', 'lock', 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit', \
-        'is_limit_reached', 'ip_address_cache', 'current_period_func', 'by_period'
+    __slots__ = 'current_idx', 'lock', 'api', 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit', \
+        'is_limit_reached', 'ip_address_cache', 'current_period_func', 'by_period', 'parent_type', 'parent_name'
 
     def __init__(self):
         self.current_idx = 0
         self.lock = RLock()
-        self.object_info = None   # type: ObjectInfo
-        self.definition = None    # type: list
-        self.has_from_any = None  # type: bool
-        self.from_any_rate = None # type: int
-        self.from_any_unit = None # type: unicode
+        self.api = None            # type: RateLimiting
+        self.object_info = None    # type: ObjectInfo
+        self.definition = None     # type: list
+        self.has_from_any = None   # type: bool
+        self.from_any_rate = None  # type: int
+        self.from_any_unit = None  # type: unicode
         self.ip_address_cache = {} # type: dict
         self.by_period = {}        # type: dict
+        self.parent_type = None    # type: unicode
+        self.parent_name = None    # type: unicode
 
         self.current_period_func = {
             Const.Unit.day: self._get_current_day,
             Const.Unit.hour: self._get_current_hour,
             Const.Unit.minute: self._get_current_minute,
         }
+
+# ################################################################################################################################
+
+    @property
+    def has_parent(self):
+        return self.parent_type and self.parent_name
 
 # ################################################################################################################################
 
@@ -250,6 +259,11 @@ class ObjectConfig(object):
             network_dict['last_from'] = orig_from
             network_dict['last_network'] = str(network_found)
 
+        # Above, we checked our own rate limit but it is still possible that we have a parent
+        # that also wants to check it.
+        if self.has_parent:
+            self.api.check_limit(cid, self.parent_type, self.parent_name, orig_from)
+
 # ################################################################################################################################
 
     def check_limit(self, cid, orig_from):
@@ -331,7 +345,6 @@ class RateLimiting(object):
         self.config_store = {}
         self.lock = RLock()
 
-
 # ################################################################################################################################
 
     def _get_config_key(self, object_type, object_name):
@@ -352,8 +365,11 @@ class RateLimiting(object):
         has_from_any = def_first.from_ == Const.from_any
 
         config = ObjectConfig()
+        config.api = self
         config.object_info = info
         config.definition = parsed
+        config.parent_type = object_dict['parent_type']
+        config.parent_name = object_dict['parent_name']
 
         if has_from_any:
             config.has_from_any = has_from_any
@@ -395,35 +411,74 @@ class RateLimiting(object):
 
 if __name__ == '__main__':
 
-    cid = 'abc123'
+    def get_channel_config():
+        return {
+            'id': 333,
+            'parent_type': 'sso_user',
+            'parent_name': 'Joan Doe',
+            'type_': 'http_soap',
+            'name': 'My Endpoint',
+        }
 
-    object_type = 'http_soap'
-    object_name = 'My Channel'
+    def get_channel_definition():
+        return """
+        192.168.1.123 = 11/m
+        127.0.0.1/32  = 6/m
+        """
 
-    object_dict = {
-        'id':    123,
-        'type_': object_type,
-        'name':  object_name
-    }
+    def get_sec_def_config():
+        return {
+            'id': 222,
+            'parent_type': 'sso_user',
+            'parent_name': 'Joan Doe',
+            'type_': 'api_key',
+            'name': 'API Key',
+        }
 
-    definition = """
-    10.0.0.0 = 1/m
-    * = 1/m
-    * = 2/d
+    def get_sec_def_definition():
+        return """
+        127.0.0.1/32  = 6/m
+        """
 
-    192.168.1.123 = 11/m
-    10.210.0.0/18 = 22/h
-    #127.0.0.1/32  = 1/d
-    """
+    def get_user_config():
+        return {
+            'id': 111,
+            'parent_type': None,
+            'parent_name': None,
+            'type_': 'sso_user',
+            'name': 'Joan Doe',
+        }
+
+    def get_user_definition():
+        return """
+        10.210.0.0/18 = 22/h
+        #127.0.0.1/32  = 1/m
+        * = 2/m
+        """
+
+    user_config        = get_user_config()
+    user_definition    = get_user_definition()
+
+    channel_config     = get_channel_config()
+    channel_definition = get_channel_definition()
+
+    sec_def_config     = get_sec_def_config()
+    sec_def_definition = get_sec_def_definition()
 
     rate_limiting = RateLimiting()
-    rate_limiting.create(object_dict, definition)
 
-    rate_limiting.check_limit(cid, object_type, object_name, '127.0.0.1')
-    #rate_limiting.check_limit(cid, object_type, object_name, '127.0.0.1')
+    rate_limiting.create(user_config, user_definition)
+    rate_limiting.create(channel_config, channel_definition)
+    rate_limiting.create(sec_def_config, sec_def_definition)
 
-    import time
-    time.sleep(61)
+    cid = 123
+    rate_limiting.check_limit(cid, 'http_soap', 'My Endpoint', '127.0.0.1')
+
+    cid = 456
+    rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
+
+    cid = 789
+    rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
 
     rate_limiting.cleanup()
 
