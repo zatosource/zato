@@ -587,11 +587,11 @@ if __name__ == '__main__':
     cid = 456
     rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
 
-    #cid = 789
-    #rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
+    rate_limiting.edit('sso_user', 'Joan Doe', get_user_config(' 2'), get_user_definition(2))
+    rate_limiting.edit('sso_user', 'Joan Doe 2', get_user_config(' 3'), get_user_definition(3))
 
-    rate_limiting.edit('sso_user', 'Joan Doe', get_user_config(' 3'), get_user_definition(3))
-    rate_limiting.edit('sso_user', 'Joan Doe', get_user_config(' 3'), get_user_definition(3))
+    cid = 789
+    rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
 
     rate_limiting.cleanup()
 
