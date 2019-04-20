@@ -8,6 +8,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# gevent monkeypatch is needed as soon as possible
+from gevent.monkey import patch_all
+patch_all()
+
 # stdlib
 import locale, logging, os, ssl, sys
 from logging.config import dictConfig
@@ -20,10 +24,6 @@ cloghandler = cloghandler # For pyflakes
 from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log
-
-# gevent monkeypatch is needed
-from gevent.monkey import patch_all
-patch_all()
 
 # Django
 import django
