@@ -27,7 +27,7 @@ from django.core.management import call_command
 # TODO: There really shouldn't be any direct dependency between zato-cli and zato-web-admin
 from zato.admin.zato_settings import update_globals
 
-from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, ZatoCommand
+from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, is_arg_given, ZatoCommand
 from zato.common.crypto import WebAdminCryptoManager, well_known_data
 from zato.common.defaults import web_admin_host, web_admin_port
 
@@ -126,7 +126,7 @@ class Create(ZatoCommand):
         # and the only certificate we are interested in is the one to the load-balancer.
         # This is why, if we get ca_certs_path, it must be because we are to use TLS
         # in communication with the load-balancer's agent.
-        lb_agent_use_tls = bool(args.get('ca_certs_path'))
+        lb_agent_use_tls = is_arg_given(args, 'ca_certs_path')
 
         config = {
             'host': web_admin_host,
