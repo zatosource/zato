@@ -84,7 +84,7 @@ passlib==1.7.1
 pathtools==0.1.2
 pbr==0.7.0
 pep8==1.5.7
-pg8000==1.12.0
+pg8000==1.13.1
 portalocker==0.5.7
 posix-ipc==1.0.0
 prettytable==0.7.2

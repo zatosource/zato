@@ -84,7 +84,7 @@ soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="
 
 # ################################################################################################################################
 
-zato_message_soap = b"""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
+zato_message_soap = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
   <soap:Body>{data}</soap:Body>
 </soap:Envelope>"""
 
@@ -92,6 +92,7 @@ zato_message_soap = b"""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/so
 
 zato_message_plain = b'{data}'
 zato_message_declaration = b"<?xml version='1.0' encoding='UTF-8'?>" + zato_message_plain
+zato_message_declaration_uni = zato_message_declaration.decode('utf8')
 
 # ################################################################################################################################
 
@@ -565,7 +566,7 @@ class RequestHandler(object):
                        namespace=getattr(service_instance.SimpleIO, 'namespace', zato_namespace),
                          cid=service_instance.cid, result=ZATO_OK)
 
-        return zato_message_template.format(data=data.encode('utf-8'))
+        return zato_message_template.format(data=data.encode('utf-8') if isinstance(data, unicode) else data)
 
 # ################################################################################################################################
 
@@ -589,7 +590,7 @@ class RequestHandler(object):
                 if transport == URL_TYPE.SOAP:
                     zato_message_template = zato_message_soap
                 else:
-                    zato_message_template = zato_message_declaration
+                    zato_message_template = zato_message_declaration_uni
 
                 if response.payload:
                     if not isinstance(response.payload, basestring):
