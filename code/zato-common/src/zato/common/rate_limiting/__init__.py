@@ -327,7 +327,7 @@ if __name__ == '__main__':
 
     def get_sec_def_definition():
         return """
-        127.0.0.1/32  = 1/m
+        127.0.0.1/32  = 10/m
         """
 
     def get_user_config(name_suffix=''):
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     def get_user_definition(prefix=''):
         return """
         10.210.0.0/18 = 1/h
-        127.0.0.1/32  = 1/m
+        127.0.0.1/32  = 6/m
         * = *
         """.format(prefix)
 
@@ -364,15 +364,13 @@ if __name__ == '__main__':
 
     cid = 123
     rate_limiting.check_limit(123, 'http_soap', 'My Endpoint', '127.0.0.1')
-    rate_limiting.check_limit(456, 'http_soap', 'My Endpoint', '127.0.0.1')
 
-    '''
     cid = 456
     rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
     rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
 
-    #rate_limiting.edit('sso_user', 'Joan Doe', get_user_config(' 2'), get_user_definition(2), is_exact)
-    #rate_limiting.edit('sso_user', 'Joan Doe 2', get_user_config(' 3'), get_user_definition(3), is_exact)
+    rate_limiting.edit('sso_user', 'Joan Doe', get_user_config(' 2'), get_user_definition(2), is_exact)
+    rate_limiting.edit('sso_user', 'Joan Doe 2', get_user_config(' 3'), get_user_definition(3), is_exact)
 
     cid = 789
     rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
@@ -380,8 +378,7 @@ if __name__ == '__main__':
     cid = 111
     rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
 
-    #rate_limiting.delete('sso_user', 'Joan Doe 3')
+    rate_limiting.delete('sso_user', 'Joan Doe 3')
     rate_limiting.cleanup()
-    '''
 
 # ################################################################################################################################
