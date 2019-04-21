@@ -180,19 +180,8 @@ class BaseLimiter(object):
 
         # Get current period, e.g. current day, hour or minute
         current_period_func = self.current_period_func[unit]
-        period = current_period_func(now)
-
-        # Get or create a dictionary of requests information for current period
-        period_dict = self.by_period.setdefault(period, {}) # type: dict
-
-        # Get information about already stored requests for that network in current period
-        current_state = period_dict.setdefault(network_found, {
-            'requests': 0,
-            'last_cid': None,
-            'last_request_time_utc': None,
-            'last_from': None,
-            'last_network': None,
-        }) # type: dict
+        current_period = current_period_func(now)
+        current_state = self._get_current_state(current_period, network_found)
 
         # Unless we are allowed to have any rate ..
         if rate != _rate_any:
@@ -203,11 +192,7 @@ class BaseLimiter(object):
 
         # .. otherwise, we increase the counter and store metadata.
         else:
-            current_state['requests'] += 1
-            current_state['last_cid'] = cid
-            current_state['last_request_time_utc'] = now.isoformat()
-            current_state['last_from'] = orig_from
-            current_state['last_network'] = str(network_found)
+            self._set_new_state(current_state, cid, orig_from, network_found, now.isoformat())
 
         # Above, we checked our own rate limit but it is still possible that we have a parent
         # that also wants to check it.
@@ -234,13 +219,12 @@ class BaseLimiter(object):
             # Now, check actual rate limits
             self._check_limit(cid, orig_from, network_found, rate, unit)
 
-
 # ################################################################################################################################
 
     def _get_current_periods(self):
         raise NotImplementedError()
 
-    _delete_periods = _get_current_periods
+    _get_current_state = _set_new_state = _delete_periods = _get_current_periods
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -250,9 +234,36 @@ class Approximate(BaseLimiter):
     def _get_current_periods(self):
         return list(iterkeys(self.by_period))
 
+# ################################################################################################################################
+
     def _delete_periods(self, to_delete):
         for item in to_delete: # item: unicode
             del self.by_period[item]
+
+# ################################################################################################################################
+
+    def _get_current_state(self, current_period, network_found):
+
+        # Get or create a dictionary of requests information for current period
+        period_dict = self.by_period.setdefault(current_period, {}) # type: dict
+
+        # Get information about already stored requests for that network in current period
+        return period_dict.setdefault(network_found, {
+            'requests': 0,
+            'last_cid': None,
+            'last_request_time_utc': None,
+            'last_from': None,
+            'last_network': None,
+        }) # type: dict
+
+# ################################################################################################################################
+
+    def _set_new_state(self, current_state, cid, orig_from, network_found, now):
+        current_state['requests'] += 1
+        current_state['last_cid'] = cid
+        current_state['last_request_time_utc'] = now
+        current_state['last_from'] = orig_from
+        current_state['last_network'] = str(network_found)
 
 # ################################################################################################################################
 # ################################################################################################################################
