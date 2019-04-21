@@ -188,8 +188,6 @@ class BaseLimiter(object):
         current_period = current_period_func(now)
         current_state = self._get_current_state(current_period, network_found)
 
-        print(111, rate, current_state)
-
         # Unless we are allowed to have any rate ..
         if rate != _rate_any:
 
