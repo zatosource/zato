@@ -35,7 +35,7 @@ class BaseLimiter(object):
     """
     __slots__ = 'current_idx', 'lock', 'api', 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit', \
         'is_limit_reached', 'ip_address_cache', 'current_period_func', 'by_period', 'parent_type', 'parent_name', \
-        'is_exact'
+        'is_exact', 'from_any_object_id', 'from_any_object_type', 'from_any_object_name'
 
     def __init__(self):
         self.current_idx = 0
@@ -51,6 +51,10 @@ class BaseLimiter(object):
         self.parent_type = None    # type: unicode
         self.parent_name = None    # type: unicode
         self.is_exact = None       # type: bool
+
+        self.from_any_object_id = None   # type: int
+        self.from_any_object_type = None # type: unicode
+        self.from_any_object_name = None # type: unicode
 
         self.current_period_func = {
             Const.Unit.day: self._get_current_day,
@@ -166,14 +170,18 @@ class BaseLimiter(object):
 
 # ################################################################################################################################
 
-    def _raise_rate_limit_exceeded(self, rate, unit, orig_from, network_found, current_state, cid):
-        raise RateLimitReached('Max. rate limit of {}/{} reached; from:`{}`, network:`{}`; {} ({})'.format(
-            rate, unit, orig_from, network_found, self._format_last_info(current_state), cid))
+    def _raise_rate_limit_exceeded(self, rate, unit, orig_from, network_found, current_state, cid,
+            def_object_id, def_object_name, def_object_type):
+
+        raise RateLimitReached('Max. rate limit of {}/{} reached; from:`{}`, network:`{}`; {} (cid:{}) (def:{} {} {})'.format(
+            rate, unit, orig_from, network_found, self._format_last_info(current_state), cid, def_object_id, def_object_type,
+            def_object_name))
 
 # ################################################################################################################################
 
-    def _check_limit(self, cid, orig_from, network_found, rate, unit, _rate_any=Const.rate_any, _utcnow=datetime.utcnow):
-        # type: (unicode, unicode, unicode, object, unicode, unicode)
+    def _check_limit(self, cid, orig_from, network_found, rate, unit, def_object_id, def_object_name, def_object_type,
+        _rate_any=Const.rate_any, _utcnow=datetime.utcnow):
+        # type: (unicode, unicode, unicode, int, unicode, unicode, object, unicode, unicode)
 
         # Local aliases
         now = _utcnow()
@@ -183,16 +191,18 @@ class BaseLimiter(object):
         current_period = current_period_func(now)
         current_state = self._get_current_state(current_period, network_found)
 
+        print(111, rate, current_state)
+
         # Unless we are allowed to have any rate ..
         if rate != _rate_any:
 
             # We may have reached the limit already ..
             if current_state['requests'] >= rate:
-                self._raise_rate_limit_exceeded(rate, unit, orig_from, network_found, current_state, cid)
+                self._raise_rate_limit_exceeded(rate, unit, orig_from, network_found, current_state, cid,
+                    def_object_id, def_object_name, def_object_type)
 
-        # .. otherwise, we increase the counter and store metadata.
-        else:
-            self._set_new_state(current_state, cid, orig_from, network_found, now.isoformat())
+        # Update current metadata state
+        self._set_new_state(current_state, cid, orig_from, network_found, now.isoformat())
 
         # Above, we checked our own rate limit but it is still possible that we have a parent
         # that also wants to check it.
@@ -210,14 +220,20 @@ class BaseLimiter(object):
                 rate = self.from_any_rate
                 unit = self.from_any_unit
                 network_found = Const.from_any
+                def_object_id = None
+                def_object_type = None
+                def_object_name = None
             else:
                 found = self._get_rate_config_by_from(orig_from)
                 rate = found.rate
                 unit = found.unit
                 network_found = found.from_
+                def_object_id = found.object_id
+                def_object_type = found.object_type
+                def_object_name = found.object_name
 
             # Now, check actual rate limits
-            self._check_limit(cid, orig_from, network_found, rate, unit)
+            self._check_limit(cid, orig_from, network_found, rate, unit, def_object_id, def_object_name, def_object_type)
 
 # ################################################################################################################################
 
