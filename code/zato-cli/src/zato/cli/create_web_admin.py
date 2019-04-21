@@ -107,7 +107,15 @@ class Create(ZatoCommand):
         user_name = 'admin'
         admin_password = admin_password if admin_password else WebAdminCryptoManager.generate_password()
 
-        self.copy_web_admin_crypto(repo_dir, args)
+        # If we have a CA's certificate then it implicitly means that there is some CA
+        # which tells us that we are to trust both the CA and the certificates that it issues,
+        # and the only certificate we are interested in is the one to the load-balancer.
+        # This is why, if we get ca_certs_path, it must be because we are to use TLS
+        # in communication with the load-balancer's agent which in turn means that we have crypto material on input.
+        has_crypto = is_arg_given(args, 'ca_certs_path')
+
+        if has_crypto:
+            self.copy_web_admin_crypto(repo_dir, args)
 
         zato_secret_key = WebAdminCryptoManager.generate_key()
         cm = WebAdminCryptoManager.from_secret_key(zato_secret_key)
@@ -121,19 +129,13 @@ class Create(ZatoCommand):
         odb_password = args.odb_password or ''
         odb_password = odb_password.encode('utf8')
 
-        # If we have a CA's certificate then it implicitly means that there is some CA
-        # which tells us that we are to trust both the CA and the certificates that it issues,
-        # and the only certificate we are interested in is the one to the load-balancer.
-        # This is why, if we get ca_certs_path, it must be because we are to use TLS
-        # in communication with the load-balancer's agent.
-        lb_agent_use_tls = is_arg_given(args, 'ca_certs_path')
 
         config = {
             'host': web_admin_host,
             'port': web_admin_port,
             'db_type': args.odb_type,
             'log_config': 'logging.conf',
-            'lb_agent_use_tls': 'true' if lb_agent_use_tls else 'false',
+            'lb_agent_use_tls': 'true' if has_crypto else 'false',
             'zato_secret_key':zato_secret_key,
             'well_known_data': cm.encrypt(well_known_data.encode('utf8')),
             'DATABASE_NAME': args.odb_db_name or args.sqlite_path,
