@@ -294,7 +294,7 @@ if __name__ == '__main__':
     # Zato
     from zato.common.odb.model import RateLimitState
 
-    engine = create_engine('sqlite://')
+    engine = create_engine('sqlite:////tmp/data.dat', echo=True)
     Session = orm.sessionmaker() # noqa
     Session.configure(bind=engine)
     session = Session()
@@ -355,7 +355,7 @@ if __name__ == '__main__':
     sec_def_config     = get_sec_def_config()
     sec_def_definition = get_sec_def_definition()
 
-    is_exact = False
+    is_exact = True
     rate_limiting = RateLimiting()
 
     rate_limiting.create(user_config, user_definition, is_exact)
