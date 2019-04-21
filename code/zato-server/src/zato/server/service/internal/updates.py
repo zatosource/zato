@@ -28,10 +28,13 @@ from requests import get as requests_get
 from requests.exceptions import ConnectionError
 
 # Zato
-from zato.common import version
+from zato.common import get_version
 from zato.server.service import Service
 
 # ################################################################################################################################
+
+# Current Zato version
+version = get_version()
 
 # If a version has this prefix it means someone is running from source code
 source_prefix = 'pre'

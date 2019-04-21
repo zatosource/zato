@@ -42,20 +42,25 @@ from zato.vault.client import VAULT
 # For pyflakes, otherwise it doesn't know that other parts of Zato import VAULT from here
 VAULT = VAULT
 
-# ##############################################################################
+# ################################################################################################################################
 # Version
-# ##############################################################################
+# ################################################################################################################################
 
-try:
-    curdir = os.path.dirname(os.path.abspath(__file__))
-    _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
-    _locals = {}
-    execfile(_version_py, _locals)
-    version = 'Zato {}'.format(_locals['version'])
-except IOError:
-    version = '3.1.0'
+def get_version():
+    try:
+        curdir = os.path.dirname(os.path.abspath(__file__))
+        _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
+        _locals = {}
+        execfile(_version_py, _locals)
+        version = 'Zato {}'.format(_locals['version'])
+    except IOError:
+        version = '3.1'
+    finally:
+        version = '{}-py{}.{}.{}'.format(version, py_version_info.major, py_version_info.minor, py_version_info.micro)
 
-version = '{}-py{}.{}.{}'.format(version, py_version_info.major, py_version_info.minor, py_version_info.micro)
+    return version
+
+# ################################################################################################################################
 
 # XML namespace for use in all Zato's own services.
 zato_namespace = 'https://zato.io/ns/v1'
