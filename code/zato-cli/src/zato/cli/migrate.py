@@ -21,7 +21,7 @@ from bunch import bunchify
 # Zato
 from zato.cli import common_logging_conf_contents, ManageCommand
 from zato.cli.create_server import lua_zato_rename_if_exists, server_conf_template, user_conf_contents
-from zato.common import version as zato_version, ZATO_INFO_FILE
+from zato.common import get_version, ZATO_INFO_FILE
 from zato.common.util import get_crypto_manager_from_server_config, get_odb_session_from_server_config, get_zato_command
 
 # Python 2/3 compatibility
@@ -30,6 +30,7 @@ from future.utils import iteritems
 
 # ################################################################################################################################
 
+zato_version = get_version()
 zato_version_number_full = zato_version.replace('Zato ', '')
 zato_version_number = zato_version_number_full[:3]
 
