@@ -52,8 +52,8 @@ logger = getLogger(__name__)
 class DefinitionParser(object):
     """ Parser for user-provided rate limiting definitions.
     """
-    def _get_lines(self, definition):
-        # type: (unicode) -> list
+    def _get_lines(self, definition, object_id, object_type, object_name):
+        # type: (unicode, int, unicode, unicode) -> list
 
         out = []
         definition = definition if isinstance(definition, unicode) else definition.decode('utf8')
@@ -90,14 +90,17 @@ class DefinitionParser(object):
             item.from_ = from_
             item.rate = rate
             item.unit = unit
+            item.object_id = object_id
+            item.object_type = object_type
+            item.object_name = object_name
 
             out.append(item)
 
         return out
 
-    def parse(self, definition):
-        # type: (unicode) -> list
-        return self._get_lines(definition.strip())
+    def parse(self, definition, object_id, object_type, object_name):
+        # type: (unicode, int, unicode, unicode) -> list
+        return self._get_lines(definition.strip(), object_id, object_type, object_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -129,16 +132,20 @@ class RateLimiting(object):
     def _create_config(self, object_dict, definition, is_exact):
         # type: (dict, unicode, bool) -> BaseLimiter
 
-        info = ObjectInfo()
-        info.type_ = object_dict['type_']
-        info.id = object_dict['id']
-        info.name = object_dict['name']
+        object_id = object_dict['id']
+        object_type = object_dict['type_']
+        object_name = object_dict['name']
 
-        parsed = self.parser.parse(definition)
+        info = ObjectInfo()
+        info.id = object_id
+        info.type_ = object_type
+        info.name = object_name
+
+        parsed = self.parser.parse(definition, object_id, object_type, object_name)
         def_first = parsed[0]
         has_from_any = def_first.from_ == Const.from_any
 
-        config = Exact() if is_exact else Approximate()
+        config = Exact() if is_exact else Approximate() # type: BaseLimiter
         config.api = self
         config.object_info = info
         config.definition = parsed
@@ -146,9 +153,14 @@ class RateLimiting(object):
         config.parent_name = object_dict['parent_name']
 
         if has_from_any:
+
             config.has_from_any = has_from_any
             config.from_any_rate = def_first.rate
             config.from_any_unit = def_first.unit
+
+            config.from_any_object_id = object_id
+            config.from_any_object_type = object_type
+            config.from_any_object_name = object_name
 
         return config
 
@@ -302,8 +314,8 @@ if __name__ == '__main__':
 
     def get_channel_definition():
         return """
-        192.168.1.123 = 11/m
-        127.0.0.1/32  = 1/m
+        #192.168.1.123 = 11/m
+        127.0.0.1/32  = 5/m
         """
 
     def get_sec_def_config():
@@ -332,7 +344,7 @@ if __name__ == '__main__':
     def get_user_definition(prefix=''):
         return """
         10.210.0.0/18 = 1/h
-        127.0.0.1/32  = {}1/m
+        127.0.0.1/32  = 1/m
         * = *
         """.format(prefix)
 
@@ -353,8 +365,10 @@ if __name__ == '__main__':
     rate_limiting.create(sec_def_config, sec_def_definition, is_exact)
 
     cid = 123
-    rate_limiting.check_limit(cid, 'http_soap', 'My Endpoint', '127.0.0.1')
+    rate_limiting.check_limit(123, 'http_soap', 'My Endpoint', '127.0.0.1')
+    rate_limiting.check_limit(456, 'http_soap', 'My Endpoint', '127.0.0.1')
 
+    '''
     cid = 456
     rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
     rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
@@ -370,5 +384,6 @@ if __name__ == '__main__':
 
     #rate_limiting.delete('sso_user', 'Joan Doe 3')
     rate_limiting.cleanup()
+    '''
 
 # ################################################################################################################################
