@@ -10,21 +10,19 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from datetime import datetime
 from logging import getLogger
 
 # gevent
 from gevent.lock import RLock
 
 # netaddr
-from netaddr import IPAddress, IPNetwork
+from netaddr import IPNetwork
 
 # Zato
-from zato.common.rate_limiting.common import Const, DefinitionItem, FromIPNotAllowed, ObjectInfo, RateLimitReached
+from zato.common.rate_limiting.common import Const, DefinitionItem, ObjectInfo
 from zato.common.rate_limiting.limiter import Approximate, Exact
 
 # Python 2/3 compatibility
-from future.utils import iterkeys
 from past.builtins import unicode
 
 # ################################################################################################################################
