@@ -180,6 +180,13 @@ class Ping(AdminService):
 
 # ################################################################################################################################
 
+class PubPing(Ping):
+    """ Just like zato.ping but available by default in web-admin (because of its prefix).
+    """
+    name = 'pub.zato.ping'
+
+# ################################################################################################################################
+
 class Ping2(Ping):
     """ Works exactly the same as zato.ping, added to have another service for API testing.
     """
