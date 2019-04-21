@@ -2855,3 +2855,31 @@ class GenericConnClient(Base):
         Cluster, backref=backref('gen_conn_clients', order_by=last_seen, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
+
+class RateLimitState(Base):
+    """ Outgoing SMS connections with Twilio.
+    """
+    __tablename__ = 'rate_limit_state'
+    __table_args__ = (
+        UniqueConstraint('object_type', 'object_id'),
+    {})
+
+    id = Column(Integer(), Sequence('rate_limit_state'), primary_key=True)
+
+    object_type = Column(Text(), nullable=False)
+    object_id = Column(Text(), nullable=False)
+
+    period = Column(Text(), nullable=False)
+    requests = Column(Integer(), nullable=False, server_default='0')
+    last_cid = Column(Text(), nullable=False)
+    last_request_time_utc = Column(DateTime(), nullable=False)
+    last_from = Column(Text(), nullable=False)
+    last_network = Column(Text(), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('rate_limit_state_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
