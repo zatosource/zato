@@ -9,22 +9,19 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging
 from datetime import datetime
-from logging import getLogger
 
 # gevent
 from gevent.lock import RLock
 
 # netaddr
-from netaddr import IPAddress, IPNetwork
+from netaddr import IPAddress
 
 # Zato
-from zato.common.rate_limiting.common import Const, DefinitionItem, FromIPNotAllowed, ObjectInfo, RateLimitReached
+from zato.common.rate_limiting.common import Const, FromIPNotAllowed, RateLimitReached
 
 # Python 2/3 compatibility
 from future.utils import iterkeys
-from past.builtins import unicode
 
 # ################################################################################################################################
 # ################################################################################################################################
