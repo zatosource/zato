@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from copy import deepcopy
 from datetime import datetime
 
 # gevent
@@ -33,6 +34,14 @@ class BaseLimiter(object):
     __slots__ = 'current_idx', 'lock', 'api', 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit', \
         'is_limit_reached', 'ip_address_cache', 'current_period_func', 'by_period', 'parent_type', 'parent_name', \
         'is_exact', 'from_any_object_id', 'from_any_object_type', 'from_any_object_name'
+
+    initial_state = {
+        'requests': 0,
+        'last_cid': None,
+        'last_request_time_utc': None,
+        'last_from': None,
+        'last_network': None,
+    }
 
     def __init__(self):
         self.current_idx = 0
@@ -254,18 +263,13 @@ class Approximate(BaseLimiter):
 # ################################################################################################################################
 
     def _get_current_state(self, current_period, network_found):
+        # type: (unicode, unicode) -> dict
 
         # Get or create a dictionary of requests information for current period
         period_dict = self.by_period.setdefault(current_period, {}) # type: dict
 
         # Get information about already stored requests for that network in current period
-        return period_dict.setdefault(network_found, {
-            'requests': 0,
-            'last_cid': None,
-            'last_request_time_utc': None,
-            'last_from': None,
-            'last_network': None,
-        }) # type: dict
+        return period_dict.setdefault(network_found, deepcopy(self.initial_state))
 
 # ################################################################################################################################
 
@@ -280,7 +284,27 @@ class Approximate(BaseLimiter):
 # ################################################################################################################################
 
 class Exact(BaseLimiter):
-    pass
+
+    def _get_current_state(self, current_period, network_found):
+        # type: (unicode, unicode) -> dict
+
+        print(111, current_period, network_found)
+
+        return deepcopy(self.initial_state)
+
+    def _set_new_state(self, current_state, cid, orig_from, network_found, now):
+        pass
+
+# ################################################################################################################################
+
+    def _get_current_periods(self):
+        return []
+
+# ################################################################################################################################
+
+    def _delete_periods(self, to_delete):
+        for item in to_delete: # item: unicode
+            del self.by_period[item]
 
 # ################################################################################################################################
 # ################################################################################################################################
