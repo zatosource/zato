@@ -19,10 +19,29 @@ from gevent.lock import RLock
 from netaddr import IPAddress
 
 # Zato
+from zato.common.odb.model import RateLimitState
+from zato.common.odb.query.rate_limiting import current_state as current_state_query
 from zato.common.rate_limiting.common import Const, FromIPNotAllowed, RateLimitReached
 
 # Python 2/3 compatibility
 from future.utils import iterkeys
+
+# ################################################################################################################################
+
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # stdlib
+    from typing import Callable
+
+    # Zato
+    from zato.common.rate_limiting.common import ObjectInfo
+
+    # For pyflakes
+    Callable = Callable
+    ObjectInfo = ObjectInfo
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,7 +52,7 @@ class BaseLimiter(object):
     """
     __slots__ = 'current_idx', 'lock', 'api', 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit', \
         'is_limit_reached', 'ip_address_cache', 'current_period_func', 'by_period', 'parent_type', 'parent_name', \
-        'is_exact', 'from_any_object_id', 'from_any_object_type', 'from_any_object_name'
+        'is_exact', 'from_any_object_id', 'from_any_object_type', 'from_any_object_name', 'cluster_id'
 
     initial_state = {
         'requests': 0,
@@ -43,7 +62,9 @@ class BaseLimiter(object):
         'last_network': None,
     }
 
-    def __init__(self):
+    def __init__(self, cluster_id):
+        # type: (int)
+        self.cluster_id = cluster_id
         self.current_idx = 0
         self.lock = RLock()
         self.api = None            # type: RateLimiting
@@ -206,7 +227,7 @@ class BaseLimiter(object):
                     def_object_id, def_object_name, def_object_type)
 
         # Update current metadata state
-        self._set_new_state(current_state, cid, orig_from, network_found, now.isoformat())
+        self._set_new_state(current_state, cid, orig_from, network_found, now, current_period)
 
         # Above, we checked our own rate limit but it is still possible that we have a parent
         # that also wants to check it.
@@ -273,10 +294,10 @@ class Approximate(BaseLimiter):
 
 # ################################################################################################################################
 
-    def _set_new_state(self, current_state, cid, orig_from, network_found, now):
+    def _set_new_state(self, current_state, cid, orig_from, network_found, now, *ignored):
         current_state['requests'] += 1
         current_state['last_cid'] = cid
-        current_state['last_request_time_utc'] = now
+        current_state['last_request_time_utc'] = now.isoformat()
         current_state['last_from'] = orig_from
         current_state['last_network'] = str(network_found)
 
@@ -285,19 +306,63 @@ class Approximate(BaseLimiter):
 
 class Exact(BaseLimiter):
 
-    def __init__(self, sql_session_func):
-        super(Exact, self).__init__()
+    def __init__(self, cluster_id, sql_session_func):
+        # type: (int, Callable)
+        super(Exact, self).__init__(cluster_id)
         self.sql_session_func = sql_session_func
+
+    def _fetch_current_state(self, session, current_period, network_found):
+        # type: (unicode, unicode) -> RateLimitState
+
+        # We have a complex Python object but for the query we just need its string representation
+        network_found = str(network_found)
+
+        return current_state_query(session, self.cluster_id, self.object_info.type_, self.object_info.id,
+            current_period, network_found).\
+            first()
 
     def _get_current_state(self, current_period, network_found):
         # type: (unicode, unicode) -> dict
 
-        with self.sql_session_func() as session:
-            print(111, session, current_period, network_found)
-            return deepcopy(self.initial_state)
+        current_state = deepcopy(self.initial_state) # type: dict
 
-    def _set_new_state(self, current_state, cid, orig_from, network_found, now):
-        pass
+        with self.sql_session_func() as session:
+            item = self._fetch_current_state(session, current_period, network_found)
+
+        if item:
+            current_state.update(item.asdict())
+
+        return current_state
+
+    def _set_new_state(self, current_state, cid, orig_from, network_found, now, current_period):
+
+        # We just need a string representation of this object
+        network_found = str(network_found)
+
+        with self.sql_session_func() as session:
+            item = self._fetch_current_state(session, current_period, network_found)
+
+            if item:
+                item.last_cid = cid
+                item.last_from = orig_from
+                item.last_request_time_utc = now
+            else:
+                item = RateLimitState()
+                item.cluster_id = self.cluster_id
+                item.object_type = self.object_info.type_
+                item.object_id = self.object_info.id
+                item.requests = 0
+                item.period = current_period
+                item.network = network_found
+                item.last_cid = cid
+                item.last_from = orig_from
+                item.last_network = network_found
+                item.last_request_time_utc = now
+
+            item.requests += 1
+
+            session.add(item)
+            session.commit()
 
 # ################################################################################################################################
 

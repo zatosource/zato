@@ -2861,7 +2861,7 @@ class RateLimitState(Base):
     """
     __tablename__ = 'rate_limit_state'
     __table_args__ = (
-        UniqueConstraint('object_type', 'object_id'),
+        UniqueConstraint('object_type', 'object_id', 'period'),
     {})
 
     id = Column(Integer(), Sequence('rate_limit_state'), primary_key=True)
