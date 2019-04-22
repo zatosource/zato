@@ -106,12 +106,13 @@ class DefinitionParser(object):
 class RateLimiting(object):
     """ Main API for the management of rate limiting functionality.
     """
-    __slots__ = 'parser', 'config_store', 'lock'
+    __slots__ = 'parser', 'config_store', 'lock', 'sql_session_func'
 
     def __init__(self):
         self.parser = DefinitionParser()
         self.config_store = {}
         self.lock = RLock()
+        self.sql_session_func = None
 
 # ################################################################################################################################
 
@@ -143,7 +144,7 @@ class RateLimiting(object):
         def_first = parsed[0]
         has_from_any = def_first.from_ == Const.from_any
 
-        config = Exact() if is_exact else Approximate() # type: BaseLimiter
+        config = Exact(self.sql_session_func) if is_exact else Approximate() # type: BaseLimiter
         config.api = self
         config.object_info = info
         config.definition = parsed
@@ -299,6 +300,20 @@ if __name__ == '__main__':
     Session.configure(bind=engine)
     session = Session()
 
+    class GetSession(object):
+
+        def __enter__(self):
+            self.session = Session()
+            return self.session
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            if exc_type:
+                return True
+            self.session.close()
+
+    with GetSession() as s1:
+        pass
+
     RateLimitState.metadata.create_all(engine)
 
     def get_channel_config():
@@ -356,7 +371,9 @@ if __name__ == '__main__':
     sec_def_definition = get_sec_def_definition()
 
     is_exact = True
+
     rate_limiting = RateLimiting()
+    rate_limiting.sql_session_func = GetSession
 
     rate_limiting.create(user_config, user_definition, is_exact)
     rate_limiting.create(channel_config, channel_definition, is_exact)

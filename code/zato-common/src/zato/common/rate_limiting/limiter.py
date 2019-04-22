@@ -285,12 +285,16 @@ class Approximate(BaseLimiter):
 
 class Exact(BaseLimiter):
 
+    def __init__(self, sql_session_func):
+        super(Exact, self).__init__()
+        self.sql_session_func = sql_session_func
+
     def _get_current_state(self, current_period, network_found):
         # type: (unicode, unicode) -> dict
 
-        print(111, current_period, network_found)
-
-        return deepcopy(self.initial_state)
+        with self.sql_session_func() as session:
+            print(111, session, current_period, network_found)
+            return deepcopy(self.initial_state)
 
     def _set_new_state(self, current_state, cid, orig_from, network_found, now):
         pass
