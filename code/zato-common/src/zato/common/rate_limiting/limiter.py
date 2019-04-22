@@ -20,7 +20,7 @@ from netaddr import IPAddress
 
 # Zato
 from zato.common.odb.model import RateLimitState
-from zato.common.odb.query.rate_limiting import current_state as current_state_query
+from zato.common.odb.query.rate_limiting import current_period_list, current_state as current_state_query
 from zato.common.rate_limiting.common import Const, FromIPNotAllowed, RateLimitReached
 
 # Python 2/3 compatibility
@@ -42,6 +42,11 @@ if typing.TYPE_CHECKING:
     # For pyflakes
     Callable = Callable
     ObjectInfo = ObjectInfo
+
+# ################################################################################################################################
+
+RateLimitStateTable  = RateLimitState.__table__
+RateLimitStateDelete = RateLimitStateTable.delete
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -128,6 +133,9 @@ class BaseLimiter(object):
                 # If this period is in the past, add it to the ones to be deleted
                 if period < current_period:
                     to_delete.add(period)
+
+            if to_delete:
+                self._delete_periods(to_delete)
 
 # ################################################################################################################################
 
@@ -367,13 +375,18 @@ class Exact(BaseLimiter):
 # ################################################################################################################################
 
     def _get_current_periods(self):
-        return []
+        with self.sql_session_func() as session:
+            return [elem[0] for elem in current_period_list(session, self.cluster_id).\
+                   all()]
 
 # ################################################################################################################################
 
     def _delete_periods(self, to_delete):
-        for item in to_delete: # item: unicode
-            del self.by_period[item]
+        with self.sql_session_func() as session:
+            session.execute(RateLimitStateDelete().where(
+                RateLimitStateTable.c.period.in_(to_delete)
+            ))
+            session.commit()
 
 # ################################################################################################################################
 # ################################################################################################################################

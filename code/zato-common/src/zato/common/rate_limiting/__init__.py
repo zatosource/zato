@@ -301,7 +301,7 @@ if __name__ == '__main__':
     # Zato
     from zato.common.odb.model import RateLimitState
 
-    engine = create_engine('sqlite:////tmp/data.dat', echo=False)
+    engine = create_engine('sqlite:////tmp/data.dat', echo=True)
     Session = orm.sessionmaker() # noqa
     Session.configure(bind=engine)
     session = Session()
@@ -403,6 +403,7 @@ if __name__ == '__main__':
     rate_limiting.edit('sso_user', 'Joan Doe', get_user_config(' 2'), get_user_definition(2), is_exact)
     rate_limiting.edit('sso_user', 'Joan Doe 2', get_user_config(' 3'), get_user_definition(3), is_exact)
 
+    '''
     cid = 789
     rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
 
@@ -410,6 +411,7 @@ if __name__ == '__main__':
     rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
 
     rate_limiting.delete('sso_user', 'Joan Doe 3')
+    '''
     rate_limiting.cleanup()
 
 # ################################################################################################################################
