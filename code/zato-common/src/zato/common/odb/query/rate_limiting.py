@@ -24,3 +24,10 @@ def current_state(session, cluster_id, object_type, object_id, period, network):
         filter(RateLimitState.last_network==network)
 
 # ################################################################################################################################
+
+def current_period_list(session, cluster_id):
+    """ Returns all periods stored in ODB, no matter their object type, ID or similar.
+    """
+    return session.query(RateLimitState.period)
+
+# ################################################################################################################################
