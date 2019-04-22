@@ -32,11 +32,15 @@ import typing
 
 if typing.TYPE_CHECKING:
 
+    # stdlib
+    from typing import Callable
+
     # Zato
     from zato.common.rate_limiting.limiter import BaseLimiter
 
     # For pyflakes
     BaseLimiter = BaseLimiter
+    Callable = Callable
 
 # ################################################################################################################################
 
@@ -106,13 +110,15 @@ class DefinitionParser(object):
 class RateLimiting(object):
     """ Main API for the management of rate limiting functionality.
     """
-    __slots__ = 'parser', 'config_store', 'lock', 'sql_session_func'
+    __slots__ = 'parser', 'config_store', 'lock', 'sql_session_func', 'global_lock_func', 'cluster_id'
 
     def __init__(self):
-        self.parser = DefinitionParser()
-        self.config_store = {}
-        self.lock = RLock()
-        self.sql_session_func = None
+        self.parser = DefinitionParser() # type: DefinitionParser
+        self.config_store = {}           # type: dict
+        self.lock = RLock()              # type: Rlock
+        self.global_lock_func = None     # type: Callable
+        self.sql_session_func = None     # type: Callable
+        self.cluster_id = None           # type: int
 
 # ################################################################################################################################
 
@@ -144,7 +150,7 @@ class RateLimiting(object):
         def_first = parsed[0]
         has_from_any = def_first.from_ == Const.from_any
 
-        config = Exact(self.sql_session_func) if is_exact else Approximate() # type: BaseLimiter
+        config = Exact(self.cluster_id, self.sql_session_func) if is_exact else Approximate(self.cluster_id) # type: BaseLimiter
         config.api = self
         config.object_info = info
         config.definition = parsed
@@ -295,7 +301,7 @@ if __name__ == '__main__':
     # Zato
     from zato.common.odb.model import RateLimitState
 
-    engine = create_engine('sqlite:////tmp/data.dat', echo=True)
+    engine = create_engine('sqlite:////tmp/data.dat', echo=False)
     Session = orm.sessionmaker() # noqa
     Session.configure(bind=engine)
     session = Session()
@@ -308,11 +314,16 @@ if __name__ == '__main__':
 
         def __exit__(self, exc_type, exc_val, exc_tb):
             if exc_type:
-                return True
+                raise
             self.session.close()
 
-    with GetSession() as s1:
-        pass
+    class GlobalLock(object):
+
+        def __enter__(self):
+            pass
+
+        def __exit__(self, *ignored):
+            pass
 
     RateLimitState.metadata.create_all(engine)
 
@@ -371,9 +382,12 @@ if __name__ == '__main__':
     sec_def_definition = get_sec_def_definition()
 
     is_exact = True
+    cluster_id = 1
 
     rate_limiting = RateLimiting()
     rate_limiting.sql_session_func = GetSession
+    rate_limiting.cluster_id = cluster_id
+    rate_limiting.global_lock_func = GlobalLock
 
     rate_limiting.create(user_config, user_definition, is_exact)
     rate_limiting.create(channel_config, channel_definition, is_exact)
