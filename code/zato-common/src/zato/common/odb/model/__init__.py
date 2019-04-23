@@ -18,8 +18,8 @@ from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, \
-     ODOO, SAP, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
+from zato.common import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, ODOO, SAP, PUBSUB, \
+     SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base
 from zato.common.odb.model.sso import _SSOAttr, _SSOSession, _SSOUser
@@ -556,8 +556,8 @@ class HTTPSOAP(Base):
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
 
-    connection = Column(Enum(CONNECTION.CHANNEL, CONNECTION.OUTGOING, name='http_soap_connection'), nullable=False)
-    transport = Column(Enum(URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP, name='http_soap_transport'), nullable=False)
+    connection = Column(String(200), nullable=False)
+    transport = Column(String(200), nullable=False)
 
     host = Column(String(200), nullable=True)
     url_path = Column(String(200), nullable=False)
