@@ -146,11 +146,6 @@ class JSONRPCGateway(AdminService):
 
 # ################################################################################################################################
 
-    def _get_json_rpc_message(self):
-        pass
-
-# ################################################################################################################################
-
     def handle(self):
         try:
             channel_config = self.server.worker_store.request_dispatcher.url_data.get_channel_by_name(self.channel.name)
