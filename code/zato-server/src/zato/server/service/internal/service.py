@@ -233,7 +233,7 @@ class Delete(AdminService):
             try:
                 service = session.query(Service).\
                     filter(Service.id==self.request.input.id).\
-                    one()
+                    one() # type: Service
 
                 internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
 
@@ -246,8 +246,13 @@ class Delete(AdminService):
                 session.delete(service)
                 session.commit()
 
-                msg = {'action': SERVICE.DELETE.value, 'id': self.request.input.id, 'impl_name':service.impl_name,
-                       'is_internal':service.is_internal}
+                msg = {
+                    'action': SERVICE.DELETE.value,
+                    'id': self.request.input.id,
+                    'name':service.name,
+                    'impl_name':service.impl_name,
+                    'is_internal':service.is_internal,
+                }
                 self.broker_client.publish(msg)
 
             except Exception:

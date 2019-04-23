@@ -1709,11 +1709,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         mod = inspect.getmodule(self.server.service_store.services[msg.impl_name]['service_class'])
 
         # Where to delete it from in the second step
-        deployment_info = loads(self.server.service_store.services[msg.impl_name]['deployment_info'])
+        deployment_info = self.server.service_store.get_deployment_info(msg.impl_name)
         fs_location = deployment_info['fs_location']
 
         # Delete it from the service store
-        del self.server.service_store.services[msg.impl_name]
+        self.server.service_store.delete_service_data(msg.name)
 
         # Delete it from the filesystem, including any bytecode left over. Note that
         # other parallel servers may wish to do exactly the same so we just ignore
