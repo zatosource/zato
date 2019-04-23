@@ -61,8 +61,10 @@ if typing.TYPE_CHECKING:
     # Zato
     from zato.common.odb.api import ODBManager
     from zato.server.base.parallel import ParallelServer
+    from zato.server.config import ConfigDict
 
     # For pyflakes
+    ConfigDict = ConfigDict
     ODBManager = ODBManager
     ParallelServer = ParallelServer
 
@@ -96,9 +98,9 @@ class InRAMService(object):
     def __init__(self):
         self.cluster_id = None       # type: int
         self.id = None               # type: int
-        self.impl_name = None        # type: text
-        self.name = None             # type: text
-        self.deployment_info = None  # type: text
+        self.impl_name = None        # type: unicode
+        self.name = None             # type: unicode
+        self.deployment_info = None  # type: unicode
         self.service_class = None    # type: object
         self.is_active = None        # type: bool
         self.is_internal = None      # type: bool
@@ -208,8 +210,23 @@ class ServiceStore(object):
         self.id_to_impl_name = {}
         self.impl_name_to_id = {}
         self.name_to_impl_name = {}
+        self.deployment_info = {}  # impl_name to deployment information
         self.update_lock = RLock()
         self.patterns_matcher = Matcher()
+
+# ################################################################################################################################
+
+    def delete_service_data(self, name):
+        # type: (unicode)
+
+        with self.update_lock:
+            impl_name = self.name_to_impl_name[name]     # type: unicode
+            service_id = self.impl_name_to_id[impl_name] # type: int
+
+            del self.id_to_impl_name[service_id]
+            del self.impl_name_to_id[impl_name]
+            del self.name_to_impl_name[name]
+            del self.services[impl_name]
 
 # ################################################################################################################################
 
@@ -246,8 +263,45 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def set_up_class_attributes(self, class_, service_store=None, name=None, _exact=RATE_LIMIT.TYPE.EXACT.id):
-        # type: (Service, ServiceStore, unicode, unicode)
+    def set_up_rate_limiting(self, name, class_=None, _exact=RATE_LIMIT.TYPE.EXACT.id):
+        # type: (unicode, Service, unicode)
+
+        config = self.server.config.service.get(name) # type: ConfigDict
+
+        # This will not exist if we are booting up and we deploying this service for the very first time.
+        # In such a case, the hot-deployment service will call us explicitly thus we can just return here.
+        if not config:
+            return
+
+        config = config['config'] # type: dict
+        has_rate_limiting = bool(config.get('rate_limit_def'))
+
+        if not class_:
+            service_id = self.get_service_id_by_name(name)
+            class_ = self.get_service_class_by_id(service_id)
+
+        if has_rate_limiting:
+
+            # Per-service rate limiting information
+            rate_limit_config = {
+                'id': 'service.{}'.format(config['id']),
+                'type_': 'service',
+                'name': name,
+                'parent_type': None,
+                'parent_name': None,
+            }
+
+            # Register the configuration with the rate limiting API
+            self.server.rate_limiting.create(rate_limit_config,
+                config['rate_limit_def'], config['rate_limit_type'] == _exact)
+
+        # Set a flag to signal that this service has rate limiting enabled or not
+        class_._has_rate_limiting = has_rate_limiting
+
+# ################################################################################################################################
+
+    def set_up_class_attributes(self, class_, service_store=None, name=None):
+        # type: (Service, ServiceStore, unicode)
         class_.add_http_method_handlers()
 
         # Set up enforcement of what other services a given service can invoke
@@ -305,28 +359,6 @@ class ServiceStore(object):
             class_.component_enabled_target_matcher = service_store.server.fs_server_config.component_enabled.target_matcher
             class_.component_enabled_invoke_matcher = service_store.server.fs_server_config.component_enabled.invoke_matcher
             class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
-
-            # Rate limiting
-            config = self.server.config.service[name]['config'] # type: dict
-            has_rate_limiting = bool(config.get('rate_limit_def'))
-
-            if has_rate_limiting:
-
-                # Per-service rate limiting information
-                rate_limit_config = {
-                    'id': 'service.{}'.format(config['id']),
-                    'type_': 'service',
-                    'name': name,
-                    'parent_type': None,
-                    'parent_name': None,
-                }
-
-                # Register the configuration with the rate limiting API
-                self.server.rate_limiting.create(rate_limit_config,
-                    config['rate_limit_def'], config['rate_limit_type'] == _exact)
-
-            # Set a flag to signal that this service has rate limiting enabled or not
-            class_._has_rate_limiting = has_rate_limiting
 
             # JSON Schema
             if class_.json_schema:
@@ -395,6 +427,12 @@ class ServiceStore(object):
 
     def get_service_name_by_id(self, service_id):
         return self.get_service_class_by_id(service_id)['name']
+
+# ################################################################################################################################
+
+    def get_deployment_info(self, impl_name):
+        # type: (unicode) -> dict
+        return self.deployment_info[impl_name]
 
 # ################################################################################################################################
 
@@ -604,7 +642,13 @@ class ServiceStore(object):
 
             # Add to ODB all the Service objects from this batch found not to be in ODB already
             if to_add:
-                self.odb.add_services(session, [elem.to_dict() for elem in to_add])
+                elems = [elem.to_dict() for elem in to_add]
+
+                for elem in elems: # type: dict
+                    elem_name = elem['name']
+                    logger.warn('QQQ %s %s', elem_name, self.name_to_impl_name.get(elem_name))
+
+                self.odb.add_services(session, elems)
                 any_added = True
 
         return any_added
@@ -649,7 +693,9 @@ class ServiceStore(object):
                 # Metadata about this deployment as a JSON object
                 class_ = service.service_class
                 path = service.source_code_info.path
-                deployment_details = dumps(deployment_info('service-store', str(class_), now_iso, path))
+                deployment_info_dict = deployment_info('service-store', str(class_), now_iso, path)
+                self.deployment_info[service.impl_name] = deployment_info_dict
+                deployment_details = dumps(deployment_info_dict)
 
                 # No such Service object in ODB so we need to store it
                 if service.name not in deployed_services:
@@ -765,8 +811,21 @@ class ServiceStore(object):
         self._store_in_odb(info.to_process)
         self._store_in_ram(info.to_process)
 
+        # Postprocessing, like rate limiting which needs access to information that becomes
+        # available only after a service is saved to ODB.
+        self.after_import(info)
+
         # Done deploying, we can return
         return info
+
+# ################################################################################################################################
+
+    def after_import(self, info):
+        # type: (DeploymentInfo) -> None
+
+        # Rate limiting
+        for item in info.to_process: # type: InRAMService
+            self.set_up_rate_limiting(item.name, item.service_class)
 
 # ################################################################################################################################
 
