@@ -29,6 +29,7 @@ from gevent import Timeout, spawn
 
 # Python 2/3 compatibility
 from past.builtins import basestring
+from future.utils import iterkeys
 from zato.common.py23_ import maxint
 
 # Zato
@@ -660,7 +661,8 @@ class Service(object):
             else:
                 out = self.update_handle(*invoke_args, **kwargs)
                 if kwargs.get('skip_response_elem') and hasattr(out, 'keys'):
-                    response_elem = out.keys()[0]
+                    keys = list(iterkeys(out))
+                    response_elem = keys[0]
                     return out[response_elem]
                 else:
                     return out
