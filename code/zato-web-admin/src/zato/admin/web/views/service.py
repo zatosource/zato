@@ -179,7 +179,8 @@ class Index(_Index):
         input_required = 'cluster_id',
         input_optional = 'query',
         output_required = 'id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage', 'slow_threshold'
-        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details'
+        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_enabled', \
+            'rate_limit_type', 'rate_limit_def'
         output_repeated = True
 
     def handle(self):
@@ -204,7 +205,8 @@ class Edit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'id', 'is_active', 'slow_threshold'
-        input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details'
+        input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_enabled', \
+            'rate_limit_type', 'rate_limit_def'
         output_required = 'id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted'
 
     def success_message(self, item):

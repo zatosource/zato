@@ -54,10 +54,14 @@ logger = getLogger(__name__)
 class DefinitionParser(object):
     """ Parser for user-provided rate limiting definitions.
     """
-    def _get_lines(self, definition, object_id, object_type, object_name):
-        # type: (unicode, int, unicode, unicode) -> list
 
-        out = []
+    @staticmethod
+    def get_lines(definition, object_id, object_type, object_name, parse_only=False):
+        # type: (unicode, int, unicode, unicode, bool) -> list
+
+        if not parse_only:
+            out = []
+
         definition = definition if isinstance(definition, unicode) else definition.decode('utf8')
 
         for idx, line in enumerate(definition.splitlines(), 1): # type: int, unicode
@@ -87,6 +91,10 @@ class DefinitionParser(object):
             if unit not in all_units:
                 raise ValueError('Unit `{}` is not one of `{}`'.format(unit, all_units))
 
+            # In parse-only mode we do not build any actual output
+            if parse_only:
+                continue
+
             item = DefinitionItem()
             item.config_line = idx
             item.from_ = from_
@@ -98,11 +106,22 @@ class DefinitionParser(object):
 
             out.append(item)
 
-        return out
+        if not parse_only:
+            return out
+
+# ################################################################################################################################
+
+    @staticmethod
+    def check_definition(definition):
+        # type: (unicode)
+        DefinitionParser.get_lines(definition.strip(), None, None, None, True)
+
+# ################################################################################################################################
 
     def parse(self, definition, object_id, object_type, object_name):
         # type: (unicode, int, unicode, unicode) -> list
-        return self._get_lines(definition.strip(), object_id, object_type, object_name)
+        return DefinitionParser.get_lines(definition.strip(), object_id, object_type, object_name)
+
 
 # ################################################################################################################################
 # ################################################################################################################################
