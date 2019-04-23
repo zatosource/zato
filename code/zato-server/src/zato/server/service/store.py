@@ -648,7 +648,16 @@ class ServiceStore(object):
                     elem_name = elem['name']
                     logger.warn('QQQ %s %s', elem_name, self.name_to_impl_name.get(elem_name))
 
+                # This saves services in ODB
                 self.odb.add_services(session, elems)
+
+                # Now that we have them, we can look up their IDs
+                service_id_list = self.odb.get_service_id_list(session, self.server.cluster_id,
+                    [elem['name'] for elem in elems]) # type: dict
+
+                for item in service_id_list: # type: dict
+                    logger.warn('YYY %s', item)
+
                 any_added = True
 
         return any_added
