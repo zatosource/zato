@@ -833,7 +833,7 @@ class WebSocket(_WebSocket):
                 try:
                     self.handle_client_message(cid, request) if not request.is_auth else self.handle_create_session(cid, request)
                 except RuntimeError as e:
-                    if e.message == 'Cannot send on a terminated websocket':
+                    if str(e) == 'Cannot send on a terminated websocket':
                         msg = 'Ignoring message (client disconnected), cid:`%s`, request:`%s` conn:`%s`'
                         logger.info(msg, cid, request, self.peer_conn_info_pretty)
                         logger_zato.info(msg, cid, request, self.peer_conn_info_pretty)

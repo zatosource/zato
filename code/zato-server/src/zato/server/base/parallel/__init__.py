@@ -67,9 +67,11 @@ import typing
 if typing.TYPE_CHECKING:
 
     # Zato
+    from zato.common.odb.api import ODBManager
     from zato.server.service.store import ServiceStore
 
     # For pyflakes
+    ODBManager = ODBManager
     ServiceStore = ServiceStore
 
 # ################################################################################################################################
@@ -91,7 +93,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.host = None
         self.port = None
         self.crypto_manager = None
-        self.odb = None
+        self.odb = None # type: ODBManager
         self.odb_data = None
         self.config = None
         self.repo_location = None
@@ -410,7 +412,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.config.odb_data['fs_sql_config'] = self.fs_sql_config
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
-        self.odb.token = self.config.odb_data.token
+        self.odb.token = self.config.odb_data.token.decode('utf8')
         self.odb.decrypt_func = self.decrypt
 
 # ################################################################################################################################
