@@ -64,13 +64,15 @@ class DefinitionParser(object):
 
         definition = definition if isinstance(definition, unicode) else definition.decode('utf8')
 
-        for idx, line in enumerate(definition.splitlines(), 1): # type: int, unicode
-            line = line.strip()
+        for idx, orig_line in enumerate(definition.splitlines(), 1): # type: int, unicode
+            line = orig_line.strip()
 
             if (not line) or line.startswith('#'):
                 continue
 
             line = line.split('=')
+            if len(line) != 2:
+                raise ValueError('Invalid definition line `{}`; (idx:{})'.format(orig_line, idx))
             from_, rate_info = line # type: unicode, unicode
 
             from_ = from_.strip()
@@ -115,6 +117,15 @@ class DefinitionParser(object):
     def check_definition(definition):
         # type: (unicode)
         DefinitionParser.get_lines(definition.strip(), None, None, None, True)
+
+# ################################################################################################################################
+
+    @staticmethod
+    def check_definition_from_input(input_data):
+        # type: (dict)
+        rate_limit_def = input_data.get('rate_limit_def')
+        if rate_limit_def:
+            DefinitionParser.check_definition(rate_limit_def)
 
 # ################################################################################################################################
 

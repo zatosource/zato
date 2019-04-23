@@ -33,6 +33,7 @@ from zato.common.exception import BadRequest
 from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
+from zato.common.rate_limiting import DefinitionParser
 from zato.common.util import hot_deploy, payload_from_request
 from zato.common.util.json_ import dumps
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
@@ -175,10 +176,14 @@ class Edit(AdminService):
         input_required = 'id', 'is_active', Integer('slow_threshold')
         input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_enabled', \
             'rate_limit_type', 'rate_limit_def'
-        output_required = 'id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted')
+        output_optional = 'id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted')
 
     def handle(self):
         input = self.request.input
+
+        # If we have a rate limiting definition, let's check it upfront
+        DefinitionParser.check_definition_from_input(input)
+
         with closing(self.odb.session()) as session:
             try:
                 service = session.query(Service).filter_by(id=input.id).one()
