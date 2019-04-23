@@ -41,7 +41,7 @@ except ImportError:
     Dumper = Dumper
 
 # Zato
-from zato.common import CHANNEL, DONT_DEPLOY_ATTR_NAME, KVDB, SourceCodeInfo, TRACE1
+from zato.common import CHANNEL, DONT_DEPLOY_ATTR_NAME, KVDB, RATE_LIMIT, SourceCodeInfo, TRACE1
 from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
      Validator as JSONSchemaValidator
 from zato.common.match import Matcher
@@ -246,8 +246,8 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def set_up_class_attributes(self, class_, service_store=None, name=None):
-        # type: (Service, ServiceStore, unicode)
+    def set_up_class_attributes(self, class_, service_store=None, name=None, _exact=RATE_LIMIT.TYPE.EXACT.id):
+        # type: (Service, ServiceStore, unicode, unicode)
         class_.add_http_method_handlers()
 
         # Set up enforcement of what other services a given service can invoke
@@ -262,7 +262,7 @@ class ServiceStore(object):
         except AttributeError:
             class_.has_sio = False
 
-        # May be None during unit-tests. Not every one will provide it because it's not always needed in a given test.
+        # May be None during unit-tests - not every test provides it.
         if service_store:
 
             # Set up all attributes that do not have to be assigned to each instance separately
@@ -305,6 +305,28 @@ class ServiceStore(object):
             class_.component_enabled_target_matcher = service_store.server.fs_server_config.component_enabled.target_matcher
             class_.component_enabled_invoke_matcher = service_store.server.fs_server_config.component_enabled.invoke_matcher
             class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
+
+            # Rate limiting
+            config = self.server.config.service[name]['config'] # type: dict
+            has_rate_limiting = bool(config.get('rate_limit_def'))
+
+            if has_rate_limiting:
+
+                # Per-service rate limiting information
+                rate_limit_config = {
+                    'id': 'service.{}'.format(config['id']),
+                    'type_': 'service',
+                    'name': name,
+                    'parent_type': None,
+                    'parent_name': None,
+                }
+
+                # Register the configuration with the rate limiting API
+                self.server.rate_limiting.create(rate_limit_config,
+                    config['rate_limit_def'], config['rate_limit_type'] == _exact)
+
+            # Set a flag to signal that this service has rate limiting enabled or not
+            class_._has_rate_limiting = has_rate_limiting
 
             # JSON Schema
             if class_.json_schema:

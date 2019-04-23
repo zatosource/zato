@@ -292,6 +292,9 @@ class ConfigStore(object):
         # XPath
         self.xpath = xpath
 
+        # Services
+        self.service = None # type: ConfigDict
+
 # ################################################################################################################################
 
     def outgoing_connections(self):
