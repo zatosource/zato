@@ -41,6 +41,10 @@
 
             'is_json_schema_enabled',
             'needs_json_schema_err_details',
+
+            'is_rate_limit_enabled',
+            'rate_limit_type',
+            'rate_limit_def',
         ]
     }
 
@@ -109,12 +113,23 @@
                         <th><a href="#">Internal</a></th>
                         <th>1h req/s</th>
                         <th>1h mean</th>
+
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -129,6 +144,7 @@
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
                         <td id="rate_1h_{{ item.id }}">&lt;0.01</td>
                         <td id="mean_1h_{{ item.id }}">&lt;0.01</td>
+
                         <td><a href="javascript:$.fn.zato.service.edit('{{ item.id }}')">Edit</a></td>
                         <td>
                             {% if item.may_be_deleted %}
@@ -137,12 +153,17 @@
                         </td>
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_internal }}</td>
                         <td class='ignore'>{{ item.slow_threshold }}</td>
 
                         <td class='ignore'>{{ item.is_json_schema_enabled }}</td>
                         <td class='ignore'>{{ item.needs_json_schema_err_details }}</td>
+
+                        <td class='ignore'>{{ item.is_rate_limit_enabled }}</td>
+                        <td class='ignore'>{{ item.rate_limit_type }}</td>
+                        <td class='ignore'>{{ item.rate_limit_def }}</td>
 
                     </tr>
                 {% endfor %}
@@ -164,7 +185,7 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:10%">Options</td>
+                            <td style="vertical-align:middle;width:14%">Options</td>
                             <td>
                             <label>
                             Active
@@ -179,6 +200,7 @@
                         </tr>
 
                         {% include "zato/include/json-schema/edit.html" %}
+                        {% include "zato/include/rate-limiting.html" %}
 
                         <tr>
                             <td colspan="2" style="text-align:right">

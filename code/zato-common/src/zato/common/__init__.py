@@ -1110,6 +1110,14 @@ class TLS:
         def __iter__(self):
             return iter((self.CERT_NONE, self.CERT_OPTIONAL, self.CERT_REQUIRED))
 
+class RATE_LIMIT:
+    class TYPE:
+        APPROXIMATE = NameId('Approximate', 'APPROXIMATE')
+        EXACT       = NameId('Exact', 'EXACT')
+
+        def __iter__(self):
+            return iter((self.APPROXIMATE, self.EXACT))
+
 # ################################################################################################################################
 # ################################################################################################################################
 

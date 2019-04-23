@@ -13,12 +13,16 @@ from contextlib import closing
 from time import time
 
 # Zato
-from zato.common import SMTPMessage, version
+from zato.common import SMTPMessage, get_version
 from zato.common.broker_message import EMAIL
 from zato.common.odb.model import SMTP
 from zato.common.odb.query import email_smtp_list
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+
+# ################################################################################################################################
+
+version = get_version()
 
 # ################################################################################################################################
 
