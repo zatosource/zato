@@ -818,6 +818,14 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_service_id_list(self, session, cluster_id, name_list):
+        """ Returns a list of IDs matching input service names.
+        """
+        # type: object, int, list
+        return query.service_id_list(session, cluster_id, name_list)
+
+# ################################################################################################################################
+
     def get_apikey_security_list(self, cluster_id, needs_columns=False):
         """ Returns a list of API keys existing on the given cluster.
         """
