@@ -1206,6 +1206,9 @@ class URLData(CyURLData, OAuthDataStore):
             channel_item['security_id'] = msg['security_id']
             channel_item['security_name'] = msg['security_name']
 
+        # For JSON-RPC
+        channel_item['service_whitelist'] = msg.get('service_whitelist', [])
+
         channel_item['service_impl_name'] = msg['impl_name']
         channel_item['match_target'] = match_target
         channel_item['match_target_compiled'] = Matcher(channel_item['match_target'], channel_item['match_slash'])
