@@ -37,10 +37,12 @@ if typing.TYPE_CHECKING:
 
     # Zato
     from zato.common.rate_limiting.limiter import BaseLimiter
+    from zato.distlock import LockManager
 
     # For pyflakes
     BaseLimiter = BaseLimiter
     Callable = Callable
+    LockManager = LockManager
 
 # ################################################################################################################################
 
@@ -146,7 +148,7 @@ class RateLimiting(object):
         self.parser = DefinitionParser() # type: DefinitionParser
         self.config_store = {}           # type: dict
         self.lock = RLock()              # type: Rlock
-        self.global_lock_func = None     # type: Callable
+        self.global_lock_func = None     # type: LockManager
         self.sql_session_func = None     # type: Callable
         self.cluster_id = None           # type: int
 

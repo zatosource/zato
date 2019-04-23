@@ -656,6 +656,7 @@ class CHANNEL(Attrs):
     SCHEDULER = 'scheduler'
     SCHEDULER_AFTER_ONE_TIME = 'scheduler-after-one-time'
     SERVICE = 'service'
+    SSO_USER = 'sso-user'
     STARTUP_SERVICE = 'startup-service'
     STOMP = 'stomp'
     URL_DATA = 'url-data'

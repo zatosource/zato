@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
 
@@ -334,7 +335,7 @@ class Exact(BaseLimiter):
 
         current_state = deepcopy(self.initial_state) # type: dict
 
-        with self.sql_session_func() as session:
+        with closing(self.sql_session_func()) as session:
             item = self._fetch_current_state(session, current_period, network_found)
 
         if item:
@@ -347,7 +348,7 @@ class Exact(BaseLimiter):
         # We just need a string representation of this object
         network_found = str(network_found)
 
-        with self.sql_session_func() as session:
+        with closing(self.sql_session_func()) as session:
             item = self._fetch_current_state(session, current_period, network_found)
 
             if item:
@@ -375,14 +376,14 @@ class Exact(BaseLimiter):
 # ################################################################################################################################
 
     def _get_current_periods(self):
-        with self.sql_session_func() as session:
+        with closing(self.sql_session_func()) as session:
             return [elem[0] for elem in current_period_list(session, self.cluster_id).\
                    all()]
 
 # ################################################################################################################################
 
     def _delete_periods(self, to_delete):
-        with self.sql_session_func() as session:
+        with closing(self.sql_session_func()) as session:
             session.execute(RateLimitStateDelete().where(
                 RateLimitStateTable.c.period.in_(to_delete)
             ))

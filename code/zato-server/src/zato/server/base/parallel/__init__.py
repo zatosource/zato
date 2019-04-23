@@ -44,6 +44,7 @@ from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
 from zato.common.zato_keyutils import KeyUtils
 from zato.common.pubsub import SkipDelivery
+from zato.common.rate_limiting import RateLimiting
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
@@ -95,7 +96,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.crypto_manager = None
         self.odb = None # type: ODBManager
         self.odb_data = None
-        self.config = None
+        self.config = None # type: ConfigStore
         self.repo_location = None
         self.user_conf_location = None
         self.sql_pool_store = None
@@ -119,12 +120,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.sio_config = None
         self.sso_config = None
         self.connector_server_grace_time = None
-        self.id = None
-        self.name = None
-        self.worker_id = None
-        self.worker_pid = None
+        self.id = None # type: int
+        self.name = None # type: unicode
+        self.worker_id = None # type: int
+        self.worker_pid = None # type: int
         self.cluster = None
-        self.cluster_id = None
+        self.cluster_id = None # type: int
         self.kvdb = None
         self.startup_jobs = None
         self.worker_store = None # type: WorkerStore
@@ -145,7 +146,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.preferred_address = None
         self.crypto_use_tls = None
         self.servers = None
-        self.zato_lock_manager = None
+        self.zato_lock_manager = None # type: LockManager
         self.pid = None
         self.sync_internal = None
         self.ipc_api = IPCAPI()
@@ -161,6 +162,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.has_fg = False
         self.startup_callable_tool = None
         self.default_internal_pubsub_endpoint_id = None
+        self.rate_limiting = RateLimiting()
         self._hash_secret_method = None
         self._hash_secret_rounds = None
         self._hash_secret_salt_size = None
@@ -530,6 +532,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Cannot be done in __init__ because self.sso_config is not available there yet
         salt_size = self.sso_config.hash_secret.salt_size
         self.crypto_manager.add_hash_scheme('zato.default', self.sso_config.hash_secret.rounds, salt_size)
+
+        # Rate limiting
+        self.rate_limiting.cluster_id = self.cluster_id
+        self.rate_limiting.global_lock_func = self.zato_lock_manager
+        self.rate_limiting.sql_session_func = self.odb.session
 
         for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pickup'):
 

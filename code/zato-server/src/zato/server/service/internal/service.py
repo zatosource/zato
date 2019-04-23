@@ -63,7 +63,8 @@ class GetList(AdminService):
         input_required = 'cluster_id', 'query'
         input_optional = Integer('cur_page'), Boolean('paginate')
         output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'), \
-            Integer('slow_threshold'), 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_enabled', \
+            Integer('slow_threshold')
+        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_enabled', \
             'rate_limit_type', 'rate_limit_def'
         output_repeated = True
         default_value = ''
