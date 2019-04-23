@@ -12,9 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import UploadForm, WithJSONSchema
+from zato.admin.web.forms import UploadForm, WithJSONSchema, WithRateLimiting
 
-class CreateForm(WithJSONSchema):
+class CreateForm(WithJSONSchema, WithRateLimiting):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     slow_threshold = forms.CharField(widget=forms.TextInput(attrs={'style':'width:15%'}))
 
