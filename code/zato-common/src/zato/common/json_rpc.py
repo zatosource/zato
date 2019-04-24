@@ -180,7 +180,7 @@ class JSONRPCItem(object):
         # At this stage we only create a Python-level object and input
         # validation is performed by our caller.
         out.jsonrpc = item.get('jsonrpc')
-        out.id = item.get('id', NotGiven)
+        out.id = item.get('id', -123456789)
         out.method = item.get('method')
         out.params = item.get('params')
         out.needs_response = out.id is not NotGiven
@@ -239,6 +239,8 @@ class JSONRPCHandler(object):
                 raise MethodNotFound(cid, 'Method not supported `{}` in `{}`'.format(item.method, orig_message))
 
             # Try to invoke the service ..
+            logger.warn('QQQ %s %s', item.method, item.params)
+            logger.warn('WWW %s', message)
             service_response = self.invoke_func(item.method, item.params, skip_response_elem=True)
 
             # .. no exception here = invocation was successful
