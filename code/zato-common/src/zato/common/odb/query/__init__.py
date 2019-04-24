@@ -803,7 +803,7 @@ def service_list(session, cluster_id, return_internal=True, needs_columns=False)
 def service_id_list(session, cluster_id, name_list=None):
     return session.query(
         Service.id,
-        Service.name).\
+        Service.impl_name).\
         filter(Cluster.id==Service.cluster_id).\
         filter(Cluster.id==cluster_id).\
         filter(Service.name.in_(name_list))
