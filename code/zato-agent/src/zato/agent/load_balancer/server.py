@@ -159,7 +159,7 @@ class BaseLoadBalancerAgent(object):
         """
         # TODO: Use local git repo here
         f = open(self.config_path, 'wb')
-        f.write(config_string)
+        f.write(config_string.encode('utf8'))
         f.close()
 
         self.config = self._read_config()
