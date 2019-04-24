@@ -1730,8 +1730,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                     if e.errno != ENOENT:
                         raise
 
-        # Makes it actually gets reimported next time it's redeployed
-        del sys.modules[mod.__name__]
+        # It is possible that this module was already deleted from sys.modules
+        # in case there was more than one service in it and we first deleted
+        # one and then the other.
+        if mod:
+            del sys.modules[mod.__name__]
 
     def on_broker_msg_SERVICE_EDIT(self, msg, *args):
         for name in('is_active', 'slow_threshold'):
