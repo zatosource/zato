@@ -302,16 +302,26 @@ class RateLimiting(object):
                 # because we are just editing the former, not deleting it altogether.
                 self._delete(object_type, old_object_name, False)
 
-                #
-                self.config_store[new_config.get_config_key()] = new_config
+            self.config_store[new_config.get_config_key()] = new_config
 
 # ################################################################################################################################
 
     def delete(self, object_type, object_name):
         """ Deletes configuration for input object and clears out parent references to it.
         """
+        # type: (unicode, unicode)
         with self.lock:
             self._delete(object_type, object_name, True)
+
+# ################################################################################################################################
+
+    def get_config(self, object_type, object_name):
+        """ Returns configuration for the input object, assumming we have it at all.
+        """
+        # type: (unicode, unicode) -> BaseLimiter
+        with self.lock:
+            config_key = self._get_config_key(object_type, object_name)
+            return self.config_store.get(config_key)
 
 # ################################################################################################################################
 

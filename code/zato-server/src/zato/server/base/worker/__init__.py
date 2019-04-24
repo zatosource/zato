@@ -1737,8 +1737,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             del sys.modules[mod.__name__]
 
     def on_broker_msg_SERVICE_EDIT(self, msg, *args):
-        for name in('is_active', 'slow_threshold'):
-            self.server.service_store.services[msg.impl_name][name] = msg[name]
+        # type: (dict)
+        del msg['action']
+        del msg['msg_type']
+        self.server.service_store.edit_service_data(msg)
 
 # ################################################################################################################################
 

@@ -61,6 +61,7 @@ if typing.TYPE_CHECKING:
 
     # Zato
     from zato.common.odb.api import ODBManager
+    from zato.common.rate_limiting.limiter import BaseLimiter
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
 
@@ -217,6 +218,18 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
+    def edit_service_data(self, config):
+        # type: (dict)
+
+        # Udpate the ConfigDict object
+        config_dict = self.server.config.service[config.name] # type: ConfigDict
+        config_dict['config'].update(config)
+
+        # Recreate the rate limiting configuration
+        self.set_up_rate_limiting(config.name)
+
+# ################################################################################################################################
+
     def delete_service_data(self, name):
         # type: (unicode)
 
@@ -264,31 +277,57 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def set_up_rate_limiting(self, name, class_=None, _exact=RATE_LIMIT.TYPE.EXACT.id):
-        # type: (unicode, Service, unicode)
+    def set_up_rate_limiting(self, name, class_=None, _exact=RATE_LIMIT.TYPE.EXACT.id, _service=CHANNEL.SERVICE):
+        # type: (unicode, Service, unicode, unicode)
 
         config = self.server.config.service.get(name) # type: ConfigDict
         config = config['config'] # type: dict
         has_rate_limiting = bool(config.get('rate_limit_def'))
 
         if not class_:
-            service_id = self.get_service_id_by_name(name)
-            class_ = self.get_service_class_by_id(service_id)
+            service_id = self.get_service_id_by_name(name) # type: int
+            info = self.get_service_info_by_id(service_id) # type: dict
+            class_ = info['service_class'] # type: Service
 
         if has_rate_limiting:
 
-            # Per-service rate limiting information
+            # This is reusable no matter if it is edit or create action
+            rate_limit_def = config['rate_limit_def']
+            rate_limit_type = config['rate_limit_type'] == _exact
+
+            # Base dict that will be used as is, if we are to create the rate limiting configuration,
+            # or it will be updated with existing configuration, if it already exists.
             rate_limit_config = {
                 'id': 'service.{}'.format(config['id']),
-                'type_': 'service',
+                'type_': _service,
                 'name': name,
                 'parent_type': None,
                 'parent_name': None,
             }
 
-            # Register the configuration with the rate limiting API
-            self.server.rate_limiting.create(rate_limit_config,
-                config['rate_limit_def'], config['rate_limit_type'] == _exact)
+            # Do we have such configuration already?
+            existing_config = self.server.rate_limiting.get_config(_service, name)
+
+            # .. if yes, we will be updating it
+            if existing_config:
+                rate_limit_config['parent_type'] = existing_config.parent_type
+                rate_limit_config['parent_name'] = existing_config.parent_name
+
+                self.server.rate_limiting.edit(_service, name, rate_limit_config, rate_limit_def, rate_limit_type)
+
+            # .. otherwise, we will be creating a new one
+            else:
+                self.server.rate_limiting.create(rate_limit_config, rate_limit_def, rate_limit_type)
+
+        # We are not to have any rate limits, but it is possible that previously we were required to,
+        # in which case this needs to be cleaned up.
+        else:
+            existing_config = self.server.rate_limiting.get_config(_service, name)
+
+            if existing_config:
+
+                object_info = existing_config.object_info
+                self.server.rate_limiting.delete(object_info.type_, object_info.name)
 
         # Set a flag to signal that this service has rate limiting enabled or not
         class_._has_rate_limiting = has_rate_limiting
@@ -393,7 +432,7 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def get_service_class_by_id(self, service_id):
+    def get_service_info_by_id(self, service_id):
         if not isinstance(service_id, int):
             service_id = int(service_id)
 
@@ -421,7 +460,7 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def get_service_name_by_id(self, service_id):
-        return self.get_service_class_by_id(service_id)['name']
+        return self.get_service_info_by_id(service_id)['name']
 
 # ################################################################################################################################
 
@@ -639,12 +678,6 @@ class ServiceStore(object):
             if to_add:
                 elems = [elem.to_dict() for elem in to_add]
 
-                '''
-                for elem in elems: # type: dict
-                    elem_name = elem['name']
-                    logger.warn('QQQ %s %s', elem_name, self.name_to_impl_name.get(elem_name))
-                    '''
-
                 # This saves services in ODB
                 self.odb.add_services(session, elems)
 
@@ -845,7 +878,7 @@ class ServiceStore(object):
             session, self.server.cluster_id, deployed_service_name_list, True) # type: list
 
         service_list = ConfigDict.from_query('service_list_after_import', query, decrypt_func=self.server.decrypt)
-        self.server.config.service.update(service_list)
+        self.server.config.service.update(service_list._impl)
 
         # Rate limiting
         for item in info.to_process: # type: InRAMService
