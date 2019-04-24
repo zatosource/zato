@@ -187,14 +187,14 @@ class Edit(AdminService):
 
         with closing(self.odb.session()) as session:
             try:
-                service = session.query(Service).filter_by(id=input.id).one()
+                service = session.query(Service).filter_by(id=input.id).one() # type: Service
                 service.is_active = input.is_active
                 service.slow_threshold = input.slow_threshold
 
                 set_instance_opaque_attrs(service, input)
 
                 # Configure JSON Schema validation if service has a schema assigned by user.
-                class_info = self.server.service_store.get_service_class_by_id(input.id) # type: dict
+                class_info = self.server.service_store.get_service_info_by_id(input.id) # type: dict
                 class_ = class_info['service_class'] # type: Service
                 if class_.json_schema:
                     self.server.service_store.set_up_class_json_schema(class_, input)
@@ -204,16 +204,15 @@ class Edit(AdminService):
 
                 input.action = SERVICE.EDIT.value
                 input.impl_name = service.impl_name
+                input.name = service.name
                 self.broker_client.publish(input)
 
                 self.response.payload = service
-
                 internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
                 self.response.payload.may_be_deleted = internal_del if service.is_internal else True
 
             except Exception:
-                msg = 'Service could not be updated, e:`{}`'.format(format_exc())
-                self.logger.error(msg)
+                self.logger.error('Service could not be updated, e:`%s`', format_exc())
                 session.rollback()
 
                 raise

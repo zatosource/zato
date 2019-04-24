@@ -81,10 +81,10 @@ class ConfigDict(object):
 
 # ################################################################################################################################
 
-    def update(self, config_dict):
-        # type: (ConfigDict)
+    def update(self, dict_):
+        # type: (dict_)
         with self.lock:
-            self._impl.update(config_dict._impl)
+            self._impl.update(dict_)
 
 # ################################################################################################################################
 
