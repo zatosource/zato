@@ -826,11 +826,11 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_service_list_with_include(self, session, cluster_id, include_list):
+    def get_service_list_with_include(self, session, cluster_id, include_list, needs_columns=False):
         """ Returns a list of all services from the input include_list.
         """
         # type: (object, int, list)
-        return query.service_list_with_include(session, cluster_id, include_list).all()
+        return query.service_list_with_include(session, cluster_id, include_list, needs_columns)
 
 # ################################################################################################################################
 

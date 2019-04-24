@@ -43,8 +43,8 @@ class ConfigDict(object):
     details.
     """
     def __init__(self, name, _bunch=None):
-        self.name = name
-        self._impl = _bunch
+        self.name = name    # type: unicode
+        self._impl = _bunch # type: Bunch
         self.lock = RLock()
 
 # ################################################################################################################################
@@ -78,6 +78,13 @@ class ConfigDict(object):
     def pop(self, key, default):
         with self.lock:
             return self._impl.pop(key, default)
+
+# ################################################################################################################################
+
+    def update(self, config_dict):
+        # type: (ConfigDict)
+        with self.lock:
+            self._impl.update(config_dict._impl)
 
 # ################################################################################################################################
 

@@ -48,6 +48,7 @@ from zato.common.match import Matcher
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.common.util.json_ import dumps
+from zato.server.config import ConfigDict
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service
 from zato.server.service.internal import AdminService
 
@@ -267,12 +268,6 @@ class ServiceStore(object):
         # type: (unicode, Service, unicode)
 
         config = self.server.config.service.get(name) # type: ConfigDict
-
-        # This will not exist if we are booting up and we deploying this service for the very first time.
-        # In such a case, the hot-deployment service will call us explicitly thus we can just return here.
-        if not config:
-            return
-
         config = config['config'] # type: dict
         has_rate_limiting = bool(config.get('rate_limit_def'))
 
@@ -846,15 +841,15 @@ class ServiceStore(object):
 
         # .. and now we know for which services to create ConfigDict objects.
 
-        deployed_service_list = self.odb.get_service_list_with_include(
-            session, self.server.cluster_id, )
+        query = self.odb.get_service_list_with_include(
+            session, self.server.cluster_id, deployed_service_name_list, True) # type: list
 
-        logger.warn('TTT %s', deployed_service_list)
+        service_list = ConfigDict.from_query('service_list_after_import', query, decrypt_func=self.server.decrypt)
+        self.server.config.service.update(service_list)
 
         # Rate limiting
         for item in info.to_process: # type: InRAMService
-            #self.set_up_rate_limiting(item.name, item.service_class)
-            logger.warn('QQQ %s %s', item.name, self.server.config.service.get(item.name))
+            self.set_up_rate_limiting(item.name, item.service_class)
 
 # ################################################################################################################################
 

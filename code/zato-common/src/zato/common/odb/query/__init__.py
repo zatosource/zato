@@ -798,9 +798,11 @@ def service_list(session, cluster_id, return_internal=True, needs_columns=False)
     q = _service(session, cluster_id)
     if not return_internal:
         q = q.filter(not_(Service.name.startswith('zato')))
+
     return q
 
-def service_list_with_include(session, cluster_id, include_list):
+@query_wrapper
+def service_list_with_include(session, cluster_id, include_list, needs_columns=False):
     q = _service(session, cluster_id)
     return q.filter(Service.name.in_(include_list))
 
