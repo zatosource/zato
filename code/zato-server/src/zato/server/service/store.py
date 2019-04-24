@@ -728,28 +728,23 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _store_in_odb(self, to_process):
-        # type: (List[DeploymentInfo]) -> None
+    def _store_in_odb(self, session, to_process):
+        # type: (object, List[DeploymentInfo]) -> None
 
         # Indicates boundaries of deployment batches
         batch_indexes = get_batch_indexes(to_process, self.max_batch_size)
 
-        with closing(self.odb.session()) as session:
+        # Store Service objects first
+        needs_commit = self._store_services_in_odb(session, batch_indexes, to_process)
 
-            # Store Service objects first
-            needs_commit = self._store_services_in_odb(session, batch_indexes, to_process)
-
-            # This flag will be True if there were any services to be added,
-            # in which case we need to commit the sesssion here to make it possible
-            # for the next method to have access to these newly added Service objects.
-            if needs_commit:
-                session.commit()
-
-            # Now DeployedService can be added - they assume that all Service objects all are in ODB already
-            self._store_deployed_services_in_odb(session, batch_indexes, to_process)
-
-            # Done with everything, we can commit it now
+        # This flag will be True if there were any services to be added,
+        # in which case we need to commit the sesssion here to make it possible
+        # for the next method to have access to these newly added Service objects.
+        if needs_commit:
             session.commit()
+
+        # Now DeployedService can be added - they assume that all Service objects all are in ODB already
+        self._store_deployed_services_in_odb(session, batch_indexes, to_process)
 
 # ################################################################################################################################
 
@@ -819,25 +814,47 @@ class ServiceStore(object):
         info.total_size = total_size
         info.total_size_human = naturalsize(info.total_size)
 
-        # Save data to both ODB and RAM now
-        self._store_in_odb(info.to_process)
-        self._store_in_ram(info.to_process)
+        with closing(self.odb.session()) as session:
 
-        # Postprocessing, like rate limiting which needs access to information that becomes
-        # available only after a service is saved to ODB.
-        self.after_import(info)
+            # Save data to both ODB and RAM now
+            self._store_in_odb(session, info.to_process)
+            self._store_in_ram(info.to_process)
+
+            # Postprocessing, like rate limiting which needs access to information that becomes
+            # available only after a service is saved to ODB.
+            self.after_import(session, info)
+
+            # Done with everything, we can commit it now
+            session.commit()
 
         # Done deploying, we can return
         return info
 
 # ################################################################################################################################
 
-    def after_import(self, info):
+    def after_import(self, session, info):
         # type: (DeploymentInfo) -> None
+
+        # Names of all services that have been just deployed ..
+        deployed_service_name_list = [item.name for item in info.to_process]
+
+        # .. out of which we need to substract the ones that the server is already aware of
+        # because they were added to SQL ODB prior to current deployment ..
+        for name in deployed_service_name_list[:]:
+            if name in self.server.config.service:
+                deployed_service_name_list.remove(name)
+
+        # .. and now we know for which services to create ConfigDict objects.
+
+        deployed_service_list = self.odb.get_service_list_with_include(
+            session, self.server.cluster_id, )
+
+        logger.warn('TTT %s', deployed_service_list)
 
         # Rate limiting
         for item in info.to_process: # type: InRAMService
-            self.set_up_rate_limiting(item.name, item.service_class)
+            #self.set_up_rate_limiting(item.name, item.service_class)
+            logger.warn('QQQ %s %s', item.name, self.server.config.service.get(item.name))
 
 # ################################################################################################################################
 
