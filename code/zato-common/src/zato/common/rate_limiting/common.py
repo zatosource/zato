@@ -14,7 +14,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 class BaseException(Exception):
     pass
 
-class FromIPNotAllowed(BaseException):
+class AddressNotAllowed(BaseException):
     pass
 
 class RateLimitReached(BaseException):

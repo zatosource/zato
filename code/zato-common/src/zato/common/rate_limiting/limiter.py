@@ -22,7 +22,7 @@ from netaddr import IPAddress
 # Zato
 from zato.common.odb.model import RateLimitState
 from zato.common.odb.query.rate_limiting import current_period_list, current_state as current_state_query
-from zato.common.rate_limiting.common import Const, FromIPNotAllowed, RateLimitReached
+from zato.common.rate_limiting.common import Const, AddressNotAllowed, RateLimitReached
 
 # Python 2/3 compatibility
 from future.utils import iterkeys
@@ -177,7 +177,7 @@ class BaseLimiter(object):
 
         # We did not match any line from configuration
         if not found:
-            raise FromIPNotAllowed('From IP address not allowed `{}`'.format(orig_from))
+            raise AddressNotAllowed('Address not allowed `{}`'.format(orig_from))
 
         # We found a matching piece of from IP configuration
         return found
