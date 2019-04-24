@@ -87,7 +87,10 @@ class CheckUpdates(Service):
             while True:
 
                 # Check if there are updates and notify if needed
-                self._check_notify(url_info, major, minor, _version)
+                try:
+                    self._check_notify(url_info, major, minor, _version)
+                except Exception:
+                    pass # Ignore any and all errors, e.g. due to the lack of Internet connectivity
 
                 # We can sleep for 1 day and then check again
                 sleep(day)
