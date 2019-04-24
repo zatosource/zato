@@ -80,7 +80,7 @@ for code, response in HTTP_RESPONSES.items():
 
 # ################################################################################################################################
 
-soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>""" # noqa
+soap_doc = """<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>""" # noqa
 
 # ################################################################################################################################
 
@@ -416,7 +416,7 @@ class RequestHandler(object):
         if params:
             params = QueryDict(params, encoding='utf-8')
             out = {}
-            for key, value in params.iterlists():
+            for key, value in params.lists():
                 if len(value) > 1:
                     out[key] = value
                 else:
