@@ -795,10 +795,14 @@ def service(session, cluster_id, id):
 def service_list(session, cluster_id, return_internal=True, needs_columns=False):
     """ All services.
     """
-    result = _service(session, cluster_id)
+    q = _service(session, cluster_id)
     if not return_internal:
-        result = result.filter(not_(Service.name.startswith('zato')))
-    return result
+        q = q.filter(not_(Service.name.startswith('zato')))
+    return q
+
+def service_list_with_include(session, cluster_id, include_list):
+    q = _service(session, cluster_id)
+    return q.filter(Service.name.in_(include_list))
 
 def service_id_list(session, cluster_id, name_list=None):
     return session.query(

@@ -821,8 +821,16 @@ class ODBManager(SessionWrapper):
     def get_service_id_list(self, session, cluster_id, name_list):
         """ Returns a list of IDs matching input service names.
         """
-        # type: object, int, list
+        # type: (object, int, list)
         return query.service_id_list(session, cluster_id, name_list)
+
+# ################################################################################################################################
+
+    def get_service_list_with_include(self, session, cluster_id, include_list):
+        """ Returns a list of all services from the input include_list.
+        """
+        # type: (object, int, list)
+        return query.service_list_with_include(session, cluster_id, include_list).all()
 
 # ################################################################################################################################
 
