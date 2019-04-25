@@ -379,7 +379,7 @@ class RequestDispatcher(object):
 
         # This is 404, no such URL path and SOAP action is not known either.
         else:
-            response = _response_404.format(path_info.encode('utf8'),
+            response = _response_404.format(path_info,
                 wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
             wsgi_environ['zato.http.response.status'] = _status_not_found
 
