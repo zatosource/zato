@@ -289,9 +289,6 @@ class RateLimiting(object):
             # Now, create a new config object ..
             new_config = self._create_config(object_dict, definition, is_exact)
 
-            # .. move existing rate limiting data from the old config object to the new one
-            new_config.rewrite_rate_data(old_config)
-
             # .. in case it was a rename ..
             if old_config.object_info.name != new_config.object_info.name:
 
