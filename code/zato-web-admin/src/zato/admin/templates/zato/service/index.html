@@ -45,6 +45,7 @@
             'is_rate_limit_enabled',
             'rate_limit_type',
             'rate_limit_def',
+            'rate_limit_check_parent_def',
         ]
     }
 
@@ -129,6 +130,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -164,6 +166,7 @@
                         <td class='ignore'>{{ item.is_rate_limit_enabled }}</td>
                         <td class='ignore'>{{ item.rate_limit_type }}</td>
                         <td class='ignore'>{{ item.rate_limit_def }}</td>
+                        <td class='ignore'>{{ item.rate_limit_check_parent_def }}</td>
 
                     </tr>
                 {% endfor %}
