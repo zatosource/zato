@@ -262,7 +262,7 @@ class JSONRPCHandler(object):
                 # Any JSON-RPC error
                 if isinstance(e, JSONRPCException):
                     err_code = e.code
-                    err_message = e.message
+                    err_message = e.args[0]
 
                 # Any other error
                 else:
