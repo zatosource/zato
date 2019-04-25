@@ -17,9 +17,11 @@ from bunch import bunchify
 
 # Zato
 from zato.common import CONNECTION, JSON_RPC, URL_TYPE
-from zato.common.json_rpc import ErrorCtx, InternalError, ItemResponse, JSONRPCHandler, ParseError, RequestContext
+from zato.common.json_rpc import ErrorCtx, Forbidden, InternalError, ItemResponse, JSONRPCHandler, ParseError, \
+     RateLimitReached as JSONRPCRateLimitReached, RequestContext
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.odb.model import HTTPSOAP
+from zato.common.rate_limiting.common import AddressNotAllowed, RateLimitReached
 from zato.server.service import List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
@@ -163,11 +165,19 @@ class JSONRPCGateway(AdminService):
                 code = ParseError.code
                 message = 'Parsing error'
 
+            # Source address is not allowed to invoke the service
+            if isinstance(e, AddressNotAllowed):
+                code = Forbidden.code
+                message = 'You are not allowed to access this resource'
+
+            elif isinstance(e, RateLimitReached):
+                code = JSONRPCRateLimitReached.code
+                message = 'Rate limit reached'
+
             # Any other error
             else:
                 code = InternalError.code
                 message = 'Message could not be handled'
-
 
             error_ctx.code = code
             error_ctx.message = message

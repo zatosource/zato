@@ -143,6 +143,18 @@ class ParseError(JSONRPCBadRequest):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class Forbidden(JSONRPCBadRequest):
+    code = -32403
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class RateLimitReached(JSONRPCBadRequest):
+    code = -32429
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class JSONRPCItem(object):
     """ An object describing an individual JSON-RPC request.
     """
@@ -232,15 +244,14 @@ class JSONRPCHandler(object):
 
             # Confirm that we can handle the JSON-RPC version requested
             if item.jsonrpc != json_rpc_version_supported:
-                raise InvalidRequest(cid, 'Unsupported JSON-RPC version `{}` in `{}`'.format(item.jsonrpc, orig_message))
+                raise InvalidRequest(cid, 'Unsupported JSON-RPC version `{}` in `{}`'.format(
+                    item.jsonrpc, orig_message.decode('utf8')))
 
             # Confirm that method requested is one that we can handle
             if not self.can_handle(item.method):
-                raise MethodNotFound(cid, 'Method not supported `{}` in `{}`'.format(item.method, orig_message))
+                raise MethodNotFound(cid, 'Method not supported `{}` in `{}`'.format(item.method, orig_message.decode('utf8')))
 
             # Try to invoke the service ..
-            logger.warn('QQQ %s %s', item.method, item.params)
-            logger.warn('WWW %s', message)
             service_response = self.invoke_func(item.method, item.params, skip_response_elem=True)
 
             # .. no exception here = invocation was successful
@@ -262,7 +273,7 @@ class JSONRPCHandler(object):
                 # Any JSON-RPC error
                 if isinstance(e, JSONRPCException):
                     err_code = e.code
-                    err_message = e.message
+                    err_message = e.args[0]
 
                 # Any other error
                 else:
