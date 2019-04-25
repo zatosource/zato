@@ -523,7 +523,8 @@ class Service(object):
 
                 # Check rate limiting first
                 if self._has_rate_limiting:
-                    self.server.rate_limiting.check_limit(self.cid, _CHANNEL_SERVICE, self.name, '127.0.0.1')
+                    self.server.rate_limiting.check_limit(self.cid, _CHANNEL_SERVICE, self.name,
+                        self.wsgi_environ['zato.http.remote_addr'])
 
                 if service.server.component_enabled.stats:
                     service.usage = service.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, service.name))
