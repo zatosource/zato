@@ -34,10 +34,10 @@ from six import PY3
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, HTTP_SOAP, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
+from zato.common import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_RESPONSES, HTTP_SOAP, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
-from zato.common.rate_limiting.common import AddressNotAllowed, RateLimitReached
+from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.util import payload_from_request
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
@@ -358,18 +358,8 @@ class RequestDispatcher(object):
                             cid, e.needs_err_details, e.error_msg, needs_prefix=needs_prefix).serialize(True)
 
                     # Rate limiting and whitelisting
-                    elif isinstance(e, RateLimitReached):
-                        status_code = TOO_MANY_REQUESTS
-                        status = _status_too_many_requests
-                        response = ''
-
-                        for k, v in sorted(channel_item.items()):
-                            logger.warn('QQQ %s %r', k, v)
-
-                    elif isinstance(e, AddressNotAllowed):
-                        status_code = FORBIDDEN
-                        status = _status_forbidden
-                        response = ''
+                    if isinstance(e, RateLimitingException):
+                        response, status_code, status = self._on_rate_limiting_exception(cid, e, channel_item)
 
                     else:
                         status_code = INTERNAL_SERVER_ERROR
@@ -403,6 +393,23 @@ class RequestDispatcher(object):
 
             logger.error(response)
             return response
+
+# ################################################################################################################################
+
+    def _on_rate_limiting_exception(self, cid, e, channel_item, _json=DATA_FORMAT.JSON, _json_rpc=JSON_RPC.PREFIX.CHANNEL):
+        # type: (unicode, RateLimitingException, dict, unicode, unicode) -> (unicode, int, unicode)
+
+        if isinstance(e, RateLimitReached):
+            status_code = TOO_MANY_REQUESTS
+            status = _status_too_many_requests
+
+        elif isinstance(e, AddressNotAllowed):
+            status_code = FORBIDDEN
+            status = _status_forbidden
+
+        error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'] or _json)
+
+        return error_wrapper(cid, 'Error {}'.format(status)), status_code, status
 
 # ################################################################################################################################
 

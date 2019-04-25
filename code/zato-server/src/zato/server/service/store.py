@@ -61,9 +61,7 @@ if typing.TYPE_CHECKING:
 
     # Zato
     from zato.common.odb.api import ODBManager
-    from zato.common.rate_limiting.limiter import BaseLimiter
     from zato.server.base.parallel import ParallelServer
-    from zato.server.config import ConfigDict
 
     # For pyflakes
     ConfigDict = ConfigDict
