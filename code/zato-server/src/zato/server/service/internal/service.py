@@ -65,7 +65,7 @@ class GetList(AdminService):
         output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'), \
             Integer('slow_threshold')
         output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_enabled', \
-            'rate_limit_type', 'rate_limit_def'
+            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
         output_repeated = True
         default_value = ''
 
@@ -103,6 +103,8 @@ class _Get(AdminService):
         output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'),
             Integer('usage'), Integer('slow_threshold'), Integer('time_last'),
             Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time',)
+        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_enabled', \
+            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
 
     def get_data(self, session):
         query = session.query(Service.id, Service.name, Service.is_active,
@@ -176,7 +178,7 @@ class Edit(AdminService):
         response_elem = 'zato_service_edit_response'
         input_required = 'id', 'is_active', Integer('slow_threshold')
         input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_enabled', \
-            'rate_limit_type', 'rate_limit_def'
+            'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
         output_optional = 'id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted')
 
     def handle(self):

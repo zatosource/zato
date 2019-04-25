@@ -20,6 +20,7 @@ class CreateForm(WithJSONSchema, WithRateLimiting):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'style':'text-align:left'}))
+    rate_limit_check_parent_def = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 class WSDLUploadForm(UploadForm):
     pass

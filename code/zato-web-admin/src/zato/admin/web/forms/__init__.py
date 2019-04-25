@@ -264,6 +264,7 @@ class WithRateLimiting(forms.Form):
     rate_limit_type = forms.ChoiceField(widget=forms.Select(), initial=RATE_LIMIT.TYPE.APPROXIMATE)
     rate_limit_def = forms.CharField(widget=forms.Textarea(
         attrs={'style':'overflow:auto; width:100%; white-space: pre-wrap;height:100px'}))
+    rate_limit_check_parent_def = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     def __init__(self, *args, **kwargs):
         super(WithRateLimiting, self).__init__(*args, **kwargs)

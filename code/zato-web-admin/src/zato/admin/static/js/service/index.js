@@ -59,6 +59,7 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
     var needs_json_schema_err_details  = $.fn.zato.like_bool(data.needs_json_schema_err_details ) == true;
 
     var is_rate_limit_enabled = $.fn.zato.like_bool(data.is_rate_limit_enabled) == true;
+    var rate_limit_check_parent_def = $.fn.zato.like_bool(data.rate_limit_check_parent_def) == true;
 
     var cluster_id = $(document).getUrlParam('cluster');
 
@@ -90,6 +91,7 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", is_rate_limit_enabled);
     row += String.format("<td class='ignore'>{0}</td>", data.rate_limit_type);
     row += String.format("<td class='ignore'>{0}</td>", data.rate_limit_def);
+    row += String.format("<td class='ignore'>{0}</td>", rate_limit_check_parent_def);
 
     if(include_tr) {
         row += '</tr>';
