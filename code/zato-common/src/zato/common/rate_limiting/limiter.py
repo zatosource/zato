@@ -44,6 +44,7 @@ if typing.TYPE_CHECKING:
     Callable = Callable
     ObjectInfo = ObjectInfo
 
+
 # ################################################################################################################################
 
 RateLimitStateTable  = RateLimitState.__table__
@@ -321,6 +322,8 @@ class Exact(BaseLimiter):
         super(Exact, self).__init__(cluster_id)
         self.sql_session_func = sql_session_func
 
+# ################################################################################################################################
+
     def _fetch_current_state(self, session, current_period, network_found):
         # type: (unicode, unicode) -> RateLimitState
 
@@ -330,6 +333,8 @@ class Exact(BaseLimiter):
         return current_state_query(session, self.cluster_id, self.object_info.type_, self.object_info.id,
             current_period, network_found).\
             first()
+
+# ################################################################################################################################
 
     def _get_current_state(self, current_period, network_found):
         # type: (unicode, unicode) -> dict
@@ -343,6 +348,8 @@ class Exact(BaseLimiter):
             current_state.update(item.asdict())
 
         return current_state
+
+# ################################################################################################################################
 
     def _set_new_state(self, current_state, cid, orig_from, network_found, now, current_period):
 
