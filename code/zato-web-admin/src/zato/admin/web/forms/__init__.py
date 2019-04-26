@@ -260,7 +260,7 @@ class WithJSONSchema(forms.Form):
 # ################################################################################################################################
 
 class WithRateLimiting(forms.Form):
-    is_rate_limit_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_rate_limit_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     rate_limit_type = forms.ChoiceField(widget=forms.Select(), initial=RATE_LIMIT.TYPE.APPROXIMATE)
     rate_limit_def = forms.CharField(widget=forms.Textarea(
         attrs={'style':'overflow:auto; width:100%; white-space: pre-wrap;height:100px'}))

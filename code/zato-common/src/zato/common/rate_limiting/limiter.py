@@ -58,7 +58,7 @@ class BaseLimiter(object):
     """
     __slots__ = 'current_idx', 'lock', 'api', 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit', \
         'is_limit_reached', 'ip_address_cache', 'current_period_func', 'by_period', 'parent_type', 'parent_name', \
-        'is_exact', 'from_any_object_id', 'from_any_object_type', 'from_any_object_name', 'cluster_id'
+        'is_exact', 'from_any_object_id', 'from_any_object_type', 'from_any_object_name', 'cluster_id', 'is_active'
 
     initial_state = {
         'requests': 0,
@@ -71,6 +71,7 @@ class BaseLimiter(object):
     def __init__(self, cluster_id):
         # type: (int)
         self.cluster_id = cluster_id
+        self.is_active = None
         self.current_idx = 0
         self.lock = RLock()
         self.api = None            # type: RateLimiting

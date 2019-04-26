@@ -183,6 +183,7 @@ class RateLimiting(object):
         has_from_any = def_first.from_ == Const.from_any
 
         config = Exact(self.cluster_id, self.sql_session_func) if is_exact else Approximate(self.cluster_id) # type: BaseLimiter
+        config.is_active = object_dict['is_active']
         config.api = self
         config.object_info = info
         config.definition = parsed
