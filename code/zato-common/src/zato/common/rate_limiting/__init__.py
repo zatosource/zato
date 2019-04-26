@@ -178,9 +178,13 @@ class RateLimiting(object):
         info.type_ = object_type
         info.name = object_name
 
-        parsed = self.parser.parse(definition, object_id, object_type, object_name)
-        def_first = parsed[0]
-        has_from_any = def_first.from_ == Const.from_any
+        parsed = self.parser.parse(definition or '', object_id, object_type, object_name)
+
+        if parsed:
+            def_first = parsed[0]
+            has_from_any = def_first.from_ == Const.from_any
+        else:
+            has_from_any = False
 
         config = Exact(self.cluster_id, self.sql_session_func) if is_exact else Approximate(self.cluster_id) # type: BaseLimiter
         config.is_active = object_dict['is_active']
