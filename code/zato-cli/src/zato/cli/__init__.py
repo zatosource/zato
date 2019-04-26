@@ -29,10 +29,14 @@ import sqlalchemy
 # Zato
 from zato import common
 from zato.cli import util as cli_util
-from zato.common import odb, util, ZATO_INFO_FILE
+from zato.common import get_version, odb, util, ZATO_INFO_FILE
 from zato.common.util import get_engine_url, get_full_stack, get_session
 from zato.common.util.cli import read_stdin_data
 from zato.common.util.import_ import import_string
+
+# ################################################################################################################################
+
+zato_version = get_version()
 
 # ################################################################################################################################
 
@@ -531,7 +535,7 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def store_initial_info(self, target_dir, component):
-        info = {'version': common.version, # noqa
+        info = {'version': zato_version, # noqa
                 'created_user_host': self._get_user_host(),
                 'created_ts': datetime.utcnow().isoformat(), # noqa
                 'component': component
