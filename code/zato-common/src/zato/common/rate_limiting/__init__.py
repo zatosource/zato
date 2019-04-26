@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging
+from contextlib import closing
 from logging import getLogger
 
 # gevent
@@ -18,9 +18,12 @@ from gevent.lock import RLock
 # netaddr
 from netaddr import IPNetwork
 
+# SQLAlchemy
+from sqlalchemy import and_
+
 # Zato
 from zato.common.rate_limiting.common import Const, DefinitionItem, ObjectInfo
-from zato.common.rate_limiting.limiter import Approximate, Exact
+from zato.common.rate_limiting.limiter import Approximate, Exact, RateLimitStateDelete, RateLimitStateTable
 
 # Python 2/3 compatibility
 from past.builtins import unicode
@@ -46,8 +49,6 @@ if typing.TYPE_CHECKING:
 
 # ################################################################################################################################
 
-log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
-logging.basicConfig(level=logging.INFO, format=log_format)
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -135,7 +136,6 @@ class DefinitionParser(object):
         # type: (unicode, int, unicode, unicode) -> list
         return DefinitionParser.get_lines(definition.strip(), object_id, object_type, object_name)
 
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -188,6 +188,7 @@ class RateLimiting(object):
 
         config = Exact(self.cluster_id, self.sql_session_func) if is_exact else Approximate(self.cluster_id) # type: BaseLimiter
         config.is_active = object_dict['is_active']
+        config.is_exact = is_exact
         config.api = self
         config.object_info = info
         config.definition = parsed
@@ -233,6 +234,16 @@ class RateLimiting(object):
 
 # ################################################################################################################################
 
+    def _delete_from_odb(self, object_type, object_id):
+        with closing(self.sql_session_func()) as session:
+            session.execute(RateLimitStateDelete().where(and_(
+                RateLimitStateTable.c.object_type==object_type,
+                RateLimitStateTable.c.object_id==object_id,
+            )))
+            session.commit()
+
+# ################################################################################################################################
+
     def _delete(self, object_type, object_name, remove_parent):
         """ Deletes configuration for input data, optionally deleting references to it from all objects that depended on it.
         Must be called with self.lock held.
@@ -240,7 +251,11 @@ class RateLimiting(object):
         # type: (unicode, unicode, bool)
 
         config_key = self._get_config_key(object_type, object_name)
+        limiter = self.config_store[config_key] # type: BaseLimiter
         del self.config_store[config_key]
+
+        if limiter.is_exact:
+            self._delete_from_odb(object_type, limiter.object_info.id)
 
         if remove_parent:
             self._set_new_parent(object_type, object_name, None, None)
@@ -300,10 +315,11 @@ class RateLimiting(object):
                 # .. make all child objects depend on the new name, in case it changed
                 self._set_new_parent(object_type, old_object_name, new_config.object_info.type_, new_config.object_info.name)
 
-                # First, delete the old configuration, but do not delete any objects that depended on it
-                # because we are just editing the former, not deleting it altogether.
-                self._delete(object_type, old_object_name, False)
+            # First, delete the old configuration, but do not delete any objects that depended on it
+            # because we are just editing the former, not deleting it altogether.
+            self._delete(object_type, old_object_name, False)
 
+            # Now, create a new key
             self.config_store[new_config.get_config_key()] = new_config
 
 # ################################################################################################################################
@@ -335,127 +351,4 @@ class RateLimiting(object):
             config.cleanup()
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-if __name__ == '__main__':
-
-    # SQLAlchemy
-    from sqlalchemy import create_engine, orm
-
-    # Zato
-    from zato.common.odb.model import RateLimitState
-
-    engine = create_engine('sqlite:////tmp/data.dat', echo=True)
-    Session = orm.sessionmaker() # noqa
-    Session.configure(bind=engine)
-    session = Session()
-
-    class GetSession(object):
-
-        def __enter__(self):
-            self.session = Session()
-            return self.session
-
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            if exc_type:
-                raise
-            self.session.close()
-
-    class GlobalLock(object):
-
-        def __enter__(self):
-            pass
-
-        def __exit__(self, *ignored):
-            pass
-
-    RateLimitState.metadata.create_all(engine)
-
-    def get_channel_config():
-        return {
-            'id': 333,
-            'parent_type': 'sso_user',
-            'parent_name': 'Joan Doe',
-            'type_': 'http_soap',
-            'name': 'My Endpoint',
-        }
-
-    def get_channel_definition():
-        return """
-        #192.168.1.123 = 11/m
-        127.0.0.1/32  = 5/m
-        """
-
-    def get_sec_def_config():
-        return {
-            'id': 222,
-            'parent_type': 'sso_user',
-            'parent_name': 'Joan Doe',
-            'type_': 'api_key',
-            'name': 'API Key',
-        }
-
-    def get_sec_def_definition():
-        return """
-        127.0.0.1/32  = 10/m
-        """
-
-    def get_user_config(name_suffix=''):
-        return {
-            'id': 111,
-            'parent_type': None,
-            'parent_name': None,
-            'type_': 'sso_user',
-            'name': 'Joan Doe' + name_suffix,
-        }
-
-    def get_user_definition(prefix=''):
-        return """
-        10.210.0.0/18 = 1/h
-        127.0.0.1/32  = 6/m
-        * = *
-        """.format(prefix)
-
-    user_config        = get_user_config()
-    user_definition    = get_user_definition()
-
-    channel_config     = get_channel_config()
-    channel_definition = get_channel_definition()
-
-    sec_def_config     = get_sec_def_config()
-    sec_def_definition = get_sec_def_definition()
-
-    is_exact = True
-    cluster_id = 1
-
-    rate_limiting = RateLimiting()
-    rate_limiting.sql_session_func = GetSession
-    rate_limiting.cluster_id = cluster_id
-    rate_limiting.global_lock_func = GlobalLock
-
-    rate_limiting.create(user_config, user_definition, is_exact)
-    rate_limiting.create(channel_config, channel_definition, is_exact)
-    rate_limiting.create(sec_def_config, sec_def_definition, is_exact)
-
-    cid = 123
-    rate_limiting.check_limit(123, 'http_soap', 'My Endpoint', '127.0.0.1')
-
-    cid = 456
-    rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
-    rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
-
-    rate_limiting.edit('sso_user', 'Joan Doe', get_user_config(' 2'), get_user_definition(2), is_exact)
-    rate_limiting.edit('sso_user', 'Joan Doe 2', get_user_config(' 3'), get_user_definition(3), is_exact)
-
-    '''
-    cid = 789
-    rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
-
-    cid = 111
-    rate_limiting.check_limit(cid, 'api_key', 'API Key', '127.0.0.1')
-
-    rate_limiting.delete('sso_user', 'Joan Doe 3')
-    '''
-    rate_limiting.cleanup()
-
 # ################################################################################################################################

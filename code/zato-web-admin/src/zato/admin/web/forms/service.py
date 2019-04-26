@@ -17,6 +17,7 @@ from zato.admin.web.forms import UploadForm, WithJSONSchema, WithRateLimiting
 class CreateForm(WithJSONSchema, WithRateLimiting):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     slow_threshold = forms.CharField(widget=forms.TextInput(attrs={'style':'width:15%'}))
+    is_rate_limit_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'style':'text-align:left'}))
