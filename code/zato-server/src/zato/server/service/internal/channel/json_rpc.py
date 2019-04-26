@@ -149,7 +149,7 @@ class JSONRPCGateway(AdminService):
     def handle(self):
         try:
             channel_config = self.server.worker_store.request_dispatcher.url_data.get_channel_by_name(self.channel.name)
-            message = loads(self.request.payload)
+            message = loads(self.request.payload.decode('utf8'))
 
         except Exception as e:
 
