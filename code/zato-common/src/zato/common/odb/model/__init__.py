@@ -2857,14 +2857,14 @@ class GenericConnClient(Base):
 # ################################################################################################################################
 
 class RateLimitState(Base):
-    """ Outgoing SMS connections with Twilio.
+    """ Rate limiting persistent storage for exact definitions.
     """
     __tablename__ = 'rate_limit_state'
     __table_args__ = (
         UniqueConstraint('object_type', 'object_id', 'period'),
     {})
 
-    id = Column(Integer(), Sequence('rate_limit_state'), primary_key=True)
+    id = Column(Integer(), Sequence('rate_limit_state_seq'), primary_key=True)
 
     object_type = Column(Text(), nullable=False)
     object_id = Column(Text(), nullable=False)
