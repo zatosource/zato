@@ -289,6 +289,8 @@ class ServiceStore(object):
 
         if has_rate_limiting:
 
+            logger.warn('QQQ %s', config)
+
             # This is reusable no matter if it is edit or create action
             rate_limit_def = config['rate_limit_def']
             rate_limit_type = config['rate_limit_type'] == _exact
@@ -297,6 +299,7 @@ class ServiceStore(object):
             # or it will be updated with existing configuration, if it already exists.
             rate_limit_config = {
                 'id': 'service.{}'.format(config['id']),
+                'is_active': config['is_rate_limit_active'],
                 'type_': _service,
                 'name': name,
                 'parent_type': None,
