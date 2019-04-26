@@ -101,7 +101,7 @@ class _CreateEdit(AdminService):
         request.name = '{}.{}'.format(JSON_RPC.PREFIX.CHANNEL, request.name)
         request.connection = CONNECTION.CHANNEL
         request.transport = URL_TYPE.PLAIN_HTTP
-        request.http_accept = 'application/json'
+        request.http_accept = '*/*'
         request.method = 'POST'
         request.service = 'pub.zato.channel.json-rpc.gateway'
         request.cache_expiry = 0
