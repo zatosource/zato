@@ -103,7 +103,7 @@ class _CreateEdit(AdminService):
         request.name = '{}.{}'.format(JSON_RPC.PREFIX.CHANNEL, request.name)
         request.connection = CONNECTION.CHANNEL
         request.transport = URL_TYPE.PLAIN_HTTP
-        request.http_accept = 'application/json'
+        request.http_accept = '*/*'
         request.method = 'POST'
         request.service = 'pub.zato.channel.json-rpc.gateway'
         request.cache_expiry = 0
@@ -151,7 +151,7 @@ class JSONRPCGateway(AdminService):
     def handle(self):
         try:
             channel_config = self.server.worker_store.request_dispatcher.url_data.get_channel_by_name(self.channel.name)
-            message = loads(self.request.payload)
+            message = loads(self.request.payload.decode('utf8'))
 
         except Exception as e:
 
