@@ -280,16 +280,15 @@ class ServiceStore(object):
 
         config = self.server.config.service.get(name) # type: ConfigDict
         config = config['config'] # type: dict
-        has_rate_limiting = bool(config.get('rate_limit_def'))
+
+        is_rate_limit_active = config.get('is_rate_limit_active') or False
 
         if not class_:
             service_id = self.get_service_id_by_name(name) # type: int
             info = self.get_service_info_by_id(service_id) # type: dict
             class_ = info['service_class'] # type: Service
 
-        if has_rate_limiting:
-
-            logger.warn('QQQ %s', config)
+        if is_rate_limit_active:
 
             # This is reusable no matter if it is edit or create action
             rate_limit_def = config['rate_limit_def']
@@ -299,7 +298,7 @@ class ServiceStore(object):
             # or it will be updated with existing configuration, if it already exists.
             rate_limit_config = {
                 'id': 'service.{}'.format(config['id']),
-                'is_active': config['is_rate_limit_active'],
+                'is_active': is_rate_limit_active,
                 'type_': _service,
                 'name': name,
                 'parent_type': None,
@@ -331,7 +330,7 @@ class ServiceStore(object):
                 self.server.rate_limiting.delete(object_info.type_, object_info.name)
 
         # Set a flag to signal that this service has rate limiting enabled or not
-        class_._has_rate_limiting = has_rate_limiting
+        class_._has_rate_limiting = is_rate_limit_active
 
 # ################################################################################################################################
 
