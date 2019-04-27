@@ -31,6 +31,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'username', 'ttl'
+        output_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
         output_repeated = True
 
     def handle(self):
@@ -45,6 +46,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'name', 'is_active', 'username', 'ttl'
+        input_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
         output_required = 'id', 'name'
 
     def success_message(self, item):
