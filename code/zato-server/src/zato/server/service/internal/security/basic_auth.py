@@ -105,6 +105,10 @@ class Edit(AdminService):
         output_required = 'id', 'name'
 
     def handle(self):
+
+        # If we have a rate limiting definition, let's check it upfront
+        DefinitionParser.check_definition_from_input(self.request.input)
+
         input = self.request.input
         with closing(self.odb.session()) as session:
             try:
@@ -165,7 +169,7 @@ class Delete(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_basic_auth_delete_request'
         response_elem = 'zato_security_basic_auth_delete_response'
-        input_required = ('id',)
+        input_required = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:
