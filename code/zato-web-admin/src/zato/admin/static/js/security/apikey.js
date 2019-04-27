@@ -65,7 +65,7 @@ $.fn.zato.security.apikey.data_table.new_row = function(item, data, include_tr) 
 
 $.fn.zato.security.apikey.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'API key [{0}] deleted',
-        'Are you sure you want to delete the API key [{0}]?',
+        'API key `{0}` deleted',
+        'Are you sure you want to delete API key `{0}`?',
         true);
 }
