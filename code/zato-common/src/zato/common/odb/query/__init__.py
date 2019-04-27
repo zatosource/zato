@@ -184,10 +184,14 @@ def apikey_security_list(session, cluster_id, needs_columns=False):
     """ All the API keys.
     """
     return session.query(
-        APIKeySecurity.id, APIKeySecurity.name,
+        APIKeySecurity.id,
+        APIKeySecurity.name,
         APIKeySecurity.is_active,
         APIKeySecurity.username,
-        APIKeySecurity.password, APIKeySecurity.sec_type).\
+        APIKeySecurity.password,
+        APIKeySecurity.sec_type,
+        APIKeySecurity.opaque1,
+        ).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==APIKeySecurity.cluster_id).\
         filter(SecurityBase.id==APIKeySecurity.id).\
@@ -212,11 +216,15 @@ def basic_auth_list(session, cluster_id, cluster_name, needs_columns=False):
     """ All the HTTP Basic Auth definitions.
     """
     q = session.query(
-        HTTPBasicAuth.id, HTTPBasicAuth.name,
+        HTTPBasicAuth.id,
+        HTTPBasicAuth.name,
         HTTPBasicAuth.is_active,
-        HTTPBasicAuth.username, HTTPBasicAuth.realm,
-        HTTPBasicAuth.password, HTTPBasicAuth.sec_type,
+        HTTPBasicAuth.username,
+        HTTPBasicAuth.realm,
+        HTTPBasicAuth.password,
+        HTTPBasicAuth.sec_type,
         HTTPBasicAuth.password_type,
+        HTTPBasicAuth.opaque1,
         Cluster.id.label('cluster_id'), Cluster.name.label('cluster_name')).\
         filter(Cluster.id==HTTPBasicAuth.cluster_id)
 
@@ -234,8 +242,15 @@ def _jwt(session, cluster_id, cluster_name, needs_columns=False):
     """ All the JWT definitions.
     """
     q = session.query(
-        JWT.id, JWT.name, JWT.is_active, JWT.username, JWT.password,
-        JWT.ttl, JWT.sec_type, JWT.password_type,
+        JWT.id,
+        JWT.name,
+        JWT.is_active,
+        JWT.username,
+        JWT.password,
+        JWT.ttl,
+        JWT.sec_type,
+        JWT.password_type,
+        JWT.opaque1,
         Cluster.id.label('cluster_id'),
         Cluster.name.label('cluster_name')).\
         filter(Cluster.id==JWT.cluster_id)

@@ -18,6 +18,9 @@ from zato.common import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, APIKeySecurity
 from zato.common.odb.query import apikey_security_list
+from zato.common.rate_limiting import DefinitionParser
+from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
+from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 class GetList(AdminService):
@@ -28,11 +31,12 @@ class GetList(AdminService):
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_security_apikey_get_list_request'
         response_elem = 'zato_security_apikey_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'username')
+        input_required = 'cluster_id',
+        output_required = 'id', 'name', 'is_active', 'username'
+        output_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
 
     def get_data(self, session):
-        return self._search(apikey_security_list, session, self.request.input.cluster_id, False)
+        return elems_with_opaque(self._search(apikey_security_list, session, self.request.input.cluster_id, False))
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -44,10 +48,15 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_apikey_create_request'
         response_elem = 'zato_security_apikey_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'username')
-        output_required = ('id', 'name')
+        input_required = 'cluster_id', 'name', 'is_active', 'username'
+        input_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+        output_required = 'id', 'name'
 
     def handle(self):
+
+        # If we have a rate limiting definition, let's check it upfront
+        DefinitionParser.check_definition_from_input(self.request.input)
+
         input = self.request.input
         input.password = uuid4().hex
 
@@ -62,9 +71,10 @@ class Create(AdminService):
                     filter(APIKeySecurity.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('API key [{0}] already exists on this cluster'.format(input.name))
+                    raise Exception('API key `{}` already exists in this cluster'.format(input.name))
 
                 auth = APIKeySecurity(None, input.name, input.is_active, input.username, input.password, cluster)
+                set_instance_opaque_attrs(auth, input)
 
                 session.add(auth)
                 session.commit()
@@ -89,11 +99,16 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_apikey_edit_request'
         response_elem = 'zato_security_apikey_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username')
-        output_required = ('id', 'name')
+        input_required = 'id', 'cluster_id', 'name', 'is_active', 'username'
+        input_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+        output_required = 'id', 'name'
 
     def handle(self):
         input = self.request.input
+
+        # If we have a rate limiting definition, let's check it upfront
+        DefinitionParser.check_definition_from_input(input)
+
         with closing(self.odb.session()) as session:
             try:
                 existing_one = session.query(APIKeySecurity).\
@@ -103,10 +118,12 @@ class Edit(AdminService):
                     first()
 
                 if existing_one:
-                    raise Exception('API key [{0}] already exists on this cluster'.format(input.name))
+                    raise Exception('API key `{}` already exists in this cluster'.format(input.name))
 
                 definition = session.query(APIKeySecurity).filter_by(id=input.id).one()
                 old_name = definition.name
+
+                set_instance_opaque_attrs(definition, input)
 
                 definition.name = input.name
                 definition.is_active = input.is_active
@@ -150,7 +167,7 @@ class Delete(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_apikey_delete_request'
         response_elem = 'zato_security_apikey_delete_response'
-        input_required = ('id',)
+        input_required = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:
