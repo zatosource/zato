@@ -67,7 +67,7 @@ $.fn.zato.security.basic_auth.data_table.new_row = function(item, data, include_
 
 $.fn.zato.security.basic_auth.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'HTTP Basic Auth definition [{0}] deleted',
-        'Are you sure you want to delete the HTTP Basic Auth definition [{0}]?',
+        'HTTP Basic Auth definition `{0}` deleted',
+        'Are you sure you want to delete HTTP Basic Auth definition `{0}`?',
         true);
 }

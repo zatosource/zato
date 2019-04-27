@@ -29,8 +29,8 @@ class Index(_Index):
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'username', 'ttl')
+        input_required = 'cluster_id',
+        output_required = 'id', 'name', 'is_active', 'username', 'ttl'
         output_repeated = True
 
     def handle(self):
@@ -44,11 +44,11 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'username', 'ttl')
-        output_required = ('id', 'name')
+        input_required = 'name', 'is_active', 'username', 'ttl'
+        output_required = 'id', 'name'
 
     def success_message(self, item):
-        return 'Successfully {} the JWT definition `{}`'.format(self.verb, item.name)
+        return 'Successfully {} JWT definition `{}`'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'security-jwt-create'
