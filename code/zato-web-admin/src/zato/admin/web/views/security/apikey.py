@@ -49,7 +49,7 @@ class _CreateEdit(CreateEdit):
         output_required = 'id', 'name'
 
     def success_message(self, item):
-        return 'Successfully {0} the API key [{1}]'.format(self.verb, item.name)
+        return 'Successfully {} API key `{}`'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'security-apikey-create'

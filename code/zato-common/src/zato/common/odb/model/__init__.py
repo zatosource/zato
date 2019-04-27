@@ -648,6 +648,10 @@ class HTTPSOAP(Base):
         self.match_slash = match_slash # Not used by the DB
         self.http_accept = http_accept # Not used by the DB
         self.opaque1 = opaque
+        self.is_rate_limit_active = None
+        self.rate_limit_type = None
+        self.rate_limit_def = None
+        self.rate_limit_check_parent_def = None
 
 # ################################################################################################################################
 
