@@ -33,6 +33,12 @@
             '_delete',
             'id',
             'is_active',
+
+            'is_rate_limit_active',
+            'rate_limit_type',
+            'rate_limit_def',
+            'rate_limit_check_parent_def',
+
         ]
     }
     </script>
@@ -56,7 +62,7 @@
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.security.basic_auth.create()">Create a new HTTP Basic Auth definition</a>
         </div>
-        
+
         <div id="markup">
             <table id="data-table">
                 <thead>
@@ -71,6 +77,12 @@
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -87,6 +99,12 @@
                         <td><a href="javascript:$.fn.zato.security.basic_auth.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+
+                        <td class='ignore'>{{ item.is_rate_limit_active }}</td>
+                        <td class='ignore'>{{ item.rate_limit_type }}</td>
+                        <td class='ignore'>{{ item.rate_limit_def }}</td>
+                        <td class='ignore'>{{ item.rate_limit_check_parent_def }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -106,7 +124,7 @@
                 <form action="{% url "security-basic-auth-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:14%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
@@ -117,6 +135,9 @@
                             <td style="vertical-align:middle">Realm</td>
                             <td>{{ create_form.realm }} </td>
                         </tr>
+
+                        {% include "zato/include/rate-limiting/create.html" %}
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -129,13 +150,13 @@
                 </form>
             </div>
         </div>
-        
+
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url "security-basic-auth-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:14%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
@@ -146,6 +167,9 @@
                             <td style="vertical-align:middle">Realm</td>
                             <td>{{ edit_form.realm }} </td>
                         </tr>
+
+                        {% include "zato/include/rate-limiting/edit.html" %}
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -159,7 +183,7 @@
                 </form>
             </div>
         </div>
-        
+
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url "security-basic-auth-change-password" %}" method="post" id="change_password-form">
@@ -174,7 +198,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Confirm password</td>
-                            <td>{{ change_password_form.password2 }} 
+                            <td>{{ change_password_form.password2 }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
                             </td>
