@@ -15,7 +15,7 @@ from django import forms
 from zato.admin.web.forms import add_security_select, add_select, add_services, SearchForm as _ChooseClusterForm, \
      DataFormatForm, INITIAL_CHOICES
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MISC, PARAMS_PRIORITY, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
+     MISC, PARAMS_PRIORITY, RATE_LIMIT, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
 
 # ################################################################################################################################
 
@@ -63,6 +63,12 @@ class CreateForm(DataFormatForm):
     data_formats_allowed = SIMPLE_IO.HTTP_SOAP_FORMAT
     http_accept = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=HTTP_SOAP.ACCEPT.ANY)
 
+    is_rate_limit_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    rate_limit_check_parent_def = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    rate_limit_type = forms.ChoiceField(widget=forms.Select(), initial=RATE_LIMIT.TYPE.APPROXIMATE)
+    rate_limit_def = forms.CharField(widget=forms.Textarea(
+        attrs={'style':'overflow:auto; width:100%; white-space: pre-wrap;height:100px'}))
+
     def __init__(self, security_list=[], sec_tls_ca_cert_list={}, cache_list=[], soap_versions=SOAP_VERSIONS,
             prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
@@ -96,6 +102,7 @@ class CreateForm(DataFormatForm):
         add_security_select(self, security_list)
         add_services(self, req)
         add_select(self, 'cache_id', cache_list)
+        add_select(self, 'rate_limit_type', RATE_LIMIT.TYPE(), needs_initial_select=False)
 
 # ################################################################################################################################
 # ################################################################################################################################

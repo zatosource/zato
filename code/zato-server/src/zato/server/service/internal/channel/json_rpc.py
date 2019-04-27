@@ -22,13 +22,14 @@ from zato.common.json_rpc import ErrorCtx, Forbidden, InternalError, ItemRespons
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.odb.model import HTTPSOAP
 from zato.common.rate_limiting.common import AddressNotAllowed, RateLimitReached
-from zato.server.service import List
+from zato.server.service import Boolean, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-get_attrs = 'id', 'name', 'is_active', 'url_path', 'sec_type', 'sec_use_rbac', 'security_id', List('service_whitelist')
+get_attrs_req = 'id', 'name', 'is_active', 'url_path', 'sec_type', 'sec_use_rbac', 'security_id', List('service_whitelist')
+attrs_opt = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,7 +53,8 @@ class GetList(_GetBase):
 
     class SimpleIO(GetListAdminSIO):
         input_required = 'cluster_id'
-        output_required = get_attrs
+        output_required = get_attrs_req
+        output_optional = attrs_opt
         output_repeated = True
         response_elem = None
 
@@ -79,7 +81,8 @@ class Get(AdminService):
     class SimpleIO(_BaseSimpleIO):
         input_required = 'cluster_id'
         input_optional = 'id', 'name'
-        output_required = get_attrs
+        output_required = get_attrs_req
+        output_optional = attrs_opt
 
     def handle(self):
         self.response.payload = self.invoke('zato.http-soap.get', self.request.input, skip_response_elem=True)
@@ -92,6 +95,7 @@ class _CreateEdit(AdminService):
 
     class SimpleIO(_BaseSimpleIO):
         input_required = 'cluster_id', 'name', 'is_active', 'url_path', 'security_id', List('service_whitelist')
+        input_optional = attrs_opt
         output_required = 'id', 'name'
         skip_empty_keys = True
         response_elem = None
