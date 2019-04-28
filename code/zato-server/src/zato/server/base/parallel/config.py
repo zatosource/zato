@@ -417,22 +417,24 @@ class ConfigLoader(object):
 
 # ################################################################################################################################
 
+    def delete_object_rate_limiting(self, object_type, object_name):
+        self.rate_limiting.delete(object_type, object_name)
+
+# ################################################################################################################################
+
     def set_up_rate_limiting(self, _config_store=('apikey', 'basic_auth', 'jwt'), _sec_def=RATE_LIMIT.OBJECT_TYPE.SEC_DEF):
         for config_store_name in _config_store:
             config_dict = self.config[config_store_name] # type: ConfigDict
             for object_name in config_dict: # type: unicode
-                self.set_up_object_rate_limiting(config_store_name, object_name, _sec_def)
+                self.set_up_object_rate_limiting(config_store_name, _sec_def, object_name)
 
 # ################################################################################################################################
 
-    def set_up_object_rate_limiting(self, config_store_name, object_name, object_type, _exact=RATE_LIMIT.TYPE.EXACT.id):
+    def set_up_object_rate_limiting(self, config_store_name, object_type, object_name, _exact=RATE_LIMIT.TYPE.EXACT.id):
         # type: (unicode, unicode, unicode) -> bool
 
         config = self.config[config_store_name].get(object_name) # type: ConfigDict
         config = config['config'] # type: dict
-
-        if config_store_name == 'apikey':
-            logger.warn('YYY %s %s %s %s %s', config_store_name, object_name, object_type, config['rate_limit_type'], _exact)
 
         is_rate_limit_active = config.get('is_rate_limit_active') or False # type: bool
 

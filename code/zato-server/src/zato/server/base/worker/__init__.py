@@ -50,7 +50,7 @@ from six import PY3
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
 from zato.common import broker_message, CHANNEL, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, \
-     PUBSUB, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
@@ -339,8 +339,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io,
             return_tracebacks=self.server.return_tracebacks, default_error_message=self.server.default_error_message,
             http_methods_allowed=self.server.http_methods_allowed)
-
-        logger.warn('DDD %s', self.worker_config.apikey['My Key'])
 
         self.request_dispatcher.url_data = URLData(
             self, self.worker_config.http_soap,
@@ -1074,12 +1072,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY,
                 self._visit_wrapper_edit, keys=('username', 'name'))
+        self.server.set_up_object_rate_limiting('apikey', RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
     def on_broker_msg_SECURITY_APIKEY_DELETE(self, msg, *args):
         """ Deletes an API key security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY,
                 self._visit_wrapper_delete)
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
     def on_broker_msg_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an API key security definition.
@@ -1202,12 +1202,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
                 self._visit_wrapper_edit, keys=('username', 'name'))
+        self.server.set_up_object_rate_limiting('basic_auth', RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
                 self._visit_wrapper_delete)
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
@@ -1249,12 +1251,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
                 self._visit_wrapper_edit, keys=('username', 'name'))
+        self.server.set_up_object_rate_limiting('jwt', RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
     def on_broker_msg_SECURITY_JWT_DELETE(self, msg, *args):
         """ Deletes a JWT security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
                 self._visit_wrapper_delete)
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
     def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of a JWT security definition.
