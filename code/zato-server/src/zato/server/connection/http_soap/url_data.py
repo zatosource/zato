@@ -1260,8 +1260,6 @@ class URLData(CyURLData, OAuthDataStore):
         self._remove_from_cache(match_target)
         self.sort_channel_data()
 
-        logger.warn('QQQ %s', channel_item)
-
         # Set up rate limiting
         self.worker.server.set_up_object_rate_limiting(
             RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config=channel_item)
@@ -1299,6 +1297,9 @@ class URLData(CyURLData, OAuthDataStore):
 
         # Re-sort all elements to match against
         self.sort_channel_data()
+
+        # Delete rate limiting configuration
+        self.worker.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, msg.name)
 
         return old_data
 
