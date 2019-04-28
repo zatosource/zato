@@ -15,13 +15,25 @@ from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import SECRETS
+from zato.common import RATE_LIMIT, SECRETS
 from zato.common.util import asbool
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
+
+# ################################################################################################################################
+
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # Zato
+    from zato.server.config import ConfigDict
+
+    ConfigDict = ConfigDict
 
 # ################################################################################################################################
 
@@ -402,6 +414,68 @@ class ConfigLoader(object):
 
         # Assign config to worker
         self.worker_store.worker_config = self.config
+
+# ################################################################################################################################
+
+    def set_up_rate_limiting(self, _config_store=('apikey', 'basic_auth', 'jwt'), _sec_def=RATE_LIMIT.OBJECT_TYPE.SEC_DEF):
+        for config_store_name in _config_store:
+            config_dict = self.config[config_store_name] # type: ConfigDict
+            for object_name in config_dict: # type: unicode
+                self.set_up_object_rate_limiting(config_store_name, object_name, _sec_def)
+
+# ################################################################################################################################
+
+    def set_up_object_rate_limiting(self, config_store_name, object_name, object_type, _exact=RATE_LIMIT.TYPE.EXACT):
+        # type: (unicode, unicode, unicode) -> bool
+
+        config = self.config[config_store_name].get(object_name) # type: ConfigDict
+        config = config['config'] # type: dict
+
+        if config_store_name == 'apikey':
+            logger.warn('YYY %s %s %s %s', config_store_name, object_name, object_type, config)
+
+        is_rate_limit_active = config.get('is_rate_limit_active') or False # type: bool
+
+        if is_rate_limit_active:
+
+            # This is reusable no matter if it is edit or create action
+            rate_limit_def = config['rate_limit_def']
+            rate_limit_type = config['rate_limit_type'] == _exact
+
+            # Base dict that will be used as is, if we are to create the rate limiting configuration,
+            # or it will be updated with existing configuration, if it already exists.
+            rate_limit_config = {
+                'id': 'service.{}'.format(config['id']),
+                'is_active': is_rate_limit_active,
+                'type_': object_type,
+                'name': object_name,
+                'parent_type': None,
+                'parent_name': None,
+            }
+
+            # Do we have such configuration already?
+            existing_config = self.rate_limiting.get_config(object_type, object_name)
+
+            # .. if yes, we will be updating it
+            if existing_config:
+                rate_limit_config['parent_type'] = existing_config.parent_type
+                rate_limit_config['parent_name'] = existing_config.parent_name
+
+                self.rate_limiting.edit(object_type, object_name, rate_limit_config, rate_limit_def, rate_limit_type)
+
+            # .. otherwise, we will be creating a new one
+            else:
+                self.rate_limiting.create(rate_limit_config, rate_limit_def, rate_limit_type)
+
+        # We are not to have any rate limits, but it is possible that previously we were required to,
+        # in which case this needs to be cleaned up.
+        else:
+            existing_config = self.rate_limiting.get_config(object_type, object_name)
+            if existing_config:
+                object_info = existing_config.object_info
+                self.rate_limiting.delete(object_info.type_, object_info.name)
+
+        return is_rate_limit_active
 
 # ################################################################################################################################
 

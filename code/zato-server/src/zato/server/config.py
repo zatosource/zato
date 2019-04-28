@@ -192,6 +192,9 @@ class ConfigDict(object):
         config_dict = ConfigDict(name)
         config_dict._impl = impl_class()
 
+        if name == 'apikey':
+            logger.warn('EEE %s', query_data)
+
         if query_data:
             query, attrs = query_data
 
@@ -288,19 +291,24 @@ class ConfigStore(object):
         self.odb_data = odb_data
 
         # SimpleIO
-        self.simple_io = simple_io
+        self.simple_io = simple_io # type: ConfigDict
 
         # Namespace
-        self.msg_ns = msg_ns
+        self.msg_ns = msg_ns # type: ConfigDict
 
         # JSON Pointer
-        self.json_pointer = json_pointer
+        self.json_pointer = json_pointer # type: ConfigDict
 
         # XPath
-        self.xpath = xpath
+        self.xpath = xpath # type: ConfigDict
 
         # Services
         self.service = None # type: ConfigDict
+
+# ################################################################################################################################
+
+    def __getitem__(self, key):
+        return getattr(self, key)
 
 # ################################################################################################################################
 

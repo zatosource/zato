@@ -22,7 +22,7 @@ from six import PY2
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import CONNECTION, DATA_FORMAT, MISC, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
+from zato.common import CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition, update_apikey_username_to_channel
@@ -612,9 +612,8 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
-        enforce_auth=True):
+        enforce_auth=True, _object_type=RATE_LIMIT.OBJECT_TYPE.SEC_DEF):
         """ Authenticates and authorizes a given request. Returns None on success
-        or raises an exception otherwise.
         """
         if sec.sec_use_rbac:
             return self.check_rbac_delegated_security(
@@ -634,6 +633,12 @@ class URLData(CyURLData, OAuthDataStore):
 
             if not is_allowed:
                 raise Forbidden(cid, 'You are not allowed to access this URL\n')
+
+        # Knowing that credentials are confirmed, we can check rate limiting now
+        logger.warn('QQQ %r', sec_def)
+
+        if sec_def.get('is_rate_limit_active'):
+            self.worker.server.rate_limiting.check_limit(cid, _object_type, sec_def.name, wsgi_environ['zato.http.remote_addr'])
 
         self.enrich_with_sec_data(wsgi_environ, sec_def, sec_def_type)
 

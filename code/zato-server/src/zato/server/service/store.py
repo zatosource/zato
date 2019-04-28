@@ -41,7 +41,7 @@ except ImportError:
     Dumper = Dumper
 
 # Zato
-from zato.common import CHANNEL, DONT_DEPLOY_ATTR_NAME, KVDB, RATE_LIMIT, SourceCodeInfo, TRACE1
+from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, RATE_LIMIT, SourceCodeInfo, TRACE1
 from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
      Validator as JSONSchemaValidator
 from zato.common.match import Matcher
@@ -275,59 +275,16 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def set_up_rate_limiting(self, name, class_=None, _exact=RATE_LIMIT.TYPE.EXACT.id, _service=CHANNEL.SERVICE):
+    def set_up_rate_limiting(self, name, class_=None, _exact=RATE_LIMIT.TYPE.EXACT.id, _service=RATE_LIMIT.OBJECT_TYPE.SERVICE):
         # type: (unicode, Service, unicode, unicode)
-
-        config = self.server.config.service.get(name) # type: ConfigDict
-        config = config['config'] # type: dict
-
-        is_rate_limit_active = config.get('is_rate_limit_active') or False
 
         if not class_:
             service_id = self.get_service_id_by_name(name) # type: int
             info = self.get_service_info_by_id(service_id) # type: dict
             class_ = info['service_class'] # type: Service
 
-        if is_rate_limit_active:
-
-            # This is reusable no matter if it is edit or create action
-            rate_limit_def = config['rate_limit_def']
-            rate_limit_type = config['rate_limit_type'] == _exact
-
-            # Base dict that will be used as is, if we are to create the rate limiting configuration,
-            # or it will be updated with existing configuration, if it already exists.
-            rate_limit_config = {
-                'id': 'service.{}'.format(config['id']),
-                'is_active': is_rate_limit_active,
-                'type_': _service,
-                'name': name,
-                'parent_type': None,
-                'parent_name': None,
-            }
-
-            # Do we have such configuration already?
-            existing_config = self.server.rate_limiting.get_config(_service, name)
-
-            # .. if yes, we will be updating it
-            if existing_config:
-                rate_limit_config['parent_type'] = existing_config.parent_type
-                rate_limit_config['parent_name'] = existing_config.parent_name
-
-                self.server.rate_limiting.edit(_service, name, rate_limit_config, rate_limit_def, rate_limit_type)
-
-            # .. otherwise, we will be creating a new one
-            else:
-                self.server.rate_limiting.create(rate_limit_config, rate_limit_def, rate_limit_type)
-
-        # We are not to have any rate limits, but it is possible that previously we were required to,
-        # in which case this needs to be cleaned up.
-        else:
-            existing_config = self.server.rate_limiting.get_config(_service, name)
-
-            if existing_config:
-
-                object_info = existing_config.object_info
-                self.server.rate_limiting.delete(object_info.type_, object_info.name)
+        # Will set up rate limiting for service if it needs to be done, returning in such a case or False otherwise.
+        is_rate_limit_active = self.server.set_up_object_rate_limiting('service', name, _service)
 
         # Set a flag to signal that this service has rate limiting enabled or not
         class_._has_rate_limiting = is_rate_limit_active
