@@ -1072,7 +1072,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY,
                 self._visit_wrapper_edit, keys=('username', 'name'))
-        self.server.set_up_object_rate_limiting('apikey', RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
+        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'apikey')
 
     def on_broker_msg_SECURITY_APIKEY_DELETE(self, msg, *args):
         """ Deletes an API key security definition.
@@ -1202,7 +1202,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
                 self._visit_wrapper_edit, keys=('username', 'name'))
-        self.server.set_up_object_rate_limiting('basic_auth', RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
+        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'basic_auth')
 
     def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
@@ -1251,7 +1251,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
                 self._visit_wrapper_edit, keys=('username', 'name'))
-        self.server.set_up_object_rate_limiting('jwt', RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
+        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'jwt')
 
     def on_broker_msg_SECURITY_JWT_DELETE(self, msg, *args):
         """ Deletes a JWT security definition.
