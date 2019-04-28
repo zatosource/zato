@@ -525,6 +525,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.rate_limiting.global_lock_func = self.zato_lock_manager
         self.rate_limiting.sql_session_func = self.odb.session
 
+        # Set up rate limiting other than services. the latter are configured in ServiceStore
+        self.set_up_rate_limiting()
+
         # Deploys services
         is_first, locally_deployed = self._after_init_common(server)
 

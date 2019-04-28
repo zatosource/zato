@@ -339,6 +339,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io,
             return_tracebacks=self.server.return_tracebacks, default_error_message=self.server.default_error_message,
             http_methods_allowed=self.server.http_methods_allowed)
+
+        logger.warn('DDD %s', self.worker_config.apikey['My Key'])
+
         self.request_dispatcher.url_data = URLData(
             self, self.worker_config.http_soap,
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],

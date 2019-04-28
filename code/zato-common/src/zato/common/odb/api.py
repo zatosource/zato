@@ -28,7 +28,7 @@ from sqlalchemy.sql.expression import true
 from sqlalchemy.sql.type_api import TypeEngine
 
 # Bunch
-from bunch import Bunch
+from bunch import Bunch, bunchify
 
 # Zato
 from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
@@ -41,7 +41,7 @@ from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
 from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
      parse_tls_channel_security_definition
-from zato.common.util.sql import elems_with_opaque
+from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
 
 # ################################################################################################################################
@@ -58,6 +58,10 @@ if typing.TYPE_CHECKING:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+rate_limit_keys = 'is_rate_limit_active', 'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def'
 
 # ################################################################################################################################
 
@@ -570,9 +574,20 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def _copy_rate_limiting_config(self, copy_from, copy_to, _keys=rate_limit_keys):
+        for key in _keys:
+            copy_to[key] = copy_from.get(key)
+
+# ################################################################################################################################
+
     def get_url_security(self, cluster_id, connection=None, any_internal=HTTP_SOAP.ACCEPT.ANY_INTERNAL):
         """ Returns the security configuration of HTTP URLs.
         """
+
+        # Temporary cache of security definitions visited so as not to
+        # look the same ones for each HTTP object that uses them.
+        sec_def_cache = {}
+
         with closing(self.session()) as session:
             # What DB class to fetch depending on the string value of the security type.
             sec_type_db_class = {
@@ -610,14 +625,26 @@ class ODBManager(SessionWrapper):
                 result[target].sec_use_rbac = item.sec_use_rbac
 
                 if item.security_id:
+
+                    # For later use
                     result[target].sec_def = Bunch()
 
-                    # Will raise KeyError if the DB gets somehow misconfigured.
-                    db_class = sec_type_db_class[item.sec_type]
+                    # We either have already seen this security definition ..
+                    if item.security_id in sec_def_cache:
+                        sec_def = sec_def_cache[item.security_id]
 
-                    sec_def = session.query(db_class).\
-                            filter(db_class.id==item.security_id).\
-                            one()
+                    # .. or we have not, in which case we need to look it up
+                    # and then cache it for later use.
+                    else:
+
+                        # Will raise KeyError if the DB gets somehow misconfigured.
+                        db_class = sec_type_db_class[item.sec_type]
+                        sec_def_item = session.query(db_class).\
+                                filter(db_class.id==item.security_id).\
+                                one()
+                        sec_def = bunchify(sec_def_item.asdict())
+                        ElemsWithOpaqueMaker.process_config_dict(sec_def)
+                        sec_def_cache[item.security_id] = sec_def
 
                     # Common things first
                     result[target].sec_def.id = sec_def.id
@@ -628,12 +655,15 @@ class ODBManager(SessionWrapper):
                     if item.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
                         result[target].sec_def.username = sec_def.username
                         result[target].sec_def.realm = sec_def.realm
+                        self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.JWT:
                         result[target].sec_def.username = sec_def.username
+                        self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.APIKEY:
                         result[target].sec_def.username = 'HTTP_{}'.format(sec_def.username.upper().replace('-', '_'))
+                        self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.WSS:
                         result[target].sec_def.username = sec_def.username
@@ -838,7 +868,7 @@ class ODBManager(SessionWrapper):
         """ Returns a list of API keys existing on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.apikey_security_list(session, cluster_id, needs_columns)
+            return elems_with_opaque(query.apikey_security_list(session, cluster_id, needs_columns))
 
 # ################################################################################################################################
 
@@ -854,7 +884,7 @@ class ODBManager(SessionWrapper):
         """ Returns a list of HTTP Basic Auth definitions existing on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.basic_auth_list(session, cluster_id, cluster_name, needs_columns)
+            return elems_with_opaque(query.basic_auth_list(session, cluster_id, cluster_name, needs_columns))
 
 # ################################################################################################################################
 
@@ -862,7 +892,7 @@ class ODBManager(SessionWrapper):
         """ Returns a list of JWT definitions existing on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.jwt_list(session, cluster_id, cluster_name, needs_columns)
+            return elems_with_opaque(query.jwt_list(session, cluster_id, cluster_name, needs_columns))
 
 # ################################################################################################################################
 
