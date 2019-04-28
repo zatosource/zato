@@ -34,7 +34,7 @@ from six import PY3
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_RESPONSES, HTTP_SOAP, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
+from zato.common import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_RESPONSES, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
 from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
@@ -49,9 +49,11 @@ from zato.server.service.internal import AdminService
 import typing
 
 if typing.TYPE_CHECKING:
+    from zato.server.base.parallel import ParallelServer
     from zato.server.connection.http_soap.url_data import URLData
 
     # For pyflakes
+    ParallelServer = ParallelServer
     URLData = URLData
 
 # ################################################################################################################################
@@ -177,10 +179,11 @@ class _HashCtx(object):
 class RequestDispatcher(object):
     """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
     """
-    def __init__(self, url_data=None, security=None, request_handler=None, simple_io_config=None, return_tracebacks=None,
-            default_error_message=None, http_methods_allowed=None):
-        # type: (URLData, object, object, dict, bool, unicode, list)
+    def __init__(self, server=None, url_data=None, security=None, request_handler=None, simple_io_config=None,
+            return_tracebacks=None, default_error_message=None, http_methods_allowed=None):
+        # type: (ParallelServer, URLData, object, object, dict, bool, unicode, list)
 
+        self.server = server
         self.url_data = url_data
         self.security = security
 
@@ -221,7 +224,7 @@ class RequestDispatcher(object):
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
-        _accept_any_internal=accept_any_internal):
+        _accept_any_internal=accept_any_internal, _rate_limit_type=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -269,7 +272,7 @@ class RequestDispatcher(object):
                     logger.warn('url_data:`%s` is not active, raising NotFound', sorted(url_match.items()))
                     raise NotFound(cid, 'Channel inactive')
 
-                # Need to read security info here so we know if POST needs to be
+                # We need to read security info here so we know if POST needs to be
                 # parsed. If so, we do it here and reuse it in other places
                 # so it doesn't have to be parsed two or more times.
                 post_data = {}
@@ -293,6 +296,14 @@ class RequestDispatcher(object):
                     # Will raise an exception on any security violation
                     self.url_data.check_security(
                         sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
+
+                # Check rate limiting now - this could not have been done earlier because we wanted
+                # for security checks to be made first. Otherwise, someone would be able to invoke
+                # our endpoint without credentials as many times as it is needed to exhaust the rate limit
+                # denying in this manner access to genuine users.
+                if channel_item.get('is_rate_limit_active'):
+                    self.server.rate_limiting.check_limit(
+                        cid, _rate_limit_type, channel_item['name'], wsgi_environ['zato.http.remote_addr'])
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data

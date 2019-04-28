@@ -284,7 +284,7 @@ class ServiceStore(object):
             class_ = info['service_class'] # type: Service
 
         # Will set up rate limiting for service if it needs to be done, returning in such a case or False otherwise.
-        is_rate_limit_active = self.server.set_up_object_rate_limiting('service', _service, name)
+        is_rate_limit_active = self.server.set_up_object_rate_limiting(_service, name, 'service')
 
         # Set a flag to signal that this service has rate limiting enabled or not
         class_._has_rate_limiting = is_rate_limit_active

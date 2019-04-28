@@ -336,7 +336,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_sftp()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
-        self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io,
+        self.request_dispatcher = RequestDispatcher(self.server, simple_io_config=self.worker_config.simple_io,
             return_tracebacks=self.server.return_tracebacks, default_error_message=self.server.default_error_message,
             http_methods_allowed=self.server.http_methods_allowed)
 

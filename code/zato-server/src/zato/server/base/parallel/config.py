@@ -422,19 +422,28 @@ class ConfigLoader(object):
 
 # ################################################################################################################################
 
-    def set_up_rate_limiting(self, _config_store=('apikey', 'basic_auth', 'jwt'), _sec_def=RATE_LIMIT.OBJECT_TYPE.SEC_DEF):
+    def set_up_rate_limiting(self, _config_store=('apikey', 'basic_auth', 'jwt'), _sec_def=RATE_LIMIT.OBJECT_TYPE.SEC_DEF,
+        _http_soap=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP):
+
         for config_store_name in _config_store:
             config_dict = self.config[config_store_name] # type: ConfigDict
             for object_name in config_dict: # type: unicode
-                self.set_up_object_rate_limiting(config_store_name, _sec_def, object_name)
+                self.set_up_object_rate_limiting(_sec_def, object_name, config_store_name)
+
+        for item in self.config['http_soap']: # type: dict
+            # Do not try to set up rate limiting if we know there is no configuration for it available
+            if 'is_rate_limit_active':
+                self.set_up_object_rate_limiting(_http_soap, item['name'], config=item)
 
 # ################################################################################################################################
 
-    def set_up_object_rate_limiting(self, config_store_name, object_type, object_name, _exact=RATE_LIMIT.TYPE.EXACT.id):
-        # type: (unicode, unicode, unicode) -> bool
+    def set_up_object_rate_limiting(self, object_type, object_name, config_store_name=None, config=None,
+        _exact=RATE_LIMIT.TYPE.EXACT.id):
+        # type: (unicode, unicode, unicode, dict) -> bool
 
-        config = self.config[config_store_name].get(object_name) # type: ConfigDict
-        config = config['config'] # type: dict
+        if not config:
+            config = self.config[config_store_name].get(object_name) # type: ConfigDict
+            config = config['config'] # type: dict
 
         is_rate_limit_active = config.get('is_rate_limit_active') or False # type: bool
 
