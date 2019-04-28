@@ -1712,9 +1712,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Delete the service from RBAC resources
         self.rbac.delete_resource(msg.id)
 
-        # Module this service is in so it can be removed from sys.modules
-        mod = inspect.getmodule(self.server.service_store.services[msg.impl_name]['service_class'])
-
         # Where to delete it from in the second step
         deployment_info = self.server.service_store.get_deployment_info(msg.impl_name)
         fs_location = deployment_info['fs_location']
@@ -1743,7 +1740,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # It is possible that this module was already deleted from sys.modules
         # in case there was more than one service in it and we first deleted
         # one and then the other.
-        if mod:
+        try:
+            service_info = self.server.service_store.services[msg.impl_name]
+        except KeyError:
+            return
+        else:
+            mod = inspect.getmodule(service_info['service_class'])
             del sys.modules[mod.__name__]
 
     def on_broker_msg_SERVICE_EDIT(self, msg, *args):

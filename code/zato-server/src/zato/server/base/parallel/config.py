@@ -418,7 +418,8 @@ class ConfigLoader(object):
 # ################################################################################################################################
 
     def delete_object_rate_limiting(self, object_type, object_name):
-        self.rate_limiting.delete(object_type, object_name)
+        if self.rate_limiting.has_config(object_type, object_name):
+            self.rate_limiting.delete(object_type, object_name)
 
 # ################################################################################################################################
 

@@ -333,13 +333,26 @@ class RateLimiting(object):
 
 # ################################################################################################################################
 
-    def get_config(self, object_type, object_name):
+    def _get_config(self, object_type, object_name):
         """ Returns configuration for the input object, assumming we have it at all.
         """
         # type: (unicode, unicode) -> BaseLimiter
+        config_key = self._get_config_key(object_type, object_name)
+        return self.config_store.get(config_key)
+
+# ################################################################################################################################
+
+    def get_config(self, object_type, object_name):
+        # type: (unicode, unicode) -> BaseLimiter
         with self.lock:
-            config_key = self._get_config_key(object_type, object_name)
-            return self.config_store.get(config_key)
+            return self._get_config(object_type, object_name)
+
+# ################################################################################################################################
+
+    def has_config(self, object_type, object_name):
+        # type: (unicode, unicode) -> bool
+        with self.lock:
+            return bool(self._get_config(object_type, object_name))
 
 # ################################################################################################################################
 
