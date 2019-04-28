@@ -1216,6 +1216,10 @@ class URLData(CyURLData, OAuthDataStore):
         channel_item['match_target'] = match_target
         channel_item['match_target_compiled'] = Matcher(channel_item['match_target'], channel_item['match_slash'])
 
+        # For rate limiting
+        for name in('is_rate_limit_active', 'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def'):
+            channel_item[name] = msg.get(name)
+
         return channel_item
 
 # ################################################################################################################################
@@ -1249,11 +1253,18 @@ class URLData(CyURLData, OAuthDataStore):
         Clears out URL cache for that entry, if it existed at all.
         """
         match_target = get_match_target(msg, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
-        self.channel_data.append(self._channel_item_from_msg(msg, match_target, old_data))
+        channel_item = self._channel_item_from_msg(msg, match_target, old_data)
+        self.channel_data.append(channel_item)
         self.url_sec[match_target] = self._sec_info_from_msg(msg)
 
         self._remove_from_cache(match_target)
         self.sort_channel_data()
+
+        logger.warn('QQQ %s', channel_item)
+
+        # Set up rate limiting
+        self.worker.server.set_up_object_rate_limiting(
+            RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config=channel_item)
 
 # ################################################################################################################################
 
