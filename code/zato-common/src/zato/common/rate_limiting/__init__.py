@@ -178,6 +178,8 @@ class RateLimiting(object):
         info.type_ = object_type
         info.name = object_name
 
+        logger.warn('EEE %s %s %s %s', object_id, object_type, object_name, is_exact)
+
         parsed = self.parser.parse(definition or '', object_id, object_type, object_name)
 
         if parsed:

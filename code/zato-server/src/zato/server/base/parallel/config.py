@@ -425,14 +425,14 @@ class ConfigLoader(object):
 
 # ################################################################################################################################
 
-    def set_up_object_rate_limiting(self, config_store_name, object_name, object_type, _exact=RATE_LIMIT.TYPE.EXACT):
+    def set_up_object_rate_limiting(self, config_store_name, object_name, object_type, _exact=RATE_LIMIT.TYPE.EXACT.id):
         # type: (unicode, unicode, unicode) -> bool
 
         config = self.config[config_store_name].get(object_name) # type: ConfigDict
         config = config['config'] # type: dict
 
         if config_store_name == 'apikey':
-            logger.warn('YYY %s %s %s %s', config_store_name, object_name, object_type, config)
+            logger.warn('YYY %s %s %s %s %s', config_store_name, object_name, object_type, config['rate_limit_type'], _exact)
 
         is_rate_limit_active = config.get('is_rate_limit_active') or False # type: bool
 
@@ -440,12 +440,12 @@ class ConfigLoader(object):
 
             # This is reusable no matter if it is edit or create action
             rate_limit_def = config['rate_limit_def']
-            rate_limit_type = config['rate_limit_type'] == _exact
+            is_exact = config['rate_limit_type'] == _exact
 
             # Base dict that will be used as is, if we are to create the rate limiting configuration,
             # or it will be updated with existing configuration, if it already exists.
             rate_limit_config = {
-                'id': 'service.{}'.format(config['id']),
+                'id': '{}.{}'.format(object_type, config['id']),
                 'is_active': is_rate_limit_active,
                 'type_': object_type,
                 'name': object_name,
@@ -461,11 +461,11 @@ class ConfigLoader(object):
                 rate_limit_config['parent_type'] = existing_config.parent_type
                 rate_limit_config['parent_name'] = existing_config.parent_name
 
-                self.rate_limiting.edit(object_type, object_name, rate_limit_config, rate_limit_def, rate_limit_type)
+                self.rate_limiting.edit(object_type, object_name, rate_limit_config, rate_limit_def, is_exact)
 
             # .. otherwise, we will be creating a new one
             else:
-                self.rate_limiting.create(rate_limit_config, rate_limit_def, rate_limit_type)
+                self.rate_limiting.create(rate_limit_config, rate_limit_def, is_exact)
 
         # We are not to have any rate limits, but it is possible that previously we were required to,
         # in which case this needs to be cleaned up.

@@ -634,9 +634,6 @@ class URLData(CyURLData, OAuthDataStore):
             if not is_allowed:
                 raise Forbidden(cid, 'You are not allowed to access this URL\n')
 
-        # Knowing that credentials are confirmed, we can check rate limiting now
-        logger.warn('QQQ %r', sec_def)
-
         if sec_def.get('is_rate_limit_active'):
             self.worker.server.rate_limiting.check_limit(cid, _object_type, sec_def.name, wsgi_environ['zato.http.remote_addr'])
 
