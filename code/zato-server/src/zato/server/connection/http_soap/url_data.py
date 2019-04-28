@@ -649,7 +649,8 @@ class URLData(CyURLData, OAuthDataStore):
         the new configuration or, optionally, deletes the URL security definition
         altogether if 'delete' is True.
         """
-        for target_match, url_info in self.url_sec.items():
+        items = list(iteritems(self.url_sec))
+        for target_match, url_info in items:
             sec_def = url_info.sec_def
             if sec_def != ZATO_NONE and sec_def.sec_type == sec_def_type:
                 name = msg.get('old_name') if msg.get('old_name') else msg.get('name')
