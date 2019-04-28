@@ -192,9 +192,6 @@ class ConfigDict(object):
         config_dict = ConfigDict(name)
         config_dict._impl = impl_class()
 
-        if name == 'apikey':
-            logger.warn('EEE %s', query_data)
-
         if query_data:
             query, attrs = query_data
 
