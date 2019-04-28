@@ -1722,6 +1722,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Delete it from the service store
         self.server.service_store.delete_service_data(msg.name)
 
+        # Remove rate limiting configuration
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SERVICE, msg.name)
+
         # Delete it from the filesystem, including any bytecode left over. Note that
         # other parallel servers may wish to do exactly the same so we just ignore
         # the error if any files are missing. Also note that internal services won't
