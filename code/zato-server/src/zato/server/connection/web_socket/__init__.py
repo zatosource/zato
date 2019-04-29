@@ -305,18 +305,16 @@ class WebSocket(_WebSocket):
             # Are we to invoke the services this time?
             if needs_services:
 
-                now_formatted = now.isoformat()
-
                 pub_sub_request = {
                     'sub_key': self.pubsub_tool.get_sub_keys(),
-                    'last_interaction_time': now_formatted,
+                    'last_interaction_time': now,
                     'last_interaction_type': self.last_interact_source,
                     'last_interaction_details': self.get_peer_info_pretty(),
                 }
 
                 wsx_request = {
                     'id': self.sql_ws_client_id,
-                    'last_seen': now_formatted,
+                    'last_seen': now,
                 }
 
                 logger.info('Setting pub/sub interaction metadata `%s`', pub_sub_request)

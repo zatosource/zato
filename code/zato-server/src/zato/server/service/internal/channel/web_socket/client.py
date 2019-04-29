@@ -20,7 +20,7 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import ChannelWebSocket, Cluster, WebSocketClient
 from zato.common.odb.query import web_socket_client_by_pub_id, web_socket_clients_by_server_id
 from zato.common.util.sql import set_instance_opaque_attrs
-from zato.server.service import AsIs, List
+from zato.server.service import AsIs, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -154,7 +154,7 @@ class SetLastSeen(AdminService):
     """ Sets last_seen for input WSX client.
     """
     class SimpleIO(AdminSIO):
-        input_required = 'id', 'last_seen'
+        input_required = 'id', Opaque('last_seen')
 
     def handle(self):
 
