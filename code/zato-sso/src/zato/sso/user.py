@@ -19,7 +19,7 @@ from traceback import format_exc
 from sqlalchemy import update as sql_update
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from past.builtins import basestring, unicode
 
 # Zato
 from zato.common.audit import audit_pii
@@ -283,7 +283,9 @@ class UserAPI(object):
 
         # .. while emails are only encrypted, and it is optional.
         if self.encrypt_email:
-            email = make_data_secret(ctx.data.get('email', '').encode('utf8') or b'', self.encrypt_func)
+            email = ctx.data.get('email') or ''
+            email = email.encode('utf8') if isinstance(email, unicode) else email
+            email = make_data_secret(email, self.encrypt_func)
 
         user_model.username = ctx.data['username']
         user_model.email = email

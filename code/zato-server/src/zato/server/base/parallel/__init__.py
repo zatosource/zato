@@ -70,10 +70,12 @@ if typing.TYPE_CHECKING:
     # Zato
     from zato.common.odb.api import ODBManager
     from zato.server.service.store import ServiceStore
+    from zato.sso.api import SSOAPI
 
     # For pyflakes
     ODBManager = ODBManager
     ServiceStore = ServiceStore
+    SSOAPI = SSOAPI
 
 # ################################################################################################################################
 
@@ -156,7 +158,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.server_startup_ipc = ServerStartupIPC()
         self.connector_config_ipc = ConnectorConfigIPC()
         self.keyutils = KeyUtils()
-        self.sso_api = None
+        self.sso_api = None # type: SSOAPI
         self.is_sso_enabled = False
         self.audit_pii = audit_pii
         self.has_fg = False
