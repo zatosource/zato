@@ -37,8 +37,8 @@ from dateutil.rrule import DAILY, MINUTELY, rrule
 import gevent
 
 # gunicorn
-from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
-from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
+from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
+from zato.server.ext.zunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Python 2/3 compatibility
 from future.utils import iterkeys
