@@ -88,17 +88,24 @@ if typing.TYPE_CHECKING:
 
     # Zato
     from zato.broker.client import BrokerClient
+    from zato.common.audit import AuditPII
     from zato.common.crypto import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
+    from zato.common.kvdb import KVDB
+    from zato.common.odb.api import ODBManager
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.server import Servers
+    from zato.sso.api import SSOAPI
 
     # For pyflakes
+    AuditPII = AuditPII
     BrokerClient = BrokerClient
     Callable = Callable
     JSONSchemaValidator = JSONSchemaValidator
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
+    SSOAPI = SSOAPI
     WorkerStore = WorkerStore
 
 # ################################################################################################################################
@@ -220,8 +227,8 @@ class Service(object):
     cloud = Cloud()
     definition = Definition()
     im = InstantMessaging()
-    odb = None
-    kvdb = None
+    odb = None # type: ODBManager
+    kvdb = None # type: KVDB
     pubsub = None # type: PubSub
     cassandra_conn = None
     cassandra_query = None
@@ -248,16 +255,16 @@ class Service(object):
     _has_rate_limiting = None
 
     # User management and SSO
-    sso = None
+    sso = None # type: SSOAPI
 
     # Crypto operations
     crypto = None # type: ServerCryptoManager
 
     # Audit log
-    audit_pii = None
+    audit_pii = None # type: AuditPII
 
     # For invoking other servers directly
-    servers = None
+    servers = None # type: Servers
 
     # By default, services do not use JSON Schema
     schema = '' # type: unicode
