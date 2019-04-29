@@ -15,9 +15,6 @@ from logging import getLogger
 # Bunch
 from bunch import Bunch
 
-# dateutil
-from dateutil.parser import parse as dt_parse
-
 # SQLAlchemy
 from sqlalchemy import update
 
@@ -35,7 +32,7 @@ from zato.common.util import get_sa_model_columns, make_repr
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic
-from zato.server.service import Bool, Int, List
+from zato.server.service import Bool, Int, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
 
@@ -730,7 +727,7 @@ class UpdateInteractionMetadata(AdminService):
     """ Updates last interaction metadata for input sub keys.
     """
     class SimpleIO:
-        input_required = List('sub_key'), 'last_interaction_time', 'last_interaction_type', 'last_interaction_details'
+        input_required = List('sub_key'), Opaque('last_interaction_time'), 'last_interaction_type', 'last_interaction_details'
 
     def handle(self):
 
@@ -738,9 +735,7 @@ class UpdateInteractionMetadata(AdminService):
         req = self.request.input
 
         # Convert from string to milliseconds as expected by the database
-        last_interaction_time = req.last_interaction_time
-        last_interaction_time = dt_parse(last_interaction_time)
-        last_interaction_time = datetime_to_ms(last_interaction_time) / 1000.0
+        last_interaction_time = datetime_to_ms(req.last_interaction_time) / 1000.0
 
         with closing(self.odb.session()) as session:
 
