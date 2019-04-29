@@ -56,7 +56,7 @@ from gevent.server import StreamServer
 from gevent.socket import wait_write, socket
 from gevent import pywsgi
 
-import zato.server.ext.zunicorn as zunicorn
+from zato.server.ext.zunicorn import SERVER_SOFTWARE
 from zato.server.ext.zunicorn.http.wsgi import base_environ
 from zato.server.ext.zunicorn.workers.base_async import AsyncWorker
 from zato.server.ext.zunicorn.http.wsgi import sendfile as o_sendfile
@@ -130,7 +130,7 @@ class GeventWorker(AsyncWorker):
                 environ = base_environ(self.cfg)
                 environ.update({
                     "wsgi.multithread": True,
-                    "SERVER_SOFTWARE": 'Zato',
+                    "SERVER_SOFTWARE": SERVER_SOFTWARE,
                 })
                 server = self.server_class(
                     s, application=self.wsgi, spawn=pool, log=self.log,

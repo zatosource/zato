@@ -40,11 +40,11 @@ import os
 import re
 import sys
 
+from zato.server.ext.zunicorn import SERVER_SOFTWARE, util
 from zato.server.ext.zunicorn._compat import unquote_to_wsgi_str
 from zato.server.ext.zunicorn.http.message import HEADER_RE
 from zato.server.ext.zunicorn.http.errors import InvalidHeader, InvalidHeaderName
 from zato.server.ext.zunicorn.six import string_types, binary_type, reraise
-import zato.server.ext.zunicorn.util as util
 
 try:
     # Python 3.3 has os.sendfile().
@@ -114,7 +114,7 @@ def base_environ(cfg):
         "wsgi.multiprocess": (cfg.workers > 1),
         "wsgi.run_once": False,
         "wsgi.file_wrapper": FileWrapper,
-        "SERVER_SOFTWARE": 'Zato',
+        "SERVER_SOFTWARE": SERVER_SOFTWARE
     }
 
 
@@ -235,7 +235,7 @@ class Response(object):
     def __init__(self, req, sock, cfg):
         self.req = req
         self.sock = sock
-        self.version = SERVER_SOFTWARE
+        self.version = cfg.server_software
         self.status = None
         self.chunked = False
         self.must_close = False
