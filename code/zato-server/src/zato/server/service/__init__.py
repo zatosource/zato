@@ -260,7 +260,7 @@ class Service(object):
     servers = None
 
     # By default, services do not use JSON Schema
-    json_schema = '' # type: unicode
+    schema = '' # type: unicode
 
     # JSON Schema validator attached only if service declares a schema to use
     _json_schema_validator = None # type: JSONSchemaValidator
