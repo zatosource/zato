@@ -51,7 +51,6 @@ import sys
 import textwrap
 import shlex
 
-from zato.server.ext.zunicorn import __version__
 from zato.server.ext.zunicorn import _compat
 from zato.server.ext.zunicorn.errors import ConfigError
 from zato.server.ext.zunicorn.reloader import reloader_engines
@@ -116,7 +115,7 @@ class Config(object):
         parser = argparse.ArgumentParser(**kwargs)
         parser.add_argument("-v", "--version",
                 action="version", default=argparse.SUPPRESS,
-                version="%(prog)s (version " + __version__ + ")\n",
+                version="%(prog)s (version " + 'n/a' + ")\n",
                 help="show program's version number and exit")
         parser.add_argument("args", nargs="*", help=argparse.SUPPRESS)
 

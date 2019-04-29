@@ -45,12 +45,13 @@ import sys
 import time
 import traceback
 
+# Zato
+from zato.common import get_version
 from zato.server.ext.zunicorn.errors import HaltServer, AppImportError
 from zato.server.ext.zunicorn.pidfile import Pidfile
 from zato.server.ext.zunicorn import sock, systemd, util
 
-from zato.server.ext.zunicorn import __version__, SERVER_SOFTWARE
-
+version = get_version()
 
 class Arbiter(object):
     """
@@ -83,7 +84,7 @@ class Arbiter(object):
     )
 
     def __init__(self, app):
-        os.environ["SERVER_SOFTWARE"] = SERVER_SOFTWARE
+        os.environ["SERVER_SOFTWARE"] = 'Zato'
 
         self._num_workers = None
         self._last_logged_active_worker_count = None
@@ -155,7 +156,7 @@ class Arbiter(object):
         """\
         Initialize the arbiter. Start listening and set pidfile if needed.
         """
-        self.log.info("Starting gunicorn %s", __version__)
+        self.log.info('Starting %s', version)
 
         if 'GUNICORN_PID' in os.environ:
             self.master_pid = int(os.environ.get('GUNICORN_PID'))
