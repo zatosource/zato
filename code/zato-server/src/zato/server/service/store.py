@@ -250,14 +250,14 @@ class ServiceStore(object):
         json_schema_config = get_service_config(service_config, self.server)
 
         # Make sure the schema points to an absolute path and that it exists
-        if not os.path.isabs(class_.json_schema):
-            schema_path = os.path.join(self.server.json_schema_dir, class_.json_schema)
+        if not os.path.isabs(class_.schema):
+            schema_path = os.path.join(self.server.json_schema_dir, class_.schema)
         else:
-            schema_path = class_.json_schema
+            schema_path = class_.schema
 
         if not os.path.exists(schema_path):
-            logger.warn('Could not find JSON Schema for `%s` in `%s` (class_.json_schema=%s)',
-                class_name, schema_path, class_.json_schema)
+            logger.warn('Could not find JSON Schema for `%s` in `%s` (class_.schema=%s)',
+                class_name, schema_path, class_.schema)
             return
 
         config = JSONSchemaValidationConfig()
@@ -352,7 +352,7 @@ class ServiceStore(object):
             class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
 
             # JSON Schema
-            if class_.json_schema:
+            if class_.schema:
                 self.set_up_class_json_schema(class_)
 
             # User management and SSO
