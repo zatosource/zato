@@ -47,9 +47,9 @@ import traceback
 
 # Zato
 from zato.common import get_version
+from zato.server.ext.zunicorn import SERVER_SOFTWARE, sock, systemd, util
 from zato.server.ext.zunicorn.errors import HaltServer, AppImportError
 from zato.server.ext.zunicorn.pidfile import Pidfile
-from zato.server.ext.zunicorn import sock, systemd, util
 
 version = get_version()
 
@@ -84,7 +84,7 @@ class Arbiter(object):
     )
 
     def __init__(self, app):
-        os.environ["SERVER_SOFTWARE"] = 'Zato'
+        os.environ["SERVER_SOFTWARE"] = SERVER_SOFTWARE
 
         self._num_workers = None
         self._last_logged_active_worker_count = None

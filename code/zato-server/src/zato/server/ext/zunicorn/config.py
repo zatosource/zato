@@ -87,6 +87,10 @@ class Config(object):
         self.prog = prog or os.path.basename(sys.argv[0])
         self.env_orig = os.environ.copy()
 
+        #
+        from zato.server.ext.zunicorn import SERVER_SOFTWARE
+        self.server_software = SERVER_SOFTWARE
+
     def __getattr__(self, name):
         if name not in self.settings:
             raise AttributeError("No configuration setting for: %s" % name)
