@@ -74,9 +74,6 @@ echo "$(pwd)/zato_extra_paths" >> eggs/easy-install.pth
 # Apply patches.
 patch -p0 -d eggs < patches/butler/__init__.py.diff
 patch -p0 -d eggs < patches/configobj.py.diff
-patch -p0 -d eggs < patches/gunicorn/arbiter.py.diff
-patch -p0 -d eggs < patches/gunicorn/glogging.py.diff
-patch -p0 -d eggs < patches/gunicorn/workers/base.py.diff
 patch -p0 -d eggs < patches/outbox/outbox.py.diff
 patch -p0 -d eggs < patches/outbox/outbox.py2.diff
 patch -p0 -d eggs < patches/outbox/outbox.py3.diff

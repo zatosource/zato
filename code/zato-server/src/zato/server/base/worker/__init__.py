@@ -36,10 +36,6 @@ from dateutil.rrule import DAILY, MINUTELY, rrule
 # gevent
 import gevent
 
-# gunicorn
-from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
-from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
-
 # Python 2/3 compatibility
 from future.utils import iterkeys
 from future.moves.urllib.parse import urlparse
@@ -80,6 +76,7 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
      OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
+from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
@@ -125,14 +122,6 @@ class GeventWorker(GunicornGeventWorker):
     def __init__(self, *args, **kwargs):
         self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
         super(GunicornGeventWorker, self).__init__(*args, **kwargs)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SyncWorker(GunicornSyncWorker):
-    def __init__(self, *args, **kwargs):
-        self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
-        super(GunicornSyncWorker, self).__init__(*args, **kwargs)
 
 # ################################################################################################################################
 
