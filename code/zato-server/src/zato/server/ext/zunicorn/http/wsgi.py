@@ -44,7 +44,6 @@ from zato.server.ext.zunicorn._compat import unquote_to_wsgi_str
 from zato.server.ext.zunicorn.http.message import HEADER_RE
 from zato.server.ext.zunicorn.http.errors import InvalidHeader, InvalidHeaderName
 from zato.server.ext.zunicorn.six import string_types, binary_type, reraise
-from zato.server.ext.zunicorn import SERVER_SOFTWARE
 import zato.server.ext.zunicorn.util as util
 
 try:
@@ -115,7 +114,7 @@ def base_environ(cfg):
         "wsgi.multiprocess": (cfg.workers > 1),
         "wsgi.run_once": False,
         "wsgi.file_wrapper": FileWrapper,
-        "SERVER_SOFTWARE": SERVER_SOFTWARE,
+        "SERVER_SOFTWARE": 'Zato',
     }
 
 

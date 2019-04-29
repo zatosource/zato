@@ -87,11 +87,11 @@ CONFIG_DEFAULTS = dict(
 
         loggers={
             "root": {"level": "INFO", "handlers": ["console"]},
-            "gunicorn.main": {
+            "zato": {
                 "level": "INFO",
                 "handlers": ["error_console"],
                 "propagate": True,
-                "qualname": "gunicorn.main"
+                "qualname": "zato"
             },
 
             "gunicorn.access": {
@@ -219,7 +219,7 @@ class Logger(object):
     atoms_wrapper_class = SafeAtoms
 
     def __init__(self, cfg):
-        self.error_log = logging.getLogger("gunicorn.main")
+        self.error_log = logging.getLogger("zato")
         self.error_log.propagate = False
         self.access_log = logging.getLogger("gunicorn.access")
         self.access_log.propagate = False

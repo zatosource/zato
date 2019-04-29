@@ -61,8 +61,6 @@ from zato.server.ext.zunicorn.http.wsgi import base_environ
 from zato.server.ext.zunicorn.workers.base_async import AsyncWorker
 from zato.server.ext.zunicorn.http.wsgi import sendfile as o_sendfile
 
-VERSION = "gevent/%s gunicorn/%s" % (gevent.__version__, zunicorn.__version__)
-
 def _gevent_sendfile(fdout, fdin, offset, nbytes):
     while True:
         try:
@@ -132,7 +130,7 @@ class GeventWorker(AsyncWorker):
                 environ = base_environ(self.cfg)
                 environ.update({
                     "wsgi.multithread": True,
-                    "SERVER_SOFTWARE": VERSION,
+                    "SERVER_SOFTWARE": 'Zato',
                 })
                 server = self.server_class(
                     s, application=self.wsgi, spawn=pool, log=self.log,
