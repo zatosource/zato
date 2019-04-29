@@ -43,8 +43,8 @@ class ConfigDict(object):
     details.
     """
     def __init__(self, name, _bunch=None):
-        self.name = name
-        self._impl = _bunch
+        self.name = name    # type: unicode
+        self._impl = _bunch # type: Bunch
         self.lock = RLock()
 
 # ################################################################################################################################
@@ -78,6 +78,13 @@ class ConfigDict(object):
     def pop(self, key, default):
         with self.lock:
             return self._impl.pop(key, default)
+
+# ################################################################################################################################
+
+    def update(self, dict_):
+        # type: (dict_)
+        with self.lock:
+            self._impl.update(dict_)
 
 # ################################################################################################################################
 
@@ -281,16 +288,24 @@ class ConfigStore(object):
         self.odb_data = odb_data
 
         # SimpleIO
-        self.simple_io = simple_io
+        self.simple_io = simple_io # type: ConfigDict
 
         # Namespace
-        self.msg_ns = msg_ns
+        self.msg_ns = msg_ns # type: ConfigDict
 
         # JSON Pointer
-        self.json_pointer = json_pointer
+        self.json_pointer = json_pointer # type: ConfigDict
 
         # XPath
-        self.xpath = xpath
+        self.xpath = xpath # type: ConfigDict
+
+        # Services
+        self.service = None # type: ConfigDict
+
+# ################################################################################################################################
+
+    def __getitem__(self, key):
+        return getattr(self, key)
 
 # ################################################################################################################################
 

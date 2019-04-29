@@ -33,6 +33,7 @@ from zato.common.exception import BadRequest
 from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
+from zato.common.rate_limiting import DefinitionParser
 from zato.common.util import hot_deploy, payload_from_request
 from zato.common.util.json_ import dumps
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
@@ -62,7 +63,9 @@ class GetList(AdminService):
         input_required = 'cluster_id', 'query'
         input_optional = Integer('cur_page'), Boolean('paginate')
         output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'), \
-            Integer('slow_threshold'), 'is_json_schema_enabled', 'needs_json_schema_err_details'
+            Integer('slow_threshold')
+        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
+            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
         output_repeated = True
         default_value = ''
 
@@ -96,10 +99,12 @@ class GetList(AdminService):
 class _Get(AdminService):
 
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'),
-            Integer('usage'), Integer('slow_threshold'), Integer('time_last'),
-            Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time',)
+        input_required = 'cluster_id',
+        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), \
+            Integer('usage'), Integer('slow_threshold'), Integer('time_last'), \
+            Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time'
+        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
+            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
 
     def get_data(self, session):
         query = session.query(Service.id, Service.name, Service.is_active,
@@ -172,21 +177,26 @@ class Edit(AdminService):
         request_elem = 'zato_service_edit_request'
         response_elem = 'zato_service_edit_response'
         input_required = 'id', 'is_active', Integer('slow_threshold')
-        input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details'
-        output_required = 'id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted')
+        input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
+            'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
+        output_optional = 'id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted')
 
     def handle(self):
         input = self.request.input
+
+        # If we have a rate limiting definition, let's check it upfront
+        DefinitionParser.check_definition_from_input(input)
+
         with closing(self.odb.session()) as session:
             try:
-                service = session.query(Service).filter_by(id=input.id).one()
+                service = session.query(Service).filter_by(id=input.id).one() # type: Service
                 service.is_active = input.is_active
                 service.slow_threshold = input.slow_threshold
 
                 set_instance_opaque_attrs(service, input)
 
                 # Configure JSON Schema validation if service has a schema assigned by user.
-                class_info = self.server.service_store.get_service_class_by_id(input.id) # type: dict
+                class_info = self.server.service_store.get_service_info_by_id(input.id) # type: dict
                 class_ = class_info['service_class'] # type: Service
                 if class_.json_schema:
                     self.server.service_store.set_up_class_json_schema(class_, input)
@@ -196,16 +206,15 @@ class Edit(AdminService):
 
                 input.action = SERVICE.EDIT.value
                 input.impl_name = service.impl_name
+                input.name = service.name
                 self.broker_client.publish(input)
 
                 self.response.payload = service
-
                 internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
                 self.response.payload.may_be_deleted = internal_del if service.is_internal else True
 
             except Exception:
-                msg = 'Service could not be updated, e:`{}`'.format(format_exc())
-                self.logger.error(msg)
+                self.logger.error('Service could not be updated, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -225,7 +234,7 @@ class Delete(AdminService):
             try:
                 service = session.query(Service).\
                     filter(Service.id==self.request.input.id).\
-                    one()
+                    one() # type: Service
 
                 internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
 
@@ -238,8 +247,13 @@ class Delete(AdminService):
                 session.delete(service)
                 session.commit()
 
-                msg = {'action': SERVICE.DELETE.value, 'id': self.request.input.id, 'impl_name':service.impl_name,
-                       'is_internal':service.is_internal}
+                msg = {
+                    'action': SERVICE.DELETE.value,
+                    'id': self.request.input.id,
+                    'name':service.name,
+                    'impl_name':service.impl_name,
+                    'is_internal':service.is_internal,
+                }
                 self.broker_client.publish(msg)
 
             except Exception:

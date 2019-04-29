@@ -41,13 +41,14 @@ except ImportError:
     Dumper = Dumper
 
 # Zato
-from zato.common import CHANNEL, DONT_DEPLOY_ATTR_NAME, KVDB, SourceCodeInfo, TRACE1
+from zato.common import CHANNEL, DONT_DEPLOY_ATTR_NAME, KVDB, RATE_LIMIT, SourceCodeInfo, TRACE1
 from zato.common.json_schema import get_service_config, ValidationConfig as JSONSchemaValidationConfig, \
      Validator as JSONSchemaValidator
 from zato.common.match import Matcher
 from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.common.util.json_ import dumps
+from zato.server.config import ConfigDict
 from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service
 from zato.server.service.internal import AdminService
 
@@ -63,6 +64,7 @@ if typing.TYPE_CHECKING:
     from zato.server.base.parallel import ParallelServer
 
     # For pyflakes
+    ConfigDict = ConfigDict
     ODBManager = ODBManager
     ParallelServer = ParallelServer
 
@@ -96,9 +98,9 @@ class InRAMService(object):
     def __init__(self):
         self.cluster_id = None       # type: int
         self.id = None               # type: int
-        self.impl_name = None        # type: text
-        self.name = None             # type: text
-        self.deployment_info = None  # type: text
+        self.impl_name = None        # type: unicode
+        self.name = None             # type: unicode
+        self.deployment_info = None  # type: unicode
         self.service_class = None    # type: object
         self.is_active = None        # type: bool
         self.is_internal = None      # type: bool
@@ -208,8 +210,35 @@ class ServiceStore(object):
         self.id_to_impl_name = {}
         self.impl_name_to_id = {}
         self.name_to_impl_name = {}
+        self.deployment_info = {}  # impl_name to deployment information
         self.update_lock = RLock()
         self.patterns_matcher = Matcher()
+
+# ################################################################################################################################
+
+    def edit_service_data(self, config):
+        # type: (dict)
+
+        # Udpate the ConfigDict object
+        config_dict = self.server.config.service[config.name] # type: ConfigDict
+        config_dict['config'].update(config)
+
+        # Recreate the rate limiting configuration
+        self.set_up_rate_limiting(config.name)
+
+# ################################################################################################################################
+
+    def delete_service_data(self, name):
+        # type: (unicode)
+
+        with self.update_lock:
+            impl_name = self.name_to_impl_name[name]     # type: unicode
+            service_id = self.impl_name_to_id[impl_name] # type: int
+
+            del self.id_to_impl_name[service_id]
+            del self.impl_name_to_id[impl_name]
+            del self.name_to_impl_name[name]
+            del self.services[impl_name]
 
 # ################################################################################################################################
 
@@ -246,6 +275,22 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
+    def set_up_rate_limiting(self, name, class_=None, _exact=RATE_LIMIT.TYPE.EXACT.id, _service=RATE_LIMIT.OBJECT_TYPE.SERVICE):
+        # type: (unicode, Service, unicode, unicode)
+
+        if not class_:
+            service_id = self.get_service_id_by_name(name) # type: int
+            info = self.get_service_info_by_id(service_id) # type: dict
+            class_ = info['service_class'] # type: Service
+
+        # Will set up rate limiting for service if it needs to be done, returning in such a case or False otherwise.
+        is_rate_limit_active = self.server.set_up_object_rate_limiting(_service, name, 'service')
+
+        # Set a flag to signal that this service has rate limiting enabled or not
+        class_._has_rate_limiting = is_rate_limit_active
+
+# ################################################################################################################################
+
     def set_up_class_attributes(self, class_, service_store=None, name=None):
         # type: (Service, ServiceStore, unicode)
         class_.add_http_method_handlers()
@@ -262,7 +307,7 @@ class ServiceStore(object):
         except AttributeError:
             class_.has_sio = False
 
-        # May be None during unit-tests. Not every one will provide it because it's not always needed in a given test.
+        # May be None during unit-tests - not every test provides it.
         if service_store:
 
             # Set up all attributes that do not have to be assigned to each instance separately
@@ -344,7 +389,7 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def get_service_class_by_id(self, service_id):
+    def get_service_info_by_id(self, service_id):
         if not isinstance(service_id, int):
             service_id = int(service_id)
 
@@ -372,7 +417,13 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def get_service_name_by_id(self, service_id):
-        return self.get_service_class_by_id(service_id)['name']
+        return self.get_service_info_by_id(service_id)['name']
+
+# ################################################################################################################################
+
+    def get_deployment_info(self, impl_name):
+        # type: (unicode) -> dict
+        return self.deployment_info[impl_name]
 
 # ################################################################################################################################
 
@@ -582,7 +633,19 @@ class ServiceStore(object):
 
             # Add to ODB all the Service objects from this batch found not to be in ODB already
             if to_add:
-                self.odb.add_services(session, [elem.to_dict() for elem in to_add])
+                elems = [elem.to_dict() for elem in to_add]
+
+                # This saves services in ODB
+                self.odb.add_services(session, elems)
+
+                # Now that we have them, we can look up their IDs ..
+                service_id_list = self.odb.get_service_id_list(session, self.server.cluster_id,
+                    [elem['name'] for elem in elems]) # type: dict
+
+                # .. and add them for later use.
+                for item in service_id_list: # type: dict
+                    self.impl_name_to_id[item.impl_name] = item.id
+
                 any_added = True
 
         return any_added
@@ -627,7 +690,9 @@ class ServiceStore(object):
                 # Metadata about this deployment as a JSON object
                 class_ = service.service_class
                 path = service.source_code_info.path
-                deployment_details = dumps(deployment_info('service-store', str(class_), now_iso, path))
+                deployment_info_dict = deployment_info('service-store', str(class_), now_iso, path)
+                self.deployment_info[service.impl_name] = deployment_info_dict
+                deployment_details = dumps(deployment_info_dict)
 
                 # No such Service object in ODB so we need to store it
                 if service.name not in deployed_services:
@@ -648,28 +713,23 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _store_in_odb(self, to_process):
-        # type: (List[DeploymentInfo]) -> None
+    def _store_in_odb(self, session, to_process):
+        # type: (object, List[DeploymentInfo]) -> None
 
         # Indicates boundaries of deployment batches
         batch_indexes = get_batch_indexes(to_process, self.max_batch_size)
 
-        with closing(self.odb.session()) as session:
+        # Store Service objects first
+        needs_commit = self._store_services_in_odb(session, batch_indexes, to_process)
 
-            # Store Service objects first
-            needs_commit = self._store_services_in_odb(session, batch_indexes, to_process)
-
-            # This flag will be True if there were any services to be added,
-            # in which case we need to commit the sesssion here to make it possible
-            # for the next method to have access to these newly added Service objects.
-            if needs_commit:
-                session.commit()
-
-            # Now DeployedService can be added - they assume that all Service objects all are in ODB already
-            self._store_deployed_services_in_odb(session, batch_indexes, to_process)
-
-            # Done with everything, we can commit it now
+        # This flag will be True if there were any services to be added,
+        # in which case we need to commit the sesssion here to make it possible
+        # for the next method to have access to these newly added Service objects.
+        if needs_commit:
             session.commit()
+
+        # Now DeployedService can be added - they assume that all Service objects all are in ODB already
+        self._store_deployed_services_in_odb(session, batch_indexes, to_process)
 
 # ################################################################################################################################
 
@@ -739,12 +799,47 @@ class ServiceStore(object):
         info.total_size = total_size
         info.total_size_human = naturalsize(info.total_size)
 
-        # Save data to both ODB and RAM now
-        self._store_in_odb(info.to_process)
-        self._store_in_ram(info.to_process)
+        with closing(self.odb.session()) as session:
+
+            # Save data to both ODB and RAM now
+            self._store_in_odb(session, info.to_process)
+            self._store_in_ram(info.to_process)
+
+            # Postprocessing, like rate limiting which needs access to information that becomes
+            # available only after a service is saved to ODB.
+            self.after_import(session, info)
+
+            # Done with everything, we can commit it now
+            session.commit()
 
         # Done deploying, we can return
         return info
+
+# ################################################################################################################################
+
+    def after_import(self, session, info):
+        # type: (DeploymentInfo) -> None
+
+        # Names of all services that have been just deployed ..
+        deployed_service_name_list = [item.name for item in info.to_process]
+
+        # .. out of which we need to substract the ones that the server is already aware of
+        # because they were added to SQL ODB prior to current deployment ..
+        for name in deployed_service_name_list[:]:
+            if name in self.server.config.service:
+                deployed_service_name_list.remove(name)
+
+        # .. and now we know for which services to create ConfigDict objects.
+
+        query = self.odb.get_service_list_with_include(
+            session, self.server.cluster_id, deployed_service_name_list, True) # type: list
+
+        service_list = ConfigDict.from_query('service_list_after_import', query, decrypt_func=self.server.decrypt)
+        self.server.config.service.update(service_list._impl)
+
+        # Rate limiting
+        for item in info.to_process: # type: InRAMService
+            self.set_up_rate_limiting(item.name, item.service_class)
 
 # ################################################################################################################################
 

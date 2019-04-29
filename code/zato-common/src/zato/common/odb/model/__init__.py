@@ -648,6 +648,10 @@ class HTTPSOAP(Base):
         self.match_slash = match_slash # Not used by the DB
         self.http_accept = http_accept # Not used by the DB
         self.opaque1 = opaque
+        self.is_rate_limit_active = None
+        self.rate_limit_type = None
+        self.rate_limit_def = None
+        self.rate_limit_check_parent_def = None
 
 # ################################################################################################################################
 
@@ -2853,5 +2857,33 @@ class GenericConnClient(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(
         Cluster, backref=backref('gen_conn_clients', order_by=last_seen, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class RateLimitState(Base):
+    """ Rate limiting persistent storage for exact definitions.
+    """
+    __tablename__ = 'rate_limit_state'
+    __table_args__ = (
+        UniqueConstraint('object_type', 'object_id', 'period'),
+    {})
+
+    id = Column(Integer(), Sequence('rate_limit_state_seq'), primary_key=True)
+
+    object_type = Column(Text(), nullable=False)
+    object_id = Column(Text(), nullable=False)
+
+    period = Column(Text(), nullable=False)
+    requests = Column(Integer(), nullable=False, server_default='0')
+    last_cid = Column(Text(), nullable=False)
+    last_request_time_utc = Column(DateTime(), nullable=False)
+    last_from = Column(Text(), nullable=False)
+    last_network = Column(Text(), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('rate_limit_state_list', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################

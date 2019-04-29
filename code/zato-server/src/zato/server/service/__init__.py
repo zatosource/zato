@@ -244,6 +244,9 @@ class Service(object):
     _before_job_hooks = []
     _after_job_hooks = []
 
+    # Rate limiting
+    _has_rate_limiting = None
+
     # User management and SSO
     sso = None
 
@@ -483,6 +486,7 @@ class Service(object):
         _call_hook_with_service=call_hook_with_service,
         _call_hook_no_service=call_hook_no_service,
         _CHANNEL_SCHEDULER=CHANNEL.SCHEDULER,
+        _CHANNEL_SERVICE=CHANNEL.SERVICE,
         _pattern_channels=(CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL),
         *args, **kwargs):
 
@@ -516,6 +520,11 @@ class Service(object):
             e, exc_formatted = None, None
 
             try:
+
+                # Check rate limiting first
+                if self._has_rate_limiting:
+                    self.server.rate_limiting.check_limit(self.cid, _CHANNEL_SERVICE, self.name,
+                        self.wsgi_environ['zato.http.remote_addr'])
 
                 if service.server.component_enabled.stats:
                     service.usage = service.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, service.name))

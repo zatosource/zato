@@ -22,7 +22,7 @@ from six import PY2
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import CONNECTION, DATA_FORMAT, MISC, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
+from zato.common import CONNECTION, DATA_FORMAT, MISC, RATE_LIMIT, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
 from zato.common.broker_message import code_to_name, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition, update_apikey_username_to_channel
@@ -612,9 +612,8 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
-        enforce_auth=True):
+        enforce_auth=True, _object_type=RATE_LIMIT.OBJECT_TYPE.SEC_DEF):
         """ Authenticates and authorizes a given request. Returns None on success
-        or raises an exception otherwise.
         """
         if sec.sec_use_rbac:
             return self.check_rbac_delegated_security(
@@ -635,6 +634,9 @@ class URLData(CyURLData, OAuthDataStore):
             if not is_allowed:
                 raise Forbidden(cid, 'You are not allowed to access this URL\n')
 
+        if sec_def.get('is_rate_limit_active'):
+            self.worker.server.rate_limiting.check_limit(cid, _object_type, sec_def.name, wsgi_environ['zato.http.remote_addr'])
+
         self.enrich_with_sec_data(wsgi_environ, sec_def, sec_def_type)
 
         return True
@@ -647,7 +649,8 @@ class URLData(CyURLData, OAuthDataStore):
         the new configuration or, optionally, deletes the URL security definition
         altogether if 'delete' is True.
         """
-        for target_match, url_info in self.url_sec.items():
+        items = list(iteritems(self.url_sec))
+        for target_match, url_info in items:
             sec_def = url_info.sec_def
             if sec_def != ZATO_NONE and sec_def.sec_type == sec_def_type:
                 name = msg.get('old_name') if msg.get('old_name') else msg.get('name')
@@ -1213,6 +1216,10 @@ class URLData(CyURLData, OAuthDataStore):
         channel_item['match_target'] = match_target
         channel_item['match_target_compiled'] = Matcher(channel_item['match_target'], channel_item['match_slash'])
 
+        # For rate limiting
+        for name in('is_rate_limit_active', 'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def'):
+            channel_item[name] = msg.get(name)
+
         return channel_item
 
 # ################################################################################################################################
@@ -1246,11 +1253,16 @@ class URLData(CyURLData, OAuthDataStore):
         Clears out URL cache for that entry, if it existed at all.
         """
         match_target = get_match_target(msg, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
-        self.channel_data.append(self._channel_item_from_msg(msg, match_target, old_data))
+        channel_item = self._channel_item_from_msg(msg, match_target, old_data)
+        self.channel_data.append(channel_item)
         self.url_sec[match_target] = self._sec_info_from_msg(msg)
 
         self._remove_from_cache(match_target)
         self.sort_channel_data()
+
+        # Set up rate limiting
+        self.worker.server.set_up_object_rate_limiting(
+            RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, channel_item['name'], config=channel_item)
 
 # ################################################################################################################################
 
@@ -1285,6 +1297,9 @@ class URLData(CyURLData, OAuthDataStore):
 
         # Re-sort all elements to match against
         self.sort_channel_data()
+
+        # Delete rate limiting configuration
+        self.worker.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP, msg.name)
 
         return old_data
 

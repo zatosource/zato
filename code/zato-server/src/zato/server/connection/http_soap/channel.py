@@ -12,7 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from gzip import GzipFile
 from hashlib import sha256
-from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
+from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, TOO_MANY_REQUESTS, \
+     UNAUTHORIZED
 from io import StringIO
 from traceback import format_exc
 
@@ -33,9 +34,10 @@ from six import PY3
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, HTTP_SOAP, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
+from zato.common import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_RESPONSES, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
+from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.util import payload_from_request
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
@@ -47,9 +49,11 @@ from zato.server.service.internal import AdminService
 import typing
 
 if typing.TYPE_CHECKING:
+    from zato.server.base.parallel import ParallelServer
     from zato.server.connection.http_soap.url_data import URLData
 
     # For pyflakes
+    ParallelServer = ParallelServer
     URLData = URLData
 
 # ################################################################################################################################
@@ -175,10 +179,11 @@ class _HashCtx(object):
 class RequestDispatcher(object):
     """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
     """
-    def __init__(self, url_data=None, security=None, request_handler=None, simple_io_config=None, return_tracebacks=None,
-            default_error_message=None, http_methods_allowed=None):
-        # type: (URLData, object, object, dict, bool, unicode, list)
+    def __init__(self, server=None, url_data=None, security=None, request_handler=None, simple_io_config=None,
+            return_tracebacks=None, default_error_message=None, http_methods_allowed=None):
+        # type: (ParallelServer, URLData, object, object, dict, bool, unicode, list)
 
+        self.server = server
         self.url_data = url_data
         self.security = security
 
@@ -219,7 +224,7 @@ class RequestDispatcher(object):
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
-        _accept_any_internal=accept_any_internal):
+        _accept_any_internal=accept_any_internal, _rate_limit_type=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -267,7 +272,7 @@ class RequestDispatcher(object):
                     logger.warn('url_data:`%s` is not active, raising NotFound', sorted(url_match.items()))
                     raise NotFound(cid, 'Channel inactive')
 
-                # Need to read security info here so we know if POST needs to be
+                # We need to read security info here so we know if POST needs to be
                 # parsed. If so, we do it here and reuse it in other places
                 # so it doesn't have to be parsed two or more times.
                 post_data = {}
@@ -291,6 +296,14 @@ class RequestDispatcher(object):
                     # Will raise an exception on any security violation
                     self.url_data.check_security(
                         sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
+
+                # Check rate limiting now - this could not have been done earlier because we wanted
+                # for security checks to be made first. Otherwise, someone would be able to invoke
+                # our endpoint without credentials as many times as it is needed to exhaust the rate limit
+                # denying in this manner access to genuine users.
+                if channel_item.get('is_rate_limit_active'):
+                    self.server.rate_limiting.check_limit(
+                        cid, _rate_limit_type, channel_item['name'], wsgi_environ['zato.http.remote_addr'])
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
@@ -348,11 +361,17 @@ class RequestDispatcher(object):
 
                 else:
 
+                    # JSON Schema validation
                     if isinstance(e, JSONSchemaValidationException):
                         status_code = _status_bad_request
                         needs_prefix = False if e.needs_err_details else True
                         response = JSONSchemaDictError(
                             cid, e.needs_err_details, e.error_msg, needs_prefix=needs_prefix).serialize(True)
+
+                    # Rate limiting and whitelisting
+                    if isinstance(e, RateLimitingException):
+                        response, status_code, status = self._on_rate_limiting_exception(cid, e, channel_item)
+
                     else:
                         status_code = INTERNAL_SERVER_ERROR
                         response = _format_exc if self.return_tracebacks else self.default_error_message
@@ -379,12 +398,29 @@ class RequestDispatcher(object):
 
         # This is 404, no such URL path and SOAP action is not known either.
         else:
-            response = _response_404.format(path_info.encode('utf8'),
+            response = _response_404.format(path_info,
                 wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
             wsgi_environ['zato.http.response.status'] = _status_not_found
 
             logger.error(response)
             return response
+
+# ################################################################################################################################
+
+    def _on_rate_limiting_exception(self, cid, e, channel_item, _json=DATA_FORMAT.JSON, _json_rpc=JSON_RPC.PREFIX.CHANNEL):
+        # type: (unicode, RateLimitingException, dict, unicode, unicode) -> (unicode, int, unicode)
+
+        if isinstance(e, RateLimitReached):
+            status_code = TOO_MANY_REQUESTS
+            status = _status_too_many_requests
+
+        elif isinstance(e, AddressNotAllowed):
+            status_code = FORBIDDEN
+            status = _status_forbidden
+
+        error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'] or _json)
+
+        return error_wrapper(cid, 'Error {}'.format(status)), status_code, status
 
 # ################################################################################################################################
 

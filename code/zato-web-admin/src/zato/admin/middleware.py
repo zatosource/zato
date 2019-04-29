@@ -24,7 +24,7 @@ from zato.admin.web.forms import SearchForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import get_user_profile
 from zato.client import AnyServiceInvoker
-from zato.common import version
+from zato.common import get_version
 from zato.common.odb.model import Cluster
 
 # New in 2.0.8 thus optional
@@ -33,6 +33,9 @@ try:
 except ImportError:
     lb_use_tls = False
     lb_tls_verify = True
+
+# Zato version
+version = get_version()
 
 # Code below is taken from http://djangosnippets.org/snippets/136/
 # Slightly modified for Zato's purposes.

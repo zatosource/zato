@@ -1044,6 +1044,11 @@ def parse_extra_into_dict(lines, convert_bool=True):
         for line in extra.split(';'):
             original_line = line
             if line:
+
+                line = line.strip()
+                if line.startswith('#'):
+                    continue
+
                 line = line.split('=', 1)
                 if not len(line) == 2:
                     raise ValueError('Each line must be a single key=value entry, not `{}`'.format(original_line))

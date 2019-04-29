@@ -44,6 +44,7 @@ from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
 from zato.common.zato_keyutils import KeyUtils
 from zato.common.pubsub import SkipDelivery
+from zato.common.rate_limiting import RateLimiting
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, \
      register_diag_handlers
@@ -95,7 +96,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.crypto_manager = None
         self.odb = None # type: ODBManager
         self.odb_data = None
-        self.config = None
+        self.config = None # type: ConfigStore
         self.repo_location = None
         self.user_conf_location = None
         self.sql_pool_store = None
@@ -119,12 +120,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.sio_config = None
         self.sso_config = None
         self.connector_server_grace_time = None
-        self.id = None
-        self.name = None
-        self.worker_id = None
-        self.worker_pid = None
+        self.id = None # type: int
+        self.name = None # type: unicode
+        self.worker_id = None # type: int
+        self.worker_pid = None # type: int
         self.cluster = None
-        self.cluster_id = None
+        self.cluster_id = None # type: int
         self.kvdb = None
         self.startup_jobs = None
         self.worker_store = None # type: WorkerStore
@@ -138,19 +139,19 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.static_config = None
         self.component_enabled = Bunch()
         self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
-        self.broker_client = None
-        self.return_tracebacks = None
-        self.default_error_message = None
-        self.time_util = None
-        self.preferred_address = None
-        self.crypto_use_tls = None
-        self.servers = None
-        self.zato_lock_manager = None
-        self.pid = None
-        self.sync_internal = None
+        self.broker_client = None # type: BrokerClient
+        self.return_tracebacks = None # type: bool
+        self.default_error_message = None # type: unicode
+        self.time_util = None # type: TimeUtil
+        self.preferred_address = None # type: unicode
+        self.crypto_use_tls = None # type: bool
+        self.servers = None # type: Servers
+        self.zato_lock_manager = None # type: LockManager
+        self.pid = None # type: int
+        self.sync_internal = None # type: bool
         self.ipc_api = IPCAPI()
-        self.fifo_response_buffer_size = None # Will be in megabytes
-        self.is_first_worker = None
+        self.fifo_response_buffer_size = None # type: int # Will be in megabytes
+        self.is_first_worker = None # type: bool
         self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
         self.connector_config_ipc = ConnectorConfigIPC()
@@ -161,6 +162,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.has_fg = False
         self.startup_callable_tool = None
         self.default_internal_pubsub_endpoint_id = None
+        self.rate_limiting = None # type: RateLimiting
         self._hash_secret_method = None
         self._hash_secret_rounds = None
         self._hash_secret_salt_size = None
@@ -516,6 +518,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Finally, assign it to ServiceStore
         self.service_store.max_batch_size = max_batch_size
+
+        # Rate limiting
+        self.rate_limiting = RateLimiting()
+        self.rate_limiting.cluster_id = self.cluster_id
+        self.rate_limiting.global_lock_func = self.zato_lock_manager
+        self.rate_limiting.sql_session_func = self.odb.session
+
+        # Set up rate limiting other than services. the latter are configured in ServiceStore
+        self.set_up_rate_limiting()
 
         # Deploys services
         is_first, locally_deployed = self._after_init_common(server)

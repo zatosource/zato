@@ -15,7 +15,7 @@ from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import SECRETS
+from zato.common import RATE_LIMIT, SECRETS
 from zato.common.util import asbool
 from zato.common.util.sql import elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
@@ -315,8 +315,8 @@ class ConfigLoader(object):
         query = self.odb.get_xpath_sec_list(server.cluster.id, True)
         self.config.xpath_sec = ConfigDict.from_query('xpath_sec', query, decrypt_func=self.decrypt)
 
-        # New in 3.0 - encrypt all old secrets
-        self._migrate_30_encrypt_secrets()
+        # Encrypt all secrets
+        self._encrypt_secrets()
 
         #
         # Security - end
@@ -405,42 +405,77 @@ class ConfigLoader(object):
 
 # ################################################################################################################################
 
-    def _migrate_30_encrypt_secrets(self):
-        """ New in 3.0 - all passwords are always encrypted so we need to look up any that are not,
-        for instance, because it is a cluster newly migrated from 2.0 to 3.0, and encrypt them now in ODB.
-        """
-        sec_config_dict_types = ('apikey', 'aws', 'basic_auth', 'jwt', 'ntlm', 'oauth', 'openstack_security',
-            'tls_key_cert', 'wss', 'vault_conn_sec', 'xpath_sec')
+    def delete_object_rate_limiting(self, object_type, object_name):
+        if self.rate_limiting.has_config(object_type, object_name):
+            self.rate_limiting.delete(object_type, object_name)
 
-        # Global lock to make sure only one server attempts to do it at a time
-        with self.zato_lock_manager('migrate_30_encrypt_secrets'):
+# ################################################################################################################################
 
-            # An SQL session shared by all updates
-            with closing(self.odb.session()) as session:
+    def set_up_rate_limiting(self, _config_store=('apikey', 'basic_auth', 'jwt'), _sec_def=RATE_LIMIT.OBJECT_TYPE.SEC_DEF,
+        _http_soap=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP):
 
-                # Iterate over all security definitions
-                for sec_config_dict_type in sec_config_dict_types:
-                    config_dicts = getattr(self.config, sec_config_dict_type)
-                    for config in config_dicts.values():
-                        config = config['config']
+        for config_store_name in _config_store:
+            config_dict = self.config[config_store_name] # type: ConfigDict
+            for object_name in config_dict: # type: unicode
+                self.set_up_object_rate_limiting(_sec_def, object_name, config_store_name)
 
-                        # Continue to encryption only if needed and not already encrypted
-                        if config.get('_encryption_needed'):
-                            if not config['_encrypted_in_odb']:
-                                odb_func = getattr(self.odb, '_migrate_30_encrypt_sec_{}'.format(sec_config_dict_type))
+        for item in self.config['http_soap']: # type: dict
+            # Do not try to set up rate limiting if we know there is no configuration for it available
+            if 'is_rate_limit_active':
+                self.set_up_object_rate_limiting(_http_soap, item['name'], config=item)
 
-                                # Encrypt all params that are applicable
-                                for secret_param in SECRETS.PARAMS:
-                                    if secret_param in config:
-                                        encrypted = self.encrypt(config[secret_param])
-                                        odb_func(session, config['id'], secret_param, encrypted)
+# ################################################################################################################################
 
-                        # Clean up config afterwards
-                        config.pop('_encryption_needed', None)
-                        config.pop('_encrypted_in_odb', None)
+    def set_up_object_rate_limiting(self, object_type, object_name, config_store_name=None, config=None,
+        _exact=RATE_LIMIT.TYPE.EXACT.id):
+        # type: (unicode, unicode, unicode, dict) -> bool
 
-                # Commit to SQL now that all updates are made
-                session.commit()
+        if not config:
+            config = self.config[config_store_name].get(object_name) # type: ConfigDict
+            config = config['config'] # type: dict
+
+        is_rate_limit_active = config.get('is_rate_limit_active') or False # type: bool
+
+        if is_rate_limit_active:
+
+            # This is reusable no matter if it is edit or create action
+            rate_limit_def = config['rate_limit_def']
+            is_exact = config['rate_limit_type'] == _exact
+
+            # Base dict that will be used as is, if we are to create the rate limiting configuration,
+            # or it will be updated with existing configuration, if it already exists.
+            rate_limit_config = {
+                'id': '{}.{}'.format(object_type, config['id']),
+                'is_active': is_rate_limit_active,
+                'type_': object_type,
+                'name': object_name,
+                'parent_type': None,
+                'parent_name': None,
+            }
+
+            # Do we have such configuration already?
+            existing_config = self.rate_limiting.get_config(object_type, object_name)
+
+            # .. if yes, we will be updating it
+            if existing_config:
+                rate_limit_config['parent_type'] = existing_config.parent_type
+                rate_limit_config['parent_name'] = existing_config.parent_name
+
+                self.rate_limiting.edit(object_type, object_name, rate_limit_config, rate_limit_def, is_exact)
+
+            # .. otherwise, we will be creating a new one
+            else:
+                self.rate_limiting.create(rate_limit_config, rate_limit_def, is_exact)
+
+        # We are not to have any rate limits, but it is possible that previously we were required to,
+        # in which case this needs to be cleaned up.
+        else:
+            existing_config = self.rate_limiting.get_config(object_type, object_name)
+            if existing_config:
+                object_info = existing_config.object_info
+                self.rate_limiting.delete(object_info.type_, object_info.name)
+
+        return is_rate_limit_active
 
 # ################################################################################################################################
 
@@ -501,6 +536,45 @@ class ConfigLoader(object):
         odb_data.is_active = True
 
         return odb_data
+
+# ################################################################################################################################
+
+    def _encrypt_secrets(self):
+        """ All passwords are always encrypted so we need to look up any that are not,
+        for instance, because it is a cluster newly migrated from 2.0 to 3.0, and encrypt them now in ODB.
+        """
+        sec_config_dict_types = ('apikey', 'aws', 'basic_auth', 'jwt', 'ntlm', 'oauth', 'openstack_security',
+            'tls_key_cert', 'wss', 'vault_conn_sec', 'xpath_sec')
+
+        # Global lock to make sure only one server attempts to do it at a time
+        with self.zato_lock_manager('zato_encrypt_secrets'):
+
+            # An SQL session shared by all updates
+            with closing(self.odb.session()) as session:
+
+                # Iterate over all security definitions
+                for sec_config_dict_type in sec_config_dict_types:
+                    config_dicts = getattr(self.config, sec_config_dict_type)
+                    for config in config_dicts.values():
+                        config = config['config']
+
+                        # Continue to encryption only if needed and not already encrypted
+                        if config.get('_encryption_needed'):
+                            if not config['_encrypted_in_odb']:
+                                odb_func = getattr(self.odb, '_migrate_30_encrypt_sec_{}'.format(sec_config_dict_type))
+
+                                # Encrypt all params that are applicable
+                                for secret_param in SECRETS.PARAMS:
+                                    if secret_param in config:
+                                        encrypted = self.encrypt(config[secret_param])
+                                        odb_func(session, config['id'], secret_param, encrypted)
+
+                        # Clean up config afterwards
+                        config.pop('_encryption_needed', None)
+                        config.pop('_encrypted_in_odb', None)
+
+                # Commit to SQL now that all updates are made
+                session.commit()
 
 # ################################################################################################################################
 
