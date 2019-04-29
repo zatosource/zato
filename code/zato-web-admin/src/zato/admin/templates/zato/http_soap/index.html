@@ -104,6 +104,14 @@
                 '_reload_wsdl',
               {% endifequal %}
             {% endifequal %}
+
+            {% ifequal connection 'channel' %}
+                'is_rate_limit_active',
+                'rate_limit_type',
+                'rate_limit_def',
+                'rate_limit_check_parent_def',
+            {% endifequal %}
+
         ]
     }
     </script>
@@ -222,6 +230,14 @@
                             <th>&nbsp;</th> {% comment %} _reload_wsdl {% endcomment %}
                           {% endifequal %}
                         {% endifequal %}
+
+                        {% ifequal connection 'channel' %}
+                            <th class='ignore'>&nbsp;</th>
+                            <th class='ignore'>&nbsp;</th>
+                            <th class='ignore'>&nbsp;</th>
+                            <th class='ignore'>&nbsp;</th>
+                        {% endifequal %}
+
                 </thead>
 
                 <tbody>
@@ -328,6 +344,14 @@
                             <td>{% ifequal item.serialization_type 'suds' %}<a href="javascript:$.fn.zato.http_soap.reload_wsdl('{{ item.id }}')">Reload WSDL</a>{% endifequal %}</td>
                           {% endifequal %}
                         {% endifequal %}
+
+                        {% ifequal connection 'channel' %}
+                            <td class='ignore'>{{ item.is_rate_limit_active }}</td>
+                            <td class='ignore'>{{ item.rate_limit_type }}</td>
+                            <td class='ignore'>{{ item.rate_limit_def }}</td>
+                            <td class='ignore'>{{ item.rate_limit_check_parent_def }}</td>
+                        {% endifequal %}
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -503,6 +527,9 @@
                                 {{ create_form.http_accept }}
                             </td>
                         </tr>
+
+                        {% include "zato/include/rate-limiting/create.html" %}
+
                         {% endifequal %}
 
                         {% ifequal connection 'outgoing' %}
@@ -689,7 +716,9 @@
                                 {{ edit_form.http_accept }}
                             </td>
                         </tr>
-                        </tr>
+
+                        {% include "zato/include/rate-limiting/edit.html" %}
+
                         {% endifequal %}
 
                         {% ifequal connection 'outgoing' %}

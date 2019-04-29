@@ -12,14 +12,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_security_select
+from zato.admin.web.forms import add_security_select, WithRateLimiting
 
-class CreateForm(forms.Form):
+class CreateForm(WithRateLimiting):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     url_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     security_id = forms.ChoiceField(widget=forms.Select())
     service_whitelist = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:100px'}))
+    is_rate_limit_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    rate_limit_check_parent_def = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     def __init__(self, security_list=[], prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
@@ -27,3 +29,4 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    rate_limit_check_parent_def = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))

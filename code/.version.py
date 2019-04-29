@@ -22,13 +22,19 @@ curdir = os.path.dirname(os.path.abspath(_file))
 release_info_dir = os.path.join(curdir, 'release-info')
 git_repo_dir = os.path.join(release_info_dir, '..')
 
+#
 # This is Zato version information
+#
 release = open(os.path.join(release_info_dir, 'release.json')).read()
 release = json.loads(release)
 
+#
+# This is last git commit ID.
+#
 # Make sure to use -C to specify the git directory instead of navigating to it directly;
 # the latter may result in spurious pip errors, such as:
 # "error in zato-agent setup command: Distribution contains no modules or packages for namespace package 'zato'"
+#
 revision = sh.git('-C', release_info_dir, 'rev-parse', '--short', 'HEAD').strip()
 
 version = '{}.{}+rev.{}'.format(release['major'], release['minor'], revision)

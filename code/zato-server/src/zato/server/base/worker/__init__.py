@@ -50,7 +50,7 @@ from six import PY3
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
 from zato.common import broker_message, CHANNEL, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, \
-     PUBSUB, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
@@ -336,9 +336,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_sftp()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
-        self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io,
+        self.request_dispatcher = RequestDispatcher(self.server, simple_io_config=self.worker_config.simple_io,
             return_tracebacks=self.server.return_tracebacks, default_error_message=self.server.default_error_message,
             http_methods_allowed=self.server.http_methods_allowed)
+
         self.request_dispatcher.url_data = URLData(
             self, self.worker_config.http_soap,
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
@@ -1071,12 +1072,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY,
                 self._visit_wrapper_edit, keys=('username', 'name'))
+        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'apikey')
 
     def on_broker_msg_SECURITY_APIKEY_DELETE(self, msg, *args):
         """ Deletes an API key security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY,
                 self._visit_wrapper_delete)
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
     def on_broker_msg_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an API key security definition.
@@ -1199,12 +1202,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
                 self._visit_wrapper_edit, keys=('username', 'name'))
+        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'basic_auth')
 
     def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
                 self._visit_wrapper_delete)
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
@@ -1246,12 +1251,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
                 self._visit_wrapper_edit, keys=('username', 'name'))
+        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'jwt')
 
     def on_broker_msg_SECURITY_JWT_DELETE(self, msg, *args):
         """ Deletes a JWT security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
                 self._visit_wrapper_delete)
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
     def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of a JWT security definition.
@@ -1705,15 +1712,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Delete the service from RBAC resources
         self.rbac.delete_resource(msg.id)
 
-        # Module this service is in so it can be removed from sys.modules
-        mod = inspect.getmodule(self.server.service_store.services[msg.impl_name]['service_class'])
-
         # Where to delete it from in the second step
-        deployment_info = loads(self.server.service_store.services[msg.impl_name]['deployment_info'])
+        deployment_info = self.server.service_store.get_deployment_info(msg.impl_name)
         fs_location = deployment_info['fs_location']
 
         # Delete it from the service store
-        del self.server.service_store.services[msg.impl_name]
+        self.server.service_store.delete_service_data(msg.name)
+
+        # Remove rate limiting configuration
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SERVICE, msg.name)
 
         # Delete it from the filesystem, including any bytecode left over. Note that
         # other parallel servers may wish to do exactly the same so we just ignore
@@ -1730,12 +1737,22 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                     if e.errno != ENOENT:
                         raise
 
-        # Makes it actually gets reimported next time it's redeployed
-        del sys.modules[mod.__name__]
+        # It is possible that this module was already deleted from sys.modules
+        # in case there was more than one service in it and we first deleted
+        # one and then the other.
+        try:
+            service_info = self.server.service_store.services[msg.impl_name]
+        except KeyError:
+            return
+        else:
+            mod = inspect.getmodule(service_info['service_class'])
+            del sys.modules[mod.__name__]
 
     def on_broker_msg_SERVICE_EDIT(self, msg, *args):
-        for name in('is_active', 'slow_threshold'):
-            self.server.service_store.services[msg.impl_name][name] = msg[name]
+        # type: (dict)
+        del msg['action']
+        del msg['msg_type']
+        self.server.service_store.edit_service_data(msg)
 
 # ################################################################################################################################
 

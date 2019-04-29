@@ -179,7 +179,8 @@ class Index(_Index):
         input_required = 'cluster_id',
         input_optional = 'query',
         output_required = 'id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage', 'slow_threshold'
-        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details'
+        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
+            'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
         output_repeated = True
 
     def handle(self):
@@ -204,7 +205,8 @@ class Edit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'id', 'is_active', 'slow_threshold'
-        input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details'
+        input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
+            'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
         output_required = 'id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted'
 
     def success_message(self, item):
@@ -396,7 +398,7 @@ def request_response_configure(req, service_name, cluster_id):
 
 class Delete(_Delete):
     url_name = 'service-delete'
-    error_message = 'Could not delete the service'
+    error_message = 'Service could not be deleted'
     service_name = 'zato.service.delete'
 
 # ################################################################################################################################

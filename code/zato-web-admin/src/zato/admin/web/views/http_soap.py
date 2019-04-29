@@ -89,6 +89,10 @@ def _get_edit_create_message(params, prefix=''):
         'cache_id': params.get(prefix + 'cache_id'),
         'cache_expiry': params.get(prefix + 'cache_expiry'),
         'content_encoding': params.get(prefix + 'content_encoding'),
+        'is_rate_limit_active': params.get(prefix + 'is_rate_limit_active'),
+        'rate_limit_type': params.get(prefix + 'rate_limit_type'),
+        'rate_limit_def': params.get(prefix + 'rate_limit_def'),
+        'rate_limit_check_parent_def': params.get(prefix + 'rate_limit_check_parent_def'),
     }
 
 def _edit_create_response(req, id, verb, transport, connection, name):
@@ -207,7 +211,7 @@ def index(req):
             # New in 3.1
             http_accept = item.get('http_accept') or ''
 
-            item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection,
+            http_soap = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection,
                     transport, item.host, item.url_path, item.method, item.soap_action,
                     item.soap_version, item.data_format, item.ping_method,
                     item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri,
@@ -216,7 +220,11 @@ def index(req):
                     security_name=security_name, content_type=item.content_type,
                     cache_id=item.cache_id, cache_name=cache_name, cache_type=item.cache_type, cache_expiry=item.cache_expiry,
                     content_encoding=item.content_encoding, match_slash=match_slash, http_accept=http_accept)
-            items.append(item)
+
+            for name in 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def':
+                setattr(http_soap, name, item.get(name))
+
+            items.append(http_soap)
 
     return_data = {'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,

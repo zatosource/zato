@@ -15,7 +15,7 @@ from django import forms
 from future.utils import iteritems
 
 # Zato
-from zato.common import DELEGATED_TO_RBAC, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common import DELEGATED_TO_RBAC, RATE_LIMIT, SIMPLE_IO, TLS, ZATO_NONE, ZATO_SEC_USE_RBAC
 
 # ################################################################################################################################
 
@@ -255,6 +255,19 @@ class WithTLSForm(forms.Form):
 class WithJSONSchema(forms.Form):
     is_json_schema_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     needs_json_schema_err_details = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class WithRateLimiting(forms.Form):
+    rate_limit_type = forms.ChoiceField(widget=forms.Select(), initial=RATE_LIMIT.TYPE.APPROXIMATE)
+    rate_limit_def = forms.CharField(widget=forms.Textarea(
+        attrs={'style':'overflow:auto; width:100%; white-space: pre-wrap;height:100px'}))
+
+    def __init__(self, *args, **kwargs):
+        super(WithRateLimiting, self).__init__(*args, **kwargs)
+
+        add_select(self, 'rate_limit_type', RATE_LIMIT.TYPE(), needs_initial_select=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
