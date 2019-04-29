@@ -27,7 +27,6 @@ from socket import gethostname
 import sqlalchemy
 
 # Zato
-from zato import common
 from zato.cli import util as cli_util
 from zato.common import get_version, odb, util, ZATO_INFO_FILE
 from zato.common.util import get_engine_url, get_full_stack, get_session
