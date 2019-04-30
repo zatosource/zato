@@ -20,11 +20,17 @@ from unittest import TestCase
 # Bunch
 from bunch import bunchify
 
+# dateutil
+from dateutil.parser import parse as dt_parse
+
 # sh
 import sh
 
 # requests
 import requests
+
+# Zato
+from zato.sso import const, status_code
 
 # ################################################################################################################################
 
@@ -39,7 +45,7 @@ super_user_name = 'admin1'
 super_user_password = 'hQ9nl93UDqGus'
 
 username_prefix = 'test.{}+{}'
-password_prefix = 'pwd.{}+{}'
+random_prefix = 'rand.{}+{}'
 
 server_location = os.path.expanduser('~/env/z31sqlite/server1')
 server_address  = 'http://localhost:17010{}'
@@ -108,8 +114,8 @@ class BaseTest(TestCase):
 
 # ################################################################################################################################
 
-    def _get_random_password(self):
-        return self._get_random(password_prefix)
+    def _get_random_data(self):
+        return self._get_random(random_prefix)
 
 # ################################################################################################################################
 
@@ -124,6 +130,9 @@ class BaseTest(TestCase):
 
         data = loads(response.text)
         return bunchify(data)
+
+    def get(self, url_path, request):
+        return self._invoke(requests.get, 'GET', url_path, request)
 
     def post(self, url_path, request):
         return self._invoke(requests.post, 'POST', url_path, request)
@@ -143,6 +152,31 @@ class BaseTest(TestCase):
         response = self.post(url_path, request)
 
         self.ctx.super_user_ust = response.ust
+
+# ################################################################################################################################
+
+    def _assert_default_user_data(self, response, now):
+
+        self.assertEquals(response.approval_status, const.approval_status.before_decision)
+        self.assertEquals(response.sign_up_status, const.signup_status.final)
+
+        self.assertTrue(response.is_active)
+        self.assertTrue(response.password_is_set)
+
+        self.assertTrue(response.user_id.startswith('zusr'))
+        self.assertTrue(response.username.startswith('test.'))
+
+        self.assertFalse(response.is_internal)
+        self.assertFalse(response.is_locked)
+        self.assertFalse(response.is_super_user)
+        self.assertFalse(response.password_must_change)
+
+        self.assertIsNotNone(response.approval_status_mod_by)
+
+        self.assertLess(now, dt_parse(response.approval_status_mod_time))
+        self.assertLess(now, dt_parse(response.password_last_set))
+        self.assertLess(now, dt_parse(response.sign_up_time))
+        self.assertLess(now, dt_parse(response.password_expiry))
 
 # ################################################################################################################################
 # ################################################################################################################################
