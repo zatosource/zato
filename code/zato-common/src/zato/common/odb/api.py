@@ -704,21 +704,19 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_basic_data_service_list(self):
+    def get_basic_data_service_list(self, session):
         """ Returns basic information about all the services in ODB.
         """
-        with closing(self.session()) as session:
+        query = select([
+            ServiceTable.c.id,
+            ServiceTable.c.name,
+            ServiceTable.c.impl_name,
+        ]).where(
+            ServiceTable.c.cluster_id==self.cluster_id
+        )
 
-            query = select([
-                ServiceTable.c.id,
-                ServiceTable.c.name,
-                ServiceTable.c.impl_name,
-            ]).where(
-                ServiceTable.c.cluster_id==self.cluster_id
-            )
-
-            return session.execute(query).\
-                fetchall()
+        return session.execute(query).\
+            fetchall()
 
 # ################################################################################################################################
 

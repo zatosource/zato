@@ -574,7 +574,7 @@ class ServiceStore(object):
                 class_ = self._visit_class(item['mod'], item['service_class'], item['fs_location'], True)
                 to_process.append(class_)
 
-            self._store_in_ram(to_process)
+            self._store_in_ram(None, to_process)
 
             logger.info('Deployed %d cached internal services (%s)', len_si, self.server.name)
 
@@ -582,11 +582,20 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def _store_in_ram(self, to_process):
-        # type: (List[DeploymentInfo]) -> None
+    def _store_in_ram(self, session, to_process):
+        # type: (object, List[DeploymentInfo]) -> None
 
         # We need to look up all the services in ODB to be able to find their IDs
-        services = self.get_basic_data_services()
+        if session:
+            needs_new_session = False
+        else:
+            needs_new_session = True
+            session = self.odb.session()
+        try:
+            services = self.get_basic_data_services(session)
+        finally:
+            if needs_new_session and session:
+                session.close()
 
         with self.update_lock:
             for item in to_process: # type: InRAMService
@@ -617,7 +626,7 @@ class ServiceStore(object):
         any_added = False
 
         # Get all services already deployed in ODB for comparisons (Service)
-        services = self.get_basic_data_services()
+        services = self.get_basic_data_services(session)
 
         # Add any missing Service objects from each batch delineated by indexes found
         for start_idx, end_idx in batch_indexes:
@@ -662,7 +671,7 @@ class ServiceStore(object):
         # Get all services already deployed in ODB for comparisons (Service) - it is needed to do it again,
         # in addition to _store_deployed_services_in_odb, because that other method may have added
         # DB-level IDs that we need with our own objects.
-        services = self.get_basic_data_services()
+        services = self.get_basic_data_services(session)
 
         # Same goes for deployed services objects (DeployedService)
         deployed_services = self.get_basic_data_deployed_services()
@@ -733,14 +742,14 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
-    def get_basic_data_services(self):
-        # type: (None) -> dict
+    def get_basic_data_services(self, session):
+        # type: (object) -> dict
 
         # We will return service keyed by their names
         out = {}
 
         # This is a list of services to turn into a dict
-        service_list = self.odb.get_basic_data_service_list()
+        service_list = self.odb.get_basic_data_service_list(session)
 
         for service_id, name, impl_name in service_list: # type: name, name
             out[name] = {'id': service_id, 'impl_name': impl_name}
@@ -803,7 +812,7 @@ class ServiceStore(object):
 
             # Save data to both ODB and RAM now
             self._store_in_odb(session, info.to_process)
-            self._store_in_ram(info.to_process)
+            self._store_in_ram(session, info.to_process)
 
             # Postprocessing, like rate limiting which needs access to information that becomes
             # available only after a service is saved to ODB.
