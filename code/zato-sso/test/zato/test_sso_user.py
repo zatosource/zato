@@ -21,11 +21,17 @@ from unittest import TestCase, main
 # Bunch
 from bunch import bunchify
 
+# dateutil
+from dateutil.parser import parse as dt_parse
+
 # sh
 import sh
 
 # requests
 import requests
+
+# Zato
+from zato.sso import const, status_code
 
 # ################################################################################################################################
 
@@ -137,6 +143,8 @@ class BaseClass(TestCase):
 class UserCreateTestCase(BaseClass):
 
     def test_default_values(self):
+
+        now = datetime.utcnow()
         username = self._get_random_username()
 
         request = {
@@ -146,6 +154,30 @@ class UserCreateTestCase(BaseClass):
         }
 
         response = self.post('/zato/sso/user', request)
+
+        self.assertEquals(response.status, status_code.ok)
+        self.assertEquals(response.approval_status, const.approval_status.before_decision)
+        self.assertEquals(response.sign_up_status, const.signup_status.final)
+
+        self.assertTrue(response.is_active)
+        self.assertTrue(response.is_approval_needed)
+        self.assertTrue(response.password_is_set)
+
+        self.assertTrue(response.user_id.startswith('zusr'))
+        self.assertTrue(response.username.startswith('test.'))
+
+        self.assertFalse(response.is_internal)
+        self.assertFalse(response.is_locked)
+        self.assertFalse(response.is_super_user)
+        self.assertFalse(response.password_must_change)
+
+        self.assertIsNotNone(response.get('approval_status_mod_by'))
+        self.assertIsNotNone(response.get('cid'))
+
+        self.assertLess(now, dt_parse(response.approval_status_mod_time))
+        self.assertLess(now, dt_parse(response.password_last_set))
+        self.assertLess(now, dt_parse(response.sign_up_time))
+        self.assertLess(now, dt_parse(response.password_expiry))
 
 # ################################################################################################################################
 # ################################################################################################################################
