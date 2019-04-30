@@ -298,7 +298,7 @@ class UserAPI(object):
 
         user_model.sign_up_status = ctx.data.get('sign_up_status')
         user_model.sign_up_time = now
-        user_model.sign_up_confirm_token = ctx.data['sign_up_confirm_token']
+        user_model.sign_up_confirm_token = new_confirm_token()
 
         user_model.approval_status = ctx.data['approval_status']
         user_model.approval_status_mod_time = now
@@ -326,14 +326,14 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _create_user(self, ctx, is_super_user, ust=None, current_app=None, remote_addr=None, require_super_user=True,
+    def _create_user(self, ctx, cid, is_super_user, ust=None, current_app=None, remote_addr=None, require_super_user=True,
         auto_approve=False):
         """ Creates a new regular or super-user out of initial user data.
         """
         with closing(self.odb_session_func()) as session:
 
             if require_super_user:
-                current_session = self._require_super_user(ust, current_app, remote_addr)
+                current_session = self._require_super_user(cid, ust, current_app, remote_addr)
                 current_user = current_session.user_id
             else:
                 current_user = 'auto'
@@ -408,7 +408,7 @@ class UserAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'user.create_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._create_user(CreateUserCtx(data), False, ust, current_app, remote_addr, require_super_user, auto_approve)
+        return self._create_user(CreateUserCtx(data), cid, False, ust, current_app, remote_addr, require_super_user, auto_approve)
 
 # ################################################################################################################################
 
@@ -422,7 +422,7 @@ class UserAPI(object):
         # Super-users don't need to confirmation their own creation
         data['sign_up_status'] = const.signup_status.final
 
-        return self._create_user(CreateUserCtx(data), True, ust, current_app, remote_addr, require_super_user, auto_approve)
+        return self._create_user(CreateUserCtx(data), cid, True, ust, current_app, remote_addr, require_super_user, auto_approve)
 
 # ################################################################################################################################
 
