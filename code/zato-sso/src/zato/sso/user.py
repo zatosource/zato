@@ -298,7 +298,7 @@ class UserAPI(object):
 
         user_model.sign_up_status = ctx.data.get('sign_up_status')
         user_model.sign_up_time = now
-        user_model.sign_up_confirm_token = new_confirm_token()
+        user_model.sign_up_confirm_token = ctx.data.get('sign_up_confirm_token') or new_confirm_token()
 
         user_model.approval_status = ctx.data['approval_status']
         user_model.approval_status_mod_time = now
