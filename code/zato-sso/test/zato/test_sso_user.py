@@ -108,18 +108,39 @@ class UserCreateTestCase(BaseTest):
 
 class UserSignupTestCase(BaseTest):
     def test(self):
-        request = {
+        response = self.post('/zato/sso/user/signup', {
             'username': self._get_random_username(),
             'password': self._get_random_password(),
             'current_app': current_app,
             'app_list': [current_app]
-        }
-
-        response = self.post('/zato/sso/user/signup', request)
+        })
 
         self.assertEquals(response.status, status_code.ok)
         self.assertIsNotNone(response.cid)
         self.assertIsNotNone(response.confirm_token)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UserConfirmSignupTestCase(BaseTest):
+    def test(self):
+
+        response = self.post('/zato/sso/user/signup', {
+            'username': self._get_random_username(),
+            'password': self._get_random_password(),
+            'current_app': current_app,
+            'app_list': [current_app]
+        })
+
+        confirm_token = response.confirm_token
+
+        response = self.patch('/zato/sso/user/signup', {
+            'confirm_token': confirm_token,
+            'current_app': current_app,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        self.assertIsNotNone(response.cid)
 
 # ################################################################################################################################
 # ################################################################################################################################
