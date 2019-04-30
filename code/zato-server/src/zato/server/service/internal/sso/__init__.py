@@ -107,7 +107,7 @@ class BaseService(Service):
             remote_addr =  [ip_address(elem) for elem in remote_addr]
 
         # OK, we can proceed to the actual call now
-        self._call_sso_api(self._handle_sso, 'Could not call service', ctx=SSOCtx(self.request.input, sso_conf, remote_addr))
+        self._handle_sso(SSOCtx(self.request.input, sso_conf, remote_addr))
 
 # ################################################################################################################################
 

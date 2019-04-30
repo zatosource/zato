@@ -15,6 +15,9 @@ from uuid import uuid4
 # dateutil
 from dateutil.parser import parser as DateTimeParser
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 from zato.common.util import asbool
 from zato.server.service import AsIs, Bool, Int, List
@@ -54,14 +57,18 @@ class Login(BaseService):
     def _handle_sso(self, ctx):
 
         input = ctx.input
+        input.cid = self.cid
+
         has_remote_addr = input.get('remote_addr')
         has_user_agent = input.get('user_agent')
 
         input.has_remote_addr = has_remote_addr
         input.has_user_agent = has_user_agent
 
-        input.remote_addr = input.remote_addr if has_remote_addr else self.wsgi_environ['zato.http.remote_addr'].decode('utf8')
-        input.user_agent = input.user_agent if has_user_agent else self.wsgi_environ['HTTP_USER_AGENT']
+        if not has_remote_addr:
+            wsgi_remote_addr = self.wsgi_environ['zato.http.remote_addr']
+            wsgi_remote_addr = wsgi_remote_addr.decode('utf8') if not isinstance(wsgi_remote_addr, unicode) else wsgi_remote_addr
+            input.remote_addr = wsgi_remote_addr
 
         out = self._call_sso_api(self.sso.user.login, 'SSO user `{username}` cannot log in to `{current_app}`', **ctx.input)
         if out:
