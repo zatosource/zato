@@ -70,7 +70,7 @@ class Login(BaseService):
             wsgi_remote_addr = wsgi_remote_addr.decode('utf8') if not isinstance(wsgi_remote_addr, unicode) else wsgi_remote_addr
             input.remote_addr = wsgi_remote_addr
 
-        out = self._call_sso_api(self.sso.user.login, 'SSO user `{username}` cannot log in to `{current_app}`', **ctx.input)
+        out = self.sso.user.login(**ctx.input)
         if out:
             self.response.payload.ust = out.ust
 
@@ -120,17 +120,17 @@ class User(BaseRESTService):
         user_id = ctx.input.get('user_id')
         attrs = []
 
-        if user_id:
+        if user_id != self.SimpleIO.default_value:
             func = self.sso.user.get_user_by_id
             attrs.append(user_id)
         else:
-            func = self.sso.user.get_user_by_ust
+            func = self.sso.user.get_current_user
 
         # These will be always needed, no matter which function is used
         attrs += [ctx.input.ust, ctx.input.current_app, ctx.remote_addr]
 
         # Func will return a dictionary describing the required user, already taking permissions into account
-        self.response.payload = func(self.cid, *attrs)
+        self.response.payload = func(self.cid, *attrs).to_dict()
 
 # ################################################################################################################################
 
