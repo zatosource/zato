@@ -12,8 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from gzip import GzipFile
 from hashlib import sha256
-from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, TOO_MANY_REQUESTS, \
-     UNAUTHORIZED
+from http.client import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
 from io import StringIO
 from traceback import format_exc
 
@@ -67,6 +66,8 @@ accept_any_http = HTTP_SOAP.ACCEPT.ANY
 accept_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 
 # ################################################################################################################################
+
+TOO_MANY_REQUESTS = 429
 
 _status_bad_request = '{} {}'.format(BAD_REQUEST, HTTP_RESPONSES[BAD_REQUEST])
 _status_internal_server_error = '{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
