@@ -12,7 +12,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 import os
 from copy import deepcopy
+from datetime import datetime
+from itertools import count
 from json import dumps, loads
+from random import randint
 from unittest import TestCase, main
 
 # Bunch
@@ -35,6 +38,8 @@ current_app = 'CRM'
 
 super_user_name = 'admin1'
 super_user_password = 'hQ9nl93UDqGus'
+
+username_prefix = 'test.{}+{}'
 
 server_location = os.path.expanduser('~/env/z31sqlite/server1')
 server_address  = 'http://localhost:17010{}'
@@ -67,6 +72,37 @@ class BaseClass(TestCase):
 
 # ################################################################################################################################
 
+    def setUp(self):
+        try:
+            # Try to create a super-user ..
+            sh.zato('sso', 'create-super-user', server_location, super_user_name, '--password', super_user_password, '--verbose')
+            pass
+        except Exception as e:
+            # .. but ignore it if such a user already exists.
+            if not 'User already exists' in e.args[0]:
+                if isinstance(e, sh.ErrorReturnCode):
+                    logger.warn('Shell exception %s', e.stderr)
+                raise
+
+        # Create a new context object for each test
+        self.ctx = TestCtx()
+        self._login_super_user()
+
+        # A new counter for random data
+        self.rand_counter = count()
+
+# ################################################################################################################################
+
+    def tearDown(self):
+        self.ctx.reset()
+
+# ################################################################################################################################
+
+    def _get_random_username(self, _utcnow=datetime.utcnow):
+        return username_prefix.format(_utcnow().isoformat(), next(self.rand_counter))
+
+# ################################################################################################################################
+
     def _invoke(self, func, func_name, url_path, request):
         address = server_address.format(url_path)
         data = dumps(request)
@@ -96,33 +132,20 @@ class BaseClass(TestCase):
         self.ctx.super_user_ust = response.ust
 
 # ################################################################################################################################
-
-    def setUp(self):
-        try:
-            # Try to create a super-user ..
-            #sh.zato('sso', 'create-user', server_location, super_user_name, '--password', super_user_password)
-            pass
-        except Exception as e:
-            # .. but ignore it if such a user already exists.
-            if not 'User already exists' in e.args[0]:
-                raise
-
-        # Create a new context object for each test
-        self.ctx = TestCtx()
-        self.ctx.super_user_ust = self._login_super_user()
-
-# ################################################################################################################################
-
-    def tearDown(self):
-        self.ctx.reset()
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class UserCreateTestCase(BaseClass):
 
-    def test(self):
-        pass
+    def test_default_values(self):
+        username = self._get_random_username()
+
+        request = {
+            'ust': self.ctx.super_user_ust,
+            'current_app': current_app,
+            'username': username
+        }
+
+        response = self.post('/zato/sso/user', request)
 
 # ################################################################################################################################
 # ################################################################################################################################
