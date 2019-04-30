@@ -254,6 +254,44 @@ class UserRejectTestCase(BaseTest):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class UserLoginTestCase(BaseTest):
+
+    def test_user_login(self):
+
+        response = self.post('/zato/sso/user/login', {
+            'current_app': current_app,
+            'username': super_user_name,
+            'password': super_user_password,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        self.assertIsNotNone(response.cid)
+        self.assertIsNotNone(response.ust)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UserLogoutTestCase(BaseTest):
+
+    def test_user_logout(self):
+
+        ust = self.post('/zato/sso/user/login', {
+            'current_app': current_app,
+            'username': super_user_name,
+            'password': super_user_password,
+        }).ust
+
+        response = self.post('/zato/sso/user/logout', {
+            'ust': ust,
+            'current_app': current_app,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        self.assertIsNotNone(response.cid)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
     main()
 
