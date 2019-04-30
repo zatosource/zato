@@ -22,6 +22,9 @@ from ipaddress import ip_network
 # SQLAlchemy
 from sqlalchemy import update
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOUser as UserModel
@@ -85,6 +88,8 @@ def make_data_secret(data, encrypt_func=None, hash_func=None):
     # E.g. PBKDF2-SHA512
     if hash_func:
         data = hash_func(data)
+
+    data = data.encode('utf8') if isinstance(data, unicode) else data
 
     # E.g. Fernet (AES-128)
     if encrypt_func:
