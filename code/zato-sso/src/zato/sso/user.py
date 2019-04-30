@@ -1091,7 +1091,7 @@ class UserAPI(object):
 
                 # Custom attributes
                 item.attr = AttrAPI(cid, current_session.user_id, current_session.is_super_user, current_app, remote_addr,
-                    self.odb_session_func, self.encrypt_func, self.decrypt_func, sql_item.user_id)
+                    self.odb_session_func, self.encrypt_func, self.decrypt_func, sql_item['user_id'])
 
                 # Write out all super-user accessible attributes for each output row
                 for name in sorted(_all_super_user_attrs):
@@ -1108,7 +1108,7 @@ class UserAPI(object):
 
                     setattr(item, name, value)
 
-                out['result'].append(item)
+                out['result'].append(item.to_dict())
 
             return out
 

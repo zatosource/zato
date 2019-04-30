@@ -15,14 +15,10 @@ from copy import deepcopy
 from datetime import datetime
 from itertools import count
 from json import dumps, loads
-from random import randint
 from unittest import TestCase, main
 
 # Bunch
 from bunch import bunchify
-
-# dateutil
-from dateutil.parser import parse as dt_parse
 
 # sh
 import sh
@@ -31,6 +27,7 @@ import sh
 import requests
 
 # Zato
+from base import BaseTest
 from zato.sso import const, status_code
 
 # ################################################################################################################################
@@ -64,120 +61,119 @@ class Request:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestCtx(object):
-    def __init__(self):
-        self.reset()
+class UserCreateTestCase(BaseTest):
 
-    def reset(self):
-        self.super_user_ust = None # type: unicode
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class BaseClass(TestCase):
-
-# ################################################################################################################################
-
-    def setUp(self):
-        try:
-            # Try to create a super-user ..
-            sh.zato('sso', 'create-super-user', server_location, super_user_name, '--password', super_user_password, '--verbose')
-            pass
-        except Exception as e:
-            # .. but ignore it if such a user already exists.
-            if not 'User already exists' in e.args[0]:
-                if isinstance(e, sh.ErrorReturnCode):
-                    logger.warn('Shell exception %s', e.stderr)
-                raise
-
-        # Create a new context object for each test
-        self.ctx = TestCtx()
-        self._login_super_user()
-
-        # A new counter for random data
-        self.rand_counter = count()
-
-# ################################################################################################################################
-
-    def tearDown(self):
-        self.ctx.reset()
-
-# ################################################################################################################################
-
-    def _get_random_username(self, _utcnow=datetime.utcnow):
-        return username_prefix.format(_utcnow().isoformat(), next(self.rand_counter))
-
-# ################################################################################################################################
-
-    def _invoke(self, func, func_name, url_path, request):
-        address = server_address.format(url_path)
-        data = dumps(request)
-
-        logger.info('Invoking %s %s with %s', func_name, address, data)
-        response = func(address, data=data)
-
-        logger.info('Response received %s %s', response.status_code, response.text)
-
-        data = loads(response.text)
-        return bunchify(data)
-
-    def post(self, url_path, request):
-        return self._invoke(requests.post, 'POST', url_path, request)
-
-# ################################################################################################################################
-
-    def _login_super_user(self):
-        request = deepcopy(Request.login) # type: Bunch
-        request.username = super_user_name
-        request.password = super_user_password
-        request.current_app = current_app
-
-        url_path = '/zato/sso/user/login'
-        response = self.post(url_path, request)
-
-        self.ctx.super_user_ust = response.ust
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class UserCreateTestCase(BaseClass):
-
-    def test_default_values(self):
+    def test(self):
 
         now = datetime.utcnow()
         username = self._get_random_username()
 
-        request = {
+        response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': current_app,
             'username': username
-        }
-
-        response = self.post('/zato/sso/user', request)
+        })
 
         self.assertEquals(response.status, status_code.ok)
-        self.assertEquals(response.approval_status, const.approval_status.before_decision)
-        self.assertEquals(response.sign_up_status, const.signup_status.final)
-
-        self.assertTrue(response.is_active)
+        self.assertIsNotNone(response.cid)
         self.assertTrue(response.is_approval_needed)
-        self.assertTrue(response.password_is_set)
+        self._assert_default_user_data(response, now)
 
-        self.assertTrue(response.user_id.startswith('zusr'))
-        self.assertTrue(response.username.startswith('test.'))
+# ################################################################################################################################
+# ################################################################################################################################
 
-        self.assertFalse(response.is_internal)
-        self.assertFalse(response.is_locked)
-        self.assertFalse(response.is_super_user)
-        self.assertFalse(response.password_must_change)
+class UserSignupTestCase(BaseTest):
+    def ztest(self):
+        response = self.post('/zato/sso/user/signup', {
+            'username': self._get_random_username(),
+            'password': self._get_random_data(),
+            'current_app': current_app,
+            'app_list': [current_app]
+        })
 
-        self.assertIsNotNone(response.get('approval_status_mod_by'))
-        self.assertIsNotNone(response.get('cid'))
+        self.assertEquals(response.status, status_code.ok)
+        self.assertIsNotNone(response.cid)
+        self.assertIsNotNone(response.confirm_token)
 
-        self.assertLess(now, dt_parse(response.approval_status_mod_time))
-        self.assertLess(now, dt_parse(response.password_last_set))
-        self.assertLess(now, dt_parse(response.sign_up_time))
-        self.assertLess(now, dt_parse(response.password_expiry))
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UserConfirmSignupTestCase(BaseTest):
+    def ztest(self):
+
+        response = self.post('/zato/sso/user/signup', {
+            'username': self._get_random_username(),
+            'password': self._get_random_data(),
+            'current_app': current_app,
+            'app_list': [current_app]
+        })
+
+        confirm_token = response.confirm_token
+
+        response = self.patch('/zato/sso/user/signup', {
+            'confirm_token': confirm_token,
+            'current_app': current_app,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        self.assertIsNotNone(response.cid)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UserSearchTestCase(BaseTest):
+    def test(self):
+
+        username1 = self._get_random_username()
+        username2 = self._get_random_username()
+
+        random_data = self._get_random_data()
+
+        display_name1 = 'display' + random_data
+        display_name2 = 'display' + random_data
+
+        email1 = self._get_random_data()
+        email2 = self._get_random_data()
+
+        now = datetime.utcnow()
+
+        self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': current_app,
+            'username': username1,
+            'display_name': display_name1,
+            'email': email1,
+        })
+
+        self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': current_app,
+            'username': username2,
+            'display_name': display_name2,
+            'email': email2,
+        })
+
+        response = self.get('/zato/sso/user/search', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'display_name': random_data,
+            'is_name_exact': False,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        self.assertEquals(response.cur_page, 1)
+        self.assertEquals(response.num_pages, 1)
+        self.assertEquals(response.has_next_page, False)
+        self.assertEquals(response.has_prev_page, False)
+        self.assertEquals(response.page_size, const.search.page_size)
+        self.assertEquals(response.total, 2)
+        self.assertEquals(len(response.result), 2)
+
+        user1 = response.result[0]
+        self._assert_default_user_data(user1, now)
+
+        user2 = response.result[1]
+        self._assert_default_user_data(user2, now)
 
 # ################################################################################################################################
 # ################################################################################################################################
