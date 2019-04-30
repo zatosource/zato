@@ -268,7 +268,7 @@ class Create(_CreateEdit):
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.cache_id or None
-                item.cache_expiry = input.cache_expiry
+                item.cache_expiry = input.cache_expiry or 0
                 item.content_encoding = input.content_encoding
 
                 if input.security_id:
