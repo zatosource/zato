@@ -216,5 +216,45 @@ class UserApproveTestCase(BaseTest):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class UserRejectTestCase(BaseTest):
+    def test_reject(self):
+
+        self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': current_app,
+            'username': self._get_random_username(),
+        })
+
+        response = self.get('/zato/sso/user/search', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'approval_status': const.approval_status.before_decision
+        })
+
+        self.assertTrue(response.total > 0)
+        user = response.result[0]
+
+        self.post('/zato/sso/user/reject', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'user_id': user.user_id
+        })
+
+        response = self.get('/zato/sso/user/search', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'user_id': user.user_id
+        })
+
+        self.assertTrue(response.total > 0)
+        user = response.result[0]
+
+        self.assertEquals(user.approval_status, const.approval_status.rejected)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
     main()
+
+# ################################################################################################################################
