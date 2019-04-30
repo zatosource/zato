@@ -128,6 +128,9 @@ class BaseTest(TestCase):
     def post(self, url_path, request):
         return self._invoke(requests.post, 'POST', url_path, request)
 
+    def patch(self, url_path, request):
+        return self._invoke(requests.patch, 'PATCH', url_path, request)
+
 # ################################################################################################################################
 
     def _login_super_user(self):
