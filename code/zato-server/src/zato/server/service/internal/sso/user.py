@@ -70,7 +70,7 @@ class Login(BaseService):
             wsgi_remote_addr = wsgi_remote_addr.decode('utf8') if not isinstance(wsgi_remote_addr, unicode) else wsgi_remote_addr
             input.remote_addr = wsgi_remote_addr
 
-        out = self._call_sso_api(self.sso.user.login, 'SSO user `{username}` cannot log in to `{current_app}`', **ctx.input)
+        out = self.sso.user.login(**ctx.input)
         if out:
             self.response.payload.ust = out.ust
 
