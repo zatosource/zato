@@ -305,7 +305,7 @@ class Search(_CtxInputUsing):
     """
     class SimpleIO(_CtxInputUsing.SimpleIO):
         input_required = ('ust', 'current_app')
-        input_optional = ('user_id', 'username', 'email', 'display_name', 'first_name', 'middle_name', 'last_name',
+        input_optional = (AsIs('user_id'), 'username', 'email', 'display_name', 'first_name', 'middle_name', 'last_name',
             'sign_up_status', 'approval_status', Bool('paginate'), Int('cur_page'), Int('page_size'), 'name_op',
             'is_name_exact')
         output_required = ('status',)

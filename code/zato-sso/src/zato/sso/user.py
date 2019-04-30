@@ -971,10 +971,10 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _change_approval_status(self, user_id, new_value, current_ust, current_app, remote_addr):
+    def _change_approval_status(self, cid, user_id, new_value, current_ust, current_app, remote_addr):
         """ Changes a given user's approval_status to 'value'.
         """
-        return self._update_user({'approval_status': new_value}, current_ust, current_app, remote_addr, user_id=user_id)
+        return self._update_user(cid, {'approval_status': new_value}, current_ust, current_app, remote_addr, user_id=user_id)
 
 # ################################################################################################################################
 
@@ -985,7 +985,7 @@ class UserAPI(object):
         audit_pii.info(cid, 'user.approve_user', target_user=user_id,
             extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._change_approval_status(user_id, const.approval_status.approved, current_ust, current_app, remote_addr)
+        return self._change_approval_status(cid, user_id, const.approval_status.approved, current_ust, current_app, remote_addr)
 
 # ################################################################################################################################
 
@@ -995,7 +995,7 @@ class UserAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'user.reject_user', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._change_approval_status(user_id, const.approval_status.rejected, current_ust, current_app, remote_addr)
+        return self._change_approval_status(cid, user_id, const.approval_status.rejected, current_ust, current_app, remote_addr)
 
 # ################################################################################################################################
 
