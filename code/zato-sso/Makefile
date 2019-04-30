@@ -2,4 +2,4 @@
 .PHONY: build
 
 sso-test:
-	nosetests $(CURDIR)/test/zato/*.py -s
+	py $(CURDIR)/test/zato/test_sso_user.py
