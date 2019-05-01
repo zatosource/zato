@@ -115,7 +115,7 @@ class update:
     regular_attrs = set(('email', 'display_name', 'first_name', 'middle_name', 'last_name'))
 
     # Accessible to super-users only
-    super_user_attrs = set(('is_approved', 'is_locked', 'password_expiry', 'password_must_change', 'sign_up_status',
+    super_user_attrs = set(('is_locked', 'password_expiry', 'password_must_change', 'sign_up_status',
         'approval_status'))
 
     # All updateable attributes
@@ -128,7 +128,7 @@ class update:
     max_len_attrs = len(all_update_attrs)
 
     # All boolean attributes
-    boolean_attrs = ('is_approved', 'is_locked', 'password_must_change')
+    boolean_attrs = ('is_locked', 'password_must_change')
 
     # All datetime attributes
     datetime_attrs = ('password_expiry',)
