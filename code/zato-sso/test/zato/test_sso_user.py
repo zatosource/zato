@@ -292,6 +292,68 @@ class UserLogoutTestCase(BaseTest):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class UserGetTestCase(BaseTest):
+
+    def test_user_get_by_user_id(self):
+
+        now = datetime.utcnow()
+
+        username = self._get_random_username()
+        password_must_change = True
+        display_name = self._get_random_data()
+        first_name = self._get_random_data()
+        middle_name = self._get_random_data()
+        last_name = self._get_random_data()
+        email = self._get_random_data()
+        is_locked = True
+        sign_up_status = const.signup_status.before_confirmation
+
+        self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': current_app,
+            'username': username,
+            'password_must_change': password_must_change,
+            'display_name': display_name,
+            'first_name': first_name,
+            'middle_name': middle_name,
+            'last_name': last_name,
+            'email': email,
+            'is_locked': is_locked,
+            'sign_up_status': sign_up_status,
+        })
+
+        response = self.get('/zato/sso/user/search', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'username': username,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        self.assertEquals(response.total, 1)
+
+        user = response.result[0]
+        user_id = user.user_id
+
+        response = self.get('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'user_id': user_id,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        self.assertEquals(response.username, username)
+        self.assertEquals(response.display_name, display_name)
+        self.assertEquals(response.first_name, first_name)
+        self.assertEquals(response.middle_name, middle_name)
+        self.assertEquals(response.last_name, last_name)
+        self.assertEquals(response.email, email)
+        self.assertEquals(response.sign_up_status, sign_up_status)
+        self.assertIs(response.password_must_change, password_must_change)
+        self.assertIs(response.is_locked, is_locked)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if __name__ == '__main__':
     main()
 

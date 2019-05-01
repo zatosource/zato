@@ -142,7 +142,7 @@ class User(BaseRESTService):
         data = {}
         for name in _create_user_attrs:
             value = ctx.input.get(name)
-            if value != _invalid:
+            if value != self.SimpleIO.default_value:
                 data[name] = value
 
         # This will update 'data' in place ..
