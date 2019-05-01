@@ -181,37 +181,28 @@ class UserSearchTestCase(BaseTest):
 class UserApproveTestCase(BaseTest):
     def test_approve(self):
 
-        self.post('/zato/sso/user', {
+        response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': current_app,
             'username': self._get_random_username(),
         })
 
-        response = self.get('/zato/sso/user/search', {
-            'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
-            'approval_status': const.approval_status.before_decision
-        })
-
-        self.assertTrue(response.total > 0)
-        user = response.result[0]
+        self.assertEquals(response.status, status_code.ok)
+        user_id = response.user_id
 
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
             'current_app': 'CRM',
-            'user_id': user.user_id
+            'user_id': user_id
         })
 
-        response = self.get('/zato/sso/user/search', {
+        response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': 'CRM',
-            'user_id': user.user_id
+            'user_id': user_id
         })
 
-        self.assertTrue(response.total > 0)
-        user = response.result[0]
-
-        self.assertEquals(user.approval_status, const.approval_status.approved)
+        self.assertEquals(response.approval_status, const.approval_status.approved)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -219,37 +210,28 @@ class UserApproveTestCase(BaseTest):
 class UserRejectTestCase(BaseTest):
     def test_reject(self):
 
-        self.post('/zato/sso/user', {
+        response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': current_app,
             'username': self._get_random_username(),
         })
 
-        response = self.get('/zato/sso/user/search', {
-            'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
-            'approval_status': const.approval_status.before_decision
-        })
-
-        self.assertTrue(response.total > 0)
-        user = response.result[0]
+        self.assertEquals(response.status, status_code.ok)
+        user_id = response.user_id
 
         self.post('/zato/sso/user/reject', {
             'ust': self.ctx.super_user_ust,
             'current_app': 'CRM',
-            'user_id': user.user_id
+            'user_id': user_id
         })
 
-        response = self.get('/zato/sso/user/search', {
+        response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': 'CRM',
-            'user_id': user.user_id
+            'user_id': user_id
         })
 
-        self.assertTrue(response.total > 0)
-        user = response.result[0]
-
-        self.assertEquals(user.approval_status, const.approval_status.rejected)
+        self.assertEquals(response.approval_status, const.approval_status.rejected)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -306,7 +288,7 @@ class UserGetTestCase(BaseTest):
         is_locked = True
         sign_up_status = const.signup_status.before_confirmation
 
-        self.post('/zato/sso/user', {
+        response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': current_app,
             'username': username,
@@ -320,17 +302,8 @@ class UserGetTestCase(BaseTest):
             'sign_up_status': sign_up_status,
         })
 
-        response = self.get('/zato/sso/user/search', {
-            'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
-            'username': username,
-        })
-
         self.assertEquals(response.status, status_code.ok)
-        self.assertEquals(response.total, 1)
-
-        user = response.result[0]
-        user_id = user.user_id
+        user_id = response.user_id
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
@@ -386,28 +359,20 @@ class UserUpdateTestCase(BaseTest):
         username = self._get_random_username()
         password = self._get_random_data()
 
-        self.post('/zato/sso/user', {
+        response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': current_app,
             'username': username,
             'password': password,
         })
 
-        response = self.get('/zato/sso/user/search', {
-            'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
-            'username': username,
-        })
-
         self.assertEquals(response.status, status_code.ok)
-        self.assertEquals(response.total, 1)
-        user = response.result[0]
-        user_id = user.user_id
+        user_id = response.user_id
 
         response = self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
             'current_app': 'CRM',
-            'user_id': user.user_id
+            'user_id': user_id
         })
 
         self.assertEquals(response.status, status_code.ok)
@@ -469,23 +434,15 @@ class UserUpdateTestCase(BaseTest):
         username = self._get_random_username()
         password = self._get_random_data()
 
-        self.post('/zato/sso/user', {
+        response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': current_app,
             'username': username,
             'password': password,
         })
 
-        response = self.get('/zato/sso/user/search', {
-            'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
-            'username': username,
-        })
-
         self.assertEquals(response.status, status_code.ok)
-        self.assertEquals(response.total, 1)
-        user = response.result[0]
-        user_id = user.user_id
+        user_id = response.user_id
 
         display_name = self._get_random_data()
         first_name = self._get_random_data()
