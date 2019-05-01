@@ -73,6 +73,9 @@ class BaseService(Service):
         self.response.payload.status = status_code.error
         self.response.payload.sub_status = []
 
+        # Will be set to True if the default value of status_code.ok should not be returned
+        self.environ['status_changed'] = False
+
 # ################################################################################################################################
 
     def after_handle(self):
@@ -133,7 +136,8 @@ class BaseService(Service):
 
         # All went fine, we can set status OK and return business data
         else:
-            self._set_response_ok()
+            if not self.environ.get('status_changed'):
+                self._set_response_ok()
             return out
 
 # ################################################################################################################################
