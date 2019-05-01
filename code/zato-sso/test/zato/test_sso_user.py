@@ -181,37 +181,28 @@ class UserSearchTestCase(BaseTest):
 class UserApproveTestCase(BaseTest):
     def xtest_approve(self):
 
-        self.post('/zato/sso/user', {
+        response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': current_app,
             'username': self._get_random_username(),
         })
 
-        response = self.get('/zato/sso/user/search', {
-            'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
-            'approval_status': const.approval_status.before_decision
-        })
-
-        self.assertTrue(response.total > 0)
-        user = response.result[0]
+        self.assertEquals(response.status, status_code.ok)
+        user_id = response.user_id
 
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
             'current_app': 'CRM',
-            'user_id': user.user_id
+            'user_id': user_id
         })
 
-        response = self.get('/zato/sso/user/search', {
+        response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': 'CRM',
-            'user_id': user.user_id
+            'user_id': user_id
         })
 
-        self.assertTrue(response.total > 0)
-        user = response.result[0]
-
-        self.assertEquals(user.approval_status, const.approval_status.approved)
+        self.assertEquals(response.approval_status, const.approval_status.approved)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -219,37 +210,28 @@ class UserApproveTestCase(BaseTest):
 class UserRejectTestCase(BaseTest):
     def xtest_reject(self):
 
-        self.post('/zato/sso/user', {
+        response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': current_app,
             'username': self._get_random_username(),
         })
 
-        response = self.get('/zato/sso/user/search', {
-            'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
-            'approval_status': const.approval_status.before_decision
-        })
-
-        self.assertTrue(response.total > 0)
-        user = response.result[0]
+        self.assertEquals(response.status, status_code.ok)
+        user_id = response.user_id
 
         self.post('/zato/sso/user/reject', {
             'ust': self.ctx.super_user_ust,
             'current_app': 'CRM',
-            'user_id': user.user_id
+            'user_id': user_id
         })
 
-        response = self.get('/zato/sso/user/search', {
+        response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': 'CRM',
-            'user_id': user.user_id
+            'user_id': user_id
         })
 
-        self.assertTrue(response.total > 0)
-        user = response.result[0]
-
-        self.assertEquals(user.approval_status, const.approval_status.rejected)
+        self.assertEquals(response.approval_status, const.approval_status.rejected)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -306,7 +288,7 @@ class UserGetTestCase(BaseTest):
         is_locked = True
         sign_up_status = const.signup_status.before_confirmation
 
-        self.post('/zato/sso/user', {
+        response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': current_app,
             'username': username,
@@ -320,17 +302,8 @@ class UserGetTestCase(BaseTest):
             'sign_up_status': sign_up_status,
         })
 
-        response = self.get('/zato/sso/user/search', {
-            'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
-            'username': username,
-        })
-
         self.assertEquals(response.status, status_code.ok)
-        self.assertEquals(response.total, 1)
-
-        user = response.result[0]
-        user_id = user.user_id
+        user_id = response.user_id
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
@@ -380,34 +353,26 @@ class UserGetTestCase(BaseTest):
 
 class UserUpdateTestCase(BaseTest):
 
-    def test_user_update_self(self):
+    def xtest_user_update_self(self):
 
         now = datetime.utcnow()
         username = self._get_random_username()
         password = self._get_random_data()
 
-        self.post('/zato/sso/user', {
+        response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'current_app': current_app,
             'username': username,
             'password': password,
         })
 
-        response = self.get('/zato/sso/user/search', {
-            'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
-            'username': username,
-        })
-
         self.assertEquals(response.status, status_code.ok)
-        self.assertEquals(response.total, 1)
-        user = response.result[0]
-        user_id = user.user_id
+        user_id = response.user_id
 
         response = self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
             'current_app': 'CRM',
-            'user_id': user.user_id
+            'user_id': user_id
         })
 
         self.assertEquals(response.status, status_code.ok)
@@ -460,6 +425,185 @@ class UserUpdateTestCase(BaseTest):
         self.assertEquals(response.last_name, last_name)
         self.assertEquals(response.middle_name, middle_name)
         self.assertEquals(response.username, username)
+
+# ################################################################################################################################
+
+    def xtest_user_update_by_id(self):
+
+        now = datetime.utcnow()
+        username = self._get_random_username()
+        password = self._get_random_data()
+
+        response = self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': current_app,
+            'username': username,
+            'password': password,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        user_id = response.user_id
+
+        display_name = self._get_random_data()
+        first_name = self._get_random_data()
+        middle_name = self._get_random_data()
+        last_name = self._get_random_data()
+        email = self._get_random_data()
+
+        is_approved = True
+        is_locked = True
+        password_expiry = '2345-12-27T11:22:33'
+        password_must_change = True
+        sign_up_status = const.signup_status.final
+        approval_status = const.approval_status.rejected
+
+        response = self.patch('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'user_id': user_id,
+            'current_app': current_app,
+            'display_name': display_name,
+            'first_name': first_name,
+            'middle_name': middle_name,
+            'last_name': last_name,
+            'email': email,
+            'is_approved': is_approved,
+            'is_locked': is_locked,
+            'password_expiry': password_expiry,
+            'password_must_change': password_must_change,
+            'sign_up_status': sign_up_status,
+            'approval_status': approval_status,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+
+        response = self.get('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': current_app,
+            'user_id': user_id,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        self.assertIsNotNone(response.cid)
+
+        self.assertEquals(response.user_id, user_id)
+        self.assertEquals(response.display_name, display_name)
+        self.assertEquals(response.email, email)
+        self.assertEquals(response.first_name, first_name)
+        self.assertEquals(response.last_name, last_name)
+        self.assertEquals(response.middle_name, middle_name)
+        self.assertEquals(response.username, username)
+
+        self.assertEquals(response.is_locked, is_locked)
+        self.assertEquals(response.password_expiry, password_expiry)
+        self.assertEquals(response.password_must_change, password_must_change)
+        self.assertEquals(response.sign_up_status, sign_up_status)
+        self.assertEquals(response.approval_status, approval_status)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class UserDeleteTestCase(BaseTest):
+
+    def xtest_user_delete_by_super_user(self):
+
+        response = self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': current_app,
+            'username': self._get_random_username(),
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        user_id = response.user_id
+
+        response = self.get('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'user_id': user_id,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+
+        response = self.delete('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'user_id': user_id,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+
+        response = self.get('/zato/sso/user/search', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'user_id': user_id,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        self.assertEquals(response.total, 0)
+
+# ################################################################################################################################
+
+    def test_user_delete_by_super_user(self):
+
+        response = self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': current_app,
+            'username': self._get_random_username(),
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        user_id1 = response.user_id
+
+        response = self.get('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'user_id': user_id1,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+
+        username = self._get_random_username()
+        password = self._get_random_data()
+
+        response = self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': current_app,
+            'username': username,
+            'password': password,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        user_id2 = response.user_id
+
+        self.post('/zato/sso/user/approve', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'user_id': user_id1
+        })
+
+        self.post('/zato/sso/user/approve', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'user_id': user_id2
+        })
+
+        response = self.post('/zato/sso/user/login', {
+            'current_app': current_app,
+            'username': username,
+            'password': password,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+
+        ust = response.ust
+
+        response = self.delete('/zato/sso/user', {
+            'ust': ust,
+            'current_app': 'CRM',
+            'user_id': user_id1,
+        })
+
+        self.assertEquals(response.status, status_code.error)
+        self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
 
 # ################################################################################################################################
 # ################################################################################################################################
