@@ -296,8 +296,6 @@ class UserGetTestCase(BaseTest):
 
     def test_user_get_by_user_id(self):
 
-        now = datetime.utcnow()
-
         username = self._get_random_username()
         password_must_change = True
         display_name = self._get_random_data()
@@ -350,6 +348,32 @@ class UserGetTestCase(BaseTest):
         self.assertEquals(response.sign_up_status, sign_up_status)
         self.assertIs(response.password_must_change, password_must_change)
         self.assertIs(response.is_locked, is_locked)
+
+# ################################################################################################################################
+
+    def test_user_get_by_ust(self):
+
+        now = datetime.utcnow()
+        response = self.get('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        self.assertEquals(response.approval_status, const.approval_status.approved)
+        self.assertEquals(response.approval_status_mod_by, 'auto')
+        self.assertEquals(response.username, super_user_name)
+        self.assertEquals(response.sign_up_status, const.signup_status.final)
+
+        self.assertTrue(response.is_approval_needed)
+        self.assertTrue(response.is_super_user)
+        self.assertTrue(response.password_is_set)
+
+        self.assertFalse(response.is_internal)
+        self.assertFalse(response.is_locked)
+        self.assertFalse(response.password_must_change)
+
+        self._assert_user_dates(response, now, True)
 
 # ################################################################################################################################
 # ################################################################################################################################
