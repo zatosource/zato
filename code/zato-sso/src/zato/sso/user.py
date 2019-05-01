@@ -14,6 +14,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from logging import getLogger
 from traceback import format_exc
+from uuid import uuid4
 
 # SQLAlchemy
 from sqlalchemy import update as sql_update
@@ -911,7 +912,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def change_password(self, cid, data, current_ust, current_app, remote_addr):
+    def change_password(self, cid, data, current_ust, current_app, remote_addr, _no_user_id='no-user-id'.format(uuid4().hex)):
         """ Changes a user's password. Super-admins may also set its expiration
         and whether the user must set it to a new one on next login.
         """
@@ -919,16 +920,17 @@ class UserAPI(object):
         self._check_basic_update_attrs(data, change_password.max_len_attrs, change_password.all_attrs)
 
         # Get current user's session ..
-        current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=False)
+        current_session = self._get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user=False)
 
         # . only super-users may send user_id on input ..
-        user_id = data.get('user_id', _no_such_value)
+        user_id = data.get('user_id', _no_user_id)
 
         # PII audit goes here, once we know the target user's ID
-        audit_pii.info(cid, 'user.change_password', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
+        audit_pii.info(
+            cid, 'user.change_password', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # .. so if it is sent ..
-        if user_id != _no_such_value:
+        if user_id != _no_user_id:
 
             # .. we must confirm we have a super-user's session.
             if not current_session.is_super_user:
@@ -945,7 +947,7 @@ class UserAPI(object):
 
             # .. but only if the user changes another user's password ..
             if current_session.user_id != user_id:
-                self.set_password(user_id, data['new_password'], data.get('must_change'), data.get('password_expiry'),
+                self.set_password(cid, user_id, data['new_password'], data.get('must_change'), data.get('password_expiry'),
                     current_app, remote_addr)
 
                 # All done, another user's password has been changed
@@ -975,7 +977,7 @@ class UserAPI(object):
 
             # All done, we can set the new password now.
             try:
-                self.set_password(user_id, data['new_password'], must_change, password_expiry, current_app, remote_addr)
+                self.set_password(cid, user_id, data['new_password'], must_change, password_expiry, current_app, remote_addr)
             except Exception:
                 logger.warn('Could not set a new password for user_id:`%s`, e:`%s`', current_session.user_id, format_exc())
                 raise ValidationError(status_code.auth.not_allowed, True)
