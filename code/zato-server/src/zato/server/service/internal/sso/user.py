@@ -74,6 +74,10 @@ class Login(BaseService):
         out = self.sso.user.login(**ctx.input)
         if out:
             self.response.payload.ust = out.ust
+            if out.has_w_about_to_exp:
+                self.environ['status_changed'] = True
+                self.response.payload.status = status_code.warning
+                self.response.payload.sub_status = [status_code.password.w_about_to_exp]
 
 # ################################################################################################################################
 
