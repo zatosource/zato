@@ -172,10 +172,14 @@ class BaseTest(TestCase):
         self.assertFalse(response.password_must_change)
 
         self.assertIsNotNone(response.approval_status_mod_by)
+        self._assert_user_dates(response, now)
 
-        self.assertLess(now, dt_parse(response.approval_status_mod_time))
-        self.assertLess(now, dt_parse(response.password_last_set))
-        self.assertLess(now, dt_parse(response.sign_up_time))
+    def _assert_user_dates(self, response, now, is_default_user=False):
+
+        func = self.assertGreater if is_default_user else self.assertLess
+        func(now, dt_parse(response.approval_status_mod_time))
+        func(now, dt_parse(response.password_last_set))
+        func(now, dt_parse(response.sign_up_time))
         self.assertLess(now, dt_parse(response.password_expiry))
 
 # ################################################################################################################################

@@ -13,6 +13,7 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from logging import getLogger
 from traceback import format_exc
+from uuid import uuid4
 
 # ipaddress
 from ipaddress import ip_address
@@ -110,8 +111,8 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def _check_credentials(self, ctx, user):
-        return check_credentials(self.decrypt_func, self.verify_hash_func, user.password, ctx.input['password'])
+    def _check_credentials(self, ctx, user_password):
+        return check_credentials(self.decrypt_func, self.verify_hash_func, user_password, ctx.input['password'])
 
 # ################################################################################################################################
 
@@ -287,18 +288,17 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta):
+    def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta, _dummy_password=uuid4().hex):
         """ Logs a user in, returning session info on success or raising ValidationError on any error.
         """
         # Look up user and raise exception if not found by username
         with closing(self.odb_session_func()) as session:
             user = get_user_by_username(session, ctx.input['username'])
-            if not user:
-                raise ValidationError(status_code.auth.not_allowed, False)
+            password = user.password if user else _dummy_password
 
             # Check credentials first to make sure that attackers do not learn about any sort
             # of metadata (e.g. is the account locked) if they do not know username and password.
-            if not self._check_credentials(ctx, user):
+            if not self._check_credentials(ctx, password):
                 raise ValidationError(status_code.auth.not_allowed, False)
 
             # It must be possible to log into the application requested (CRM above)
