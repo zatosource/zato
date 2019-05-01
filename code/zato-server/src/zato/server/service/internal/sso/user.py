@@ -103,7 +103,8 @@ class User(BaseRESTService):
     class SimpleIO(BaseSIO):
         input_required = ('ust', 'current_app')
         input_optional = (AsIs('user_id'), 'username', 'password', Bool('password_must_change'), 'password_expiry',
-            'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'is_locked', 'sign_up_status')
+            'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'is_locked', 'sign_up_status',
+            'approval_status')
 
         output_optional = BaseSIO.output_optional + (AsIs('user_id'), 'username', 'email', 'display_name', 'first_name',
             'middle_name', 'last_name', 'is_active', 'is_internal', 'is_super_user', 'is_approval_needed',
