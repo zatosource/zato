@@ -223,6 +223,13 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
+    def _get_encrypted_email(self, email):
+        email = email or b''
+        email = email.encode('utf8') if isinstance(email, unicode) else email
+        return make_data_secret(email, self.encrypt_func)
+
+# ################################################################################################################################
+
     def _create_sql_user(self, ctx, _utcnow=_utcnow, _timedelta=timedelta):
 
         # Always in UTC
@@ -283,9 +290,7 @@ class UserAPI(object):
 
         # .. while emails are only encrypted, and it is optional.
         if self.encrypt_email:
-            email = ctx.data.get('email') or ''
-            email = email.encode('utf8') if isinstance(email, unicode) else email
-            email = make_data_secret(email, self.encrypt_func)
+            email = self._get_encrypted_email(ctx.data.get('email'))
 
         user_model.username = ctx.data['username']
         user_model.email = email
@@ -559,7 +564,7 @@ class UserAPI(object):
                         try:
                             out.email = self.decrypt_func(out.email)
                         except Exception:
-                            logger.warn('Could not decrypt email, user_id:`%s`', out.user_id)
+                            logger.warn('Could not decrypt email, user_id:`%s` (%s)', out.user_id, format_exc())
 
                 # Custom attributes
                 out.attr = AttrAPI(cid, current_session.user_id, current_session.is_super_user, current_app, remote_addr,
@@ -856,6 +861,12 @@ class UserAPI(object):
                         if attr_name and isinstance(data[attr_name], basestring):
                             data[attr_name_upper] = data[attr_name].upper()
 
+            # Email may be optionally encrypted
+            if self.encrypt_email:
+                email = data.get('email')
+                if email:
+                    data['email'] = self._get_encrypted_email(email)
+
             # Everything is validated - we can save the data now
             with closing(self.odb_session_func()) as session:
                 session.execute(
@@ -873,7 +884,7 @@ class UserAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'user.update_current_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._update_user(data, current_ust, current_app, remote_addr, update_self=True)
+        return self._update_user(cid, data, current_ust, current_app, remote_addr, update_self=True)
 
 # ################################################################################################################################
 
@@ -884,7 +895,7 @@ class UserAPI(object):
         audit_pii.info(cid, 'user.update_user_by_id', target_user=user_id,
             extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._update_user(data, current_ust, current_app, remote_addr, user_id=user_id)
+        return self._update_user(cid, data, current_ust, current_app, remote_addr, user_id=user_id)
 
 # ################################################################################################################################
 

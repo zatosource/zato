@@ -19,6 +19,7 @@ from dateutil.parser import parser as DateTimeParser
 from past.builtins import unicode
 
 # Zato
+from zato.common import NotGiven
 from zato.common.util import asbool
 from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal.sso import BaseService, BaseRESTService, BaseSIO
@@ -142,7 +143,7 @@ class User(BaseRESTService):
         data = {}
         for name in _create_user_attrs:
             value = ctx.input.get(name)
-            if value != _invalid:
+            if value != self.SimpleIO.default_value:
                 data[name] = value
 
         # This will update 'data' in place ..
@@ -173,7 +174,7 @@ class User(BaseRESTService):
 
 # ################################################################################################################################
 
-    def _handle_sso_PATCH(self, ctx):
+    def _handle_sso_PATCH(self, ctx, _not_given=NotGiven):
         """ Updates an existing user.
         """
         current_ust = ctx.input.pop('ust')
@@ -182,7 +183,12 @@ class User(BaseRESTService):
         # Explicitly provide only what we know is allowed
         data = {}
         for name in update.all_attrs:
-            value = ctx.input.get(name)
+            value = ctx.input.get(name, _not_given)
+
+            # No such key on input, we can ignore it
+            if value is _not_given:
+                continue
+
             if value != _invalid:
 
                 # Boolean values will never be None on input (SIO will convert them to a default value of an empty string)..
