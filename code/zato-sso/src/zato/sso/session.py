@@ -72,7 +72,7 @@ class VerifyCtx(object):
 class SessionInfo(object):
     """ Details about an individual session.
     """
-    __slots__ = ('username', 'user_id', 'ust', 'creation_time', 'expiration_time')
+    __slots__ = ('username', 'user_id', 'ust', 'creation_time', 'expiration_time', 'has_w_about_to_exp')
 
     def __init__(self):
         self.username = None
@@ -80,6 +80,7 @@ class SessionInfo(object):
         self.ust = None
         self.creation_time = None
         self.expiration_time = None
+        self.has_w_about_to_exp = None
 
     def to_dict(self, serialize_dt=True):
         return {
@@ -88,6 +89,7 @@ class SessionInfo(object):
             'ust': self.ust,
             'creation_time': self.creation_time.isoformat() if serialize_dt else self.creation_time,
             'expiration_time': self.expiration_time.isoformat() if serialize_dt else self.expiration_time,
+            'has_w_about_to_exp': self.has_w_about_to_exp
         }
 
 # ################################################################################################################################
@@ -307,18 +309,17 @@ class SessionAPI(object):
             # Common auth checks
             self._run_user_checks(ctx, user)
 
+            # We assume that we will not have to warn about an approaching password expiry
+            has_w_about_to_exp = False
+
             # If applicable, password may not be about to expire (this must be after checking that it has not already).
             # Note that it may return a specific status to return (warning or error)
             _about_status = self._check_password_about_to_expire(user)
             if _about_status is not True:
                 if _about_status == status_code.warning:
-                    _status_code = status_code.password.w_about_to_exp
-                    inform = True
+                    has_w_about_to_exp = True
                 else:
-                    _status_code = status_code.password.e_about_to_exp
-                    inform = False
-
-                raise ValidationError(_status_code, inform, _about_status)
+                    raise ValidationError(status_code.password.e_about_to_exp, False, _about_status)
 
             # If password is marked as as requiring a change upon next login but a new one was not sent, reject the request.
             self._check_must_send_new_password(ctx, user)
@@ -359,6 +360,7 @@ class SessionAPI(object):
             info.ust = self.encrypt_func(ust.encode('utf8'))
             info.creation_time = creation_time
             info.expiration_time = expiration_time
+            info.has_w_about_to_exp = has_w_about_to_exp
 
             return info
 

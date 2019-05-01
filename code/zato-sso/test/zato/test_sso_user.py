@@ -610,7 +610,7 @@ class UserDeleteTestCase(BaseTest):
 
 class UserChangePasswordTestCase(BaseTest):
 
-    def test_user_change_password_self(self):
+    def xtest_user_change_password_self(self):
 
         username = self._get_random_username()
         password = self._get_random_data()
@@ -667,6 +667,72 @@ class UserChangePasswordTestCase(BaseTest):
         })
 
         self.assertEquals(response.status, status_code.ok)
+        self.assertIsNotNone(response.ust)
+
+# ################################################################################################################################
+
+    def test_user_change_password_super_user(self):
+
+        username = self._get_random_username()
+        password = self._get_random_data()
+
+        response = self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': current_app,
+            'username': username,
+            'password': password,
+        })
+
+        user_id = response.user_id
+
+        self.post('/zato/sso/user/approve', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': 'CRM',
+            'user_id': user_id
+        })
+
+        response = self.post('/zato/sso/user/login', {
+            'current_app': current_app,
+            'username': username,
+            'password': password,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+        self.assertIsNotNone(response.ust)
+
+        new_pasword = self._get_random_data()
+        password_expiry = 1
+        must_change = True
+
+        response = self.patch('/zato/sso/user/password', {
+            'ust': self.ctx.super_user_ust,
+            'current_app': current_app,
+            'user_id': user_id,
+            'old_password': password,
+            'new_password': new_pasword,
+            'password_expiry': password_expiry,
+            'password_must_change': must_change,
+        })
+
+        self.assertEquals(response.status, status_code.ok)
+
+        response = self.post('/zato/sso/user/login', {
+            'current_app': current_app,
+            'username': username,
+            'password': password,
+        })
+
+        self.assertEquals(response.status, status_code.error)
+        self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
+
+        response = self.post('/zato/sso/user/login', {
+            'current_app': current_app,
+            'username': username,
+            'password': new_pasword,
+        })
+
+        self.assertEquals(response.status, status_code.warning)
+        self.assertListEqual(response.sub_status, [status_code.password.w_about_to_exp])
         self.assertIsNotNone(response.ust)
 
 # ################################################################################################################################
