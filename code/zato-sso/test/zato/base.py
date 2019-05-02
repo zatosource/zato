@@ -39,16 +39,17 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-current_app = 'CRM'
+class Config:
+    current_app = 'CRM'
 
-super_user_name = 'admin1'
-super_user_password = 'hQ9nl93UDqGus'
+    super_user_name = 'admin1'
+    super_user_password = 'hQ9nl93UDqGus'
 
-username_prefix = 'test.{}+{}'
-random_prefix = 'rand.{}+{}'
+    username_prefix = 'test.{}+{}'
+    random_prefix = 'rand.{}+{}'
 
-server_location = os.path.expanduser('~/env/z31sqlite/server1')
-server_address  = 'http://localhost:17010{}'
+    server_location = os.path.expanduser('~/env/z31sqlite/server1')
+    server_address  = 'http://localhost:17010{}'
 
 class NotGiven:
     pass
@@ -110,17 +111,17 @@ class BaseTest(TestCase):
 # ################################################################################################################################
 
     def _get_random_username(self):
-        return self._get_random(username_prefix)
+        return self._get_random(Config.username_prefix)
 
 # ################################################################################################################################
 
     def _get_random_data(self):
-        return self._get_random(random_prefix)
+        return self._get_random(Config.random_prefix)
 
 # ################################################################################################################################
 
     def _invoke(self, func, func_name, url_path, request):
-        address = server_address.format(url_path)
+        address = Config.server_address.format(url_path)
         data = dumps(request)
 
         logger.info('Invoking %s %s with %s', func_name, address, data)
@@ -147,9 +148,9 @@ class BaseTest(TestCase):
 
     def _login_super_user(self):
         request = deepcopy(Request.login) # type: Bunch
-        request.username = super_user_name
-        request.password = super_user_password
-        request.current_app = current_app
+        request.username = Config.super_user_name
+        request.password = Config.super_user_password
+        request.current_app = Config.current_app
 
         url_path = '/zato/sso/user/login'
         response = self.post(url_path, request)
