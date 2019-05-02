@@ -28,7 +28,6 @@ class SessionVerifyTestCase(BaseTest):
         response = self.post('/zato/sso/user/session', {
             'current_ust': self.ctx.super_user_ust,
             'target_ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
         })
 
         self.assertTrue(response.is_valid)
@@ -42,7 +41,6 @@ class SessionVerifyTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
@@ -51,7 +49,6 @@ class SessionVerifyTestCase(BaseTest):
         self._approve(user_id)
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
@@ -61,20 +58,17 @@ class SessionVerifyTestCase(BaseTest):
         response = self.post('/zato/sso/user/session', {
             'current_ust': self.ctx.super_user_ust,
             'target_ust': ust,
-            'current_app': Config.current_app,
         })
 
         self.assertTrue(response.is_valid)
 
         response = self.post('/zato/sso/user/logout', {
-            'current_app': Config.current_app,
             'ust': ust,
         })
 
         response = self.post('/zato/sso/user/session', {
             'current_ust': self.ctx.super_user_ust,
             'target_ust': ust,
-            'current_app': Config.current_app,
         })
 
         self.assertFalse(response.is_valid)
@@ -91,14 +85,12 @@ class SessionVerifyTestCase(BaseTest):
 
         response1 = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username1,
             'password': password1,
         })
 
         response2 = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username2,
             'password': password2,
         })
@@ -110,13 +102,11 @@ class SessionVerifyTestCase(BaseTest):
         self._approve(user_id2)
 
         response1 = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username1,
             'password': password1,
         })
 
         response2 = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username1,
             'password': password1,
         })
@@ -127,37 +117,31 @@ class SessionVerifyTestCase(BaseTest):
         response1 = self.post('/zato/sso/user/session', {
             'current_ust': ust1,
             'target_ust': ust2,
-            'current_app': Config.current_app,
         }, False)
 
         response2 = self.post('/zato/sso/user/session', {
             'current_ust': ust2,
             'target_ust': ust1,
-            'current_app': Config.current_app,
         }, False)
 
         response3 = self.post('/zato/sso/user/session', {
             'current_ust': ust1,
             'target_ust': ust1,
-            'current_app': Config.current_app,
         }, False)
 
         response4 = self.post('/zato/sso/user/session', {
             'current_ust': ust2,
             'target_ust': ust2,
-            'current_app': Config.current_app,
         }, False)
 
         response5 = self.post('/zato/sso/user/session', {
             'current_ust': ust1,
             'target_ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
         }, False)
 
         response6 = self.post('/zato/sso/user/session', {
             'current_ust': ust1,
             'target_ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
         }, False)
 
         self.assertEquals(response1.status, status_code.error)
@@ -177,6 +161,17 @@ class SessionVerifyTestCase(BaseTest):
 
         self.assertEquals(response6.status, status_code.error)
         self.assertListEqual(response6.sub_status, [status_code.auth.not_allowed])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SessionRenewTestCase(BaseTest):
+
+    def test_renew(self):
+
+        response = self.patch('/zato/sso/user/session', {
+            'ust': self.ctx.super_user_ust,
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################

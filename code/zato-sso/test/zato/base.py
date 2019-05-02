@@ -122,6 +122,8 @@ class BaseTest(TestCase):
 
     def _invoke(self, func, func_name, url_path, request, expect_ok, _not_given='_test_not_given'):
         address = Config.server_address.format(url_path)
+
+        request['current_app'] = Config.current_app
         data = dumps(request)
 
         logger.info('Invoking %s %s with %s', func_name, address, data)
@@ -200,7 +202,6 @@ class BaseTest(TestCase):
     def _approve(self, user_id):
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
