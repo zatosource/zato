@@ -120,7 +120,7 @@ class BaseTest(TestCase):
 
 # ################################################################################################################################
 
-    def _invoke(self, func, func_name, url_path, request):
+    def _invoke(self, func, func_name, url_path, request, _not_given='_test_not_given'):
         address = Config.server_address.format(url_path)
         data = dumps(request)
 
@@ -130,7 +130,12 @@ class BaseTest(TestCase):
         logger.info('Response received %s %s', response.status_code, response.text)
 
         data = loads(response.text)
-        return bunchify(data)
+        data = bunchify(data)
+
+        # CID is always required in all responses
+        self.assertNotEquals(data.get('cid', _not_given), _not_given)
+
+        return data
 
     def get(self, url_path, request):
         return self._invoke(requests.get, 'GET', url_path, request)
