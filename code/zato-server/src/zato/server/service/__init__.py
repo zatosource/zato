@@ -91,7 +91,6 @@ if typing.TYPE_CHECKING:
     from zato.common.audit import AuditPII
     from zato.common.crypto import ServerCryptoManager
     from zato.common.json_schema import Validator as JSONSchemaValidator
-    from zato.common.kvdb import KVDB
     from zato.common.odb.api import ODBManager
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
@@ -103,8 +102,10 @@ if typing.TYPE_CHECKING:
     BrokerClient = BrokerClient
     Callable = Callable
     JSONSchemaValidator = JSONSchemaValidator
+    ODBManager = ODBManager
     ParallelServer = ParallelServer
     ServerCryptoManager = ServerCryptoManager
+    Servers = Servers
     SSOAPI = SSOAPI
     WorkerStore = WorkerStore
 
