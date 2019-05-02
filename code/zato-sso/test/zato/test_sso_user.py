@@ -33,7 +33,6 @@ class UserCreateTestCase(BaseTest):
         })
 
         self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
         self.assertTrue(response.is_approval_needed)
         self._assert_default_user_data(response, now)
 
@@ -50,7 +49,6 @@ class UserSignupTestCase(BaseTest):
         })
 
         self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
         self.assertIsNotNone(response.confirm_token)
 
 # ################################################################################################################################
@@ -74,7 +72,6 @@ class UserConfirmSignupTestCase(BaseTest):
         })
 
         self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -205,7 +202,6 @@ class UserLoginTestCase(BaseTest):
         })
 
         self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
         self.assertIsNotNone(response.ust)
 
 # ################################################################################################################################
@@ -227,7 +223,6 @@ class UserLogoutTestCase(BaseTest):
         })
 
         self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -367,7 +362,6 @@ class UserUpdateTestCase(BaseTest):
         })
 
         self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
         self.assertIsNotNone(response.user_id)
 
         self.assertFalse(response.is_active)
@@ -439,7 +433,6 @@ class UserUpdateTestCase(BaseTest):
         })
 
         self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
 
         self.assertEquals(response.user_id, user_id)
         self.assertEquals(response.display_name, display_name)
