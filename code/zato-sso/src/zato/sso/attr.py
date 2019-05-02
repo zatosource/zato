@@ -485,7 +485,8 @@ class AttrAPI(object):
         # Audit comes first
         audit_pii.info(self.cid, 'attr._call_many', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
-                'is_super_user':self.is_super_user, 'func':func.im_func.func_name})
+                'is_super_user':self.is_super_user,
+                'func':func.__func__.__name__})
 
         with closing(self.odb_session_func()) as session:
             for item in data:

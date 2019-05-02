@@ -152,6 +152,23 @@ class UserAttrTestCase(BaseTest):
         self.assertEqual(response.sub_status, [status_code.auth.not_allowed])
 
 # ################################################################################################################################
+
+    def test_create_many(self):
+
+        data = [
+            {'name': self._get_random_data(), 'value': self._get_random_data()},
+            {'name': self._get_random_data(), 'value': self._get_random_data()},
+        ]
+
+        response = self.post('/zato/sso/user/attr', {
+            'ust': self.ctx.super_user_ust,
+            'user_id': self.ctx.super_user_id,
+            'data': data,
+        })
+
+        self.assertEqual(response.status, status_code.ok)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
