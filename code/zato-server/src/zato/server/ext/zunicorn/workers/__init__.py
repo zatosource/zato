@@ -34,8 +34,6 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import sys
-
 # supported gunicorn workers.
 SUPPORTED_WORKERS = {
     "gevent": "zato.server.ext.zunicorn.workers.ggevent.GeventWorker",
