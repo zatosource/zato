@@ -9,44 +9,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging
-import os
-from copy import deepcopy
 from datetime import datetime
-from itertools import count
-from json import dumps, loads
-from unittest import TestCase, main
-
-# Bunch
-from bunch import bunchify
-
-# sh
-import sh
-
-# requests
-import requests
+from unittest import main
 
 # Zato
 from base import BaseTest, Config
 from zato.sso import const, status_code
-
-# ################################################################################################################################
-
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-# ################################################################################################################################
-
-class NotGiven:
-    pass
-
-class Request:
-
-    login = bunchify({
-        'username': NotGiven,
-        'password': NotGiven,
-        'current_app': NotGiven,
-    })
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -345,7 +313,6 @@ class UserUpdateTestCase(BaseTest):
 
     def test_user_update_self(self):
 
-        now = datetime.utcnow()
         username = self._get_random_username()
         password = self._get_random_data()
 
@@ -420,7 +387,6 @@ class UserUpdateTestCase(BaseTest):
 
     def test_user_update_by_id(self):
 
-        now = datetime.utcnow()
         username = self._get_random_username()
         password = self._get_random_data()
 
