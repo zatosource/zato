@@ -26,8 +26,8 @@ class Session(BaseRESTService):
     """ Session manipulation through REST.
     """
     class SimpleIO(BaseSIO):
-        input_required = ('current_ust', 'current_app')
-        input_optional = ('target_ust',)
+        input_required = 'current_app',
+        input_optional = 'target_ust', 'current_ust', 'ust'
         output_optional = BaseSIO.output_optional + ('creation_time', 'expiration_time', 'remote_addr', 'user_agent',
             'is_valid')
         default_value = _invalid
@@ -69,7 +69,7 @@ class Session(BaseRESTService):
     def _handle_sso_PATCH(self, ctx):
         """ Renews a session given on input.
         """
-        self.response.payload.expiration_time = self.sso.user.session.renew(self.cid, ctx.input.current_ust,
+        self.response.payload.expiration_time = self.sso.user.session.renew(self.cid, ctx.input.ust,
             ctx.input.current_app, ctx.remote_addr).isoformat()
 
 # ################################################################################################################################

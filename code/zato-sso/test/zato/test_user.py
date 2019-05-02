@@ -28,7 +28,6 @@ class UserCreateTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username
         })
 
@@ -43,7 +42,6 @@ class UserSignupTestCase(BaseTest):
         response = self.post('/zato/sso/user/signup', {
             'username': self._get_random_username(),
             'password': self._get_random_data(),
-            'current_app': Config.current_app,
             'app_list': [Config.current_app]
         })
 
@@ -58,7 +56,6 @@ class UserConfirmSignupTestCase(BaseTest):
         response = self.post('/zato/sso/user/signup', {
             'username': self._get_random_username(),
             'password': self._get_random_data(),
-            'current_app': Config.current_app,
             'app_list': [Config.current_app]
         })
 
@@ -66,7 +63,6 @@ class UserConfirmSignupTestCase(BaseTest):
 
         response = self.patch('/zato/sso/user/signup', {
             'confirm_token': confirm_token,
-            'current_app': Config.current_app,
         })
 
 # ################################################################################################################################
@@ -90,7 +86,6 @@ class UserSearchTestCase(BaseTest):
 
         self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username1,
             'display_name': display_name1,
             'email': email1,
@@ -98,7 +93,6 @@ class UserSearchTestCase(BaseTest):
 
         self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username2,
             'display_name': display_name2,
             'email': email2,
@@ -106,7 +100,6 @@ class UserSearchTestCase(BaseTest):
 
         response = self.get('/zato/sso/user/search', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'display_name': random_data,
             'is_name_exact': False,
         })
@@ -141,13 +134,11 @@ class UserApproveTestCase(BaseTest):
 
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
@@ -161,7 +152,6 @@ class UserRejectTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': self._get_random_username(),
         })
 
@@ -169,13 +159,11 @@ class UserRejectTestCase(BaseTest):
 
         self.post('/zato/sso/user/reject', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
@@ -189,7 +177,6 @@ class UserLoginTestCase(BaseTest):
     def test_user_login(self):
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': Config.super_user_name,
             'password': Config.super_user_password,
         })
@@ -204,14 +191,12 @@ class UserLogoutTestCase(BaseTest):
     def test_user_logout(self):
 
         ust = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': Config.super_user_name,
             'password': Config.super_user_password,
         }).ust
 
         response = self.post('/zato/sso/user/logout', {
             'ust': ust,
-            'current_app': Config.current_app,
         })
 
 # ################################################################################################################################
@@ -233,7 +218,6 @@ class UserGetTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password_must_change': password_must_change,
             'display_name': display_name,
@@ -249,7 +233,6 @@ class UserGetTestCase(BaseTest):
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id,
         })
 
@@ -271,7 +254,6 @@ class UserGetTestCase(BaseTest):
         now = datetime.utcnow()
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
         })
 
         self.assertEquals(response.approval_status, const.approval_status.approved)
@@ -301,7 +283,6 @@ class UserUpdateTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
@@ -310,14 +291,12 @@ class UserUpdateTestCase(BaseTest):
 
         response = self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
         self.assertEquals(response.status, status_code.ok)
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password
         })
@@ -332,7 +311,6 @@ class UserUpdateTestCase(BaseTest):
 
         response = self.patch('/zato/sso/user', {
             'ust': ust,
-            'current_app': Config.current_app,
             'display_name': display_name,
             'first_name': first_name,
             'middle_name': middle_name,
@@ -342,7 +320,6 @@ class UserUpdateTestCase(BaseTest):
 
         response = self.get('/zato/sso/user', {
             'ust': ust,
-            'current_app': Config.current_app,
         })
 
         self.assertIsNotNone(response.user_id)
@@ -369,7 +346,6 @@ class UserUpdateTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
@@ -392,7 +368,6 @@ class UserUpdateTestCase(BaseTest):
         response = self.patch('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'user_id': user_id,
-            'current_app': Config.current_app,
             'display_name': display_name,
             'first_name': first_name,
             'middle_name': middle_name,
@@ -408,7 +383,6 @@ class UserUpdateTestCase(BaseTest):
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'user_id': user_id,
         })
 
@@ -435,7 +409,6 @@ class UserDeleteTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': self._get_random_username(),
         })
 
@@ -443,7 +416,6 @@ class UserDeleteTestCase(BaseTest):
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id,
         })
 
@@ -451,7 +423,6 @@ class UserDeleteTestCase(BaseTest):
 
         response = self.delete('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id,
         })
 
@@ -459,7 +430,6 @@ class UserDeleteTestCase(BaseTest):
 
         response = self.get('/zato/sso/user/search', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id,
         })
 
@@ -471,7 +441,6 @@ class UserDeleteTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': self._get_random_username(),
         })
 
@@ -480,7 +449,6 @@ class UserDeleteTestCase(BaseTest):
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id1,
         })
 
@@ -489,7 +457,6 @@ class UserDeleteTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
@@ -498,18 +465,15 @@ class UserDeleteTestCase(BaseTest):
 
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id1
         })
 
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id2
         })
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
@@ -518,7 +482,6 @@ class UserDeleteTestCase(BaseTest):
 
         response = self.delete('/zato/sso/user', {
             'ust': ust,
-            'current_app': 'CRM',
             'user_id': user_id1,
         }, False)
 
@@ -537,7 +500,6 @@ class UserChangePasswordTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
@@ -546,12 +508,10 @@ class UserChangePasswordTestCase(BaseTest):
 
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
@@ -563,13 +523,11 @@ class UserChangePasswordTestCase(BaseTest):
 
         response = self.patch('/zato/sso/user/password', {
             'ust': ust,
-            'current_app': Config.current_app,
             'old_password': password,
             'new_password': new_pasword
         })
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         }, False)
@@ -578,7 +536,6 @@ class UserChangePasswordTestCase(BaseTest):
         self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': new_pasword,
         })
@@ -595,7 +552,6 @@ class UserChangePasswordTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
@@ -604,12 +560,10 @@ class UserChangePasswordTestCase(BaseTest):
 
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
@@ -622,7 +576,6 @@ class UserChangePasswordTestCase(BaseTest):
 
         response = self.patch('/zato/sso/user/password', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'user_id': user_id,
             'old_password': password,
             'new_password': new_pasword,
@@ -631,7 +584,6 @@ class UserChangePasswordTestCase(BaseTest):
         })
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         }, False)
@@ -640,7 +592,6 @@ class UserChangePasswordTestCase(BaseTest):
         self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': new_pasword,
         }, False)
