@@ -218,7 +218,7 @@ class Worker(object):
         self.alive = False
         try:
             self.app.zato_wsgi_app.cleanup_on_stop()
-        except Exception as e:
+        except Exception:
             # At this poing logging may not be available anymore hence we are using print() instead.
             from traceback import format_exc
             print('Exception in gunicorn.workers.base.Worker.handle_quit', format_exc())
