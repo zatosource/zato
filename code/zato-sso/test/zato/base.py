@@ -30,7 +30,7 @@ import sh
 import requests
 
 # Zato
-from zato.sso import const, status_code
+from zato.sso import const
 
 # ################################################################################################################################
 
