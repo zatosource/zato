@@ -499,7 +499,11 @@ class AttrAPI(object):
                     item.get('encrypt', encrypt), _user_id, needs_commit=False)
 
             # Commit now everything added to session thus far
-            session.commit()
+            try:
+                session.commit()
+            except IntegrityError:
+                logger.warn(format_exc())
+                raise ValidationError(status_code.attr.already_exists)
 
 # ################################################################################################################################
 
