@@ -54,14 +54,6 @@ class Config:
 class NotGiven:
     pass
 
-class Request:
-
-    login = bunchify({
-        'username': NotGiven,
-        'password': NotGiven,
-        'current_app': NotGiven,
-    })
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -71,6 +63,7 @@ class TestCtx(object):
 
     def reset(self):
         self.super_user_ust = None # type: unicode
+        self.super_user_id = None # type: unicode
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -158,15 +151,16 @@ class BaseTest(TestCase):
 # ################################################################################################################################
 
     def _login_super_user(self):
-        request = deepcopy(Request.login) # type: Bunch
-        request.username = Config.super_user_name
-        request.password = Config.super_user_password
-        request.current_app = Config.current_app
-
-        url_path = '/zato/sso/user/login'
-        response = self.post(url_path, request)
-
+        response = self.post('/zato/sso/user/login', {
+            'username': Config.super_user_name,
+            'password': Config.super_user_password,
+        })
         self.ctx.super_user_ust = response.ust
+
+        response = self.get('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+        })
+        self.ctx.super_user_id = response.user_id
 
 # ################################################################################################################################
 

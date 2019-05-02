@@ -151,22 +151,22 @@ class SessionVerifyTestCase(BaseTest):
             'target_ust': self.ctx.super_user_ust,
         }, False)
 
-        self.assertEquals(response1.status, status_code.error)
+        self.assertEqual(response1.status, status_code.error)
         self.assertListEqual(response1.sub_status, [status_code.auth.not_allowed])
 
-        self.assertEquals(response2.status, status_code.error)
+        self.assertEqual(response2.status, status_code.error)
         self.assertListEqual(response2.sub_status, [status_code.auth.not_allowed])
 
-        self.assertEquals(response3.status, status_code.error)
+        self.assertEqual(response3.status, status_code.error)
         self.assertListEqual(response3.sub_status, [status_code.auth.not_allowed])
 
-        self.assertEquals(response4.status, status_code.error)
+        self.assertEqual(response4.status, status_code.error)
         self.assertListEqual(response4.sub_status, [status_code.auth.not_allowed])
 
-        self.assertEquals(response5.status, status_code.error)
+        self.assertEqual(response5.status, status_code.error)
         self.assertListEqual(response5.sub_status, [status_code.auth.not_allowed])
 
-        self.assertEquals(response6.status, status_code.error)
+        self.assertEqual(response6.status, status_code.error)
         self.assertListEqual(response6.sub_status, [status_code.auth.not_allowed])
 
 # ################################################################################################################################
@@ -232,7 +232,7 @@ class SessionGetTestCase(BaseTest):
             'target_ust': self.ctx.super_user_ust,
         }, False)
 
-        self.assertEquals(response.status, status_code.error)
+        self.assertEqual(response.status, status_code.error)
         self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
 
 # ################################################################################################################################

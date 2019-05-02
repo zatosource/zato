@@ -287,7 +287,7 @@ class UserAPI(object):
 
         # Passwords must be strong and are always at least hashed and possibly encrypted too ..
         password = make_password_secret(
-            ctx.data['password'].encode('utf8'), self.encrypt_password, self.encrypt_func, self.hash_func)
+            ctx.data['password'], self.encrypt_password, self.encrypt_func, self.hash_func)
 
         # .. while emails are only encrypted, and it is optional.
         if self.encrypt_email:
