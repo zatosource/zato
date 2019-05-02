@@ -104,13 +104,13 @@ class UserSearchTestCase(BaseTest):
             'is_name_exact': False,
         })
 
-        self.assertEquals(response.cur_page, 1)
-        self.assertEquals(response.num_pages, 1)
-        self.assertEquals(response.has_next_page, False)
-        self.assertEquals(response.has_prev_page, False)
-        self.assertEquals(response.page_size, const.search.page_size)
-        self.assertEquals(response.total, 2)
-        self.assertEquals(len(response.result), 2)
+        self.assertEqual(response.cur_page, 1)
+        self.assertEqual(response.num_pages, 1)
+        self.assertEqual(response.has_next_page, False)
+        self.assertEqual(response.has_prev_page, False)
+        self.assertEqual(response.page_size, const.search.page_size)
+        self.assertEqual(response.total, 2)
+        self.assertEqual(len(response.result), 2)
 
         user1 = response.result[0]
         self._assert_default_user_data(user1, now)
@@ -142,7 +142,7 @@ class UserApproveTestCase(BaseTest):
             'user_id': user_id
         })
 
-        self.assertEquals(response.approval_status, const.approval_status.approved)
+        self.assertEqual(response.approval_status, const.approval_status.approved)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -167,7 +167,7 @@ class UserRejectTestCase(BaseTest):
             'user_id': user_id
         })
 
-        self.assertEquals(response.approval_status, const.approval_status.rejected)
+        self.assertEqual(response.approval_status, const.approval_status.rejected)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -236,14 +236,14 @@ class UserGetTestCase(BaseTest):
             'user_id': user_id,
         })
 
-        self.assertEquals(response.status, status_code.ok)
-        self.assertEquals(response.username, username)
-        self.assertEquals(response.display_name, display_name)
-        self.assertEquals(response.first_name, first_name)
-        self.assertEquals(response.middle_name, middle_name)
-        self.assertEquals(response.last_name, last_name)
-        self.assertEquals(response.email, email)
-        self.assertEquals(response.sign_up_status, sign_up_status)
+        self.assertEqual(response.status, status_code.ok)
+        self.assertEqual(response.username, username)
+        self.assertEqual(response.display_name, display_name)
+        self.assertEqual(response.first_name, first_name)
+        self.assertEqual(response.middle_name, middle_name)
+        self.assertEqual(response.last_name, last_name)
+        self.assertEqual(response.email, email)
+        self.assertEqual(response.sign_up_status, sign_up_status)
         self.assertIs(response.password_must_change, password_must_change)
         self.assertIs(response.is_locked, is_locked)
 
@@ -256,10 +256,10 @@ class UserGetTestCase(BaseTest):
             'ust': self.ctx.super_user_ust,
         })
 
-        self.assertEquals(response.approval_status, const.approval_status.approved)
-        self.assertEquals(response.approval_status_mod_by, 'auto')
-        self.assertEquals(response.username, Config.super_user_name)
-        self.assertEquals(response.sign_up_status, const.signup_status.final)
+        self.assertEqual(response.approval_status, const.approval_status.approved)
+        self.assertEqual(response.approval_status_mod_by, 'auto')
+        self.assertEqual(response.username, Config.super_user_name)
+        self.assertEqual(response.sign_up_status, const.signup_status.final)
 
         self.assertTrue(response.is_approval_needed)
         self.assertTrue(response.is_super_user)
@@ -294,7 +294,7 @@ class UserUpdateTestCase(BaseTest):
             'user_id': user_id
         })
 
-        self.assertEquals(response.status, status_code.ok)
+        self.assertEqual(response.status, status_code.ok)
 
         response = self.post('/zato/sso/user/login', {
             'username': username,
@@ -330,12 +330,12 @@ class UserUpdateTestCase(BaseTest):
         self.assertFalse(response.is_locked)
         self.assertFalse(response.is_super_user)
 
-        self.assertEquals(response.display_name, display_name)
-        self.assertEquals(response.email, email)
-        self.assertEquals(response.first_name, first_name)
-        self.assertEquals(response.last_name, last_name)
-        self.assertEquals(response.middle_name, middle_name)
-        self.assertEquals(response.username, username)
+        self.assertEqual(response.display_name, display_name)
+        self.assertEqual(response.email, email)
+        self.assertEqual(response.first_name, first_name)
+        self.assertEqual(response.last_name, last_name)
+        self.assertEqual(response.middle_name, middle_name)
+        self.assertEqual(response.username, username)
 
 # ################################################################################################################################
 
@@ -386,19 +386,19 @@ class UserUpdateTestCase(BaseTest):
             'user_id': user_id,
         })
 
-        self.assertEquals(response.user_id, user_id)
-        self.assertEquals(response.display_name, display_name)
-        self.assertEquals(response.email, email)
-        self.assertEquals(response.first_name, first_name)
-        self.assertEquals(response.last_name, last_name)
-        self.assertEquals(response.middle_name, middle_name)
-        self.assertEquals(response.username, username)
+        self.assertEqual(response.user_id, user_id)
+        self.assertEqual(response.display_name, display_name)
+        self.assertEqual(response.email, email)
+        self.assertEqual(response.first_name, first_name)
+        self.assertEqual(response.last_name, last_name)
+        self.assertEqual(response.middle_name, middle_name)
+        self.assertEqual(response.username, username)
 
-        self.assertEquals(response.is_locked, is_locked)
-        self.assertEquals(response.password_expiry, password_expiry)
-        self.assertEquals(response.password_must_change, password_must_change)
-        self.assertEquals(response.sign_up_status, sign_up_status)
-        self.assertEquals(response.approval_status, approval_status)
+        self.assertEqual(response.is_locked, is_locked)
+        self.assertEqual(response.password_expiry, password_expiry)
+        self.assertEqual(response.password_must_change, password_must_change)
+        self.assertEqual(response.sign_up_status, sign_up_status)
+        self.assertEqual(response.approval_status, approval_status)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -419,21 +419,21 @@ class UserDeleteTestCase(BaseTest):
             'user_id': user_id,
         })
 
-        self.assertEquals(response.status, status_code.ok)
+        self.assertEqual(response.status, status_code.ok)
 
         response = self.delete('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'user_id': user_id,
         })
 
-        self.assertEquals(response.status, status_code.ok)
+        self.assertEqual(response.status, status_code.ok)
 
         response = self.get('/zato/sso/user/search', {
             'ust': self.ctx.super_user_ust,
             'user_id': user_id,
         })
 
-        self.assertEquals(response.total, 0)
+        self.assertEqual(response.total, 0)
 
 # ################################################################################################################################
 
@@ -444,7 +444,7 @@ class UserDeleteTestCase(BaseTest):
             'username': self._get_random_username(),
         })
 
-        self.assertEquals(response.status, status_code.ok)
+        self.assertEqual(response.status, status_code.ok)
         user_id1 = response.user_id
 
         response = self.get('/zato/sso/user', {
@@ -485,7 +485,7 @@ class UserDeleteTestCase(BaseTest):
             'user_id': user_id1,
         }, False)
 
-        self.assertEquals(response.status, status_code.error)
+        self.assertEqual(response.status, status_code.error)
         self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
 
 # ################################################################################################################################
@@ -532,7 +532,7 @@ class UserChangePasswordTestCase(BaseTest):
             'password': password,
         }, False)
 
-        self.assertEquals(response.status, status_code.error)
+        self.assertEqual(response.status, status_code.error)
         self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
 
         response = self.post('/zato/sso/user/login', {
@@ -540,7 +540,7 @@ class UserChangePasswordTestCase(BaseTest):
             'password': new_pasword,
         })
 
-        self.assertEquals(response.status, status_code.ok)
+        self.assertEqual(response.status, status_code.ok)
         self.assertIsNotNone(response.ust)
 
 # ################################################################################################################################
@@ -588,7 +588,7 @@ class UserChangePasswordTestCase(BaseTest):
             'password': password,
         }, False)
 
-        self.assertEquals(response.status, status_code.error)
+        self.assertEqual(response.status, status_code.error)
         self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
 
         response = self.post('/zato/sso/user/login', {
@@ -596,7 +596,7 @@ class UserChangePasswordTestCase(BaseTest):
             'password': new_pasword,
         }, False)
 
-        self.assertEquals(response.status, status_code.warning)
+        self.assertEqual(response.status, status_code.warning)
         self.assertListEqual(response.sub_status, [status_code.password.w_about_to_exp])
         self.assertIsNotNone(response.ust)
 

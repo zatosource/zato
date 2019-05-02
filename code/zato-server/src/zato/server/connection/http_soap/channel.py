@@ -29,7 +29,7 @@ from paste.util.converters import asbool
 from regex import compile as regex_compile
 
 # Python 2/3 compatibility
-from six import PY3
+from six import PY2, PY3
 from past.builtins import basestring, unicode
 
 # Zato
@@ -41,6 +41,11 @@ from zato.common.util import payload_from_request
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
+
+if PY2:
+    stack_format = None
+else:
+    from stackprinter import format as stack_format
 
 # ################################################################################################################################
 
@@ -225,7 +230,8 @@ class RequestDispatcher(object):
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
-        _accept_any_internal=accept_any_internal, _rate_limit_type=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP):
+        _accept_any_internal=accept_any_internal, _rate_limit_type=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
+        _stack_format=stack_format, _exc_sep='*' * 80):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -327,7 +333,7 @@ class RequestDispatcher(object):
 
                     wsgi_environ['zato.http.response.headers']['Content-Encoding'] = 'gzip'
 
-                # Finally return payload to the client
+                # Finally, return payload to the client
                 return response.payload
 
             except Exception as e:
@@ -380,7 +386,11 @@ class RequestDispatcher(object):
                 # TODO: This should be configurable. Some people may want such
                 # things to be on DEBUG whereas for others ERROR will make most sense
                 # in given circumstances.
-                logger.error('Caught an exception, cid:`%s`, status_code:`%s`, _format_exc:`%s`', cid, status_code, _format_exc)
+                _exc = _stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
+                    add_summary=True, source_lines=20) if _stack_format else _format_exc
+
+                logger.error(
+                    'Caught an exception, cid:`%s`, status_code:`%s`, e:\n%s\n`%s`', cid, status_code, _exc_sep, _exc)
 
                 try:
                     error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'])
