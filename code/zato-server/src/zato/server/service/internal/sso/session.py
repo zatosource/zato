@@ -46,11 +46,11 @@ class Session(BaseRESTService):
             ctx.input.current_app, ctx.remote_addr)
 
         # Serialize datetime objects to string
-        result['creation_time'] = result['creation_time'].isoformat()
-        result['expiration_time'] = result['expiration_time'].isoformat()
+        result.creation_time = result.creation_time.isoformat()
+        result.expiration_time = result.expiration_time.isoformat()
 
         # Return output
-        self.response.payload = result
+        self.response.payload = result.to_dict()
 
 # ################################################################################################################################
 

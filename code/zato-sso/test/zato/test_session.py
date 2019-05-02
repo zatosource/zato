@@ -12,8 +12,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from datetime import datetime
 from unittest import main
 
+# dateutil
+from dateutil.parser import parse as dt_parse
+
+# ipaddress
+from ipaddress import ip_address
+
 # Zato
 from base import BaseTest, Config
+from zato.common.ipaddress_ import ip_network
 from zato.sso import const, status_code
 
 # ################################################################################################################################
@@ -169,9 +176,64 @@ class SessionRenewTestCase(BaseTest):
 
     def test_renew(self):
 
+        now = datetime.utcnow()
+
         response = self.patch('/zato/sso/user/session', {
             'ust': self.ctx.super_user_ust,
         })
+
+        self.assertGreater(dt_parse(response.expiration_time), now)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SessionGetTestCase(BaseTest):
+
+    def test_get_super_user(self):
+
+        now = datetime.utcnow()
+
+        response = self.get('/zato/sso/user/session', {
+            'current_ust': self.ctx.super_user_ust,
+            'target_ust': self.ctx.super_user_ust,
+        })
+
+        self.assertLess(dt_parse(response.creation_time), now)
+        self.assertGreater(dt_parse(response.expiration_time), now)
+
+        # Instead of an assertion, this will raise an exception if remote_addr cannot be parsed
+        ip_address(response.remote_addr)
+
+# ################################################################################################################################
+
+    def test_get_regular_user(self):
+
+        username = self._get_random_username()
+        password = self._get_random_data()
+
+        response = self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'username': username,
+            'password': password,
+        })
+
+        user_id = response.user_id
+        self._approve(user_id)
+
+        response = self.post('/zato/sso/user/login', {
+            'username': username,
+            'password': password,
+        })
+
+        ust = response.ust
+
+        response = self.get('/zato/sso/user/session', {
+            'current_ust': ust,
+            'target_ust': self.ctx.super_user_ust,
+        }, False)
+
+        self.assertEquals(response.status, status_code.error)
+        self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
 
 # ################################################################################################################################
 # ################################################################################################################################
