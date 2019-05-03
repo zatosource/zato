@@ -19,7 +19,7 @@ from dateutil.parser import parse as dt_parse
 from ipaddress import ip_address
 
 # Zato
-from base import BaseTest, Config
+from base import BaseTest, Config, logger
 from zato.common.ipaddress_ import ip_network
 from zato.sso import const, status_code
 
@@ -30,13 +30,16 @@ class UserAttrTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_create(self):
+    def xtest_update(self):
 
         name = self._get_random_data()
         value = self._get_random_data()
         expiration = 900
 
-        response = self.post('/zato/sso/user/attr', {
+        new_value = self._get_random_data()
+        new_expiration = 123
+
+        self.post('/zato/sso/user/attr', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'name': name,
@@ -44,36 +47,17 @@ class UserAttrTestCase(BaseTest):
             'expiration': expiration
         })
 
-        self.assertEqual(response.status, status_code.ok)
-
-# ################################################################################################################################
-
-    def test_create_already_exists(self):
-
-        name = self._get_random_data()
-        value = self._get_random_data()
-
-        response1 = self.post('/zato/sso/user/attr', {
+        self.patch('/zato/sso/user/attr', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'name': name,
-            'value': value,
+            'value': new_value,
+            'expiration': new_expiration
         })
 
-        response2 = self.post('/zato/sso/user/attr', {
-            'ust': self.ctx.super_user_ust,
-            'user_id': self.ctx.super_user_id,
-            'name': name,
-            'value': value,
-        }, False)
-
-        self.assertEqual(response1.status, status_code.ok)
-        self.assertEqual(response2.status, status_code.error)
-        self.assertListEqual(response2.sub_status, [status_code.attr.already_exists])
-
 # ################################################################################################################################
 
-    def test_create_for_another_user_by_super_user(self):
+    def xtest_update_for_another_user_by_super_user(self):
 
         username = self._get_random_username()
         password = self._get_random_data()
@@ -91,7 +75,7 @@ class UserAttrTestCase(BaseTest):
         value = self._get_random_data()
         expiration = 900
 
-        response = self.post('/zato/sso/user/attr', {
+        self.post('/zato/sso/user/attr', {
             'ust': self.ctx.super_user_ust,
             'user_id': user_id,
             'name': name,
@@ -99,11 +83,20 @@ class UserAttrTestCase(BaseTest):
             'expiration': expiration
         })
 
-        self.assertEqual(response.status, status_code.ok)
+        new_value = self._get_random_data()
+        new_expiration = 123
+
+        self.patch('/zato/sso/user/attr', {
+            'ust': self.ctx.super_user_ust,
+            'user_id': user_id,
+            'name': name,
+            'value': new_value,
+            'expiration': new_expiration
+        })
 
 # ################################################################################################################################
 
-    def test_create_for_another_user_by_regular_user(self):
+    def test_update_for_another_user_by_regular_user(self):
 
         username1 = self._get_random_username()
         password1 = self._get_random_data()
@@ -140,12 +133,23 @@ class UserAttrTestCase(BaseTest):
         value = self._get_random_data()
         expiration = 900
 
-        response = self.post('/zato/sso/user/attr', {
-            'ust': ust,
+        self.post('/zato/sso/user/attr', {
+            'ust': self.ctx.super_user_ust,
             'user_id': user_id2,
             'name': name,
             'value': value,
             'expiration': expiration
+        })
+
+        new_value = self._get_random_data()
+        new_expiration = 123
+
+        response = self.patch('/zato/sso/user/attr', {
+            'ust': ust,
+            'user_id': user_id2,
+            'name': name,
+            'value': new_value,
+            'expiration': new_expiration
         }, False)
 
         self.assertEqual(response.status, status_code.error)
@@ -153,7 +157,7 @@ class UserAttrTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_create_many(self):
+    def xtest_update_many(self):
 
         data = [
             {'name': self._get_random_data(), 'value': self._get_random_data()},
@@ -170,7 +174,7 @@ class UserAttrTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_create_many_already_exists(self):
+    def xtest_update_many_already_exists(self):
 
         data = [
             {'name': self._get_random_data(), 'value': self._get_random_data()},
@@ -195,7 +199,7 @@ class UserAttrTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_create_many_for_another_user_by_super_user(self):
+    def xtest_update_many_for_another_user_by_super_user(self):
 
         username = self._get_random_username()
         password = self._get_random_data()
@@ -224,7 +228,7 @@ class UserAttrTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_create_for_another_user_by_regular_user(self):
+    def xtest_update_for_another_user_by_regular_user(self):
 
         username1 = self._get_random_username()
         password1 = self._get_random_data()
