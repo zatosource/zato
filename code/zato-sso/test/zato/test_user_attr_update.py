@@ -96,7 +96,7 @@ class UserAttrTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_update_for_another_user_by_regular_user(self):
+    def xtest_update_for_another_user_by_regular_user(self):
 
         username1 = self._get_random_username()
         password1 = self._get_random_data()
@@ -157,45 +157,38 @@ class UserAttrTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def xtest_update_many(self):
+    def test_update_many(self):
+
+        name1 = self._get_random_data()
+        name2 = self._get_random_data()
+
+        value1 = self._get_random_data()
+        value2 = self._get_random_data()
+
+        new_value1 = self._get_random_data()
+        new_value2 = self._get_random_data()
 
         data = [
-            {'name': self._get_random_data(), 'value': self._get_random_data()},
-            {'name': self._get_random_data(), 'value': self._get_random_data()},
+            {'name': name1, 'value': value1},
+            {'name': name2, 'value': value2},
         ]
 
-        response = self.post('/zato/sso/user/attr', {
+        new_data = [
+            {'name': name1, 'value': new_value1},
+            {'name': name2, 'value': new_value2},
+        ]
+
+        self.post('/zato/sso/user/attr', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'data': data,
         })
 
-        self.assertEqual(response.status, status_code.ok)
-
-# ################################################################################################################################
-
-    def xtest_update_many_already_exists(self):
-
-        data = [
-            {'name': self._get_random_data(), 'value': self._get_random_data()},
-            {'name': self._get_random_data(), 'value': self._get_random_data()},
-        ]
-
-        response1 = self.post('/zato/sso/user/attr', {
+        self.patch('/zato/sso/user/attr', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
-            'data': data,
+            'data': new_data,
         })
-
-        response2 = self.post('/zato/sso/user/attr', {
-            'ust': self.ctx.super_user_ust,
-            'user_id': self.ctx.super_user_id,
-            'data': data,
-        }, False)
-
-        self.assertEqual(response1.status, status_code.ok)
-        self.assertEqual(response2.status, status_code.error)
-        self.assertListEqual(response2.sub_status, [status_code.attr.already_exists])
 
 # ################################################################################################################################
 
