@@ -71,6 +71,10 @@ __version__ = "1.8.0"
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
 
+# For pyflakes
+from past.builtins import basestring, execfile, file, long, unicode
+execfile = execfile
+
 if PY3:
     string_types = str,
     integer_types = int,

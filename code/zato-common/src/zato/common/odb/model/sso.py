@@ -134,7 +134,7 @@ class _SSOAttr(Base):
     name = Column(String(191), nullable=False)
     value = Column(Text(), nullable=True)
 
-    # Unlike, this cannot be NULL so it may be used for practical purposes in the unique constraint 'zato_attr_name_uq',
+    # Unlike ust, this cannot be NULL so it may be used for practical purposes in the unique constraint 'zato_attr_name_uq',
     # otherwise all NULL values are considered different (or at least uncomparable) and API-wise, it is not possible
     # to construct a sensible unique constraint.
     _ust_string = Column(String(191), nullable=False)

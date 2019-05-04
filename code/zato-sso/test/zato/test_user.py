@@ -28,12 +28,9 @@ class UserCreateTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username
         })
 
-        self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
         self.assertTrue(response.is_approval_needed)
         self._assert_default_user_data(response, now)
 
@@ -45,12 +42,9 @@ class UserSignupTestCase(BaseTest):
         response = self.post('/zato/sso/user/signup', {
             'username': self._get_random_username(),
             'password': self._get_random_data(),
-            'current_app': Config.current_app,
             'app_list': [Config.current_app]
         })
 
-        self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
         self.assertIsNotNone(response.confirm_token)
 
 # ################################################################################################################################
@@ -62,7 +56,6 @@ class UserConfirmSignupTestCase(BaseTest):
         response = self.post('/zato/sso/user/signup', {
             'username': self._get_random_username(),
             'password': self._get_random_data(),
-            'current_app': Config.current_app,
             'app_list': [Config.current_app]
         })
 
@@ -70,11 +63,7 @@ class UserConfirmSignupTestCase(BaseTest):
 
         response = self.patch('/zato/sso/user/signup', {
             'confirm_token': confirm_token,
-            'current_app': Config.current_app,
         })
-
-        self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -97,7 +86,6 @@ class UserSearchTestCase(BaseTest):
 
         self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username1,
             'display_name': display_name1,
             'email': email1,
@@ -105,7 +93,6 @@ class UserSearchTestCase(BaseTest):
 
         self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username2,
             'display_name': display_name2,
             'email': email2,
@@ -113,19 +100,17 @@ class UserSearchTestCase(BaseTest):
 
         response = self.get('/zato/sso/user/search', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'display_name': random_data,
             'is_name_exact': False,
         })
 
-        self.assertEquals(response.status, status_code.ok)
-        self.assertEquals(response.cur_page, 1)
-        self.assertEquals(response.num_pages, 1)
-        self.assertEquals(response.has_next_page, False)
-        self.assertEquals(response.has_prev_page, False)
-        self.assertEquals(response.page_size, const.search.page_size)
-        self.assertEquals(response.total, 2)
-        self.assertEquals(len(response.result), 2)
+        self.assertEqual(response.cur_page, 1)
+        self.assertEqual(response.num_pages, 1)
+        self.assertEqual(response.has_next_page, False)
+        self.assertEqual(response.has_prev_page, False)
+        self.assertEqual(response.page_size, const.search.page_size)
+        self.assertEqual(response.total, 2)
+        self.assertEqual(len(response.result), 2)
 
         user1 = response.result[0]
         self._assert_default_user_data(user1, now)
@@ -145,22 +130,19 @@ class UserApproveTestCase(BaseTest):
             'username': self._get_random_username(),
         })
 
-        self.assertEquals(response.status, status_code.ok)
         user_id = response.user_id
 
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
-        self.assertEquals(response.approval_status, const.approval_status.approved)
+        self.assertEqual(response.approval_status, const.approval_status.approved)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -170,26 +152,22 @@ class UserRejectTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': self._get_random_username(),
         })
 
-        self.assertEquals(response.status, status_code.ok)
         user_id = response.user_id
 
         self.post('/zato/sso/user/reject', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
-        self.assertEquals(response.approval_status, const.approval_status.rejected)
+        self.assertEqual(response.approval_status, const.approval_status.rejected)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -199,13 +177,10 @@ class UserLoginTestCase(BaseTest):
     def test_user_login(self):
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': Config.super_user_name,
             'password': Config.super_user_password,
         })
 
-        self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
         self.assertIsNotNone(response.ust)
 
 # ################################################################################################################################
@@ -216,18 +191,13 @@ class UserLogoutTestCase(BaseTest):
     def test_user_logout(self):
 
         ust = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': Config.super_user_name,
             'password': Config.super_user_password,
         }).ust
 
-        response = self.post('/zato/sso/user/logout', {
+        self.post('/zato/sso/user/logout', {
             'ust': ust,
-            'current_app': Config.current_app,
         })
-
-        self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -248,7 +218,6 @@ class UserGetTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password_must_change': password_must_change,
             'display_name': display_name,
@@ -260,23 +229,21 @@ class UserGetTestCase(BaseTest):
             'sign_up_status': sign_up_status,
         })
 
-        self.assertEquals(response.status, status_code.ok)
         user_id = response.user_id
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id,
         })
 
-        self.assertEquals(response.status, status_code.ok)
-        self.assertEquals(response.username, username)
-        self.assertEquals(response.display_name, display_name)
-        self.assertEquals(response.first_name, first_name)
-        self.assertEquals(response.middle_name, middle_name)
-        self.assertEquals(response.last_name, last_name)
-        self.assertEquals(response.email, email)
-        self.assertEquals(response.sign_up_status, sign_up_status)
+        self.assertEqual(response.status, status_code.ok)
+        self.assertEqual(response.username, username)
+        self.assertEqual(response.display_name, display_name)
+        self.assertEqual(response.first_name, first_name)
+        self.assertEqual(response.middle_name, middle_name)
+        self.assertEqual(response.last_name, last_name)
+        self.assertEqual(response.email, email)
+        self.assertEqual(response.sign_up_status, sign_up_status)
         self.assertIs(response.password_must_change, password_must_change)
         self.assertIs(response.is_locked, is_locked)
 
@@ -287,14 +254,12 @@ class UserGetTestCase(BaseTest):
         now = datetime.utcnow()
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
         })
 
-        self.assertEquals(response.status, status_code.ok)
-        self.assertEquals(response.approval_status, const.approval_status.approved)
-        self.assertEquals(response.approval_status_mod_by, 'auto')
-        self.assertEquals(response.username, Config.super_user_name)
-        self.assertEquals(response.sign_up_status, const.signup_status.final)
+        self.assertEqual(response.approval_status, const.approval_status.approved)
+        self.assertEqual(response.approval_status_mod_by, 'auto')
+        self.assertEqual(response.username, Config.super_user_name)
+        self.assertEqual(response.sign_up_status, const.signup_status.final)
 
         self.assertTrue(response.is_approval_needed)
         self.assertTrue(response.is_super_user)
@@ -318,29 +283,24 @@ class UserUpdateTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
 
-        self.assertEquals(response.status, status_code.ok)
         user_id = response.user_id
 
         response = self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
-        self.assertEquals(response.status, status_code.ok)
+        self.assertEqual(response.status, status_code.ok)
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password
         })
 
-        self.assertEquals(response.status, status_code.ok)
         ust = response.ust
 
         display_name = self._get_random_data()
@@ -351,7 +311,6 @@ class UserUpdateTestCase(BaseTest):
 
         response = self.patch('/zato/sso/user', {
             'ust': ust,
-            'current_app': Config.current_app,
             'display_name': display_name,
             'first_name': first_name,
             'middle_name': middle_name,
@@ -359,15 +318,10 @@ class UserUpdateTestCase(BaseTest):
             'email': email,
         })
 
-        self.assertEquals(response.status, status_code.ok)
-
         response = self.get('/zato/sso/user', {
             'ust': ust,
-            'current_app': Config.current_app,
         })
 
-        self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
         self.assertIsNotNone(response.user_id)
 
         self.assertFalse(response.is_active)
@@ -376,12 +330,12 @@ class UserUpdateTestCase(BaseTest):
         self.assertFalse(response.is_locked)
         self.assertFalse(response.is_super_user)
 
-        self.assertEquals(response.display_name, display_name)
-        self.assertEquals(response.email, email)
-        self.assertEquals(response.first_name, first_name)
-        self.assertEquals(response.last_name, last_name)
-        self.assertEquals(response.middle_name, middle_name)
-        self.assertEquals(response.username, username)
+        self.assertEqual(response.display_name, display_name)
+        self.assertEqual(response.email, email)
+        self.assertEqual(response.first_name, first_name)
+        self.assertEqual(response.last_name, last_name)
+        self.assertEqual(response.middle_name, middle_name)
+        self.assertEqual(response.username, username)
 
 # ################################################################################################################################
 
@@ -392,12 +346,10 @@ class UserUpdateTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
 
-        self.assertEquals(response.status, status_code.ok)
         user_id = response.user_id
 
         display_name = self._get_random_data()
@@ -416,7 +368,6 @@ class UserUpdateTestCase(BaseTest):
         response = self.patch('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
             'user_id': user_id,
-            'current_app': Config.current_app,
             'display_name': display_name,
             'first_name': first_name,
             'middle_name': middle_name,
@@ -430,30 +381,24 @@ class UserUpdateTestCase(BaseTest):
             'approval_status': approval_status,
         })
 
-        self.assertEquals(response.status, status_code.ok)
-
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'user_id': user_id,
         })
 
-        self.assertEquals(response.status, status_code.ok)
-        self.assertIsNotNone(response.cid)
+        self.assertEqual(response.user_id, user_id)
+        self.assertEqual(response.display_name, display_name)
+        self.assertEqual(response.email, email)
+        self.assertEqual(response.first_name, first_name)
+        self.assertEqual(response.last_name, last_name)
+        self.assertEqual(response.middle_name, middle_name)
+        self.assertEqual(response.username, username)
 
-        self.assertEquals(response.user_id, user_id)
-        self.assertEquals(response.display_name, display_name)
-        self.assertEquals(response.email, email)
-        self.assertEquals(response.first_name, first_name)
-        self.assertEquals(response.last_name, last_name)
-        self.assertEquals(response.middle_name, middle_name)
-        self.assertEquals(response.username, username)
-
-        self.assertEquals(response.is_locked, is_locked)
-        self.assertEquals(response.password_expiry, password_expiry)
-        self.assertEquals(response.password_must_change, password_must_change)
-        self.assertEquals(response.sign_up_status, sign_up_status)
-        self.assertEquals(response.approval_status, approval_status)
+        self.assertEqual(response.is_locked, is_locked)
+        self.assertEqual(response.password_expiry, password_expiry)
+        self.assertEqual(response.password_must_change, password_must_change)
+        self.assertEqual(response.sign_up_status, sign_up_status)
+        self.assertEqual(response.approval_status, approval_status)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -464,37 +409,31 @@ class UserDeleteTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': self._get_random_username(),
         })
 
-        self.assertEquals(response.status, status_code.ok)
         user_id = response.user_id
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id,
         })
 
-        self.assertEquals(response.status, status_code.ok)
+        self.assertEqual(response.status, status_code.ok)
 
         response = self.delete('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id,
         })
 
-        self.assertEquals(response.status, status_code.ok)
+        self.assertEqual(response.status, status_code.ok)
 
         response = self.get('/zato/sso/user/search', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id,
         })
 
-        self.assertEquals(response.status, status_code.ok)
-        self.assertEquals(response.total, 0)
+        self.assertEqual(response.total, 0)
 
 # ################################################################################################################################
 
@@ -502,63 +441,51 @@ class UserDeleteTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': self._get_random_username(),
         })
 
-        self.assertEquals(response.status, status_code.ok)
+        self.assertEqual(response.status, status_code.ok)
         user_id1 = response.user_id
 
         response = self.get('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id1,
         })
-
-        self.assertEquals(response.status, status_code.ok)
 
         username = self._get_random_username()
         password = self._get_random_data()
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
 
-        self.assertEquals(response.status, status_code.ok)
         user_id2 = response.user_id
 
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id1
         })
 
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id2
         })
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
-
-        self.assertEquals(response.status, status_code.ok)
 
         ust = response.ust
 
         response = self.delete('/zato/sso/user', {
             'ust': ust,
-            'current_app': 'CRM',
             'user_id': user_id1,
-        })
+        }, False)
 
-        self.assertEquals(response.status, status_code.error)
+        self.assertEqual(response.status, status_code.error)
         self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
 
 # ################################################################################################################################
@@ -573,7 +500,6 @@ class UserChangePasswordTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
@@ -582,17 +508,14 @@ class UserChangePasswordTestCase(BaseTest):
 
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
 
-        self.assertEquals(response.status, status_code.ok)
         self.assertIsNotNone(response.ust)
 
         ust = response.ust
@@ -600,29 +523,24 @@ class UserChangePasswordTestCase(BaseTest):
 
         response = self.patch('/zato/sso/user/password', {
             'ust': ust,
-            'current_app': Config.current_app,
             'old_password': password,
             'new_password': new_pasword
         })
 
-        self.assertEquals(response.status, status_code.ok)
-
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
-        })
+        }, False)
 
-        self.assertEquals(response.status, status_code.error)
+        self.assertEqual(response.status, status_code.error)
         self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': new_pasword,
         })
 
-        self.assertEquals(response.status, status_code.ok)
+        self.assertEqual(response.status, status_code.ok)
         self.assertIsNotNone(response.ust)
 
 # ################################################################################################################################
@@ -634,7 +552,6 @@ class UserChangePasswordTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
@@ -643,17 +560,14 @@ class UserChangePasswordTestCase(BaseTest):
 
         self.post('/zato/sso/user/approve', {
             'ust': self.ctx.super_user_ust,
-            'current_app': 'CRM',
             'user_id': user_id
         })
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
         })
 
-        self.assertEquals(response.status, status_code.ok)
         self.assertIsNotNone(response.ust)
 
         new_pasword = self._get_random_data()
@@ -662,7 +576,6 @@ class UserChangePasswordTestCase(BaseTest):
 
         response = self.patch('/zato/sso/user/password', {
             'ust': self.ctx.super_user_ust,
-            'current_app': Config.current_app,
             'user_id': user_id,
             'old_password': password,
             'new_password': new_pasword,
@@ -670,24 +583,20 @@ class UserChangePasswordTestCase(BaseTest):
             'password_must_change': must_change,
         })
 
-        self.assertEquals(response.status, status_code.ok)
-
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': password,
-        })
+        }, False)
 
-        self.assertEquals(response.status, status_code.error)
+        self.assertEqual(response.status, status_code.error)
         self.assertListEqual(response.sub_status, [status_code.auth.not_allowed])
 
         response = self.post('/zato/sso/user/login', {
-            'current_app': Config.current_app,
             'username': username,
             'password': new_pasword,
-        })
+        }, False)
 
-        self.assertEquals(response.status, status_code.warning)
+        self.assertEqual(response.status, status_code.warning)
         self.assertListEqual(response.sub_status, [status_code.password.w_about_to_exp])
         self.assertIsNotNone(response.ust)
 

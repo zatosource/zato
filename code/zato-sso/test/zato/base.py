@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 import os
-from copy import deepcopy
 from datetime import datetime
 from itertools import count
 from json import dumps, loads
@@ -30,7 +29,7 @@ import sh
 import requests
 
 # Zato
-from zato.sso import const
+from zato.sso import const, status_code
 
 # ################################################################################################################################
 
@@ -54,14 +53,6 @@ class Config:
 class NotGiven:
     pass
 
-class Request:
-
-    login = bunchify({
-        'username': NotGiven,
-        'password': NotGiven,
-        'current_app': NotGiven,
-    })
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -71,6 +62,7 @@ class TestCtx(object):
 
     def reset(self):
         self.super_user_ust = None # type: unicode
+        self.super_user_id = None # type: unicode
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,8 +112,10 @@ class BaseTest(TestCase):
 
 # ################################################################################################################################
 
-    def _invoke(self, func, func_name, url_path, request):
+    def _invoke(self, func, func_name, url_path, request, expect_ok, _not_given='_test_not_given'):
         address = Config.server_address.format(url_path)
+
+        request['current_app'] = Config.current_app
         data = dumps(request)
 
         logger.info('Invoking %s %s with %s', func_name, address, data)
@@ -130,32 +124,42 @@ class BaseTest(TestCase):
         logger.info('Response received %s %s', response.status_code, response.text)
 
         data = loads(response.text)
-        return bunchify(data)
+        data = bunchify(data)
 
-    def get(self, url_path, request):
-        return self._invoke(requests.get, 'GET', url_path, request)
+        # CID is always required in all responses
+        self.assertNotEquals(data.get('cid', _not_given), _not_given)
 
-    def post(self, url_path, request):
-        return self._invoke(requests.post, 'POST', url_path, request)
+        # Most tests require status OK
+        if expect_ok:
+            self.assertEquals(data.status, status_code.ok)
 
-    def patch(self, url_path, request):
-        return self._invoke(requests.patch, 'PATCH', url_path, request)
+        return data
 
-    def delete(self, url_path, request):
-        return self._invoke(requests.delete, 'DELETE', url_path, request)
+    def get(self, url_path, request, expect_ok=True):
+        return self._invoke(requests.get, 'GET', url_path, request, expect_ok)
+
+    def post(self, url_path, request, expect_ok=True):
+        return self._invoke(requests.post, 'POST', url_path, request, expect_ok)
+
+    def patch(self, url_path, request, expect_ok=True):
+        return self._invoke(requests.patch, 'PATCH', url_path, request, expect_ok)
+
+    def delete(self, url_path, request, expect_ok=True):
+        return self._invoke(requests.delete, 'DELETE', url_path, request, expect_ok)
 
 # ################################################################################################################################
 
     def _login_super_user(self):
-        request = deepcopy(Request.login) # type: Bunch
-        request.username = Config.super_user_name
-        request.password = Config.super_user_password
-        request.current_app = Config.current_app
-
-        url_path = '/zato/sso/user/login'
-        response = self.post(url_path, request)
-
+        response = self.post('/zato/sso/user/login', {
+            'username': Config.super_user_name,
+            'password': Config.super_user_password,
+        })
         self.ctx.super_user_ust = response.ust
+
+        response = self.get('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+        })
+        self.ctx.super_user_id = response.user_id
 
 # ################################################################################################################################
 
@@ -185,6 +189,14 @@ class BaseTest(TestCase):
         func(now, dt_parse(response.password_last_set))
         func(now, dt_parse(response.sign_up_time))
         self.assertLess(now, dt_parse(response.password_expiry))
+
+# ################################################################################################################################
+
+    def _approve(self, user_id):
+        self.post('/zato/sso/user/approve', {
+            'ust': self.ctx.super_user_ust,
+            'user_id': user_id
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################
