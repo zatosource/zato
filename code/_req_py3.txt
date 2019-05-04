@@ -9,4 +9,5 @@ pyaml==18.11.0
 pyprof2calltree==1.4.4
 python-swiftclient==3.6.0
 https://github.com/salmito/simple-rbac/archive/master.zip#egg=simple-rbac
+stackprinter==0.2.0
 stompest==2.3.0

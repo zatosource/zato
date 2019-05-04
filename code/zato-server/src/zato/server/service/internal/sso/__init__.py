@@ -155,9 +155,10 @@ class BaseRESTService(BaseService):
 
         try:
             getattr(self, '_handle_sso_{}'.format(http_verb))(ctx)
-        except Exception:
+        except Exception as e:
             self.response.payload.status = status_code.error
-            self.response.payload.sub_status = [status_code.auth.not_allowed]
+            sub_status = e.sub_status if isinstance(e, ValidationError) else [status_code.auth.not_allowed]
+            self.response.payload.sub_status = sub_status
             raise
         else:
             self.response.payload.status = status_code.ok

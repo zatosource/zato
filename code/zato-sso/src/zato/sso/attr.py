@@ -94,7 +94,7 @@ class AttrEntity(object):
 class AttrAPI(object):
     """ A base class for both user and session SSO attributes.
     """
-    def __init__(self, cid, current_user_id, is_super_user, current_app, remote_addr, odb_session_func, encrypt_func,
+    def __init__(self, cid, current_user_id, is_super_user, current_app, remote_addr, odb_session_func, is_sqlite, encrypt_func,
         decrypt_func, user_id, ust=None):
         self.cid = cid
         self.current_user_id = current_user_id
@@ -102,6 +102,7 @@ class AttrAPI(object):
         self.current_app = current_app
         self.remote_addr = remote_addr
         self.odb_session_func = odb_session_func
+        self.is_sqlite = is_sqlite
         self.encrypt_func = encrypt_func
         self.decrypt_func = decrypt_func
         self.user_id = user_id
@@ -127,6 +128,15 @@ class AttrAPI(object):
 
         if result != status_code.ok:
             raise ValidationError(status_code.auth.not_allowed)
+
+# ################################################################################################################################
+
+    def _ensure_ust_is_not_expired(self, session, ust, now):
+
+        return session.query(SSOSessionTable.c.ust).\
+            filter(SSOSessionTable.c.ust==ust).\
+            filter(SSOSessionTable.c.expiration_time > now).\
+            first()
 
 # ################################################################################################################################
 
@@ -254,10 +264,19 @@ class AttrAPI(object):
         ]
 
         if self.ust:
-            and_condition.extend([
-                AttrModelTable.c.ust==SSOSessionTable.c.ust,
-                SSOSessionTable.c.expiration_time > now
-            ])
+
+            # SQLite needs to be treated in a special way, otherwise we get an exception from SQLAlchemy
+            # NotImplementedError: This backend does not support multiple-table criteria within UPDATE
+            # which means that on SQLite we need an additional query.
+            if self.is_sqlite:
+                result = self._ensure_ust_is_not_expired(session, self.ust, now)
+                if not result:
+                    raise ValidationError(status_code.session.no_such_session)
+            else:
+                and_condition.extend([
+                    AttrModelTable.c.ust==SSOSessionTable.c.ust,
+                    SSOSessionTable.c.expiration_time > now
+                ])
 
         session.execute(
             AttrModelTableUpdate().\
@@ -432,13 +451,21 @@ class AttrAPI(object):
             AttrModelTable.c.expiration_time > now,
         ]
 
-        if self.ust:
-            and_condition.extend([
-                AttrModelTable.c.ust==SSOSessionTable.c.ust,
-                SSOSessionTable.c.expiration_time > now
-            ])
-
         with closing(self.odb_session_func()) as session:
+
+            if self.ust:
+
+                # Check comment in self._update for a comment why the below is needed
+                if self.is_sqlite:
+                    result = self._ensure_ust_is_not_expired(session, self.ust, now)
+                    if not result:
+                        raise ValidationError(status_code.session.no_such_session)
+                else:
+                    and_condition.extend([
+                        AttrModelTable.c.ust==SSOSessionTable.c.ust,
+                        SSOSessionTable.c.expiration_time > now
+                    ])
+
             session.execute(
                 AttrModelTableDelete().\
                 where(and_(*and_condition)))
@@ -485,7 +512,8 @@ class AttrAPI(object):
         # Audit comes first
         audit_pii.info(self.cid, 'attr._call_many', self.current_user_id,
             user_id, extra={'current_app':self.current_app, 'remote_addr':self.remote_addr,
-                'is_super_user':self.is_super_user, 'func':func.im_func.func_name})
+                'is_super_user':self.is_super_user,
+                'func':func.__func__.__name__})
 
         with closing(self.odb_session_func()) as session:
             for item in data:
@@ -498,7 +526,11 @@ class AttrAPI(object):
                     item.get('encrypt', encrypt), _user_id, needs_commit=False)
 
             # Commit now everything added to session thus far
-            session.commit()
+            try:
+                session.commit()
+            except IntegrityError:
+                logger.warn(format_exc())
+                raise ValidationError(status_code.attr.already_exists)
 
 # ################################################################################################################################
 

@@ -204,6 +204,7 @@ class UserAPI(object):
         self.server = server
         self.sso_conf = sso_conf
         self.odb_session_func = odb_session_func
+        self.is_sqlite = None
         self.encrypt_func = encrypt_func
         self.decrypt_func = decrypt_func
         self.hash_func = hash_func
@@ -218,9 +219,10 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def set_odb_session_func(self, func):
+    def set_odb_session_func(self, func, is_sqlite):
         self.odb_session_func = func
-        self.session.set_odb_session_func(func)
+        self.is_sqlite = is_sqlite
+        self.session.set_odb_session_func(func, is_sqlite)
 
 # ################################################################################################################################
 
@@ -287,7 +289,7 @@ class UserAPI(object):
 
         # Passwords must be strong and are always at least hashed and possibly encrypted too ..
         password = make_password_secret(
-            ctx.data['password'].encode('utf8'), self.encrypt_password, self.encrypt_func, self.hash_func)
+            ctx.data['password'], self.encrypt_password, self.encrypt_func, self.hash_func)
 
         # .. while emails are only encrypted, and it is optional.
         if self.encrypt_email:
@@ -569,7 +571,7 @@ class UserAPI(object):
 
                 # Custom attributes
                 out.attr = AttrAPI(cid, current_session.user_id, current_session.is_super_user, current_app, remote_addr,
-                    self.odb_session_func, self.encrypt_func, self.decrypt_func, out.user_id)
+                    self.odb_session_func, self.is_sqlite, self.encrypt_func, self.decrypt_func, out.user_id)
 
                 return out
 
@@ -1104,7 +1106,7 @@ class UserAPI(object):
 
                 # Custom attributes
                 item.attr = AttrAPI(cid, current_session.user_id, current_session.is_super_user, current_app, remote_addr,
-                    self.odb_session_func, self.encrypt_func, self.decrypt_func, sql_item['user_id'])
+                    self.odb_session_func, self.is_sqlite, self.encrypt_func, self.decrypt_func, sql_item['user_id'])
 
                 # Write out all super-user accessible attributes for each output row
                 for name in sorted(_all_super_user_attrs):
