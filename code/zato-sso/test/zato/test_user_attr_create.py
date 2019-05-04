@@ -36,15 +36,13 @@ class UserAttrCreateTestCase(BaseTest):
         value = self._get_random_data()
         expiration = 900
 
-        response = self.post('/zato/sso/user/attr', {
+        self.post('/zato/sso/user/attr', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'name': name,
             'value': value,
             'expiration': expiration
         })
-
-        self.assertEqual(response.status, status_code.ok)
 
 # ################################################################################################################################
 

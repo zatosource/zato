@@ -94,7 +94,7 @@ class AttrEntity(object):
 class AttrAPI(object):
     """ A base class for both user and session SSO attributes.
     """
-    def __init__(self, cid, current_user_id, is_super_user, current_app, remote_addr, odb_session_func, encrypt_func,
+    def __init__(self, cid, current_user_id, is_super_user, current_app, remote_addr, odb_session_func, is_sqlite, encrypt_func,
         decrypt_func, user_id, ust=None):
         self.cid = cid
         self.current_user_id = current_user_id
@@ -102,6 +102,7 @@ class AttrAPI(object):
         self.current_app = current_app
         self.remote_addr = remote_addr
         self.odb_session_func = odb_session_func
+        self.is_sqlite = is_sqlite
         self.encrypt_func = encrypt_func
         self.decrypt_func = decrypt_func
         self.user_id = user_id
