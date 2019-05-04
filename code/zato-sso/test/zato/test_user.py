@@ -195,7 +195,7 @@ class UserLogoutTestCase(BaseTest):
             'password': Config.super_user_password,
         }).ust
 
-        response = self.post('/zato/sso/user/logout', {
+        self.post('/zato/sso/user/logout', {
             'ust': ust,
         })
 

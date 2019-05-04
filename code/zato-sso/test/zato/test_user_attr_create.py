@@ -9,19 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from datetime import datetime
 from unittest import main
 
-# dateutil
-from dateutil.parser import parse as dt_parse
-
-# ipaddress
-from ipaddress import ip_address
-
 # Zato
-from base import BaseTest, Config
-from zato.common.ipaddress_ import ip_network
-from zato.sso import const, status_code
+from base import BaseTest
+from zato.sso import status_code
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -222,7 +214,7 @@ class UserAttrCreateTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_create_for_another_user_by_regular_user(self):
+    def test_create_many_for_another_user_by_regular_user(self):
 
         username1 = self._get_random_username()
         password1 = self._get_random_data()

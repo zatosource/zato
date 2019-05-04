@@ -9,19 +9,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from datetime import datetime
 from unittest import main
 
 # dateutil
 from dateutil.parser import parse as dt_parse
 
-# ipaddress
-from ipaddress import ip_address
-
 # Zato
-from base import BaseTest, Config, logger
-from zato.common.ipaddress_ import ip_network
-from zato.sso import const, status_code
+from base import BaseTest
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -35,9 +29,6 @@ class SessionAttrGetTestCase(BaseTest):
         name = self._get_random_data()
         value = self._get_random_data()
         expiration = 900
-
-        new_value = self._get_random_data()
-        new_expiration = 123
 
         self.post('/zato/sso/session/attr', {
             'current_ust': self.ctx.super_user_ust,
