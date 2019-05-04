@@ -165,7 +165,7 @@ class SessionWrapper(object):
 
             self._session = self._Session()
             self.session_initialized = True
-            self.is_sqlite = self.pool.engine == 'sqlite'
+            self.is_sqlite = self.pool.engine.name == 'sqlite'
 
     def session(self):
         return self._Session()
