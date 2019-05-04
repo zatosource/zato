@@ -19,9 +19,8 @@ from dateutil.parser import parse as dt_parse
 from ipaddress import ip_address
 
 # Zato
-from base import BaseTest, Config
-from zato.common.ipaddress_ import ip_network
-from zato.sso import const, status_code
+from base import BaseTest
+from zato.sso import status_code
 
 # ################################################################################################################################
 # ################################################################################################################################

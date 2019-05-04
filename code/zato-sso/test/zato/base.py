@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 import os
-from copy import deepcopy
 from datetime import datetime
 from itertools import count
 from json import dumps, loads
