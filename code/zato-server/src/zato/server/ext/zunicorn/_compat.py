@@ -41,6 +41,8 @@ from zato.server.ext.zunicorn import six
 PY26 = (sys.version_info[:2] == (2, 6))
 PY33 = (sys.version_info >= (3, 3))
 
+# For pyflakes
+from past.builtins import execfile, unicode
 
 def _check_if_pyc(fname):
     """Return True if the extension is .pyc, False if .py
