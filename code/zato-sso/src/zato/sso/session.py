@@ -105,10 +105,11 @@ class SessionAPI(object):
         self.hash_func = hash_func
         self.verify_hash_func = verify_hash_func
         self.odb_session_func = None
+        self.is_sqlite = None
 
 # ################################################################################################################################
 
-    def set_odb_session_func(self, func):
+    def set_odb_session_func(self, func, is_sqlite):
         self.odb_session_func = func
 
 # ################################################################################################################################
@@ -467,7 +468,8 @@ class SessionAPI(object):
         out.remote_addr = session.remote_addr
         out.user_agent = session.user_agent
         out.attr = AttrAPI(cid, current_session.user_id, current_session.is_super_user,
-            current_app, remote_addr, self.odb_session_func, self.encrypt_func, self.decrypt_func, session.user_id, session.ust)
+            current_app, remote_addr, self.odb_session_func, self.is_sqlite, self.encrypt_func, self.decrypt_func,
+            session.user_id, session.ust)
 
         return out
 

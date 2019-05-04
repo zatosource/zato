@@ -144,6 +144,7 @@ class SessionWrapper(object):
         self.session_initialized = False
         self.pool = None
         self.config = None
+        self.is_sqlite = None
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def init_session(self, name, config, pool, use_scoped_session=True):
@@ -164,6 +165,7 @@ class SessionWrapper(object):
 
             self._session = self._Session()
             self.session_initialized = True
+            self.is_sqlite = self.pool.engine == 'sqlite'
 
     def session(self):
         return self._Session()
