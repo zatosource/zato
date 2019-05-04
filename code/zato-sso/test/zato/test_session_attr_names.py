@@ -26,38 +26,38 @@ from zato.sso import const, status_code
 # ################################################################################################################################
 # ################################################################################################################################
 
-class UserAttrGetTestCase(BaseTest):
+class SessionAttrNamesTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_get(self):
+    def test_names(self):
 
-        name = self._get_random_data()
-        value = self._get_random_data()
-        expiration = 900
+        name1 = self._get_random_data()
+        value1 = self._get_random_data()
 
-        self.post('/zato/sso/user/attr', {
-            'ust': self.ctx.super_user_ust,
+        name2 = self._get_random_data()
+        value2 = self._get_random_data()
+
+        data = [
+            {'name':name1, 'value':value1},
+            {'name':name2, 'value':value2},
+        ]
+
+        self.post('/zato/sso/session/attr', {
+            'current_ust': self.ctx.super_user_ust,
+            'target_ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
-            'name': name,
-            'value': value,
-            'expiration': expiration
+            'data': data
         })
 
-        response = self.get('/zato/sso/user/attr', {
-            'ust': self.ctx.super_user_ust,
+        response = self.get('/zato/sso/session/attr/names', {
+            'current_ust': self.ctx.super_user_ust,
+            'target_ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
-            'name': name,
         })
 
-        self.assertTrue(response.found)
-        self.assertEqual(response.name, name)
-        self.assertEqual(response.value, value)
-
-        # Will raise an exception if date parsing fails
-        dt_parse(response.creation_time)
-        dt_parse(response.last_modified)
-        dt_parse(response.expiration_time)
+        self.assertIn(name1, response.result)
+        self.assertIn(name2, response.result)
 
 # ################################################################################################################################
 # ################################################################################################################################
