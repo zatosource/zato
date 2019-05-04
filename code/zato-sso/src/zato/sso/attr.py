@@ -131,6 +131,15 @@ class AttrAPI(object):
 
 # ################################################################################################################################
 
+    def _ensure_ust_is_not_expired(self, session, ust, now):
+
+        return session.query(SSOSessionTable.c.ust).\
+            filter(SSOSessionTable.c.ust==ust).\
+            filter(SSOSessionTable.c.expiration_time > now).\
+            first()
+
+# ################################################################################################################################
+
     def _create(self, session, name, value, expiration=None, encrypt=False, user_id=None, needs_commit=True,
         _utcnow=_utcnow):
         """ A low-level implementation of self.create which expects an SQL session on input.
@@ -255,10 +264,19 @@ class AttrAPI(object):
         ]
 
         if self.ust:
-            and_condition.extend([
-                AttrModelTable.c.ust==SSOSessionTable.c.ust,
-                SSOSessionTable.c.expiration_time > now
-            ])
+
+            # SQLite needs to be treated in a special way, otherwise we get an exception from SQLAlchemy
+            # NotImplementedError: This backend does not support multiple-table criteria within UPDATE
+            # which means that on SQLite we need an additional query.
+            if self.is_sqlite:
+                result = self._ensure_ust_is_not_expired(session, self.ust, now)
+                if result:
+                    zzz
+            else:
+                and_condition.extend([
+                    AttrModelTable.c.ust==SSOSessionTable.c.ust,
+                    SSOSessionTable.c.expiration_time > now
+                ])
 
         session.execute(
             AttrModelTableUpdate().\

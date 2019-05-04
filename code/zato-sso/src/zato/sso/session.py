@@ -111,6 +111,8 @@ class SessionAPI(object):
 
     def set_odb_session_func(self, func, is_sqlite):
         self.odb_session_func = func
+        self.is_sqlite = is_sqlite
+        logger.warn('VVV %s', is_sqlite)
 
 # ################################################################################################################################
 
