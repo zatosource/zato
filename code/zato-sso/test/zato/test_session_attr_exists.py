@@ -26,38 +26,35 @@ from zato.sso import const, status_code
 # ################################################################################################################################
 # ################################################################################################################################
 
-class UserAttrGetTestCase(BaseTest):
+class SessionAttrExistsTestCase(BaseTest):
 
 # ################################################################################################################################
 
-    def test_get(self):
+    def test_exists(self):
 
         name = self._get_random_data()
         value = self._get_random_data()
         expiration = 900
 
-        self.post('/zato/sso/user/attr', {
-            'ust': self.ctx.super_user_ust,
+        new_value = self._get_random_data()
+        new_expiration = 123
+
+        self.post('/zato/sso/session/attr', {
+            'current_ust': self.ctx.super_user_ust,
+            'target_ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'name': name,
             'value': value,
             'expiration': expiration
         })
 
-        response = self.get('/zato/sso/user/attr', {
-            'ust': self.ctx.super_user_ust,
-            'user_id': self.ctx.super_user_id,
+        response = self.get('/zato/sso/session/attr/exists', {
+            'current_ust': self.ctx.super_user_ust,
+            'target_ust': self.ctx.super_user_ust,
             'name': name,
         })
 
-        self.assertTrue(response.found)
-        self.assertEqual(response.name, name)
-        self.assertEqual(response.value, value)
-
-        # Will raise an exception if date parsing fails
-        dt_parse(response.creation_time)
-        dt_parse(response.last_modified)
-        dt_parse(response.expiration_time)
+        self.assertTrue(response.result)
 
 # ################################################################################################################################
 # ################################################################################################################################
