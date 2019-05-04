@@ -270,8 +270,8 @@ class AttrAPI(object):
             # which means that on SQLite we need an additional query.
             if self.is_sqlite:
                 result = self._ensure_ust_is_not_expired(session, self.ust, now)
-                if result:
-                    zzz
+                if not result:
+                    raise ValidationError(status_code.session.no_such_session)
             else:
                 and_condition.extend([
                     AttrModelTable.c.ust==SSOSessionTable.c.ust,
@@ -451,13 +451,21 @@ class AttrAPI(object):
             AttrModelTable.c.expiration_time > now,
         ]
 
-        if self.ust:
-            and_condition.extend([
-                AttrModelTable.c.ust==SSOSessionTable.c.ust,
-                SSOSessionTable.c.expiration_time > now
-            ])
-
         with closing(self.odb_session_func()) as session:
+
+            if self.ust:
+
+                # Check comment in self._update for a comment why the below is needed
+                if self.is_sqlite:
+                    result = self._ensure_ust_is_not_expired(session, self.ust, now)
+                    if not result:
+                        raise ValidationError(status_code.session.no_such_session)
+                else:
+                    and_condition.extend([
+                        AttrModelTable.c.ust==SSOSessionTable.c.ust,
+                        SSOSessionTable.c.expiration_time > now
+                    ])
+
             session.execute(
                 AttrModelTableDelete().\
                 where(and_(*and_condition)))
