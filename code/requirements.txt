@@ -32,7 +32,6 @@ dill==0.2.5
 Django==1.9.7
 docformatter==0.8
 elasticsearch==7.0.0
-enum34==1.1.6
 ephem==3.7.6.0
 faker==0.7.18
 flake8==2.1.0
