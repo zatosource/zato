@@ -72,7 +72,7 @@ PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
 
 # For pyflakes
-from past.builtins import basestring, execfile, file, long, unicode
+from past.builtins import basestring, execfile, long, unicode
 execfile = execfile
 
 if PY3:
@@ -693,14 +693,6 @@ if print_ is None:
         def write(data):
             if not isinstance(data, basestring):
                 data = str(data)
-            # If the file has an encoding, encode unicode with it.
-            if (isinstance(fp, file) and
-                isinstance(data, unicode) and
-                fp.encoding is not None):
-                errors = getattr(fp, "errors", None)
-                if errors is None:
-                    errors = "strict"
-                data = data.encode(fp.encoding, errors)
             fp.write(data)
         want_unicode = False
         sep = kwargs.pop("sep", None)
