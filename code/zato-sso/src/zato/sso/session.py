@@ -521,7 +521,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def verify(self, cid, target_ust, current_ust, current_app, remote_addr):
+    def verify(self, cid, target_ust, current_ust, current_app, remote_addr, user_agent):
         """ Verifies a user session without renewing it.
         """
         # PII audit comes first
@@ -531,14 +531,14 @@ class SessionAPI(object):
 
         try:
             with closing(self.odb_session_func()) as session:
-                return self._get(session, target_ust, current_app, remote_addr, 'verify', renew=False)
+                return self._get(session, target_ust, current_app, remote_addr, 'verify', renew=False, user_agent=user_agent)
         except Exception:
             logger.warn('Could not verify UST, e:`%s`', format_exc())
             return False
 
 # ################################################################################################################################
 
-    def renew(self, cid, ust, current_app, remote_addr):
+    def renew(self, cid, ust, current_app, remote_addr, user_agent):
         """ Renew timelife of a user session, if it is valid, and returns its new expiration time in UTC.
         """
         # PII audit comes first
@@ -546,13 +546,14 @@ class SessionAPI(object):
 
         with closing(self.odb_session_func()) as session:
             expiration_time = self._get(
-                session, ust, current_app, remote_addr, 'renew', renew=True, check_if_password_expired=True)
+                session, ust, current_app, remote_addr, 'renew', renew=True, user_agent=user_agent,
+                check_if_password_expired=True)
             session.commit()
             return expiration_time
 
 # ################################################################################################################################
 
-    def get(self, cid, target_ust, current_ust, current_app, remote_addr, check_if_password_expired=True):
+    def get(self, cid, target_ust, current_ust, current_app, remote_addr, user_agent, check_if_password_expired=True):
         """ Gets details of a session given by its UST on input, without renewing it.
         Must be called by a super-user.
         """
@@ -563,7 +564,8 @@ class SessionAPI(object):
         current_session = self.require_super_user(cid, current_ust, current_app, remote_addr)
 
         # This returns all attributes ..
-        session = self._get_session(target_ust, current_app, remote_addr, 'get', check_if_password_expired)
+        session = self._get_session(
+            target_ust, current_app, remote_addr, 'get', check_if_password_expired, user_agent=user_agent)
 
         # .. and we need to build a session entity with a few selected ones only
         out = SessionEntity()
@@ -579,12 +581,12 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def _get_session(self, ust, current_app, remote_addr, ctx_source, check_if_password_expired=True):
+    def _get_session(self, ust, current_app, remote_addr, ctx_source, check_if_password_expired=True, user_agent=None):
         """ An internal wrapper around self.get which optionally does not require super-user rights.
         """
         with closing(self.odb_session_func()) as session:
             return self._get(session, ust, current_app, remote_addr, ctx_source, renew=False, needs_attrs=True,
-                check_if_password_expired=check_if_password_expired)
+                check_if_password_expired=check_if_password_expired, user_agent=user_agent)
 
 # ################################################################################################################################
 
