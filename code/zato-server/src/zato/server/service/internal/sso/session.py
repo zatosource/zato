@@ -43,7 +43,7 @@ class Session(BaseRESTService):
 
         # Get result
         result = self.sso.user.session.get(self.cid, ctx.input.target_ust, ctx.input.current_ust,
-            ctx.input.current_app, ctx.remote_addr)
+            ctx.input.current_app, ctx.remote_addr, self.wsgi_environ.get('HTTP_USER_AGENT'))
 
         # Serialize datetime objects to string
         result.creation_time = result.creation_time.isoformat()
@@ -62,7 +62,7 @@ class Session(BaseRESTService):
             raise ValidationError(status_code.session.no_such_session)
 
         self.response.payload.is_valid = self.sso.user.session.verify(self.cid, ctx.input.target_ust, ctx.input.current_ust,
-            ctx.input.current_app, ctx.remote_addr)
+            ctx.input.current_app, ctx.remote_addr, self.wsgi_environ.get('HTTP_USER_AGENT'))
 
 # ################################################################################################################################
 
@@ -70,6 +70,6 @@ class Session(BaseRESTService):
         """ Renews a session given on input.
         """
         self.response.payload.expiration_time = self.sso.user.session.renew(self.cid, ctx.input.ust,
-            ctx.input.current_app, ctx.remote_addr).isoformat()
+            ctx.input.current_app, ctx.remote_addr, self.wsgi_environ.get('HTTP_USER_AGENT')).isoformat()
 
 # ################################################################################################################################
