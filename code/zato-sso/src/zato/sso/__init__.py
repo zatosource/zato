@@ -109,6 +109,11 @@ class const:
         def __iter__(self):
             return iter([self.and_, self.or_])
 
+    class auth_type:
+        basic_auth = 'basic_auth'
+        default    = 'default'
+        jwt        = 'jwt'
+
 # ################################################################################################################################
 
 class ValidationError(Exception):

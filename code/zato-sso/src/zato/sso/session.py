@@ -408,6 +408,8 @@ class SessionAPI(object):
                     'creation_time': creation_time,
                     'expiration_time': expiration_time,
                     'user_id': user.id,
+                    'auth_type': const.auth_type.default,
+                    'auth_principal': user.username,
                     'remote_addr': ', '.join(str(elem) for elem in ctx.remote_addr),
                     'user_agent': ctx.user_agent,
                     GENERIC.ATTR_NAME: dumps(opaque)
@@ -623,21 +625,14 @@ class SessionAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'session.get_session_list', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        '''
         # Local aliases
         current_session = self.get_current_session(cid, current_ust, current_app, remote_addr, False)
 
         # Only super-users may look up other users' sessions
         if target_ust != current_ust:
 
-            #if not current_session
-
-            # Will raise an exception if current_ust is not one of a super-user
-            self.require_super_user(cid, current_ust, current_app, remote_addr)
-
-            # We get here only if current_ust points to a super-user
-            is_super_user = True
-            '''
+            if not current_session.is_super_user:
+                raise ValidationError(status_code.auth.not_allowed, True)
 
 # ################################################################################################################################
 
