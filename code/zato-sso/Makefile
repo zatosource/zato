@@ -16,4 +16,4 @@ sso-test:
 #	py $(CURDIR)/test/zato/test_session_attr_get.py &&
 #	py $(CURDIR)/test/zato/test_session_attr_exists.py &&
 #	py $(CURDIR)/test/zato/test_session_attr_names.py &&
-	py $(CURDIR)/test/zato/test_session_list.py &&
+	py $(CURDIR)/test/zato/test_session_list.py

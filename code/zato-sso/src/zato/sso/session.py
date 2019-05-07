@@ -434,6 +434,29 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
+    def update_interaction_state(self, current_state, from_addr, user_agent, now, max_len):
+        """ Adds information about a user interaction with SSO, keeping the history
+        of such interactions to up to max_len entries.
+        """
+        # type: (list, unicode, unicode, datetime, int)
+
+        if current_state:
+            idx = current_state[-1]['idx']
+        else:
+            idx = 0
+
+        current_state.append({
+            'from_addr': from_addr,
+            'user_agent': user_agent,
+            'timestamp_utc': now.isoformat(),
+            'idx': idx + 1
+        })
+
+        if len(current_state) > max_len:
+            current_state.pop(0)
+
+# ################################################################################################################################
+
     def _get(self, session, ust, current_app, remote_addr, needs_decrypt=True, renew=False, needs_attrs=False,
         check_if_password_expired=True, _now=datetime.utcnow):
         """ Verifies if input user session token is valid and if the user is allowed to access current_app.
@@ -458,7 +481,16 @@ class SessionAPI(object):
 
         # Everything is validated, we can renew the session, if told to.
         if renew:
+
+            # Update current interaction details for this session
+            current_state = sso_info.opaq
+
+            zzxclzx zxc;kZXcw40e -34
+            P Xc'x , XC {
+
+            # Set a new expiration time
             expiration_time = now + timedelta(minutes=self.sso_conf.session.expiry)
+
             session.execute(
                 SessionModelUpdate().values({
                     'expiration_time': expiration_time,

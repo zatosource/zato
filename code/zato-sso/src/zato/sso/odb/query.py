@@ -16,6 +16,7 @@ from sqlalchemy import or_
 
 # Zato
 from zato.common.odb.model import SSOSession, SSOUser
+from zato.common.util.sql import parse_instance_opaque_attr
 from zato.sso import const
 
 # ################################################################################################################################
@@ -82,8 +83,12 @@ def _get_session_by_ust(session, ust, now, _columns=_session_columns_with_user, 
 # ################################################################################################################################
 
 def get_session_by_ust(session, ust, now):
-    return _get_session_by_ust(session, ust, now).\
+    session = _get_session_by_ust(session, ust, now).\
         first()
+    if session:
+        parse_instance_opaque_attr(session)
+
+    return session
 
 get_user_by_ust = get_session_by_ust
 

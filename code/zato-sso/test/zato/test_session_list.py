@@ -31,7 +31,7 @@ class SessionGetListTestCase(BaseTest):
 
     def test_get_list_self_super_user(self):
 
-        response = self.post('/zato/sso/user/session/list', {
+        response = self.post('/zato/sso/user/session', {
             'current_ust': self.ctx.super_user_ust,
             'target_ust': self.ctx.super_user_ust,
         })
