@@ -106,6 +106,9 @@ class _SSOSession(Base):
     remote_addr = Column(Text(), nullable=False)
     user_agent = Column(Text(), nullable=False)
 
+    auth_type = Column(Text(), nullable=False)
+    auth_principal = Column(Text(), nullable=False)
+
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
