@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from datetime import datetime, timedelta
+from json import dumps
 from logging import getLogger
 from traceback import format_exc
 from uuid import uuid4
@@ -19,6 +20,7 @@ from uuid import uuid4
 from ipaddress import ip_address
 
 # Zato
+from zato.common import GENERIC
 from zato.common.audit import audit_pii
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.sso import const, status_code, Session as SessionEntity, ValidationError
@@ -131,6 +133,7 @@ class SessionAPI(object):
         self.verify_hash_func = verify_hash_func
         self.odb_session_func = None
         self.is_sqlite = None
+        self.interaction_max_len = 100
 
 # ################################################################################################################################
 
@@ -392,6 +395,13 @@ class SessionAPI(object):
             expiration_time = creation_time + timedelta(minutes=self.sso_conf.session.expiry)
             ust = new_user_session_token()
 
+            # Create current interaction details for this session
+            interaction_state = []
+            self.update_interaction_state(interaction_state, ctx.remote_addr, ctx.user_agent, 'login', creation_time)
+            opaque = {
+                'interaction_state': interaction_state
+            }
+
             session.execute(
                 SessionModelInsert().values({
                     'ust': ust,
@@ -400,6 +410,7 @@ class SessionAPI(object):
                     'user_id': user.id,
                     'remote_addr': ', '.join(str(elem) for elem in ctx.remote_addr),
                     'user_agent': ctx.user_agent,
+                    GENERIC.ATTR_NAME: dumps(opaque)
             }))
             session.commit()
 
@@ -434,7 +445,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def update_interaction_state(self, current_state, from_addr, user_agent, now, max_len):
+    def update_interaction_state(self, current_state, remote_addr, user_agent, ctx_source, now):
         """ Adds information about a user interaction with SSO, keeping the history
         of such interactions to up to max_len entries.
         """
@@ -445,25 +456,31 @@ class SessionAPI(object):
         else:
             idx = 0
 
+        if len(remote_addr) == 1:
+            remote_addr = str(remote_addr[0])
+        else:
+            remote_addr = [str(elem) for elem in remote_addr]
+
         current_state.append({
-            'from_addr': from_addr,
+            'remote_addr': remote_addr,
             'user_agent': user_agent,
             'timestamp_utc': now.isoformat(),
+            'ctx_source': ctx_source,
             'idx': idx + 1
         })
 
-        if len(current_state) > max_len:
+        if len(current_state) > self.interaction_max_len:
             current_state.pop(0)
 
 # ################################################################################################################################
 
-    def _get(self, session, ust, current_app, remote_addr, needs_decrypt=True, renew=False, needs_attrs=False,
-        check_if_password_expired=True, _now=datetime.utcnow):
+    def _get(self, session, ust, current_app, remote_addr, ctx_source, needs_decrypt=True, renew=False, needs_attrs=False,
+        check_if_password_expired=True, _now=datetime.utcnow, _opaque=GENERIC.ATTR_NAME):
         """ Verifies if input user session token is valid and if the user is allowed to access current_app.
         On success, if renew is True, renews the session. Returns all session attributes or True,
         depending on needs_attrs's value.
         """
-        # type: (object, unicode, unicode, bool, bool, bool, bool, datetime) -> object
+        # type: (object, unicode, unicode, bool, bool, bool, bool, datetime, unicode) -> object
 
         now = _now()
         ctx = VerifyCtx(self.decrypt_func(ust) if needs_decrypt else ust, remote_addr, current_app)
@@ -483,10 +500,10 @@ class SessionAPI(object):
         if renew:
 
             # Update current interaction details for this session
-            current_state = sso_info.opaq
-
-            zzxclzx zxc;kZXcw40e -34
-            P Xc'x , XC {
+            opaque = getattr(sso_info, _opaque) or {}
+            interaction_state = opaque.get('interaction_state', [])
+            self.update_interaction_state(interaction_state, remote_addr, 'Firefox', ctx_source, now)
+            opaque['interaction_state'] = interaction_state
 
             # Set a new expiration time
             expiration_time = now + timedelta(minutes=self.sso_conf.session.expiry)
@@ -494,6 +511,7 @@ class SessionAPI(object):
             session.execute(
                 SessionModelUpdate().values({
                     'expiration_time': expiration_time,
+                    GENERIC.ATTR_NAME: dumps(opaque),
             }).where(
                 SessionModelTable.c.ust==ctx.ust
             ))
@@ -514,7 +532,7 @@ class SessionAPI(object):
 
         try:
             with closing(self.odb_session_func()) as session:
-                return self._get(session, target_ust, current_app, remote_addr, renew=False)
+                return self._get(session, target_ust, current_app, remote_addr, 'verify', renew=False)
         except Exception:
             logger.warn('Could not verify UST, e:`%s`', format_exc())
             return False
@@ -528,7 +546,8 @@ class SessionAPI(object):
         audit_pii.info(cid, 'session.renew', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         with closing(self.odb_session_func()) as session:
-            expiration_time = self._get(session, ust, current_app, remote_addr, renew=True, check_if_password_expired=True)
+            expiration_time = self._get(
+                session, ust, current_app, remote_addr, 'renew', renew=True, check_if_password_expired=True)
             session.commit()
             return expiration_time
 
@@ -545,7 +564,7 @@ class SessionAPI(object):
         current_session = self.require_super_user(cid, current_ust, current_app, remote_addr)
 
         # This returns all attributes ..
-        session = self._get_session(target_ust, current_app, remote_addr, check_if_password_expired)
+        session = self._get_session(target_ust, current_app, remote_addr, 'get', check_if_password_expired)
 
         # .. and we need to build a session entity with a few selected ones only
         out = SessionEntity()
@@ -561,11 +580,11 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def _get_session(self, ust, current_app, remote_addr, check_if_password_expired=True):
+    def _get_session(self, ust, current_app, remote_addr, ctx_source, check_if_password_expired=True):
         """ An internal wrapper around self.get which optionally does not require super-user rights.
         """
         with closing(self.odb_session_func()) as session:
-            return self._get(session, ust, current_app, remote_addr, renew=False, needs_attrs=True,
+            return self._get(session, ust, current_app, remote_addr, ctx_source, renew=False, needs_attrs=True,
                 check_if_password_expired=check_if_password_expired)
 
 # ################################################################################################################################
@@ -578,7 +597,7 @@ class SessionAPI(object):
         audit_pii.info(cid, 'session.get_current_session', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # Verify current session's very existence first ..
-        current_session = self._get_session(current_ust, current_app, remote_addr)
+        current_session = self._get_session(current_ust, current_app, remote_addr, 'get_current_session')
         if not current_session:
             logger.warn('Could not verify session `%s` `%s` `%s` `%s`',
                 current_ust, current_app, remote_addr, format_exc())
@@ -637,7 +656,7 @@ class SessionAPI(object):
         with closing(self.odb_session_func()) as session:
 
             # Check that the session and user exist ..
-            if self._get(session, ust, current_app, remote_addr, needs_decrypt=False, renew=False):
+            if self._get(session, ust, current_app, remote_addr, 'logout', needs_decrypt=False, renew=False):
 
                 # .. and if so, delete the session now.
                 session.execute(
