@@ -294,7 +294,7 @@ class SessionAPI(object):
 
         if ctx.has_remote_addr or ctx.has_user_agent:
             if ctx.input['current_app'] not in self.sso_conf.apps.login_metadata_allowed:
-                raise ValidationError(status_code.password.must_send_new, False)
+                raise ValidationError(status_code.metadata.not_allowed, False)
 
         return True
 
@@ -450,7 +450,6 @@ class SessionAPI(object):
         of such interactions to up to max_len entries.
         """
         # type: (list, unicode, unicode, datetime, int)
-
         if current_state:
             idx = current_state[-1]['idx']
         else:
@@ -475,7 +474,7 @@ class SessionAPI(object):
 # ################################################################################################################################
 
     def _get(self, session, ust, current_app, remote_addr, ctx_source, needs_decrypt=True, renew=False, needs_attrs=False,
-        check_if_password_expired=True, _now=datetime.utcnow, _opaque=GENERIC.ATTR_NAME):
+        user_agent=None, check_if_password_expired=True, _now=datetime.utcnow, _opaque=GENERIC.ATTR_NAME):
         """ Verifies if input user session token is valid and if the user is allowed to access current_app.
         On success, if renew is True, renews the session. Returns all session attributes or True,
         depending on needs_attrs's value.
@@ -502,7 +501,7 @@ class SessionAPI(object):
             # Update current interaction details for this session
             opaque = getattr(sso_info, _opaque) or {}
             interaction_state = opaque.get('interaction_state', [])
-            self.update_interaction_state(interaction_state, remote_addr, 'Firefox', ctx_source, now)
+            self.update_interaction_state(interaction_state, remote_addr, user_agent, ctx_source, now)
             opaque['interaction_state'] = interaction_state
 
             # Set a new expiration time

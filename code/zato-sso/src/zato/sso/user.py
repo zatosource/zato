@@ -710,8 +710,7 @@ class UserAPI(object):
         audit_pii.info(cid, 'user.login', target_user=username, extra={
             'current_app': current_app,
             'remote_addr': remote_addr,
-            'has_remote_addr': has_remote_addr,
-            'has_user_agent': has_user_agent,
+            'user_agent': user_agent,
             'new_password': bool(new_password) # To store information if a new password was sent or not
         })
 
