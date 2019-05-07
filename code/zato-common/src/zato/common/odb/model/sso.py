@@ -13,7 +13,7 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, Se
 from sqlalchemy.ext.declarative import declared_attr
 
 # Zato
-from zato.common.odb.model.base import Base
+from zato.common.odb.model.base import Base, _JSON
 
 # ################################################################################################################################
 
@@ -83,6 +83,9 @@ class _SSOUser(Base):
     middle_name_upper = Column(String(191), nullable=True)
     last_name_upper = Column(String(191), nullable=True)
 
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
 # ################################################################################################################################
 
 class _SSOSession(Base):
@@ -102,6 +105,9 @@ class _SSOSession(Base):
 
     remote_addr = Column(Text(), nullable=False)
     user_agent = Column(Text(), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     @declared_attr
     def user_id(cls):
@@ -138,6 +144,9 @@ class _SSOAttr(Base):
     # otherwise all NULL values are considered different (or at least uncomparable) and API-wise, it is not possible
     # to construct a sensible unique constraint.
     _ust_string = Column(String(191), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
 
     user_id = Column(String(191), ForeignKey('zato_sso_user.user_id', ondelete='CASCADE'), nullable=False)
     ust = Column(String(191), ForeignKey('zato_sso_session.ust', ondelete='CASCADE'), nullable=True)
