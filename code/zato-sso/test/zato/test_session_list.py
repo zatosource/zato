@@ -9,18 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from datetime import datetime
 from unittest import main
-
-# dateutil
-from dateutil.parser import parse as dt_parse
-
-# ipaddress
-from ipaddress import ip_address
 
 # Zato
 from base import BaseTest
-from zato.sso import status_code
 
 # ################################################################################################################################
 # ################################################################################################################################

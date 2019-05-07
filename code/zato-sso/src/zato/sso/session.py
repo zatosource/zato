@@ -622,6 +622,7 @@ class SessionAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'session.get_session_list', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
+        '''
         # Local aliases
         current_session = self.get_current_session(cid, current_ust, current_app, remote_addr, False)
 
@@ -635,6 +636,7 @@ class SessionAPI(object):
 
             # We get here only if current_ust points to a super-user
             is_super_user = True
+            '''
 
 # ################################################################################################################################
 
