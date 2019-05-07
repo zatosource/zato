@@ -43,10 +43,11 @@ class _JSON(TypeDecorator):
         return value
 
     def process_result_value(self, value, dialect):
-        try:
-            return json_loads(value)
-        except(ValueError, TypeError):
-            return None
+        if value is not None and value != 'null':
+            try:
+                return json_loads(value)
+            except(ValueError, TypeError):
+                return None
 
 # ################################################################################################################################
 # ################################################################################################################################
