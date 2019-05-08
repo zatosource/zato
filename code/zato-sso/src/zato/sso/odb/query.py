@@ -12,16 +12,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from json import loads
 from datetime import datetime
 
-# Bunch
-from bunch import bunchify
-
 # SQLAlchemy
 from sqlalchemy import or_
 
 # Zato
 from zato.common import GENERIC
 from zato.common.odb.model import SSOSession, SSOUser
-from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque
+from zato.common.util.sql import elems_with_opaque
 from zato.sso import const
 
 # ################################################################################################################################
