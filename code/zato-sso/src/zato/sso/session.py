@@ -625,7 +625,8 @@ class SessionAPI(object):
 # ################################################################################################################################
 
     def _get_session_list_by_ust(self, ust):
-        session = self.get_session_by_ust(ust, datetime.utcnow())
+        now = datetime.utcnow()
+        session = self.get_session_by_ust(ust, now)
         return self._get_session_list_by_user_id(session.user_id, now)
 
 # ################################################################################################################################
