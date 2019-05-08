@@ -221,12 +221,12 @@ def parse_instance_opaque_attr(instance):
 
 # ################################################################################################################################
 
-def get_dict_with_opaque(instance):
+def get_dict_with_opaque(instance, to_bunch=False):
     opaque = parse_instance_opaque_attr(instance)
     out = instance._asdict()
     for k, v in opaque.items():
         out[k] = v
-    return out
+    return bunchify(out) if to_bunch else out
 
 # ################################################################################################################################
 

@@ -60,8 +60,12 @@ class Login(BaseService):
         input = ctx.input
         input.cid = self.cid
 
-        has_remote_addr = input.get('remote_addr')
-        has_user_agent = input.get('user_agent')
+        has_remote_addr = bool(input.get('remote_addr'))
+
+        user_provided_user_agent = input.get('user_agent')
+        has_user_agent = bool(user_provided_user_agent)
+
+        user_agent = user_provided_user_agent if has_user_agent else ctx.user_agent
 
         input.has_remote_addr = has_remote_addr
         input.has_user_agent = has_user_agent
@@ -71,7 +75,9 @@ class Login(BaseService):
             wsgi_remote_addr = wsgi_remote_addr.decode('utf8') if not isinstance(wsgi_remote_addr, unicode) else wsgi_remote_addr
             input.remote_addr = wsgi_remote_addr
 
-        out = self.sso.user.login(**ctx.input)
+        out = self.sso.user.login(input.cid, input.username, input.password, input.current_app, input.remote_addr,
+            user_agent, has_remote_addr, has_user_agent, input.new_password)
+
         if out:
             self.response.payload.ust = out.ust
             if out.has_w_about_to_exp:
