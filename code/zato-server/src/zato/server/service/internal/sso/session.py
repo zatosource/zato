@@ -56,12 +56,10 @@ class SessionList(BaseRESTService):
             if not (ctx.input.current_ust != default_value and ctx.input.target_ust != default_value):
                 raise ValidationError(status_code.common.invalid_input)
 
-        result = self.sso.user.session.get_session_list(
+        result = self.sso.user.session.get_list(
             self.cid, ctx.input.ust, ctx.input.target_ust, ctx.input.current_ust, ctx.input.current_app, ctx.remote_addr)
 
         for item in result: # type: dict
-            del item['id']
-            del item['user_id']
             item['creation_time'] = item['creation_time'].isoformat()
             item['expiration_time'] = item['expiration_time'].isoformat()
 
