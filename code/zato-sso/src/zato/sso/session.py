@@ -610,15 +610,20 @@ class SessionAPI(object):
         if needs_super_user:
             if not current_session.is_super_user:
                 logger.warn(
-                    'Current UST does not belong to a super-user, cannot continue, current user is `%s` `%s`',
-                    current_session.user_id, current_session.username)
+                    'Current UST does not belong to a super-user, cannot continue (session.get_current_session), ' \
+                    'current user is `%s` `%s`', current_session.user_id, current_session.username)
                 raise ValidationError(status_code.auth.not_allowed, True)
 
         return current_session
 
 # ################################################################################################################################
 
-    def get_list(self, cid, target_ust, current_ust, current_app, remote_addr):
+    def _get_list_by_ust(self, ust):
+
+
+# ################################################################################################################################
+
+    def get_list(self, cid, ust, target_ust, current_ust, current_app, remote_addr):
         """ Returns a list of sessions. Regular users may receive basic information about their own sessions only
         whereas super-users may look up any other user's session list.
         """
@@ -626,7 +631,22 @@ class SessionAPI(object):
         audit_pii.info(cid, 'session.get_list', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # Local aliases
-        current_session = self.get_current_session(cid, current_ust, current_app, remote_addr, False)
+        has_ust = bool(ust)
+        current_ust_elem = ust if has_ust else current_ust
+
+        current_session = self.get_current_session(cid, current_ust_elem, current_app, remote_addr, False)
+
+        # We return a list of sessions for currently logged in user
+        if has_ust:
+            return self._get_list_by_ust(ust)
+
+        # If we are to return a list of sessions for another UST, we need to be a super-user
+        else:
+            if not current_session.is_super_user:
+                logger.warn(
+                    'Current UST does not belong to a super-user, cannot continue (session.get_list), current user is ' \
+                    '`%s` `%s`', current_session.user_id, current_session.username)
+                raise ValidationError(status_code.auth.not_allowed, True)
 
         # Only super-users may look up other users' sessions
         if target_ust != current_ust:
