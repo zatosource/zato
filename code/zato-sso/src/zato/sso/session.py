@@ -396,10 +396,10 @@ class SessionAPI(object):
             ust = new_user_session_token()
 
             # Create current interaction details for this session
-            interaction_state = []
-            self.update_interaction_state(interaction_state, ctx.remote_addr, ctx.user_agent, 'login', creation_time)
+            session_state_change_list = []
+            self.update_session_state_change_list(session_state_change_list, ctx.remote_addr, ctx.user_agent, 'login', creation_time)
             opaque = {
-                'interaction_state': interaction_state
+                'session_state_change_list': session_state_change_list
             }
 
             session.execute(
@@ -447,7 +447,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def update_interaction_state(self, current_state, remote_addr, user_agent, ctx_source, now):
+    def update_session_state_change_list(self, current_state, remote_addr, user_agent, ctx_source, now):
         """ Adds information about a user interaction with SSO, keeping the history
         of such interactions to up to max_len entries.
         """
@@ -502,9 +502,9 @@ class SessionAPI(object):
 
             # Update current interaction details for this session
             opaque = getattr(sso_info, _opaque) or {}
-            interaction_state = opaque.get('interaction_state', [])
-            self.update_interaction_state(interaction_state, remote_addr, user_agent, ctx_source, now)
-            opaque['interaction_state'] = interaction_state
+            session_state_change_list = opaque.get('session_state_change_list', [])
+            self.update_session_state_change_list(session_state_change_list, remote_addr, user_agent, ctx_source, now)
+            opaque['session_state_change_list'] = session_state_change_list
 
             # Set a new expiration time
             expiration_time = now + timedelta(minutes=self.sso_conf.session.expiry)
