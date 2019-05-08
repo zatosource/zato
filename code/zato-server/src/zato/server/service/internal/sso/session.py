@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from uuid import uuid4
 
 # Zato
+from zato.server.service import ListOfDicts
 from zato.server.service.internal.sso import BaseRESTService, BaseSIO
 from zato.sso import status_code, ValidationError
 
@@ -22,15 +23,47 @@ _invalid = '_invalid.{}'.format(uuid4().hex)
 
 # ################################################################################################################################
 
+class BaseGetSIO(BaseSIO):
+    input_required = 'current_app',
+    input_optional = 'target_ust', 'current_ust', 'ust'
+    output_optional = BaseSIO.output_optional + ('creation_time', 'expiration_time', 'remote_addr', 'user_agent',
+        'is_valid', ListOfDicts('interaction_state'))
+    default_value = _invalid
+    skip_empty_keys = True
+
+# ################################################################################################################################
+
+class SessionList(BaseRESTService):
+    """ Returns a list of sessions for current user or another one.
+    """
+    class SimpleIO(BaseGetSIO):
+        output_repeated = True
+
+# ################################################################################################################################
+
 class Session(BaseRESTService):
     """ Session manipulation through REST.
     """
-    class SimpleIO(BaseSIO):
-        input_required = 'current_app',
-        input_optional = 'target_ust', 'current_ust', 'ust'
-        output_optional = BaseSIO.output_optional + ('creation_time', 'expiration_time', 'remote_addr', 'user_agent',
-            'is_valid')
-        default_value = _invalid
+    class SimpleIO(BaseGetSIO):
+        pass
+
+    def _handle_sso_GET(self, ctx):
+
+        # We either have a single UST on input or both target and current ones, but not both kinds
+        if ctx.input.ust:
+            if ctx.input.current_ust or ctx.input.target_ust:
+                raise ValidationError(status_code.common.invalid_input)
+
+        else:
+
+            # Without ctx.input.ust we must require both of the other elements
+            if not (ctx.input.current_ust and ctx.input.target_ust):
+                raise ValidationError(status_code.common.invalid_input)
+
+        result = self.sso.user.session.get_list(self.cid, ctx.input.ust, ctx.input.target_ust, ctx.input.current_ust,
+            ctx.input.current_app, ctx.remote_addr)
+
+        self.logger.warn('EEE %s', result)
 
 # ################################################################################################################################
 
