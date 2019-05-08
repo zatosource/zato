@@ -25,7 +25,7 @@ from zato.common.audit import audit_pii
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.sso import const, status_code, Session as SessionEntity, ValidationError
 from zato.sso.attr import AttrAPI
-from zato.sso.odb.query import get_session_by_ust, get_user_by_username
+from zato.sso.odb.query import get_session_by_ust, get_session_list_by_user_id, get_user_by_username
 from zato.sso.util import check_credentials, check_remote_app_exists, new_user_session_token, set_password, validate_password
 
 # ################################################################################################################################
@@ -618,12 +618,19 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def _get_list_by_ust(self, ust):
-
+    def _get_session_list_by_user_id(self, user_id, now=None):
+        with closing(self.odb_session_func()) as session:
+            return get_session_list_by_user_id(session, user_id, now or datetime.utcnow())
 
 # ################################################################################################################################
 
-    def get_list(self, cid, ust, target_ust, current_ust, current_app, remote_addr):
+    def _get_session_list_by_ust(self, ust):
+        session = self.get_session_by_ust(ust, datetime.utcnow())
+        return self._get_session_list_by_user_id(session.user_id, now)
+
+# ################################################################################################################################
+
+    def get_session_list(self, cid, ust, target_ust, current_ust, current_app, remote_addr):
         """ Returns a list of sessions. Regular users may receive basic information about their own sessions only
         whereas super-users may look up any other user's session list.
         """
@@ -638,21 +645,22 @@ class SessionAPI(object):
 
         # We return a list of sessions for currently logged in user
         if has_ust:
-            return self._get_list_by_ust(ust)
+            return self._get_session_list_by_user_id(current_session.user_id)
 
-        # If we are to return a list of sessions for another UST, we need to be a super-user
         else:
+            # If we are to return a list of sessions for another UST, we need to be a super-user
             if not current_session.is_super_user:
                 logger.warn(
                     'Current UST does not belong to a super-user, cannot continue (session.get_list), current user is ' \
                     '`%s` `%s`', current_session.user_id, current_session.username)
                 raise ValidationError(status_code.auth.not_allowed, True)
 
-        # Only super-users may look up other users' sessions
-        if target_ust != current_ust:
-
-            if not current_session.is_super_user:
-                raise ValidationError(status_code.auth.not_allowed, True)
+            # If we are here, it means that we are a super-user and we are to return sessions
+            # by another person's UST but there is still a chance that this other person is actually us.
+            if current_ust == target_ust:
+                return self._get_session_list_by_user_id(current_session.user_id)
+            else:
+                return self._get_session_list_by_ust(target_ust)
 
 # ################################################################################################################################
 

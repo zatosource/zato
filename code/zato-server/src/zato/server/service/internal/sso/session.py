@@ -39,14 +39,6 @@ class SessionList(BaseRESTService):
     class SimpleIO(BaseGetSIO):
         output_repeated = True
 
-# ################################################################################################################################
-
-class Session(BaseRESTService):
-    """ Session manipulation through REST.
-    """
-    class SimpleIO(BaseGetSIO):
-        pass
-
     def _handle_sso_GET(self, ctx):
 
         # We either have a single UST on input or both target and current ones, but not both kinds
@@ -60,10 +52,17 @@ class Session(BaseRESTService):
             if not (ctx.input.current_ust and ctx.input.target_ust):
                 raise ValidationError(status_code.common.invalid_input)
 
-        result = self.sso.user.session.get_list(self.cid, ctx.input.ust, ctx.input.target_ust, ctx.input.current_ust,
+        result = self.sso.user.session.get_session_list(self.cid, ctx.input.ust, ctx.input.target_ust, ctx.input.current_ust,
             ctx.input.current_app, ctx.remote_addr)
 
         self.logger.warn('EEE %s', result)
+
+# ################################################################################################################################
+
+class Session(BaseRESTService):
+    """ Session manipulation through REST.
+    """
+    SimpleIO = BaseGetSIO
 
 # ################################################################################################################################
 

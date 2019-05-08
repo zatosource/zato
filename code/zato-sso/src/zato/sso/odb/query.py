@@ -21,7 +21,7 @@ from sqlalchemy import or_
 # Zato
 from zato.common import GENERIC
 from zato.common.odb.model import SSOSession, SSOUser
-from zato.common.util.sql import get_dict_with_opaque
+from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque
 from zato.sso import const
 
 # ################################################################################################################################
@@ -78,12 +78,24 @@ def get_user_by_username(session, username, needs_approved=True, _approved=_appr
 
 # ################################################################################################################################
 
-def _get_session_by_ust(session, ust, now, _columns=_session_columns_with_user, _approved=_approved):
+def _get_session(session, now , _columns=_session_columns_with_user, _approved=_approved):
     return _get_model(session, _columns).\
         filter(SSOSession.user_id==SSOUser.id).\
         filter(SSOUser.approval_status==_approved).\
-        filter(SSOSession.ust==ust).\
         filter(SSOSession.expiration_time > now)
+
+# ################################################################################################################################
+
+def _get_session_by_ust(session, ust, now):
+    return _get_session(session, now).\
+        filter(SSOSession.ust==ust)
+
+# ################################################################################################################################
+
+def get_session_list_by_user_id(session, user_id, now, _columns=_session_columns):
+    return elems_with_opaque(_get_session(session, now, _columns).\
+           filter(SSOSession.user_id==user_id).\
+           all())
 
 # ################################################################################################################################
 
