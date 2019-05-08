@@ -620,7 +620,11 @@ class SessionAPI(object):
 
     def _get_session_list_by_user_id(self, user_id, now=None):
         with closing(self.odb_session_func()) as session:
-            return get_session_list_by_user_id(session, user_id, now or datetime.utcnow())
+            result = get_session_list_by_user_id(session, user_id, now or datetime.utcnow())
+
+        for item in result:
+            item.pop(GENERIC.ATTR_NAME, None)
+        return result
 
 # ################################################################################################################################
 
@@ -631,7 +635,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def get_session_list(self, cid, ust, target_ust, current_ust, current_app, remote_addr):
+    def get_list(self, cid, ust, target_ust, current_ust, current_app, remote_addr, _unused_user_agent):
         """ Returns a list of sessions. Regular users may receive basic information about their own sessions only
         whereas super-users may look up any other user's session list.
         """
