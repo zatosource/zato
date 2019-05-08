@@ -9,9 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from json import loads
 from uuid import uuid4
 
 # Zato
+from zato.common import GENERIC
 from zato.server.service import DateTime, ListOfDicts
 from zato.server.service.internal.sso import BaseRESTService, BaseSIO
 from zato.sso import status_code, ValidationError
@@ -27,7 +29,7 @@ class BaseGetSIO(BaseSIO):
     input_required = 'current_app',
     input_optional = 'target_ust', 'current_ust', 'ust'
     output_optional = BaseSIO.output_optional + (DateTime('creation_time'), DateTime('expiration_time'), 'remote_addr',
-        'user_agent', 'is_valid', ListOfDicts('interaction_state'))
+        'user_agent', 'is_valid', ListOfDicts('session_state_change_list'), 'result')
     default_value = _invalid
     skip_empty_keys = True
 
@@ -36,8 +38,7 @@ class BaseGetSIO(BaseSIO):
 class SessionList(BaseRESTService):
     """ Returns a list of sessions for current user or another one.
     """
-    class SimpleIO(BaseGetSIO):
-        output_repeated = True
+    SimpleIO = BaseGetSIO
 
     def _handle_sso_GET(self, ctx):
 
@@ -55,8 +56,21 @@ class SessionList(BaseRESTService):
             if not (ctx.input.current_ust != default_value and ctx.input.target_ust != default_value):
                 raise ValidationError(status_code.common.invalid_input)
 
-        self.response.payload[:] = self.sso.user.session.get_session_list(
+        result = self.sso.user.session.get_session_list(
             self.cid, ctx.input.ust, ctx.input.target_ust, ctx.input.current_ust, ctx.input.current_app, ctx.remote_addr)
+
+        for item in result: # type: dict
+            del item['id']
+            del item['user_id']
+            item['creation_time'] = item['creation_time'].isoformat()
+            item['expiration_time'] = item['expiration_time'].isoformat()
+
+            opaque = item.pop(GENERIC.ATTR_NAME, None)
+            if opaque:
+                opaque = loads(opaque) # type: dict
+                item['session_state_change_list'] = opaque.get('session_state_change_list', [])
+
+        self.response.payload.result = result
 
 # ################################################################################################################################
 
