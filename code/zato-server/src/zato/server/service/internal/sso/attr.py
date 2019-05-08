@@ -68,7 +68,7 @@ class _AttrBase(object):
                 ctx.remote_addr)
         elif self._api_entity == 'session':
             entity = self.sso.user.session.get(self.cid, ctx.input.target_ust, ctx.input.current_ust,
-                ctx.input.current_app, ctx.remote_addr)
+                ctx.input.current_app, ctx.remote_addr, user_agent=None)
         else:
             logger.warn('Could not establish API entity to use out of `%s`', self._api_entity)
             raise ValidationError(status_code.common.internal_error)

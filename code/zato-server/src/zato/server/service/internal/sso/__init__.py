@@ -25,12 +25,13 @@ from zato.sso import status_code, ValidationError
 class SSOCtx(object):
     """ A set of attributes describing current SSO request.
     """
-    __slots__ = ('input', 'sso_conf', 'remote_addr')
+    __slots__ = ('input', 'sso_conf', 'remote_addr', 'user_agent')
 
-    def __init__(self, input, sso_conf, remote_addr):
+    def __init__(self, input, sso_conf, remote_addr, user_agent):
         self.input = input
         self.sso_conf = sso_conf
         self.remote_addr = remote_addr
+        self.user_agent = user_agent
 
 # ################################################################################################################################
 
@@ -110,7 +111,8 @@ class BaseService(Service):
             remote_addr =  [ip_address(elem) for elem in remote_addr]
 
         # OK, we can proceed to the actual call now
-        self._call_sso_api(self._handle_sso, 'Could not call service', ctx=SSOCtx(self.request.input, sso_conf, remote_addr))
+        self._call_sso_api(self._handle_sso, 'Could not call service',
+            ctx=SSOCtx(self.request.input, sso_conf, remote_addr, self.wsgi_environ.get('HTTP_USER_AGENT')))
 
 # ################################################################################################################################
 
