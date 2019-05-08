@@ -23,14 +23,16 @@ class SessionGetListTestCase(BaseTest):
 
     def test_get_list_self_super_user(self):
 
-        response = self.post('/zato/sso/user/session', {
+        self.post('/zato/sso/user/session', {
             'current_ust': self.ctx.super_user_ust,
             'target_ust': self.ctx.super_user_ust,
         })
 
-        self.assertTrue(response.is_valid)
-
         self.patch('/zato/sso/user/session', {
+            'ust': self.ctx.super_user_ust,
+        })
+
+        response = self.get('/zato/sso/user/session/list', {
             'ust': self.ctx.super_user_ust,
         })
 

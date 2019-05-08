@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from uuid import uuid4
 
 # Zato
-from zato.server.service import ListOfDicts
+from zato.server.service import DateTime, ListOfDicts
 from zato.server.service.internal.sso import BaseRESTService, BaseSIO
 from zato.sso import status_code, ValidationError
 
@@ -26,8 +26,8 @@ _invalid = '_invalid.{}'.format(uuid4().hex)
 class BaseGetSIO(BaseSIO):
     input_required = 'current_app',
     input_optional = 'target_ust', 'current_ust', 'ust'
-    output_optional = BaseSIO.output_optional + ('creation_time', 'expiration_time', 'remote_addr', 'user_agent',
-        'is_valid', ListOfDicts('interaction_state'))
+    output_optional = BaseSIO.output_optional + (DateTime('creation_time'), DateTime('expiration_time'), 'remote_addr',
+        'user_agent', 'is_valid', ListOfDicts('interaction_state'))
     default_value = _invalid
     skip_empty_keys = True
 
@@ -41,21 +41,22 @@ class SessionList(BaseRESTService):
 
     def _handle_sso_GET(self, ctx):
 
+        # Local aliases
+        default_value = self.SimpleIO.default_value
+
         # We either have a single UST on input or both target and current ones, but not both kinds
         if ctx.input.ust:
-            if ctx.input.current_ust or ctx.input.target_ust:
+            if ctx.input.current_ust != default_value or ctx.input.target_ust != default_value:
                 raise ValidationError(status_code.common.invalid_input)
 
         else:
 
             # Without ctx.input.ust we must require both of the other elements
-            if not (ctx.input.current_ust and ctx.input.target_ust):
+            if not (ctx.input.current_ust != default_value and ctx.input.target_ust != default_value):
                 raise ValidationError(status_code.common.invalid_input)
 
-        result = self.sso.user.session.get_session_list(self.cid, ctx.input.ust, ctx.input.target_ust, ctx.input.current_ust,
-            ctx.input.current_app, ctx.remote_addr)
-
-        self.logger.warn('EEE %s', result)
+        self.response.payload[:] = self.sso.user.session.get_session_list(
+            self.cid, ctx.input.ust, ctx.input.target_ust, ctx.input.current_ust, ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
 
@@ -76,10 +77,6 @@ class Session(BaseRESTService):
         # Get result
         result = self.sso.user.session.get(self.cid, ctx.input.target_ust, ctx.input.current_ust,
             ctx.input.current_app, ctx.remote_addr, self.wsgi_environ.get('HTTP_USER_AGENT'))
-
-        # Serialize datetime objects to string
-        result.creation_time = result.creation_time.isoformat()
-        result.expiration_time = result.expiration_time.isoformat()
 
         # Return output
         self.response.payload = result.to_dict()

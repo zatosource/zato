@@ -91,7 +91,7 @@ def _get_session_by_ust(session, ust, now):
 
 def get_session_list_by_user_id(session, user_id, now, _columns=_session_columns):
     return elems_with_opaque(_get_session(session, now, _columns).\
-           filter(SSOSession.user_id==user_id).\
+           filter(SSOUser.user_id==user_id).\
            all())
 
 # ################################################################################################################################
