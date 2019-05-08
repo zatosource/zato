@@ -618,12 +618,12 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def get_session_list(self, cid, target_ust, current_ust, current_app, remote_addr):
+    def get_list(self, cid, target_ust, current_ust, current_app, remote_addr):
         """ Returns a list of sessions. Regular users may receive basic information about their own sessions only
         whereas super-users may look up any other user's session list.
         """
         # PII audit comes first
-        audit_pii.info(cid, 'session.get_session_list', extra={'current_app':current_app, 'remote_addr':remote_addr})
+        audit_pii.info(cid, 'session.get_list', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # Local aliases
         current_session = self.get_current_session(cid, current_ust, current_app, remote_addr, False)
