@@ -389,4 +389,9 @@ def get_parser():
     return parser
 
 def main():
-    return run_command(get_parser().parse_args())
+    parser = get_parser()
+    args = parser.parse_args()
+    if not hasattr(args, 'command'):
+        parser.print_help()
+    else:
+        return run_command(args)
