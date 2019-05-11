@@ -21,6 +21,7 @@ import pyotp
 from zato.admin.web.util import set_user_profile_totp_key
 from zato.admin.zato_settings import update_globals
 from zato.cli import ManageCommand
+from zato.common.util import get_client_from_server_conf
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -210,6 +211,23 @@ class ResetTOTPKey(_WebAdminAuthCommand):
             self.logger.info('OK')
         else:
             self.logger.info(key)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SetAdminInvokePassword(_WebAdminAuthCommand):
+    """ Resets a web-admin user's password that it uses to connect to servers.
+    """
+    opts = [
+        {'name': '--username', 'help': 'Username to reset the password of', 'default':'admin.invoke'},
+        {'name': '--password', 'help': 'Password to set'},
+    ]
+
+    def execute(self, args):
+        client = get_client_from_server_conf(args.path)
+        client.invoke('zato.ping')
+
+        print(111, client)
 
 # ################################################################################################################################
 # ################################################################################################################################
