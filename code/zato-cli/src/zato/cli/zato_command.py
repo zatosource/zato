@@ -256,6 +256,15 @@ def get_parser():
     add_opts(reset_totp_key, web_admin_auth_mod.ResetTOTPKey.opts)
 
     #
+    # set-admin-invoke-password
+    #
+    set_admin_invoke_password = subs.add_parser('set-admin-invoke-password',
+        description=web_admin_auth_mod.SetAdminInvokePassword.__doc__, parents=[base_parser])
+    set_admin_invoke_password.add_argument('path', help='Path to a server')
+    set_admin_invoke_password.set_defaults(command='set_admin_invoke_password')
+    add_opts(set_admin_invoke_password, web_admin_auth_mod.SetAdminInvokePassword.opts)
+
+    #
     # quickstart
     #
     quickstart = subs.add_parser('quickstart', description='Quickly set up and manage Zato clusters', parents=[base_parser])
