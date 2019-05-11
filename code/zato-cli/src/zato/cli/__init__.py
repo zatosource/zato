@@ -94,14 +94,6 @@ kvdb_opts = [
 
 # ################################################################################################################################
 
-def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
-    return [
-        {'name':'tech_account_name', 'help':'Technical account name {}'.format(help_suffix)},
-        {'name':'--tech_account_password', 'help':'Technical account password'},
-    ]
-
-# ################################################################################################################################
-
 common_logging_conf_contents = """
 loggers:
     '':
