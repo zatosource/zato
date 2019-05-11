@@ -465,6 +465,7 @@ class Create(ZatoCommand):
     opts.append({'name':'broker_host', 'help':"Redis host"})
     opts.append({'name':'broker_port', 'help':'Redis port'})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
+    opts.append({'name':'--admin-invoke-password', 'help':'Password for web-admin to connect to servers with'})
     opts.append({'name':'--skip-if-exists',
         'help':'Return without raising an error if cluster already exists', 'action':'store_true'})
 
@@ -491,9 +492,10 @@ class Create(ZatoCommand):
             setattr(cluster, name, getattr(args, name))
         session.add(cluster)
 
-        admin_invoke_sec = HTTPBasicAuth(
-            None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke',
-            getattr(args, 'admin_invoke_password', None), cluster)
+        admin_invoke_password = getattr(args, 'admin-invoke-password', None)
+
+        admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke',
+            admin_invoke_password, cluster)
         session.add(admin_invoke_sec)
 
         pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', new_password(), cluster)
