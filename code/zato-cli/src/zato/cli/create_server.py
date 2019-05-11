@@ -595,7 +595,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--pub_key_path', 'help':"Path to the server's public key in PEM"})
     opts.append({'name':'--priv_key_path', 'help':"Path to the server's private key in PEM"})
     opts.append({'name':'--cert_path', 'help':"Path to the server's certificate in PEM"})
-    opts.append({'name':'--ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
+    opts.append({'name':'--ca_certs_path', 'help':"Path to list of PEM certificates the server will trust"})
     opts.append({'name':'--secret_key', 'help':"Server's secret key (must be the same for all servers)"})
     opts.append({'name':'--jwt_secret', 'help':"Server's JWT secret (must be the same for all servers)"})
     opts.append({'name':'--http_port', 'help':"Server's HTTP port"})
