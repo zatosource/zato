@@ -577,7 +577,7 @@ class ZatoCommand(object):
 
             # It is OK if password is an empty string and empty secrets are allowed
             if not password_arg:
-                if isinstance(password_arg, str) and self.allow_empty_secrets:
+                if self.allow_empty_secrets:
                     continue
 
                 password = self._get_secret(opt_help, self.needs_secrets_confirm, self.allow_empty_secrets, opt_name)
