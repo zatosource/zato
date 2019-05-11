@@ -274,7 +274,7 @@ class Create(ZatoCommand):
             server_names['{}'.format(idx)] = 'server{}'.format(idx)
 
         total_steps = 7 + servers
-        admin_invoke_password = uuid4().hex
+        admin_invoke_password = 'admin.invoke.' + uuid4().hex
         broker_host = 'localhost'
         broker_port = 6379
         lb_host = 'localhost'
