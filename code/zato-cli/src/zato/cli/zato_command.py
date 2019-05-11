@@ -158,7 +158,7 @@ def get_parser():
     add_opts(create_server, create_server_mod.Create.opts)
 
     create_user = create_subs.add_parser('user', description=web_admin_auth_mod.CreateUser.__doc__, parents=[base_parser])
-    create_user.add_argument('path', help='Path to a web admin')
+    create_user.add_argument('path', help='Path to a web-admin instance')
     create_user.set_defaults(command='create_user')
     add_opts(create_user, web_admin_auth_mod.CreateUser.opts)
 
@@ -260,7 +260,7 @@ def get_parser():
     #
     set_admin_invoke_password = subs.add_parser('set-admin-invoke-password',
         description=web_admin_auth_mod.SetAdminInvokePassword.__doc__, parents=[base_parser])
-    set_admin_invoke_password.add_argument('path', help='Path to a server')
+    set_admin_invoke_password.add_argument('path', help='Path to web-admin')
     set_admin_invoke_password.set_defaults(command='set_admin_invoke_password')
     add_opts(set_admin_invoke_password, web_admin_auth_mod.SetAdminInvokePassword.opts)
 
