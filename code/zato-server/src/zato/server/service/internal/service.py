@@ -198,7 +198,7 @@ class Edit(AdminService):
                 # Configure JSON Schema validation if service has a schema assigned by user.
                 class_info = self.server.service_store.get_service_info_by_id(input.id) # type: dict
                 class_ = class_info['service_class'] # type: Service
-                if class_.json_schema:
+                if class_.schema:
                     self.server.service_store.set_up_class_json_schema(class_, input)
 
                 session.add(service)
