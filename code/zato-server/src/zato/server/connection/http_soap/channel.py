@@ -42,10 +42,7 @@ from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbid
      TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
 
-if PY2:
-    stack_format = None
-else:
-    from stackprinter import format as stack_format
+stack_format = None
 
 # ################################################################################################################################
 
@@ -373,22 +370,22 @@ class RequestDispatcher(object):
                         status_code = _status_bad_request
                         needs_prefix = False if e.needs_err_details else True
                         response = JSONSchemaDictError(
-                            cid, e.needs_err_details, e.error_msg, needs_prefix=needs_prefix).serialize(True)
+                            cid, e.needs_err_details, e.error_msg, needs_prefix=needs_prefix).serialize()
 
                     # Rate limiting and whitelisting
-                    if isinstance(e, RateLimitingException):
+                    elif isinstance(e, RateLimitingException):
                         response, status_code, status = self._on_rate_limiting_exception(cid, e, channel_item)
 
                     else:
                         status_code = INTERNAL_SERVER_ERROR
                         response = _format_exc if self.return_tracebacks else self.default_error_message
 
-                # TODO: This should be configurable. Some people may want such
-                # things to be on DEBUG whereas for others ERROR will make most sense
-                # in given circumstances.
                 _exc = _stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
                     add_summary=True, source_lines=20) if _stack_format else _format_exc
 
+                # TODO: This should be configurable. Some people may want such
+                # things to be on DEBUG whereas for others ERROR will make most sense
+                # in given circumstances.
                 logger.error(
                     'Caught an exception, cid:`%s`, status_code:`%s`, e:\n%s\n`%s`', cid, status_code, _exc_sep, _exc)
 

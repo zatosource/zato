@@ -158,7 +158,7 @@ def get_parser():
     add_opts(create_server, create_server_mod.Create.opts)
 
     create_user = create_subs.add_parser('user', description=web_admin_auth_mod.CreateUser.__doc__, parents=[base_parser])
-    create_user.add_argument('path', help='Path to a web admin')
+    create_user.add_argument('path', help='Path to a web-admin instance')
     create_user.set_defaults(command='create_user')
     add_opts(create_user, web_admin_auth_mod.CreateUser.opts)
 
@@ -254,6 +254,15 @@ def get_parser():
     reset_totp_key.add_argument('path', help='Path to web-admin')
     reset_totp_key.set_defaults(command='reset_totp_key')
     add_opts(reset_totp_key, web_admin_auth_mod.ResetTOTPKey.opts)
+
+    #
+    # set-admin-invoke-password
+    #
+    set_admin_invoke_password = subs.add_parser('set-admin-invoke-password',
+        description=web_admin_auth_mod.SetAdminInvokePassword.__doc__, parents=[base_parser])
+    set_admin_invoke_password.add_argument('path', help='Path to web-admin')
+    set_admin_invoke_password.set_defaults(command='set_admin_invoke_password')
+    add_opts(set_admin_invoke_password, web_admin_auth_mod.SetAdminInvokePassword.opts)
 
     #
     # quickstart
@@ -389,4 +398,9 @@ def get_parser():
     return parser
 
 def main():
-    return run_command(get_parser().parse_args())
+    parser = get_parser()
+    args = parser.parse_args()
+    if not hasattr(args, 'command'):
+        parser.print_help()
+    else:
+        return run_command(args)

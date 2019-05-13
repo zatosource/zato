@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from future.utils import iteritems
 
 # Zato
-from zato.cli import common_odb_opts, get_tech_account_opts, is_arg_given, ZatoCommand
+from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
 from zato.common import CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE
 from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, \
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
@@ -465,10 +465,9 @@ class Create(ZatoCommand):
     opts.append({'name':'broker_host', 'help':"Redis host"})
     opts.append({'name':'broker_port', 'help':'Redis port'})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
+    opts.append({'name':'--admin-invoke-password', 'help':'Password for web-admin to connect to servers with'})
     opts.append({'name':'--skip-if-exists',
         'help':'Return without raising an error if cluster already exists', 'action':'store_true'})
-
-    opts += get_tech_account_opts('for web-admin instances to use')
 
     def execute(self, args, show_output=True):
 
@@ -493,11 +492,14 @@ class Create(ZatoCommand):
             setattr(cluster, name, getattr(args, name))
         session.add(cluster)
 
-        # TODO: getattrs below should be squared away - one of the attrs should win
-        #       and the other one should be get ridden of.
-        admin_invoke_sec = HTTPBasicAuth(
-            None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke', getattr(
-                args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password'), cluster)
+        print(111, args)
+
+        admin_invoke_password = getattr(args, 'admin-invoke-password', None)
+
+        print(222, admin_invoke_password)
+
+        admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke',
+            admin_invoke_password, cluster)
         session.add(admin_invoke_sec)
 
         pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', new_password(), cluster)
