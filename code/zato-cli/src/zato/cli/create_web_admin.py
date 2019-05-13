@@ -23,11 +23,14 @@ from uuid import uuid4
 # Django
 from django.core.management import call_command
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 # TODO: There really shouldn't be any direct dependency between zato-cli and zato-web-admin
 from zato.admin.zato_settings import update_globals
 
-from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, is_arg_given, ZatoCommand
+from zato.cli import common_logging_conf_contents, common_odb_opts, is_arg_given, ZatoCommand
 from zato.common.crypto import WebAdminCryptoManager, well_known_data
 from zato.common.defaults import web_admin_host, web_admin_port
 
@@ -86,8 +89,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--priv_key_path', 'help':"Path to the web admin's private key in PEM"})
     opts.append({'name':'--cert_path', 'help':"Path to the web admin's certificate in PEM"})
     opts.append({'name':'--ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
-
-    opts += get_tech_account_opts()
+    opts.append({'name':'--admin-invoke-password', 'help':'Password for web-admin to connect to servers with'})
 
     def __init__(self, args):
         self.target_dir = os.path.abspath(args.path)
@@ -123,8 +125,13 @@ class Create(ZatoCommand):
         django_secret_key = uuid4().hex.encode('utf8')
         django_site_id = getrandbits(20)
 
-        admin_invoke_password = getattr(args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password')
-        admin_invoke_password = admin_invoke_password.encode('utf8')
+        admin_invoke_password = getattr(args, 'admin_invoke_password', None)
+
+        if not admin_invoke_password:
+            admin_invoke_password = 'create_wa.admin.' + uuid4().hex
+
+        if isinstance(admin_invoke_password, unicode):
+            admin_invoke_password = admin_invoke_password.encode('utf8')
 
         odb_password = args.odb_password or ''
         odb_password = odb_password.encode('utf8')

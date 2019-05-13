@@ -25,7 +25,8 @@ sudo apt-get install -y \
     build-essential curl git haproxy libbz2-dev libev-dev libev4 libevent-dev \
     libffi-dev libkeyutils-dev libldap2-dev libmemcached-dev libpq-dev \
     libsasl2-dev libssl-dev libxml2-dev libxslt1-dev libyaml-dev openssl \
-    $PY_BINARY $PY_BINARY-dev python-pip swig uuid-dev uuid-runtime wget zlib1g-dev lsb-release
+    $PY_BINARY $PY_BINARY-dev $PY_BINARY-pip swig uuid-dev uuid-runtime wget \
+    zlib1g-dev lsb-release
 
 # On Debian and Ubuntu the binary goes to /usr/sbin/haproxy so we need to
 # symlink it to a directory that can be easily found on PATH so that starting

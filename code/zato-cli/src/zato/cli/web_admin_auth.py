@@ -17,10 +17,14 @@ from traceback import format_exc
 # PyOTP
 import pyotp
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 from zato.admin.web.util import set_user_profile_totp_key
 from zato.admin.zato_settings import update_globals
 from zato.cli import ManageCommand
+from zato.common.crypto import WebAdminCryptoManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -210,6 +214,44 @@ class ResetTOTPKey(_WebAdminAuthCommand):
             self.logger.info('OK')
         else:
             self.logger.info(key)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class SetAdminInvokePassword(_WebAdminAuthCommand):
+    """ Resets a web-admin user's password that it uses to connect to servers.
+    """
+    opts = [
+        {'name': '--username', 'help': 'Username to reset the password of', 'default':'admin.invoke'},
+        {'name': '--password', 'help': 'Password to set'},
+    ]
+
+    def execute(self, args):
+
+        # Find directories for config data
+        os.chdir(os.path.abspath(args.path))
+        base_dir = os.path.join(self.original_dir, args.path)
+        repo_dir = os.path.join(base_dir, 'config', 'repo')
+
+        # Read config in
+        config_path = os.path.join(repo_dir, 'web-admin.conf')
+        config_data = open(config_path).read()
+
+        # Encrypted the provided password
+        cm = WebAdminCryptoManager(repo_dir=repo_dir)
+        encrypted = cm.encrypt(args.password.encode('utf8') if isinstance(args.password, unicode) else args.password)
+
+        # Update the config file in-place so as not to reformat its contents
+        new_config = []
+        for line in config_data.splitlines():
+            if 'ADMIN_INVOKE_PASSWORD' in line:
+                encrypted = encrypted.decode('utf8') if not isinstance(encrypted, unicode) else encrypted
+                line = '  "ADMIN_INVOKE_PASSWORD": "{}",'.format(encrypted)
+            new_config.append(line)
+
+        # Save config with the updated password
+        new_config = '\n'.join(new_config)
+        open(config_path, 'w').write(new_config)
 
 # ################################################################################################################################
 # ################################################################################################################################

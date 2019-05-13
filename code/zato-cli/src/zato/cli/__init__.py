@@ -94,14 +94,6 @@ kvdb_opts = [
 
 # ################################################################################################################################
 
-def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
-    return [
-        {'name':'tech_account_name', 'help':'Technical account name {}'.format(help_suffix)},
-        {'name':'--tech_account_password', 'help':'Technical account password'},
-    ]
-
-# ################################################################################################################################
-
 common_logging_conf_contents = """
 loggers:
     '':
@@ -359,6 +351,7 @@ def run_command(args):
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('service_invoke', 'zato.cli.service.Invoke'),
         ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),
+        ('set_admin_invoke_password', 'zato.cli.web_admin_auth.SetAdminInvokePassword'),
         ('sso_change_user_password', 'zato.cli.sso.ChangeUserPassword'),
         ('sso_create_odb', 'zato.cli.sso.CreateODB'),
         ('sso_create_user', 'zato.cli.sso.CreateUser'),
@@ -584,7 +577,7 @@ class ZatoCommand(object):
 
             # It is OK if password is an empty string and empty secrets are allowed
             if not password_arg:
-                if isinstance(password_arg, str) and self.allow_empty_secrets:
+                if self.allow_empty_secrets:
                     continue
 
                 password = self._get_secret(opt_help, self.needs_secrets_confirm, self.allow_empty_secrets, opt_name)
