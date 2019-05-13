@@ -635,7 +635,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def get_list(self, cid, ust, target_ust, current_ust, current_app, remote_addr, _unused_user_agent):
+    def get_list(self, cid, ust, target_ust, current_ust, current_app, remote_addr, _unused_user_agent=None):
         """ Returns a list of sessions. Regular users may receive basic information about their own sessions only
         whereas super-users may look up any other user's session list.
         """
