@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from datetime import datetime
 from unittest import main
 
 # Zato
@@ -23,11 +22,11 @@ class LinkedAuthTestCase(BaseTest):
 
     def test_create(self):
 
-        response = self.get('/sso/user/linked', {
+        self.get('/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
         })
 
-        response = self.post('/sso/user/linked', {
+        self.post('/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
@@ -35,7 +34,7 @@ class LinkedAuthTestCase(BaseTest):
             'is_active': True,
         })
 
-        response = self.delete('/sso/user/linked', {
+        self.delete('/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
