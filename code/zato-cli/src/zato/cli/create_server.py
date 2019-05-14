@@ -73,7 +73,7 @@ ca_certs_location=zato-server-ca-certs.pem
 [odb]
 db_name={{odb_db_name}}
 engine={{odb_engine}}
-extra=
+extra=echo=False
 host={{odb_host}}
 port={{odb_port}}
 password=zato+secret://zato.server_conf.odb.password

@@ -27,7 +27,6 @@ class LinkedAuthTestCase(BaseTest):
             'ust': self.ctx.super_user_ust,
         })
 
-        '''
         response = self.post('/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
@@ -35,7 +34,13 @@ class LinkedAuthTestCase(BaseTest):
             'auth_id': 1,
             'is_active': True,
         })
-        '''
+
+        response = self.delete('/sso/user/linked', {
+            'ust': self.ctx.super_user_ust,
+            'user_id': self.ctx.super_user_id,
+            'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
+            'auth_id': 1,
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -112,10 +117,14 @@ class LinkedAuth(BaseRESTService):
 # ################################################################################################################################
 
     def _handle_sso_POST(self, ctx):
-        self.logger.warn('POST %s', ctx)
-
         self.sso.user.create_linked_auth(self.cid, ctx.input.ust, ctx.input.user_id, ctx.input.auth_type,
             ctx.input.auth_id, ctx.input.is_active, ctx.input.current_app, ctx.remote_addr)
+
+# ################################################################################################################################
+
+    def _handle_sso_DELETE(self, ctx):
+        self.sso.user.delete_linked_auth(self.cid, ctx.input.ust, ctx.input.user_id, ctx.input.auth_type,
+            ctx.input.auth_id, ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
 # ################################################################################################################################
