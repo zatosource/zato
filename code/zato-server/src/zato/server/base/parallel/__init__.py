@@ -673,7 +673,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def configure_sso(self):
         if self.is_sso_enabled:
-            self.sso_api.set_odb_session_func(self._get_sso_session, self.odb.is_sqlite)
+            self.sso_api.post_configure(self._get_sso_session, self.odb.is_sqlite)
 
 # ################################################################################################################################
 

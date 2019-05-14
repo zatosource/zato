@@ -18,14 +18,16 @@ from uuid import uuid4
 
 # SQLAlchemy
 from sqlalchemy import update as sql_update
+from sqlalchemy.exc import IntegrityError
 
 # Python 2/3 compatibility
 from past.builtins import basestring, unicode
 
 # Zato
+from zato.common import SEC_DEF_TYPE
 from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
-from zato.common.odb.model import SSOUser as UserModel
+from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOUser as UserModel
 from zato.common.util.json_ import dumps
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
 from zato.sso.attr import AttrAPI
@@ -38,7 +40,28 @@ from zato.sso.util import check_credentials, check_remote_app_exists, make_data_
 
 # ################################################################################################################################
 
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # stdlib
+    from typing import Callable
+
+    # Zato
+    from zato.server.base.parallel import ParallelServer
+
+    # For pyflakes
+    Callable = Callable
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+
 logger = getLogger('zato')
+
+# ################################################################################################################################
+
+linked_auth_supported = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
 
 # ################################################################################################################################
 
@@ -202,6 +225,7 @@ class UserAPI(object):
     """
     def __init__(self, server, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func,
             new_user_id_func):
+        # type: (ParallelServer, dict, Callable, Callable, Callable, Callable, Callable, Callable)
         self.server = server
         self.sso_conf = sso_conf
         self.odb_session_func = odb_session_func
@@ -220,10 +244,16 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def set_odb_session_func(self, func, is_sqlite):
+    def post_configure(self, func, is_sqlite):
         self.odb_session_func = func
         self.is_sqlite = is_sqlite
-        self.session.set_odb_session_func(func, is_sqlite)
+        self.session.post_configure(func, is_sqlite)
+
+        # Maps all auth types that SSO users can be linked with to their server definitions
+        self.auth_link_map = {
+            SEC_DEF_TYPE.BASIC_AUTH: self.server.worker_store.request_dispatcher.url_data.basic_auth_config,
+            SEC_DEF_TYPE.JWT: self.server.worker_store.request_dispatcher.url_data.jwt_config,
+        }
 
 # ################################################################################################################################
 
@@ -1015,7 +1045,7 @@ class UserAPI(object):
 # ################################################################################################################################
 
     def get_linked_auth_list(self, cid, ust, user_id, current_app, remote_addr):
-        """ Verifies a user session without renewing it.
+        """ Returns a list of linked auth accounts for input user, either current or another one.
         """
         # PII audit comes first
         audit_pii.info(cid, 'user.get_linked_auth_list', extra={'current_app':current_app, 'remote_addr':remote_addr})
@@ -1038,6 +1068,55 @@ class UserAPI(object):
                 return get_linked_auth_list(session, user_id)
         except Exception:
             logger.warn('Could not return linked accounts, e:`%s`', format_exc())
+
+# ################################################################################################################################
+
+    def create_linked_auth(self, cid, ust, user_id, auth_type, auth_id, is_active, current_app, remote_addr,
+        _linked_auth_supported=linked_auth_supported):
+        """ Creates a link between input user and a security account.
+        """
+        # PII audit comes first
+        audit_pii.info(cid, 'user.create_linked_auth', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
+        # Only super-users may link auth accounts
+        self._require_super_user(cid, ust, current_app, remote_addr)
+
+        if auth_type not in self.auth_link_map:
+            raise ValueError('Invalid auth_type:`{}`'.format(auth_type))
+
+        for item in self.auth_link_map[auth_type].values(): # type: dict
+            config = item['config']
+            if config['id'] == auth_id:
+                break
+        else:
+            raise ValueError('Invalid auth_id:`{}`'.format(auth_id))
+
+        # We have validated everything and a link can be saved to the database now
+        now = datetime.utcnow()
+
+        with closing(self.odb_session_func()) as session:
+
+            instance = LinkedAuth()
+            instance.auth_id = auth_id
+            instance.auth_type = 'zato.{}'.format(auth_type)
+            instance.creation_time = now
+            instance.last_modified = now
+            instance.is_internal = False
+            instance.is_active = is_active
+            instance.user_id = user_id
+
+            # Reserved for future use
+            instance.has_ext_principal = False
+            instance.auth_principal = 'reserved'
+            instance.auth_source = 'reserved'
+
+            session.add(instance)
+
+            try:
+                session.commit()
+            except IntegrityError:
+                logger.warn('Could not add auth link e:`%s`', format_exc())
+                raise ValueError('Auth link could not be added')
 
 # ################################################################################################################################
 

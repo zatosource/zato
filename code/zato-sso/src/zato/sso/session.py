@@ -137,7 +137,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def set_odb_session_func(self, func, is_sqlite):
+    def post_configure(self, func, is_sqlite):
         # type: (Callable, bool)
         self.odb_session_func = func
         self.is_sqlite = is_sqlite
