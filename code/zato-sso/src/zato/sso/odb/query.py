@@ -134,7 +134,6 @@ def get_linked_auth_list(session, user_id):
         SSOLinkedAuth.is_active,
         SSOLinkedAuth.is_internal,
         SSOLinkedAuth.creation_time,
-        SSOLinkedAuth.last_modified,
         SSOLinkedAuth.has_ext_principal,
         SSOLinkedAuth.auth_type,
         SSOLinkedAuth.auth_id,
