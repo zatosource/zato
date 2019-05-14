@@ -17,7 +17,7 @@ from sqlalchemy import or_
 
 # Zato
 from zato.common import GENERIC
-from zato.common.odb.model import SSOSession, SSOUser
+from zato.common.odb.model import SSOLinkedAuth, SSOSession, SSOUser
 from zato.common.util.sql import elems_with_opaque
 from zato.sso import const
 
@@ -126,5 +126,22 @@ def get_sign_up_status_by_token(session, confirm_token):
     return session.query(SSOUser.sign_up_status).\
         filter(SSOUser.sign_up_confirm_token==confirm_token).\
         first()
+
+# ################################################################################################################################
+
+def get_linked_auth_list(session, user_id):
+    return session.query(
+        SSOLinkedAuth.is_active,
+        SSOLinkedAuth.is_internal,
+        SSOLinkedAuth.creation_time,
+        SSOLinkedAuth.last_modified,
+        SSOLinkedAuth.has_ext_principal,
+        SSOLinkedAuth.auth_type,
+        SSOLinkedAuth.auth_id,
+        SSOLinkedAuth.auth_principal,
+        SSOLinkedAuth.auth_source,
+        ).\
+        filter(SSOLinkedAuth.user_id==user_id).\
+        all()
 
 # ################################################################################################################################

@@ -29,7 +29,8 @@ from zato.common.odb.model import SSOUser as UserModel
 from zato.common.util.json_ import dumps
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
 from zato.sso.attr import AttrAPI
-from zato.sso.odb.query import get_sign_up_status_by_token, get_user_by_id, get_user_by_username, get_user_by_ust
+from zato.sso.odb.query import get_linked_auth_list, get_sign_up_status_by_token, get_user_by_id, get_user_by_username, \
+     get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.user_search import SSOSearch
 from zato.sso.util import check_credentials, check_remote_app_exists, make_data_secret, make_password_secret, new_confirm_token, \
@@ -1010,6 +1011,33 @@ class UserAPI(object):
         audit_pii.info(cid, 'user.reject_user', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         return self._change_approval_status(cid, user_id, const.approval_status.rejected, current_ust, current_app, remote_addr)
+
+# ################################################################################################################################
+
+    def get_linked_auth_list(self, cid, ust, user_id, current_app, remote_addr):
+        """ Verifies a user session without renewing it.
+        """
+        # PII audit comes first
+        audit_pii.info(cid, 'user.get_linked_auth_list', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
+        # Get current user, which may be possibly the one that we will return accounts for
+        user = self.get_current_user(cid, ust, current_app, remote_addr)
+
+        # We are to return linked accounts for another user ..
+        if user_id:
+
+            # .. in which case this will raise an exception if current caller is not a super-user
+            self._require_super_user(cid, ust, current_app, remote_addr)
+
+        else:
+            # No user_id given on input = we need to get accounts for current one
+            user_id = user.user_id
+
+        try:
+            with closing(self.odb_session_func()) as session:
+                return get_linked_auth_list(session, user_id)
+        except Exception:
+            logger.warn('Could not return linked accounts, e:`%s`', format_exc())
 
 # ################################################################################################################################
 
