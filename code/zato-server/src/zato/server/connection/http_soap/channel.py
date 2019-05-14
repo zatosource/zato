@@ -29,7 +29,7 @@ from paste.util.converters import asbool
 from regex import compile as regex_compile
 
 # Python 2/3 compatibility
-from six import PY2, PY3
+from six import PY3
 from past.builtins import basestring, unicode
 
 # Zato
