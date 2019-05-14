@@ -17,6 +17,33 @@ from zato.common.odb.model.base import Base, _JSON
 
 # ################################################################################################################################
 
+class _SSOGroup(Base):
+    __tablename__ = 'zato_sso_group'
+    __table_args__ = (
+        UniqueConstraint('name', 'source', name='zato_g_name_uq'),
+        UniqueConstraint('group_id', name='zato_g_gid_uq'),
+    {})
+
+    # Not exposed publicly, used only for SQL joins
+    id = Column(Integer, Sequence('zato_sso_group_id_seq'), primary_key=True)
+
+    is_active = Column(Boolean(), nullable=False) # Currently unused and always set to True
+    is_internal = Column(Boolean(), nullable=False, default=False)
+
+    # Publicly visible
+    group_id = Column(String(191), nullable=False)
+
+    name = Column(String(191), nullable=False)
+    source = Column(String(191), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    # Groups may be optionally nested
+    parent_id = Column(Integer, ForeignKey('zato_sso_group.id', ondelete='CASCADE'), nullable=True)
+
+# ################################################################################################################################
+
 class _SSOUser(Base):
     __tablename__ = 'zato_sso_user'
     __table_args__ = (
@@ -85,6 +112,25 @@ class _SSOUser(Base):
 
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
+
+# ################################################################################################################################
+
+class _SSOUserGroup(Base):
+    """ An N:N mapping of users to their groups.
+    """
+    __tablename__ = 'zato_sso_user_group'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'group_id', name='zato_ug_id_uq'),
+    {})
+
+    # Not exposed publicly, used only to have a natural FK
+    id = Column(Integer, Sequence('zato_sso_ug_seq'), primary_key=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    user_id = Column(Integer, ForeignKey('zato_sso_user.id', ondelete='CASCADE'), nullable=False)
+    group_id = Column(Integer, ForeignKey('zato_sso_group.id', ondelete='CASCADE'), nullable=False)
 
 # ################################################################################################################################
 

@@ -22,7 +22,7 @@ from zato.common import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIALIZA
      SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 from zato.common.odb.model.base import Base, _JSON
-from zato.common.odb.model.sso import _SSOAttr, _SSOLinkedAuth, _SSOSession, _SSOUser
+from zato.common.odb.model.sso import _SSOAttr, _SSOGroup, _SSOLinkedAuth, _SSOSession, _SSOUser
 
 # ################################################################################################################################
 
@@ -43,6 +43,10 @@ def to_json(model, return_as_dict=False):
 
 # ################################################################################################################################
 
+class SSOGroup(_SSOGroup):
+    pass
+
+# ################################################################################################################################
 
 class SSOUser(_SSOUser):
     pass

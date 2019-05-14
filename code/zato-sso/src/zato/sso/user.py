@@ -17,7 +17,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # SQLAlchemy
-from sqlalchemy import update as sql_update
+from sqlalchemy import and_ as sql_and, update as sql_update
 from sqlalchemy.exc import IntegrityError
 
 # Python 2/3 compatibility
@@ -71,6 +71,10 @@ sso_search.set_up()
 # ################################################################################################################################
 
 _utcnow = datetime.utcnow
+
+LinkedAuthTable = LinkedAuth.__table__
+LinkedAuthTableDelete = LinkedAuthTable.delete
+
 UserModelTable = UserModel.__table__
 UserModelTableDelete = UserModelTable.delete
 UserModelTableUpdate = UserModelTable.update
@@ -1071,12 +1075,11 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def create_linked_auth(self, cid, ust, user_id, auth_type, auth_id, is_active, current_app, remote_addr,
+    def _check_linked_auth_call(self, call_name, cid, ust, user_id, auth_type, auth_id, current_app, remote_addr,
         _linked_auth_supported=linked_auth_supported):
-        """ Creates a link between input user and a security account.
-        """
+
         # PII audit comes first
-        audit_pii.info(cid, 'user.create_linked_auth', extra={'current_app':current_app, 'remote_addr':remote_addr})
+        audit_pii.info(cid, call_name, extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # Only super-users may link auth accounts
         self._require_super_user(cid, ust, current_app, remote_addr)
@@ -1090,6 +1093,15 @@ class UserAPI(object):
                 break
         else:
             raise ValueError('Invalid auth_id:`{}`'.format(auth_id))
+
+# ################################################################################################################################
+
+    def create_linked_auth(self, cid, ust, user_id, auth_type, auth_id, is_active, current_app, remote_addr,
+        _linked_auth_supported=linked_auth_supported):
+        """ Creates a link between input user and a security account.
+        """
+        # Validate input
+        self._check_linked_auth_call('user.create_linked_auth', cid, ust, user_id, auth_type, auth_id, current_app, remote_addr)
 
         # We have validated everything and a link can be saved to the database now
         now = datetime.utcnow()
@@ -1117,6 +1129,40 @@ class UserAPI(object):
             except IntegrityError:
                 logger.warn('Could not add auth link e:`%s`', format_exc())
                 raise ValueError('Auth link could not be added')
+
+# ################################################################################################################################
+
+    def delete_linked_auth(self, cid, ust, user_id, auth_type, auth_id, current_app, remote_addr,
+        _linked_auth_supported=linked_auth_supported):
+        """ Creates a link between input user and a security account.
+        """
+        # Validate input
+        self._check_linked_auth_call('user.delete_linked_auth', cid, ust, user_id, auth_type, auth_id, current_app, remote_addr)
+
+        # All internal auth types have this prefix
+        auth_type = 'zato.{}'.format(auth_type)
+
+        with closing(self.odb_session_func()) as session:
+
+            # First, confirm that such a mapping exists at all ..
+            existing = session.query(LinkedAuth).\
+                filter(LinkedAuth.auth_type==auth_type).\
+                filter(LinkedAuth.auth_id==auth_id).\
+                filter(LinkedAuth.user_id==user_id).\
+                first()
+
+            if not existing:
+                raise ValueError('No such auth link found')
+
+            # .. delete it now, knowing that it does.
+            session.execute(LinkedAuthTableDelete().\
+                where(sql_and(
+                    LinkedAuthTable.c.auth_type==auth_type,
+                    LinkedAuthTable.c.auth_id==auth_id,
+                    LinkedAuthTable.c.user_id==user_id,
+                ))
+            )
+            session.commit()
 
 # ################################################################################################################################
 
