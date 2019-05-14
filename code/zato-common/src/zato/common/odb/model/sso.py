@@ -155,3 +155,46 @@ class _SSOAttr(Base):
     ust = Column(String(191), ForeignKey('zato_sso_session.ust', ondelete='CASCADE'), nullable=True)
 
 # ################################################################################################################################
+
+class _SSOLinkedAuth(Base):
+    __tablename__ = 'zato_sso_linked_auth'
+
+    __table_args__ = (
+        UniqueConstraint('auth_type', 'user_id', 'auth_id', 'auth_principal', 'auth_source', name='zato_sso_link_auth_uq'),
+    {})
+
+    # Not exposed publicly, used only because SQLAlchemy requires an FK
+    id = Column(Integer, Sequence('zato_sso_linked_auth_seq'), primary_key=True)
+
+    is_active = Column(Boolean(), nullable=False) # Currently unused and always set to True
+    is_internal = Column(Boolean(), nullable=False, default=False)
+
+    creation_time = Column(DateTime(), nullable=False)
+    last_modified = Column(DateTime(), nullable=True)
+
+    # If True, auth_principal will point to an account/user defined externally to Zato,
+    # e.g. in a system that Zato has no direct authentication support for.
+    # Otherwise, if False, auth_id will be filled in.
+    has_ext_principal = Column(Boolean(), nullable=False)
+
+    # A label describing authentication type
+    auth_type = Column(Text(), nullable=False)
+
+    # Will be provided if has_ext_principal is False, in which case
+    # it will point to one of sec_base.id definitions.
+    auth_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
+
+    # Will be given if auth_id is not provided.
+    auth_principal = Column(Text(), nullable=True)
+
+    # E.g. name of an environment this link is valid in - useful in cases when the same user
+    # has multiple linked accounts, different in different auth sources (environments).
+    auth_source = Column(Text(), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    # SSO user this entry links to
+    user_id = Column(String(191), ForeignKey('zato_sso_user.user_id', ondelete='CASCADE'), nullable=False)
+
+# ################################################################################################################################
