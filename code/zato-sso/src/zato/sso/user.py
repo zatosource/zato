@@ -16,6 +16,9 @@ from logging import getLogger
 from traceback import format_exc
 from uuid import uuid4
 
+# gevent
+from gevent.lock import RLock
+
 # SQLAlchemy
 from sqlalchemy import and_ as sql_and, update as sql_update
 from sqlalchemy.exc import IntegrityError
@@ -242,6 +245,7 @@ class UserAPI(object):
         self.encrypt_email = self.sso_conf.main.encrypt_email
         self.encrypt_password = self.sso_conf.main.encrypt_password
         self.password_expiry = self.sso_conf.password.expiry
+        self.lock = RLock()
 
         # In-RAM maps of auth IDs to SSO user IDs
         self.auth_id_link_map = {
@@ -1149,9 +1153,7 @@ class UserAPI(object):
                 logger.warn('Could not add auth link e:`%s`', format_exc())
                 raise ValueError('Auth link could not be added')
             else:
-                # With data saved to SQL, we can
-                sso_user_id_set = self.auth_id_link_map[auth_type].setdefault(auth_id, set()) # type: set
-                sso_user_id_set.add(instance.user_id)
+                return instance.user_id
 
 # ################################################################################################################################
 
@@ -1187,10 +1189,46 @@ class UserAPI(object):
             )
             session.commit()
 
-            # The link was deleted from SQL above and now we need to delete
-            # its in-RAM representation.
-            # sso_user_id_set = self.auth_id_link_map[auth_type].setdefault(auth_id, set()) # type: set
-            # sso_user_id_set.add(instance.user_id)
+# ################################################################################################################################
+
+    def on_broker_msg_SSO_LINK_AUTH_CREATE(self, auth_type, auth_id, user_id):
+        with self.lock:
+            sso_user_id_set = self.auth_id_link_map[auth_type].setdefault(auth_id, set()) # type: set
+            sso_user_id_set.add(user_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SSO_LINK_AUTH_DELETE(self, auth_type, auth_id, user_id):
+        with self.lock:
+            sso_user_id_set = self.auth_id_link_map[auth_type].get(auth_id) # type: set
+            if sso_user_id_set:
+                try:
+                    sso_user_id_set.remove(user_id)
+                except KeyError:
+                    # It is fine, the user had not linked accounts
+                    pass
+
+# ################################################################################################################################
+
+    def _on_broker_msg_sec_delete(self, sec_type, auth_id):
+        auth_id_link_map['zato.{}'.format(sec_type)]
+        try:
+            del auth_id_link_map[auth_id]
+        except KeyError:
+            # It is fine, the account had no associated SSO users
+            logger.warn('EEE %s %r', sec_type, auth_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, auth_id):
+        with self.lock:
+            self._on_broker_msg_sec_delete(SEC_DEF_TYPE.BASIC_AUTH, auth_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_JWT_DELETE(self, auth_id):
+        with self.lock:
+            self._on_broker_msg_sec_delete(SEC_DEF_TYPE.JWT, auth_id)
 
 # ################################################################################################################################
 
