@@ -243,6 +243,12 @@ class UserAPI(object):
         self.encrypt_password = self.sso_conf.main.encrypt_password
         self.password_expiry = self.sso_conf.password.expiry
 
+        # In-RAM maps of auth IDs to SSO user IDs
+        self.auth_id_link_map = {
+            'zato.{}'.format(SEC_DEF_TYPE.BASIC_AUTH): {},
+            'zato.{}'.format(SEC_DEF_TYPE.JWT): {}
+        }
+
         # For convenience, sessions are accessible through user API.
         self.session = SessionAPI(self.sso_conf, self.encrypt_func, self.decrypt_func, self.hash_func, self.verify_hash_func)
 
@@ -665,13 +671,15 @@ class UserAPI(object):
                 user = get_user_by_username(session, username, needs_approved=False)
                 where = UserModelTable.c.username==username
 
+            user_id = user.user_id
+
             # Make sure the user exists at all
             if not user:
                 raise ValidationError(status_code.common.invalid_operation, False)
 
             # Users cannot delete themselves
             if not skip_sec:
-                if user.user_id == current_session.user_id:
+                if user_id == current_session.user_id:
                     raise ValidationError(status_code.common.invalid_operation, False)
 
             rows_matched = session.execute(
@@ -683,6 +691,16 @@ class UserAPI(object):
             if rows_matched != 1:
                 msg = 'Expected for rows_matched to be 1 instead of %d, user_id:`%s`, username:`%s`'
                 logger.warn(msg, rows_matched, user_id, username)
+
+            # After deleting the user from ODB, we can remove a reference to this account
+            # from the map of linked accounts.
+            for auth_id_link_map in self.auth_id_link_map: # type: dict
+                for user_id_set in auth_id_link_map.values(): # type: set
+                    try:
+                        user_id_set.remove(user_id)
+                    except KeyError:
+                        # This is fine, that user had not linked accounts
+                        pass
 
 # ################################################################################################################################
 
@@ -1105,12 +1123,13 @@ class UserAPI(object):
 
         # We have validated everything and a link can be saved to the database now
         now = datetime.utcnow()
+        auth_type = 'zato.{}'.format(auth_type)
 
         with closing(self.odb_session_func()) as session:
 
             instance = LinkedAuth()
             instance.auth_id = auth_id
-            instance.auth_type = 'zato.{}'.format(auth_type)
+            instance.auth_type = auth_type
             instance.creation_time = now
             instance.last_modified = now
             instance.is_internal = False
@@ -1129,6 +1148,10 @@ class UserAPI(object):
             except IntegrityError:
                 logger.warn('Could not add auth link e:`%s`', format_exc())
                 raise ValueError('Auth link could not be added')
+            else:
+                # With data saved to SQL, we can
+                sso_user_id_set = self.auth_id_link_map[auth_type].setdefault(auth_id, set()) # type: set
+                sso_user_id_set.add(instance.user_id)
 
 # ################################################################################################################################
 
@@ -1154,7 +1177,7 @@ class UserAPI(object):
             if not existing:
                 raise ValueError('No such auth link found')
 
-            # .. delete it now, knowing that it does.
+            # .. delete it now, knowing that it does ..
             session.execute(LinkedAuthTableDelete().\
                 where(sql_and(
                     LinkedAuthTable.c.auth_type==auth_type,
@@ -1163,6 +1186,11 @@ class UserAPI(object):
                 ))
             )
             session.commit()
+
+            # The link was deleted from SQL above and now we need to delete
+            # its in-RAM representation.
+            # sso_user_id_set = self.auth_id_link_map[auth_type].setdefault(auth_id, set()) # type: set
+            # sso_user_id_set.add(instance.user_id)
 
 # ################################################################################################################################
 
