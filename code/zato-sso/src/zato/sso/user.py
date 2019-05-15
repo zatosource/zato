@@ -1211,7 +1211,7 @@ class UserAPI(object):
 # ################################################################################################################################
 
     def _on_broker_msg_sec_delete(self, sec_type, auth_id):
-        auth_id_link_map['zato.{}'.format(sec_type)]
+        auth_id_link_map = self.auth_id_link_map['zato.{}'.format(sec_type)]
         try:
             del auth_id_link_map[auth_id]
         except KeyError:

@@ -18,8 +18,8 @@ if typing.TYPE_CHECKING:
     from zato.server.connection.http_soap.url_data import URLData
 
     # For pyflakes
-    ConfigStore = ConfigStore
     ParallelServer = ParallelServer
+    URLData = URLData
 
 # ################################################################################################################################
 # ################################################################################################################################
