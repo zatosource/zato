@@ -273,6 +273,12 @@ class UserAPI(object):
             SEC_DEF_TYPE.JWT: self.server.worker_store.request_dispatcher.url_data.jwt_config,
         }
 
+        # Load in initial mappings of SSO users and concrete security definitions
+        with closing(self.odb_session_func()) as session:
+            linked_auth_list = get_linked_auth_list(session)
+            for item in linked_auth_list: # type: LinkedAuth
+                self._add_user_id_to_linked_auth(item.auth_type, item.auth_id, item.user_id)
+
 # ################################################################################################################################
 
     def _get_encrypted_email(self, email):
@@ -1202,10 +1208,15 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
+    def _add_user_id_to_linked_auth(self, auth_type, auth_id, user_id):
+        sso_user_id_set = self.auth_id_link_map[auth_type].setdefault(auth_id, set()) # type: set
+        sso_user_id_set.add()
+
+# ################################################################################################################################
+
     def on_broker_msg_SSO_LINK_AUTH_CREATE(self, auth_type, auth_id, user_id):
         with self.lock:
-            sso_user_id_set = self.auth_id_link_map[auth_type].setdefault(auth_id, set()) # type: set
-            sso_user_id_set.add(user_id)
+            self._add_user_id_to_linked_auth(auth_type, auth_id, user_id)
 
 # ################################################################################################################################
 

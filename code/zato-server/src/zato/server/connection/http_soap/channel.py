@@ -81,6 +81,11 @@ _status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO
 
 # ################################################################################################################################
 
+# Definitions of these security types may be linked to SSO users and their rate limiting definitions
+_sec_def_sso_rate_limit = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
+
+# ################################################################################################################################
+
 status_response = {}
 for code, response in HTTP_RESPONSES.items():
     status_response[code] = '{} {}'.format(code, response)
@@ -197,6 +202,9 @@ class RequestDispatcher(object):
         self.default_error_message = default_error_message
         self.http_methods_allowed = http_methods_allowed
 
+        # To reduce the number of attribute lookups
+        self._sso_api_user = self.server.sso_api.user
+
 # ################################################################################################################################
 
     def wrap_error_message(self, cid, url_type, msg):
@@ -228,7 +236,7 @@ class RequestDispatcher(object):
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
         _accept_any_internal=accept_any_internal, _rate_limit_type=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
-        _stack_format=stack_format, _exc_sep='*' * 80):
+        _stack_format=stack_format, _exc_sep='*' * 80, _sec_def_sso_rate_limit=_sec_def_sso_rate_limit):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -300,6 +308,21 @@ class RequestDispatcher(object):
                     # Will raise an exception on any security violation
                     self.url_data.check_security(
                         sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
+
+                    # Security definition-based checks went fine but it is still possible
+                    # that this sec_def is linked to an SSO user whose rate limits we need to check.
+
+                    # Not all sec_def types may have associated SSO users
+                    if sec.sec_def.sec_type in _sec_def_sso_rate_limit:
+
+                        # Do we have an SSO user related to this sec_def?
+                        auth_id_link_map = self._sso_api_user.auth_id_link_map['zato.{}'.format(
+                            sec.sec_def.sec_type)] # type: dict
+
+                        if sec.sec_def.id in auth_id_link_map:
+                            logger.warn('')
+                            logger.warn('QQQ %s', auth_id_link_map)
+                            logger.warn('')
 
                 # Check rate limiting now - this could not have been done earlier because we wanted
                 # for security checks to be made first. Otherwise, someone would be able to invoke
