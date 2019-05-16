@@ -39,8 +39,16 @@ class SSO(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SSO_USER_EDIT(self, msg):
-        logger.warn('WWW %s', msg)
+    def on_broker_msg_SSO_USER_EDIT(self, msg, _type=RATE_LIMIT.OBJECT_TYPE.SSO_USER):
+        if self.server.rate_limiting.has_config(_type, msg.username):
+            self.server.rate_limiting.edit(_type, msg.username, {
+                'id': msg.user_id,
+                'type_': _type,
+                'name': msg.username,
+                'is_active': msg.is_rate_limit_active,
+                'parent_type': None,
+                'parent_name': None,
+              }, msg.rate_limit_def, True)
 
 # ################################################################################################################################
 
