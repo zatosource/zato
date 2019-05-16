@@ -26,12 +26,11 @@ class LinkedAuthTestCase(BaseTest):
             'ust': self.ctx.super_user_ust,
         })
 
-        '''
         self.post('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
-            'auth_id': 14,
+            'auth_id': 1,
             'is_active': True,
         })
 
@@ -42,7 +41,6 @@ class LinkedAuthTestCase(BaseTest):
             'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
             'auth_id': 1,
         })
-        '''
 
 # ################################################################################################################################
 # ################################################################################################################################
