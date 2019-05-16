@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 
 # Zato
+from zato.common import RATE_LIMIT
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
@@ -23,6 +24,23 @@ logger = getLogger('zato')
 class SSO(WorkerImpl):
     """ Callbacks for messages related to SSO.
     """
+
+# ################################################################################################################################
+
+    def on_broker_msg_SSO_USER_CREATE(self, msg):
+        self.server.rate_limiting.create({
+            'id': msg.user_id,
+            'type_': RATE_LIMIT.OBJECT_TYPE.SSO_USER,
+            'name': msg.username,
+            'is_active': msg.is_rate_limit_active,
+            'parent_type': None,
+            'parent_name': None,
+        }, msg.rate_limit_def, True)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SSO_USER_EDIT(self, msg):
+        logger.warn('WWW %s', msg)
 
 # ################################################################################################################################
 

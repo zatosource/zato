@@ -27,7 +27,7 @@ from sqlalchemy.exc import IntegrityError
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import SEC_DEF_TYPE
+from zato.common import RATE_LIMIT, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOUser as UserModel
@@ -367,7 +367,7 @@ class UserAPI(object):
         user_model.last_name = ctx.data['last_name']
 
         user_model.is_rate_limit_active = ctx.data.get('is_rate_limit_active', False)
-        user_model.rate_limit_type = ctx.data.get('rate_limit_type')
+        user_model.rate_limit_type = ctx.data.get('rate_limit_type', RATE_LIMIT.TYPE.EXACT.id)
         user_model.rate_limit_def = ctx.data.get('rate_limit_def')
         user_model.rate_limit_check_parent_def = ctx.data.get('rate_limit_check_parent_def', False)
 
@@ -460,7 +460,9 @@ class UserAPI(object):
             session.add(user)
             session.commit()
 
-        return user
+            user_id = user.user_id
+
+        return user_id
 
 # ################################################################################################################################
 

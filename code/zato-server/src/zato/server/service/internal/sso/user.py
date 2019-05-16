@@ -162,7 +162,7 @@ class User(BaseRESTService):
                 data[name] = value
 
         # This will update 'data' in place ..
-        self.sso.user.create_user(self.cid, data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
+        user_id = self.sso.user.create_user(self.cid, data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
         # .. and we can now assign it to response..
 
@@ -175,7 +175,19 @@ class User(BaseRESTService):
             if value:
                 data[name] = value.isoformat()
 
-        # .. and finally we can assign it.
+        # .. if rate-limiting is active, let all servers know about it ..
+        if ctx.input.is_rate_limit_active:
+            self.broker_client.publish({
+                'action': BROKER_MSG_SSO.USER_CREATE.value,
+                'user_id': user_id,
+                'username': ctx.input.username,
+                'is_rate_limit_active': True,
+                'rate_limit_def': ctx.input.rate_limit_def
+            })
+
+        self.logger.warn('QQQ %s', ctx.input)
+
+        # .. and finally we can create the response.
         self.response.payload = data
 
 # ################################################################################################################################
@@ -227,6 +239,14 @@ class User(BaseRESTService):
             self.sso.user.update_user_by_id(self.cid, user_id, data, current_ust, current_app, ctx.remote_addr)
         else:
             self.sso.user.update_current_user(self.cid, data, current_ust, current_app, ctx.remote_addr)
+
+        # Always notify all servers about this event in case we need to disable rate limiting
+        self.broker_client.publish({
+            'action': BROKER_MSG_SSO.USER_CREATE.value,
+            'user_id': user_id,
+            'is_rate_limit_active': True,
+            'rate_limit_def': ctx.input.rate_limit_def
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################
