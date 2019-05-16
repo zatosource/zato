@@ -500,6 +500,9 @@ class GENERIC(Constants):
 class SSO(Constants):
     code_start = 107200
 
+    USER_CREATE      = ValueConstant('')
+    USER_EDIT        = ValueConstant('')
+
     LINK_AUTH_CREATE = ValueConstant('')
     LINK_AUTH_DELETE = ValueConstant('')
 
