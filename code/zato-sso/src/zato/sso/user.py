@@ -707,7 +707,7 @@ class UserAPI(object):
 
             # After deleting the user from ODB, we can remove a reference to this account
             # from the map of linked accounts.
-            for auth_id_link_map in self.auth_id_link_map: # type: dict
+            for auth_id_link_map in self.auth_id_link_map.values(): # type: dict
                 for user_id_set in auth_id_link_map.values(): # type: set
                     try:
                         user_id_set.remove(user_id)

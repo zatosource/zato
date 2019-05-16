@@ -216,6 +216,10 @@ class User(object):
         self.sign_up_time = None
         self.user_id = None
         self.username = None
+        self.is_rate_limit_active = None
+        self.rate_limit_def = None
+        self.rate_limit_type = None
+        self.rate_limit_check_parent_def = None
 
     def to_dict(self):
         return dict((name, getattr(self, name)) for name in self.__slots__ if name != 'attr')
