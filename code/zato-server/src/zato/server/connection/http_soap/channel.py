@@ -235,8 +235,9 @@ class RequestDispatcher(object):
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
-        _accept_any_internal=accept_any_internal, _rate_limit_type=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
-        _stack_format=stack_format, _exc_sep='*' * 80, _sec_def_sso_rate_limit=_sec_def_sso_rate_limit):
+        _accept_any_internal=accept_any_internal, _rate_limit_type_http=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
+        _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format,
+        _exc_sep='*' * 80, _sec_def_sso_rate_limit=_sec_def_sso_rate_limit):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -309,28 +310,29 @@ class RequestDispatcher(object):
                     self.url_data.check_security(
                         sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
 
-                    # Security definition-based checks went fine but it is still possible
-                    # that this sec_def is linked to an SSO user whose rate limits we need to check.
-
-                    # Not all sec_def types may have associated SSO users
-                    if sec.sec_def.sec_type in _sec_def_sso_rate_limit:
-
-                        # Do we have an SSO user related to this sec_def?
-                        auth_id_link_map = self._sso_api_user.auth_id_link_map['zato.{}'.format(
-                            sec.sec_def.sec_type)] # type: dict
-
-                        if sec.sec_def.id in auth_id_link_map:
-                            logger.warn('')
-                            logger.warn('QQQ %s', auth_id_link_map)
-                            logger.warn('')
-
                 # Check rate limiting now - this could not have been done earlier because we wanted
                 # for security checks to be made first. Otherwise, someone would be able to invoke
                 # our endpoint without credentials as many times as it is needed to exhaust the rate limit
                 # denying in this manner access to genuine users.
                 if channel_item.get('is_rate_limit_active'):
                     self.server.rate_limiting.check_limit(
-                        cid, _rate_limit_type, channel_item['name'], wsgi_environ['zato.http.remote_addr'])
+                        cid, _rate_limit_type_http, channel_item['name'], wsgi_environ['zato.http.remote_addr'])
+
+                # Security definition-based checks went fine but it is still possible
+                # that this sec_def is linked to an SSO user whose rate limits we need to check.
+
+                # Not all sec_def types may have associated SSO users
+                if sec.sec_def != ZATO_NONE:
+                    if sec.sec_def.sec_type in _sec_def_sso_rate_limit:
+
+                        # Do we have an SSO user related to this sec_def?
+                        auth_id_link_map = self._sso_api_user.auth_id_link_map['zato.{}'.format(
+                            sec.sec_def.sec_type)] # type: dict
+
+                        sso_user_id = auth_id_link_map.get(sec.sec_def.id)
+                        if sso_user_id:
+                            self.server.rate_limiting.check_limit(
+                                cid, _rate_limit_type_sso_user, sso_user_id, wsgi_environ['zato.http.remote_addr'])
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data

@@ -28,23 +28,17 @@ class SSO(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_SSO_USER_CREATE(self, msg):
-        self.server.rate_limiting.create({
-            'id': msg.user_id,
-            'type_': RATE_LIMIT.OBJECT_TYPE.SSO_USER,
-            'name': msg.username,
-            'is_active': msg.is_rate_limit_active,
-            'parent_type': None,
-            'parent_name': None,
-        }, msg.rate_limit_def, True)
+        self.server._create_sso_user_rate_limiting(msg.user_id, msg.is_rate_limit_active, msg.rate_limit_def)
+
 
 # ################################################################################################################################
 
     def on_broker_msg_SSO_USER_EDIT(self, msg, _type=RATE_LIMIT.OBJECT_TYPE.SSO_USER):
-        if self.server.rate_limiting.has_config(_type, msg.username):
-            self.server.rate_limiting.edit(_type, msg.username, {
+        if self.server.rate_limiting.has_config(_type, msg.user_id):
+            self.server.rate_limiting.edit(_type, msg.user_id, {
                 'id': msg.user_id,
                 'type_': _type,
-                'name': msg.username,
+                'name': msg.user_id,
                 'is_active': msg.is_rate_limit_active,
                 'parent_type': None,
                 'parent_name': None,
