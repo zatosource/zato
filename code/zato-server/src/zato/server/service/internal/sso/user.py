@@ -182,10 +182,8 @@ class User(BaseRESTService):
                 'user_id': user_id,
                 'username': ctx.input.username,
                 'is_rate_limit_active': True,
-                'rate_limit_def': ctx.input.rate_limit_def
+                'rate_limit_def': ctx.input.rate_limit_def if ctx.input.rate_limit_def != _invalid else None
             })
-
-        self.logger.warn('QQQ %s', ctx.input)
 
         # .. and finally we can create the response.
         self.response.payload = data
@@ -237,15 +235,20 @@ class User(BaseRESTService):
 
         if user_id:
             self.sso.user.update_user_by_id(self.cid, user_id, data, current_ust, current_app, ctx.remote_addr)
+            user = self.sso.user.get_user_by_id(self.cid, user_id, current_ust, current_app, ctx.remote_addr)
         else:
             self.sso.user.update_current_user(self.cid, data, current_ust, current_app, ctx.remote_addr)
+            user = self.sso.user.get_current_user(self.cid, current_ust, current_app, ctx.remote_addr)
+
+        username = user.username
 
         # Always notify all servers about this event in case we need to disable rate limiting
         self.broker_client.publish({
-            'action': BROKER_MSG_SSO.USER_CREATE.value,
+            'action': BROKER_MSG_SSO.USER_EDIT.value,
             'user_id': user_id,
-            'is_rate_limit_active': True,
-            'rate_limit_def': ctx.input.rate_limit_def
+            'username': username,
+            'is_rate_limit_active': ctx.input.is_rate_limit_active,
+            'rate_limit_def': ctx.input.rate_limit_def if ctx.input.rate_limit_def != _invalid else None,
         })
 
 # ################################################################################################################################

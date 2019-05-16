@@ -21,7 +21,7 @@ from zato.sso import const, status_code
 
 class UserCreateTestCase(BaseTest):
 
-    def test_user_create(self):
+    def xtest_user_create(self):
 
         now = datetime.utcnow()
         username = self._get_random_username()
@@ -278,7 +278,7 @@ class UserGetTestCase(BaseTest):
 
 class UserUpdateTestCase(BaseTest):
 
-    def xtest_user_update_self(self):
+    def test_user_update_self(self):
 
         username = self._get_random_username()
         password = self._get_random_data()
