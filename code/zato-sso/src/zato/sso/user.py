@@ -366,10 +366,10 @@ class UserAPI(object):
         user_model.middle_name = ctx.data['middle_name']
         user_model.last_name = ctx.data['last_name']
 
-        user_model.is_rate_limit_active = ctx.data['is_rate_limit_active']
-        user_model.rate_limit_type = ctx.data['rate_limit_type']
-        user_model.rate_limit_def = ctx.data['rate_limit_def']
-        user_model.rate_limit_check_parent_def = ctx.data['rate_limit_check_parent_def']
+        user_model.is_rate_limit_active = ctx.data.get('is_rate_limit_active', False)
+        user_model.rate_limit_type = ctx.data.get('rate_limit_type')
+        user_model.rate_limit_def = ctx.data.get('rate_limit_def')
+        user_model.rate_limit_check_parent_def = ctx.data.get('rate_limit_check_parent_def', False)
 
         # Uppercase any and all names for indexing purposes.
         for attr_name, attr_name_upper in _name_attrs.items():
