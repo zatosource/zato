@@ -1209,7 +1209,7 @@ class UserAPI(object):
 # ################################################################################################################################
 
     def _add_user_id_to_linked_auth(self, auth_type, auth_id, user_id):
-        sso_user_id_set = self.auth_id_link_map[auth_type].setdefault(auth_id, user_id)
+        self.auth_id_link_map[auth_type].setdefault(auth_id, user_id)
 
 # ################################################################################################################################
 

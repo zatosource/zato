@@ -37,7 +37,7 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common import DATA_FORMAT, default_internal_modules, KVDB, SECRETS, SERVER_STARTUP, SERVER_UP_STATUS, \
+from zato.common import DATA_FORMAT, default_internal_modules, KVDB, RATE_LIMIT, SECRETS, SERVER_STARTUP, SERVER_UP_STATUS, \
      ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
@@ -527,8 +527,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.rate_limiting.global_lock_func = self.zato_lock_manager
         self.rate_limiting.sql_session_func = self.odb.session
 
-        # Set up rate limiting other than services. the latter are configured in ServiceStore
+        # Set up rate limiting for ConfigDict-based objects, which includes everything except for:
+        # * services  - configured in ServiceStore
+        # * SSO       - configured in the next call
         self.set_up_rate_limiting()
+
+        # Rate limiting for SSO
+        self.set_up_sso_rate_limiting()
 
         # Deploys services
         is_first, locally_deployed = self._after_init_common(server)
@@ -648,6 +653,24 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         })
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def set_up_sso_rate_limiting(self):
+        for item in self.odb.get_sso_user_rate_limiting_info():
+            self._create_sso_user_rate_limiting(item.user_id, True, item.rate_limit_def)
+
+# ################################################################################################################################
+
+    def _create_sso_user_rate_limiting(self, user_id, is_active, rate_limit_def, _type=RATE_LIMIT.OBJECT_TYPE.SSO_USER):
+        self.rate_limiting.create({
+            'id': user_id,
+            'type_': _type,
+            'name': user_id,
+            'is_active': is_active,
+            'parent_type': None,
+            'parent_name': None,
+        }, rate_limit_def, True)
 
 # ################################################################################################################################
 

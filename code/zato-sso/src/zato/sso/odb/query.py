@@ -148,3 +148,13 @@ def get_linked_auth_list(session, user_id=None):
     return q.all()
 
 # ################################################################################################################################
+
+def get_rate_limiting_info(session):
+    return session.query(
+        SSOUser.user_id,
+        SSOUser.rate_limit_def
+        ).\
+        filter(SSOUser.is_rate_limit_active==True).\
+        all()
+
+# ################################################################################################################################
