@@ -128,6 +128,10 @@ class _CreateUser(SSOCommand):
         data.last_name = args.last_name or b''
         data.password = args.password
         data.sign_up_confirm_token = 'cli.{}'.format(CryptoManager.generate_secret())
+        data.is_rate_limit_active = False
+        data.rate_limit_def = None
+        data.rate_limit_type = None
+        data.rate_limit_check_parent_def = False
 
         func = getattr(user_api, self.create_func)
         func('cli', data, require_super_user=False, auto_approve=True)

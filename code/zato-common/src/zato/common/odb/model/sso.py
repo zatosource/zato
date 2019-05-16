@@ -110,6 +110,12 @@ class _SSOUser(Base):
     middle_name_upper = Column(String(191), nullable=True)
     last_name_upper = Column(String(191), nullable=True)
 
+    # Rate limiting
+    is_rate_limit_active = Column(Boolean(), nullable=True)
+    rate_limit_type = Column(String(40), nullable=True)
+    rate_limit_def = Column(Text(), nullable=True)
+    rate_limit_check_parent_def = Column(Boolean(), nullable=True)
+
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 

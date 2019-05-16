@@ -74,14 +74,14 @@ class BaseTest(TestCase):
     def setUp(self):
         try:
             # Try to create a super-user ..
-            #sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
-            #    Config.super_user_password, '--verbose')
+            sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
+                Config.super_user_password, '--verbose')
             pass
         except Exception as e:
             # .. but ignore it if such a user already exists.
             if not 'User already exists' in e.args[0]:
                 if isinstance(e, sh.ErrorReturnCode):
-                    logger.warn('Shell exception %s', e.stderr)
+                    logger.warning('Shell exception %s', e.stderr)
                 raise
 
         # Create a new context object for each test

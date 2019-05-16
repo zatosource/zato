@@ -113,6 +113,10 @@ super_user_attrs = {
     'password_last_set': None,
     'sign_up_status': None,
     'sign_up_time': None,
+    'is_rate_limit_active': None,
+    'rate_limit_def': None,
+    'rate_limit_type': None,
+    'rate_limit_check_parent_def': None,
 }
 
 # This can be only changed but never read
@@ -361,6 +365,11 @@ class UserAPI(object):
         user_model.first_name = ctx.data['first_name']
         user_model.middle_name = ctx.data['middle_name']
         user_model.last_name = ctx.data['last_name']
+
+        user_model.is_rate_limit_active = ctx.data['is_rate_limit_active']
+        user_model.rate_limit_type = ctx.data['rate_limit_type']
+        user_model.rate_limit_def = ctx.data['rate_limit_def']
+        user_model.rate_limit_check_parent_def = ctx.data['rate_limit_check_parent_def']
 
         # Uppercase any and all names for indexing purposes.
         for attr_name, attr_name_upper in _name_attrs.items():

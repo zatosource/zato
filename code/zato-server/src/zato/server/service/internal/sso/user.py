@@ -30,7 +30,7 @@ from zato.sso.user import update
 # ################################################################################################################################
 
 _create_user_attrs = ('username', 'password', 'password_must_change', 'display_name', 'first_name', 'middle_name', 'last_name', \
-    'email', 'is_locked', 'sign_up_status')
+    'email', 'is_locked', 'sign_up_status', 'is_rate_limit_active', 'rate_limit_def')
 _date_time_attrs = ('approv_rej_time', 'locked_time', 'password_expiry', 'password_last_set', 'sign_up_time',
     'approval_status_mod_time')
 
@@ -118,7 +118,7 @@ class User(BaseRESTService):
         input_required = ('ust', 'current_app')
         input_optional = (AsIs('user_id'), 'username', 'password', Bool('password_must_change'), 'password_expiry',
             'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'is_locked', 'sign_up_status',
-            'approval_status')
+            'approval_status', 'is_rate_limit_active', 'rate_limit_def')
 
         output_optional = BaseSIO.output_optional + (AsIs('user_id'), 'username', 'email', 'display_name', 'first_name',
             'middle_name', 'last_name', 'is_active', 'is_internal', 'is_super_user', 'is_approval_needed',
