@@ -1209,8 +1209,7 @@ class UserAPI(object):
 # ################################################################################################################################
 
     def _add_user_id_to_linked_auth(self, auth_type, auth_id, user_id):
-        sso_user_id_set = self.auth_id_link_map[auth_type].setdefault(auth_id, set()) # type: set
-        sso_user_id_set.add()
+        sso_user_id_set = self.auth_id_link_map[auth_type].setdefault(auth_id, user_id)
 
 # ################################################################################################################################
 
@@ -1222,13 +1221,12 @@ class UserAPI(object):
 
     def on_broker_msg_SSO_LINK_AUTH_DELETE(self, auth_type, auth_id, user_id):
         with self.lock:
-            sso_user_id_set = self.auth_id_link_map[auth_type].get(auth_id) # type: set
-            if sso_user_id_set:
-                try:
-                    sso_user_id_set.remove(user_id)
-                except KeyError:
-                    # It is fine, the user had not linked accounts
-                    pass
+            auth_id_link_map = self.auth_id_link_map[auth_type]
+            try:
+                del auth_id_link_map[auth_id]
+            except KeyError:
+                # It is fine, the user had not linked accounts
+                pass
 
 # ################################################################################################################################
 
