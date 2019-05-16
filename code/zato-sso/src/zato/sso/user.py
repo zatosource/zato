@@ -1216,7 +1216,7 @@ class UserAPI(object):
             del auth_id_link_map[auth_id]
         except KeyError:
             # It is fine, the account had no associated SSO users
-            logger.warn('EEE %s %r', sec_type, auth_id)
+            pass
 
 # ################################################################################################################################
 
