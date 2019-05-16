@@ -168,7 +168,7 @@ class ConfigLoader(object):
 
         # SAP RFC
         query = self.odb.get_out_sap_list(server.cluster.id, True)
-        self.config.out_sap = ConfigDict.from_query('out_sap', query)
+        self.config.out_sap = ConfigDict.from_query('out_sap', query, decrypt_func=self.decrypt)
 
         # REST
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'plain_http', True)
