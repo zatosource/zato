@@ -129,8 +129,9 @@ def get_sign_up_status_by_token(session, confirm_token):
 
 # ################################################################################################################################
 
-def get_linked_auth_list(session, user_id):
-    return session.query(
+def get_linked_auth_list(session, user_id=None):
+    q = session.query(
+        SSOLinkedAuth.user_id,
         SSOLinkedAuth.is_active,
         SSOLinkedAuth.is_internal,
         SSOLinkedAuth.creation_time,
@@ -139,8 +140,11 @@ def get_linked_auth_list(session, user_id):
         SSOLinkedAuth.auth_id,
         SSOLinkedAuth.auth_principal,
         SSOLinkedAuth.auth_source,
-        ).\
-        filter(SSOLinkedAuth.user_id==user_id).\
-        all()
+        )
+
+    if user_id:
+        q = q.filter(SSOLinkedAuth.user_id==user_id)
+
+    return q.all()
 
 # ################################################################################################################################

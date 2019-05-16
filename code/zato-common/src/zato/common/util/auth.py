@@ -92,11 +92,13 @@ class AuthResult(object):
             self.__class__.__name__, hex(id(self)), self.status, self.code,
             self.description, self.auth_info)
 
-    def __nonzero__(self):
+    def __bool__(self):
         """ Returns the boolean value of self.status. Useful when an instance
         must be compared in a boolean context.
         """
         return bool(self.status)
+
+    __nonzero__ = __bool__
 
 # ################################################################################################################################
 # ################################################################################################################################
