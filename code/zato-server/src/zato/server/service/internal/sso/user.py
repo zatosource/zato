@@ -20,8 +20,9 @@ from past.builtins import unicode
 
 # Zato
 from zato.common import NotGiven
+from zato.common.broker_message import SSO as BROKER_MSG_SSO
 from zato.common.util import asbool
-from zato.server.service import AsIs, Bool, Int, List
+from zato.server.service import AsIs, Bool, Int, List, Opaque
 from zato.server.service.internal.sso import BaseService, BaseRESTService, BaseSIO
 from zato.sso import status_code, SearchCtx, SignupCtx, ValidationError
 from zato.sso.user import update
@@ -42,6 +43,7 @@ _invalid = '_invalid.{}'.format(uuid4().hex)
 
 dt_parser = DateTimeParser()
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Login(BaseService):
@@ -86,6 +88,7 @@ class Login(BaseService):
                 self.response.payload.sub_status = [status_code.password.w_about_to_exp]
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Logout(BaseService):
     """ Logs a user out of SSO.
@@ -105,6 +108,7 @@ class Logout(BaseService):
         finally:
             self.response.payload.status = status_code.ok
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class User(BaseRESTService):
@@ -225,6 +229,7 @@ class User(BaseRESTService):
             self.sso.user.update_current_user(self.cid, data, current_ust, current_app, ctx.remote_addr)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Password(BaseRESTService):
     """ User password management.
@@ -268,6 +273,7 @@ class Password(BaseRESTService):
         self.sso.user.change_password(self.cid, data, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class _ChangeApprovalStatus(BaseRESTService):
     """ Base class for services changing a user's approval_status.
@@ -282,6 +288,7 @@ class _ChangeApprovalStatus(BaseRESTService):
         func(self.cid, ctx.input.user_id, ctx.input.ust, ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Approve(_ChangeApprovalStatus):
     """ Approves a user - changes his or her approval_status to 'approved'
@@ -289,12 +296,14 @@ class Approve(_ChangeApprovalStatus):
     func_name = 'approve_user'
 
 # ################################################################################################################################
+# ################################################################################################################################
 
 class Reject(_ChangeApprovalStatus):
     """ Rejects a user - changes his or her approval_status to 'rejected'
     """
     func_name = 'reject_user'
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class _CtxInputUsing(BaseService):
@@ -315,6 +324,7 @@ class _CtxInputUsing(BaseService):
                     setattr(ctx, key, value)
         return ctx
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Search(_CtxInputUsing):
@@ -344,6 +354,7 @@ class Search(_CtxInputUsing):
         # All went fine, return status code OK
         self.response.payload.status = status_code.ok
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Signup(BaseRESTService, _CtxInputUsing):
@@ -375,4 +386,70 @@ class Signup(BaseRESTService, _CtxInputUsing):
         else:
             self.response.payload.status = status_code.ok
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LinkedAuth(BaseRESTService):
+    class SimpleIO(BaseSIO):
+        input_required = 'current_app', 'ust'
+        input_optional = Opaque('user_id'), 'auth_type', 'auth_id', 'is_active',
+        output_optional = BaseSIO.output_optional + ('result',)
+        default_value = _invalid
+        skip_empty_keys = True
+
+# ################################################################################################################################
+
+    def _handle_sso_GET(self, ctx):
+        user_id = ctx.input.user_id
+        user_id = user_id if user_id != _invalid else None
+
+        out = []
+        result = self.sso.user.get_linked_auth_list(self.cid, ctx.input.ust, user_id, ctx.input.current_app, ctx.remote_addr)
+
+        for item in result:
+
+            item = item._asdict()
+            item['creation_time'] = item['creation_time'].isoformat()
+
+            for name in 'auth_principal', 'auth_source':
+                if item[name] == 'reserved':
+                    del item[name]
+
+            item.pop('is_internal', None)
+            item.pop('auth_principal', None)
+            item.pop('has_ext_principal', None)
+
+            out.append(item)
+
+        self.response.payload.result = out
+
+# ################################################################################################################################
+
+    def _handle_sso_POST(self, ctx):
+        user_id = self.sso.user.create_linked_auth(self.cid, ctx.input.ust, ctx.input.user_id, ctx.input.auth_type,
+            ctx.input.auth_id, ctx.input.is_active, ctx.input.current_app, ctx.remote_addr)
+
+        # With data saved to SQL, we can now notify all the servers about the new link
+        msg = {}
+        msg['action'] = BROKER_MSG_SSO.LINK_AUTH_CREATE.value
+        msg['auth_type'] = ctx.input.auth_type
+        msg['auth_id'] = ctx.input.auth_id
+        msg['user_id'] = user_id
+        self.broker_client.publish(msg)
+
+# ################################################################################################################################
+
+    def _handle_sso_DELETE(self, ctx):
+        self.sso.user.delete_linked_auth(self.cid, ctx.input.ust, ctx.input.user_id, ctx.input.auth_type,
+            ctx.input.auth_id, ctx.input.current_app, ctx.remote_addr)
+
+        # With data saved to SQL, we can now notify all the servers about the new link
+        msg = {}
+        msg['action'] = BROKER_MSG_SSO.LINK_AUTH_DELETE.value
+        msg['auth_type'] = ctx.input.auth_type
+        msg['auth_id'] = ctx.input.auth_id
+        msg['user_id'] = ctx.input.user_id
+        self.broker_client.publish(msg)
+
+# ################################################################################################################################
 # ################################################################################################################################

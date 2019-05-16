@@ -1075,6 +1075,8 @@ class Create(ZatoCommand):
     def add_sso_endpoints(self, session, cluster):
 
         data = [
+
+            # Users
             ['zato.sso.user.create', 'zato.server.service.internal.sso.user.Create', '/zato/sso/user/create'],
             ['zato.sso.user.signup', 'zato.server.service.internal.sso.user.Signup', '/zato/sso/user/signup'],
             ['zato.sso.user.approve', 'zato.server.service.internal.sso.user.Approve', '/zato/sso/user/approve'],
@@ -1085,16 +1087,23 @@ class Create(ZatoCommand):
             ['zato.sso.user.password', 'zato.server.service.internal.sso.user.Password', '/zato/sso/user/password'],
             ['zato.sso.user.search', 'zato.server.service.internal.sso.user.Search', '/zato/sso/user/search'],
 
+            # Linked accounts
+            ['zato.sso.user.linked-auth', 'zato.server.service.internal.sso.user.LinkedAuth', '/zato/sso/user/linked'],
+
+            # User sessions
             ['zato.sso.session.session', 'zato.server.service.internal.sso.session.Session', '/zato/sso/user/session'],
             ['zato.sso.session.session-list', 'zato.server.service.internal.sso.session.SessionList', '/zato/sso/user/session/list'],
 
+            # Password reset
             ['zato.sso.user.password-reset.begin', 'zato.server.service.internal.sso.password_reset.Begin', '/zato/sso/user/password/reset/begin'],
             ['zato.sso.user.password-reset.complete', 'zato.server.service.internal.sso.password_reset.Complete', '/zato/sso/user/password/reset/complete'],
 
+            # User attributes
             ['zato.sso.user-attr.user-attr', 'zato.server.service.internal.sso.user_attr.UserAttr', '/zato/sso/user/attr'],
             ['zato.sso.user-attr.user-attr-exists', 'zato.server.service.internal.sso.user_attr.UserAttrExists', '/zato/sso/user/attr/exists'],
             ['zato.sso.user-attr.user-attr-names', 'zato.server.service.internal.sso.user_attr.UserAttrNames', '/zato/sso/user/attr/names'],
 
+            # Session attributes
             ['zato.sso.session-attr.session-attr', 'zato.server.service.internal.sso.session_attr.SessionAttr', '/zato/sso/session/attr'],
             ['zato.sso.session-attr.session-attr-exists', 'zato.server.service.internal.sso.session_attr.SessionAttrExists', '/zato/sso/session/attr/exists'],
             ['zato.sso.session-attr.session-attr-names', 'zato.server.service.internal.sso.session_attr.SessionAttrNames', '/zato/sso/session/attr/names'],

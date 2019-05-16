@@ -22,11 +22,11 @@ class LinkedAuthTestCase(BaseTest):
 
     def test_create(self):
 
-        self.get('/sso/user/linked', {
+        self.get('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
         })
 
-        self.post('/sso/user/linked', {
+        self.post('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
@@ -34,7 +34,7 @@ class LinkedAuthTestCase(BaseTest):
             'is_active': True,
         })
 
-        self.delete('/sso/user/linked', {
+        self.delete('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
