@@ -13,6 +13,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common import LDAP
+from zato.common.broker_message import GENERIC
 from zato.common.util import as_bool, parse_simple_type
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.generic.connection import GenericConnection
@@ -126,7 +127,17 @@ class Generic(WorkerImpl):
 
     def reconnect_generic(self, conn_id):
         found_conn_dict, found_name = self._find_conn_info(conn_id)
-        self.on_broker_msg_GENERIC_CONNECTION_EDIT(found_conn_dict, ['conn', 'parent'])
+
+        edit_msg = Bunch()
+        edit_msg['action'] = GENERIC.CONNECTION_EDIT.value
+
+        for k, v in found_conn_dict.items():
+            if k in ('conn', 'parent'):
+                continue
+            else:
+                edit_msg[k] = v
+
+        self.on_broker_msg_GENERIC_CONNECTION_EDIT(edit_msg, ['conn', 'parent'])
 
 # ################################################################################################################################
 
