@@ -17,12 +17,23 @@ from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
 
+# Type hints
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.connection.connector import ConnectorStore
+
+    # Pyflakes
+    ConnectorStore = ConnectorStore
+
+# ################################################################################################################################
+
 class WebSocket(WorkerImpl):
     """ WebSocket-related functionality for worker objects.
     """
     def __init__(self):
         super(WebSocket, self).__init__()
-        self.web_socket_api = None
+        self.web_socket_api = None # type: ConnectorStore
 
 # ################################################################################################################################
 

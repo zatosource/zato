@@ -121,6 +121,10 @@ class Connector(object):
         log_each = 10
         start = datetime.utcnow()
 
+        if not self.is_active:
+            logger.warning('Skipped creation of an inactive connection `%s` (%s)', self.name, self.type)
+            return
+
         try:
             while self.keep_connecting:
                 while not self.is_connected:
@@ -224,9 +228,10 @@ class Connector(object):
             if not predicate():
                 return
 
-        logger.info(
-            '%s %s connector `%s` (id:%s) %s', verb, self.type, self.name, self.id_self,
-            ' ({})'.format(log_details if log_details else self.get_log_details()))
+        if self.is_active:
+            logger.info(
+                '%s %s connector `%s` (id:%s) %s', verb, self.type, self.name, self.id_self,
+                ' ({})'.format(log_details if log_details else self.get_log_details()))
 
 # ################################################################################################################################
 
