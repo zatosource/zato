@@ -60,6 +60,7 @@ class Config(object):
         self.secret = secret
         self.on_request_callback = on_request_callback
         self.wait_time = wait_time
+        self.needs_auth = bool(self.username)
 
 # ################################################################################################################################
 
@@ -219,7 +220,8 @@ class Client(object):
     """ A WebSocket client that knows how to invoke Zato services.
     """
     def __init__(self, config):
-        self.config = config # type: Config
+        # type: (Config)
+        self.config = config
         self.conn = _WSClient(self.on_connected, self.on_message, self.on_error, self.on_closed, self.config.address)
         self.keep_running = True
         self.is_authenticated = False
@@ -228,6 +230,7 @@ class Client(object):
         self.auth_token = None
         self.on_request_callback = self.config.on_request_callback
         self.on_closed_callback = self.config.on_closed_callback
+        self.needs_auth = self.config.needs_auth
 
         # Keyed by IDs of requests sent from this client to Zato
         self.requests_sent = {}
@@ -403,7 +406,7 @@ class Client(object):
 # ################################################################################################################################
 
     def invoke(self, request):
-        if not self.is_authenticated:
+        if self.needs_auth and (not self.is_authenticated):
             raise Exception('Client is not authenticated')
 
         request_id = MSG_PREFIX.INVOKE_SERVICE.format(uuid4().hex)
