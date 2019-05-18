@@ -62,12 +62,13 @@ class ConnectionQueue(object):
     def __init__(self, pool_size, queue_build_cap, conn_name, conn_type, address, add_client_func):
 
         self.queue = Queue(pool_size)
-        self.queue_build_cap = queue_build_cap
+        self.queue_build_cap = 2#queue_build_cap
         self.conn_name = conn_name
         self.conn_type = conn_type
         self.address = address
         self.add_client_func = add_client_func
         self.keep_connecting = True
+        self.lock = RLock()
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -75,8 +76,20 @@ class ConnectionQueue(object):
         return _Connection(self.queue, self.conn_name)
 
     def put_client(self, client):
-        self.queue.put(client)
-        self.logger.info('Added `%s` client to %s (%s)', self.conn_name, self.address, self.conn_type)
+        with self.lock:
+            if not self.queue.full():
+                self.queue.put(client)
+                is_accepted = False
+                msg = 'Added `%s` client to %s (%s)'
+                log_func = self.logger.warn
+            else:
+                zzz
+                is_accepted = False
+                msg = 'Skipped adding a superfluous `%s`, client to %s (%s)'
+                log_func = self.logger.warn
+
+            log_func(msg, self.conn_name, self.address, self.conn_type)
+            return is_accepted
 
     def _build_queue(self):
 
@@ -86,7 +99,7 @@ class ConnectionQueue(object):
 
         try:
             while self.keep_connecting and not self.queue.full():
-                gevent.sleep(0.5)
+                gevent.sleep(0.1)#5)
                 now = datetime.utcnow()
 
                 self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
@@ -101,7 +114,7 @@ class ConnectionQueue(object):
                         datetime.utcnow() + timedelta(seconds=self.queue_build_cap))
 
                     # Sleep for a predetermined time
-                    gevent.sleep(self.queue_build_cap)
+                    gevent.sleep(1)#self.queue_build_cap)
 
                     # Spawn additional greenlets to fill up the queue
                     self._spawn_add_client_func(self.queue.maxsize - self.queue.qsize())

@@ -301,9 +301,6 @@ class OutconnWSXWrapper(Wrapper):
             # Try to connect ..
             conn = WSXClient(self.config)
 
-            # .. give it a moment to connect ..
-            sleep(5)
-
             # .. log a warning if it still did not connect.
             if not conn.is_impl_connected():
                 logger.warn('WSX client `%s` did not connect in the expected time', self.config.name)
@@ -312,6 +309,9 @@ class OutconnWSXWrapper(Wrapper):
         except Exception:
             logger.warn('WSX client `%s` could not be built `%s`', self.config.name, format_exc())
         else:
-            self.client.put_client(conn)
+            if not self.client.put_client(conn):
+                logger.info('Closing a connection that the queue rejected `%s` (%s)', self.config.name, self.config.type)
+                self.delete_requested = True
+                conn.delete()
 
 # ################################################################################################################################
