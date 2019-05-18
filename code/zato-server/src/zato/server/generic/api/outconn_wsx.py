@@ -306,11 +306,21 @@ class OutconnWSXWrapper(Wrapper):
             # Try to connect ..
             conn = WSXClient(self.config)
 
+            #sleep(3)
+
+            is_impl_connected = conn.is_impl_connected()
+            if not is_impl_connected:
+                logger.warn('QQQ %s', is_impl_connected)
+                self.client.decr_in_progress_count()
+                return
+
         except Exception:
             logger.warn('WSX client `%s` could not be built `%s`', self.config.name, format_exc())
         else:
             try:
-                self.client.put_client(conn)
+                is_accepted = self.client.put_client(conn)
+                if not is_accepted:
+                    self.delete_queue_connections(msg_closing_superfluous)
             except Exception:
                 logger.warn('WSX error `%s`', format_exc())
 
