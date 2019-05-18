@@ -1120,7 +1120,8 @@ class ChannelWebSocket(Connector):
         self.server.start()
 
     def _stop(self):
-        self.server.stop(3)
+        if self.is_connected:
+            self.server.stop(3)
 
     def get_log_details(self):
         return self.config.address
