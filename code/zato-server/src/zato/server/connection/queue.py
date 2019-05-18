@@ -77,15 +77,14 @@ class ConnectionQueue(object):
 
     def put_client(self, client):
         with self.lock:
-            if not self.queue.full():
-                self.queue.put(client)
+            if self.queue.full():
                 is_accepted = False
-                msg = 'Added `%s` client to %s (%s)'
+                msg = 'Skipped adding a superfluous `%s` client to %s (%s)'
                 log_func = self.logger.warn
             else:
-                zzz
-                is_accepted = False
-                msg = 'Skipped adding a superfluous `%s`, client to %s (%s)'
+                self.queue.put(client)
+                is_accepted = True
+                msg = 'Added `%s` client to %s (%s)'
                 log_func = self.logger.warn
 
             log_func(msg, self.conn_name, self.address, self.conn_type)
