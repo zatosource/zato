@@ -161,7 +161,7 @@ class ConnectionQueue(object):
         """ Spawns greenlets to populate the queue and waits up to self.queue_build_cap seconds until the queue is full.
         If it never is, raises an exception stating so.
         """
-        self._spawn_add_client_func()#self.queue.maxsize)
+        self._spawn_add_client_func(self.queue.maxsize)
 
         # Build the queue in background
         gevent.spawn(self._build_queue)
