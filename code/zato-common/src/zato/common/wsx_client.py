@@ -219,11 +219,12 @@ class Client(object):
     """ A WebSocket client that knows how to invoke Zato services.
     """
     def __init__(self, config):
-        self.config = config
+        self.config = config # type: Config
         self.conn = _WSClient(self.on_connected, self.on_message, self.on_error, self.on_closed, self.config.address)
         self.keep_running = True
         self.is_authenticated = False
         self.is_connected = False
+        self.is_auth_needed = bool(self.config.username)
         self.auth_token = None
         self.on_request_callback = self.config.on_request_callback
         self.on_closed_callback = self.config.on_closed_callback
@@ -381,16 +382,17 @@ class Client(object):
 # ################################################################################################################################
 
     def run(self, max_wait=20):
-        spawn_greenlet(self._run, timeout=3)
+        spawn_greenlet(self._run, timeout=1)
 
         now = datetime.utcnow()
         until = now + timedelta(seconds=max_wait)
 
-        while not self.is_authenticated:
-            sleep(0.01)
-            now = datetime.utcnow()
-            if now >= until:
-                return
+        if self.is_auth_needed:
+            while not self.is_authenticated:
+                sleep(0.01)
+                now = datetime.utcnow()
+                if now >= until:
+                    return
 
 # ################################################################################################################################
 
