@@ -260,7 +260,7 @@ class Connector(object):
 
             try:
                 if self.start_in_greenlet:
-                    spawn_greenlet(self._spawn_start)
+                    spawn_greenlet(self._spawn_start, timeout=1)
                 else:
                     self._start_loop()
             except Exception:
@@ -271,7 +271,6 @@ class Connector(object):
     def stop(self):
         with self._start_stop_logger('Stopping',' Stopped'):
             self._stop()
-            self.is_connected = False
             self.keep_connecting = False # Set to False in case .stop is called before the connection was established
             self.keep_running = False
 
