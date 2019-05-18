@@ -68,6 +68,11 @@ class ConnectionQueue(object):
         self.address = address
         self.add_client_func = add_client_func
         self.keep_connecting = True
+        self.lock = RLock()
+
+        # How many add_client_func instances are running currently,
+        # must be updated with self.lock held.
+        self.in_progress_count = 0
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -75,8 +80,19 @@ class ConnectionQueue(object):
         return _Connection(self.queue, self.conn_name)
 
     def put_client(self, client):
-        self.queue.put(client)
-        self.logger.info('Added `%s` client to %s (%s)', self.conn_name, self.address, self.conn_type)
+        with self.lock:
+            if self.queue.full():
+                is_accepted = False
+                msg = 'Skipped adding a superfluous `%s` client to %s (%s)'
+                log_func = self.logger.info
+            else:
+                self.queue.put(client)
+                is_accepted = True
+                msg = 'Added `%s` client to %s (%s)'
+                log_func = self.logger.info
+
+            log_func(msg, self.conn_name, self.address, self.conn_type)
+            return is_accepted
 
     def _build_queue(self):
 
@@ -86,7 +102,7 @@ class ConnectionQueue(object):
 
         try:
             while self.keep_connecting and not self.queue.full():
-                gevent.sleep(0.5)
+                gevent.sleep(5)
                 now = datetime.utcnow()
 
                 self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
@@ -96,15 +112,18 @@ class ConnectionQueue(object):
                 if now >= build_until:
 
                     # Log the fact that the queue is not full yet
-                    self.logger.warn('Built %s/%s %s clients to `%s` within %s seconds, sleeping until %s (UTC)',
+                    self.logger.info('Built %s/%s %s clients to `%s` within %s seconds, sleeping until %s (UTC)',
                         self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.queue_build_cap,
                         datetime.utcnow() + timedelta(seconds=self.queue_build_cap))
 
                     # Sleep for a predetermined time
                     gevent.sleep(self.queue_build_cap)
 
-                    # Spawn additional greenlets to fill up the queue
-                    self._spawn_add_client_func(self.queue.maxsize - self.queue.qsize())
+                    # Spawn additional greenlets to fill up the queue but make sure not to spawn
+                    # more greenlets than there are slots in the queue still available.
+                    with self.lock:
+                        if self.in_progress_count < self.queue.maxsize:
+                            self._spawn_add_client_func(self.queue.maxsize - self.in_progress_count)
 
                     start = datetime.utcnow()
                     build_until = start + timedelta(seconds=self.queue_build_cap)
@@ -120,11 +139,23 @@ class ConnectionQueue(object):
         except KeyboardInterrupt:
             self.keep_connecting = False
 
-    def _spawn_add_client_func(self, count):
-        """ Spawns as many greenlets to populate the connection queue as there are free slots in the queue available.
-        """
+    def _spawn_add_client_func_no_lock(self, count):
         for x in range(count):
             gevent.spawn(self.add_client_func)
+            self.in_progress_count += 1
+
+    def _spawn_add_client_func(self, count=1):
+        """ Spawns as many greenlets to populate the connection queue as there are free slots in the queue available.
+        """
+        with self.lock:
+            if self.queue.full():
+                logger.info('Queue already full (c:%d) (%s %s)', count, self.address, self.conn_name)
+                return
+            self._spawn_add_client_func_no_lock(count)
+
+    def decr_in_progress_count(self):
+        with self.lock:
+            self.in_progress_count -= 1
 
     def build_queue(self):
         """ Spawns greenlets to populate the queue and waits up to self.queue_build_cap seconds until the queue is full.
@@ -173,24 +204,35 @@ class Wrapper(object):
 
 # ################################################################################################################################
 
+    def delete_queue_connections(self, reason=None):
+        for item in self.client.queue.queue:
+            try:
+                logger.info('Deleting connection from queue for `%s`', self.config.name)
+
+                # Some connections (e.g. LDAP) want to expose .delete to user API
+                # which conflicts with our own needs.
+                delete_func = getattr(item, 'zato_delete_impl', None)
+                if not delete_func:
+                    delete_func = getattr(item, 'delete', None)
+                delete_func(reason) if reason else delete_func()
+            except Exception:
+                logger.warn('Could not delete connection from queue for `%s`, e:`%s`', self.config.name, format_exc())
+
+# ################################################################################################################################
+
     def delete(self):
+        """ Deletes all connections from queue and sets flag that disallow for this client to connect again.
+        """
         with self.update_lock:
 
             self.delete_requested = True
             self.client.keep_connecting = False
 
-            for item in self.client.queue.queue:
-                try:
-                    logger.info('Deleting connection from queue for `%s`', self.config.name)
+            self.delete_queue_connections()
 
-                    # Some connections (e.g. LDAP) want to expose .delete to user API
-                    # which conflicts with our own needs.
-                    delete_func = getattr(item, 'zato_delete_impl', None)
-                    if not delete_func:
-                        delete_func = getattr(item, 'delete', None)
-                    delete_func()
-                except Exception:
-                    logger.warn('Could not delete connection from queue for `%s`, e:`%s`', self.config.name, format_exc())
+            # Reset flags that will allow this client to reconnect in the future
+            self.delete_requested = False
+            self.client.keep_connecting = True
 
 # ################################################################################################################################
 # ################################################################################################################################

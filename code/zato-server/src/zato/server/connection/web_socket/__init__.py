@@ -1068,6 +1068,14 @@ class WebSocketServer(WSGIServer):
 
 # ################################################################################################################################
 
+    def stop(self, *args, **kwargs):
+        """ Reimplemented from the parent class to be able to call shutdown prior to its calling self.socket.close.
+        """
+        self.socket.shutdown(2) # SHUT_RDWR has value of 2 in 'man 2 shutdown'
+        super(WebSocketServer, self).stop(*args, **kwargs)
+
+# ################################################################################################################################
+
     # These two methods are reimplemented from gevent.server to make it possible to use SO_REUSEPORT.
 
     @classmethod
@@ -1124,8 +1132,9 @@ class ChannelWebSocket(Connector):
         self._wsx_server.start()
 
     def _stop(self):
-        if self._wsx_server:
-            self._wsx_server.stop()
+        if self.is_connected:
+            self._wsx_server.stop(3)
+            self.is_connected = False
 
     def get_log_details(self):
         return self.config.address

@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 from traceback import format_exc
 
+# gevent
+from gevent import sleep
+
 # ws4py
 from ws4py.client.threadedclient import WebSocketClient
 
@@ -24,6 +27,10 @@ from zato.server.connection.queue import Wrapper
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+
+msg_closing_superfluous = 'Closing superfluous connection (Zato queue)'
 
 # ################################################################################################################################
 
@@ -133,12 +140,14 @@ class ZatoWSXClient(_BaseWSXClient):
 # ################################################################################################################################
 
     def connect(self):
-        pass # Not needed but added for API completeness
+        # Not needed but added for API completeness.
+        # The reason it is not needed is that self._zato_client's run_forever will connect itself.
+        pass
 
 # ################################################################################################################################
 
-    def close(self):
-        self._zato_client.stop()
+    def close(self, reason=''):
+        self._zato_client.stop(reason)
 
 # ################################################################################################################################
 
@@ -168,8 +177,8 @@ class WSXClient(object):
     """
     def __init__(self, config):
         self.config = config
-        self.is_connected = False
-        spawn_greenlet(self._init, timeout=2)
+        #spawn_greenlet(self._init, timeout=2)
+        self._init()
 
     def _init(self):
         _impl_class = ZatoWSXClient if self.config.is_zato else _NonZatoWSXClient
@@ -183,7 +192,6 @@ class WSXClient(object):
         self.impl.run_forever()
 
     def on_connected_cb(self, conn):
-        self.is_connected = True
         self.config.parent.on_connected_cb(conn)
 
     def on_message_cb(self, msg):
@@ -192,8 +200,11 @@ class WSXClient(object):
     def on_close_cb(self, code, reason=None):
         self.config.parent.on_close_cb(code, reason)
 
-    def delete(self):
-        self.impl.close()
+    def delete(self, reason=''):
+        self.impl.close(reason)
+
+    def is_impl_connected(self):
+        return self.impl._zato_client.is_connected
 
 # ################################################################################################################################
 
@@ -230,7 +241,6 @@ class OutconnWSXWrapper(Wrapper):
 # ################################################################################################################################
 
     def on_connected_cb(self, conn):
-        self.is_connected = True
 
         if self.config.get('on_connect_service_name'):
             try:
@@ -252,7 +262,7 @@ class OutconnWSXWrapper(Wrapper):
 
     def _should_handle_close_cb(self, code, reason):
 
-        if reason != ZATO_NONE:
+        if reason not in (ZATO_NONE, msg_closing_superfluous):
             if not self.delete_requested:
                 return True
 
@@ -293,10 +303,26 @@ class OutconnWSXWrapper(Wrapper):
 
     def add_client(self):
         try:
+            # Try to connect ..
             conn = WSXClient(self.config)
+
+            #sleep(3)
+
+            is_impl_connected = conn.is_impl_connected()
+            if not is_impl_connected:
+                self.client.decr_in_progress_count()
+                return
+
         except Exception:
-            logger.warn('WSX client could not be built `%s`', format_exc())
+            logger.warn('WSX client `%s` could not be built `%s`', self.config.name, format_exc())
         else:
-            self.client.put_client(conn)
+            try:
+                is_accepted = self.client.put_client(conn)
+                if not is_accepted:
+                    self.delete_queue_connections(msg_closing_superfluous)
+            except Exception:
+                logger.warn('WSX error `%s`', format_exc())
+            finally:
+                self.client.decr_in_progress_count()
 
 # ################################################################################################################################

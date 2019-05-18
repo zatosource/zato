@@ -255,13 +255,17 @@ class Connector(object):
 # ################################################################################################################################
 
     def start(self, needs_log=True):
+        if self.is_inactive:
+            logger.warn('Skipped creation of an inactive connector `%s` (%s)', self.name, self.type)
+            return
+
         with self._start_stop_logger('Starting',' Started', self._wait_until_connected):
             self.keep_running = True
             self.keep_connecting = True
 
             try:
                 if self.start_in_greenlet:
-                    spawn_greenlet(self._spawn_start)
+                    spawn_greenlet(self._spawn_start, timeout=1)
                 else:
                     self._start_loop()
             except Exception:
@@ -272,7 +276,6 @@ class Connector(object):
     def stop(self):
         with self._start_stop_logger('Stopping',' Stopped'):
             self._stop()
-            self.is_connected = False
             self.keep_connecting = False # Set to False in case .stop is called before the connection was established
             self.keep_running = False
 

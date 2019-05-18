@@ -225,6 +225,8 @@ class Client(object):
         self.conn = _WSClient(self.on_connected, self.on_message, self.on_error, self.on_closed, self.config.address)
         self.keep_running = True
         self.is_authenticated = False
+        self.is_connected = False
+        self.is_auth_needed = bool(self.config.username)
         self.auth_token = None
         self.on_request_callback = self.config.on_request_callback
         self.on_closed_callback = self.config.on_closed_callback
@@ -378,16 +380,17 @@ class Client(object):
                 now = datetime.utcnow()
             else:
                 needs_connect = False
+                self.is_connected = True
 
 # ################################################################################################################################
 
     def run(self, max_wait=20):
-        spawn_greenlet(self._run, timeout=10)
+        self._run()
 
         now = datetime.utcnow()
         until = now + timedelta(seconds=max_wait)
 
-        while not self.is_authenticated:
+        while not self.is_connected:
             sleep(0.01)
             now = datetime.utcnow()
             if now >= until:
@@ -395,9 +398,10 @@ class Client(object):
 
 # ################################################################################################################################
 
-    def stop(self):
+    def stop(self, reason=''):
         self.keep_running = False
-        self.conn.close()
+        self.conn.close(reason=reason)
+        self.is_connected = False
 
 # ################################################################################################################################
 
