@@ -1127,8 +1127,6 @@ class ChannelWebSocket(Connector):
         self.is_connected = True
         self.server.start()
 
-        logger.warn('^^^ %s', self.server)
-
     def _stop(self):
         if self.is_connected:
             self.server.stop(3)
