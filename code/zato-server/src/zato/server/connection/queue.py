@@ -61,7 +61,7 @@ class ConnectionQueue(object):
     """
     def __init__(self, pool_size, queue_build_cap, conn_name, conn_type, address, add_client_func):
 
-        self.queue = Queue(3)#pool_size)
+        self.queue = Queue(pool_size)
         self.queue_build_cap = 2#queue_build_cap
         self.conn_name = conn_name
         self.conn_type = conn_type
@@ -102,7 +102,7 @@ class ConnectionQueue(object):
 
         try:
             while self.keep_connecting and not self.queue.full():
-                gevent.sleep(0.1)#5)
+                gevent.sleep(5)
                 now = datetime.utcnow()
 
                 self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
@@ -117,7 +117,7 @@ class ConnectionQueue(object):
                         datetime.utcnow() + timedelta(seconds=self.queue_build_cap))
 
                     # Sleep for a predetermined time
-                    gevent.sleep(1)#self.queue_build_cap)
+                    gevent.sleep(self.queue_build_cap)
 
                     # Spawn additional greenlets to fill up the queue but make sure not to spawn
                     # more greenlets than there are slots in the queue still available.
@@ -152,7 +152,6 @@ class ConnectionQueue(object):
                 logger.info('Queue already full (c:%d) (%s %s)', count, self.address, self.conn_name)
                 return
             self._spawn_add_client_func_no_lock(count)
-            logger.warn('ZZZ %r %r %r', self.in_progress_count, self.queue.maxsize, self.in_progress_count < self.queue.maxsize)
 
     def decr_in_progress_count(self):
         with self.lock:
@@ -162,7 +161,6 @@ class ConnectionQueue(object):
         """ Spawns greenlets to populate the queue and waits up to self.queue_build_cap seconds until the queue is full.
         If it never is, raises an exception stating so.
         """
-        logger.warn('*********************** BUILD QUEUE %s ***********************', hex(id(self)))
         self._spawn_add_client_func()#self.queue.maxsize)
 
         # Build the queue in background
