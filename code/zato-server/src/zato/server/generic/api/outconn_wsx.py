@@ -310,7 +310,6 @@ class OutconnWSXWrapper(Wrapper):
 
             is_impl_connected = conn.is_impl_connected()
             if not is_impl_connected:
-                logger.warn('QQQ %s', is_impl_connected)
                 self.client.decr_in_progress_count()
                 return
 
@@ -323,5 +322,7 @@ class OutconnWSXWrapper(Wrapper):
                     self.delete_queue_connections(msg_closing_superfluous)
             except Exception:
                 logger.warn('WSX error `%s`', format_exc())
+            finally:
+                self.client.decr_in_progress_count()
 
 # ################################################################################################################################

@@ -382,19 +382,16 @@ class Client(object):
 # ################################################################################################################################
 
     def run(self, max_wait=20):
-        #spawn_greenlet(self._run, timeout=1)
         self._run()
 
-        if self.is_auth_needed:
+        now = datetime.utcnow()
+        until = now + timedelta(seconds=max_wait)
 
+        while not self.is_connected:
+            sleep(0.01)
             now = datetime.utcnow()
-            until = now + timedelta(seconds=max_wait)
-
-            while not self.is_authenticated:
-                sleep(0.01)
-                now = datetime.utcnow()
-                if now >= until:
-                    return
+            if now >= until:
+                return
 
 # ################################################################################################################################
 
