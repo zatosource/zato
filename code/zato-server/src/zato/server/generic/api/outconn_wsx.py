@@ -142,8 +142,8 @@ class ZatoWSXClient(_BaseWSXClient):
 
 # ################################################################################################################################
 
-    def close(self):
-        self._zato_client.stop()
+    def close(self, reason=''):
+        self._zato_client.stop(reason)
 
 # ################################################################################################################################
 
@@ -195,8 +195,8 @@ class WSXClient(object):
     def on_close_cb(self, code, reason=None):
         self.config.parent.on_close_cb(code, reason)
 
-    def delete(self):
-        self.impl.close()
+    def delete(self, reason=''):
+        self.impl.close(reason)
 
     def is_impl_connected(self):
         return self.impl._zato_client.is_connected
@@ -301,17 +301,21 @@ class OutconnWSXWrapper(Wrapper):
             # Try to connect ..
             conn = WSXClient(self.config)
 
-            # .. log a warning if it still did not connect.
+            # .. log a warning if it did not.
             if not conn.is_impl_connected():
-                logger.warn('WSX client `%s` did not connect in the expected time', self.config.name)
+                logger.info('WSX client `%s` did not connect in the expected time', self.config.name)
                 return
 
         except Exception:
             logger.warn('WSX client `%s` could not be built `%s`', self.config.name, format_exc())
         else:
-            if not self.client.put_client(conn):
-                logger.info('Closing a connection that the queue rejected `%s` (%s)', self.config.name, self.config.type)
+            try:
+                is_accepted = self.client.put_client(conn)
+                logger.warn('RRR %s', is_accepted)
+                logger.warn('Closing connection that was not added to queue `%s` (%s)', self.config.name, self.config.type_)
                 self.delete_requested = True
-                conn.delete()
+                conn.delete('Closing superfluous connection')
+            except Exception:
+                logger.warn('WSX error (is_accepted:%s) `%s`', is_accepted, format_exc())
 
 # ################################################################################################################################
