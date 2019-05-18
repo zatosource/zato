@@ -70,6 +70,10 @@ class ConnectionQueue(object):
         self.keep_connecting = True
         self.lock = RLock()
 
+        # How many add_client_func instances are running currently,
+        # must be updated with self.lock held.
+        self.in_progress_count = 0
+
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def __call__(self):
@@ -116,7 +120,9 @@ class ConnectionQueue(object):
                     gevent.sleep(1)#self.queue_build_cap)
 
                     # Spawn additional greenlets to fill up the queue
-                    #self._spawn_add_client_func(self.queue.maxsize - self.queue.qsize())
+                    #self._spawn_add_client_func()#self.queue.maxsize - self.queue.qsize())
+                    with self.lock:
+                        self._spawn_add_client_func(self.queue.maxsize - self.in_progress_count)
 
                     start = datetime.utcnow()
                     build_until = start + timedelta(seconds=self.queue_build_cap)
@@ -132,17 +138,23 @@ class ConnectionQueue(object):
         except KeyboardInterrupt:
             self.keep_connecting = False
 
-    def _spawn_add_client_func(self, count):
+    def _spawn_add_client_func(self, count=1):
         """ Spawns as many greenlets to populate the connection queue as there are free slots in the queue available.
         """
-        for x in range(count):
-            gevent.spawn(self.add_client_func)
+        with self.lock:
+            for x in range(count):
+                gevent.spawn(self.add_client_func)
+                self.in_progress_count += 1
+
+    def decr_in_progress_count(self):
+        with self.lock:
+            self.in_progress_count -= 1
 
     def build_queue(self):
         """ Spawns greenlets to populate the queue and waits up to self.queue_build_cap seconds until the queue is full.
         If it never is, raises an exception stating so.
         """
-        self._spawn_add_client_func(self.queue.maxsize)
+        self._spawn_add_client_func()#self.queue.maxsize)
 
         # Build the queue in background
         gevent.spawn(self._build_queue)
