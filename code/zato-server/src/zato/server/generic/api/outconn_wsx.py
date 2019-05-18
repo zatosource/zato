@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 from traceback import format_exc
 
+# gevent
+from gevent import sleep
+
 # ws4py
 from ws4py.client.threadedclient import WebSocketClient
 
@@ -133,7 +136,9 @@ class ZatoWSXClient(_BaseWSXClient):
 # ################################################################################################################################
 
     def connect(self):
-        pass # Not needed but added for API completeness
+        # Not needed but added for API completeness.
+        # The reason it is not needed is that self._zato_client's run_forever will connect itself.
+        pass
 
 # ################################################################################################################################
 
@@ -180,10 +185,10 @@ class WSXClient(object):
             self.invoke = self.send
 
         self.impl.connect()
+        self.is_connected = True
         self.impl.run_forever()
 
     def on_connected_cb(self, conn):
-        self.is_connected = True
         self.config.parent.on_connected_cb(conn)
 
     def on_message_cb(self, msg):
@@ -293,9 +298,18 @@ class OutconnWSXWrapper(Wrapper):
 
     def add_client(self):
         try:
+            # Try to connect ..
             conn = WSXClient(self.config)
+
+            # .. give it a moment to connect ..
+            sleep(5)
+
+            # .. log a warning if it still did not connect.
+            logger.warn('WSX client `%s` did not connect in the expected time', self.config.name)
+            return
+
         except Exception:
-            logger.warn('WSX client could not be built `%s`', format_exc())
+            logger.warn('WSX client `%s` could not be built `%s`', self.config.name, format_exc())
         else:
             self.client.put_client(conn)
 

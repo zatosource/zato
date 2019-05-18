@@ -379,7 +379,7 @@ class Client(object):
 # ################################################################################################################################
 
     def run(self, max_wait=20):
-        spawn_greenlet(self._run, timeout=10)
+        spawn_greenlet(self._run, timeout=3)
 
         now = datetime.utcnow()
         until = now + timedelta(seconds=max_wait)
