@@ -1133,7 +1133,7 @@ class ChannelWebSocket(Connector):
 
     def _stop(self):
         if self.is_connected:
-            self.server.stop(3)
+            self._wsx_server.stop(3)
             self.is_connected = False
 
     def get_log_details(self):

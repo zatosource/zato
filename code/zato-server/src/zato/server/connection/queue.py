@@ -62,7 +62,7 @@ class ConnectionQueue(object):
     def __init__(self, pool_size, queue_build_cap, conn_name, conn_type, address, add_client_func):
 
         self.queue = Queue(pool_size)
-        self.queue_build_cap = 2#queue_build_cap
+        self.queue_build_cap = queue_build_cap
         self.conn_name = conn_name
         self.conn_type = conn_type
         self.address = address
