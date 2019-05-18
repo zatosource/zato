@@ -173,7 +173,6 @@ class WSXClient(object):
     """
     def __init__(self, config):
         self.config = config
-        self.is_connected = False
         spawn_greenlet(self._init, timeout=2)
 
     def _init(self):
@@ -185,7 +184,6 @@ class WSXClient(object):
             self.invoke = self.send
 
         self.impl.connect()
-        self.is_connected = True
         self.impl.run_forever()
 
     def on_connected_cb(self, conn):
@@ -199,6 +197,9 @@ class WSXClient(object):
 
     def delete(self):
         self.impl.close()
+
+    def is_impl_connected(self):
+        return self.impl._zato_client.is_connected
 
 # ################################################################################################################################
 
@@ -235,7 +236,6 @@ class OutconnWSXWrapper(Wrapper):
 # ################################################################################################################################
 
     def on_connected_cb(self, conn):
-        self.is_connected = True
 
         if self.config.get('on_connect_service_name'):
             try:
@@ -305,8 +305,9 @@ class OutconnWSXWrapper(Wrapper):
             sleep(5)
 
             # .. log a warning if it still did not connect.
-            logger.warn('WSX client `%s` did not connect in the expected time', self.config.name)
-            return
+            if not conn.is_impl_connected():
+                logger.warn('WSX client `%s` did not connect in the expected time', self.config.name)
+                return
 
         except Exception:
             logger.warn('WSX client `%s` could not be built `%s`', self.config.name, format_exc())

@@ -223,6 +223,7 @@ class Client(object):
         self.conn = _WSClient(self.on_connected, self.on_message, self.on_error, self.on_closed, self.config.address)
         self.keep_running = True
         self.is_authenticated = False
+        self.is_connected = False
         self.auth_token = None
         self.on_request_callback = self.config.on_request_callback
         self.on_closed_callback = self.config.on_closed_callback
@@ -375,6 +376,7 @@ class Client(object):
                 now = datetime.utcnow()
             else:
                 needs_connect = False
+                self.is_connected = True
 
 # ################################################################################################################################
 
@@ -395,6 +397,7 @@ class Client(object):
     def stop(self):
         self.keep_running = False
         self.conn.close()
+        self.is_connected = False
 
 # ################################################################################################################################
 
