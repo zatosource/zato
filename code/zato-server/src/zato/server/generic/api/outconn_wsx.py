@@ -12,16 +12,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 from traceback import format_exc
 
-# gevent
-from gevent import sleep
-
 # ws4py
 from ws4py.client.threadedclient import WebSocketClient
 
 # Zato
 from zato.common import WEB_SOCKET, ZATO_NONE
 from zato.common.wsx_client import Client as ZatoWSXClientImpl, Config as _ZatoWSXConfigImpl
-from zato.common.util import new_cid, spawn_greenlet
+from zato.common.util import new_cid
 from zato.server.connection.queue import Wrapper
 
 # ################################################################################################################################
@@ -177,7 +174,6 @@ class WSXClient(object):
     """
     def __init__(self, config):
         self.config = config
-        #spawn_greenlet(self._init, timeout=2)
         self._init()
 
     def _init(self):
@@ -303,13 +299,9 @@ class OutconnWSXWrapper(Wrapper):
 
     def add_client(self):
         try:
-            # Try to connect ..
             conn = WSXClient(self.config)
 
-            #sleep(3)
-
-            is_impl_connected = conn.is_impl_connected()
-            if not is_impl_connected:
+            if not conn.is_impl_connected():
                 self.client.decr_in_progress_count()
                 return
 
@@ -317,8 +309,7 @@ class OutconnWSXWrapper(Wrapper):
             logger.warn('WSX client `%s` could not be built `%s`', self.config.name, format_exc())
         else:
             try:
-                is_accepted = self.client.put_client(conn)
-                if not is_accepted:
+                if not self.client.put_client(conn):
                     self.delete_queue_connections(msg_closing_superfluous)
             except Exception:
                 logger.warn('WSX error `%s`', format_exc())
