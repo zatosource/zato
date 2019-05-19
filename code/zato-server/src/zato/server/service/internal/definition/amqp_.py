@@ -13,6 +13,7 @@ from contextlib import closing
 from uuid import uuid4
 
 # Zato
+from zato.common import SECRETS
 from zato.common.broker_message import DEFINITION
 from zato.common.odb.model import ConnDefAMQP
 from zato.common.odb.query import definition_amqp, definition_amqp_list
@@ -43,7 +44,8 @@ def broker_message_hook(self, input, instance, attrs, service_type):
     if service_type == 'create_edit':
         with closing(self.odb.session()) as session:
             password = definition_amqp(session, instance.cluster_id, instance.id).password
-            input.password = self.server.decrypt(password)
+            if password.startswith(SECRETS.PREFIX):
+                input.password = self.server.decrypt(password)
 
 # ################################################################################################################################
 
