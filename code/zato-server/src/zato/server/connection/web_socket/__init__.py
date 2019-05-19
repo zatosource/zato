@@ -1068,6 +1068,14 @@ class WebSocketServer(WSGIServer):
 
 # ################################################################################################################################
 
+    def stop(self, *args, **kwargs):
+        """ Reimplemented from the parent class to be able to call shutdown prior to its calling self.socket.close.
+        """
+        self.socket.shutdown(2) # SHUT_RDWR has value of 2 in 'man 2 shutdown'
+        super(WebSocketServer, self).stop(*args, **kwargs)
+
+# ################################################################################################################################
+
     # These two methods are reimplemented from gevent.server to make it possible to use SO_REUSEPORT.
 
     @classmethod
@@ -1114,27 +1122,33 @@ class ChannelWebSocket(Connector):
     """
     start_in_greenlet = True
 
+    def __init__(self, *args, **kwargs):
+        self._wsx_server = None # type: WebSocketServer
+        super(ChannelWebSocket, self).__init__(*args, **kwargs)
+
     def _start(self):
-        self.server = WebSocketServer(self.config, self.auth_func, self.on_message_callback)
+        self._wsx_server = WebSocketServer(self.config, self.auth_func, self.on_message_callback)
         self.is_connected = True
-        self.server.start()
+        self._wsx_server.start()
 
     def _stop(self):
-        self.server.stop(3)
+        if self.is_connected:
+            self._wsx_server.stop(3)
+            self.is_connected = False
 
     def get_log_details(self):
         return self.config.address
 
     def invoke(self, cid, pub_client_id, request, timeout=5):
-        return self.server.invoke_client(cid, pub_client_id, request, timeout)
+        return self._wsx_server.invoke_client(cid, pub_client_id, request, timeout)
 
     def disconnect_client(self, cid, pub_client_id, *ignored_args, **ignored_kwargs):
-        return self.server.disconnect_client(cid, pub_client_id)
+        return self._wsx_server.disconnect_client(cid, pub_client_id)
 
     def notify_pubsub_message(self, cid, pub_client_id, request):
-        return self.server.notify_pubsub_message(cid, pub_client_id, request)
+        return self._wsx_server.notify_pubsub_message(cid, pub_client_id, request)
 
     def get_client_by_pub_id(self, pub_client_id):
-        return self.server.get_client_by_pub_id(pub_client_id)
+        return self._wsx_server.get_client_by_pub_id(pub_client_id)
 
 # ################################################################################################################################
