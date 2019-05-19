@@ -161,6 +161,11 @@ class _SSOSession(Base):
     auth_type = Column(Text(), nullable=False)
     auth_principal = Column(Text(), nullable=False)
 
+    # ID of a session external to SSO that is linked to this one,
+    # where external may still mean JWT or Basic Auth,
+    # but it is not a built-in SSO one.
+    ext_session_id = Column(Text(), nullable=True)
+
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 

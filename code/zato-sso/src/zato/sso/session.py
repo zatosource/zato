@@ -340,6 +340,13 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
+    def on_external_auth_succeeded(self, sec_def, wsgi_environ):
+        """ Invoked when a user succeeded in authentication via means external to default SSO credentials,
+        e.g. through Basic Auth or JWT. Creates an SSO session related to that event or renews an existing one.
+        """
+
+# ################################################################################################################################
+
     def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta, _dummy_password=uuid4().hex):
         """ Logs a user in, returning session info on success or raising ValidationError on any error.
         """

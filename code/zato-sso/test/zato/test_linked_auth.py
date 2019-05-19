@@ -16,13 +16,20 @@ from base import BaseTest
 from zato.common import SEC_DEF_TYPE
 
 # ################################################################################################################################
+
+basic_auth_id = 14
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class LinkedAuthTestCase(BaseTest):
 
     def test_create(self):
 
-        self.get('/sso/user/linked', {
+        self.get('/zzz', {}, expect_ok=False, auth=('zz', 'zz'))
+
+        '''
+        self.get('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': 'zusr20d6006gc18n1t0n0qwbs3wrk2'
         })
@@ -31,7 +38,7 @@ class LinkedAuthTestCase(BaseTest):
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
-            'auth_id': 2,
+            'auth_id': basic_auth_id,
             'is_active': True,
         })
 
@@ -39,8 +46,9 @@ class LinkedAuthTestCase(BaseTest):
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
-            'auth_id': 2,
+            'auth_id': basic_auth_id,
         })
+        '''
 
 # ################################################################################################################################
 # ################################################################################################################################
