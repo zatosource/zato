@@ -38,7 +38,8 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
     if service_type == 'create_edit':
         with closing(self.odb.session()) as session:
-            input.password = definition_amqp(session, instance.cluster_id, instance.id).password
+            password = definition_amqp(session, instance.cluster_id, instance.id).password
+            input.password = self.server.decrypt(password)
 
 # ################################################################################################################################
 

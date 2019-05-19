@@ -23,7 +23,7 @@ from gevent import sleep, spawn
 
 # Kombu
 from kombu import Connection, Consumer as _Consumer, pools, Queue
-from kombu.transport.pyamqp import Connection as PyAMQPConnection, Transport
+from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport, Transport
 
 # Zato
 from zato.common import AMQP, CHANNEL, SECRET_SHADOW, version
@@ -279,7 +279,11 @@ class ConnectorAMQP(Connector):
                     'zato.definition.name':self.config.name,
                 }, *args, **kwargs)
 
-        class _AMQPTransport(Transport):
+        print()
+        print(111, self.config)
+        print()
+
+        class _AMQPTransport(SSLTransport if self.config.port==5671 else Transport):
             Connection = _PyAMQPConnection
 
         class _AMQPConnection(Connection):
