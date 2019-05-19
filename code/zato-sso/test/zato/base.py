@@ -113,40 +113,38 @@ class BaseTest(TestCase):
 
 # ################################################################################################################################
 
-    def _invoke(self, func, func_name, url_path, request, expect_ok, _not_given='_test_not_given'):
+    def _invoke(self, func, func_name, url_path, request, expect_ok, auth=None, _not_given='_test_not_given'):
         address = Config.server_address.format(url_path)
 
         request['current_app'] = Config.current_app
         data = dumps(request)
 
         logger.info('Invoking %s %s with %s', func_name, address, data)
-        response = func(address, data=data)
+        response = func(address, data=data, auth=auth)
 
         logger.info('Response received %s %s', response.status_code, response.text)
 
         data = loads(response.text)
         data = bunchify(data)
 
-        # CID is always required in all responses
-        self.assertNotEquals(data.get('cid', _not_given), _not_given)
-
-        # Most tests require status OK
+        # Most tests require status OK and CID
         if expect_ok:
+            self.assertNotEquals(data.get('cid', _not_given), _not_given)
             self.assertEquals(data.status, status_code.ok)
 
         return data
 
-    def get(self, url_path, request, expect_ok=True):
-        return self._invoke(requests.get, 'GET', url_path, request, expect_ok)
+    def get(self, url_path, request, expect_ok=True, auth=None):
+        return self._invoke(requests.get, 'GET', url_path, request, expect_ok, auth)
 
-    def post(self, url_path, request, expect_ok=True):
-        return self._invoke(requests.post, 'POST', url_path, request, expect_ok)
+    def post(self, url_path, request, expect_ok=True, auth=None):
+        return self._invoke(requests.post, 'POST', url_path, request, expect_ok, auth)
 
-    def patch(self, url_path, request, expect_ok=True):
-        return self._invoke(requests.patch, 'PATCH', url_path, request, expect_ok)
+    def patch(self, url_path, request, expect_ok=True, auth=None):
+        return self._invoke(requests.patch, 'PATCH', url_path, request, expect_ok, auth)
 
-    def delete(self, url_path, request, expect_ok=True):
-        return self._invoke(requests.delete, 'DELETE', url_path, request, expect_ok)
+    def delete(self, url_path, request, expect_ok=True, auth=None):
+        return self._invoke(requests.delete, 'DELETE', url_path, request, expect_ok, auth)
 
 # ################################################################################################################################
 

@@ -203,7 +203,7 @@ class RequestDispatcher(object):
         self.http_methods_allowed = http_methods_allowed
 
         # To reduce the number of attribute lookups
-        self._sso_api_user = self.server.sso_api.user
+        self._sso_api_user = self.server.sso_api.user if self.server.sso_api else None
 
 # ################################################################################################################################
 
@@ -330,9 +330,23 @@ class RequestDispatcher(object):
                             sec.sec_def.sec_type)] # type: dict
 
                         sso_user_id = auth_id_link_map.get(sec.sec_def.id)
+
                         if sso_user_id:
+
+                            # At this point we have an SSO user and we know that credentials
+                            # from the request were valid so we may check rate-limiting
+                            # first and then create or extend the user's associated SSO session.
+                            # In other words, we can already act as though the user was already
+                            # logged in because in fact he or she is logged in, just using
+                            # a security definition from sec_def.
+
+                            # Check rate-limiting
                             self.server.rate_limiting.check_limit(
                                 cid, _rate_limit_type_sso_user, sso_user_id, wsgi_environ['zato.http.remote_addr'])
+
+                            # Rate-limiting went fine, we can now create or extend
+                            # the person's SSO session linked to credentials from the request.
+                            self.server.sso_api.user.session.on_external_auth_succeeded(sec.sec_def)
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
