@@ -36,6 +36,7 @@
             '_edit',
             '_delete',
             'id',
+            'is_tls_enabled',
         ]
     }
     </script>
@@ -58,7 +59,7 @@
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.definition.amqp.create()">Create a new AMQP definition</a>
         </div>
-        
+
 
         <div id="markup">
             <table id="data-table">
@@ -76,6 +77,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -96,11 +98,12 @@
                         <td><a href="javascript:$.fn.zato.definition.amqp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.definition.amqp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_tls_enabled }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='13'>No results</td>
+                        <td colspan='14'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -114,54 +117,61 @@
             <div class="bd">
                 <form action="{% url "def-amqp-create" %}" method="post" id="create-form">
                     <table class="form-data">
-    
+
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
-                    
+
                         <tr>
                             <td style="vertical-align:middle">Host</td>
                             <td>{{ create_form.host }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Port</td>
-                            <td>{{ create_form.port }}</td>
+                            <td>
+                            {{ create_form.port }}
+                            |
+                            <label>
+                            Use TLS
+                            {{ create_form.is_tls_enabled }}
+                            </label>
+                            </td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Virtual host</td>
                             <td>{{ create_form.vhost }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Username</td>
                             <td>{{ create_form.username }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Max frame size <span class='form_hint'>(bytes)</span></td>
-                            <td>{{ create_form.frame_max }}</td>
+                            <td>
+                            {{ create_form.frame_max }}
+                            |
+                            Heartbeat <span class='form_hint'>(in s)</span>
+                            {{ create_form.heartbeat }}
+                            </td>
                         </tr>
-                        
-                        <tr>
-                            <td style="vertical-align:middle">Heartbeat interval <span class='form_hint'>(seconds)</span></td>
-                            <td>{{ create_form.heartbeat }}</td>
-                        </tr>
-    
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
-                        </tr>                        
+                        </tr>
                     </table>
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
-        
+
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url "def-amqp-edit" %}" method="post" id="edit-form">
@@ -170,52 +180,59 @@
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ edit_form.name }}</td>
-                        </tr>    
-    
+                        </tr>
+
                         <tr>
                             <td style="vertical-align:middle">Host</td>
                             <td>{{ edit_form.host }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Port</td>
-                            <td>{{ edit_form.port }}</td>
+                            <td>
+                            {{ edit_form.port }}
+                            |
+                            <label>
+                            Use TLS
+                            {{ edit_form.is_tls_enabled }}
+                            </label>
+                            </td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Virtual host</td>
                             <td>{{ edit_form.vhost }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Username</td>
                             <td>{{ edit_form.username }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Max frame size <span class='form_hint'>(bytes)</span></td>
-                            <td>{{ edit_form.frame_max }}</td>
+                            <td>
+                            {{ edit_form.frame_max }}
+                            |
+                            Heartbeat <span class='form_hint'>(in s)</span>
+                            {{ edit_form.heartbeat }}
+                            </td>
                         </tr>
-                        
-                        <tr>
-                            <td style="vertical-align:middle">Heartbeat interval <span class='form_hint'>(seconds)</span></td>
-                            <td>{{ edit_form.heartbeat }}</td>
-                        </tr>
-    
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
-                        
+
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
         </div>
-        
+
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url "def-amqp-change-password" %}" method="post" id="change_password-form">

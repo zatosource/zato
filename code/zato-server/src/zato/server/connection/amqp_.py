@@ -270,7 +270,6 @@ class ConnectorAMQP(Connector):
         this information is not available on module level hence the classes are declared here,
         in particular, we need access to self.config.name and suffix which are available only in run-time.
         """
-
         class _PyAMQPConnection(PyAMQPConnection):
             def __init__(_py_amqp_self, *args, **kwargs):
                 super(_PyAMQPConnection, _py_amqp_self).__init__(client_properties={
@@ -279,11 +278,7 @@ class ConnectorAMQP(Connector):
                     'zato.definition.name':self.config.name,
                 }, *args, **kwargs)
 
-        print()
-        print(111, self.config)
-        print()
-
-        class _AMQPTransport(SSLTransport if self.config.port==5671 else Transport):
+        class _AMQPTransport(SSLTransport if self.config.get('is_tls_enabled') else Transport):
             Connection = _PyAMQPConnection
 
         class _AMQPConnection(Connection):
