@@ -838,7 +838,8 @@ $.fn.zato.get_random_string = function() {
 
 $.fn.zato.to_bool = function(item) {
     var s = new String(item).toLowerCase();
-    return(s == "true" || s == 'on'); // 'on' too because it may be a form's field
+    result = (s === "true" || s === "on"); // 'on' too because it may be a form's field
+    return result;
 }
 
 $.fn.zato.like_bool = function(item) {

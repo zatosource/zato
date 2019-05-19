@@ -23,7 +23,7 @@ from gevent import sleep, spawn
 
 # Kombu
 from kombu import Connection, Consumer as _Consumer, pools, Queue
-from kombu.transport.pyamqp import Connection as PyAMQPConnection, Transport
+from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport, Transport
 
 # Zato
 from zato.common import AMQP, CHANNEL, SECRET_SHADOW, version
@@ -270,7 +270,6 @@ class ConnectorAMQP(Connector):
         this information is not available on module level hence the classes are declared here,
         in particular, we need access to self.config.name and suffix which are available only in run-time.
         """
-
         class _PyAMQPConnection(PyAMQPConnection):
             def __init__(_py_amqp_self, *args, **kwargs):
                 super(_PyAMQPConnection, _py_amqp_self).__init__(client_properties={
@@ -279,7 +278,7 @@ class ConnectorAMQP(Connector):
                     'zato.definition.name':self.config.name,
                 }, *args, **kwargs)
 
-        class _AMQPTransport(Transport):
+        class _AMQPTransport(SSLTransport if self.config.get('is_tls_enabled') else Transport):
             Connection = _PyAMQPConnection
 
         class _AMQPConnection(Connection):

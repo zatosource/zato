@@ -29,8 +29,9 @@ class Index(_Index):
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
+        input_required = 'cluster_id',
+        output_required = 'id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat'
+        output_optional = 'is_tls_enabled',
         output_repeated = True
 
     def handle(self):
@@ -44,8 +45,9 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
-        output_required = ('id',)
+        input_required = 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat'
+        input_optional = 'is_tls_enabled',
+        output_required = 'id',
 
     def success_message(self, item):
         return 'Successfully {} the AMQP definition `{}`'.format(self.verb, item.name)

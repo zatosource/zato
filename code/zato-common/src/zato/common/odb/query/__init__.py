@@ -369,9 +369,17 @@ def xpath_sec_list(session, cluster_id, needs_columns=False):
 
 def _definition_amqp(session, cluster_id):
     return session.query(
-        ConnDefAMQP.name, ConnDefAMQP.id, ConnDefAMQP.host,
-        ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
-        ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat, ConnDefAMQP.password).\
+        ConnDefAMQP.name,
+        ConnDefAMQP.id,
+        ConnDefAMQP.host,
+        ConnDefAMQP.port,
+        ConnDefAMQP.vhost,
+        ConnDefAMQP.username,
+        ConnDefAMQP.frame_max,
+        ConnDefAMQP.heartbeat,
+        ConnDefAMQP.password,
+        ConnDefAMQP.opaque1,
+        ).\
         filter(Cluster.id==ConnDefAMQP.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(ConnDefAMQP.name)

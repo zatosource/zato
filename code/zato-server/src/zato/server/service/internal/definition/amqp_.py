@@ -13,9 +13,12 @@ from contextlib import closing
 from uuid import uuid4
 
 # Zato
+from zato.common import SECRETS
 from zato.common.broker_message import DEFINITION
 from zato.common.odb.model import ConnDefAMQP
 from zato.common.odb.query import definition_amqp, definition_amqp_list
+from zato.common.util import as_bool
+from zato.common.util.sql import get_dict_with_opaque
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -28,7 +31,9 @@ get_list_docs = 'AMQP definitions'
 broker_message = DEFINITION
 broker_message_prefix = 'AMQP_'
 list_func = definition_amqp_list
-skip_input_params = ('password',)
+skip_input_params = 'password',
+input_optional_extra = ['is_tls_enabled']
+output_optional_extra = ['is_tls_enabled']
 
 # ################################################################################################################################
 
@@ -38,7 +43,16 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
     if service_type == 'create_edit':
         with closing(self.odb.session()) as session:
-            input.password = definition_amqp(session, instance.cluster_id, instance.id).password
+            password = definition_amqp(session, instance.cluster_id, instance.id).password
+            if password.startswith(SECRETS.PREFIX):
+                input.password = self.server.decrypt(password)
+
+# ################################################################################################################################
+
+def response_hook(self, input, instance, attrs, service_type):
+    if service_type == 'get_list':
+        for item in self.response.payload:
+            item.is_tls_enabled = as_bool(getattr(item, 'is_tls_enabled', None))
 
 # ################################################################################################################################
 
@@ -99,13 +113,14 @@ class GetByID(AdminService):
         request_elem = 'zato_definition_amqp_get_by_id_request'
         response_elem = 'zato_definition_amqp_get_by_id_response'
         input_required = ('id', 'cluster_id')
-        output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
+        output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat', 'is_tls_enabled')
 
     def get_data(self, session):
         return definition_amqp(session, self.request.input.cluster_id, self.request.input.id)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload = self.get_data(session)
+            data = self.get_data(session)
+            self.response.payload = get_dict_with_opaque(data)
 
 # ################################################################################################################################
