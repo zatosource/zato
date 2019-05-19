@@ -189,6 +189,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += merge_url_params_req_tr;
         row += url_params_pri_tr;
         row += params_pri_tr;
+        row += item.method ? item.method : '';
     }
 
     /* 31,32 */

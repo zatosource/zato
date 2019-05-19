@@ -657,7 +657,8 @@ class ODBManager(SessionWrapper):
                 service_id = service_info['id']
 
             else:
-                service = Service(None, name, True, impl_name, is_internal, self.cluster)
+                service = Service(None, name, True, impl_name, is_internal, self.cluster,
+                    slow_threshold=MISC.SLOW_THRESHOLD_DEFAULT)
                 self._session.add(service)
                 try:
                     self._session.commit()
@@ -666,11 +667,13 @@ class ODBManager(SessionWrapper):
                     logger.log(TRACE1, 'IntegrityError (Service), e:`%s`', format_exc().decode('utf-8'))
                     self._session.rollback()
 
-                    service_id = self._session.query(Service).\
+                    service = self._session.query(Service).\
                         join(Cluster, Service.cluster_id==Cluster.id).\
                         filter(Service.name==name).\
                         filter(Cluster.id==self.cluster.id).\
-                        one().id
+                        one()
+
+                    service_id = service.id
 
             self.add_deployed_service(deployment_time, details, service_id, source_info)
 

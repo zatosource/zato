@@ -706,7 +706,7 @@ class Service(Base):
     wsdl = Column(LargeBinary(5000000), nullable=True)
     wsdl_name = Column(String(200), nullable=True)
 
-    slow_threshold = Column(Integer, nullable=False, default=99999)
+    slow_threshold = Column(Integer, nullable=False, default=MISC.SLOW_THRESHOLD_DEFAULT)
 
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
@@ -715,7 +715,7 @@ class Service(Base):
     cluster = relationship(Cluster, backref=backref('services', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, impl_name=None, is_internal=None, cluster=None, wsdl=None,
-            wsdl_name=None):
+            wsdl_name=None, slow_threshold=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -724,6 +724,7 @@ class Service(Base):
         self.cluster = cluster
         self.wsdl = wsdl
         self.wsdl_name = wsdl_name
+        self.slow_threshold = slow_threshold
         self.plain_http_channels = [] # Not used by the database
         self.soap_channels = [] # Not used by the database
         self.amqp_channels = [] # Not used by the database
