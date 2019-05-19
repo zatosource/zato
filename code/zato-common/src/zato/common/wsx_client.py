@@ -28,7 +28,6 @@ from six.moves.http_client import OK
 from ws4py.client.geventclient import WebSocketClient
 
 # Zato
-from zato.common.util import spawn_greenlet
 from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
