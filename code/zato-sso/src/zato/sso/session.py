@@ -20,12 +20,13 @@ from uuid import uuid4
 from ipaddress import ip_address
 
 # Zato
-from zato.common import GENERIC
+from zato.common import GENERIC, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
 from zato.common.odb.model import SSOSession as SessionModel
 from zato.sso import const, status_code, Session as SessionEntity, ValidationError
 from zato.sso.attr import AttrAPI
-from zato.sso.odb.query import get_session_by_ust, get_session_list_by_user_id, get_user_by_username
+from zato.sso.odb.query import get_session_by_ext_id, get_session_by_ust, get_session_list_by_user_id, get_user_by_id, \
+     get_user_by_username
 from zato.sso.util import check_credentials, check_remote_app_exists, new_user_session_token, set_password, validate_password
 
 # ################################################################################################################################
@@ -38,6 +39,9 @@ if typing.TYPE_CHECKING:
     # stdlib
     from typing import Callable
 
+    # Bunch
+    from bunch import Bunch
+
     # Python 2/3 compatibility
     from past.builtins import unicode
 
@@ -45,6 +49,7 @@ if typing.TYPE_CHECKING:
     from zato.common.odb.model import SSOUser
 
     # For pyflakes
+    Bunch = Bunch
     Callable = Callable
     SSOUser = SSOUser
     unicode = unicode
@@ -65,15 +70,16 @@ SessionModelDelete = SessionModelTable.delete
 class LoginCtx(object):
     """ A set of data about a login request.
     """
-    __slots__ = ('remote_addr', 'user_agent', 'has_remote_addr', 'has_user_agent', 'input')
+    __slots__ = ('remote_addr', 'user_agent', 'has_remote_addr', 'has_user_agent', 'input', 'ext_session_id')
 
-    def __init__(self, remote_addr, user_agent, has_remote_addr, has_user_agent, input):
+    def __init__(self, remote_addr, user_agent, has_remote_addr, has_user_agent, input, ext_session_id=None):
         # type: (unicode, unicode, bool, bool, dict)
         self.remote_addr = [ip_address(remote_addr)]
         self.user_agent = user_agent
         self.has_remote_addr = has_remote_addr
         self.has_user_agent = has_user_agent
         self.input = input
+        self.ext_session_id = ext_session_id
 
 # ################################################################################################################################
 
@@ -340,27 +346,73 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def on_external_auth_succeeded(self, sec_def, wsgi_environ):
+    def on_external_auth_succeeded(self, cid, sec_def, user_id, current_app, remote_addr, user_agent,
+        _basic_auth=SEC_DEF_TYPE.BASIC_AUTH, _jwt=SEC_DEF_TYPE.JWT, _utcnow=datetime.utcnow):
         """ Invoked when a user succeeded in authentication via means external to default SSO credentials,
         e.g. through Basic Auth or JWT. Creates an SSO session related to that event or renews an existing one.
         """
+        # type: (unicode, Bunch, unicode, unicode, unicode) -> SessionInfo
+
+        # PII audit comes first
+        audit_pii.info(cid, 'session.on_external_auth_succeeded', extra={
+            'current_app':current_app,
+            'remote_addr':remote_addr,
+            'sec.sec_type': sec_def.sec_type,
+            'sec.id': sec_def.id,
+            'sec.username': sec_def.username,
+        })
+
+        if sec_def.sec_type == _basic_auth:
+            ext_session_id = '{}.{}'.format(sec_def.sec_type, sec_def.id)
+        else:
+            raise NotImplementedError()
+
+        existing_ust = None # type: unicode
+
+        # Check if there is already a session associated with this external one
+        with closing(self.odb_session_func()) as session:
+            sso_session = get_session_by_ext_id(session, ext_session_id, _utcnow())
+            if sso_session:
+                existing_ust = sso_session.ust
+
+        # .. if there is, renew it ..
+        if existing_ust:
+            self.renew(cid, existing_ust, current_app, remote_addr, user_agent, False)
+
+        # .. otherwise, create a new one. Note that we get here only if
+        else:
+            ctx = LoginCtx(remote_addr, user_agent, False, False, {
+                'user_id': user_id,
+                'current_app': current_app
+            }, ext_session_id)
+            return self.login(ctx, is_logged_in_ext=True)
 
 # ################################################################################################################################
 
-    def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta, _dummy_password=uuid4().hex):
+    def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta, _dummy_password=uuid4().hex,
+        is_logged_in_ext=True):
         """ Logs a user in, returning session info on success or raising ValidationError on any error.
         """
-        # type: (LoginCtx, unicode, datetime, timedelta, unicode) -> SessionInfo
+        # type: (LoginCtx, unicode, datetime, timedelta, unicode, bool) -> SessionInfo
 
         # Look up user and raise exception if not found by username
         with closing(self.odb_session_func()) as session:
-            user = get_user_by_username(session, ctx.input['username'])
-            password = user.password if user else _dummy_password
 
-            # Check credentials first to make sure that attackers do not learn about any sort
-            # of metadata (e.g. is the account locked) if they do not know username and password.
-            if not self._check_credentials(ctx, password):
-                raise ValidationError(status_code.auth.not_allowed, False)
+            if ctx.input.get('username'):
+                user = get_user_by_username(session, ctx.input['username'])
+            else:
+                user = get_user_by_id(session, ctx.input['user_id'])
+
+            # If the user is already logged in externally, this flag will be True,
+            # in which case we do not check the credentials - we already know they are valid
+            # because they were checked externally and user_id is the SSO user linked to the
+            # already validated external credentials.
+            if not is_logged_in_ext:
+
+                # Check credentials first to make sure that attackers do not learn about any sort
+                # of metadata (e.g. is the account locked) if they do not know username and password.
+                if not self._check_credentials(ctx, user.password if user else _dummy_password):
+                    raise ValidationError(status_code.auth.not_allowed, False)
 
             # It must be possible to log into the application requested (CRM above)
             self._check_login_to_app_allowed(ctx)
@@ -380,7 +432,7 @@ class SessionAPI(object):
                 else:
                     raise ValidationError(status_code.password.e_about_to_exp, False, _about_status)
 
-            # If password is marked as as requiring a change upon next login but a new one was not sent, reject the request.
+            # If password is marked as requiring a change upon next login but a new one was not sent, reject the request.
             self._check_must_send_new_password(ctx, user)
 
             # If new password is required, we need to validate and save it before session can be created.
@@ -389,7 +441,7 @@ class SessionAPI(object):
             # the check above would have raised a ValidationError.
             if user.password_must_change:
                 try:
-                    validate_password(self.sso_conf, ctx.input['new_password'])
+                    validate_password(self.sso_conf, ctx.input.get('new_password'))
                 except ValidationError as e:
                     if e.return_status:
                         raise ValidationError(e.sub_status, e.return_status, e.status)
@@ -419,6 +471,7 @@ class SessionAPI(object):
                     'auth_principal': user.username,
                     'remote_addr': ', '.join(str(elem) for elem in ctx.remote_addr),
                     'user_agent': ctx.user_agent,
+                    'ext_session_id': ctx.ext_session_id,
                     GENERIC.ATTR_NAME: dumps(opaque)
             }))
             session.commit()
@@ -547,7 +600,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def renew(self, cid, ust, current_app, remote_addr, user_agent):
+    def renew(self, cid, ust, current_app, remote_addr, user_agent, needs_decrypt=True):
         """ Renew timelife of a user session, if it is valid, and returns its new expiration time in UTC.
         """
         # PII audit comes first
@@ -555,8 +608,8 @@ class SessionAPI(object):
 
         with closing(self.odb_session_func()) as session:
             expiration_time = self._get(
-                session, ust, current_app, remote_addr, 'renew', renew=True, user_agent=user_agent,
-                check_if_password_expired=True)
+                session, ust, current_app, remote_addr, 'renew', needs_decrypt=needs_decrypt, renew=True,
+                user_agent=user_agent, check_if_password_expired=True)
             session.commit()
             return expiration_time
 
