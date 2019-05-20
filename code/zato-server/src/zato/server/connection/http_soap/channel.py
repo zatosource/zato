@@ -341,12 +341,31 @@ class RequestDispatcher(object):
                             # a security definition from sec_def.
 
                             # Check rate-limiting
-                            self.server.rate_limiting.check_limit(
-                                cid, _rate_limit_type_sso_user, sso_user_id, wsgi_environ['zato.http.remote_addr'])
+                            self.server.rate_limiting.check_limit(cid, _rate_limit_type_sso_user,
+                                sso_user_id, wsgi_environ['zato.http.remote_addr'], False)
 
                             # Rate-limiting went fine, we can now create or extend
                             # the person's SSO session linked to credentials from the request.
-                            self.server.sso_api.user.session.on_external_auth_succeeded(sec.sec_def)
+
+                            current_app = wsgi_environ.get(self.server.sso_config.apps.http_header) or \
+                                self.server.sso_config.apps.default
+
+                            result = self.server.sso_api.user.session.on_external_auth_succeeded(
+                                cid,
+                                sec.sec_def,
+                                sso_user_id,
+                                current_app,
+                                wsgi_environ['zato.http.remote_addr'].decode('utf8'),
+                                wsgi_environ.get('HTTP_USER_AGENT'),
+                            )
+
+                            # This will an SSO SessionInfo object in case the user has been just logged in,
+                            # we need to return a UST in HTTP response headers in such as case. Otherwise,
+                            # if there is no result, it means that the session had already existed
+                            # and it has just been renewed.
+                            if result:
+                                headers = wsgi_environ['zato.http.response.headers']
+                                headers[self.server.sso_config.session.http_header] = result.ust
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
@@ -426,7 +445,7 @@ class RequestDispatcher(object):
                 # things to be on DEBUG whereas for others ERROR will make most sense
                 # in given circumstances.
                 logger.error(
-                    'Caught an exception, cid:`%s`, status_code:`%s`, e:\n%s\n`%s`', cid, status_code, _exc_sep, _exc)
+                    'Caught an exception, cid:`%s`, status_code:`%s`, `%s`', cid, status_code, _exc)
 
                 try:
                     error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'])

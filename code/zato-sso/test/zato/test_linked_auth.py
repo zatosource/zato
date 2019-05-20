@@ -15,6 +15,9 @@ from unittest import main
 from base import BaseTest
 from zato.common import SEC_DEF_TYPE
 
+# For Pyflakes
+SEC_DEF_TYPE = SEC_DEF_TYPE
+
 # ################################################################################################################################
 
 basic_auth_id = 14

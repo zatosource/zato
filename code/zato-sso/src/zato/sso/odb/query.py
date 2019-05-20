@@ -42,6 +42,16 @@ _approved = const.approval_status.approved
 
 # ################################################################################################################################
 
+def _session_with_opaque(session, _opaque_attr=GENERIC.ATTR_NAME):
+    if session:
+        opaque = getattr(session, GENERIC.ATTR_NAME, None)
+        if opaque:
+            opaque = loads(opaque)
+            setattr(session, _opaque_attr, opaque)
+    return session
+
+# ################################################################################################################################
+
 def user_exists(session, username, email, check_email):
     """ Returns a boolean flag indicating whether user exists by username or email.
     """
@@ -79,11 +89,21 @@ def get_user_by_username(session, username, needs_approved=True, _approved=_appr
 
 # ################################################################################################################################
 
-def _get_session(session, now , _columns=_session_columns_with_user, _approved=_approved):
+def _get_session(session, now, _columns=_session_columns_with_user, _approved=_approved):
     return _get_model(session, _columns).\
         filter(SSOSession.user_id==SSOUser.id).\
         filter(SSOUser.approval_status==_approved).\
         filter(SSOSession.expiration_time > now)
+
+# ################################################################################################################################
+
+def get_session_by_ext_id(session, ext_session_id, now):
+    # type: (object, object, object) -> SSOSession
+    session = _get_session(session, now).\
+        filter(SSOSession.ext_session_id==ext_session_id).\
+        first()
+
+    return _session_with_opaque(session)
 
 # ################################################################################################################################
 
@@ -100,16 +120,11 @@ def get_session_list_by_user_id(session, user_id, now, _columns=_session_list_co
 
 # ################################################################################################################################
 
-def get_session_by_ust(session, ust, now, _opaque_attr=GENERIC.ATTR_NAME):
+def get_session_by_ust(session, ust, now):
     session = _get_session_by_ust(session, ust, now).\
         first()
 
-    if session:
-        opaque = getattr(session, GENERIC.ATTR_NAME, None)
-        if opaque:
-            opaque = loads(opaque)
-            setattr(session, _opaque_attr, opaque)
-        return session
+    return _session_with_opaque(session)
 
 get_user_by_ust = get_session_by_ust
 

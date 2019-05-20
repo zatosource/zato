@@ -216,7 +216,7 @@ class RateLimiting(object):
 
 # ################################################################################################################################
 
-    def check_limit(self, cid, object_type, object_name, from_):
+    def check_limit(self, cid, object_type, object_name, from_, needs_warn=True):
         """ Checks if input object has already reached its allotted usage limit.
         """
         # type: (unicode, unicode, unicode, unicode)
@@ -230,7 +230,8 @@ class RateLimiting(object):
             with config.lock:
                 config.check_limit(cid, from_)
         else:
-            logger.warn('No such rate limiting object `%s` (%s)', object_name, object_type)
+            if needs_warn:
+                logger.warn('No such rate limiting object `%s` (%s)', object_name, object_type)
 
 # ################################################################################################################################
 
