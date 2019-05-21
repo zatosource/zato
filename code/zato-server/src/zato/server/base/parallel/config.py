@@ -421,7 +421,7 @@ class ConfigLoader(object):
 
         for item in self.config['http_soap']: # type: dict
             # Do not try to set up rate limiting if we know there is no configuration for it available
-            if 'is_rate_limit_active':
+            if 'is_rate_limit_active' in item:
                 self.set_up_object_rate_limiting(_http_soap, item['name'], config=item)
 
 # ################################################################################################################################

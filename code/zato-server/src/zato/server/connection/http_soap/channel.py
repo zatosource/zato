@@ -81,6 +81,11 @@ _status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO
 
 # ################################################################################################################################
 
+# Definitions of these security types may be linked to SSO users and their rate limiting definitions
+_sec_def_sso_rate_limit = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
+
+# ################################################################################################################################
+
 status_response = {}
 for code, response in HTTP_RESPONSES.items():
     status_response[code] = '{} {}'.format(code, response)
@@ -197,6 +202,9 @@ class RequestDispatcher(object):
         self.default_error_message = default_error_message
         self.http_methods_allowed = http_methods_allowed
 
+        # To reduce the number of attribute lookups
+        self._sso_api_user = self.server.sso_api.user if self.server.sso_api else None
+
 # ################################################################################################################################
 
     def wrap_error_message(self, cid, url_type, msg):
@@ -227,8 +235,9 @@ class RequestDispatcher(object):
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
-        _accept_any_internal=accept_any_internal, _rate_limit_type=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
-        _stack_format=stack_format, _exc_sep='*' * 80):
+        _accept_any_internal=accept_any_internal, _rate_limit_type_http=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
+        _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format,
+        _exc_sep='*' * 80, _sec_def_sso_rate_limit=_sec_def_sso_rate_limit, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -307,7 +316,49 @@ class RequestDispatcher(object):
                 # denying in this manner access to genuine users.
                 if channel_item.get('is_rate_limit_active'):
                     self.server.rate_limiting.check_limit(
-                        cid, _rate_limit_type, channel_item['name'], wsgi_environ['zato.http.remote_addr'])
+                        cid, _rate_limit_type_http, channel_item['name'], wsgi_environ['zato.http.remote_addr'])
+
+                # Security definition-based checks went fine but it is still possible
+                # that this sec_def is linked to an SSO user whose rate limits we need to check.
+
+                # Not all sec_def types may have associated SSO users
+                if sec.sec_def != ZATO_NONE:
+                    if sec.sec_def.sec_type in _sec_def_sso_rate_limit:
+
+                        # Do we have an SSO user related to this sec_def?
+                        auth_id_link_map = self._sso_api_user.auth_id_link_map['zato.{}'.format(
+                            sec.sec_def.sec_type)] # type: dict
+
+                        sso_user_id = auth_id_link_map.get(sec.sec_def.id)
+
+                        if sso_user_id:
+
+                            # At this point we have an SSO user and we know that credentials
+                            # from the request were valid so we may check rate-limiting
+                            # first and then create or extend the user's associated SSO session.
+                            # In other words, we can already act as though the user was already
+                            # logged in because in fact he or she is logged in, just using
+                            # a security definition from sec_def.
+
+                            # Check rate-limiting
+                            self.server.rate_limiting.check_limit(cid, _rate_limit_type_sso_user,
+                                sso_user_id, wsgi_environ['zato.http.remote_addr'], False)
+
+                            # Rate-limiting went fine, we can now create or extend
+                            # the person's SSO session linked to credentials from the request.
+
+                            current_app = wsgi_environ.get(self.server.sso_config.apps.http_header) or \
+                                self.server.sso_config.apps.default
+
+                            self.server.sso_api.user.session.on_external_auth_succeeded(
+                                cid,
+                                sec.sec_def,
+                                sso_user_id,
+                                sec.sec_def if sec.sec_def.sec_type == _basic_auth else wsgi_environ['HTTP_AUTHORIZATION'],
+                                current_app,
+                                wsgi_environ['zato.http.remote_addr'].decode('utf8'),
+                                wsgi_environ.get('HTTP_USER_AGENT'),
+                            )
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
@@ -387,7 +438,7 @@ class RequestDispatcher(object):
                 # things to be on DEBUG whereas for others ERROR will make most sense
                 # in given circumstances.
                 logger.error(
-                    'Caught an exception, cid:`%s`, status_code:`%s`, e:\n%s\n`%s`', cid, status_code, _exc_sep, _exc)
+                    'Caught an exception, cid:`%s`, status_code:`%s`, `%s`', cid, status_code, _exc)
 
                 try:
                     error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'])

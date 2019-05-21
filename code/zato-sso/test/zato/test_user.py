@@ -28,7 +28,9 @@ class UserCreateTestCase(BaseTest):
 
         response = self.post('/zato/sso/user', {
             'ust': self.ctx.super_user_ust,
-            'username': username
+            'username': username,
+            'is_rate_limit_active': True,
+            'rate_limit_def': '*=1/d',
         })
 
         self.assertTrue(response.is_approval_needed)

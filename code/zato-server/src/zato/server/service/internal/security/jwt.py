@@ -220,8 +220,8 @@ class LogIn(Service):
         output_optional = 'token',
 
     def handle(self):
-        token = JWTBackend(self.kvdb, self.odb, self.server.fs_server_config.misc.jwt_secret).authenticate(
-            self.request.input.username, self.request.input.password)
+        token = JWTBackend(self.kvdb, self.odb, self.server.decrypt, self.server.jwt_secret).authenticate(
+            self.request.input.username, self.server.decrypt(self.request.input.password))
 
         if token:
             self.response.payload = {'token': token}
@@ -247,7 +247,7 @@ class LogOut(AdminService):
             self.response.payload.result = 'No JWT found'
 
         try:
-            JWTBackend(self.kvdb, self.odb, self.server.fs_server_config.misc.jwt_secret).delete(token)
+            JWTBackend(self.kvdb, self.odb, self.server.jwt_secret).delete(token)
         except Exception:
             self.logger.warn(format_exc())
             self.response.status_code = BAD_REQUEST

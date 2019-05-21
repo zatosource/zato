@@ -37,7 +37,7 @@ from paste.util.converters import asbool
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common import DATA_FORMAT, default_internal_modules, KVDB, SECRETS, SERVER_STARTUP, SERVER_UP_STATUS, \
+from zato.common import DATA_FORMAT, default_internal_modules, KVDB, RATE_LIMIT, SECRETS, SERVER_STARTUP, SERVER_UP_STATUS, \
      ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
@@ -112,15 +112,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.tls_dir = None         # type: unicode
         self.static_dir = None      # type: unicode
         self.json_schema_dir = None # type: unicode
-        self.hot_deploy_config = None
+        self.hot_deploy_config = None # type: Bunch
         self.pickup = None
-        self.fs_server_config = None
-        self.fs_sql_config = None
-        self.pickup_config = None
-        self.logging_config = None
-        self.logging_conf_path = None
-        self.sio_config = None
-        self.sso_config = None
+        self.fs_server_config = None # type: Bunch
+        self.fs_sql_config = None # type: Bunch
+        self.pickup_config = None # type: Bunch
+        self.logging_config = None # type: Bunch
+        self.logging_conf_path = None # type: unicode
+        self.sio_config = None # type: Bunch
+        self.sso_config = None # type: Bunch
         self.connector_server_grace_time = None
         self.id = None # type: int
         self.name = None # type: unicode
@@ -165,6 +165,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.startup_callable_tool = None
         self.default_internal_pubsub_endpoint_id = None
         self.rate_limiting = None # type: RateLimiting
+        self.jwt_secret = None # type: bytes
         self._hash_secret_method = None
         self._hash_secret_rounds = None
         self._hash_secret_salt_size = None
@@ -527,8 +528,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.rate_limiting.global_lock_func = self.zato_lock_manager
         self.rate_limiting.sql_session_func = self.odb.session
 
-        # Set up rate limiting other than services. the latter are configured in ServiceStore
+        # Set up rate limiting for ConfigDict-based objects, which includes everything except for:
+        # * services  - configured in ServiceStore
+        # * SSO       - configured in the next call
         self.set_up_rate_limiting()
+
+        # Rate limiting for SSO
+        self.set_up_sso_rate_limiting()
 
         # Deploys services
         is_first, locally_deployed = self._after_init_common(server)
@@ -651,6 +657,24 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def set_up_sso_rate_limiting(self):
+        for item in self.odb.get_sso_user_rate_limiting_info():
+            self._create_sso_user_rate_limiting(item.user_id, True, item.rate_limit_def)
+
+# ################################################################################################################################
+
+    def _create_sso_user_rate_limiting(self, user_id, is_active, rate_limit_def, _type=RATE_LIMIT.OBJECT_TYPE.SSO_USER):
+        self.rate_limiting.create({
+            'id': user_id,
+            'type_': _type,
+            'name': user_id,
+            'is_active': is_active,
+            'parent_type': None,
+            'parent_name': None,
+        }, rate_limit_def, True)
+
+# ################################################################################################################################
+
     def _get_sso_session(self):
         """ Returns a session function suitable for SSO operations.
         """
@@ -673,7 +697,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def configure_sso(self):
         if self.is_sso_enabled:
-            self.sso_api.set_odb_session_func(self._get_sso_session, self.odb.is_sqlite)
+            self.sso_api.post_configure(self._get_sso_session, self.odb.is_sqlite)
 
 # ################################################################################################################################
 

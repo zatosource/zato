@@ -9,11 +9,39 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # SQLAlchemy
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, Sequence, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, false as sa_false, ForeignKey, Index, Integer, Sequence, String, Text, \
+     UniqueConstraint
 from sqlalchemy.ext.declarative import declared_attr
 
 # Zato
 from zato.common.odb.model.base import Base, _JSON
+
+# ################################################################################################################################
+
+class _SSOGroup(Base):
+    __tablename__ = 'zato_sso_group'
+    __table_args__ = (
+        UniqueConstraint('name', 'source', name='zato_g_name_uq'),
+        UniqueConstraint('group_id', name='zato_g_gid_uq'),
+    {})
+
+    # Not exposed publicly, used only for SQL joins
+    id = Column(Integer, Sequence('zato_sso_group_id_seq'), primary_key=True)
+
+    is_active = Column(Boolean(), nullable=False) # Currently unused and always set to True
+    is_internal = Column(Boolean(), nullable=False, default=False)
+
+    # Publicly visible
+    group_id = Column(String(191), nullable=False)
+
+    name = Column(String(191), nullable=False)
+    source = Column(String(191), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    # Groups may be optionally nested
+    parent_id = Column(Integer, ForeignKey('zato_sso_group.id', ondelete='CASCADE'), nullable=True)
 
 # ################################################################################################################################
 
@@ -83,8 +111,38 @@ class _SSOUser(Base):
     middle_name_upper = Column(String(191), nullable=True)
     last_name_upper = Column(String(191), nullable=True)
 
+    # Rate limiting
+    is_rate_limit_active = Column(Boolean(), nullable=True)
+    rate_limit_type = Column(String(40), nullable=True)
+    rate_limit_def = Column(Text(), nullable=True)
+    rate_limit_check_parent_def = Column(Boolean(), nullable=True)
+
+    # TOTP
+    is_totp_enabled = Column(Boolean(), nullable=False, server_default=sa_false())
+    totp_key = Column(Text(), nullable=True)
+    totp_label = Column(Text(), nullable=True)
+
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
+
+# ################################################################################################################################
+
+class _SSOUserGroup(Base):
+    """ An N:N mapping of users to their groups.
+    """
+    __tablename__ = 'zato_sso_user_group'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'group_id', name='zato_ug_id_uq'),
+    {})
+
+    # Not exposed publicly, used only to have a natural FK
+    id = Column(Integer, Sequence('zato_sso_ug_seq'), primary_key=True)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    user_id = Column(Integer, ForeignKey('zato_sso_user.id', ondelete='CASCADE'), nullable=False)
+    group_id = Column(Integer, ForeignKey('zato_sso_group.id', ondelete='CASCADE'), nullable=False)
 
 # ################################################################################################################################
 
@@ -92,6 +150,7 @@ class _SSOSession(Base):
     __tablename__ = 'zato_sso_session'
     __table_args__ = (
         Index('zato_sso_sust_idx', 'ust', unique=True),
+        Index('zato_sso_extsi_idx', 'ext_session_id', unique=False),
     {})
 
     # Not exposed publicly, used only for SQL joins
@@ -108,6 +167,11 @@ class _SSOSession(Base):
 
     auth_type = Column(Text(), nullable=False)
     auth_principal = Column(Text(), nullable=False)
+
+    # ID of a session external to SSO that is linked to this one,
+    # where external may still mean JWT or Basic Auth,
+    # but it is not a built-in SSO one.
+    ext_session_id = Column(Text(), nullable=True)
 
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)

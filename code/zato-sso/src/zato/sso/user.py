@@ -16,20 +16,26 @@ from logging import getLogger
 from traceback import format_exc
 from uuid import uuid4
 
+# gevent
+from gevent.lock import RLock
+
 # SQLAlchemy
-from sqlalchemy import update as sql_update
+from sqlalchemy import and_ as sql_and, update as sql_update
+from sqlalchemy.exc import IntegrityError
 
 # Python 2/3 compatibility
 from past.builtins import basestring, unicode
 
 # Zato
+from zato.common import RATE_LIMIT, SEC_DEF_TYPE, TOTP
 from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
-from zato.common.odb.model import SSOUser as UserModel
+from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOUser as UserModel
 from zato.common.util.json_ import dumps
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
 from zato.sso.attr import AttrAPI
-from zato.sso.odb.query import get_sign_up_status_by_token, get_user_by_id, get_user_by_username, get_user_by_ust
+from zato.sso.odb.query import get_linked_auth_list, get_sign_up_status_by_token, get_user_by_id, get_user_by_username, \
+     get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.user_search import SSOSearch
 from zato.sso.util import check_credentials, check_remote_app_exists, make_data_secret, make_password_secret, new_confirm_token, \
@@ -37,7 +43,28 @@ from zato.sso.util import check_credentials, check_remote_app_exists, make_data_
 
 # ################################################################################################################################
 
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # stdlib
+    from typing import Callable
+
+    # Zato
+    from zato.server.base.parallel import ParallelServer
+
+    # For pyflakes
+    Callable = Callable
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+
 logger = getLogger('zato')
+
+# ################################################################################################################################
+
+linked_auth_supported = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
 
 # ################################################################################################################################
 
@@ -47,6 +74,10 @@ sso_search.set_up()
 # ################################################################################################################################
 
 _utcnow = datetime.utcnow
+
+LinkedAuthTable = LinkedAuth.__table__
+LinkedAuthTableDelete = LinkedAuthTable.delete
+
 UserModelTable = UserModel.__table__
 UserModelTableDelete = UserModelTable.delete
 UserModelTableUpdate = UserModelTable.update
@@ -82,6 +113,10 @@ super_user_attrs = {
     'password_last_set': None,
     'sign_up_status': None,
     'sign_up_time': None,
+    'is_rate_limit_active': None,
+    'rate_limit_def': None,
+    'rate_limit_type': None,
+    'rate_limit_check_parent_def': None,
 }
 
 # This can be only changed but never read
@@ -201,6 +236,7 @@ class UserAPI(object):
     """
     def __init__(self, server, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func,
             new_user_id_func):
+        # type: (ParallelServer, dict, Callable, Callable, Callable, Callable, Callable, Callable)
         self.server = server
         self.sso_conf = sso_conf
         self.odb_session_func = odb_session_func
@@ -213,16 +249,35 @@ class UserAPI(object):
         self.encrypt_email = self.sso_conf.main.encrypt_email
         self.encrypt_password = self.sso_conf.main.encrypt_password
         self.password_expiry = self.sso_conf.password.expiry
+        self.lock = RLock()
+
+        # In-RAM maps of auth IDs to SSO user IDs
+        self.auth_id_link_map = {
+            'zato.{}'.format(SEC_DEF_TYPE.BASIC_AUTH): {},
+            'zato.{}'.format(SEC_DEF_TYPE.JWT): {}
+        }
 
         # For convenience, sessions are accessible through user API.
         self.session = SessionAPI(self.sso_conf, self.encrypt_func, self.decrypt_func, self.hash_func, self.verify_hash_func)
 
 # ################################################################################################################################
 
-    def set_odb_session_func(self, func, is_sqlite):
+    def post_configure(self, func, is_sqlite):
         self.odb_session_func = func
         self.is_sqlite = is_sqlite
-        self.session.set_odb_session_func(func, is_sqlite)
+        self.session.post_configure(func, is_sqlite)
+
+        # Maps all auth types that SSO users can be linked with to their server definitions
+        self.auth_link_map = {
+            SEC_DEF_TYPE.BASIC_AUTH: self.server.worker_store.request_dispatcher.url_data.basic_auth_config,
+            SEC_DEF_TYPE.JWT: self.server.worker_store.request_dispatcher.url_data.jwt_config,
+        }
+
+        # Load in initial mappings of SSO users and concrete security definitions
+        with closing(self.odb_session_func()) as session:
+            linked_auth_list = get_linked_auth_list(session)
+            for item in linked_auth_list: # type: LinkedAuth
+                self._add_user_id_to_linked_auth(item.auth_type, item.auth_id, item.user_id)
 
 # ################################################################################################################################
 
@@ -317,6 +372,11 @@ class UserAPI(object):
         user_model.middle_name = ctx.data['middle_name']
         user_model.last_name = ctx.data['last_name']
 
+        user_model.is_rate_limit_active = ctx.data.get('is_rate_limit_active', False)
+        user_model.rate_limit_type = ctx.data.get('rate_limit_type', RATE_LIMIT.TYPE.EXACT.id)
+        user_model.rate_limit_def = ctx.data.get('rate_limit_def')
+        user_model.rate_limit_check_parent_def = ctx.data.get('rate_limit_check_parent_def', False)
+
         # Uppercase any and all names for indexing purposes.
         for attr_name, attr_name_upper in _name_attrs.items():
             value = ctx.data[attr_name]
@@ -406,7 +466,9 @@ class UserAPI(object):
             session.add(user)
             session.commit()
 
-        return user
+            user_id = user.user_id
+
+        return user_id
 
 # ################################################################################################################################
 
@@ -630,13 +692,15 @@ class UserAPI(object):
                 user = get_user_by_username(session, username, needs_approved=False)
                 where = UserModelTable.c.username==username
 
+            user_id = user.user_id
+
             # Make sure the user exists at all
             if not user:
                 raise ValidationError(status_code.common.invalid_operation, False)
 
             # Users cannot delete themselves
             if not skip_sec:
-                if user.user_id == current_session.user_id:
+                if user_id == current_session.user_id:
                     raise ValidationError(status_code.common.invalid_operation, False)
 
             rows_matched = session.execute(
@@ -648,6 +712,18 @@ class UserAPI(object):
             if rows_matched != 1:
                 msg = 'Expected for rows_matched to be 1 instead of %d, user_id:`%s`, username:`%s`'
                 logger.warn(msg, rows_matched, user_id, username)
+
+            # After deleting the user from ODB, we can remove a reference to this account
+            # from the map of linked accounts.
+            for auth_id_link_map in self.auth_id_link_map.values(): # type: dict
+                to_delete = set()
+
+                for auth_id, sso_user_id in auth_id_link_map.items():
+                    if user_id == sso_user_id:
+                        to_delete.add(user_id)
+
+                for user_id in to_delete:
+                    del auth_id_link_map[user_id]
 
 # ################################################################################################################################
 
@@ -901,7 +977,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def set_password(self, cid, user_id, password, must_change, password_expiry, current_app, remote_addr, _utcnow=_utcnow):
+    def set_password(self, cid, user_id, password, must_change, password_expiry, current_app, remote_addr):
         """ Sets a new password for user.
         """
         # PII audit comes first
@@ -910,6 +986,52 @@ class UserAPI(object):
 
         set_password(self.odb_session_func, self.encrypt_func, self.hash_func, self.sso_conf, user_id, password,
             must_change, password_expiry)
+
+# ################################################################################################################################
+
+    def reset_totp_key(self, cid, ust, user_id, key, key_label, current_app, remote_addr, skip_sec=False):
+        """ Saves a new TOTP key for user, either the one provided on input or a newly generates one.
+        In the latter case, it is also returned on output.
+        """
+        # PII audit comes first
+        audit_pii.info(cid, 'user.reset_totp_key', target_user=user_id,
+            extra={
+                'current_app': current_app,
+                'remote_addr': remote_addr,
+                'skip_sec': skip_sec,
+                'user_id': user_id,
+            })
+
+        key = key or CryptoManager.generate_key()
+        key_label = key_label or TOTP.default_label
+
+        # Flag skip_sec will be True if we are being called from CLI,
+        # in which case we are allowed to set the key for any user.
+        # Otherwise, regular users may change their own keys only
+        # while super-users may change any other user's key.
+
+        if skip_sec:
+            _user_id = user_id
+        else:
+            zzz
+
+        # Data to be saved comprises the TOTP key in an encrypted form
+        # along with its label, alco encrypted.
+        data = {
+            'totp_key': self.encrypt_func(key.encode('utf8')),
+            'totp_label': self.encrypt_func(key_label.encode('utf8')),
+        }
+
+        # Everything is ready - we can save the data now
+        with closing(self.odb_session_func()) as session:
+            session.execute(
+                sql_update(UserModelTable).\
+                values(data).\
+                where(UserModelTable.c.user_id==_user_id)
+            )
+            session.commit()
+
+        return key
 
 # ################################################################################################################################
 
@@ -1010,6 +1132,171 @@ class UserAPI(object):
         audit_pii.info(cid, 'user.reject_user', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         return self._change_approval_status(cid, user_id, const.approval_status.rejected, current_ust, current_app, remote_addr)
+
+# ################################################################################################################################
+
+    def get_linked_auth_list(self, cid, ust, user_id, current_app, remote_addr):
+        """ Returns a list of linked auth accounts for input user, either current or another one.
+        """
+        # PII audit comes first
+        audit_pii.info(cid, 'user.get_linked_auth_list', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
+        # Get current user, which may be possibly the one that we will return accounts for
+        user = self.get_current_user(cid, ust, current_app, remote_addr)
+
+        # We are to return linked accounts for another user ..
+        if user_id:
+
+            # .. in which case this will raise an exception if current caller is not a super-user
+            self._require_super_user(cid, ust, current_app, remote_addr)
+
+        else:
+            # No user_id given on input = we need to get accounts for current one
+            user_id = user.user_id
+
+        try:
+            with closing(self.odb_session_func()) as session:
+                return get_linked_auth_list(session, user_id)
+        except Exception:
+            logger.warn('Could not return linked accounts, e:`%s`', format_exc())
+
+# ################################################################################################################################
+
+    def _check_linked_auth_call(self, call_name, cid, ust, user_id, auth_type, auth_id, current_app, remote_addr,
+        _linked_auth_supported=linked_auth_supported):
+
+        # PII audit comes first
+        audit_pii.info(cid, call_name, extra={'current_app':current_app, 'remote_addr':remote_addr})
+
+        # Only super-users may link auth accounts
+        self._require_super_user(cid, ust, current_app, remote_addr)
+
+        if auth_type not in self.auth_link_map:
+            raise ValueError('Invalid auth_type:`{}`'.format(auth_type))
+
+        for item in self.auth_link_map[auth_type].values(): # type: dict
+            config = item['config']
+            if config['id'] == auth_id:
+                break
+        else:
+            raise ValueError('Invalid auth_id:`{}`'.format(auth_id))
+
+# ################################################################################################################################
+
+    def create_linked_auth(self, cid, ust, user_id, auth_type, auth_id, is_active, current_app, remote_addr,
+        _linked_auth_supported=linked_auth_supported):
+        """ Creates a link between input user and a security account.
+        """
+        # Validate input
+        self._check_linked_auth_call('user.create_linked_auth', cid, ust, user_id, auth_type, auth_id, current_app, remote_addr)
+
+        # We have validated everything and a link can be saved to the database now
+        now = datetime.utcnow()
+        auth_type = 'zato.{}'.format(auth_type)
+
+        with closing(self.odb_session_func()) as session:
+
+            instance = LinkedAuth()
+            instance.auth_id = auth_id
+            instance.auth_type = auth_type
+            instance.creation_time = now
+            instance.last_modified = now
+            instance.is_internal = False
+            instance.is_active = is_active
+            instance.user_id = user_id
+
+            # Reserved for future use
+            instance.has_ext_principal = False
+            instance.auth_principal = 'reserved'
+            instance.auth_source = 'reserved'
+
+            session.add(instance)
+
+            try:
+                session.commit()
+            except IntegrityError:
+                logger.warn('Could not add auth link e:`%s`', format_exc())
+                raise ValueError('Auth link could not be added')
+            else:
+                return instance.user_id
+
+# ################################################################################################################################
+
+    def delete_linked_auth(self, cid, ust, user_id, auth_type, auth_id, current_app, remote_addr,
+        _linked_auth_supported=linked_auth_supported):
+        """ Creates a link between input user and a security account.
+        """
+        # Validate input
+        self._check_linked_auth_call('user.delete_linked_auth', cid, ust, user_id, auth_type, auth_id, current_app, remote_addr)
+
+        # All internal auth types have this prefix
+        auth_type = 'zato.{}'.format(auth_type)
+
+        with closing(self.odb_session_func()) as session:
+
+            # First, confirm that such a mapping exists at all ..
+            existing = session.query(LinkedAuth).\
+                filter(LinkedAuth.auth_type==auth_type).\
+                filter(LinkedAuth.auth_id==auth_id).\
+                filter(LinkedAuth.user_id==user_id).\
+                first()
+
+            if not existing:
+                raise ValueError('No such auth link found')
+
+            # .. delete it now, knowing that it does ..
+            session.execute(LinkedAuthTableDelete().\
+                where(sql_and(
+                    LinkedAuthTable.c.auth_type==auth_type,
+                    LinkedAuthTable.c.auth_id==auth_id,
+                    LinkedAuthTable.c.user_id==user_id,
+                ))
+            )
+            session.commit()
+
+# ################################################################################################################################
+
+    def _add_user_id_to_linked_auth(self, auth_type, auth_id, user_id):
+        self.auth_id_link_map[auth_type].setdefault(auth_id, user_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SSO_LINK_AUTH_CREATE(self, auth_type, auth_id, user_id):
+        with self.lock:
+            self._add_user_id_to_linked_auth(auth_type, auth_id, user_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SSO_LINK_AUTH_DELETE(self, auth_type, auth_id, user_id):
+        with self.lock:
+            auth_id_link_map = self.auth_id_link_map[auth_type]
+            try:
+                del auth_id_link_map[auth_id]
+            except KeyError:
+                # It is fine, the user had not linked accounts
+                pass
+
+# ################################################################################################################################
+
+    def _on_broker_msg_sec_delete(self, sec_type, auth_id):
+        auth_id_link_map = self.auth_id_link_map['zato.{}'.format(sec_type)]
+        try:
+            del auth_id_link_map[auth_id]
+        except KeyError:
+            # It is fine, the account had no associated SSO users
+            pass
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, auth_id):
+        with self.lock:
+            self._on_broker_msg_sec_delete(SEC_DEF_TYPE.BASIC_AUTH, auth_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_JWT_DELETE(self, auth_id):
+        with self.lock:
+            self._on_broker_msg_sec_delete(SEC_DEF_TYPE.JWT, auth_id)
 
 # ################################################################################################################################
 

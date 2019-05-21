@@ -17,7 +17,7 @@ from sqlalchemy import or_
 
 # Zato
 from zato.common import GENERIC
-from zato.common.odb.model import SSOSession, SSOUser
+from zato.common.odb.model import SSOLinkedAuth, SSOSession, SSOUser
 from zato.common.util.sql import elems_with_opaque
 from zato.sso import const
 
@@ -39,6 +39,16 @@ _session_list_columns = [elem for elem in SSOSession.__table__.c if elem.name no
 _session_columns_with_user = _session_columns + _user_basic_columns
 
 _approved = const.approval_status.approved
+
+# ################################################################################################################################
+
+def _session_with_opaque(session, _opaque_attr=GENERIC.ATTR_NAME):
+    if session:
+        opaque = getattr(session, GENERIC.ATTR_NAME, None)
+        if opaque:
+            opaque = loads(opaque)
+            setattr(session, _opaque_attr, opaque)
+    return session
 
 # ################################################################################################################################
 
@@ -79,11 +89,21 @@ def get_user_by_username(session, username, needs_approved=True, _approved=_appr
 
 # ################################################################################################################################
 
-def _get_session(session, now , _columns=_session_columns_with_user, _approved=_approved):
+def _get_session(session, now, _columns=_session_columns_with_user, _approved=_approved):
     return _get_model(session, _columns).\
         filter(SSOSession.user_id==SSOUser.id).\
         filter(SSOUser.approval_status==_approved).\
         filter(SSOSession.expiration_time > now)
+
+# ################################################################################################################################
+
+def get_session_by_ext_id(session, ext_session_id, now):
+    # type: (object, object, object) -> SSOSession
+    session = _get_session(session, now).\
+        filter(SSOSession.ext_session_id==ext_session_id).\
+        first()
+
+    return _session_with_opaque(session)
 
 # ################################################################################################################################
 
@@ -100,16 +120,11 @@ def get_session_list_by_user_id(session, user_id, now, _columns=_session_list_co
 
 # ################################################################################################################################
 
-def get_session_by_ust(session, ust, now, _opaque_attr=GENERIC.ATTR_NAME):
+def get_session_by_ust(session, ust, now):
     session = _get_session_by_ust(session, ust, now).\
         first()
 
-    if session:
-        opaque = getattr(session, GENERIC.ATTR_NAME, None)
-        if opaque:
-            opaque = loads(opaque)
-            setattr(session, _opaque_attr, opaque)
-        return session
+    return _session_with_opaque(session)
 
 get_user_by_ust = get_session_by_ust
 
@@ -126,5 +141,35 @@ def get_sign_up_status_by_token(session, confirm_token):
     return session.query(SSOUser.sign_up_status).\
         filter(SSOUser.sign_up_confirm_token==confirm_token).\
         first()
+
+# ################################################################################################################################
+
+def get_linked_auth_list(session, user_id=None):
+    q = session.query(
+        SSOLinkedAuth.user_id,
+        SSOLinkedAuth.is_active,
+        SSOLinkedAuth.is_internal,
+        SSOLinkedAuth.creation_time,
+        SSOLinkedAuth.has_ext_principal,
+        SSOLinkedAuth.auth_type,
+        SSOLinkedAuth.auth_id,
+        SSOLinkedAuth.auth_principal,
+        SSOLinkedAuth.auth_source,
+        )
+
+    if user_id:
+        q = q.filter(SSOLinkedAuth.user_id==user_id)
+
+    return q.all()
+
+# ################################################################################################################################
+
+def get_rate_limiting_info(session):
+    return session.query(
+        SSOUser.user_id,
+        SSOUser.rate_limit_def
+        ).\
+        filter(SSOUser.is_rate_limit_active==True).\
+        all()
 
 # ################################################################################################################################

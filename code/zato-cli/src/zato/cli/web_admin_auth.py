@@ -14,16 +14,14 @@ import os
 import sys
 from traceback import format_exc
 
-# PyOTP
-import pyotp
-
 # Python 2/3 compatibility
 from past.builtins import unicode
 
 # Zato
 from zato.admin.web.util import set_user_profile_totp_key
 from zato.admin.zato_settings import update_globals
-from zato.cli import ManageCommand
+from zato.cli import common_totp_opts, ManageCommand
+from zato.cli.util import get_totp_info_from_args
 from zato.common.crypto import WebAdminCryptoManager
 
 # ################################################################################################################################
@@ -162,30 +160,19 @@ class UpdatePassword(_WebAdminAuthCommand):
 # ################################################################################################################################
 
 class ResetTOTPKey(_WebAdminAuthCommand):
-    """ Resets a user's TOTP secret key and returns it.
+    """ Resets a user's TOTP secret key. Returns the key on output unless it was given on input.
     """
-    opts = [
-        {'name': 'username', 'help': 'Username to reset the TOTP secret key of'},
-        {'name': '--key', 'help': 'Key to use'},
-        {'name': '--key-label', 'help': 'Label to apply to the key'},
-    ]
+    opts = common_totp_opts
 
     def before_execute(self, args):
         super(ResetTOTPKey, self).before_execute(args)
         self._prepare(args)
+        self.reset_logger(args, True)
 
     def execute(self, args):
 
-        # If there was a key given on input, we need to validate it,
-        # this report an erorr if the key cannot be used.
-        if args.key:
-            totp = pyotp.TOTP(args.key)
-            totp.now()
-
-            # If we are here, it means that the key was valid
-            key = args.key
-        else:
-            key = pyotp.random_base32()
+        # Extract or generate a new TOTP key and label
+        key, key_label = get_totp_info_from_args(args)
 
         from zato.admin.web.models import User
         from zato.admin.web.util import get_user_profile
@@ -199,10 +186,10 @@ class ResetTOTPKey(_WebAdminAuthCommand):
             return
 
         # Here we know we have the user and key for sure, now we need to get the person's profile
-        user_profile = get_user_profile(user)
+        user_profile = get_user_profile(user, False)
 
         # Everything is ready, we can reset the key ..
-        opaque_attrs = set_user_profile_totp_key(user_profile, zato_secret_key, key, args.key_label)
+        opaque_attrs = set_user_profile_totp_key(user_profile, zato_secret_key, key, key_label)
 
         # .. and save the modified profile.
         user_profile.opaque1 = json.dumps(opaque_attrs)

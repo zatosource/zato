@@ -295,7 +295,8 @@ class URLData(CyURLData, OAuthDataStore):
                 return False
 
         token = authorization.split('Bearer ', 1)[1]
-        result = JWT(self.kvdb, self.odb, self.jwt_secret).validate(sec_def.username, token.encode('utf8'))
+        result = JWT(self.kvdb, self.odb, self.worker.server.decrypt, self.jwt_secret).validate(
+            sec_def.username, token.encode('utf8'))
 
         if not result.valid:
             if enforce_auth:
@@ -835,6 +836,9 @@ class URLData(CyURLData, OAuthDataStore):
             del self.basic_auth_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH, True)
 
+            # If this account was linked to an SSO user, delete that link
+            self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.id)
+
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
@@ -909,6 +913,9 @@ class URLData(CyURLData, OAuthDataStore):
             self._delete_channel_data('jwt', msg.name)
             del self.jwt_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.JWT, True)
+
+            # If this account was linked to an SSO user, delete that link
+            self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.id)
 
     def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of a JWT security definition.
