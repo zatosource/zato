@@ -1031,6 +1031,8 @@ class UserAPI(object):
             )
             session.commit()
 
+        return key
+
 # ################################################################################################################################
 
     def change_password(self, cid, data, current_ust, current_app, remote_addr, _no_user_id='no-user-id'.format(uuid4().hex)):
