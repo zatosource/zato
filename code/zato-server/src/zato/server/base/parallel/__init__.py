@@ -165,6 +165,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.startup_callable_tool = None
         self.default_internal_pubsub_endpoint_id = None
         self.rate_limiting = None # type: RateLimiting
+        self.jwt_secret = None # type: bytes
         self._hash_secret_method = None
         self._hash_secret_rounds = None
         self._hash_secret_salt_size = None

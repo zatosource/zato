@@ -21,6 +21,7 @@ SEC_DEF_TYPE = SEC_DEF_TYPE
 # ################################################################################################################################
 
 basic_auth_id = 14
+jwt_auth_id = 15
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,11 +38,12 @@ class LinkedAuthTestCase(BaseTest):
             'user_id': 'zusr20d6006gc18n1t0n0qwbs3wrk2'
         })
 
+
         self.post('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
-            'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
-            'auth_id': basic_auth_id,
+            'auth_type': SEC_DEF_TYPE.JWT,
+            'auth_id': jwt_auth_id,
             'is_active': True,
         })
 
