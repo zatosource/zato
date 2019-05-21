@@ -342,6 +342,15 @@ def get_parser():
     add_opts(sso_change_user_password, sso_mod.ChangeUserPassword.opts)
 
     #
+    # reset-totp-key (sso)
+    #
+    sso_reset_totp_key_password = sso_subs.add_parser(
+        'reset-totp-key', description=sso_mod.ResetTOTPKey.__doc__, parents=[base_parser])
+    sso_reset_totp_key_password.add_argument('path', help='Path to a Zato server')
+    sso_reset_totp_key_password.set_defaults(command='sso_reset_totp_key')
+    add_opts(sso_reset_totp_key_password, sso_mod.ResetTOTPKey.opts)
+
+    #
     # reset-user-password
     #
     sso_reset_user_password = sso_subs.add_parser(
@@ -351,7 +360,7 @@ def get_parser():
     add_opts(sso_reset_user_password, sso_mod.ResetUserPassword.opts)
 
     #
-    # reset-user-password
+    # create-odb
     #
     sso_create_odb = sso_subs.add_parser(
         'create-odb', description=sso_mod.CreateODB.__doc__, parents=[base_parser])

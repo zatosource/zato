@@ -9,7 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # SQLAlchemy
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, Sequence, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, false as sa_false, ForeignKey, Index, Integer, Sequence, String, Text, \
+     UniqueConstraint
 from sqlalchemy.ext.declarative import declared_attr
 
 # Zato
@@ -115,6 +116,11 @@ class _SSOUser(Base):
     rate_limit_type = Column(String(40), nullable=True)
     rate_limit_def = Column(Text(), nullable=True)
     rate_limit_check_parent_def = Column(Boolean(), nullable=True)
+
+    # TOTP
+    is_totp_enabled = Column(Boolean(), nullable=False, server_default=sa_false())
+    totp_key = Column(Text(), nullable=True)
+    totp_label = Column(Text(), nullable=True)
 
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)

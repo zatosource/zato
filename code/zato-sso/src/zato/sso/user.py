@@ -27,7 +27,7 @@ from sqlalchemy.exc import IntegrityError
 from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import RATE_LIMIT, SEC_DEF_TYPE
+from zato.common import RATE_LIMIT, SEC_DEF_TYPE, TOTP
 from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOUser as UserModel
@@ -977,7 +977,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def set_password(self, cid, user_id, password, must_change, password_expiry, current_app, remote_addr, _utcnow=_utcnow):
+    def set_password(self, cid, user_id, password, must_change, password_expiry, current_app, remote_addr):
         """ Sets a new password for user.
         """
         # PII audit comes first
@@ -986,6 +986,50 @@ class UserAPI(object):
 
         set_password(self.odb_session_func, self.encrypt_func, self.hash_func, self.sso_conf, user_id, password,
             must_change, password_expiry)
+
+# ################################################################################################################################
+
+    def reset_totp_key(self, cid, ust, user_id, key, key_label, current_app, remote_addr, skip_sec=False):
+        """ Saves a new TOTP key for user, either the one provided on input or a newly generates one.
+        In the latter case, it is also returned on output.
+        """
+        # PII audit comes first
+        audit_pii.info(cid, 'user.reset_totp_key', target_user=user_id,
+            extra={
+                'current_app': current_app,
+                'remote_addr': remote_addr,
+                'skip_sec': skip_sec,
+                'user_id': user_id,
+            })
+
+        key = key or CryptoManager.generate_key()
+        key_label = key_label or TOTP.default_label
+
+        # Flag skip_sec will be True if we are being called from CLI,
+        # in which case we are allowed to set the key for any user.
+        # Otherwise, regular users may change their own keys only
+        # while super-users may change any other user's key.
+
+        if skip_sec:
+            _user_id = user_id
+        else:
+            zzz
+
+        # Data to be saved comprises the TOTP key in an encrypted form
+        # along with its label, alco encrypted.
+        data = {
+            'totp_key': self.encrypt_func(key.encode('utf8')),
+            'totp_label': self.encrypt_func(key_label.encode('utf8')),
+        }
+
+        # Everything is ready - we can save the data now
+        with closing(self.odb_session_func()) as session:
+            session.execute(
+                sql_update(UserModelTable).\
+                values(data).\
+                where(UserModelTable.c.user_id==_user_id)
+            )
+            session.commit()
 
 # ################################################################################################################################
 
