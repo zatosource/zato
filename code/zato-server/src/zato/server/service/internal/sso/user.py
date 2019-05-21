@@ -251,6 +251,23 @@ class User(BaseRESTService):
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TOTP(BaseRESTService):
+    """ TOTP key management.
+    """
+    class SimpleIO(BaseSIO):
+        input_required = ('ust', 'current_app', 'new_password')
+        input_optional = AsIs('user_id'),
+        output_optional = BaseSIO.output_optional + ('totp_key',)
+
+    def _handle_sso_PATCH(self, ctx):
+        """ Resets a user's TOTP key.
+        """
+        self.response.payload.totp_key = self.sso.user.reset_totp_key(
+            self.cid, ctx.input.ust, ctx.input.user_id, None, None, ctx.input.current_app, ctx.input.current_app)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Password(BaseRESTService):
     """ User password management.
     """

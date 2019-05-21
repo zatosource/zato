@@ -21,6 +21,7 @@ from zato.common.crypto import CryptoManager
 from zato.common.odb.model.sso import _SSOAttr, _SSOSession, _SSOUser, Base as SSOModelBase
 from zato.common.util import asbool, get_config, current_host
 from zato.sso import ValidationError
+from zato.sso.api import UserAPI
 from zato.sso.util import new_user_id, normalize_password_reject_list
 
 # ################################################################################################################################
@@ -38,13 +39,11 @@ if typing.TYPE_CHECKING:
 
     # Zato
     from zato.common.odb.model import SSOUser
-    from zato.sso.api import UserAPI
 
     # For pyflakes
     Namespace = Namespace
     SSOUser = SSOUser
     unicode = unicode
-    UserAPI = UserAPI
 
 # ################################################################################################################################
 

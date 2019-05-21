@@ -174,7 +174,7 @@ class CryptoManager(object):
 
 # ################################################################################################################################
 
-    # staticmethod
+    @staticmethod
     def generate_password(bits=192):
         """ Generates a string strong enough to be a password (default: 192 bits)
         """
