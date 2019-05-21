@@ -23,14 +23,17 @@ from bunch import bunchify
 # configobj
 from configobj import ConfigObj
 
+# py-cpuinfo
+from cpuinfo import get_cpu_info
+
 # cryptography
 from cryptography.fernet import Fernet, InvalidToken
 
 # hashlib
 from passlib import hash as passlib_hash
 
-# py-cpuinfo
-from cpuinfo import get_cpu_info
+# PyOTP
+import pyotp
 
 # Python 2/3 compatibility
 from builtins import bytes
@@ -171,11 +174,17 @@ class CryptoManager(object):
 
 # ################################################################################################################################
 
-    @staticmethod
+    # staticmethod
     def generate_password(bits=192):
         """ Generates a string strong enough to be a password (default: 192 bits)
         """
         return CryptoManager.generate_secret(bits)
+
+# ################################################################################################################################
+
+    @staticmethod
+    def generate_totp_key():
+        return pyotp.random_base32()
 
 # ################################################################################################################################
 
