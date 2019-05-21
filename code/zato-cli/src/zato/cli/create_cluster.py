@@ -492,7 +492,16 @@ class Create(ZatoCommand):
             setattr(cluster, name, getattr(args, name))
         session.add(cluster)
 
-        admin_invoke_password = getattr(args, 'admin-invoke-password', new_password())
+        # admin.invoke user's password may be possibly in one of these attributes,
+        # but if it is now, generate a new one.
+
+        admin_invoke_password = getattr(args, 'admin-invoke-password', None)
+
+        if not admin_invoke_password:
+            admin_invoke_password = getattr(args, 'admin_invoke_password', None)
+
+        if not admin_invoke_password:
+            admin_invoke_password = new_password()
 
         admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke',
             admin_invoke_password, cluster)
