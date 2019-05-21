@@ -625,6 +625,8 @@ class UserAPI(object):
                     value = getattr(info, key)
                     if isinstance(value, datetime):
                         value = value.isoformat()
+                    elif key in ('totp_key', 'totp_label'):
+                        value = self.decrypt_func(value)
                     setattr(out, key, value)
 
                 if out.email:

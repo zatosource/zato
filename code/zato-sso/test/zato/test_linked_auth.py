@@ -30,10 +30,17 @@ class LinkedAuthTestCase(BaseTest):
 
     def test_create(self):
 
+        self.get('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'user_id': self.ctx.super_user_id
+        })
+
+        '''
         self.patch('/zato/sso/user/totp', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id
         })
+        '''
 
         '''
         self.get('/zzz', {}, expect_ok=False, auth=('zz', 'zz'))
