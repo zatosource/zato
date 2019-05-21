@@ -52,11 +52,13 @@ if typing.TYPE_CHECKING:
     from typing import Callable
 
     # Zato
+    from zato.common.odb.model import SSOSession
     from zato.server.base.parallel import ParallelServer
 
     # For pyflakes
     Callable = Callable
     ParallelServer = ParallelServer
+    SSOSession = SSOSession
 
 # ################################################################################################################################
 
@@ -582,6 +584,7 @@ class UserAPI(object):
         """ Returns current session info or raises an exception if it could not be found.
         Optionally, requires that a super-user be owner of current_ust.
         """
+        # type: (unicode, unicode, unicode, unicode, bool) -> SSOSession
         return self.session.get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user)
 
 # ################################################################################################################################
@@ -989,7 +992,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def reset_totp_key(self, cid, ust, user_id, key, key_label, current_app, remote_addr, skip_sec=False):
+    def reset_totp_key(self, cid, current_ust, user_id, key, key_label, current_app, remote_addr, skip_sec=False):
         """ Saves a new TOTP key for user, either the one provided on input or a newly generates one.
         In the latter case, it is also returned on output.
         """
@@ -1013,7 +1016,34 @@ class UserAPI(object):
         if skip_sec:
             _user_id = user_id
         else:
-            zzz
+
+            # Get current session by its UST ..
+            current_session = self._get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user=False)
+
+            # .. if user_id is given, reject the request if it does not belong to a super-user ..
+            if user_id:
+
+                # A non-super-user tries to reset TOTP key of another user
+                if not current_session.is_super_user:
+                    logger.warn('Current user `%s` is not a super-user, cannot reset TOTP key for user `%s`',
+                        current_session.user_id, user_id)
+                    raise ValidationError(status_code.common.invalid_input, False)
+
+                # This is good, it is a super-user resetting the TOTP key
+                else:
+
+                    # We need to confirm that such a user exists
+                    if not self.get_user_by_id(cid, user_id, current_ust, current_app, remote_addr):
+                        logger.warn('No such user `%s`', user_id)
+                        raise ValidationError(status_code.common.invalid_input, False)
+
+                    # Input user actually exists
+                    else:
+                        _user_id = user_id
+
+            # .. no user_id given on input, which means we reset the current user's TOTP key
+            else:
+                _user_id = current_session.user_id
 
         # Data to be saved comprises the TOTP key in an encrypted form
         # along with its label, alco encrypted.

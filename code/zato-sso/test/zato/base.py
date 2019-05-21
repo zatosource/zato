@@ -74,8 +74,8 @@ class BaseTest(TestCase):
     def setUp(self):
         try:
             # Try to create a super-user ..
-            sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
-                Config.super_user_password, '--verbose')
+            #sh.zato('sso', 'create-super-user', Config.server_location, Config.super_user_name, '--password',
+            #    Config.super_user_password, '--verbose')
             pass
         except Exception as e:
             # .. but ignore it if such a user already exists.
