@@ -625,8 +625,6 @@ class UserAPI(object):
                     value = getattr(info, key)
                     if isinstance(value, datetime):
                         value = value.isoformat()
-                    elif key in ('totp_key', 'totp_label'):
-                        value = self.decrypt_func(value)
                     setattr(out, key, value)
 
                 if out.email:
@@ -1007,7 +1005,7 @@ class UserAPI(object):
                 'user_id': user_id,
             })
 
-        key = key or CryptoManager.generate_key()
+        key = key or CryptoManager.generate_totp_key()
         key_label = key_label or TOTP.default_label
 
         # Flag skip_sec will be True if we are being called from CLI,
