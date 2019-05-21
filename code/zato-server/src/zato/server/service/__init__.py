@@ -1021,7 +1021,7 @@ class Service(object):
         context data.
         """
         service.server = server
-        service.broker_client = broker_client
+        service.broker_client = broker_client # type: BrokerClient
         service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request

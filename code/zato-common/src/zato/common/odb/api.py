@@ -43,6 +43,7 @@ from zato.common.util import current_host, get_component_name, get_engine_url, p
      parse_tls_channel_security_definition
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
+from zato.sso.odb.query import get_rate_limiting_info as get_sso_user_rate_limiting_info
 
 # ################################################################################################################################
 
@@ -1404,6 +1405,14 @@ class ODBManager(SessionWrapper):
         """ Returns a list of generic connections.
         """
         return query_generic.connection_list(self._session, cluster_id, needs_columns=needs_columns)
+
+# ################################################################################################################################
+
+    def get_sso_user_rate_limiting_info(self):
+        """ Returns a list of SSO users that have rate limiting enabled.
+        """
+        with closing(self.session()) as session:
+            return get_sso_user_rate_limiting_info(session)
 
 # ################################################################################################################################
 

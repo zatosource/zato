@@ -86,6 +86,12 @@ common_ca_create_opts = [
     {'name':'--common-name', 'help':'Common name (defaults to {default})'.format(default=default_common_name)},
 ]
 
+common_totp_opts = [
+    {'name': 'username', 'help': 'Username to reset the TOTP secret key of'},
+    {'name': '--key', 'help': 'Key to use'},
+    {'name': '--key-label', 'help': 'Label to apply to the key'},
+]
+
 kvdb_opts = [
     {'name':'kvdb_host', 'help':_opts_kvdb_host},
     {'name':'kvdb_port', 'help':_opts_kvdb_port},
@@ -358,6 +364,7 @@ def run_command(args):
         ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
         ('sso_delete_user', 'zato.cli.sso.DeleteUser'),
         ('sso_lock_user', 'zato.cli.sso.LockUser'),
+        ('sso_reset_totp_key', 'zato.cli.sso.ResetTOTPKey'),
         ('sso_reset_user_password', 'zato.cli.sso.ResetUserPassword'),
         ('sso_unlock_user', 'zato.cli.sso.UnlockUser'),
         ('start', 'zato.cli.start.Start'),
