@@ -124,7 +124,7 @@ class User(BaseRESTService):
             'middle_name', 'last_name', 'is_active', 'is_internal', 'is_super_user', 'is_approval_needed',
             'approval_status', 'approval_status_mod_time', 'approval_status_mod_by', 'is_locked', 'locked_time',
             'creation_ctx', 'locked_by', 'approv_rej_time', 'approv_rej_by', 'password_expiry', 'password_is_set',
-            'password_must_change', 'password_last_set', 'sign_up_status','sign_up_time')
+            'password_must_change', 'password_last_set', 'sign_up_status','sign_up_time', 'totp_key', 'totp_label')
 
         default_value = _invalid
 
