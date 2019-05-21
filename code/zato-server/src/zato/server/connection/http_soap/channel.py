@@ -350,7 +350,7 @@ class RequestDispatcher(object):
                             current_app = wsgi_environ.get(self.server.sso_config.apps.http_header) or \
                                 self.server.sso_config.apps.default
 
-                            result = self.server.sso_api.user.session.on_external_auth_succeeded(
+                            self.server.sso_api.user.session.on_external_auth_succeeded(
                                 cid,
                                 sec.sec_def,
                                 sso_user_id,
@@ -358,14 +358,6 @@ class RequestDispatcher(object):
                                 wsgi_environ['zato.http.remote_addr'].decode('utf8'),
                                 wsgi_environ.get('HTTP_USER_AGENT'),
                             )
-
-                            # This will an SSO SessionInfo object in case the user has been just logged in,
-                            # we need to return a UST in HTTP response headers in such as case. Otherwise,
-                            # if there is no result, it means that the session had already existed
-                            # and it has just been renewed.
-                            if result:
-                                headers = wsgi_environ['zato.http.response.headers']
-                                headers[self.server.sso_config.session.http_header] = result.ust
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
