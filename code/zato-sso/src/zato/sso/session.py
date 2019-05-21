@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from datetime import datetime, timedelta
 from json import dumps
+from hashlib import sha256
 from logging import getLogger
 from traceback import format_exc
 from uuid import uuid4
@@ -346,12 +347,13 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def on_external_auth_succeeded(self, cid, sec_def, user_id, current_app, remote_addr, user_agent,
-        _basic_auth=SEC_DEF_TYPE.BASIC_AUTH, _jwt=SEC_DEF_TYPE.JWT, _utcnow=datetime.utcnow):
+    def on_external_auth_succeeded(self, cid, sec_def, user_id, ext_session_id, current_app, remote_addr, user_agent,
+        _basic_auth=SEC_DEF_TYPE.BASIC_AUTH, _jwt=SEC_DEF_TYPE.JWT, _utcnow=datetime.utcnow,
+        _sha256=sha256):
         """ Invoked when a user succeeded in authentication via means external to default SSO credentials,
         e.g. through Basic Auth or JWT. Creates an SSO session related to that event or renews an existing one.
         """
-        # type: (unicode, Bunch, unicode, unicode, unicode) -> SessionInfo
+        # type: (unicode, Bunch, unicode, unicode, unicode, unicode) -> SessionInfo
 
         # PII audit comes first
         audit_pii.info(cid, 'session.on_external_auth_succeeded', extra={
@@ -364,6 +366,9 @@ class SessionAPI(object):
 
         if sec_def.sec_type == _basic_auth:
             ext_session_id = '{}.{}'.format(sec_def.sec_type, sec_def.id)
+        elif sec_def.sec_type == _jwt:
+            # JWT tokens tend to be long so we store and hashes rather than raw values
+            ext_session_id = _sha256(ext_session_id).hexdigest()
         else:
             raise NotImplementedError()
 

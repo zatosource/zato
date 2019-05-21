@@ -237,7 +237,7 @@ class RequestDispatcher(object):
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
         _accept_any_internal=accept_any_internal, _rate_limit_type_http=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
         _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format,
-        _exc_sep='*' * 80, _sec_def_sso_rate_limit=_sec_def_sso_rate_limit):
+        _exc_sep='*' * 80, _sec_def_sso_rate_limit=_sec_def_sso_rate_limit, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -354,6 +354,7 @@ class RequestDispatcher(object):
                                 cid,
                                 sec.sec_def,
                                 sso_user_id,
+                                sec.sec_def if sec.sec_def.sec_type == _basic_auth else wsgi_environ['HTTP_AUTHORIZATION'],
                                 current_app,
                                 wsgi_environ['zato.http.remote_addr'].decode('utf8'),
                                 wsgi_environ.get('HTTP_USER_AGENT'),

@@ -107,7 +107,7 @@ class JWT(object):
         2.b If found:
             3. decrypt
             4. decode
-            5. renew the cache expiration asyncronouysly (do not wait for the update confirmation).
+            5. renew the cache expiration asynchronously (do not wait for the update confirmation).
             5. return "valid" + the token contents
         """
         if self.cache.get(token):
