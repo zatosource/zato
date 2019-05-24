@@ -347,7 +347,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def on_external_auth_succeeded(self, cid, sec_def, user_id, ext_session_id, current_app, remote_addr, user_agent,
+    def on_external_auth_succeeded(self, cid, sec_def, user_id, ext_session_id, current_app, remote_addr, user_agent=None,
         _basic_auth=SEC_DEF_TYPE.BASIC_AUTH, _jwt=SEC_DEF_TYPE.JWT, _utcnow=datetime.utcnow,
         _sha256=sha256):
         """ Invoked when a user succeeded in authentication via means external to default SSO credentials,
@@ -461,7 +461,8 @@ class SessionAPI(object):
 
             # Create current interaction details for this session
             session_state_change_list = []
-            self.update_session_state_change_list(session_state_change_list, ctx.remote_addr, ctx.user_agent, 'login', creation_time)
+            self.update_session_state_change_list(
+                session_state_change_list, ctx.remote_addr, ctx.user_agent, 'login', creation_time)
             opaque = {
                 'session_state_change_list': session_state_change_list
             }
@@ -588,7 +589,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def verify(self, cid, target_ust, current_ust, current_app, remote_addr, user_agent):
+    def verify(self, cid, target_ust, current_ust, current_app, remote_addr, user_agent=None):
         """ Verifies a user session without renewing it.
         """
         # PII audit comes first
@@ -605,7 +606,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def renew(self, cid, ust, current_app, remote_addr, user_agent, needs_decrypt=True):
+    def renew(self, cid, ust, current_app, remote_addr, user_agent=None, needs_decrypt=True):
         """ Renew timelife of a user session, if it is valid, and returns its new expiration time in UTC.
         """
         # PII audit comes first
@@ -620,7 +621,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def get(self, cid, target_ust, current_ust, current_app, remote_addr, user_agent, check_if_password_expired=True):
+    def get(self, cid, target_ust, current_ust, current_app, remote_addr, user_agent=None, check_if_password_expired=True):
         """ Gets details of a session given by its UST on input, without renewing it.
         Must be called by a super-user.
         """
