@@ -210,8 +210,8 @@ class ChangePasswordBase(AdminService):
             password1 = self.request.input.get('password1', '')
             password2 = self.request.input.get('password2', '')
 
-            password1_decrypted = self.server.decrypt(password1)
-            password2_decrypted = self.server.decrypt(password2)
+            password1_decrypted = self.server.decrypt(password1) if password1 else password1
+            password2_decrypted = self.server.decrypt(password2) if password2 else password2
 
             try:
                 if self.password_required:
