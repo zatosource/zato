@@ -380,7 +380,7 @@ class SubscribeServiceImpl(_Subscribe):
                             self.pubsub.emit_in_subscribe_impl({'stage':'has_subscription', 'data':{
                                 'ctx.cluster_id': ctx.cluster_id,
                                 'ctx.topic_id': ctx.topic.id,
-                                'ctx.topic_id': ctx.endpoint_id.id,
+                                'ctx.topic_id': ctx.endpoint_id,
                             }})
 
                             raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
@@ -653,10 +653,24 @@ class CreateWSXSubscription(AdminService):
         topic_name = self.request.input.topic_name
         topic_name_list = set(self.request.input.topic_name_list)
         async_msg = self.wsgi_environ['zato.request_ctx.async_msg']
+
+        '''
+        for k, v in sorted(self.wsgi_environ.items()):
+            self.logger.warn('QQQ %r %r', k, v)
+
+        for k, v in sorted(async_msg.items()):
+            self.logger.warn('WWW %r %r', k, v)
+        '''
+
         unsub_on_wsx_close = async_msg['wsgi_environ'].get('zato.request_ctx.pubsub.unsub_on_wsx_close')
 
         # This will exist if we are being invoked directly ..
         environ = async_msg.get('environ')
+
+        '''
+        for k, v in sorted(environ.items()):
+            self.logger.warn('JJJ %r %r', k, v)
+            '''
 
         # .. however, if there is a service on whose behalf we are invoked, the 'environ' key will be further nested.
         if not environ:

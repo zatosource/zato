@@ -1478,7 +1478,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_message_invoke_service(self, msg, channel, action, args=None, **kwargs):
-        """ Triggered by external events, such as messages sent through connectots. Creates a new service instance and invokes it.
+        """ Triggered by external events, such as messages sent through connectors. Creates a new service instance and invokes it.
         """
         zato_ctx = msg.get('zato_ctx') or {}
         target = zato_ctx.get('zato.request_ctx.target', '')
