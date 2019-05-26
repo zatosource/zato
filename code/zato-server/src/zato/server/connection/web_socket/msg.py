@@ -21,6 +21,7 @@ from rapidjson import dumps
 # Zato
 from zato.common import DATA_FORMAT
 from zato.common.util import make_repr, new_cid
+from zato.server.service.reqresp import SimpleIOPayload
 
 # ################################################################################################################################
 
@@ -121,7 +122,17 @@ class ServerMessage(object):
         """
         msg = {'meta': self.meta}
         if self.data:
-            msg['data'] = self.data
+            if isinstance(self.data, SimpleIOPayload):
+                data = self.data.getvalue(serialize=False)
+                keys = list(data.keys())
+                if len(keys) != 1:
+                    raise ValueError('Unexpected data `{}`'.format(data))
+                else:
+                    response_key = keys[0]
+                    data = data[response_key]
+            else:
+                data = self.data
+            msg['data'] = data
         return dumps(msg)
 
 # ################################################################################################################################

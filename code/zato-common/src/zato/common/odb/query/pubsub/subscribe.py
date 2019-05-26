@@ -35,7 +35,7 @@ def has_subscription(session, cluster_id, topic_id, endpoint_id):
         PubSubSubscription.topic_id==topic_id,
         PubSubSubscription.cluster_id==cluster_id,
         ))).\
-        scalar()[0]
+        scalar()
 
 # ################################################################################################################################
 
