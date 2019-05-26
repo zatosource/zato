@@ -180,7 +180,8 @@ class WebSocketsGateway(Service):
     def handle(self, _pubsub_prefix='zato.pubsub.pubapi'):
 
         # Local aliases
-        service = self.request.input.service
+        input = self.request.input
+        service = input.service
 
         # We need to special-case requests related to pub/sub
         # because they will require calling self.pubsub on behalf of the current WSX connection.
@@ -189,8 +190,10 @@ class WebSocketsGateway(Service):
             action = action.split('.')[1]
 
             if action == 'subscribe-wsx':
-                topic_name = self.request.input.request['topic_name']
-                sub_key = self.pubsub.subscribe(topic_name, use_current_wsx=True, service=self)
+                topic_name = input.request['topic_name']
+                unsub_on_wsx_close = input.request.get('unsub_on_wsx_close', True)
+                sub_key = self.pubsub.subscribe(
+                    topic_name, use_current_wsx=True, unsub_on_wsx_close=unsub_on_wsx_close, service=self)
                 self.response.payload.sub_key = sub_key
 
         else:
