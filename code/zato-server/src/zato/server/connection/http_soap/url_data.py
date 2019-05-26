@@ -17,7 +17,7 @@ from traceback import format_exc
 
 # Python 2/3 compatibility
 from future.utils import iteritems, itervalues
-from past.builtins import basestring
+from past.builtins import basestring, unicode
 from six import PY2
 
 # Zato
@@ -202,8 +202,18 @@ class URLData(CyURLData, OAuthDataStore):
         if sec_def_type == _basic_auth:
             auth_func = self._handle_security_basic_auth
             get_func = self.basic_auth_get
-            auth = b64encode('{}:{}'.format(auth['username'], auth['secret']))
-            headers['HTTP_AUTHORIZATION'] = 'Basic {}'.format(auth)
+
+            username = auth['username']
+            secret = auth['secret']
+
+            username = username if isinstance(username, unicode) else username.decode('utf8')
+            secret = secret if isinstance(secret, unicode) else secret.decode('utf8')
+
+            auth_info = '{}:{}'.format(username, secret)
+            auth_info = auth_info.encode('utf8')
+
+            auth = b64encode(auth_info)
+            headers['HTTP_AUTHORIZATION'] = 'Basic {}'.format(auth.decode('utf8'))
 
         elif sec_def_type == _jwt:
             auth_func = self._handle_security_jwt
