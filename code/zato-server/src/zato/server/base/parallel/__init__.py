@@ -193,6 +193,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)
         self.has_pubsub_audit_log = logging.getLogger('zato_pubsub_audit').isEnabledFor(INFO)
         self.is_enabled_for_warn = logging.getLogger('zato').isEnabledFor(WARN)
+        self.is_admin_enabled_for_info = logging.getLogger('zato_admin').isEnabledFor(INFO)
 
         # The main config store
         self.config = ConfigStore()
