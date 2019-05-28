@@ -56,18 +56,20 @@ def get_extra(service, role_id, service_id, perm_id):
 # ################################################################################################################################
 
 def instance_hook(self, input, instance, attrs):
-    with closing(self.odb.session()) as session:
 
-        role = session.query(RBACRole).\
-            filter(RBACRole.id==input.role_id).one()
+    if attrs.is_create_edit:
+        with closing(self.odb.session()) as session:
 
-        _service = session.query(Service).\
-            filter(Service.id==input.service_id).one()
+            role = session.query(RBACRole).\
+                filter(RBACRole.id==input.role_id).one()
 
-        perm = session.query(RBACPermission).\
-            filter(RBACPermission.id==input.perm_id).one()
+            _service = session.query(Service).\
+                filter(Service.id==input.service_id).one()
 
-    instance.name = '{}:::{}::{}'.format(role.name, _service.name, perm.name)
+            perm = session.query(RBACPermission).\
+                filter(RBACPermission.id==input.perm_id).one()
+
+        instance.name = '{}:::{}::{}'.format(role.name, _service.name, perm.name)
 
 # ################################################################################################################################
 
