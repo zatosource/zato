@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from logging import getLogger
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 from zato.common import GENERIC
 from zato.common.util import new_cid
@@ -121,7 +124,7 @@ class PubSubMessage(object):
                 if value is not None:
                     if needs_utf8_encode:
                         if key in _data_keys:
-                            value = value.encode('utf8')
+                            value = value.encode('utf8') if isinstance(value, unicode) else value
                     out[key] = value
 
         if add_id_attrs:
