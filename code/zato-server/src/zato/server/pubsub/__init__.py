@@ -708,15 +708,19 @@ class InRAMSyncBacklog(object):
         # Delete all messages marked to be deleted ..
         for msg_id in to_delete_msg:
 
+            logger.warn('BEFORE 1 %s', self.msg_id_to_msg)
+
             # .. first, direct mappings ..
             self.msg_id_to_msg.pop(msg_id, None)
 
-            logger.info('Deleting msg from mapping dict `%s`', msg_id)
+            logger.warn('Deleting msg from mapping dict `%s`, after:`%s`', msg_id, self.msg_id_to_msg)
+
+            logger.warn('BEFORE 2 %s', self.topic_msg_id)
 
             # .. now, remove the message from topic ..
             self.topic_msg_id[topic_id].remove(msg_id)
 
-            logger.info('Deleting msg from mapping topic `%s`', msg_id)
+            logger.warn('Deleting msg from mapping topic `%s`, after:`%s`', msg_id, self.topic_msg_id)
 
             # .. now, find the message for each sub_key ..
             for sub_key in sub_keys:
@@ -2317,7 +2321,7 @@ class PubSub(object):
                                 _do_emit_loop_before_sync(topic_id, topic.name, topic.sync_has_gd_msg, topic.sync_has_non_gd_msg,
                                     non_gd_msg_list_msg_id_list, pub_time_max)
 
-                                _logger_info('Syncing messages for `%s` ngd-list:%s (sk_list:%s) cid:%s' % (
+                                _logger_info('Forwarding messages to a task for `%s` ngd-list:%s (sk_list:%s) cid:%s' % (
                                     topic_name, non_gd_msg_list_msg_id_list, sub_keys, cid))
 
                                 # .. and notify all the tasks in background.

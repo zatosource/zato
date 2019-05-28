@@ -35,6 +35,8 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
+msg_id = 0
+
 
 @method_allowed('GET')
 def get(req, cluster_id, object_type, object_id, msg_id):
@@ -296,7 +298,7 @@ def publish_action(req):
 
     try:
 
-        msg_id = req.POST.get('msg_id') or new_msg_id()
+        #msg_id = req.POST.get('msg_id') or new_msg_id()
         gd = req.POST['gd']
 
         if gd == PUBSUB.GD_CHOICE.DEFAULT_PER_TOPIC.id:
@@ -305,7 +307,7 @@ def publish_action(req):
             has_gd = asbool(gd)
 
         service_input = {
-            'msg_id': msg_id,
+            #'msg_id': msg_id,
             'has_gd': has_gd,
             'skip_pattern_matching': True,
             'endpoint_id': req.POST['publisher_id'],
@@ -324,7 +326,14 @@ def publish_action(req):
         for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group', 'expiration', 'in_reply_to'):
             service_input[name] = req.POST.get(name, None) or None # Always use None instead of ''
 
-        req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
+        global msg_id
+
+        for x in range(1):
+            service_input['data'] = str(x)
+            service_input['msg_id'] = str(msg_id)
+            req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
+
+            msg_id += 1
 
     except Exception as e:
         message = e.message
