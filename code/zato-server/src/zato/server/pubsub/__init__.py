@@ -27,6 +27,7 @@ from texttable import Texttable
 
 # Python 2/3 compatibility
 from future.utils import iteritems, itervalues
+from past.builtins import basestring, unicode
 
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, SEARCH
@@ -1609,12 +1610,16 @@ class PubSub(object):
 
         for idx, item in enumerate(servers, 1):
 
-            sub_key_info = item.sub_key
+            sub_key_info = [item.sub_key]
 
             if item.wsx_info:
                 for name in ('swc', 'name', 'pub_client_id', 'peer_fqdn', 'forwarded_for_fqdn', 'python_id', 'sock'):
-                    sub_key_info += '\n'
-                    sub_key_info += '{}: {}'.format(name, item.wsx_info[name])
+                    name = name if isinstance(name, unicode) else name.decode('utf8')
+                    value = item.wsx_info[name]
+                    if isinstance(value, basestring):
+                        value = value if isinstance(value, unicode) else value.decode('utf8')
+                        value = value.strip()
+                    sub_key_info.append('{}: {}'.format(name, value))
 
             rows.append([
                 idx,
@@ -1622,7 +1627,7 @@ class PubSub(object):
                 item.server_name,
                 item.server_pid,
                 item.channel_name or default,
-                sub_key_info.encode('utf8'),
+                '\n'.join(sub_key_info),
             ])
 
 
@@ -1726,7 +1731,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def add_missing_server_for_sub_key(self, sub_key, is_wsx):
+    def add_missing_server_for_sub_key(self, sub_key, is_wsx, _wsx=PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id):
         """ Adds to self.sub_key_servers information from ODB about which server handles input sub_key.
         Must be called with self.lock held.
         """
@@ -1741,13 +1746,15 @@ class PubSub(object):
                 logger.info(msg, sub_key, is_wsx)
         else:
 
+            endpoint_type = _wsx if is_wsx else data.endpoint_type
+
             # This is common config that we already know is valid but on top of it
             # we will try to the server found and ask about PID that handles messages for sub_key.
             config = {
                 'sub_key': sub_key,
                 'cluster_id': data.cluster_id,
                 'server_name': data.server_name,
-                'endpoint_type': data.endpoint_type,
+                'endpoint_type': endpoint_type,
             }
 
             # Guaranteed to either set PID or None
