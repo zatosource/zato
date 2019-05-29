@@ -2254,11 +2254,18 @@ class PubSub(object):
                         continue
 
                     # There are some messages, let's see if there are subscribers ..
-                    subs = _self_get_subscriptions_by_topic(_topic.name)
+                    subs = []
+                    _subs = _self_get_subscriptions_by_topic(_topic.name)
+
+                    # Filter out subscriptions for whom we have no subscription servers
+                    for _sub in _subs:
+                        if _self_get_delivery_server_by_sub_key(_sub.sub_key):
+                            subs.append(_sub)
 
                     # .. if there are any subscriptions at all, we store that information for later use.
                     if subs:
                         topic_id_dict[_topic.id] = (_topic.name, subs)
+
 
                 # OK, if we had any subscriptions for at least one topic and there are any messages waiting,
                 # we can continue.
@@ -2284,10 +2291,7 @@ class PubSub(object):
 
                         # Build a list of sub_keys for whom we know what their delivery server is which will
                         # allow us to send messages only to tasks that are known to be up.
-                        sub_keys = []
-                        for item in subs:
-                            if _self_get_delivery_server_by_sub_key(item.sub_key):
-                                sub_keys.append(item.sub_key)
+                        sub_keys = [item.sub_key for item in subs]
 
                         # Continue only if there are actually any sub_keys left = any tasks up and running ..
                         if sub_keys:
