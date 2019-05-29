@@ -37,11 +37,13 @@ check_existing_one = False
 # ################################################################################################################################
 
 def instance_hook(service, input, instance, attrs):
-    with closing(service.odb.session()) as session:
-        role = session.query(RBACRole).\
-            filter(RBACRole.id==input.role_id).one()
 
-    instance.name = '{}:::{}'.format(instance.client_def, role.name)
+    if attrs.is_create_edit:
+        with closing(service.odb.session()) as session:
+            role = session.query(RBACRole).\
+                filter(RBACRole.id==input.role_id).one()
+
+        instance.name = '{}:::{}'.format(instance.client_def, role.name)
 
 # ################################################################################################################################
 

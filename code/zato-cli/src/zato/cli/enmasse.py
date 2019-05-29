@@ -861,6 +861,9 @@ class ObjectManager(object):
             'name_filter': '*'
         })
 
+        if not response.ok:
+            raise Exception('Unexpected response from Zato; e:{}'.format(response))
+
         if response.has_data:
             self.services = {
                 service['name']: Bunch(service)
