@@ -150,7 +150,7 @@ class _SSOSession(Base):
     __tablename__ = 'zato_sso_session'
     __table_args__ = (
         Index('zato_sso_sust_idx', 'ust', unique=True),
-        Index('zato_sso_extsi_idx', 'ext_session_id', unique=False, mysql_length={'email':767}),
+        Index('zato_sso_extsi_idx', 'ext_session_id', unique=False, mysql_length={'ext_session_id':767}),
     {})
 
     # Not exposed publicly, used only for SQL joins
