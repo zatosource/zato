@@ -57,7 +57,7 @@ class SortedList(_SortedList):
         """ Removes a pubsub message from a SortedList instance - we cannot use the regular .remove method
         because it may triggger __cmp__ per https://github.com/grantjenks/sorted_containers/issues/81.
         """
-        #logger.info('In remove_pubsub_msg msg:`%s`, self._maxes:`%s`', msg, self._maxes)
+        logger.info('In remove_pubsub_msg msg:`%s`, self._maxes:`%s`', msg, self._maxes)
         pos = bisect_left(self._maxes, msg)
 
         if pos == len(self._maxes):
@@ -328,9 +328,9 @@ class DeliveryTask(object):
                 # Status of messages is updated in both SQL and RAM so we can now log success
                 len_delivered = len(delivered_msg_id_list)
                 suffix = ' ' if len_delivered == 1 else 's '
-                #logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [dlvc:%d]',
-                #    len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config.endpoint_name,
-                #    self.delivery_counter)
+                logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [dlvc:%d]',
+                    len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config.endpoint_name,
+                    self.delivery_counter)
 
                 self.delivery_counter += 1
 
@@ -349,8 +349,8 @@ class DeliveryTask(object):
 
         if diff >= self.delivery_interval:
             if self.delivery_list:
-                #logger.info('Waking task:%s now:%s last:%s diff:%s interval:%s len-list:%d',
-                #    self.sub_key, now, self.last_run, diff, self.delivery_interval, len(self.delivery_list))
+                logger.info('Waking task:%s now:%s last:%s diff:%s interval:%s len-list:%d',
+                    self.sub_key, now, self.last_run, diff, self.delivery_interval, len(self.delivery_list))
                 return True
 
 # ################################################################################################################################
@@ -555,7 +555,7 @@ class GDMessage(Message):
     def __init__(self, sub_key, topic_name, msg, _sk_opaque=PUBSUB.DEFAULT.SK_OPAQUE, _gen_attr=GENERIC.ATTR_NAME,
         _loads=loads):
 
-        #logger.info('Building task message (gd) from `%s`', msg)
+        logger.info('Building task message (gd) from `%s`', msg)
 
         super(GDMessage, self).__init__()
         self.endp_msg_queue_id = msg.endp_msg_queue_id
@@ -590,7 +590,7 @@ class GDMessage(Message):
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
 
-        #logger.info('Built task message (gd) `%s`', self.to_dict(add_id_attrs=True))
+        logger.info('Built task message (gd) `%s`', self.to_dict(add_id_attrs=True))
 
 # ################################################################################################################################
 
@@ -602,7 +602,7 @@ class NonGDMessage(Message):
     def __init__(self, sub_key, server_name, server_pid, msg, _def_priority=PUBSUB.PRIORITY.DEFAULT,
             _def_mime_type=PUBSUB.DEFAULT.MIME_TYPE):
 
-        #logger.info('Building task message (ngd) from `%s`', msg)
+        logger.info('Building task message (ngd) from `%s`', msg)
 
         super(NonGDMessage, self).__init__()
         self.sub_key = sub_key
@@ -639,7 +639,7 @@ class NonGDMessage(Message):
         # Add times in ISO-8601 for external subscribers
         self.add_iso_times()
 
-        #logger.info('Built task message (ngd) `%s`', self.to_dict(add_id_attrs=True))
+        logger.info('Built task message (ngd) `%s`', self.to_dict(add_id_attrs=True))
 
 # ################################################################################################################################
 
@@ -853,8 +853,8 @@ class PubSubTool(object):
                         ctx.non_gd_msg_list, ctx.cid, ctx.has_gd, ctx.sub_key_list))
                     return
 
-            #logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
-            #    ctx.cid, int(ctx.has_gd), ctx.sub_key_list, len(ctx.non_gd_msg_list), ctx.is_bg_call)
+            logger.info('Handle new messages, cid:%s, gd:%d, sub_keys:%s, len_non_gd:%d bg:%d',
+                ctx.cid, int(ctx.has_gd), ctx.sub_key_list, len(ctx.non_gd_msg_list), ctx.is_bg_call)
 
             gd_msg_list = {}
 
@@ -893,7 +893,7 @@ class PubSubTool(object):
 
                             self.last_gd_run[sub_key] = new_now
 
-                            #logger.info('Storing last_gd_run of `%r` for sub_key:%s (d:%s)', new_now, sub_key, delta)
+                            logger.info('Storing last_gd_run of `%r` for sub_key:%s (d:%s)', new_now, sub_key, delta)
 
         except Exception:
             e = format_exc()
@@ -959,8 +959,8 @@ class PubSubTool(object):
             self.delivery_lists[sub_key].add(GDMessage(sub_key, topic_name, msg))
             count += 1
 
-        #logger.info('Pushing %d GD message{}to task:%s msg_ids:%s'.format(
-        #    ' ' if count==1 else 's '), count, sub_key, msg_ids)
+        logger.info('Pushing %d GD message{}to task:%s msg_ids:%s'.format(
+            ' ' if count==1 else 's '), count, sub_key, msg_ids)
 
 # ################################################################################################################################
 
