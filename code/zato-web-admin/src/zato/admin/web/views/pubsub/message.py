@@ -35,8 +35,6 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-#msg_id = 0
-
 @method_allowed('GET')
 def get(req, cluster_id, object_type, object_id, msg_id):
 
@@ -326,17 +324,6 @@ def publish_action(req):
             service_input[name] = req.POST.get(name, None) or None # Always use None instead of ''
 
             req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
-
-        '''
-        global msg_id
-
-        for x in range(1):
-            service_input['data'] = str(x)
-            service_input['msg_id'] = str(msg_id)
-            req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
-
-            msg_id += 1
-            '''
 
     except Exception as e:
         message = e.message
