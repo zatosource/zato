@@ -366,8 +366,9 @@ class Publish(AdminService):
             # If so, later on we will need to turn all the messages into GD ones.
             sk_server = self.pubsub.get_sub_key_server(sub.sub_key)
             if not sk_server:
-                logger_pubsub.info('No sk_server for sub_key `%s` among `%s`', sub.sub_key,
-                    sorted(self.pubsub.sub_key_servers.keys()))
+                if has_logger_pubsub_debug:
+                    logger_pubsub.debug('No sk_server for sub_key `%s` among `%s`', sub.sub_key,
+                        sorted(self.pubsub.sub_key_servers.keys()))
                 has_wsx_no_server = True # We have found at least one WSX subscriber that has no server = it is not connected
 
         logger_pubsub.info('Subscriptions for topic `%s` `%s` (a:%d, %d/%d, cid:%s)',

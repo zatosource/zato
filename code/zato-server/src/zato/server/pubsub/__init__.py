@@ -708,15 +708,19 @@ class InRAMSyncBacklog(object):
         # Delete all messages marked to be deleted ..
         for msg_id in to_delete_msg:
 
+            logger.warn('BEFORE 1 %s', self.msg_id_to_msg)
+
             # .. first, direct mappings ..
             self.msg_id_to_msg.pop(msg_id, None)
 
-            logger.info('Deleting msg from mapping dict `%s`', msg_id)
+            logger.warn('Deleting msg from mapping dict `%s`, after:`%s`', msg_id, self.msg_id_to_msg)
+
+            logger.warn('BEFORE 2 %s', self.topic_msg_id)
 
             # .. now, remove the message from topic ..
             self.topic_msg_id[topic_id].remove(msg_id)
 
-            logger.info('Deleting msg from mapping topic `%s`', msg_id)
+            logger.warn('Deleting msg from mapping topic `%s`, after:`%s`', msg_id, self.topic_msg_id)
 
             # .. now, find the message for each sub_key ..
             for sub_key in sub_keys:
@@ -2250,11 +2254,18 @@ class PubSub(object):
                         continue
 
                     # There are some messages, let's see if there are subscribers ..
-                    subs = _self_get_subscriptions_by_topic(_topic.name)
+                    subs = []
+                    _subs = _self_get_subscriptions_by_topic(_topic.name)
+
+                    # Filter out subscriptions for whom we have no subscription servers
+                    for _sub in _subs:
+                        if _self_get_delivery_server_by_sub_key(_sub.sub_key):
+                            subs.append(_sub)
 
                     # .. if there are any subscriptions at all, we store that information for later use.
                     if subs:
                         topic_id_dict[_topic.id] = (_topic.name, subs)
+
 
                 # OK, if we had any subscriptions for at least one topic and there are any messages waiting,
                 # we can continue.
@@ -2280,10 +2291,7 @@ class PubSub(object):
 
                         # Build a list of sub_keys for whom we know what their delivery server is which will
                         # allow us to send messages only to tasks that are known to be up.
-                        sub_keys = []
-                        for item in subs:
-                            if _self_get_delivery_server_by_sub_key(item.sub_key):
-                                sub_keys.append(item.sub_key)
+                        sub_keys = [item.sub_key for item in subs]
 
                         # Continue only if there are actually any sub_keys left = any tasks up and running ..
                         if sub_keys:
@@ -2317,7 +2325,7 @@ class PubSub(object):
                                 _do_emit_loop_before_sync(topic_id, topic.name, topic.sync_has_gd_msg, topic.sync_has_non_gd_msg,
                                     non_gd_msg_list_msg_id_list, pub_time_max)
 
-                                _logger_info('Syncing messages for `%s` ngd-list:%s (sk_list:%s) cid:%s' % (
+                                _logger_info('Forwarding messages to a task for `%s` ngd-list:%s (sk_list:%s) cid:%s' % (
                                     topic_name, non_gd_msg_list_msg_id_list, sub_keys, cid))
 
                                 # .. and notify all the tasks in background.
