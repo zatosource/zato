@@ -519,22 +519,24 @@ class Create(ZatoCommand):
         ide_pub_rbac_role = self.add_rbac_role_and_acct(
             session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
 
-        self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, ide_pub_rbac_role)
+        with session.no_autoflush:
 
-        self.add_ping_services(session, cluster)
-        self.add_default_cache(session, cluster)
-        self.add_cache_endpoints(session, cluster)
-        self.add_crypto_endpoints(session, cluster)
-        self.add_pubsub_sec_endpoints(session, cluster)
+            self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, ide_pub_rbac_role)
 
-        # IBM MQ connections / connectors
-        self.add_internal_callback_wmq(session, cluster)
+            self.add_ping_services(session, cluster)
+            self.add_default_cache(session, cluster)
+            self.add_cache_endpoints(session, cluster)
+            self.add_crypto_endpoints(session, cluster)
+            self.add_pubsub_sec_endpoints(session, cluster)
 
-        # SFTP connections / connectors
-        self.add_sftp_credentials(session, cluster)
+            # IBM MQ connections / connectors
+            self.add_internal_callback_wmq(session, cluster)
 
-        # SSO
-        self.add_sso_endpoints(session, cluster)
+            # SFTP connections / connectors
+            self.add_sftp_credentials(session, cluster)
+
+            # SSO
+            self.add_sso_endpoints(session, cluster)
 
         try:
             session.commit()
