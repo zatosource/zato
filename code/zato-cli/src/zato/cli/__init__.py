@@ -348,7 +348,7 @@ def run_command(args):
         ('delete_odb', 'zato.cli.delete_odb.Delete'),
         ('decrypt', 'zato.cli.crypto.Decrypt'),
         ('encrypt', 'zato.cli.crypto.Encrypt'),
-        ('enmasse', 'zato.cli.enmasse.EnMasse'),
+        ('enmasse', 'zato.cli.enmasse.Enmasse'),
         ('from_config', 'zato.cli.FromConfig'),
         ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
         ('info', 'zato.cli.info.Info'),

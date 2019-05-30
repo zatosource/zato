@@ -43,6 +43,25 @@ from zato.cli.check_config import CheckConfig
 from zato.common import SECRETS
 from zato.common.util import get_client_from_server_conf
 
+# ################################################################################################################################
+
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # stdlib
+    from logging import Logger
+
+    # Zato
+    from zato.client import APIClient
+
+    # For pyflakes
+    APIClient = APIClient
+    Logger = Logger
+
+# ################################################################################################################################
+
 DEFAULT_COLS_WIDTH = '15,100'
 ZATO_NO_SECURITY = 'zato-no-security'
 
@@ -542,9 +561,8 @@ class DependencyScanner(object):
 # ################################################################################################################################
 
     def scan(self):
-        """
-        :rtype Results:
-        """
+        # type: () -> Results
+
         results = Results()
         for item_type, items in iteritems(self.json):
             for item in items:
@@ -562,6 +580,7 @@ class DependencyScanner(object):
 
 class ObjectImporter(object):
     def __init__(self, client, logger, object_mgr, json, ignore_missing):
+        # type: (APIClient, Logger, ObjectManager, dict, bool)
 
         # Zato client.
         self.client = client
@@ -600,10 +619,9 @@ class ObjectImporter(object):
 
     def validate_import_data(self):
         results = Results()
-        dep_scanner = DependencyScanner(self.json,
-            ignore_missing=self.ignore_missing)
-
+        dep_scanner = DependencyScanner(self.json,ignore_missing=self.ignore_missing)
         scan_results = dep_scanner.scan()
+
         if not scan_results.ok:
             return scan_results
 
@@ -701,11 +719,25 @@ class ObjectImporter(object):
 
 # ################################################################################################################################
 
+    def may_be_dependency(self, item_type):
+        """ Returns True if input item_type may be possibly a dependency, for instance,
+        a security definition may be potentially a dependency of channels or a web socket
+        object may be a dependency of pub/sub endpoints.
+        """
+        return SERVICE_BY_NAME[item_type].is_security or 'def' in item_type or item_type == 'web_socket'
+
+# ################################################################################################################################
+
     def import_objects(self, already_existing):
         existing_defs = []
         existing_other = []
 
+        # Definitions or other objects for which self.may_be_dependency returns True,
+        # as they are found in the input enmasse file - they do not exist in ODB yet.
         new_defs = []
+
+        # Objects other than the ones from new_defs that are found in the enmasse file
+        # and which do not exist in ODB yet.
         new_other = []
 
         #
@@ -733,7 +765,7 @@ class ObjectImporter(object):
         # Create new objects, again, definitions come first ..
         #
         for item_type, items in iteritems(self.json):
-            if SERVICE_BY_NAME[item_type].is_security or 'def' in item_type:
+            if self.may_be_dependency(item_type):
                 new_defs.append({item_type: items})
             else:
                 new_other.append({item_type: items})
@@ -785,18 +817,20 @@ class ObjectImporter(object):
             item.id = odb_item.id
 
         for field_name, info in iteritems(service_info.object_dependencies):
+
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
                 dep_obj = self.object_mgr.find(info['dependent_type'], {
                     info['dependent_field']: item[field_name]
                 })
+
                 item[info['id_field']] = dep_obj.id
 
-        self.logger.debug("Invoking {} for {}".format(service_name, service_info.name))
+        self.logger.info('Invoking %s for %s', service_name, service_info.name)
 
         response = self.client.invoke(service_name, item)
         if response.ok:
             verb = 'Updated' if is_edit else 'Created'
-            self.logger.info("{} object '{}' with {}".format(verb, item.name, service_name))
+            self.logger.info('%s object `%s` with %s', verb, item.name, service_name)
 
         return response
 
@@ -820,8 +854,8 @@ class ObjectImporter(object):
 
 class ObjectManager(object):
     def __init__(self, client, logger):
-        self.client = client
-        self.logger = logger
+        self.client = client # type: APIClient
+        self.logger = logger # type: Logger
 
 # ################################################################################################################################
 
@@ -1157,7 +1191,7 @@ class InputParser(object):
         self.parse_items(parsed, results)
         return results
 
-class EnMasse(ManageCommand):
+class Enmasse(ManageCommand):
     """ Manages server objects en masse.
     """
     opts = [
@@ -1446,6 +1480,7 @@ class EnMasse(ManageCommand):
 
     def run_import(self):
         self.object_mgr.refresh()
+
         importer = ObjectImporter(self.client, self.logger,
             self.object_mgr, self.json,
             ignore_missing=self.args.ignore_missing_defs)
@@ -1454,6 +1489,7 @@ class EnMasse(ManageCommand):
         results = importer.validate_import_data()
         if not results.ok:
             return [results]
+
 
         already_existing = importer.find_already_existing_odb_objects()
         if not already_existing.ok and not self.args.replace_odb_objects:
@@ -1466,3 +1502,22 @@ class EnMasse(ManageCommand):
         return []
 
 # ################################################################################################################################
+
+if __name__ == '__main__':
+
+    args = Bunch()
+    args.verbose = True
+    args.store_log = False
+    args.store_config = False
+    args.dump_format = 'yaml'
+    args.export_local = False
+    args.export_odb = False
+    args.clean_odb = True
+    args.ignore_missing_defs = False
+    args['import'] = True
+
+    args.path = sys.argv[1]
+    args.input = sys.argv[2]
+
+    enmasse = Enmasse(args)
+    enmasse.run(args)
