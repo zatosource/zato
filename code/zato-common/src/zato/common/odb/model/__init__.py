@@ -2858,8 +2858,8 @@ class RateLimitState(Base):
 
     id = Column(Integer(), Sequence('rate_limit_state_seq'), primary_key=True)
 
-    object_type = Column(Text(), nullable=False)
-    object_id = Column(Text(), nullable=False)
+    object_type = Column(Text(191), nullable=False)
+    object_id = Column(Text(191), nullable=False)
 
     period = Column(Text(), nullable=False)
     requests = Column(Integer(), nullable=False, server_default='0')
