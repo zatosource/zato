@@ -482,44 +482,48 @@ class Create(ZatoCommand):
                     else:
                         self.logger.info('OK')
 
-        cluster = Cluster()
-        cluster.name = args.cluster_name
-        cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), datetime.utcnow().isoformat())
-
-        for name in(
-              'odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name',
-              'broker_host', 'broker_port', 'lb_host', 'lb_port', 'lb_agent_port'):
-            setattr(cluster, name, getattr(args, name))
-        session.add(cluster)
-
-        # admin.invoke user's password may be possibly in one of these attributes,
-        # but if it is now, generate a new one.
-
-        admin_invoke_password = getattr(args, 'admin-invoke-password', None)
-
-        if not admin_invoke_password:
-            admin_invoke_password = getattr(args, 'admin_invoke_password', None)
-
-        if not admin_invoke_password:
-            admin_invoke_password = new_password()
-
-        admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke',
-            admin_invoke_password, cluster)
-        session.add(admin_invoke_sec)
-
-        pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', new_password(), cluster)
-        session.add(pubapi_sec)
-
-        internal_invoke_sec = HTTPBasicAuth(None, 'zato.internal.invoke', True, 'zato.internal.invoke.user',
-            'Zato internal invoker', new_password(), cluster)
-        session.add(internal_invoke_sec)
-
-        self.add_default_rbac_permissions(session, cluster)
-        root_rbac_role = self.add_default_rbac_roles(session, cluster)
-        ide_pub_rbac_role = self.add_rbac_role_and_acct(
-            session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
-
         with session.no_autoflush:
+
+            cluster = Cluster()
+            cluster.name = args.cluster_name
+            cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), datetime.utcnow().isoformat())
+
+            for name in(
+                  'odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name',
+                  'broker_host', 'broker_port', 'lb_host', 'lb_port', 'lb_agent_port'):
+                setattr(cluster, name, getattr(args, name))
+            session.add(cluster)
+
+            # admin.invoke user's password may be possibly in one of these attributes,
+            # but if it is now, generate a new one.
+
+            admin_invoke_password = getattr(args, 'admin-invoke-password', None)
+
+            if not admin_invoke_password:
+                admin_invoke_password = getattr(args, 'admin_invoke_password', None)
+
+            if not admin_invoke_password:
+                admin_invoke_password = new_password()
+
+            admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke',
+                admin_invoke_password, cluster)
+            session.add(admin_invoke_sec)
+
+            pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', new_password(), cluster)
+            session.add(pubapi_sec)
+
+            internal_invoke_sec = HTTPBasicAuth(None, 'zato.internal.invoke', True, 'zato.internal.invoke.user',
+                'Zato internal invoker', new_password(), cluster)
+            session.add(internal_invoke_sec)
+
+            self.add_default_rbac_permissions(session, cluster)
+            root_rbac_role = self.add_default_rbac_roles(session, cluster)
+            ide_pub_rbac_role = self.add_rbac_role_and_acct(
+                session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
+
+            # We need to flush the session here, after adding default RBAC permissions
+            # which are needed by REST channels with security delegated to RBAC.
+            session.flush()
 
             self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, ide_pub_rbac_role)
 
