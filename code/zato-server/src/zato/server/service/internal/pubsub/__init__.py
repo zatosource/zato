@@ -304,6 +304,13 @@ class ResumeWSXSubscription(AdminService):
             for sub_key in sub_key_list:
                 self.pubsub.set_pubsub_tool_for_sub_key(sub_key, pubsub_tool)
 
+            # No exceptions here = we have resumed the subscription(s) successfully and we can report it
+            _log_info = {}
+            for _sub_key in sub_key_list:
+                _log_info[_sub_key] = self.pubsub.get_topic_by_sub_key(_sub_key).name
+
+            self.logger.info('Subscription%sresumed: `%s', ' ' if len(sub_key_list) == 1 else 's ', _log_info)
+
 # ################################################################################################################################
 
     def _parse_non_gd_messages(self, sub_key_list, server_response):

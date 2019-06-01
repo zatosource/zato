@@ -152,6 +152,7 @@ def update_attrs(cls, name, attrs):
     attrs.request_as_is = getattr(mod, 'request_as_is', [])
     attrs.sio_default_value = getattr(mod, 'sio_default_value', None)
     attrs.get_list_docs = getattr(mod, 'get_list_docs', None)
+    attrs.delete_require_instance = getattr(mod, 'delete_require_instance', True)
     attrs._meta_session = None
 
     attrs.is_create = False
@@ -384,7 +385,20 @@ class DeleteMeta(AdminServiceMeta):
                 try:
                     instance = session.query(attrs.model).\
                         filter(attrs.model.id==input.id).\
-                        one()
+                        first()
+
+                    # We do not always require for input ID to actually exist - this is useful
+                    # with enmasse which may attempt to delete objects that no longer exist.
+                    # This may happen if it deletes an object that was an FK to another one.
+                    # That other one will be always deleted but enmasse will not know it
+                    # so it will try to delete it too, which will fail. This happens, for instance,
+                    # when a WebSocket channel is deleted - it may cascade to a pub/sub endpoint
+                    # but enmasse does not know, hence delete_require_instance is True in pubsub_endpoint's endpoint.py.
+                    if not instance:
+                        if attrs.delete_require_instance:
+                            raise Exception('Could not find {} instance with ID `{}`'.format(attrs.label, input.id))
+                        else:
+                            return
 
                     if attrs.instance_hook:
                         attrs.instance_hook(self, input, instance, attrs)
