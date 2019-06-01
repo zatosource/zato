@@ -566,8 +566,10 @@ class ConfigLoader(object):
                                 # Encrypt all params that are applicable
                                 for secret_param in SECRETS.PARAMS:
                                     if secret_param in config:
-                                        encrypted = self.encrypt(config[secret_param])
-                                        odb_func(session, config['id'], secret_param, encrypted)
+                                        data = config[secret_param]
+                                        if data:
+                                            encrypted = self.encrypt(data)
+                                            odb_func(session, config['id'], secret_param, encrypted)
 
                         # Clean up config afterwards
                         config.pop('_encryption_needed', None)

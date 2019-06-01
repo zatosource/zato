@@ -224,7 +224,8 @@ class _SSOLinkedAuth(Base):
     __tablename__ = 'zato_sso_linked_auth'
 
     __table_args__ = (
-        UniqueConstraint('auth_type', 'user_id', 'auth_id', 'auth_principal', 'auth_source', name='zato_sso_link_auth_uq'),
+        Index('auth_idx', 'auth_type', 'user_id', 'auth_id', 'auth_principal', unique=True,
+          mysql_length={'auth_type':191, 'user_id':191, 'auth_principal':191}),
     {})
 
     # Not exposed publicly, used only because SQLAlchemy requires an FK
@@ -242,14 +243,14 @@ class _SSOLinkedAuth(Base):
     has_ext_principal = Column(Boolean(), nullable=False)
 
     # A label describing authentication type
-    auth_type = Column(Text(), nullable=False)
+    auth_type = Column(Text(191), nullable=False)
 
     # Will be provided if has_ext_principal is False, in which case
     # it will point to one of sec_base.id definitions.
     auth_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
 
     # Will be given if auth_id is not provided.
-    auth_principal = Column(Text(), nullable=True)
+    auth_principal = Column(Text(191), nullable=True)
 
     # E.g. name of an environment this link is valid in - useful in cases when the same user
     # has multiple linked accounts, different in different auth sources (environments).

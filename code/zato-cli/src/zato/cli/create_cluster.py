@@ -482,59 +482,65 @@ class Create(ZatoCommand):
                     else:
                         self.logger.info('OK')
 
-        cluster = Cluster()
-        cluster.name = args.cluster_name
-        cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), datetime.utcnow().isoformat())
+        with session.no_autoflush:
 
-        for name in(
-              'odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name',
-              'broker_host', 'broker_port', 'lb_host', 'lb_port', 'lb_agent_port'):
-            setattr(cluster, name, getattr(args, name))
-        session.add(cluster)
+            cluster = Cluster()
+            cluster.name = args.cluster_name
+            cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), datetime.utcnow().isoformat())
 
-        # admin.invoke user's password may be possibly in one of these attributes,
-        # but if it is now, generate a new one.
+            for name in(
+                  'odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name',
+                  'broker_host', 'broker_port', 'lb_host', 'lb_port', 'lb_agent_port'):
+                setattr(cluster, name, getattr(args, name))
+            session.add(cluster)
 
-        admin_invoke_password = getattr(args, 'admin-invoke-password', None)
+            # admin.invoke user's password may be possibly in one of these attributes,
+            # but if it is now, generate a new one.
 
-        if not admin_invoke_password:
-            admin_invoke_password = getattr(args, 'admin_invoke_password', None)
+            admin_invoke_password = getattr(args, 'admin-invoke-password', None)
 
-        if not admin_invoke_password:
-            admin_invoke_password = new_password()
+            if not admin_invoke_password:
+                admin_invoke_password = getattr(args, 'admin_invoke_password', None)
 
-        admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke',
-            admin_invoke_password, cluster)
-        session.add(admin_invoke_sec)
+            if not admin_invoke_password:
+                admin_invoke_password = new_password()
 
-        pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', new_password(), cluster)
-        session.add(pubapi_sec)
+            admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke',
+                admin_invoke_password, cluster)
+            session.add(admin_invoke_sec)
 
-        internal_invoke_sec = HTTPBasicAuth(None, 'zato.internal.invoke', True, 'zato.internal.invoke.user',
-            'Zato internal invoker', new_password(), cluster)
-        session.add(internal_invoke_sec)
+            pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', new_password(), cluster)
+            session.add(pubapi_sec)
 
-        self.add_default_rbac_permissions(session, cluster)
-        root_rbac_role = self.add_default_rbac_roles(session, cluster)
-        ide_pub_rbac_role = self.add_rbac_role_and_acct(
-            session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
+            internal_invoke_sec = HTTPBasicAuth(None, 'zato.internal.invoke', True, 'zato.internal.invoke.user',
+                'Zato internal invoker', new_password(), cluster)
+            session.add(internal_invoke_sec)
 
-        self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, ide_pub_rbac_role)
+            self.add_default_rbac_permissions(session, cluster)
+            root_rbac_role = self.add_default_rbac_roles(session, cluster)
+            ide_pub_rbac_role = self.add_rbac_role_and_acct(
+                session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
 
-        self.add_ping_services(session, cluster)
-        self.add_default_cache(session, cluster)
-        self.add_cache_endpoints(session, cluster)
-        self.add_crypto_endpoints(session, cluster)
-        self.add_pubsub_sec_endpoints(session, cluster)
+            # We need to flush the session here, after adding default RBAC permissions
+            # which are needed by REST channels with security delegated to RBAC.
+            session.flush()
 
-        # IBM MQ connections / connectors
-        self.add_internal_callback_wmq(session, cluster)
+            self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, ide_pub_rbac_role)
 
-        # SFTP connections / connectors
-        self.add_sftp_credentials(session, cluster)
+            self.add_ping_services(session, cluster)
+            self.add_default_cache(session, cluster)
+            self.add_cache_endpoints(session, cluster)
+            self.add_crypto_endpoints(session, cluster)
+            self.add_pubsub_sec_endpoints(session, cluster)
 
-        # SSO
-        self.add_sso_endpoints(session, cluster)
+            # IBM MQ connections / connectors
+            self.add_internal_callback_wmq(session, cluster)
+
+            # SFTP connections / connectors
+            self.add_sftp_credentials(session, cluster)
+
+            # SSO
+            self.add_sso_endpoints(session, cluster)
 
         try:
             session.commit()

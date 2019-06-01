@@ -206,10 +206,10 @@ def get_parser():
     #
     # enmasse
     #
-    enmasse = subs.add_parser('enmasse', description=enmasse_mod.EnMasse.__doc__, parents=[base_parser])
+    enmasse = subs.add_parser('enmasse', description=enmasse_mod.Enmasse.__doc__, parents=[base_parser])
     enmasse.add_argument('path', help='Path to a running Zato server')
     enmasse.set_defaults(command='enmasse')
-    add_opts(enmasse, enmasse_mod.EnMasse.opts)
+    add_opts(enmasse, enmasse_mod.Enmasse.opts)
 
     #
     # update

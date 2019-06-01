@@ -176,6 +176,7 @@ class WebSocketsGateway(Service):
         input_required = 'service',
         input_optional = AsIs('request'),
         output_optional = 'sub_key',
+        skip_empty_keys = True
 
     def handle(self, _pubsub_prefix='zato.pubsub.pubapi'):
 
@@ -198,7 +199,9 @@ class WebSocketsGateway(Service):
 
         else:
             self.wsgi_environ['zato.orig_channel'] = self.channel
-            self.response.payload = self.invoke(service, self.request.input.request, wsgi_environ=self.wsgi_environ)
+            response = self.invoke(service, self.request.input.request, wsgi_environ=self.wsgi_environ)
+            self.logger.warn('QQQ %s', response)
+            self.response.payload = response
 
 # ################################################################################################################################
 
