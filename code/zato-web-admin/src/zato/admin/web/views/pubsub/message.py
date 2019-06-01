@@ -323,7 +323,7 @@ def publish_action(req):
         for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group', 'expiration', 'in_reply_to'):
             service_input[name] = req.POST.get(name, None) or None # Always use None instead of ''
 
-            req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
+        req.zato.client.invoke('zato.pubsub.publish.publish', service_input)
 
     except Exception as e:
         message = e.message

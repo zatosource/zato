@@ -200,18 +200,14 @@ class WebSocketsGateway(Service):
                 self.logger.warn('Service `%s` is not among %s', service, self.services_allowed)
                 raise Forbidden(self.cid)
 
-        # We need to special-case requests related to pub/sub
+        # We need to special-pub/sub subscriptions
         # because they will require calling self.pubsub on behalf of the current WSX connection.
-        if service.startswith(_pubsub_prefix):
-            action = service.replace(_pubsub_prefix, '')
-            action = action.split('.')[1]
-
-            if action == 'subscribe-wsx':
-                topic_name = input.request['topic_name']
-                unsub_on_wsx_close = input.request.get('unsub_on_wsx_close', True)
-                sub_key = self.pubsub.subscribe(
-                    topic_name, use_current_wsx=True, unsub_on_wsx_close=unsub_on_wsx_close, service=self)
-                self.response.payload.sub_key = sub_key
+        if service == 'zato.pubsub.pubapi.subscribe-wsx':
+            topic_name = input.request['topic_name']
+            unsub_on_wsx_close = input.request.get('unsub_on_wsx_close', True)
+            sub_key = self.pubsub.subscribe(
+                topic_name, use_current_wsx=True, unsub_on_wsx_close=unsub_on_wsx_close, service=self)
+            self.response.payload.sub_key = sub_key
 
         else:
             self.wsgi_environ['zato.orig_channel'] = self.channel
