@@ -29,6 +29,15 @@ if not settings.configured:
 
 # ################################################################################################################################
 
+default_services_allowed = (
+    'zato.pubsub.pubapi.publish-message',
+    'zato.pubsub.pubapi.subscribe-wsx',
+    'zato.pubsub.pubapi.unsubscribe',
+    'zato.pubsub.resume-wsx-subscription',
+)
+
+# ################################################################################################################################
+
 class Echo(Service):
     """ Copies request over to response.
     """
@@ -171,6 +180,7 @@ class WebSocketsGateway(Service):
     """ Dispatches incoming WebSocket requests to target services.
     """
     name = 'helpers.web-sockets-gateway'
+    services_allowed = []
 
     class SimpleIO:
         input_required = 'service',
@@ -178,11 +188,17 @@ class WebSocketsGateway(Service):
         output_optional = 'sub_key',
         skip_empty_keys = True
 
-    def handle(self, _pubsub_prefix='zato.pubsub.pubapi'):
+    def handle(self, _pubsub_prefix='zato.pubsub.pubapi', _default_allowed=default_services_allowed):
 
         # Local aliases
         input = self.request.input
         service = input.service
+
+        if service \
+           and service not in _default_allowed \
+           and service not in self.services_allowed:
+                self.logger.warn('Service `%s` is not among %s', service, self.services_allowed)
+                raise Forbidden(self.cid)
 
         # We need to special-case requests related to pub/sub
         # because they will require calling self.pubsub on behalf of the current WSX connection.
@@ -200,7 +216,6 @@ class WebSocketsGateway(Service):
         else:
             self.wsgi_environ['zato.orig_channel'] = self.channel
             response = self.invoke(service, self.request.input.request, wsgi_environ=self.wsgi_environ)
-            self.logger.warn('QQQ %s', response)
             self.response.payload = response
 
 # ################################################################################################################################
