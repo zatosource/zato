@@ -30,6 +30,7 @@ from past.builtins import basestring, unicode
 from zato.common import RATE_LIMIT, SEC_DEF_TYPE, TOTP
 from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
+from zato.common.exception import BadRequest
 from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOUser as UserModel
 from zato.common.util.json_ import dumps
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
@@ -253,6 +254,9 @@ class UserAPI(object):
         self.password_expiry = self.sso_conf.password.expiry
         self.lock = RLock()
 
+        # To look up auth_user_id by auth_username
+        self.user_id_auth_type_func = {}
+
         # In-RAM maps of auth IDs to SSO user IDs
         self.auth_id_link_map = {
             'zato.{}'.format(SEC_DEF_TYPE.BASIC_AUTH): {},
@@ -274,6 +278,10 @@ class UserAPI(object):
             SEC_DEF_TYPE.BASIC_AUTH: self.server.worker_store.request_dispatcher.url_data.basic_auth_config,
             SEC_DEF_TYPE.JWT: self.server.worker_store.request_dispatcher.url_data.jwt_config,
         }
+
+        # This cannot be done in __init__ because it references the worker store
+        self.user_id_auth_type_func[SEC_DEF_TYPE.BASIC_AUTH] = self.server.worker_store.basic_auth_get
+        self.user_id_auth_type_func[SEC_DEF_TYPE.JWT] = self.server.worker_store.jwt_get
 
         # Load in initial mappings of SSO users and concrete security definitions
         with closing(self.odb_session_func()) as session:
@@ -1213,10 +1221,34 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def create_linked_auth(self, cid, ust, user_id, auth_type, auth_id, is_active, current_app, remote_addr,
+    def _get_auth_username_by_id(self, auth_type, auth_username, _linked_auth_supported=linked_auth_supported):
+
+        # Confirm that input auth_type if of the allowed type
+        if auth_type not in _linked_auth_supported:
+            raise BadRequest(self.cid)
+
+        # Input auth_username is the linked account's username
+        # and we need to translate it into its underlying auth_id
+        # which is what the SSO API expects.
+
+        func = self.user_id_auth_type_func[auth_type]
+        auth_config = func(auth_username)
+
+        if not auth_config:
+            raise BadRequest(self.cid, 'Invalid auth_username ({})'.format(ctx.input.auth_type))
+        else:
+            auth_user_id = auth_config['config']['id']
+            return auth_user_id
+
+# ################################################################################################################################
+
+    def create_linked_auth(self, cid, ust, user_id, auth_type, auth_username, is_active, current_app, remote_addr,
         _linked_auth_supported=linked_auth_supported):
         """ Creates a link between input user and a security account.
         """
+        # Convert auth_username to auth_id, if it exists
+        auth_id = self._get_auth_username_by_id(auth_type, auth_username)
+
         # Validate input
         self._check_linked_auth_call('user.create_linked_auth', cid, ust, user_id, auth_type, auth_id, current_app, remote_addr)
 
@@ -1248,14 +1280,17 @@ class UserAPI(object):
                 logger.warn('Could not add auth link e:`%s`', format_exc())
                 raise ValueError('Auth link could not be added')
             else:
-                return instance.user_id
+                return instance.user_id, auth_id
 
 # ################################################################################################################################
 
-    def delete_linked_auth(self, cid, ust, user_id, auth_type, auth_id, current_app, remote_addr,
+    def delete_linked_auth(self, cid, ust, user_id, auth_type, auth_username, current_app, remote_addr,
         _linked_auth_supported=linked_auth_supported):
         """ Creates a link between input user and a security account.
         """
+        # Convert auth_username to auth_id, if it exists
+        auth_id = self._get_auth_username_by_id(auth_type, auth_username)
+
         # Validate input
         self._check_linked_auth_call('user.delete_linked_auth', cid, ust, user_id, auth_type, auth_id, current_app, remote_addr)
 
@@ -1283,6 +1318,8 @@ class UserAPI(object):
                 ))
             )
             session.commit()
+
+        return auth_id
 
 # ################################################################################################################################
 
