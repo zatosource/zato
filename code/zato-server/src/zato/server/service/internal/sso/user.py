@@ -19,8 +19,9 @@ from dateutil.parser import parser as DateTimeParser
 from past.builtins import unicode
 
 # Zato
-from zato.common import NotGiven
+from zato.common import NotGiven, SEC_DEF_TYPE
 from zato.common.broker_message import SSO as BROKER_MSG_SSO
+from zato.common.exception import BadRequest
 from zato.common.util import asbool
 from zato.server.service import AsIs, Bool, Int, List, Opaque
 from zato.server.service.internal.sso import BaseService, BaseRESTService, BaseSIO
@@ -38,6 +39,9 @@ _date_time_attrs = ('approv_rej_time', 'locked_time', 'password_expiry', 'passwo
 
 # A marker that indicates a value that will never exist
 _invalid = '_invalid.{}'.format(uuid4().hex)
+
+# Linked accounts must be of these types only
+linked_auth_type = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
 
 # ################################################################################################################################
 
@@ -431,7 +435,7 @@ class Signup(BaseRESTService, _CtxInputUsing):
 class LinkedAuth(BaseRESTService):
     class SimpleIO(BaseSIO):
         input_required = 'current_app', 'ust'
-        input_optional = Opaque('user_id'), 'auth_type', 'auth_id', 'is_active',
+        input_optional = Opaque('user_id'), 'auth_type', 'auth_username', 'is_active',
         output_optional = BaseSIO.output_optional + ('result',)
         default_value = _invalid
         skip_empty_keys = True
@@ -464,29 +468,57 @@ class LinkedAuth(BaseRESTService):
 
 # ################################################################################################################################
 
+    def _get_auth_username_by_id(self, ctx):
+        # Confirm that input auth_type if of the allowed type
+        if ctx.input.auth_type not in linked_auth_type:
+            raise BadRequest(self.cid)
+
+        # Input auth_username is the linked account's username
+        # and we need to translate it into its underlying auth_id
+        # which is what the SSO API expects.
+        auth_type_func = {
+            SEC_DEF_TYPE.BASIC_AUTH: self.server.worker_store.basic_auth_get,
+            SEC_DEF_TYPE.JWT: self.server.worker_store.jwt_get,
+        }
+
+        func = auth_type_func[ctx.input.auth_type]
+        auth_config = func(ctx.input.auth_username)
+
+        if not auth_config:
+            raise BadRequest(self.cid, 'Invalid auth_username ({})'.format(ctx.input.auth_type))
+        else:
+            auth_user_id = auth_config['config']['id']
+            return auth_user_id
+
+# ################################################################################################################################
+
     def _handle_sso_POST(self, ctx):
+
+        auth_id = self._get_auth_username_by_id(ctx)
         user_id = self.sso.user.create_linked_auth(self.cid, ctx.input.ust, ctx.input.user_id, ctx.input.auth_type,
-            ctx.input.auth_id, ctx.input.is_active, ctx.input.current_app, ctx.remote_addr)
+            auth_id, ctx.input.is_active, ctx.input.current_app, ctx.remote_addr)
 
         # With data saved to SQL, we can now notify all the servers about the new link
         msg = {}
         msg['action'] = BROKER_MSG_SSO.LINK_AUTH_CREATE.value
         msg['auth_type'] = ctx.input.auth_type
-        msg['auth_id'] = ctx.input.auth_id
+        msg['auth_id'] = auth_id
         msg['user_id'] = user_id
         self.broker_client.publish(msg)
 
 # ################################################################################################################################
 
     def _handle_sso_DELETE(self, ctx):
+
+        auth_id = self._get_auth_username_by_id(ctx)
         self.sso.user.delete_linked_auth(self.cid, ctx.input.ust, ctx.input.user_id, ctx.input.auth_type,
-            ctx.input.auth_id, ctx.input.current_app, ctx.remote_addr)
+            auth_id, ctx.input.current_app, ctx.remote_addr)
 
         # With data saved to SQL, we can now notify all the servers about the new link
         msg = {}
         msg['action'] = BROKER_MSG_SSO.LINK_AUTH_DELETE.value
         msg['auth_type'] = ctx.input.auth_type
-        msg['auth_id'] = ctx.input.auth_id
+        msg['auth_id'] = auth_id
         msg['user_id'] = ctx.input.user_id
         self.broker_client.publish(msg)
 

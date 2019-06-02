@@ -1225,10 +1225,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def jwt_get(self, name):
-        """ Returns the configuration of the JWT security definition
-        of the given name.
+        """ Returns the configuration of the JWT security definition of the given name.
         """
         return self.request_dispatcher.url_data.jwt_get(name)
+
+    def jwt_get_by_id(self, def_id):
+        """ Same as jwt_get but returns information by definition ID.
+        """
+        return self.request_dispatcher.url_data.jwt_get_by_id(def_id)
 
     def on_broker_msg_SECURITY_JWT_CREATE(self, msg, *args):
         """ Creates a new JWT security definition
