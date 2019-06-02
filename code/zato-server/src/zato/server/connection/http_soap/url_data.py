@@ -806,6 +806,14 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
+    def _get_sec_def_by_id(self, def_type, def_id):
+        with self.url_sec_lock:
+            for item in def_type.values():
+                if item.config['id'] == def_id:
+                    return item.config
+
+# ################################################################################################################################
+
     def _update_basic_auth(self, name, config):
         self.basic_auth_config[name] = Bunch()
         self.basic_auth_config[name].config = config
@@ -820,9 +828,7 @@ class URLData(CyURLData, OAuthDataStore):
         """ Same as basic_auth_get but returns information by definition ID.
         """
         with self.url_sec_lock:
-            for item in self.basic_auth_config.values():
-                if item.config['id'] == def_id:
-                    return item.config
+            return self._get_sec_def_by_id(self.basic_auth_config, def_id)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition.
@@ -901,6 +907,12 @@ class URLData(CyURLData, OAuthDataStore):
         """
         with self.url_sec_lock:
             return self.jwt_config.get(name)
+
+    def jwt_get_by_id(self, def_id):
+        """ Same as jwt_get but returns information by definition ID.
+        """
+        with self.url_sec_lock:
+            return self._get_sec_def_by_id(self.basic_auth_config, def_id)
 
     def on_broker_msg_SECURITY_JWT_CREATE(self, msg, *args):
         """ Creates a new JWT security definition.
