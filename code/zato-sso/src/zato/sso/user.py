@@ -1235,7 +1235,7 @@ class UserAPI(object):
         auth_config = func(auth_username)
 
         if not auth_config:
-            raise BadRequest(self.cid, 'Invalid auth_username ({})'.format(ctx.input.auth_type))
+            raise BadRequest(self.cid, 'Invalid auth_username ({})'.format(auth_type))
         else:
             auth_user_id = auth_config['config']['id']
             return auth_user_id

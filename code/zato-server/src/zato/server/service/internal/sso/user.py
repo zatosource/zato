@@ -19,9 +19,8 @@ from dateutil.parser import parser as DateTimeParser
 from past.builtins import unicode
 
 # Zato
-from zato.common import NotGiven, SEC_DEF_TYPE
+from zato.common import NotGiven
 from zato.common.broker_message import SSO as BROKER_MSG_SSO
-from zato.common.exception import BadRequest
 from zato.common.util import asbool
 from zato.server.service import AsIs, Bool, Int, List, Opaque
 from zato.server.service.internal.sso import BaseService, BaseRESTService, BaseSIO
