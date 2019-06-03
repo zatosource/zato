@@ -453,6 +453,7 @@ class LinkedAuth(BaseRESTService):
 
             item.pop('is_internal', None)
             item.pop('auth_id', None)
+            item.pop('user_id', None)
             item.pop('auth_principal', None)
             item.pop('has_ext_principal', None)
 
