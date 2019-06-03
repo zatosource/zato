@@ -35,6 +35,7 @@ release = json.loads(release)
 # the latter may result in spurious pip errors, such as:
 # "error in zato-agent setup command: Distribution contains no modules or packages for namespace package 'zato'"
 #
-revision = sh.git('-C', release_info_dir, 'rev-parse', '--short', 'HEAD').strip()
+with sh.pushd(release_info_dir):
+    revision = sh.git('rev-parse', '--short', 'HEAD').strip()
 
 version = '{}.{}+rev.{}'.format(release['major'], release['minor'], revision)
