@@ -1239,11 +1239,11 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _get_auth_username_by_id(self, auth_type, auth_username, _linked_auth_supported=linked_auth_supported):
+    def _get_auth_username_by_id(self, cid, auth_type, auth_username, _linked_auth_supported=linked_auth_supported):
 
         # Confirm that input auth_type if of the allowed type
         if auth_type not in _linked_auth_supported:
-            raise BadRequest(self.cid)
+            raise BadRequest(cid, 'Invalid auth_type `{}`'.format(auth_type))
 
         # Input auth_username is the linked account's username
         # and we need to translate it into its underlying auth_id
@@ -1253,7 +1253,7 @@ class UserAPI(object):
         auth_config = func(auth_username)
 
         if not auth_config:
-            raise BadRequest(self.cid, 'Invalid auth_username ({})'.format(auth_type))
+            raise BadRequest(cid, 'Invalid auth_username ({})'.format(auth_type))
         else:
             auth_user_id = auth_config['config']['id']
             return auth_user_id
@@ -1265,7 +1265,7 @@ class UserAPI(object):
         """ Creates a link between input user and a security account.
         """
         # Convert auth_username to auth_id, if it exists
-        auth_id = self._get_auth_username_by_id(auth_type, auth_username)
+        auth_id = self._get_auth_username_by_id(cid, auth_type, auth_username)
 
         # Validate input
         self._check_linked_auth_call('user.create_linked_auth', cid, ust, user_id, auth_type, auth_id, current_app, remote_addr)
@@ -1307,7 +1307,7 @@ class UserAPI(object):
         """ Creates a link between input user and a security account.
         """
         # Convert auth_username to auth_id, if it exists
-        auth_id = self._get_auth_username_by_id(auth_type, auth_username)
+        auth_id = self._get_auth_username_by_id(cid, auth_type, auth_username)
 
         # Validate input
         self._check_linked_auth_call('user.delete_linked_auth', cid, ust, user_id, auth_type, auth_id, current_app, remote_addr)
