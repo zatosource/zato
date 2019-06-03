@@ -254,8 +254,9 @@ class UserAPI(object):
         self.password_expiry = self.sso_conf.password.expiry
         self.lock = RLock()
 
-        # To look up auth_user_id by auth_username
+        # To look up auth_user_id by auth_username or the other way around
         self.user_id_auth_type_func = {}
+        self.user_id_auth_type_func_by_id = {}
 
         # In-RAM maps of auth IDs to SSO user IDs
         self.auth_id_link_map = {
@@ -282,6 +283,9 @@ class UserAPI(object):
         # This cannot be done in __init__ because it references the worker store
         self.user_id_auth_type_func[SEC_DEF_TYPE.BASIC_AUTH] = self.server.worker_store.basic_auth_get
         self.user_id_auth_type_func[SEC_DEF_TYPE.JWT] = self.server.worker_store.jwt_get
+
+        self.user_id_auth_type_func_by_id[SEC_DEF_TYPE.BASIC_AUTH] = self.server.worker_store.basic_auth_get_by_id
+        self.user_id_auth_type_func_by_id[SEC_DEF_TYPE.JWT] = self.server.worker_store.jwt_get_by_id
 
         # Load in initial mappings of SSO users and concrete security definitions
         with closing(self.odb_session_func()) as session:
@@ -1194,7 +1198,21 @@ class UserAPI(object):
 
         try:
             with closing(self.odb_session_func()) as session:
-                return get_linked_auth_list(session, user_id)
+                out = []
+                auth_list = get_linked_auth_list(session, user_id)
+
+                for item in auth_list:
+                    item = item._asdict()
+                    item['auth_type'] = item['auth_type'].replace('zato.', '', 1)
+                    auth_func = self.user_id_auth_type_func_by_id[item['auth_type']]
+
+                    auth_config = auth_func(item['auth_id'])
+                    auth_username = auth_config['username']
+
+                    item['auth_username'] = auth_username
+                    out.append(item)
+
+                return out
         except Exception:
             logger.warn('Could not return linked accounts, e:`%s`', format_exc())
 
