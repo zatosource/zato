@@ -446,15 +446,13 @@ class LinkedAuth(BaseRESTService):
         result = self.sso.user.get_linked_auth_list(self.cid, ctx.input.ust, user_id, ctx.input.current_app, ctx.remote_addr)
 
         for item in result:
-
-            item = item._asdict()
             item['creation_time'] = item['creation_time'].isoformat()
-
             for name in 'auth_principal', 'auth_source':
                 if item[name] == 'reserved':
                     del item[name]
 
             item.pop('is_internal', None)
+            item.pop('auth_id', None)
             item.pop('auth_principal', None)
             item.pop('has_ext_principal', None)
 
