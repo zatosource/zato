@@ -50,6 +50,8 @@ class LinkedAuthTestCase(BaseTest):
         print()
         print()
 
+        return
+
         self.delete('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,

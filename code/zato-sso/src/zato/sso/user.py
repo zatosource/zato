@@ -1177,7 +1177,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def get_linked_auth_list(self, cid, ust, user_id, current_app, remote_addr):
+    def get_linked_auth_list(self, cid, ust, current_app, remote_addr, user_id=None):
         """ Returns a list of linked auth accounts for input user, either current or another one.
         """
         # PII audit comes first
