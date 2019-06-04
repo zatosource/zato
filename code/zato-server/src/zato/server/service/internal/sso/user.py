@@ -443,7 +443,7 @@ class LinkedAuth(BaseRESTService):
         user_id = user_id if user_id != _invalid else None
 
         out = []
-        result = self.sso.user.get_linked_auth_list(self.cid, ctx.input.ust, user_id, ctx.input.current_app, ctx.remote_addr)
+        result = self.sso.user.get_linked_auth_list(self.cid, ctx.input.ust, ctx.input.current_app, ctx.remote_addr, user_id)
 
         for item in result:
             item['creation_time'] = item['creation_time'].isoformat()
