@@ -37,20 +37,10 @@ class LinkedAuthTestCase(BaseTest):
             'is_active': True,
         })
 
-        response = self.get('/zato/sso/user/linked', {
+        self.get('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id
         })
-
-        print()
-        print()
-
-        print(111, response)
-
-        print()
-        print()
-
-        return
 
         self.delete('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
