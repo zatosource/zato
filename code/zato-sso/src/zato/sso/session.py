@@ -428,7 +428,7 @@ class SessionAPI(object):
             # We assume that we will not have to warn about an approaching password expiry
             has_w_about_to_exp = False
 
-            # If applicable, password may not be about to expire (this must be after checking that it has not already).
+            # If applicable, password may be about to expire (this must be after checking that it has not already).
             # Note that it may return a specific status to return (warning or error)
             _about_status = self._check_password_about_to_expire(user)
             if _about_status is not True:

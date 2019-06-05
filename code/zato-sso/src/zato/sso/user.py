@@ -805,18 +805,14 @@ class UserAPI(object):
             'new_password': bool(new_password) # To store information if a new password was sent or not
         })
 
-        return self.session.login(
-            LoginCtx(
-                remote_addr,
-                user_agent,
-                has_remote_addr,
-                has_user_agent,
-                {
-                    'username': username,
-                    'password': password,
-                    'current_app': current_app,
-                    'new_password': new_password
-            }))
+        ctx_input = {
+          'username': username,
+          'password': password,
+          'current_app': current_app,
+          'new_password': new_password,
+        }
+        login_ctx = LoginCtx(remote_addr, user_agent, has_remote_addr, has_user_agent, ctx_input)
+        return self.session.login(login_ctx, is_logged_in_ext=False)
 
 # ################################################################################################################################
 
