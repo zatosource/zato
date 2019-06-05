@@ -51,7 +51,7 @@ class Login(BaseService):
     """
     class SimpleIO(BaseSIO):
         input_required = ('username', 'password', 'current_app')
-        input_optional = ('new_password', 'remote_addr', 'user_agent')
+        input_optional = ('totp_key', 'new_password', 'remote_addr', 'user_agent')
         output_required = ('status',)
         output_optional = BaseSIO.output_optional + ('ust',)
 
@@ -118,7 +118,7 @@ class User(BaseRESTService):
         input_required = ('ust', 'current_app')
         input_optional = (AsIs('user_id'), 'username', 'password', Bool('password_must_change'), 'password_expiry',
             'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'is_locked', 'sign_up_status',
-            'approval_status', 'is_rate_limit_active', 'rate_limit_def')
+            'approval_status', 'is_rate_limit_active', 'rate_limit_def', 'is_totp_enabled', 'totp_key', 'totp_label')
 
         output_optional = BaseSIO.output_optional + (AsIs('user_id'), 'username', 'email', 'display_name', 'first_name',
             'middle_name', 'last_name', 'is_active', 'is_internal', 'is_super_user', 'is_approval_needed',
