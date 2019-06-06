@@ -30,7 +30,8 @@ from zato.sso.user import update
 # ################################################################################################################################
 
 _create_user_attrs = ('username', 'password', 'password_must_change', 'display_name', 'first_name', 'middle_name', 'last_name', \
-    'email', 'is_locked', 'sign_up_status', 'is_rate_limit_active', 'rate_limit_def')
+    'email', 'is_locked', 'sign_up_status', 'is_rate_limit_active', 'rate_limit_def', 'is_totp_enabled', 'totp_label',
+    'totp_key')
 _date_time_attrs = ('approv_rej_time', 'locked_time', 'password_expiry', 'password_last_set', 'sign_up_time',
     'approval_status_mod_time')
 
@@ -51,7 +52,7 @@ class Login(BaseService):
     """
     class SimpleIO(BaseSIO):
         input_required = ('username', 'password', 'current_app')
-        input_optional = ('new_password', 'remote_addr', 'user_agent')
+        input_optional = ('totp_code', 'new_password', 'remote_addr', 'user_agent')
         output_required = ('status',)
         output_optional = BaseSIO.output_optional + ('ust',)
 
@@ -78,7 +79,7 @@ class Login(BaseService):
             input.remote_addr = wsgi_remote_addr
 
         out = self.sso.user.login(input.cid, input.username, input.password, input.current_app, input.remote_addr,
-            user_agent, has_remote_addr, has_user_agent, input.new_password)
+            input.totp_code, user_agent, has_remote_addr, has_user_agent, input.new_password)
 
         if out:
             self.response.payload.ust = out.ust
@@ -118,13 +119,14 @@ class User(BaseRESTService):
         input_required = ('ust', 'current_app')
         input_optional = (AsIs('user_id'), 'username', 'password', Bool('password_must_change'), 'password_expiry',
             'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'is_locked', 'sign_up_status',
-            'approval_status', 'is_rate_limit_active', 'rate_limit_def')
+            'approval_status', 'is_rate_limit_active', 'rate_limit_def', 'is_totp_enabled', 'totp_key', 'totp_label')
 
         output_optional = BaseSIO.output_optional + (AsIs('user_id'), 'username', 'email', 'display_name', 'first_name',
             'middle_name', 'last_name', 'is_active', 'is_internal', 'is_super_user', 'is_approval_needed',
             'approval_status', 'approval_status_mod_time', 'approval_status_mod_by', 'is_locked', 'locked_time',
             'creation_ctx', 'locked_by', 'approv_rej_time', 'approv_rej_by', 'password_expiry', 'password_is_set',
-            'password_must_change', 'password_last_set', 'sign_up_status','sign_up_time')
+            'password_must_change', 'password_last_set', 'sign_up_status','sign_up_time', 'is_totp_enabled',
+            'totp_label')
 
         default_value = _invalid
 
@@ -257,7 +259,7 @@ class TOTP(BaseRESTService):
     name = 'zato.server.service.internal.sso.user.totp'
 
     class SimpleIO(BaseSIO):
-        input_required = ('ust', 'current_app')
+        input_required = ('ust', 'current_app', 'totp_key', 'totp_label')
         input_optional = AsIs('user_id'),
         output_optional = BaseSIO.output_optional + ('totp_key',)
 
@@ -265,7 +267,10 @@ class TOTP(BaseRESTService):
         """ Resets a user's TOTP key.
         """
         self.response.payload.totp_key = self.sso.user.reset_totp_key(
-            self.cid, ctx.input.ust, ctx.input.user_id, None, None, ctx.input.current_app, ctx.remote_addr)
+            self.cid, ctx.input.ust, ctx.input.user_id,
+            ctx.input.totp_key,
+            ctx.input.totp_label,
+            ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
 # ################################################################################################################################
