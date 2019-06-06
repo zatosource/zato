@@ -259,7 +259,7 @@ class TOTP(BaseRESTService):
     name = 'zato.server.service.internal.sso.user.totp'
 
     class SimpleIO(BaseSIO):
-        input_required = ('ust', 'current_app')
+        input_required = ('ust', 'current_app', 'totp_key', 'totp_label')
         input_optional = AsIs('user_id'),
         output_optional = BaseSIO.output_optional + ('totp_key',)
 
@@ -267,7 +267,10 @@ class TOTP(BaseRESTService):
         """ Resets a user's TOTP key.
         """
         self.response.payload.totp_key = self.sso.user.reset_totp_key(
-            self.cid, ctx.input.ust, ctx.input.user_id, None, None, ctx.input.current_app, ctx.remote_addr)
+            self.cid, ctx.input.ust, ctx.input.user_id,
+            ctx.input.totp_key,
+            ctx.input.totp_label,
+            ctx.input.current_app, ctx.remote_addr)
 
 # ################################################################################################################################
 # ################################################################################################################################
