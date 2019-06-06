@@ -375,7 +375,7 @@ class UserAPI(object):
         user_model.password_must_change = ctx.data.get('password_must_change') or False
         user_model.password_expiry = now + timedelta(days=self.password_expiry)
 
-        totp_key = CryptoManager.generate_totp_key()
+        totp_key = ctx.data.get('totp_key') or CryptoManager.generate_totp_key()
         totp_label = ctx.data.get('totp_label') or TOTP.default_label
 
         user_model.is_totp_enabled = ctx.data.get('is_totp_enabled')
