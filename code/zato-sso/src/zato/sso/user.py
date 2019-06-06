@@ -96,6 +96,8 @@ regular_attrs = {
     'first_name': '',
     'middle_name': '',
     'last_name': '',
+    'is_totp_enabled': False,
+    'totp_label': '',
 }
 
 # Attributes accessible only to super-users
@@ -151,7 +153,7 @@ _no_such_value = object()
 class update:
 
     # Accessible to regular users only
-    regular_attrs = set(('email', 'display_name', 'first_name', 'middle_name', 'last_name'))
+    regular_attrs = set(('email', 'display_name', 'first_name', 'middle_name', 'last_name', 'is_totp_enabled', 'totp_label'))
 
     # Accessible to super-users only
     super_user_attrs = set(('is_locked', 'password_expiry', 'password_must_change', 'sign_up_status',
@@ -373,6 +375,13 @@ class UserAPI(object):
         user_model.password_must_change = ctx.data.get('password_must_change') or False
         user_model.password_expiry = now + timedelta(days=self.password_expiry)
 
+        totp_key = ctx.data.get('totp_key') or CryptoManager.generate_totp_key()
+        totp_label = ctx.data.get('totp_label') or TOTP.default_label
+
+        user_model.is_totp_enabled = ctx.data.get('is_totp_enabled')
+        user_model.totp_key = self.encrypt_func(totp_key.encode('utf8'))
+        user_model.totp_label = self.encrypt_func(totp_label.encode('utf8'))
+
         user_model.sign_up_status = ctx.data.get('sign_up_status')
         user_model.sign_up_time = now
         user_model.sign_up_confirm_token = ctx.data.get('sign_up_confirm_token') or new_confirm_token()
@@ -473,6 +482,8 @@ class UserAPI(object):
             ctx.data['password_expiry'] = user.password_expiry
             ctx.data['sign_up_status'] = user.sign_up_status
             ctx.data['sign_up_time'] = user.sign_up_time
+            ctx.data['is_totp_enabled'] = user.is_totp_enabled
+            ctx.data['totp_label'] = user.totp_label
 
             # This one we do not want to reveal back
             ctx.data.pop('password', None)
@@ -635,8 +646,13 @@ class UserAPI(object):
 
                 for key in attrs:
                     value = getattr(info, key)
+
                     if isinstance(value, datetime):
                         value = value.isoformat()
+
+                    elif key in ('totp_key', 'totp_label'):
+                        value = self.decrypt_func(value)
+
                     setattr(out, key, value)
 
                 if out.email:
@@ -792,8 +808,8 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def login(self, cid, username, password, current_app, remote_addr, user_agent=None, has_remote_addr=False,
-        has_user_agent=False, new_password=''):
+    def login(self, cid, username, password, current_app, remote_addr, totp_code=None, user_agent=None,
+        has_remote_addr=False, has_user_agent=False, new_password=''):
         """ Logs a user in if username and password are correct, returning a user session token (UST) on success,
         or a ValidationError on error.
         """
@@ -810,6 +826,7 @@ class UserAPI(object):
           'password': password,
           'current_app': current_app,
           'new_password': new_password,
+          'totp_code': totp_code,
         }
         login_ctx = LoginCtx(remote_addr, user_agent, has_remote_addr, has_user_agent, ctx_input)
         return self.session.login(login_ctx, is_logged_in_ext=False)
@@ -1001,7 +1018,7 @@ class UserAPI(object):
 # ################################################################################################################################
 
     def reset_totp_key(self, cid, current_ust, user_id, key, key_label, current_app, remote_addr, skip_sec=False):
-        """ Saves a new TOTP key for user, either the one provided on input or a newly generates one.
+        """ Saves a new TOTP key for user, either using the one provided on input or a newly generated one.
         In the latter case, it is also returned on output.
         """
         # PII audit comes first
