@@ -1017,7 +1017,7 @@ class UserAPI(object):
 # ################################################################################################################################
 
     def reset_totp_key(self, cid, current_ust, user_id, key, key_label, current_app, remote_addr, skip_sec=False):
-        """ Saves a new TOTP key for user, either the one provided on input or a newly generates one.
+        """ Saves a new TOTP key for user, either using the one provided on input or a newly generated one.
         In the latter case, it is also returned on output.
         """
         # PII audit comes first
