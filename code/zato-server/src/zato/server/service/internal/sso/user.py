@@ -51,7 +51,7 @@ class Login(BaseService):
     """
     class SimpleIO(BaseSIO):
         input_required = ('username', 'password', 'current_app')
-        input_optional = ('totp_key', 'new_password', 'remote_addr', 'user_agent')
+        input_optional = ('totp_code', 'new_password', 'remote_addr', 'user_agent')
         output_required = ('status',)
         output_optional = BaseSIO.output_optional + ('ust',)
 
@@ -78,7 +78,7 @@ class Login(BaseService):
             input.remote_addr = wsgi_remote_addr
 
         out = self.sso.user.login(input.cid, input.username, input.password, input.current_app, input.remote_addr,
-            user_agent, has_remote_addr, has_user_agent, input.new_password)
+            input.totp_code, user_agent, has_remote_addr, has_user_agent, input.new_password)
 
         if out:
             self.response.payload.ust = out.ust

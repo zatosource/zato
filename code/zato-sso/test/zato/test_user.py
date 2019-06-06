@@ -178,6 +178,11 @@ class UserLoginTestCase(BaseTest):
 
     def test_user_login(self):
 
+        self.patch('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'is_totp_enabled': False,
+        })
+
         response = self.post('/zato/sso/user/login', {
             'username': Config.super_user_name,
             'password': Config.super_user_password,
@@ -191,6 +196,11 @@ class UserLoginTestCase(BaseTest):
 class UserLogoutTestCase(BaseTest):
 
     def test_user_logout(self):
+
+        self.patch('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'is_totp_enabled': False,
+        })
 
         ust = self.post('/zato/sso/user/login', {
             'username': Config.super_user_name,
