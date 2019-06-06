@@ -29,6 +29,7 @@ import sh
 import requests
 
 # Zato
+from zato.common.crypto import CryptoManager
 from zato.sso import const, status_code
 
 # ################################################################################################################################
@@ -157,6 +158,7 @@ class BaseTest(TestCase):
         response = self.post('/zato/sso/user/login', {
             'username': Config.super_user_name,
             'password': Config.super_user_password,
+            'totp_code': CryptoManager.get_current_totp_code(Config.super_user_totp_key),
         })
         self.ctx.super_user_ust = response.ust
 

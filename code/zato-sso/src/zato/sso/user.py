@@ -153,7 +153,7 @@ _no_such_value = object()
 class update:
 
     # Accessible to regular users only
-    regular_attrs = set(('email', 'display_name', 'first_name', 'middle_name', 'last_name'))
+    regular_attrs = set(('email', 'display_name', 'first_name', 'middle_name', 'last_name', 'is_totp_enabled', 'totp_label'))
 
     # Accessible to super-users only
     super_user_attrs = set(('is_locked', 'password_expiry', 'password_must_change', 'sign_up_status',
@@ -808,8 +808,8 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def login(self, cid, username, password, current_app, remote_addr, user_agent=None, has_remote_addr=False,
-        has_user_agent=False, new_password=''):
+    def login(self, cid, username, password, current_app, remote_addr, totp_code=None, user_agent=None,
+        has_remote_addr=False, has_user_agent=False, new_password=''):
         """ Logs a user in if username and password are correct, returning a user session token (UST) on success,
         or a ValidationError on error.
         """
@@ -826,6 +826,7 @@ class UserAPI(object):
           'password': password,
           'current_app': current_app,
           'new_password': new_password,
+          'totp_code': totp_code,
         }
         login_ctx = LoginCtx(remote_addr, user_agent, has_remote_addr, has_user_agent, ctx_input)
         return self.session.login(login_ctx, is_logged_in_ext=False)
