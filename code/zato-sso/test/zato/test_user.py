@@ -216,6 +216,8 @@ class UserGetTestCase(BaseTest):
         last_name = self._get_random_data()
         email = self._get_random_data()
         is_locked = True
+        is_totp_enabled = True
+        totp_label = self._get_random_data()
         sign_up_status = const.signup_status.before_confirmation
 
         response = self.post('/zato/sso/user', {
@@ -228,6 +230,8 @@ class UserGetTestCase(BaseTest):
             'last_name': last_name,
             'email': email,
             'is_locked': is_locked,
+            'is_totp_enabled': is_totp_enabled,
+            'totp_label': totp_label,
             'sign_up_status': sign_up_status,
         })
 
@@ -248,6 +252,8 @@ class UserGetTestCase(BaseTest):
         self.assertEqual(response.sign_up_status, sign_up_status)
         self.assertIs(response.password_must_change, password_must_change)
         self.assertIs(response.is_locked, is_locked)
+        self.assertIs(response.is_totp_enabled, is_totp_enabled)
+        self.assertEqual(response.totp_label, totp_label)
 
 # ################################################################################################################################
 

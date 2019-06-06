@@ -96,6 +96,8 @@ regular_attrs = {
     'first_name': '',
     'middle_name': '',
     'last_name': '',
+    'is_totp_enabled': False,
+    'totp_label': '',
 }
 
 # Attributes accessible only to super-users
@@ -373,6 +375,13 @@ class UserAPI(object):
         user_model.password_must_change = ctx.data.get('password_must_change') or False
         user_model.password_expiry = now + timedelta(days=self.password_expiry)
 
+        totp_key = CryptoManager.generate_totp_key()
+        totp_label = ctx.data.get('totp_label') or TOTP.default_label
+
+        user_model.is_totp_enabled = ctx.data.get('is_totp_enabled')
+        user_model.totp_key = self.encrypt_func(totp_key.encode('utf8'))
+        user_model.totp_label = self.encrypt_func(totp_label.encode('utf8'))
+
         user_model.sign_up_status = ctx.data.get('sign_up_status')
         user_model.sign_up_time = now
         user_model.sign_up_confirm_token = ctx.data.get('sign_up_confirm_token') or new_confirm_token()
@@ -473,6 +482,8 @@ class UserAPI(object):
             ctx.data['password_expiry'] = user.password_expiry
             ctx.data['sign_up_status'] = user.sign_up_status
             ctx.data['sign_up_time'] = user.sign_up_time
+            ctx.data['is_totp_enabled'] = user.is_totp_enabled
+            ctx.data['totp_label'] = user.totp_label
 
             # This one we do not want to reveal back
             ctx.data.pop('password', None)
@@ -635,8 +646,13 @@ class UserAPI(object):
 
                 for key in attrs:
                     value = getattr(info, key)
+
                     if isinstance(value, datetime):
                         value = value.isoformat()
+
+                    elif key in ('totp_key', 'totp_label'):
+                        value = self.decrypt_func(value)
+
                     setattr(out, key, value)
 
                 if out.email:

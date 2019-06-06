@@ -30,7 +30,7 @@ from zato.sso.user import update
 # ################################################################################################################################
 
 _create_user_attrs = ('username', 'password', 'password_must_change', 'display_name', 'first_name', 'middle_name', 'last_name', \
-    'email', 'is_locked', 'sign_up_status', 'is_rate_limit_active', 'rate_limit_def')
+    'email', 'is_locked', 'sign_up_status', 'is_rate_limit_active', 'rate_limit_def', 'is_totp_enabled', 'totp_label')
 _date_time_attrs = ('approv_rej_time', 'locked_time', 'password_expiry', 'password_last_set', 'sign_up_time',
     'approval_status_mod_time')
 
@@ -124,7 +124,8 @@ class User(BaseRESTService):
             'middle_name', 'last_name', 'is_active', 'is_internal', 'is_super_user', 'is_approval_needed',
             'approval_status', 'approval_status_mod_time', 'approval_status_mod_by', 'is_locked', 'locked_time',
             'creation_ctx', 'locked_by', 'approv_rej_time', 'approv_rej_by', 'password_expiry', 'password_is_set',
-            'password_must_change', 'password_last_set', 'sign_up_status','sign_up_time')
+            'password_must_change', 'password_last_set', 'sign_up_status','sign_up_time', 'is_totp_enabled',
+            'totp_label')
 
         default_value = _invalid
 
