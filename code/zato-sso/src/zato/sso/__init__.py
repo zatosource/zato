@@ -187,8 +187,7 @@ class User(object):
         'email', 'first_name', 'is_active', 'is_approval_needed', 'is_internal', 'is_locked', 'is_super_user',
         'last_name', 'locked_by', 'locked_time', 'middle_name', 'password_expiry', 'password_is_set', 'password_last_set',
         'password_must_change', 'sign_up_status', 'sign_up_time', 'user_id', 'username', 'is_rate_limit_active',
-        'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def')
-
+        'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def', 'is_totp_enabled', 'totp_label')
 
     def __init__(self):
         self.approval_status = None
@@ -220,6 +219,8 @@ class User(object):
         self.rate_limit_def = None
         self.rate_limit_type = None
         self.rate_limit_check_parent_def = None
+        self.is_totp_enabled = None
+        self.totp_label = None
 
     def to_dict(self):
         return dict((name, getattr(self, name)) for name in self.__slots__ if name != 'attr')

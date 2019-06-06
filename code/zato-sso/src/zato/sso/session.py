@@ -419,8 +419,6 @@ class SessionAPI(object):
                 if not self._check_credentials(ctx, user.password if user else _dummy_password):
                     raise ValidationError(status_code.auth.not_allowed, False)
 
-                logger.warn('QQQ %s %s', user.totp_key, user.is_totp_enabled)
-
             # It must be possible to log into the application requested (CRM above)
             self._check_login_to_app_allowed(ctx)
 
