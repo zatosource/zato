@@ -1571,6 +1571,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
+
+        # If statistics are disabled, all their related services will not be available
+        # so if they are invoked via scheduler, they should be ignored. Ultimately,
+        # the scheduler should not invoke them at all.
+        if msg.name.startswith('zato.stats'):
+            if not self.server.component_enabled.stats:
+                return
+
         return self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
 
     def on_broker_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg, args=None):
