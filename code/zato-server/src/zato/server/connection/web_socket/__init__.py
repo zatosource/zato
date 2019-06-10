@@ -532,7 +532,16 @@ class WebSocket(_WebSocket):
         logger.warn(
             'Peer %s (%s) %s, closing its connection to %s (%s), cid:`%s` (%s)', self._peer_address, self._peer_fqdn, action,
             self._local_address, self.config.name, cid, self.peer_conn_info_pretty)
-        self.send(Forbidden(cid, data).serialize())
+
+        try:
+            self.send(Forbidden(cid, data).serialize())
+        except AttributeError as e:
+            # Catch a lower-level exception which may be raised in case the client
+            # disconnected and we did not manage to send the Forbidden message.
+            # In this situation, the lower level will raise an attribute error
+            # with a specific message. Otherwise, we reraise the exception.
+            if not e.args[0] == "'NoneType' object has no attribute 'text_message'":
+                raise
 
         self.server_terminated = True
         self.client_terminated = True
@@ -741,7 +750,7 @@ class WebSocket(_WebSocket):
         try:
             self.send(serialized)
         except AttributeError as e:
-            if e.message == "'NoneType' object has no attribute 'text_message'":
+            if e.args[0] == "'NoneType' object has no attribute 'text_message'":
                 _msg = 'Service response discarded (client disconnected), cid:`%s`, msg.meta:`%s`'
                 _meta = msg.get_meta()
                 logger.warn(_msg, _meta)
