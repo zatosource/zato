@@ -195,7 +195,7 @@ class ChannelSecurityInfo(object):
 # ################################################################################################################################
 
 class AMQPFacade(object):
-    """ Introduced solely to let service access outgoing connections through self.out.amqp.invoke/_async
+    """ Introduced solely to let service access outgoing connections through self.amqp.invoke/_async
     rather than self.out.amqp_invoke/_async. The .send method is kept for pre-3.0 backward-compatibility.
     """
     __slots__ = ('send', 'invoke', 'invoke_async')
@@ -236,6 +236,9 @@ class Service(object):
     email = None
     search = None
     amqp = AMQPFacade()
+
+    # For WebSockets
+    wsx = None
 
     _worker_store = None  # type: WorkerStore
     _worker_config = None
