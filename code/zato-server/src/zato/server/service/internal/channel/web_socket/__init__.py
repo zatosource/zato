@@ -31,6 +31,17 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
 
+# Type checking
+if 0:
+
+    # Zato
+    from zato.server.connection.web_socket import ChannelWebSocket as ChannelWebSocketImpl
+
+    # For pyflakes
+    ChannelWebSocketImpl = ChannelWebSocketImpl
+
+# ################################################################################################################################
+
 elem = 'channel_web_socket'
 model = ChannelWebSocket
 label = 'a WebSocket channel'
@@ -285,5 +296,16 @@ class GetSubKeyDataList(AdminService):
             for item in data:
                 item.creation_time = datetime_from_ms(item.creation_time * 1000)
             self.response.payload[:] = data
+
+# ################################################################################################################################
+
+class Broadcast(AdminService):
+    """ Broacasts the input message to all WebSocket connections attached to a channel by its name.
+    """
+    def handle(self):
+        channel_name = self.request.raw_request['channel_name']
+        data = self.request.raw_request['data']
+        connector = self.server.worker_store.web_socket_api.connectors[channel_name] # type: ChannelWebSocketImpl
+        connector.broadcast(self.cid, data)
 
 # ################################################################################################################################

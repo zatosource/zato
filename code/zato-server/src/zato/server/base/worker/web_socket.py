@@ -67,3 +67,11 @@ class WebSocket(WorkerImpl):
             self.web_socket_api.delete(msg.name)
 
 # ################################################################################################################################
+
+    def on_broker_msg_CHANNEL_WEB_SOCKET_BROADCAST(self, msg):
+        self.invoke('zato.channel.web-socket.broadcast', {
+            'channel_name': msg.channel_name,
+            'data': msg.data
+        })
+
+# ################################################################################################################################
