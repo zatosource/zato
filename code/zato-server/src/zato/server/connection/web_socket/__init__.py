@@ -38,7 +38,7 @@ from past.builtins import basestring
 from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.exception import Reportable
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
-from zato.common.util import new_cid
+from zato.common.util import new_cid, spawn_greenlet
 from zato.common.util.hook import HookTool
 from zato.common.util.wsx import cleanup_wsx_client
 from zato.server.connection.connector import Connector
@@ -1046,6 +1046,10 @@ class WebSocketContainer(WebSocketWSGIApplication):
     def invoke_client(self, cid, pub_client_id, request, timeout):
         return self.clients[pub_client_id].invoke_client(cid, request, timeout)
 
+    def broadcast(self, cid, request):
+        for client in self.clients.values():
+            spawn(client.invoke_client, cid, request)
+
     def disconnect_client(self, cid, pub_client_id):
         return self.clients[pub_client_id].disconnect_client(cid)
 
@@ -1115,6 +1119,9 @@ class WebSocketServer(WSGIServer):
     def invoke_client(self, cid, pub_client_id, request, timeout):
         return self.application.invoke_client(cid, pub_client_id, request, timeout)
 
+    def broadcast(self, cid, request):
+        return self.application.broadcast(cid, request)
+
     def disconnect_client(self, cid, pub_client_id):
         return self.application.disconnect_client(cid, pub_client_id)
 
@@ -1150,6 +1157,9 @@ class ChannelWebSocket(Connector):
 
     def invoke(self, cid, pub_client_id, request, timeout=5):
         return self._wsx_server.invoke_client(cid, pub_client_id, request, timeout)
+
+    def broadcast(self, cid, request):
+        return self._wsx_server.broadcast(cid, request)
 
     def disconnect_client(self, cid, pub_client_id, *ignored_args, **ignored_kwargs):
         return self._wsx_server.disconnect_client(cid, pub_client_id)
