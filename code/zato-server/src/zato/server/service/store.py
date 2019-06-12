@@ -49,7 +49,8 @@ from zato.common.odb.model.base import Base as ModelBase
 from zato.common.util import deployment_info, import_module_from_path, is_func_overridden, is_python_file, visit_py_source
 from zato.common.util.json_ import dumps
 from zato.server.config import ConfigDict
-from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service
+from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, PubSubHook, Service, \
+     WSXFacade
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -325,6 +326,7 @@ class ServiceStore(object):
             class_.amqp.invoke = service_store.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat
             class_.amqp.invoke_async = class_.amqp.send = service_store.server.worker_store.amqp_invoke_async
 
+            class_.wsx = WSXFacade(service_store.server)
             class_.definition.kafka = service_store.server.worker_store.def_kafka
             class_.im.slack = service_store.server.worker_store.outconn_im_slack
             class_.im.telegram = service_store.server.worker_store.outconn_im_telegram
