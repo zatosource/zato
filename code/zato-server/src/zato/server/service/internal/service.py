@@ -343,9 +343,17 @@ class Invoke(AdminService):
                 response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
 
         else:
+            # This branch the same as above in async branch, except in async there was no all_pids
 
-            # Same as above in async branch, except in async there was no all_pids
-            if all_pids:
+            # It is possible that we were given the all_pids flag on input but we know
+            # ourselves that there is only one process, the current one, so we can just
+            # invoke it directly instead of going through IPC.
+            if all_pids and self.server.fs_server_config.main.gunicorn_workers > 1:
+                use_all_pids = True
+            else:
+                use_all_pids = False
+
+            if use_all_pids:
                 args = (name, payload, timeout) if timeout else (name, payload)
                 response = dumps(self.server.invoke_all_pids(*args))
             else:
