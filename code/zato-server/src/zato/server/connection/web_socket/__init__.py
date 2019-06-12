@@ -38,7 +38,7 @@ from past.builtins import basestring
 from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.exception import Reportable
 from zato.common.pubsub import HandleNewMessageCtx, MSG_PREFIX, PubSubMessage
-from zato.common.util import new_cid, spawn_greenlet
+from zato.common.util import new_cid
 from zato.common.util.hook import HookTool
 from zato.common.util.wsx import cleanup_wsx_client
 from zato.server.connection.connector import Connector
