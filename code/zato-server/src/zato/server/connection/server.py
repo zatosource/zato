@@ -241,8 +241,6 @@ class Servers(object):
         # Will be set to False if there is at least one error messages among all the servers and worker processes.
         out_ok = True
 
-        logger.warn('QQQ %s', self._servers)
-
         for server in self._servers.values():
 
             if server.up_status == SERVER_UP_STATUS.RUNNING:
