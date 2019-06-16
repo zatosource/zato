@@ -114,7 +114,7 @@ class Publish(AdminService):
 
     def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, has_wsx_no_server,
         _initialized=_initialized, _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT,
-        _opaque_only=PUBSUB.DEFAULT.SK_OPAQUE):
+        _opaque_only=PUBSUB.DEFAULT.SK_OPAQUE, _float_str=PUBSUB.FLOAT_STRING_CONVERT):
 
         priority = get_priority(self.cid, input)
 
@@ -167,7 +167,11 @@ class Publish(AdminService):
         ps_msg.pub_msg_id = pub_msg_id
         ps_msg.pub_correl_id = pub_correl_id
         ps_msg.in_reply_to = in_reply_to
-        ps_msg.pub_time = now
+
+        # Convert to string to prevent pg8000 from rounding up float values
+        ps_msg.pub_time = _float_str.format(now)
+        ps_msg.ext_pub_time = _float_str.format(ext_pub_time) if ext_pub_time else ext_pub_time
+
         ps_msg.delivery_status = _initialized
         ps_msg.pub_pattern_matched = pub_pattern_matched
         ps_msg.data = input['data']
@@ -181,7 +185,6 @@ class Publish(AdminService):
         ps_msg.cluster_id = self.server.cluster_id
         ps_msg.has_gd = has_gd
         ps_msg.ext_client_id = ext_client_id
-        ps_msg.ext_pub_time = ext_pub_time
         ps_msg.group_id = input.get('group_id') or None
         ps_msg.position_in_group = input.get('position_in_group') or None
         ps_msg.is_in_sub_queue = bool(subscriptions_by_topic)
