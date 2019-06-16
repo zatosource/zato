@@ -143,7 +143,8 @@ def _insert_queue_messages(session, queue_msgs):
 
 # ################################################################################################################################
 
-def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list, topic_id, now, cid, _initialized=_initialized):
+def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list, topic_id, now, cid, _initialized=_initialized,
+    _float_str=PUBSUB.FLOAT_STRING_CONVERT):
     """ Moves messages to each subscriber's queue, i.e. runs an INSERT that adds relevant references to the topic message.
     Also, updates each message's is_in_sub_queue flag to indicate that it is no longer available for other subscribers.
     """
@@ -154,7 +155,7 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
 
             # Enqueues the message for each subscriber
             queue_msgs.append({
-                'creation_time': now,
+                'creation_time': _float_str.format(now),
                 'pub_msg_id': msg['pub_msg_id'],
                 'endpoint_id': sub.endpoint_id,
                 'topic_id': topic_id,
