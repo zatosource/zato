@@ -849,6 +849,10 @@ class PUBSUB:
 
     SKIPPED_PATTERN_MATCHING = '<skipped>'
 
+    # All float values are converted to strings of that precision
+    # to make sure pg8000 does not round up the floats with loss of precision.
+    FLOAT_STRING_CONVERT = '{:.7f}'
+
     class DATA_FORMAT:
         CSV  = NameId('CSV', DATA_FORMAT.CSV)
         DICT = NameId('Dict', DATA_FORMAT.DICT)
