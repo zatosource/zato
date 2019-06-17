@@ -554,6 +554,12 @@ class InRAMSyncBacklog(object):
             for msg in messages:
                 self.msg_id_to_msg[msg['pub_msg_id']] = msg
 
+                # We received timestamps as strings whereas our recipients require floats
+                # so we need to do the conversion here.
+                msg['pub_time'] = float(msg['pub_time'])
+                if msg.get('ext_pub_time'):
+                    msg['ext_pub_time'] = float(msg['ext_pub_time'])
+
                 # .. attach server metadata ..
                 msg['server_name'] = self.pubsub.server.name
                 msg['server_pid'] = self.pubsub.server.pid
