@@ -701,7 +701,11 @@ class Create(ZatoCommand):
             sso_conf.close()
 
             # There will be multiple keys in future releases to allow for key rotation
-            key1 = args.secret_key or Fernet.generate_key()
+            key1 = getattr(args, 'secret_key', None)
+            if key1:
+                key1 = str.encode(key1)
+            else:
+                key1 = Fernet.generate_key()
             fernet1 = Fernet(key1)
 
             secrets_conf_loc = os.path.join(self.target_dir, 'config/repo/secrets.conf')
@@ -725,7 +729,13 @@ class Create(ZatoCommand):
             zato_main_token = fernet1.encrypt(self.token)
             zato_main_token = zato_main_token.decode('utf8')
 
-            zato_misc_jwt_secret = fernet1.encrypt(getattr(args, 'jwt_secret', Fernet.generate_key()))
+            jwt_secret = getattr(args, 'jwt_secret', None)
+            if jwt_secret:
+                jwt_secret = str.encode(jwt_secret)
+            else:
+                jwt_secret = Fernet.generate_key()
+            zato_misc_jwt_secret = fernet1.encrypt(jwt_secret)
+
             zato_misc_jwt_secret = zato_misc_jwt_secret.decode('utf8')
 
             secrets_conf.write(secrets_conf_template.format(
