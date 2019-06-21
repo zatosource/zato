@@ -397,9 +397,12 @@ class _Client(object):
             raw_response, self.to_bunch, self.max_response_repr,
             self.max_cid_repr, self.logger, output_repeated)
 
+        if isinstance(request, (bytes, bytearray)):
+            request = request.decode('utf-8')
+
         if self.logger.isEnabledFor(logging.DEBUG):
             msg = 'request:[%s]\nresponse_class:[%s]\nasync:[%s]\nheaders:[%s]\n text:[%s]\ndata:[%s]'
-            self.logger.debug(msg, request.decode('utf-8'), response_class, async, headers, raw_response.text, response.data)
+            self.logger.debug(msg, request, response_class, async, headers, raw_response.text, response.data)
 
         return response
 
