@@ -227,7 +227,8 @@ class Create(ZatoCommand):
         zato_well_known_data = cm.encrypt(zato_well_known_data)
         zato_well_known_data = zato_well_known_data.decode('utf8')
 
-        secret_key = secret_key.decode('utf8')
+        if isinstance(secret_key, (bytes, bytearray)):
+            secret_key = secret_key.decode('utf8')
 
         # We will use TLS only if we were given crypto material on input
         use_tls = is_arg_given(args, 'priv_key_path')
