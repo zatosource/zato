@@ -232,7 +232,6 @@ class ConfigDict(object):
                             else:
                                 config['_encrypted_in_odb'] = False
 
-
         # Post-process data before it is returned to resolve any opaque attributes
         for value in config_dict.values():
             value_config = value['config']
