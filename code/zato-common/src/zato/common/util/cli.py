@@ -23,7 +23,7 @@ def read_stdin_data(strip=True):
     to_read, _, _ = select.select([sys.stdin], [], [], 0)
 
     if to_read:
-        data = to_read[0].read()
+        data = to_read[0].readline()
         out = data.strip() if strip else data
     else:
         out = ''
