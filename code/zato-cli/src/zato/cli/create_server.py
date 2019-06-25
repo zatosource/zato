@@ -21,6 +21,7 @@ from cryptography.fernet import Fernet
 from sqlalchemy.exc import IntegrityError
 
 # Python 2/3 compatibility
+from past.types import unicode
 from six import PY3
 
 # Zato
@@ -729,8 +730,14 @@ class Create(ZatoCommand):
             zato_main_token = fernet1.encrypt(self.token)
             zato_main_token = zato_main_token.decode('utf8')
 
-            zato_misc_jwt_secret = fernet1.encrypt(getattr(args, 'jwt_secret', Fernet.generate_key()).encode('utf-8'))
-            zato_misc_jwt_secret = zato_misc_jwt_secret.decode('utf8')
+            zato_misc_jwt_secret = getattr(args, 'jwt_secret', None)
+            if not zato_misc_jwt_secret:
+                zato_misc_jwt_secret = Fernet.generate_key()
+
+            zato_misc_jwt_secret = fernet1.encrypt(zato_misc_jwt_secret)
+
+            if isinstance(zato_misc_jwt_secret, bytes):
+                zato_misc_jwt_secret = zato_misc_jwt_secret.decode('utf8')
 
             secrets_conf.write(secrets_conf_template.format(
                 keys_key1=key1,
