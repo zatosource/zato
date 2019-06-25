@@ -59,7 +59,8 @@ class BaseLimiter(object):
     """
     __slots__ = 'current_idx', 'lock', 'api', 'object_info', 'definition', 'has_from_any', 'from_any_rate', 'from_any_unit', \
         'is_limit_reached', 'ip_address_cache', 'current_period_func', 'by_period', 'parent_type', 'parent_name', \
-        'is_exact', 'from_any_object_id', 'from_any_object_type', 'from_any_object_name', 'cluster_id', 'is_active'
+        'is_exact', 'from_any_object_id', 'from_any_object_type', 'from_any_object_name', 'cluster_id', 'is_active', \
+        'invocation_no'
 
     initial_state = {
         'requests': 0,
@@ -86,6 +87,7 @@ class BaseLimiter(object):
         self.parent_type = None    # type: unicode
         self.parent_name = None    # type: unicode
         self.is_exact = None       # type: bool
+        self.invocation_no = 0     # type: int
 
         self.from_any_object_id = None   # type: int
         self.from_any_object_type = None # type: unicode
@@ -221,6 +223,9 @@ class BaseLimiter(object):
         _rate_any=Const.rate_any, _utcnow=datetime.utcnow):
         # type: (unicode, unicode, unicode, int, unicode, unicode, object, unicode, unicode)
 
+        # Increase invocation counter
+        self.invocation_no += 1
+
         # Local aliases
         now = _utcnow()
 
@@ -244,6 +249,10 @@ class BaseLimiter(object):
         # that also wants to check it.
         if self.has_parent:
             self.api.check_limit(cid, self.parent_type, self.parent_name, orig_from)
+
+        # Clean up old entries periodically
+        if self.invocation_no % 1000 == 0:
+            self.cleanup()
 
 # ################################################################################################################################
 
