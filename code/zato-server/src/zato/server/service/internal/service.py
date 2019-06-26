@@ -24,6 +24,7 @@ from validate import is_boolean
 # Python 2/3 compatibility
 from builtins import bytes
 from future.moves.urllib.parse import parse_qs
+from future.utils import iterkeys
 from past.builtins import basestring
 
 # Zato
@@ -696,7 +697,7 @@ class ServiceInvoker(AdminService):
             # All internal services wrap their responses in top-level elements that we need to shed here.
             if service_name.startswith(_internal):
                 if response:
-                    top_level = response.keys()[0]
+                    top_level = list(iterkeys(response))[0]
                     response = response[top_level]
 
             # Assign response to outgoing payload
