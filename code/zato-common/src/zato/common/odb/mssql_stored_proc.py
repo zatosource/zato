@@ -11,17 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # PyTDS
 import pytds
 
-# SQLAlchemy
-from sqlalchemy.pool import _DBProxy, QueuePool as SAQueuePool
-
-# ################################################################################################################################
-
-def get_queue_pool(pool_kwargs):
-    class QueuePool(SAQueuePool):
-        def __init__(self, creator, *args, **kwargs):
-            super(QueuePool, self).__init__(creator, **pool_kwargs)
-    return QueuePool
-
 # ################################################################################################################################
 
 class StoredProcedureAPI(object):
@@ -47,11 +36,16 @@ class StoredProcedureAPI(object):
 # ################################################################################################################################
 
     def ping(self):
-        conn = self._get_connection()
-        with conn.cursor() as cursor:
-            # This will raise an exception if connection details are invalid
-            # and we let it propagate.
-            cursor.execute('select 1+1')
+        conn = None
+        try:
+            conn = self._get_connection()
+            with conn.cursor() as cursor:
+                # This will raise an exception if connection details are invalid
+                # and we let it propagate.
+                cursor.execute('select 1+1')
+        finally:
+            if conn:
+                conn.close()
 
 # ################################################################################################################################
 
@@ -61,13 +55,17 @@ class StoredProcedureAPI(object):
         # Result to return
         result = []
 
-        # Obtain a connection from pool
-        conn = self._get_connection()
-
-        # Get a new cursor
-        cursor = conn.cursor()
+        # This is optional in case getting a new cursor will fail
+        cursor = None
 
         try:
+
+            # Obtain a connection from pool
+            conn = self._get_connection()
+
+            # Get a new cursor
+            cursor = conn.cursor()
+
             # Call the proceudre
             cursor.callproc(proc_name, params or [])
 
@@ -76,6 +74,8 @@ class StoredProcedureAPI(object):
                 if not cursor.nextset():
                     break
         finally:
+            if cursor:
+                cursor.close()
             conn.commit()
             conn.close()
             return result
@@ -85,10 +85,13 @@ class StoredProcedureAPI(object):
     def _yield_rows(self, conn, name, params=None):
         """ Calls a procedure and yields all the rows it produced, one by one.
         """
-        # Get a new cursor
-        cursor = conn.cursor()
+        # This is optional in case getting a new cursor will fail
+        cursor = None
 
         try:
+            # Get a new cursor
+            cursor = conn.cursor()
+
             # Call the proceudre
             cursor.callproc(proc_name, params or [])
 
@@ -97,6 +100,8 @@ class StoredProcedureAPI(object):
                 if not cursor.nextset():
                     break
         finally:
+            if cursor:
+                cursor.close()
             conn.commit()
             conn.close()
 
@@ -110,36 +115,3 @@ class StoredProcedureAPI(object):
         return self._yield_rows(conn, name, params) if use_yield else self._return_rows(conn, name, params)
 
 # ################################################################################################################################
-
-if __name__ == '__main__':
-
-    # Zato-level attributes
-    name = 'My SP API'
-
-    # Pool attributes
-    pool_size = 20
-
-    # Details of how to connect via PyTDS
-    connect_kwargs = {
-        'dsn': 'localhost',
-        'port': 1433,
-        'database': 'db1',
-        'user': 'sa',
-        'password': '...',
-        'as_dict': True,
-        'appname': 'Zato',
-    }
-
-    #proc_name = 'get_current_db'
-    proc_name = 'get_user2'
-    params = ['abc']
-
-    api = StoredProcedureAPI(name, pool_size, connect_kwargs)
-    api.ping()
-
-    for x in range(1000):
-        result = api.callproc(proc_name, params, use_yield=True)
-        result = api.callproc(proc_name, params)
-
-# ################################################################################################################################
-
