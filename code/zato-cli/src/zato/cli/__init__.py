@@ -314,6 +314,10 @@ ping_query=SELECT 1
 display_name=Oracle
 ping_query=SELECT 1 FROM dual
 
+[zato+mssql1]
+display_name="MS SQL (SP)"
+ping_query=SELECT 1
+
 # ######### ################################# ######### #
 # ######### User-defined SQL engines go below ######### #
 # ######### ################################# ######### #
