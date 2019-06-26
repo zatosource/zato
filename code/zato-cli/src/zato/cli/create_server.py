@@ -21,7 +21,6 @@ from cryptography.fernet import Fernet
 from sqlalchemy.exc import IntegrityError
 
 # Python 2/3 compatibility
-from past.types import unicode
 from six import PY3
 
 # Zato
