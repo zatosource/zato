@@ -16,7 +16,7 @@ from threading import RLock
 from traceback import format_exc
 
 # Python 2/3 compatibility
-from future.utils import iteritems, itervalues
+from future.utils import iteritems, iterkeys, itervalues
 from past.builtins import basestring, unicode
 from six import PY2
 
@@ -581,7 +581,7 @@ class URLData(CyURLData, OAuthDataStore):
             logger.error('Invalid HTTP method `%s`, cid:`%s`', http_method, cid)
             raise Forbidden(cid, 'You are not allowed to access this URL\n')
 
-        for role_id, perm_id, resource_id in worker_store.rbac.registry._allowed.iterkeys():
+        for role_id, perm_id, resource_id in iterkeys(worker_store.rbac.registry._allowed):
 
             if is_allowed:
                 break
