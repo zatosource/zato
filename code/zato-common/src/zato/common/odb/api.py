@@ -31,9 +31,9 @@ from sqlalchemy.sql.type_api import TypeEngine
 from bunch import Bunch, bunchify
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
+from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
      SERVER_UP_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
-from zato.common.mssql_direct import MSSQLDirectAPI
+from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
@@ -163,12 +163,15 @@ class SessionWrapper(object):
             msg = 'Could not ping:`%s`, session will be left uninitialized, e:`%s`'
             self.logger.warn(msg, name, format_exc())
         else:
-            if use_scoped_session:
-                self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
+            if config['engine'] == MS_SQL.ZATO_DIRECT:
+                self._Session = SimpleSession(self.pool.engine)
             else:
-                self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
+                if use_scoped_session:
+                    self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
+                else:
+                    self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
+                self._session = self._Session()
 
-            self._session = self._Session()
             self.session_initialized = True
             self.is_sqlite = self.pool.engine.name == 'sqlite'
 
@@ -251,19 +254,20 @@ class SQLConnectionPool(object):
             return create_engine(engine_url, **extra)
         else:
 
+            # This is a direct MS SQL connection
             connect_kwargs = {
-                'dsn': 'localhost',
-                'port': 1433,
-                'database': 'db1',
-                'user': 'sa',
-                'password': 'Pbu0ast7HxTyY',
+                'dsn': config['host'],
+                'port': config['port'],
+                'database': config['db_name'],
+                'user': config['username'],
+                'password': config['password'],
                 'as_dict': True,
-                'appname': 'Zato',
             }
 
-            #print(111, engine_url)
-            #print(222, config)
-            #print(333, extra)
+            for name in MS_SQL.EXTRA_KWARGS:
+                value = extra.get(name, NotGiven)
+                if value is not NotGiven:
+                    connect_kwargs[name] = value
 
             return MSSQLDirectAPI(config['name'], config['pool_size'], connect_kwargs)
 
