@@ -11,11 +11,25 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # PyTDS
 import pytds
 
+# SQLAlchemy
+from sqlalchemy.pool import _DBProxy, QueuePool as SAQueuePool
+
 # ################################################################################################################################
 
-class StoredProcedureAPI(object):
-    """ An object through which MS SQL stored procedures can be invoked.
+def get_queue_pool(pool_kwargs):
+    class _QueuePool(SAQueuePool):
+        def __init__(self, creator, *args, **kwargs):
+            super(_QueuePool, self).__init__(creator, **pool_kwargs)
+    return _QueuePool
+
+# ################################################################################################################################
+
+class MSSQLDirectAPI(object):
+    """ An object through which MS SQL connections can be obtained and stored procedures invoked.
     """
+    name = 'zato+mssql1'
+    ping_query = 'SELECT 1'
+
     def __init__(self, name, pool_size, connect_kwargs):
         # type: (str, int, dict) -> None
         self._name = name
@@ -30,7 +44,7 @@ class StoredProcedureAPI(object):
 
 # ################################################################################################################################
 
-    def _get_connection(self):
+    def connect(self):
         return self._pool.connect(**self._connect_kwargs)
 
 # ################################################################################################################################
@@ -38,11 +52,11 @@ class StoredProcedureAPI(object):
     def ping(self):
         conn = None
         try:
-            conn = self._get_connection()
+            conn = self.connect()
             with conn.cursor() as cursor:
                 # This will raise an exception if connection details are invalid
                 # and we let it propagate.
-                cursor.execute('select 1+1')
+                cursor.execute(self.ping_query)
         finally:
             if conn:
                 conn.close()
@@ -61,7 +75,7 @@ class StoredProcedureAPI(object):
         try:
 
             # Obtain a connection from pool
-            conn = self._get_connection()
+            conn = self.connect()
 
             # Get a new cursor
             cursor = conn.cursor()
@@ -111,7 +125,7 @@ class StoredProcedureAPI(object):
         params = params or []
 
         # Obtain a connection from pool
-        conn = self._get_connection()
+        conn = self.connect()
         return self._yield_rows(conn, name, params) if use_yield else self._return_rows(conn, name, params)
 
 # ################################################################################################################################
