@@ -315,7 +315,7 @@ display_name=Oracle
 ping_query=SELECT 1 FROM dual
 
 [zato+mssql1]
-display_name="MS SQL (SP)"
+display_name="MS SQL (Direct)"
 ping_query=SELECT 1
 
 # ######### ################################# ######### #
