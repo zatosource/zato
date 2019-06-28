@@ -28,8 +28,9 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 # ################################################################################################################################
 # ################################################################################################################################
 
-get_attrs_req = 'id', 'name', 'is_active', 'url_path', 'sec_type', 'sec_use_rbac', 'security_id', List('service_whitelist')
-attrs_opt = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+get_attrs_req = 'id', 'name', 'is_active', 'url_path', 'sec_type', 'sec_use_rbac', 'security_id'
+attrs_opt = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
+    List('service_whitelist')
 
 # ################################################################################################################################
 # ################################################################################################################################
