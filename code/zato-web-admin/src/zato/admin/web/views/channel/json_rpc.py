@@ -50,7 +50,7 @@ class Index(_Index):
 
     def on_before_append_item(self, item):
 
-        item.service_whitelist = '\n'.join(item.service_whitelist)
+        item.service_whitelist = '\n'.join(item.service_whitelist) if item.service_whitelist else ''
         item.security_id = get_http_channel_security_id(item)
 
         return item
