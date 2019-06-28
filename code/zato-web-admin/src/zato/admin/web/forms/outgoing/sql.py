@@ -17,12 +17,13 @@ from zato.admin.web.forms import add_select_from_service
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    engine = forms.ChoiceField(widget=forms.Select(attrs={'class':'required'}))
+    engine = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:50%'}))
     host = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
     port = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
-    db_name = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
-    username = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
-    pool_size = forms.IntegerField(initial=1, widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:30px'}))
+    db_name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
+    pool_size = forms.IntegerField(initial=1,
+        widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:40px'}))
     extra = forms.CharField(widget=forms.Textarea())
 
     def __init__(self, req, prefix=None, post_data=None):
