@@ -37,7 +37,7 @@ class CreateForm(forms.Form):
         add_services(self, req, True)
         add_initial_select(self, 'default_auth_method')
 
-        for item in VAULT.AUTH_METHOD:
+        for item in VAULT.AUTH_METHOD():
             self.fields['default_auth_method'].choices.append([item.id, item.name])
 
         add_select_from_service(self, req, 'zato.security.tls.key-cert.get-list', 'tls_key_cert_id')
