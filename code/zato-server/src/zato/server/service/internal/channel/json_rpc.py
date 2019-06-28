@@ -17,6 +17,7 @@ from bunch import bunchify
 
 # Zato
 from zato.common import CONNECTION, JSON_RPC, URL_TYPE
+from zato.common. exception import Unauthorized
 from zato.common.json_rpc import ErrorCtx, Forbidden, InternalError, ItemResponse, JSONRPCHandler, ParseError, \
      RateLimitReached as JSONRPCRateLimitReached, RequestContext
 from zato.common.json_schema import ValidationException as JSONSchemaValidationException
@@ -28,8 +29,9 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 # ################################################################################################################################
 # ################################################################################################################################
 
-get_attrs_req = 'id', 'name', 'is_active', 'url_path', 'sec_type', 'sec_use_rbac', 'security_id', List('service_whitelist')
-attrs_opt = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+get_attrs_req = 'id', 'name', 'is_active', 'url_path', 'sec_type', 'sec_use_rbac', 'security_id'
+attrs_opt = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def'), \
+    List('service_whitelist')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -157,6 +159,33 @@ class JSONRPCGateway(AdminService):
             channel_config = self.server.worker_store.request_dispatcher.url_data.get_channel_by_name(self.channel.name)
             message = loads(self.request.payload.decode('utf8'))
 
+            #
+            # At this point we know that our own service can be invoked (the gateway itself),
+            # but we also need to check security as it pertains to the JSON-RPC method itself
+            # which is another Zato service. Note that since JSON-RPC is a kind of an HTTP-based channel
+            # we can have security definitions of three types:
+            #
+            # a) No security defined
+            # b) A specific security definition
+            # c) Deletegated to RBAC
+            #
+            # Case a) does not require anything
+            # Case b) assumes that the very JSON-RPC and the service being invoked share the definition
+            # Case c) requires an additional check because different RBAC permissions may be assigned
+            #         to the gateway itself vs. the service that is to be invoked
+            #
+
+            channel_item = self.wsgi_environ['zato.channel_item'] # type: dict
+
+            if channel_item['sec_use_rbac']:
+                inner_channel_item = {}
+                inner_channel_item['url_path'] = channel_item['url_path']
+                inner_channel_item['service_id'] = self.server.service_store.get_service_id_by_name(message['method'])
+
+                self.server.worker_store.request_dispatcher.url_data.check_rbac_delegated_security(
+                    self.chan.sec, self.cid, inner_channel_item, inner_channel_item['url_path'], self.request.raw_request,
+                    self.wsgi_environ, self.request.http.POST, self.server.worker_store)
+
         except Exception as e:
 
             self.logger.warn('JSON-RPC error in `%s` (%s), e:`%s`', self.channel.name, self.cid, format_exc())
@@ -170,7 +199,7 @@ class JSONRPCGateway(AdminService):
                 message = 'Parsing error'
 
             # Source address is not allowed to invoke the service
-            if isinstance(e, AddressNotAllowed):
+            if isinstance(e, (AddressNotAllowed, Unauthorized)):
                 code = Forbidden.code
                 message = 'You are not allowed to access this resource'
 
