@@ -160,6 +160,7 @@ class ChannelInfo(object):
     __slots__ = ('id', 'name', 'type', 'data_format', 'is_internal', 'match_target', 'impl', 'security', 'sec')
 
     def __init__(self, id, name, type, data_format, is_internal, match_target, security, impl):
+        # type: (int, str, str, str, bool, object, ChannelSecurityInfo, object)
         self.id = id
         self.name = name
         self.type = type
