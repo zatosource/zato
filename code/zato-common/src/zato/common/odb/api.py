@@ -261,6 +261,7 @@ class SQLConnectionPool(object):
                 'database': config['db_name'],
                 'user': config['username'],
                 'password': config['password'],
+                'login_timeout': 3,
                 'as_dict': True,
             }
 

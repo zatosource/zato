@@ -66,18 +66,12 @@ class MSSQLDirectAPI(object):
         # type: (str, int, dict) -> None
         self._name = name
         self._connect_kwargs = connect_kwargs
-
-        print()
-        print()
-
-        print(111, connect_kwargs)
-
-        print()
-        print()
-
         self._pool_kwargs = {
             'pool_size': pool_size,
             'max_overflow': 0,
+
+            # This is a pool-level checkout timeout, not an SQL query-level one
+            # so we do not need to make it configurable
             'timeout': 3
         }
 
