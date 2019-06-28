@@ -31,8 +31,9 @@ from sqlalchemy.sql.type_api import TypeEngine
 from bunch import Bunch, bunchify
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
+from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
      SERVER_UP_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
@@ -40,7 +41,7 @@ from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, Depl
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
 from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
-     parse_tls_channel_security_definition
+     parse_tls_channel_security_definition, spawn_greenlet
 from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
 from zato.sso.odb.query import get_rate_limiting_info as get_sso_user_rate_limiting_info
@@ -148,7 +149,10 @@ class SessionWrapper(object):
         self.is_sqlite = None
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def init_session(self, name, config, pool, use_scoped_session=True):
+    def init_session(self, *args, **kwargs):
+        spawn_greenlet(self._init_session, *args, *kwargs)
+
+    def _init_session(self, name, config, pool, use_scoped_session=True):
         self.config = config
         self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
@@ -159,12 +163,15 @@ class SessionWrapper(object):
             msg = 'Could not ping:`%s`, session will be left uninitialized, e:`%s`'
             self.logger.warn(msg, name, format_exc())
         else:
-            if use_scoped_session:
-                self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
+            if config['engine'] == MS_SQL.ZATO_DIRECT:
+                self._Session = SimpleSession(self.pool.engine)
             else:
-                self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
+                if use_scoped_session:
+                    self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
+                else:
+                    self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
+                self._session = self._Session()
 
-            self._session = self._Session()
             self.session_initialized = True
             self.is_sqlite = self.pool.engine.name == 'sqlite'
 
@@ -214,7 +221,7 @@ class SQLConnectionPool(object):
         engine_url = get_engine_url(config)
         self.engine = self._create_engine(engine_url, config, _extra)
 
-        if self.engine:
+        if self.engine and self._is_sa_engine(engine_url):
             event.listen(self.engine, 'checkin', self.on_checkin)
             event.listen(self.engine, 'checkout', self.on_checkout)
             event.listen(self.engine, 'connect', self.on_connect)
@@ -237,35 +244,33 @@ class SQLConnectionPool(object):
 
 # ################################################################################################################################
 
+    def _is_sa_engine(self, engine_url):
+        return 'zato+mssql1' not in engine_url
+
+# ################################################################################################################################
+
     def _create_engine(self, engine_url, config, extra):
-        if 'mxodbc' in engine_url:
+        if self._is_sa_engine(engine_url):
+            return create_engine(engine_url, **extra)
+        else:
 
-            from mx.ODBCConnect.Client import ServerSession as mxServerSession
-            from mx.ODBCConnect.Error import OperationalError
-
-            config_data = {
-                'Server_Connection': {},
-                'Logging': {},
-                'Integration': {},
+            # This is a direct MS SQL connection
+            connect_kwargs = {
+                'dsn': config['host'],
+                'port': config['port'],
+                'database': config['db_name'],
+                'user': config['username'],
+                'password': config['password'],
+                'login_timeout': 3,
+                'as_dict': True,
             }
 
-            config_data['Server_Connection']['host'] = config['host']
-            config_data['Server_Connection']['port'] = config['port']
-            config_data['Server_Connection']['using_ssl'] = extra.pop('mxodbc_using_ssl', False)
+            for name in MS_SQL.EXTRA_KWARGS:
+                value = extra.get(name, NotGiven)
+                if value is not NotGiven:
+                    connect_kwargs[name] = value
 
-            config_data['Integration']['gevent'] = True
-
-            try:
-                session = mxServerSession(config_data=config_data)
-                odbc = session.open()
-            except OperationalError:
-                self.logger.warn('SQL connection could not be created, caught mxODBC exception, e:`%s`', format_exc())
-            else:
-                url = '{engine}://{username}:{password}@{db_name}'.format(**config)
-                return create_engine(url, module=odbc, **extra)
-
-        else:
-            return create_engine(engine_url, **extra)
+            return MSSQLDirectAPI(config['name'], config['pool_size'], connect_kwargs)
 
 # ################################################################################################################################
 
@@ -301,12 +306,19 @@ class SQLConnectionPool(object):
     def ping(self, fs_sql_config):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
-        query = get_ping_query(fs_sql_config, self.config)
+        if hasattr(self.engine, 'ping'):
+            func = self.engine.ping
+            query = self.engine.ping_query
+            args = []
+        else:
+            func = self.engine.connect().execute
+            query = get_ping_query(fs_sql_config, self.config)
+            args = [query]
 
         self.logger.debug('About to ping the SQL connection pool:`%s`, query:`%s`', self.config_no_sensitive, query)
 
         start_time = time()
-        self.engine.connect().execute(query)
+        func(*args)
         response_time = time() - start_time
 
         self.logger.debug('Ping OK, pool:`%s`, response_time:`%s` s', self.config_no_sensitive, response_time)

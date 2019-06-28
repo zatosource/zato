@@ -28,7 +28,7 @@ import sqlalchemy
 
 # Zato
 from zato.cli import util as cli_util
-from zato.common import get_version, odb, util, ZATO_INFO_FILE
+from zato.common import get_version, MS_SQL, odb, util, ZATO_INFO_FILE
 from zato.common.util import get_engine_url, get_full_stack, get_session
 from zato.common.util.cli import read_stdin_data
 from zato.common.util.import_ import import_string
@@ -314,6 +314,10 @@ ping_query=SELECT 1
 display_name=Oracle
 ping_query=SELECT 1 FROM dual
 
+[{}]
+display_name="MS SQL (Direct)"
+ping_query=SELECT 1
+
 # ######### ################################# ######### #
 # ######### User-defined SQL engines go below ######### #
 # ######### ################################# ######### #
@@ -321,7 +325,7 @@ ping_query=SELECT 1 FROM dual
 #[label]
 #friendly_name=My DB
 #sqlalchemy_driver=sa-name
-""".lstrip() # nopep8
+""".lstrip().format(MS_SQL.ZATO_DIRECT) # nopep8
 
 # ################################################################################################################################
 
