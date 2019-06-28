@@ -70,7 +70,7 @@ def _get_edit_create_message(params, prefix=''):
         'url_path': params[prefix + 'url_path'],
         'merge_url_params_req': bool(params.get(prefix + 'merge_url_params_req')),
         'match_slash': bool(params.get(prefix + 'match_slash')),
-        'http_accept': params[prefix + 'http_accept'],
+        'http_accept': params.get(prefix + 'http_accept'),
         'url_params_pri': params.get(prefix + 'url_params_pri', URL_PARAMS_PRIORITY.DEFAULT),
         'params_pri': params.get(prefix + 'params_pri', PARAMS_PRIORITY.DEFAULT),
         'serialization_type': params.get(prefix + 'serialization_type', HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id),
