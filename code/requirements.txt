@@ -106,6 +106,7 @@ pyrapidjson==0.5.1
 pysolr==3.2.0
 python-butler==0.9
 python-dateutil==2.6.0
+python-tds==1.9.1
 python-editor==1.0.1
 python-glanceclient==0.12.0
 python-keyczar==0.71rc0
