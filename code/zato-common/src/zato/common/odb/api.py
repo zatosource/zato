@@ -150,7 +150,7 @@ class SessionWrapper(object):
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def init_session(self, *args, **kwargs):
-        spawn_greenlet(self._init_session, *args, *kwargs)
+        spawn_greenlet(self._init_session, *args, **kwargs)
 
     def _init_session(self, name, config, pool, use_scoped_session=True):
         self.config = config
