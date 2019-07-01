@@ -610,7 +610,7 @@ class Service(object):
                 # Check if there is a JSON Schema validator attached to the service and if so,
                 # validate input before proceeding any further.
                 if service._json_schema_validator and service._json_schema_validator.is_initialized:
-                    validation_result = service._json_schema_validator.validate(cid, self.request.payload)
+                    validation_result = service._json_schema_validator.validate(cid, raw_request)
                     if not validation_result:
                         error = validation_result.get_error()
 
