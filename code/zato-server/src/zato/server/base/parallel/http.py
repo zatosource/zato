@@ -91,18 +91,22 @@ class HTTPHandler(object):
 
         if self.needs_access_log:
 
-            self.access_logger_log(_INFO, '', None, None, {
-                'remote_ip': remote_addr,
-                'cid_resp_time': '%s/%s' % (cid, (_utcnow() - request_ts_utc).total_seconds()),
-                'channel_name': channel_name,
-                'req_timestamp_utc': request_ts_utc.strftime(_ACCESS_LOG_DT_FORMAT),
-                'req_timestamp': request_ts_local.strftime(_ACCESS_LOG_DT_FORMAT),
-                'method': wsgi_environ['REQUEST_METHOD'],
-                'path': wsgi_environ['PATH_INFO'],
-                'http_version': wsgi_environ['SERVER_PROTOCOL'],
-                'status_code': wsgi_environ['zato.http.response.status'].split()[0],
-                'response_size': len(payload),
-                'user_agent': wsgi_environ.get('HTTP_USER_AGENT', '(None)'),
-            })
+            # Either log all HTTP requests or make sure that current path
+            # is not in a list of paths to ignore.
+            if self.needs_all_access_log or wsgi_environ['PATH_INFO'] not in self.access_log_ignore:
+
+                self.access_logger_log(_INFO, '', None, None, {
+                    'remote_ip': remote_addr,
+                    'cid_resp_time': '%s/%s' % (cid, (_utcnow() - request_ts_utc).total_seconds()),
+                    'channel_name': channel_name,
+                    'req_timestamp_utc': request_ts_utc.strftime(_ACCESS_LOG_DT_FORMAT),
+                    'req_timestamp': request_ts_local.strftime(_ACCESS_LOG_DT_FORMAT),
+                    'method': wsgi_environ['REQUEST_METHOD'],
+                    'path': wsgi_environ['PATH_INFO'],
+                    'http_version': wsgi_environ['SERVER_PROTOCOL'],
+                    'status_code': wsgi_environ['zato.http.response.status'].split()[0],
+                    'response_size': len(payload),
+                    'user_agent': wsgi_environ.get('HTTP_USER_AGENT', '(None)'),
+                })
 
         return [payload]

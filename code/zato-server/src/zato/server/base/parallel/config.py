@@ -400,6 +400,13 @@ class ConfigLoader(object):
         self.config.json_pointer_store = JSONPointerStore()
         self.config.xpath_store = XPathStore()
 
+        # HTTP access log should optionally ignore certain requests
+        access_log_ignore = self.fs_server_config.get('logging', {}).get('http_access_log_ignore')
+        if access_log_ignore:
+            access_log_ignore = access_log_ignore if isinstance(access_log_ignore, list) else [access_log_ignore]
+            self.needs_all_access_log = False
+            self.access_log_ignore.update(access_log_ignore)
+
         # Assign config to worker
         self.worker_store.worker_config = self.config
 
