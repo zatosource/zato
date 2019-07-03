@@ -163,7 +163,7 @@ class KVDB(object):
 
         if self.has_sentinel:
             instance = self.conn_class(config['sentinels'], config.get('password'), config.get('socket_timeout'),
-                charset='utf-8', decode_responses=True)
+                decode_responses=True)
             self.conn = instance.master_for(config['sentinel_master'])
         else:
             self.conn = self.conn_class(charset='utf-8', decode_responses=True, **config)
