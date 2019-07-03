@@ -57,10 +57,6 @@ class JWT(object):
                 first()
 
             if item:
-                logger.warn('DD-1 %s', item)
-                logger.warn('DD-2 %s', password)
-                logger.warn('DD-3 %s', item.password)
-                logger.warn('DD-4 %s', self.decrypt_func(item.password))
                 if self.decrypt_func(item.password) == password:
                     return item
 
@@ -74,7 +70,7 @@ class JWT(object):
         token_data.update(data)
 
         token = jwt.encode(token_data, self.secret, algorithm=self.ALGORITHM)
-        return self.fernet.encrypt(token.encode('utf-8'))
+        return self.fernet.encrypt(token).decode('utf8')
 
 # ################################################################################################################################
 
