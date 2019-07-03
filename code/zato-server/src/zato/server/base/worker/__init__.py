@@ -1590,8 +1590,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ Creates or updates an SQL connection, including changing its
         password.
         """
-        if msg.password.startswith(SECRETS.PREFIX):
-            msg.password = self.server.decrypt(msg.password)
+        msg.password = self.server.decrypt(msg.password)
 
         # Is it a rename? If so, delete the connection first
         if msg.get('old_name') and msg.get('old_name') != msg['name']:
@@ -1958,6 +1957,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def on_broker_msg_CLOUD_AWS_S3_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an AWS S3 connection.
         """
+        msg.password = self.server.decrypt(msg.password)
+
         self._update_aws_config(msg)
         self._on_broker_msg_cloud_create_edit(msg, 'AWS S3', self.worker_config.cloud_aws_s3, S3Wrapper)
 
