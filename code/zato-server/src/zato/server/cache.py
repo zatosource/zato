@@ -58,6 +58,9 @@ class RobustCache(object):
     def _odb_put(self, key, value, ttl):
         key = self._get_odb_key(key)
 
+        key = key.encode('utf8')
+        value = value.encode('utf8')
+
         with closing(self.odb.session()) as session:
             try:
                 item = session.query(KVData).filter_by(key=key).first()
@@ -76,7 +79,7 @@ class RobustCache(object):
                 session.commit()
 
             except Exception:
-                logger.exception('Unable to put key %s into ODB', key)
+                logger.exception('Unable to put key/value `%r` `%r` (%s %s) into ODB', key, value, type(key), type(value))
                 session.rollback()
 
                 raise
