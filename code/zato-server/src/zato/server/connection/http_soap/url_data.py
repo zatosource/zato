@@ -16,7 +16,7 @@ from threading import RLock
 from traceback import format_exc
 
 # Python 2/3 compatibility
-from future.utils import iteritems, itervalues
+from future.utils import iteritems, iterkeys, itervalues
 from past.builtins import basestring, unicode
 from six import PY2
 
@@ -581,7 +581,7 @@ class URLData(CyURLData, OAuthDataStore):
             logger.error('Invalid HTTP method `%s`, cid:`%s`', http_method, cid)
             raise Forbidden(cid, 'You are not allowed to access this URL\n')
 
-        for role_id, perm_id, resource_id in worker_store.rbac.registry._allowed.iterkeys():
+        for role_id, perm_id, resource_id in iterkeys(worker_store.rbac.registry._allowed):
 
             if is_allowed:
                 break
@@ -806,6 +806,14 @@ class URLData(CyURLData, OAuthDataStore):
 
 # ################################################################################################################################
 
+    def _get_sec_def_by_id(self, def_type, def_id):
+        with self.url_sec_lock:
+            for item in def_type.values():
+                if item.config['id'] == def_id:
+                    return item.config
+
+# ################################################################################################################################
+
     def _update_basic_auth(self, name, config):
         self.basic_auth_config[name] = Bunch()
         self.basic_auth_config[name].config = config
@@ -820,9 +828,7 @@ class URLData(CyURLData, OAuthDataStore):
         """ Same as basic_auth_get but returns information by definition ID.
         """
         with self.url_sec_lock:
-            for item in self.basic_auth_config.values():
-                if item.config['id'] == def_id:
-                    return item.config
+            return self._get_sec_def_by_id(self.basic_auth_config, def_id)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition.
@@ -834,6 +840,8 @@ class URLData(CyURLData, OAuthDataStore):
         """ Updates an existing HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
+            current_config = self.basic_auth_config[msg.old_name]
+            msg.password = current_config.config.password
             del self.basic_auth_config[msg.old_name]
             self._update_basic_auth(msg.name, msg)
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
@@ -846,8 +854,10 @@ class URLData(CyURLData, OAuthDataStore):
             del self.basic_auth_config[msg.name]
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH, True)
 
-            # If this account was linked to an SSO user, delete that link
-            self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.id)
+            # If this account was linked to an SSO user, delete that link,
+            # assuming that SSO is enabled (in which case it is not None).
+            if self.worker.server.sso_api:
+                self.worker.server.sso_api.user.on_broker_msg_SSO_LINK_AUTH_DELETE(msg.id)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
@@ -901,6 +911,12 @@ class URLData(CyURLData, OAuthDataStore):
         """
         with self.url_sec_lock:
             return self.jwt_config.get(name)
+
+    def jwt_get_by_id(self, def_id):
+        """ Same as jwt_get but returns information by definition ID.
+        """
+        with self.url_sec_lock:
+            return self._get_sec_def_by_id(self.basic_auth_config, def_id)
 
     def on_broker_msg_SECURITY_JWT_CREATE(self, msg, *args):
         """ Creates a new JWT security definition.

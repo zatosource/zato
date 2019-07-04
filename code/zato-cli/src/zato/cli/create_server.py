@@ -270,6 +270,9 @@ allow_loopback=False
 [shmem]
 size=0.1 # In MB
 
+[logging]
+http_access_log_ignore=
+
 [os_environ]
 sample_key=sample_value
 
@@ -625,7 +628,10 @@ class Create(ZatoCommand):
 
         server = Server(cluster=cluster)
         server.name = args.server_name
-        server.token = self.token.decode('utf8')
+        if isinstance(self.token, (bytes, bytearray)):
+            server.token = self.token.decode('utf8')
+        else:
+            server.token = self.token
         server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED
         server.last_join_mod_by = self._get_user_host()
         server.last_join_mod_date = datetime.utcnow()
@@ -720,13 +726,20 @@ class Create(ZatoCommand):
             zato_well_known_data = fernet1.encrypt(well_known_data.encode('utf8'))
             zato_well_known_data = zato_well_known_data.decode('utf8')
 
-            key1 = key1.decode('utf8')
+            if isinstance(key1, (bytes, bytearray)):
+                key1 = key1.decode('utf8')
 
             zato_main_token = fernet1.encrypt(self.token)
             zato_main_token = zato_main_token.decode('utf8')
 
-            zato_misc_jwt_secret = fernet1.encrypt(getattr(args, 'jwt_secret', Fernet.generate_key()))
-            zato_misc_jwt_secret = zato_misc_jwt_secret.decode('utf8')
+            zato_misc_jwt_secret = getattr(args, 'jwt_secret', None)
+            if not zato_misc_jwt_secret:
+                zato_misc_jwt_secret = Fernet.generate_key()
+
+            zato_misc_jwt_secret = fernet1.encrypt(zato_misc_jwt_secret)
+
+            if isinstance(zato_misc_jwt_secret, bytes):
+                zato_misc_jwt_secret = zato_misc_jwt_secret.decode('utf8')
 
             secrets_conf.write(secrets_conf_template.format(
                 keys_key1=key1,

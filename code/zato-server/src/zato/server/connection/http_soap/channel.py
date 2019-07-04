@@ -273,7 +273,11 @@ class RequestDispatcher(object):
         # This is needed in parallel.py's on_wsgi_request
         wsgi_environ['zato.channel_item'] = channel_item
 
+        # Read the raw data
         payload = wsgi_environ['wsgi.input'].read()
+
+        # Store for later use prior to any kind of parsing
+        wsgi_environ['zato.http.raw_request'] = payload
 
         # OK, we can possibly handle it
         if url_match not in no_url_match:

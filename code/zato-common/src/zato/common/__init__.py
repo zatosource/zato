@@ -849,6 +849,10 @@ class PUBSUB:
 
     SKIPPED_PATTERN_MATCHING = '<skipped>'
 
+    # All float values are converted to strings of that precision
+    # to make sure pg8000 does not round up the floats with loss of precision.
+    FLOAT_STRING_CONVERT = '{:.7f}'
+
     class DATA_FORMAT:
         CSV  = NameId('CSV', DATA_FORMAT.CSV)
         DICT = NameId('Dict', DATA_FORMAT.DICT)
@@ -1304,7 +1308,7 @@ class GENERIC:
 # ################################################################################################################################
 
 class TOTP:
-    default_label = 'Zato'
+    default_label = '<default-label>'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1491,6 +1495,14 @@ class CONFIG_FILE:
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
 PLACEHOLDER = 'zato_placeholder'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MS_SQL:
+    ZATO_DIRECT = 'zato+mssql1'
+    EXTRA_KWARGS = 'login_timeout', 'appname', 'blocksize', 'use_mars', 'readonly', 'use_tz', 'bytes_to_unicode', \
+        'cafile', 'validate_host'
 
 # ################################################################################################################################
 # ################################################################################################################################
