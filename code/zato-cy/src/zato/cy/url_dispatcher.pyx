@@ -111,7 +111,13 @@ cdef class Matcher(object):
                 return {}
             else:
                 groups = m.groups()
-                return dict(zip(self.group_names, groups))
+
+                # Note that below we skip the first group and provide only the remaining ones
+                # to the dict constructor. This is because the first element is the HTTP method matched
+                # and we do not require it on output from this function,
+                # e.g. it is POST in the example below:
+                # :::POST:::haanyHTTP_SEPhaany:::/zato/api/invoke/zato.server.get-list
+                return dict(zip(self.group_names, groups[1:]))
 
 # ################################################################################################################################
 # ################################################################################################################################

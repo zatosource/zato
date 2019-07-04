@@ -24,6 +24,7 @@ from ipaddress import ip_address
 from zato.common import GENERIC, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
 from zato.common.odb.model import SSOSession as SessionModel
+from zato.common.crypto import CryptoManager
 from zato.sso import const, status_code, Session as SessionEntity, ValidationError
 from zato.sso.attr import AttrAPI
 from zato.sso.odb.query import get_session_by_ext_id, get_session_by_ust, get_session_list_by_user_id, get_user_by_id, \
@@ -404,9 +405,9 @@ class SessionAPI(object):
         with closing(self.odb_session_func()) as session:
 
             if ctx.input.get('username'):
-                user = get_user_by_username(session, ctx.input['username'])
+                user = get_user_by_username(session, ctx.input['username']) # type: SSOUser
             else:
-                user = get_user_by_id(session, ctx.input['user_id'])
+                user = get_user_by_id(session, ctx.input['user_id']) # type: SSOUser
 
             # If the user is already logged in externally, this flag will be True,
             # in which case we do not check the credentials - we already know they are valid
@@ -419,6 +420,18 @@ class SessionAPI(object):
                 if not self._check_credentials(ctx, user.password if user else _dummy_password):
                     raise ValidationError(status_code.auth.not_allowed, False)
 
+                # Check input TOTP key if two-factor authentication is enabled
+                if user.is_totp_enabled:
+                    input_totp_code = ctx.input.get('totp_code')
+                    if not input_totp_code:
+                        logger.warn('Missing TOTP code; user `%s`', user.username)
+                        raise ValidationError(status_code.auth.not_allowed, False)
+                    else:
+                        user_totp_key = self.decrypt_func(user.totp_key)
+                        if not CryptoManager.verify_totp_code(user_totp_key, input_totp_code):
+                            logger.warn('Invalid TOTP code; user `%s`', user.username)
+                            raise ValidationError(status_code.auth.not_allowed, False)
+
             # It must be possible to log into the application requested (CRM above)
             self._check_login_to_app_allowed(ctx)
 
@@ -428,7 +441,7 @@ class SessionAPI(object):
             # We assume that we will not have to warn about an approaching password expiry
             has_w_about_to_exp = False
 
-            # If applicable, password may not be about to expire (this must be after checking that it has not already).
+            # If applicable, password may be about to expire (this must be after checking that it has not already).
             # Note that it may return a specific status to return (warning or error)
             _about_status = self._check_password_about_to_expire(user)
             if _about_status is not True:

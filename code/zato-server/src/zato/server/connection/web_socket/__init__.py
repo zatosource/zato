@@ -532,7 +532,16 @@ class WebSocket(_WebSocket):
         logger.warn(
             'Peer %s (%s) %s, closing its connection to %s (%s), cid:`%s` (%s)', self._peer_address, self._peer_fqdn, action,
             self._local_address, self.config.name, cid, self.peer_conn_info_pretty)
-        self.send(Forbidden(cid, data).serialize())
+
+        try:
+            self.send(Forbidden(cid, data).serialize())
+        except AttributeError as e:
+            # Catch a lower-level exception which may be raised in case the client
+            # disconnected and we did not manage to send the Forbidden message.
+            # In this situation, the lower level will raise an attribute error
+            # with a specific message. Otherwise, we reraise the exception.
+            if not e.args[0] == "'NoneType' object has no attribute 'text_message'":
+                raise
 
         self.server_terminated = True
         self.client_terminated = True
@@ -741,7 +750,7 @@ class WebSocket(_WebSocket):
         try:
             self.send(serialized)
         except AttributeError as e:
-            if e.message == "'NoneType' object has no attribute 'text_message'":
+            if e.args[0] == "'NoneType' object has no attribute 'text_message'":
                 _msg = 'Service response discarded (client disconnected), cid:`%s`, msg.meta:`%s`'
                 _meta = msg.get_meta()
                 logger.warn(_msg, _meta)
@@ -898,7 +907,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def invoke_client(self, cid, request, timeout=5, ctx=None, use_send=True, _Class=InvokeClientRequest):
+    def invoke_client(self, cid, request, timeout=5, ctx=None, use_send=True, _Class=InvokeClientRequest, wait_for_response=True):
         """ Invokes a remote WSX client with request given on input, returning its response,
         if any was produced in the expected time.
         """
@@ -926,9 +935,10 @@ class WebSocket(_WebSocket):
         # these are always asynchronous and that channel's WSX hook
         # will process the response, if any arrives.
         if _Class is not InvokeClientPubSubRequest:
-            response = self._wait_for_client_response(msg.id, timeout)
-            if response:
-                return response if isinstance(response, bool) else response.data # It will be bool in pong responses
+            if wait_for_response:
+                response = self._wait_for_client_response(msg.id, timeout)
+                if response:
+                    return response if isinstance(response, bool) else response.data # It will be bool in pong responses
 
 # ################################################################################################################################
 
@@ -1040,6 +1050,10 @@ class WebSocketContainer(WebSocketWSGIApplication):
     def invoke_client(self, cid, pub_client_id, request, timeout):
         return self.clients[pub_client_id].invoke_client(cid, request, timeout)
 
+    def broadcast(self, cid, request):
+        for client in self.clients.values():
+            spawn(client.invoke_client, cid, request, wait_for_response=False)
+
     def disconnect_client(self, cid, pub_client_id):
         return self.clients[pub_client_id].disconnect_client(cid)
 
@@ -1109,6 +1123,9 @@ class WebSocketServer(WSGIServer):
     def invoke_client(self, cid, pub_client_id, request, timeout):
         return self.application.invoke_client(cid, pub_client_id, request, timeout)
 
+    def broadcast(self, cid, request):
+        return self.application.broadcast(cid, request)
+
     def disconnect_client(self, cid, pub_client_id):
         return self.application.disconnect_client(cid, pub_client_id)
 
@@ -1144,6 +1161,9 @@ class ChannelWebSocket(Connector):
 
     def invoke(self, cid, pub_client_id, request, timeout=5):
         return self._wsx_server.invoke_client(cid, pub_client_id, request, timeout)
+
+    def broadcast(self, cid, request):
+        return self._wsx_server.broadcast(cid, request)
 
     def disconnect_client(self, cid, pub_client_id, *ignored_args, **ignored_kwargs):
         return self._wsx_server.disconnect_client(cid, pub_client_id)

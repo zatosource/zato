@@ -20,8 +20,7 @@ SEC_DEF_TYPE = SEC_DEF_TYPE
 
 # ################################################################################################################################
 
-basic_auth_id = 14
-jwt_auth_id = 15
+basic_auth_user_name = 'pubapi'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,43 +29,25 @@ class LinkedAuthTestCase(BaseTest):
 
     def test_create(self):
 
-        self.get('/zato/sso/user', {
-            'ust': self.ctx.super_user_ust,
-            'user_id': self.ctx.super_user_id
-        })
-
-        '''
-        self.patch('/zato/sso/user/totp', {
-            'ust': self.ctx.super_user_ust,
-            'user_id': self.ctx.super_user_id
-        })
-        '''
-
-        '''
-        self.get('/zzz', {}, expect_ok=False, auth=('zz', 'zz'))
-
-
-        self.get('/zato/sso/user/linked', {
-            'ust': self.ctx.super_user_ust,
-            'user_id': 'zusr20d6006gc18n1t0n0qwbs3wrk2'
-        })
-
-
         self.post('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
-            'auth_type': SEC_DEF_TYPE.JWT,
-            'auth_id': jwt_auth_id,
+            'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
+            'auth_username': basic_auth_user_name,
             'is_active': True,
+        })
+
+        self.get('/zato/sso/user/linked', {
+            'ust': self.ctx.super_user_ust,
+            'user_id': self.ctx.super_user_id
         })
 
         self.delete('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
             'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
-            'auth_id': basic_auth_id,
+            'auth_username': basic_auth_user_name,
         })
-        '''
 
 # ################################################################################################################################
 # ################################################################################################################################

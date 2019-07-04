@@ -129,13 +129,17 @@
                 <form action="{% url "out-sql-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td style="vertical-align:middle;width:10%">Name</td>
                             <td colspan="3">{{ create_form.name }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Active</td>
-                            <td colspan="3">{{ create_form.is_active }}</td>
+                            <td colspan="3">{{ create_form.is_active }}
+                            |
+                            Pool size
+                            {{ create_form.pool_size }}
+                            </td>
                         </tr>
 
                         <tr>
@@ -145,24 +149,20 @@
 
                         <tr>
                             <td style="vertical-align:middle">Host</td>
-                            <td colspan="3">{{ create_form.host }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Port</td>
-                            <td colspan="3">{{ create_form.port }}</td>
+                            <td colspan="3">{{ create_form.host }}
+                            |
+                            Port
+                            {{ create_form.port }}
+                            </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Database name</td>
-                            <td>{{ create_form.db_name }}</td>
-                            <td style="vertical-align:middle">User</td>
-                            <td>{{ create_form.username }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Pool size</td>
-                            <td colspan="3">{{ create_form.pool_size }}</td>
+                            <td colspan="3">{{ create_form.db_name }}
+                            |
+                            User
+                            {{ create_form.username }}
+                            </td>
                         </tr>
 
                         <tr>
@@ -190,13 +190,17 @@
                 <form action="{% url "out-sql-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td style="vertical-align:middle;width:10%">Name</td>
                             <td colspan="3">{{ edit_form.name }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Active</td>
-                            <td colspan="3">{{ edit_form.is_active }}</td>
+                            <td colspan="3">{{ edit_form.is_active }}
+                            |
+                            Pool size
+                            {{ edit_form.pool_size }}
+                            </td>
                         </tr>
 
                         <tr>
@@ -206,24 +210,20 @@
 
                         <tr>
                             <td style="vertical-align:middle">Host</td>
-                            <td colspan="3">{{ edit_form.host }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Port</td>
-                            <td colspan="3">{{ edit_form.port }}</td>
+                            <td colspan="3">{{ edit_form.host }}
+                            |
+                            Port
+                            {{ edit_form.port }}
+                            </td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Database name</td>
-                            <td>{{ edit_form.db_name }}</td>
-                            <td style="vertical-align:middle">User</td>
-                            <td>{{ edit_form.username }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Pool size</td>
-                            <td colspan="3">{{ edit_form.pool_size }}</td>
+                            <td colspan="3">{{ edit_form.db_name }}
+                            |
+                            User
+                            {{ edit_form.username }}
+                            </td>
                         </tr>
 
                         <tr>
@@ -252,7 +252,7 @@
                 <form action="{% url "out-sql-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle; width:25%">Name</td>
                             <td id="change-password-name"></td>
                         </tr>
                         <tr>

@@ -2853,7 +2853,8 @@ class RateLimitState(Base):
     """
     __tablename__ = 'rate_limit_state'
     __table_args__ = (
-        Index('object_idx', 'object_type', 'object_id', unique=True, mysql_length={'object_type':191, 'object_id':191}),
+        Index('object_idx', 'object_type', 'object_id', 'period', 'last_network', unique=True,
+              mysql_length={'object_type':191, 'object_id':191, 'period':191, 'last_network':191}),
     {})
 
     id = Column(Integer(), Sequence('rate_limit_state_seq'), primary_key=True)
