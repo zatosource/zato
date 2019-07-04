@@ -1590,7 +1590,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ Creates or updates an SQL connection, including changing its
         password.
         """
-        msg.password = self.server.decrypt(msg.password)
+        if msg.password.startswith(SECRETS.PREFIX):
+            msg.password = self.server.decrypt(msg.password)
 
         # Is it a rename? If so, delete the connection first
         if msg.get('old_name') and msg.get('old_name') != msg['name']:
