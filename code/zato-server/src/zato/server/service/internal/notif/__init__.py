@@ -10,13 +10,21 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Bunch
 from bunch import bunchify
+from copy import deepcopy
+from logging import getLogger
 
 # gevent
 from gevent import sleep, spawn
 
 # Zato
+from zato.common import SECRET_SHADOW
+from zato.common.util import spawn_greenlet
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
+
+# ################################################################################################################################
+
+logger_notif = getLogger('zato_notif_sql')
 
 # ################################################################################################################################
 
@@ -29,16 +37,8 @@ class InvokeRunNotifier(Service):
             'sql': 'zato.notif.sql.run-notifier',
         }
 
-        '''request = {
-            'payload': dumps(self.request.payload['config']),
-            'service': notif_type_service[self.request.payload['config']['notif_type']],
-            'target_server_token': self.server.fs_server_config.main.token,
-            'cid': new_cid(),
-            'data_format': DATA_FORMAT.JSON
-        }
-        '''
-
-        spawn(self.invoke, notif_type_service[self.request.payload['config']['notif_type']], self.request.payload['config'])
+        spawn_greenlet(
+            self.invoke, notif_type_service[self.request.payload['config']['notif_type']], self.request.payload['config'])
 
 # ################################################################################################################################
 
@@ -53,6 +53,10 @@ class InitNotifiers(Service):
 
         for config_dict in config_dicts:
             for value in config_dict.values():
+                config = value.config
+                config_no_password = deepcopy(config)
+                config_no_password['password'] = SECRET_SHADOW
+                logger_notif.info('Initializing notifier with config `%s`', config_no_password)
                 self.invoke(InvokeRunNotifier.get_name(), {'config': value.config})
 
 # ################################################################################################################################
@@ -72,10 +76,17 @@ class NotifierService(AdminService):
         # The notification definition has been deleted in between the invocations of ours so we need to stop now.
         if not current_config:
             self.keep_running = False
+            logger_notif.info('No current config, stopping notifier (self.keep_running=False)')
             return
 
         if not current_config.config['is_active']:
+            logger_notif.info('Current config is not active, not running the notifier (is_active)')
             return
+
+        current_config_no_password = deepcopy(current_config)
+        current_config_no_password.config['password'] = SECRET_SHADOW
+
+        logger_notif.info('SQL notifier running with config `%r`', current_config_no_password)
 
         # Ok, overwrite old config with current one.
         config.update(current_config.config)

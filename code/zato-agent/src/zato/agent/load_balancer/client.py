@@ -9,7 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common.py23_.spring_ import SSLClient
+from zato.common.py23_.spring_ import ServerProxy, SSLClient
 
-class LoadBalancerAgentClient(SSLClient):
+class LoadBalancerAgentClient(ServerProxy):
+    pass
+
+class TLSLoadBalancerAgentClient(SSLClient):
     pass

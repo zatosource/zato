@@ -45,7 +45,7 @@ class HAProxyStats(object):
 
         try:
             client.connect(self.socket_name)
-            client.send(command + '\n')
+            client.send((command + '\n').encode('utf8'))
 
             while time() <= end:
                 data = client.recv(4096)

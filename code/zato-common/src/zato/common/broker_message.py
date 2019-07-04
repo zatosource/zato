@@ -243,6 +243,7 @@ class CHANNEL(Constants):
     WEB_SOCKET_CREATE = ValueConstant('')
     WEB_SOCKET_EDIT = ValueConstant('')
     WEB_SOCKET_DELETE = ValueConstant('')
+    WEB_SOCKET_BROADCAST = ValueConstant('')
 
 class AMQP_CONNECTOR(Constants):
     """ Since 3.0, this is not used anymore.
@@ -496,6 +497,15 @@ class GENERIC(Constants):
     CONNECTION_EDIT = ValueConstant('')
     CONNECTION_DELETE = ValueConstant('')
     CONNECTION_CHANGE_PASSWORD = ValueConstant('')
+
+class SSO(Constants):
+    code_start = 107200
+
+    USER_CREATE      = ValueConstant('')
+    USER_EDIT        = ValueConstant('')
+
+    LINK_AUTH_CREATE = ValueConstant('')
+    LINK_AUTH_DELETE = ValueConstant('')
 
 code_to_name = {}
 

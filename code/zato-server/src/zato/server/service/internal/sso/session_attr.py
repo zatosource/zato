@@ -11,17 +11,17 @@ from zato.server.service.internal.sso.attr import _Attr, _AttrExists, _AttrNames
 
 # ################################################################################################################################
 
-class UserAttr(_Attr):
+class SessionAttr(_Attr):
     _api_entity = 'session'
 
 # ################################################################################################################################
 
-class UserAttrExists(_AttrExists):
+class SessionAttrExists(_AttrExists):
     _api_entity = 'session'
 
 # ################################################################################################################################
 
-class UserAttrNames(_AttrNames):
+class SessionAttrNames(_AttrNames):
     _api_entity = 'session'
 
 # ################################################################################################################################

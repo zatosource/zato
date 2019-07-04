@@ -42,20 +42,25 @@ from zato.vault.client import VAULT
 # For pyflakes, otherwise it doesn't know that other parts of Zato import VAULT from here
 VAULT = VAULT
 
-# ##############################################################################
+# ################################################################################################################################
 # Version
-# ##############################################################################
+# ################################################################################################################################
 
-try:
-    curdir = os.path.dirname(os.path.abspath(__file__))
-    _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
-    _locals = {}
-    execfile(_version_py, _locals)
-    version = 'Zato {}'.format(_locals['version'])
-except IOError:
-    version = '3.1.0'
+def get_version():
+    try:
+        curdir = os.path.dirname(os.path.abspath(__file__))
+        _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
+        _locals = {}
+        execfile(_version_py, _locals)
+        version = 'Zato {}'.format(_locals['version'])
+    except IOError:
+        version = '3.1'
+    finally:
+        version = '{}-py{}.{}.{}'.format(version, py_version_info.major, py_version_info.minor, py_version_info.micro)
 
-version = '{}-py{}.{}.{}'.format(version, py_version_info.major, py_version_info.minor, py_version_info.micro)
+    return version
+
+# ################################################################################################################################
 
 # XML namespace for use in all Zato's own services.
 zato_namespace = 'https://zato.io/ns/v1'
@@ -642,6 +647,7 @@ class CHANNEL(Attrs):
     INVOKE_ASYNC = 'invoke-async'
     INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'
     IPC = 'ipc'
+    JSON_RPC = 'json-rpc'
     NOTIFIER_RUN = 'notifier-run'
     NOTIFIER_TARGET = 'notifier-target'
     PARALLEL_EXEC_CALL = 'parallel-exec-call'
@@ -649,6 +655,8 @@ class CHANNEL(Attrs):
     PUBLISH = 'publish'
     SCHEDULER = 'scheduler'
     SCHEDULER_AFTER_ONE_TIME = 'scheduler-after-one-time'
+    SERVICE = 'service'
+    SSO_USER = 'sso-user'
     STARTUP_SERVICE = 'startup-service'
     STOMP = 'stomp'
     URL_DATA = 'url-data'
@@ -840,6 +848,10 @@ class HTTP_SOAP_SERIALIZATION_TYPE:
 class PUBSUB:
 
     SKIPPED_PATTERN_MATCHING = '<skipped>'
+
+    # All float values are converted to strings of that precision
+    # to make sure pg8000 does not round up the floats with loss of precision.
+    FLOAT_STRING_CONVERT = '{:.7f}'
 
     class DATA_FORMAT:
         CSV  = NameId('CSV', DATA_FORMAT.CSV)
@@ -1103,6 +1115,20 @@ class TLS:
         def __iter__(self):
             return iter((self.CERT_NONE, self.CERT_OPTIONAL, self.CERT_REQUIRED))
 
+class RATE_LIMIT:
+    class TYPE:
+        APPROXIMATE = NameId('Approximate', 'APPROXIMATE')
+        EXACT       = NameId('Exact', 'EXACT')
+
+        def __iter__(self):
+            return iter((self.APPROXIMATE, self.EXACT))
+
+    class OBJECT_TYPE:
+        HTTP_SOAP = 'http_soap'
+        SERVICE   = 'service'
+        SEC_DEF   = 'sec_def'
+        SSO_USER  = 'sso_user'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -1281,6 +1307,12 @@ class GENERIC:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class TOTP:
+    default_label = '<default-label>'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class LDAP:
 
     class DEFAULT:
@@ -1445,8 +1477,16 @@ class SFTP:
         def is_valid(self, value):
             return value in (elem.id for elem in self)
 
-    # ################################################################################################################################
-    # ################################################################################################################################
+# ################################################################################################################################
+# ################################################################################################################################
+
+class JSON_RPC:
+    class PREFIX:
+        CHANNEL = 'json.rpc.channel'
+        OUTGOING = 'json.rpc.outconn'
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class CONFIG_FILE:
     USER_DEFINED = 'user-defined'
@@ -1455,6 +1495,14 @@ class CONFIG_FILE:
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
 PLACEHOLDER = 'zato_placeholder'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MS_SQL:
+    ZATO_DIRECT = 'zato+mssql1'
+    EXTRA_KWARGS = 'login_timeout', 'appname', 'blocksize', 'use_mars', 'readonly', 'use_tz', 'bytes_to_unicode', \
+        'cafile', 'validate_host'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1786,6 +1834,7 @@ default_internal_modules = {
     'zato.server.service.internal.cache.memcached': True,
     'zato.server.service.internal.channel.amqp_': True,
     'zato.server.service.internal.channel.jms_wmq': True,
+    'zato.server.service.internal.channel.json_rpc': True,
     'zato.server.service.internal.channel.stomp': False,
     'zato.server.service.internal.channel.web_socket': True,
     'zato.server.service.internal.channel.web_socket.cleanup': True,

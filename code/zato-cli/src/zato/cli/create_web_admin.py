@@ -23,11 +23,14 @@ from uuid import uuid4
 # Django
 from django.core.management import call_command
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 # TODO: There really shouldn't be any direct dependency between zato-cli and zato-web-admin
 from zato.admin.zato_settings import update_globals
 
-from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, ZatoCommand
+from zato.cli import common_logging_conf_contents, common_odb_opts, is_arg_given, ZatoCommand
 from zato.common.crypto import WebAdminCryptoManager, well_known_data
 from zato.common.defaults import web_admin_host, web_admin_port
 
@@ -36,6 +39,7 @@ config_template = """{{
   "port": {port},
   "db_type": "{db_type}",
   "log_config": "./config/repo/{log_config}",
+  "lb_agent_use_tls": {lb_agent_use_tls},
   "lb_use_tls": false,
   "lb_tls_verify": true,
   "zato_secret_key": "{zato_secret_key}",
@@ -81,12 +85,11 @@ class Create(ZatoCommand):
 
     opts = deepcopy(common_odb_opts)
 
-    opts.append({'name':'pub_key_path', 'help':"Path to the web admin's public key in PEM"})
-    opts.append({'name':'priv_key_path', 'help':"Path to the web admin's private key in PEM"})
-    opts.append({'name':'cert_path', 'help':"Path to the web admin's certificate in PEM"})
-    opts.append({'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
-
-    opts += get_tech_account_opts()
+    opts.append({'name':'--pub_key_path', 'help':"Path to the web admin's public key in PEM"})
+    opts.append({'name':'--priv_key_path', 'help':"Path to the web admin's private key in PEM"})
+    opts.append({'name':'--cert_path', 'help':"Path to the web admin's certificate in PEM"})
+    opts.append({'name':'--ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
+    opts.append({'name':'--admin-invoke-password', 'help':'Password for web-admin to connect to servers with'})
 
     def __init__(self, args):
         self.target_dir = os.path.abspath(args.path)
@@ -106,7 +109,15 @@ class Create(ZatoCommand):
         user_name = 'admin'
         admin_password = admin_password if admin_password else WebAdminCryptoManager.generate_password()
 
-        self.copy_web_admin_crypto(repo_dir, args)
+        # If we have a CA's certificate then it implicitly means that there is some CA
+        # which tells us that we are to trust both the CA and the certificates that it issues,
+        # and the only certificate we are interested in is the one to the load-balancer.
+        # This is why, if we get ca_certs_path, it must be because we are to use TLS
+        # in communication with the load-balancer's agent which in turn means that we have crypto material on input.
+        has_crypto = is_arg_given(args, 'ca_certs_path')
+
+        if has_crypto:
+            self.copy_web_admin_crypto(repo_dir, args)
 
         zato_secret_key = WebAdminCryptoManager.generate_key()
         cm = WebAdminCryptoManager.from_secret_key(zato_secret_key)
@@ -114,17 +125,24 @@ class Create(ZatoCommand):
         django_secret_key = uuid4().hex.encode('utf8')
         django_site_id = getrandbits(20)
 
-        admin_invoke_password = getattr(args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password')
-        admin_invoke_password = admin_invoke_password.encode('utf8')
+        admin_invoke_password = getattr(args, 'admin_invoke_password', None)
+
+        if not admin_invoke_password:
+            admin_invoke_password = 'create_wa.admin.' + uuid4().hex
+
+        if isinstance(admin_invoke_password, unicode):
+            admin_invoke_password = admin_invoke_password.encode('utf8')
 
         odb_password = args.odb_password or ''
         odb_password = odb_password.encode('utf8')
+
 
         config = {
             'host': web_admin_host,
             'port': web_admin_port,
             'db_type': args.odb_type,
             'log_config': 'logging.conf',
+            'lb_agent_use_tls': 'true' if has_crypto else 'false',
             'zato_secret_key':zato_secret_key,
             'well_known_data': cm.encrypt(well_known_data.encode('utf8')),
             'DATABASE_NAME': args.odb_db_name or args.sqlite_path,

@@ -13,7 +13,7 @@ $.fn.zato.data_table.WSS = new Class({
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$(document).ready(function() { 
+$(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = true;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.WSS;
@@ -67,7 +67,7 @@ $.fn.zato.security.wss.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.security.wss.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'WS-Security definition [{0}] deleted',
-        'Are you sure you want to delete the WS-Security definition [{0}]?',
+        'WS-Security definition `{0}` deleted',
+        'Are you sure you want to delete WS-Security definition `{0}`?',
         true);
 }

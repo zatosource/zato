@@ -37,8 +37,8 @@ $.fn.zato.service.edit = function(id) {
 
 $.fn.zato.service.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Service [{0}] deleted',
-        'Are you sure you want to delete the service [{0}]?',
+        'Service `{0}` deleted',
+        'Are you sure you want to delete service `{0}`?',
         true);
 }
 
@@ -48,23 +48,29 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
     if(include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
-    
+
     var instance = $.fn.zato.data_table.data[item.id];
     instance.name = data.name;
-    
+
     var is_active = $.fn.zato.like_bool(item.is_active) == true;
     var is_internal = $.fn.zato.like_bool(data.is_internal) == true;
-    
+
+    var is_json_schema_enabled = $.fn.zato.like_bool(data.is_json_schema_enabled) == true;
+    var needs_json_schema_err_details  = $.fn.zato.like_bool(data.needs_json_schema_err_details ) == true;
+
+    var is_rate_limit_active = $.fn.zato.like_bool(data.is_rate_limit_active) == true;
+    var rate_limit_check_parent_def = $.fn.zato.like_bool(data.rate_limit_check_parent_def) == true;
+
     var cluster_id = $(document).getUrlParam('cluster');
-    
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += '<td class="impexp"><input type="checkbox" /></td>';
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(data.name, cluster_id));
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', data.impl_name);
     row += String.format('<td>{0}</td>', is_internal ? 'Yes' : 'No');
-    row += String.format('<td id="rate_1h_{0}"></td>', item.id);
-    row += String.format('<td id="mean_1h_{0}"></td>', item.id);
+    row += String.format('<td id="rate_1h_{0}">---</td>', item.id);
+    row += String.format('<td id="mean_1h_{0}">---</td>', item.id);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.service.edit('{0}')\">Edit</a>", data.id));
     if(data.may_be_deleted) {
         row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.service.delete_('{0}')\">Delete</a>", data.id));
@@ -72,13 +78,24 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
     else {
         row += '<td></td>';
     }
+
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
+
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", is_internal);
+    row += String.format("<td class='ignore'>{0}</td>", data.slow_threshold);
+
+    row += String.format("<td class='ignore'>{0}</td>", is_json_schema_enabled);
+    row += String.format("<td class='ignore'>{0}</td>", needs_json_schema_err_details);
+
+    row += String.format("<td class='ignore'>{0}</td>", is_rate_limit_active);
+    row += String.format("<td class='ignore'>{0}</td>", data.rate_limit_type);
+    row += String.format("<td class='ignore'>{0}</td>", data.rate_limit_def);
+    row += String.format("<td class='ignore'>{0}</td>", rate_limit_check_parent_def);
 
     if(include_tr) {
         row += '</tr>';
     }
-    
+
     return row;
 }

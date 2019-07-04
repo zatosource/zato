@@ -12,12 +12,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 from traceback import format_exc
 
-# gevent
-from gevent.lock import RLock
-
 # Zato
 from zato.common.util import ping_sap
-from zato.server.connection.queue import ConnectionQueue
+from zato.common import SECRETS
+from zato.server.connection.queue import Wrapper
 
 # ################################################################################################################################
 
@@ -25,7 +23,8 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-class SAPWrapper(object):
+
+class SAPWrapper(Wrapper):
     """ Wraps a queue of connections to SAP RFC.
     """
     def __init__(self, config, server):
@@ -33,20 +32,18 @@ class SAPWrapper(object):
         # Imported here because not everyone will be using SAP
         import pyrfc
         self.pyrfc = pyrfc
-        self.config = config
-        self.server = server
-        self.url = 'rfc://{user}@{host}:{sysnr}/{client}'.format(**self.config)
-        self.client = ConnectionQueue(
-            self.config.pool_size, self.config.queue_build_cap, self.config.name, 'SAP', self.url, self.add_client)
+        config.username = config.user  # Make Wrapper happy.
+        if not hasattr(config, 'is_active'):  # On update passwd, we get AttributeError on is_active
+            config.is_active = False
 
-        self.update_lock = RLock()
-        self.logger = getLogger(self.__class__.__name__)
-
-    def build_queue(self):
-        with self.update_lock:
-            self.client.build_queue()
+        config.auth_url = 'rfc://{user}@{host}:{sysnr}/{client}'.format(**config)
+        super(SAPWrapper, self).__init__(config, 'SAP', server)
+        self.logger.info("config: %r", config)
 
     def add_client(self):
+        # Decrypt the password if it is encrypted.
+        if self.config.password.startswith(SECRETS.PREFIX):
+            self.config.password = self.server.decrypt(self.config.password)
         conn = self.pyrfc.Connection(user=self.config.user, passwd=self.config.password,
             ashost=self.config.host, sysnr=self.config.sysnr, client=self.config.client)
 

@@ -23,8 +23,7 @@ from imbox.parser import parse_email
 from outbox import AnonymousOutbox, Attachment, Email, Outbox
 
 # Python 2/3 compatibility
-from builtins import unicode
-from past.builtins import basestring
+from past.builtins import basestring, unicode
 
 # Zato
 from zato.common import IMAPMessage, EMAIL

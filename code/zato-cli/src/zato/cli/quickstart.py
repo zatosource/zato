@@ -66,7 +66,7 @@ STEPS={start_steps}
 CLUSTER={cluster_name}
 
 echo Starting Zato cluster $CLUSTER
-echo Running sanity checks
+echo Checking configuration
 """
 
 zato_qs_start_body_template = """
@@ -75,10 +75,19 @@ zato_qs_start_body_template = """
 echo [1/$STEPS] Redis connection OK
 echo [2/$STEPS] SQL ODB connection OK
 
+# Make sure TCP ports are available
+echo [3/$STEPS] Checking TCP ports availability
+
+ZATO_BIN_PATH=`which zato`
+ZATO_BIN_DIR=`python -c "import os; print(os.path.dirname('$ZATO_BIN_PATH'))"`
+UTIL_DIR=`python -c "import os; print(os.path.join('$ZATO_BIN_DIR', '..', 'util'))"`
+
+$ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py
+
 # Start the load balancer first ..
 cd $BASE_DIR/load-balancer
 $ZATO_BIN start . --verbose
-echo [3/$STEPS] Load-balancer started
+echo [4/$STEPS] Load-balancer started
 
 # .. servers ..
 {start_servers}
@@ -86,7 +95,7 @@ echo [3/$STEPS] Load-balancer started
 # .. scheduler ..
 cd $BASE_DIR/scheduler
 $ZATO_BIN start . --verbose
-echo [6/$STEPS] Scheduler started
+echo [7/$STEPS] Scheduler started
 """
 
 zato_qs_start_tail = """
@@ -245,8 +254,8 @@ class Create(ZatoCommand):
         1) CA and crypto material
         2) ODB
         3) ODB initial data
-        4) servers
-        5) load-balancer
+        4) Servers
+        5) Load-balancer
         6) Web admin
         7) Scheduler
         8) Scripts
@@ -254,18 +263,6 @@ class Create(ZatoCommand):
 
         if args.odb_type == 'sqlite':
             args.sqlite_path = os.path.abspath(os.path.join(args.path, 'zato.db'))
-
-        '''
-        cluster_id_args = Bunch()
-        cluster_id_args.odb_db_name = args.odb_db_name
-        cluster_id_args.odb_host = args.odb_host
-        cluster_id_args.odb_password = args.odb_password
-        cluster_id_args.odb_port = args.odb_port
-        cluster_id_args.odb_type = args.odb_type
-        cluster_id_args.odb_user = args.odb_user
-        cluster_id_args.postgresql_schema = args.postgresql_schema
-        cluster_id_args.sqlite_path = args.sqlite_path
-        '''
 
         next_step = count(1)
         next_port = count(http_plain_server_port)
@@ -277,7 +274,7 @@ class Create(ZatoCommand):
             server_names['{}'.format(idx)] = 'server{}'.format(idx)
 
         total_steps = 7 + servers
-        admin_invoke_password = uuid4().hex
+        admin_invoke_password = 'admin.invoke.' + uuid4().hex
         broker_host = 'localhost'
         broker_port = 6379
         lb_host = 'localhost'
@@ -342,7 +339,7 @@ class Create(ZatoCommand):
         create_cluster_args.lb_host = lb_host
         create_cluster_args.lb_port = lb_port
         create_cluster_args.lb_agent_port = lb_agent_port
-        create_cluster_args.admin_invoke_password = admin_invoke_password
+        create_cluster_args['admin-invoke-password'] = admin_invoke_password
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False)
 
         self.logger.info('[{}/{}] ODB initial data created'.format(next(next_step), total_steps))
@@ -468,13 +465,13 @@ class Create(ZatoCommand):
 
         for name in server_names:
             sanity_checks.append(sanity_checks_template.format(server_name=server_names[name]))
-            start_servers.append(start_servers_template.format(server_name=server_names[name], step_number=int(name)+3))
+            start_servers.append(start_servers_template.format(server_name=server_names[name], step_number=int(name)+4))
             stop_servers.append(stop_servers_template.format(server_name=server_names[name], step_number=int(name)+1))
 
         sanity_checks = '\n'.join(sanity_checks)
         start_servers = '\n'.join(start_servers)
         stop_servers = '\n'.join(stop_servers)
-        start_steps = 5 + servers
+        start_steps = 6 + servers
         stop_steps = 3 + servers
 
         zato_qs_start_head = zato_qs_start_head_template.format(

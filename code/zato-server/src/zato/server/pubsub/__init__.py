@@ -27,6 +27,7 @@ from texttable import Texttable
 
 # Python 2/3 compatibility
 from future.utils import iteritems, itervalues
+from past.builtins import basestring, unicode
 
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, SEARCH
@@ -553,6 +554,12 @@ class InRAMSyncBacklog(object):
             for msg in messages:
                 self.msg_id_to_msg[msg['pub_msg_id']] = msg
 
+                # We received timestamps as strings whereas our recipients require floats
+                # so we need to do the conversion here.
+                msg['pub_time'] = float(msg['pub_time'])
+                if msg.get('ext_pub_time'):
+                    msg['ext_pub_time'] = float(msg['ext_pub_time'])
+
                 # .. attach server metadata ..
                 msg['server_name'] = self.pubsub.server.name
                 msg['server_pid'] = self.pubsub.server.pid
@@ -707,15 +714,19 @@ class InRAMSyncBacklog(object):
         # Delete all messages marked to be deleted ..
         for msg_id in to_delete_msg:
 
+            logger.warn('BEFORE 1 %s', self.msg_id_to_msg)
+
             # .. first, direct mappings ..
             self.msg_id_to_msg.pop(msg_id, None)
 
-            logger.info('Deleting msg from mapping dict `%s`', msg_id)
+            logger.warn('Deleting msg from mapping dict `%s`, after:`%s`', msg_id, self.msg_id_to_msg)
+
+            logger.warn('BEFORE 2 %s', self.topic_msg_id)
 
             # .. now, remove the message from topic ..
             self.topic_msg_id[topic_id].remove(msg_id)
 
-            logger.info('Deleting msg from mapping topic `%s`', msg_id)
+            logger.warn('Deleting msg from mapping topic `%s`, after:`%s`', msg_id, self.topic_msg_id)
 
             # .. now, find the message for each sub_key ..
             for sub_key in sub_keys:
@@ -1609,12 +1620,16 @@ class PubSub(object):
 
         for idx, item in enumerate(servers, 1):
 
-            sub_key_info = item.sub_key
+            sub_key_info = [item.sub_key]
 
             if item.wsx_info:
                 for name in ('swc', 'name', 'pub_client_id', 'peer_fqdn', 'forwarded_for_fqdn', 'python_id', 'sock'):
-                    sub_key_info += '\n'
-                    sub_key_info += '{}: {}'.format(name, item.wsx_info[name])
+                    name = name if isinstance(name, unicode) else name.decode('utf8')
+                    value = item.wsx_info[name]
+                    if isinstance(value, basestring):
+                        value = value if isinstance(value, unicode) else value.decode('utf8')
+                        value = value.strip()
+                    sub_key_info.append('{}: {}'.format(name, value))
 
             rows.append([
                 idx,
@@ -1622,7 +1637,7 @@ class PubSub(object):
                 item.server_name,
                 item.server_pid,
                 item.channel_name or default,
-                sub_key_info.encode('utf8'),
+                '\n'.join(sub_key_info),
             ])
 
 
@@ -1726,7 +1741,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def add_missing_server_for_sub_key(self, sub_key, is_wsx):
+    def add_missing_server_for_sub_key(self, sub_key, is_wsx, _wsx=PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id):
         """ Adds to self.sub_key_servers information from ODB about which server handles input sub_key.
         Must be called with self.lock held.
         """
@@ -1741,13 +1756,15 @@ class PubSub(object):
                 logger.info(msg, sub_key, is_wsx)
         else:
 
+            endpoint_type = _wsx if is_wsx else data.endpoint_type
+
             # This is common config that we already know is valid but on top of it
             # we will try to the server found and ask about PID that handles messages for sub_key.
             config = {
                 'sub_key': sub_key,
                 'cluster_id': data.cluster_id,
                 'server_name': data.server_name,
-                'endpoint_type': data.endpoint_type,
+                'endpoint_type': endpoint_type,
             }
 
             # Guaranteed to either set PID or None
@@ -2243,11 +2260,18 @@ class PubSub(object):
                         continue
 
                     # There are some messages, let's see if there are subscribers ..
-                    subs = _self_get_subscriptions_by_topic(_topic.name)
+                    subs = []
+                    _subs = _self_get_subscriptions_by_topic(_topic.name)
+
+                    # Filter out subscriptions for whom we have no subscription servers
+                    for _sub in _subs:
+                        if _self_get_delivery_server_by_sub_key(_sub.sub_key):
+                            subs.append(_sub)
 
                     # .. if there are any subscriptions at all, we store that information for later use.
                     if subs:
                         topic_id_dict[_topic.id] = (_topic.name, subs)
+
 
                 # OK, if we had any subscriptions for at least one topic and there are any messages waiting,
                 # we can continue.
@@ -2273,10 +2297,7 @@ class PubSub(object):
 
                         # Build a list of sub_keys for whom we know what their delivery server is which will
                         # allow us to send messages only to tasks that are known to be up.
-                        sub_keys = []
-                        for item in subs:
-                            if _self_get_delivery_server_by_sub_key(item.sub_key):
-                                sub_keys.append(item.sub_key)
+                        sub_keys = [item.sub_key for item in subs]
 
                         # Continue only if there are actually any sub_keys left = any tasks up and running ..
                         if sub_keys:
@@ -2310,7 +2331,7 @@ class PubSub(object):
                                 _do_emit_loop_before_sync(topic_id, topic.name, topic.sync_has_gd_msg, topic.sync_has_non_gd_msg,
                                     non_gd_msg_list_msg_id_list, pub_time_max)
 
-                                _logger_info('Syncing messages for `%s` ngd-list:%s (sk_list:%s) cid:%s' % (
+                                _logger_info('Forwarding messages to a task for `%s` ngd-list:%s (sk_list:%s) cid:%s' % (
                                     topic_name, non_gd_msg_list_msg_id_list, sub_keys, cid))
 
                                 # .. and notify all the tasks in background.
@@ -2370,6 +2391,8 @@ class PubSub(object):
         endpoint_id = kwargs.get('endpoint_id')
         reply_to_sk = kwargs.get('reply_to_sk')
         deliver_to_sk = kwargs.get('deliver_to_sk')
+        user_ctx = kwargs.get('user_ctx')
+        zato_ctx = kwargs.get('zato_ctx')
 
         response = self.invoke_service('zato.pubsub.publish.publish', {
             'topic_name': topic_name,
@@ -2387,6 +2410,8 @@ class PubSub(object):
             'endpoint_id': endpoint_id or self.server.default_internal_pubsub_endpoint_id,
             'reply_to_sk': reply_to_sk,
             'deliver_to_sk': deliver_to_sk,
+            'user_ctx': user_ctx,
+            'zato_ctx': zato_ctx,
         }, serialize=False)
 
         return response.response['msg_id']

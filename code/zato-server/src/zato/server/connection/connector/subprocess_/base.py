@@ -1,28 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-"""
-   Copyright 2006-2008 SpringSource (http://springsource.com), All Rights Reserved
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-"""
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
 import logging
@@ -52,6 +36,7 @@ from builtins import bytes
 from six import PY2
 
 # Zato
+from zato.common import MISC
 from zato.common.broker_message import code_to_name
 from zato.common.util import parse_cmd_line_options
 from zato.common.util.auth import parse_basic_auth
@@ -183,7 +168,12 @@ class BaseConnectionContainer(object):
         if not 'zato_{}'.format(self.conn_type) in logging_config['loggers']:
             logging_config = get_logging_config(self.conn_type, self.logging_file_name)
 
+        # Configure logging for this connector
         self.set_up_logging(logging_config)
+
+        # Store our process's pidfile
+        if config.needs_pidfile:
+            self.store_pidfile(config.pidfile_suffix)
 
 # ################################################################################################################################
 
@@ -209,6 +199,13 @@ class BaseConnectionContainer(object):
 
         self.logger.addHandler(wmq_handler)
         self.logger.addHandler(stdout_handler)
+
+# ################################################################################################################################
+
+    def store_pidfile(self, suffix):
+        pidfile = os.path.join(self.base_dir, '{}-{}'.format(MISC.PIDFILE, suffix))
+        with open(pidfile, 'w') as f:
+            f.write(str(os.getpid()))
 
 # ################################################################################################################################
 

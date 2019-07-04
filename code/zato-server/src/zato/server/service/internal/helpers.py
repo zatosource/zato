@@ -173,13 +173,32 @@ class WebSocketsGateway(Service):
     name = 'helpers.web-sockets-gateway'
 
     class SimpleIO:
-        input_required = ('service',)
-        input_optional = (AsIs('request'),)
+        input_required = 'service',
+        input_optional = AsIs('request'),
+        output_optional = 'sub_key',
 
-    def handle(self):
-        self.wsgi_environ['zato.orig_channel'] = self.channel
-        self.response.payload = self.invoke(self.request.input.service, self.request.input.request,
-            wsgi_environ=self.wsgi_environ)
+    def handle(self, _pubsub_prefix='zato.pubsub.pubapi'):
+
+        # Local aliases
+        input = self.request.input
+        service = input.service
+
+        # We need to special-case requests related to pub/sub
+        # because they will require calling self.pubsub on behalf of the current WSX connection.
+        if service.startswith(_pubsub_prefix):
+            action = service.replace(_pubsub_prefix, '')
+            action = action.split('.')[1]
+
+            if action == 'subscribe-wsx':
+                topic_name = input.request['topic_name']
+                unsub_on_wsx_close = input.request.get('unsub_on_wsx_close', True)
+                sub_key = self.pubsub.subscribe(
+                    topic_name, use_current_wsx=True, unsub_on_wsx_close=unsub_on_wsx_close, service=self)
+                self.response.payload.sub_key = sub_key
+
+        else:
+            self.wsgi_environ['zato.orig_channel'] = self.channel
+            self.response.payload = self.invoke(service, self.request.input.request, wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
 

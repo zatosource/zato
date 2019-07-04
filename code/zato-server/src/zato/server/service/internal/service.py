@@ -24,18 +24,28 @@ from validate import is_boolean
 # Python 2/3 compatibility
 from builtins import bytes
 from future.moves.urllib.parse import parse_qs
+from future.utils import iterkeys
 from past.builtins import basestring
 
 # Zato
 from zato.common import BROKER, KVDB, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.exception import BadRequest
+from zato.common.json_schema import get_service_config
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
+from zato.common.rate_limiting import DefinitionParser
 from zato.common.util import hot_deploy, payload_from_request
 from zato.common.util.json_ import dumps
-from zato.server.service import Boolean, Integer
+from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
+from zato.server.service import Boolean, Integer, Service as ZatoService
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
+
+# ################################################################################################################################
+
+# For pyflakes
+ZatoService = ZatoService
 
 # ################################################################################################################################
 
@@ -51,10 +61,12 @@ class GetList(AdminService):
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
-        input_required = ('cluster_id', 'query')
-        input_optional = (Integer('cur_page'), Boolean('paginate'))
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'),
-            Integer('slow_threshold'))
+        input_required = 'cluster_id', 'query'
+        input_optional = Integer('cur_page'), Boolean('paginate')
+        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'), \
+            Integer('slow_threshold')
+        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
+            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
         output_repeated = True
         default_value = ''
 
@@ -64,9 +76,16 @@ class GetList(AdminService):
         internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
 
         out = []
-        for item in self._search(service_list, session, self.request.input.cluster_id, return_internal, False):
+        search_result = self._search(service_list, session, self.request.input.cluster_id, return_internal, False)
+        for item in elems_with_opaque(search_result):
             item.may_be_deleted = internal_del if item.is_internal else True
             item.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
+
+            # Attach JSON Schema validation configuration
+            json_schema_config = get_service_config(item, self.server)
+
+            item.is_json_schema_enabled = json_schema_config['is_json_schema_enabled']
+            item.needs_json_schema_err_details = json_schema_config['needs_json_schema_err_details']
 
             out.append(item)
 
@@ -81,10 +100,12 @@ class GetList(AdminService):
 class _Get(AdminService):
 
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'),
-            Integer('usage'), Integer('slow_threshold'), Integer('time_last'),
-            Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time',)
+        input_required = 'cluster_id',
+        output_required = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), \
+            Integer('usage'), Integer('slow_threshold'), Integer('time_last'), \
+            Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time'
+        output_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
+            'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
 
     def get_data(self, session):
         query = session.query(Service.id, Service.name, Service.is_active,
@@ -156,32 +177,45 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_edit_request'
         response_elem = 'zato_service_edit_response'
-        input_required = ('id', 'is_active', Integer('slow_threshold'))
-        output_required = ('id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted'))
+        input_required = 'id', 'is_active', Integer('slow_threshold')
+        input_optional = 'is_json_schema_enabled', 'needs_json_schema_err_details', 'is_rate_limit_active', \
+            'rate_limit_type', 'rate_limit_def', 'rate_limit_check_parent_def'
+        output_optional = 'id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted')
 
     def handle(self):
         input = self.request.input
+
+        # If we have a rate limiting definition, let's check it upfront
+        DefinitionParser.check_definition_from_input(input)
+
         with closing(self.odb.session()) as session:
             try:
-                service = session.query(Service).filter_by(id=input.id).one()
+                service = session.query(Service).filter_by(id=input.id).one() # type: Service
                 service.is_active = input.is_active
                 service.slow_threshold = input.slow_threshold
+
+                set_instance_opaque_attrs(service, input)
+
+                # Configure JSON Schema validation if service has a schema assigned by user.
+                class_info = self.server.service_store.get_service_info_by_id(input.id) # type: dict
+                class_ = class_info['service_class'] # type: Service
+                if class_.schema:
+                    self.server.service_store.set_up_class_json_schema(class_, input)
 
                 session.add(service)
                 session.commit()
 
                 input.action = SERVICE.EDIT.value
                 input.impl_name = service.impl_name
+                input.name = service.name
                 self.broker_client.publish(input)
 
                 self.response.payload = service
-
                 internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
                 self.response.payload.may_be_deleted = internal_del if service.is_internal else True
 
             except Exception:
-                msg = 'Service could not be updated, e:`{}`'.format(format_exc())
-                self.logger.error(msg)
+                self.logger.error('Service could not be updated, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -201,7 +235,7 @@ class Delete(AdminService):
             try:
                 service = session.query(Service).\
                     filter(Service.id==self.request.input.id).\
-                    one()
+                    one() # type: Service
 
                 internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
 
@@ -214,8 +248,13 @@ class Delete(AdminService):
                 session.delete(service)
                 session.commit()
 
-                msg = {'action': SERVICE.DELETE.value, 'id': self.request.input.id, 'impl_name':service.impl_name,
-                       'is_internal':service.is_internal}
+                msg = {
+                    'action': SERVICE.DELETE.value,
+                    'id': self.request.input.id,
+                    'name':service.name,
+                    'impl_name':service.impl_name,
+                    'is_internal':service.is_internal,
+                }
                 self.broker_client.publish(msg)
 
             except Exception:
@@ -305,9 +344,17 @@ class Invoke(AdminService):
                 response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
 
         else:
+            # This branch the same as above in async branch, except in async there was no all_pids
 
-            # Same as above in async branch, except in async there was no all_pids
-            if all_pids:
+            # It is possible that we were given the all_pids flag on input but we know
+            # ourselves that there is only one process, the current one, so we can just
+            # invoke it directly instead of going through IPC.
+            if all_pids and self.server.fs_server_config.main.gunicorn_workers > 1:
+                use_all_pids = True
+            else:
+                use_all_pids = False
+
+            if use_all_pids:
                 args = (name, payload, timeout) if timeout else (name, payload)
                 response = dumps(self.server.invoke_all_pids(*args))
             else:
@@ -650,7 +697,7 @@ class ServiceInvoker(AdminService):
             # All internal services wrap their responses in top-level elements that we need to shed here.
             if service_name.startswith(_internal):
                 if response:
-                    top_level = response.keys()[0]
+                    top_level = list(iterkeys(response))[0]
                     response = response[top_level]
 
             # Assign response to outgoing payload

@@ -35,7 +35,6 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-
 @method_allowed('GET')
 def get(req, cluster_id, object_type, object_id, msg_id):
 

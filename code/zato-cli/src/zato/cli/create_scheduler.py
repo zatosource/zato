@@ -18,7 +18,7 @@ except ImportError:
 import os
 from copy import deepcopy
 
-from zato.cli import common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents, ZatoCommand
+from zato.cli import common_logging_conf_contents, common_odb_opts, is_arg_given, kvdb_opts, sql_conf_contents, ZatoCommand
 from zato.common.crypto import SchedulerCryptoManager, well_known_data
 from zato.common.odb.model import Cluster
 
@@ -64,7 +64,7 @@ key1={secret_key1}
 
 [crypto]
 well_known_data={well_known_data}
-use_tls=True
+use_tls={use_tls}
 tls_protocol=TLSv1
 tls_ciphers=EECDH+AES:EDH+AES:-SHA1:EECDH+RC4:EDH+RC4:RC4-SHA:EECDH+AES256:EDH+AES256:AES256-SHA:!aNULL:!eNULL:!EXP:!LOW:!MD5
 tls_client_certs=optional
@@ -146,10 +146,10 @@ class Create(ZatoCommand):
 
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
 
-    opts.append({'name':'pub_key_path', 'help':"Path to scheduler's public key in PEM"})
-    opts.append({'name':'priv_key_path', 'help':"Path to scheduler's private key in PEM"})
-    opts.append({'name':'cert_path', 'help':"Path to the admin's certificate in PEM"})
-    opts.append({'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
+    opts.append({'name':'--pub_key_path', 'help':"Path to scheduler's public key in PEM"})
+    opts.append({'name':'--priv_key_path', 'help':"Path to scheduler's private key in PEM"})
+    opts.append({'name':'--cert_path', 'help':"Path to the admin's certificate in PEM"})
+    opts.append({'name':'--ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
     opts.append({'name':'cluster_name', 'help':"Name of the cluster this scheduler will belong to"})
     opts.append({'name':'--cluster_id', 'help':"ID of the cluster this scheduler will belong to"})
     opts.append({'name':'--secret_key', 'help':"Scheduler's secret crypto key"})
@@ -227,7 +227,11 @@ class Create(ZatoCommand):
         zato_well_known_data = cm.encrypt(zato_well_known_data)
         zato_well_known_data = zato_well_known_data.decode('utf8')
 
-        secret_key = secret_key.decode('utf8')
+        if isinstance(secret_key, (bytes, bytearray)):
+            secret_key = secret_key.decode('utf8')
+
+        # We will use TLS only if we were given crypto material on input
+        use_tls = is_arg_given(args, 'priv_key_path')
 
         config = {
             'odb_db_name': args.odb_db_name or args.sqlite_path,
@@ -244,6 +248,7 @@ class Create(ZatoCommand):
             'cluster_name': args.cluster_name,
             'secret_key1': secret_key,
             'well_known_data': zato_well_known_data,
+            'use_tls': 'true' if use_tls else 'false'
         }
 
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write(

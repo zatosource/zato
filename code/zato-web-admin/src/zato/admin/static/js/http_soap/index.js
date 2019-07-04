@@ -78,6 +78,9 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var is_outgoing = connection == 'outgoing';
     var is_soap = data.transport == 'soap';
 
+    var is_rate_limit_active = $.fn.zato.like_bool(data.is_rate_limit_active) == true;
+    var rate_limit_check_parent_def = $.fn.zato.like_bool(data.rate_limit_check_parent_def) == true;
+
     var method_tr = '';
     var soap_action_tr = '';
     var soap_version_tr = '';
@@ -209,6 +212,14 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         }
     }
 
+    /* 35,36,37,38 */
+    if(is_channel) {
+        row += String.format("<td class='ignore'>{0}</td>", is_rate_limit_active);
+        row += String.format("<td class='ignore'>{0}</td>", data.rate_limit_type);
+        row += String.format("<td class='ignore'>{0}</td>", data.rate_limit_def);
+        row += String.format("<td class='ignore'>{0}</td>", rate_limit_check_parent_def);
+    }
+
     if(include_tr) {
         row += '</tr>';
     }
@@ -219,8 +230,8 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.http_soap.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Object [{0}] deleted',
-        'Are you sure you want to delete the object [{0}]?',
+        'Object `{0}` deleted',
+        'Are you sure you want to delete object `{0}`?',
         true);
 }
 

@@ -55,6 +55,7 @@ logger_zato = getLogger('zato')
 # ################################################################################################################################
 
 http404 = '{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
+http404_bytes = http404.encode('latin1')
 
 # ################################################################################################################################
 
@@ -231,12 +232,13 @@ class WebSocket(_WebSocket):
             self.forwarded_for_fqdn = WEB_SOCKET.DEFAULT.FQDN_UNKNOWN
 
         _peer_fqdn = WEB_SOCKET.DEFAULT.FQDN_UNKNOWN
+        self._peer_host = _peer_fqdn
 
         try:
             self._peer_host = socket.gethostbyaddr(_peer_address[0])[0]
             _peer_fqdn = socket.getfqdn(self._peer_host)
         except Exception:
-            logger.warn(format_exc())
+            logger.warn('WSX exception in FQDN lookup `%s`', format_exc())
         finally:
             self._peer_fqdn = _peer_fqdn
 
@@ -303,18 +305,16 @@ class WebSocket(_WebSocket):
             # Are we to invoke the services this time?
             if needs_services:
 
-                now_formatted = now.isoformat()
-
                 pub_sub_request = {
                     'sub_key': self.pubsub_tool.get_sub_keys(),
-                    'last_interaction_time': now_formatted,
+                    'last_interaction_time': now,
                     'last_interaction_type': self.last_interact_source,
                     'last_interaction_details': self.get_peer_info_pretty(),
                 }
 
                 wsx_request = {
                     'id': self.sql_ws_client_id,
-                    'last_seen': now_formatted,
+                    'last_seen': now,
                 }
 
                 logger.info('Setting pub/sub interaction metadata `%s`', pub_sub_request)
@@ -532,7 +532,16 @@ class WebSocket(_WebSocket):
         logger.warn(
             'Peer %s (%s) %s, closing its connection to %s (%s), cid:`%s` (%s)', self._peer_address, self._peer_fqdn, action,
             self._local_address, self.config.name, cid, self.peer_conn_info_pretty)
-        self.send(Forbidden(cid, data).serialize())
+
+        try:
+            self.send(Forbidden(cid, data).serialize())
+        except AttributeError as e:
+            # Catch a lower-level exception which may be raised in case the client
+            # disconnected and we did not manage to send the Forbidden message.
+            # In this situation, the lower level will raise an attribute error
+            # with a specific message. Otherwise, we reraise the exception.
+            if not e.args[0] == "'NoneType' object has no attribute 'text_message'":
+                raise
 
         self.server_terminated = True
         self.client_terminated = True
@@ -741,7 +750,7 @@ class WebSocket(_WebSocket):
         try:
             self.send(serialized)
         except AttributeError as e:
-            if e.message == "'NoneType' object has no attribute 'text_message'":
+            if e.args[0] == "'NoneType' object has no attribute 'text_message'":
                 _msg = 'Service response discarded (client disconnected), cid:`%s`, msg.meta:`%s`'
                 _meta = msg.get_meta()
                 logger.warn(_msg, _meta)
@@ -831,7 +840,7 @@ class WebSocket(_WebSocket):
                 try:
                     self.handle_client_message(cid, request) if not request.is_auth else self.handle_create_session(cid, request)
                 except RuntimeError as e:
-                    if e.message == 'Cannot send on a terminated websocket':
+                    if str(e) == 'Cannot send on a terminated websocket':
                         msg = 'Ignoring message (client disconnected), cid:`%s`, request:`%s` conn:`%s`'
                         logger.info(msg, cid, request, self.peer_conn_info_pretty)
                         logger_zato.info(msg, cid, request, self.peer_conn_info_pretty)
@@ -883,15 +892,19 @@ class WebSocket(_WebSocket):
         which is a timestamp object. If self.has_session_opened is not True by that time, connection to the remote end
         is closed.
         """
-        if self._wait_for_event(self.config.new_token_wait_time, lambda: self.has_session_opened):
-            return
+        try:
+            if self._wait_for_event(self.config.new_token_wait_time, lambda: self.has_session_opened):
+                return
 
-        # We get here if self.has_session_opened has not been set to True by self.create_session_by
-        self.on_forbidden('did not create session within {}s'.format(self.config.new_token_wait_time))
+            # We get here if self.has_session_opened has not been set to True by self.create_session_by
+            self.on_forbidden('did not create session within {}s'.format(self.config.new_token_wait_time))
+
+        except Exception:
+            logger.warn('Exception in WSX _ensure_session_created `%s`', format_exc())
 
 # ################################################################################################################################
 
-    def invoke_client(self, cid, request, timeout=5, ctx=None, use_send=True, _Class=InvokeClientRequest):
+    def invoke_client(self, cid, request, timeout=5, ctx=None, use_send=True, _Class=InvokeClientRequest, wait_for_response=True):
         """ Invokes a remote WSX client with request given on input, returning its response,
         if any was produced in the expected time.
         """
@@ -919,9 +932,10 @@ class WebSocket(_WebSocket):
         # these are always asynchronous and that channel's WSX hook
         # will process the response, if any arrives.
         if _Class is not InvokeClientPubSubRequest:
-            response = self._wait_for_client_response(msg.id, timeout)
-            if response:
-                return response if isinstance(response, bool) else response.data # It will be bool in pong responses
+            if wait_for_response:
+                response = self._wait_for_client_response(msg.id, timeout)
+                if response:
+                    return response if isinstance(response, bool) else response.data # It will be bool in pong responses
 
 # ################################################################################################################################
 
@@ -944,7 +958,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def opened(self, _now=datetime.utcnow, _timedelta=timedelta):
+    def opened(self):
         logger.info('New connection from %s (%s) to %s (%s %s %s)', self._peer_address, self._peer_fqdn,
             self._local_address, self.config.name, self.python_id, self.sock)
 
@@ -1023,7 +1037,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
 
         try:
             if environ['PATH_INFO'] != self.config.path:
-                start_response(http404, {})
+                start_response(http404_bytes, {})
                 return [error_response[NOT_FOUND][self.config.data_format]]
 
             super(WebSocketContainer, self).__call__(environ, start_response)
@@ -1032,6 +1046,10 @@ class WebSocketContainer(WebSocketWSGIApplication):
 
     def invoke_client(self, cid, pub_client_id, request, timeout):
         return self.clients[pub_client_id].invoke_client(cid, request, timeout)
+
+    def broadcast(self, cid, request):
+        for client in self.clients.values():
+            spawn(client.invoke_client, cid, request, wait_for_response=False)
 
     def disconnect_client(self, cid, pub_client_id):
         return self.clients[pub_client_id].disconnect_client(cid)
@@ -1061,6 +1079,14 @@ class WebSocketServer(WSGIServer):
         config.needs_auth = bool(config.sec_name)
 
         super(WebSocketServer, self).__init__((config.host, config.port), WebSocketContainer(config, handler_cls=WebSocket))
+
+# ################################################################################################################################
+
+    def stop(self, *args, **kwargs):
+        """ Reimplemented from the parent class to be able to call shutdown prior to its calling self.socket.close.
+        """
+        self.socket.shutdown(2) # SHUT_RDWR has value of 2 in 'man 2 shutdown'
+        super(WebSocketServer, self).stop(*args, **kwargs)
 
 # ################################################################################################################################
 
@@ -1094,6 +1120,9 @@ class WebSocketServer(WSGIServer):
     def invoke_client(self, cid, pub_client_id, request, timeout):
         return self.application.invoke_client(cid, pub_client_id, request, timeout)
 
+    def broadcast(self, cid, request):
+        return self.application.broadcast(cid, request)
+
     def disconnect_client(self, cid, pub_client_id):
         return self.application.disconnect_client(cid, pub_client_id)
 
@@ -1110,27 +1139,36 @@ class ChannelWebSocket(Connector):
     """
     start_in_greenlet = True
 
+    def __init__(self, *args, **kwargs):
+        self._wsx_server = None # type: WebSocketServer
+        super(ChannelWebSocket, self).__init__(*args, **kwargs)
+
     def _start(self):
-        self.server = WebSocketServer(self.config, self.auth_func, self.on_message_callback)
+        self._wsx_server = WebSocketServer(self.config, self.auth_func, self.on_message_callback)
         self.is_connected = True
-        self.server.start()
+        self._wsx_server.start()
 
     def _stop(self):
-        self.server.stop(3)
+        if self.is_connected:
+            self._wsx_server.stop(3)
+            self.is_connected = False
 
     def get_log_details(self):
         return self.config.address
 
     def invoke(self, cid, pub_client_id, request, timeout=5):
-        return self.server.invoke_client(cid, pub_client_id, request, timeout)
+        return self._wsx_server.invoke_client(cid, pub_client_id, request, timeout)
+
+    def broadcast(self, cid, request):
+        return self._wsx_server.broadcast(cid, request)
 
     def disconnect_client(self, cid, pub_client_id, *ignored_args, **ignored_kwargs):
-        return self.server.disconnect_client(cid, pub_client_id)
+        return self._wsx_server.disconnect_client(cid, pub_client_id)
 
     def notify_pubsub_message(self, cid, pub_client_id, request):
-        return self.server.notify_pubsub_message(cid, pub_client_id, request)
+        return self._wsx_server.notify_pubsub_message(cid, pub_client_id, request)
 
     def get_client_by_pub_id(self, pub_client_id):
-        return self.server.get_client_by_pub_id(pub_client_id)
+        return self._wsx_server.get_client_by_pub_id(pub_client_id)
 
 # ################################################################################################################################
