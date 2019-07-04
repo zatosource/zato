@@ -22,9 +22,11 @@ from zato.common import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, JWT
 from zato.common.odb.query import jwt_list
+from zato.common.rate_limiting import DefinitionParser
+from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.connection.http_soap import Unauthorized
 from zato.server.jwt import JWT as JWTBackend
-from zato.server.service import Integer, Service
+from zato.server.service import Boolean, Integer, Service
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 # ################################################################################################################################
@@ -37,11 +39,12 @@ class GetList(AdminService):
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_security_jwt_get_list_request'
         response_elem = 'zato_security_jwt_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'username', Integer('ttl'))
+        input_required = 'cluster_id',
+        output_required = 'id', 'name', 'is_active', 'username', Integer('ttl')
+        output_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
 
     def get_data(self, session):
-        return self._search(jwt_list, session, self.request.input.cluster_id, None, False)
+        return elems_with_opaque(self._search(jwt_list, session, self.request.input.cluster_id, None, False))
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -55,10 +58,15 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_jwt_create_request'
         response_elem = 'zato_security_jwt_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'username', Integer('ttl'))
-        output_required = ('id', 'name')
+        input_required = 'cluster_id', 'name', 'is_active', 'username', Integer('ttl')
+        input_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+        output_required = 'id', 'name'
 
     def handle(self):
+
+        # If we have a rate limiting definition, let's check it upfront
+        DefinitionParser.check_definition_from_input(self.request.input)
+
         input = self.request.input
         input.password = uuid4().hex
         input.secret = Fernet.generate_key()
@@ -83,6 +91,8 @@ class Create(AdminService):
                 item.secret = input.secret
                 item.ttl = input.ttl
                 item.cluster_id = input.cluster_id
+
+                set_instance_opaque_attrs(item, input)
 
                 session.add(item)
                 session.commit()
@@ -109,8 +119,9 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_jwt_edit_request'
         response_elem = 'zato_security_jwt_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', Integer('ttl'))
-        output_required = ('id', 'name')
+        input_required = 'id', 'cluster_id', 'name', 'is_active', 'username', Integer('ttl')
+        input_optional = 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
+        output_required = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -133,6 +144,8 @@ class Edit(AdminService):
                 item.username = input.username
                 item.ttl = input.ttl
                 item.cluster_id = input.cluster_id
+
+                set_instance_opaque_attrs(item, input)
 
                 session.add(item)
                 session.commit()
@@ -176,7 +189,7 @@ class Delete(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_jwt_delete_request'
         response_elem = 'zato_security_jwt_delete_response'
-        input_required = ('id',)
+        input_required = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -203,12 +216,12 @@ class LogIn(Service):
     """ Logs user into using JWT-backed credentials and returns a new token if credentials were correct.
     """
     class SimpleIO:
-        input_required = ('username', 'password')
-        output_optional = ('token',)
+        input_required = 'username', 'password'
+        output_optional = 'token',
 
     def handle(self):
-        token = JWTBackend(self.kvdb, self.odb, self.server.fs_server_config.misc.jwt_secret).authenticate(
-            self.request.input.username, self.request.input.password)
+        token = JWTBackend(self.kvdb, self.odb, self.server.decrypt, self.server.jwt_secret).authenticate(
+            self.request.input.username, self.server.decrypt(self.request.input.password))
 
         if token:
             self.response.payload = {'token': token}
@@ -224,7 +237,7 @@ class LogOut(AdminService):
     """
     class SimpleIO(AdminSIO):
         response_elem = 'zato_security_jwt_log_out_response'
-        output_optional = ('result',)
+        output_optional = 'result',
 
     def handle(self):
         token = self.wsgi_environ.get('HTTP_AUTHORIZATION', '').replace('Bearer ', '')
@@ -234,7 +247,7 @@ class LogOut(AdminService):
             self.response.payload.result = 'No JWT found'
 
         try:
-            JWTBackend(self.kvdb, self.odb, self.server.fs_server_config.misc.jwt_secret).delete(token)
+            JWTBackend(self.kvdb, self.odb, self.server.jwt_secret).delete(token)
         except Exception:
             self.logger.warn(format_exc())
             self.response.status_code = BAD_REQUEST

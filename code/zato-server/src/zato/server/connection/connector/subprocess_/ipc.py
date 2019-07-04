@@ -27,6 +27,19 @@ from zato.common.util.proc import start_python_process
 
 # ################################################################################################################################
 
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # Zato
+    from zato.server.base.parallel import ParallelServer
+
+    # For pyflakes
+    ParallelServer = ParallelServer
+
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
 # ################################################################################################################################
@@ -45,6 +58,7 @@ class SubprocessIPC(object):
     callback_suffix = '<callback-suffix-empty>'
     ipc_config_name = '<ipc-config-name-empty>'
     auth_username = '<auth-username-empty>'
+    pidfile_suffix = 'not-configured'
 
     connector_module = '<connector-module-empty>'
 
@@ -56,6 +70,7 @@ class SubprocessIPC(object):
 # ################################################################################################################################
 
     def __init__(self, server):
+        # type: (ParallelServer)
         self.server = server
 
 # ################################################################################################################################
@@ -100,6 +115,8 @@ class SubprocessIPC(object):
             'server_name': self.server.name,
             'server_path': '/zato/internal/callback/{}'.format(self.callback_suffix),
             'base_dir': self.server.base_dir,
+            'needs_pidfile': not self.server.has_fg,
+            'pidfile_suffix': self.pidfile_suffix,
             'logging_conf_path': self.server.logging_conf_path
         }))
 

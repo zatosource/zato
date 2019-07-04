@@ -109,8 +109,8 @@ class Lock(object):
     def __enter__(self, pub_hash_func=sha256, _permanent=LOCK_TYPE.PERMANENT):
 
         # Compute lock_id in PostgreSQL's internal format which is a 64-bit integer (bigint)
-        self.priv_id = str(hash('{}{}'.format(self.namespace, self.name)))
-        self.pub_id = pub_hash_func(self.priv_id.encode('utf8')).hexdigest()
+        self.priv_id = hash('{}{}'.format(self.namespace, self.name))
+        self.pub_id = pub_hash_func(str(self.priv_id).encode('utf8')).hexdigest()
 
         # Try to acquire the lock
         self.acquired = self._acquire()

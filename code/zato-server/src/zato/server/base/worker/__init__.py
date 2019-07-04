@@ -36,10 +36,6 @@ from dateutil.rrule import DAILY, MINUTELY, rrule
 # gevent
 import gevent
 
-# gunicorn
-from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
-from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
-
 # Python 2/3 compatibility
 from future.utils import iterkeys
 from future.moves.urllib.parse import urlparse
@@ -50,7 +46,7 @@ from six import PY3
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
 from zato.common import broker_message, CHANNEL, GENERIC as COMMON_GENERIC, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, NOTIF, \
-     PUBSUB, SEC_DEF_TYPE, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     PUBSUB, RATE_LIMIT, SEC_DEF_TYPE, SECRETS, simple_types, URL_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
@@ -80,6 +76,7 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
      OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
+from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
@@ -125,14 +122,6 @@ class GeventWorker(GunicornGeventWorker):
     def __init__(self, *args, **kwargs):
         self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
         super(GunicornGeventWorker, self).__init__(*args, **kwargs)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class SyncWorker(GunicornSyncWorker):
-    def __init__(self, *args, **kwargs):
-        self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
-        super(GunicornSyncWorker, self).__init__(*args, **kwargs)
 
 # ################################################################################################################################
 
@@ -336,9 +325,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_sftp()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
-        self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io,
+        self.request_dispatcher = RequestDispatcher(self.server, simple_io_config=self.worker_config.simple_io,
             return_tracebacks=self.server.return_tracebacks, default_error_message=self.server.default_error_message,
             http_methods_allowed=self.server.http_methods_allowed)
+
         self.request_dispatcher.url_data = URLData(
             self, self.worker_config.http_soap,
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
@@ -486,7 +476,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         if conn_soap and conn_suds:
             wrapper_config['queue_build_cap'] = float(self.server.fs_server_config.misc.queue_build_cap)
             wrapper = SudsSOAPWrapper(wrapper_config)
-            wrapper.build_client_queue()
+            if wrapper_config['is_active']:
+                wrapper.build_client_queue()
             return wrapper
 
         return HTTPSOAPWrapper(wrapper_config)
@@ -1070,12 +1061,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY,
                 self._visit_wrapper_edit, keys=('username', 'name'))
+        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'apikey')
 
     def on_broker_msg_SECURITY_APIKEY_DELETE(self, msg, *args):
         """ Deletes an API key security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.APIKEY,
                 self._visit_wrapper_delete)
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
     def on_broker_msg_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an API key security definition.
@@ -1198,12 +1191,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
                 self._visit_wrapper_edit, keys=('username', 'name'))
+        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'basic_auth')
 
     def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
                 self._visit_wrapper_delete)
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
@@ -1230,10 +1225,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def jwt_get(self, name):
-        """ Returns the configuration of the JWT security definition
-        of the given name.
+        """ Returns the configuration of the JWT security definition of the given name.
         """
         return self.request_dispatcher.url_data.jwt_get(name)
+
+    def jwt_get_by_id(self, def_id):
+        """ Same as jwt_get but returns information by definition ID.
+        """
+        return self.request_dispatcher.url_data.jwt_get_by_id(def_id)
 
     def on_broker_msg_SECURITY_JWT_CREATE(self, msg, *args):
         """ Creates a new JWT security definition
@@ -1245,12 +1244,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
                 self._visit_wrapper_edit, keys=('username', 'name'))
+        self.server.set_up_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name, 'jwt')
 
     def on_broker_msg_SECURITY_JWT_DELETE(self, msg, *args):
         """ Deletes a JWT security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
                 self._visit_wrapper_delete)
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SEC_DEF, msg.name)
 
     def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of a JWT security definition.
@@ -1481,7 +1482,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_message_invoke_service(self, msg, channel, action, args=None, **kwargs):
-        """ Triggered by external events, such as messages sent through connectots. Creates a new service instance and invokes it.
+        """ Triggered by external events, such as messages sent through connectors. Creates a new service instance and invokes it.
         """
         zato_ctx = msg.get('zato_ctx') or {}
         target = zato_ctx.get('zato.request_ctx.target', '')
@@ -1570,6 +1571,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
+
+        # If statistics are disabled, all their related services will not be available
+        # so if they are invoked via scheduler, they should be ignored. Ultimately,
+        # the scheduler should not invoke them at all.
+        if msg.name.startswith('zato.stats'):
+            if not self.server.component_enabled.stats:
+                return
+
         return self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
 
     def on_broker_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg, args=None):
@@ -1581,6 +1590,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ Creates or updates an SQL connection, including changing its
         password.
         """
+        if msg.password.startswith(SECRETS.PREFIX):
+            msg.password = self.server.decrypt(msg.password)
+
         # Is it a rename? If so, delete the connection first
         if msg.get('old_name') and msg.get('old_name') != msg['name']:
             del self.sql_pool_store[msg['old_name']]
@@ -1704,15 +1716,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Delete the service from RBAC resources
         self.rbac.delete_resource(msg.id)
 
-        # Module this service is in so it can be removed from sys.modules
-        mod = inspect.getmodule(self.server.service_store.services[msg.impl_name]['service_class'])
-
         # Where to delete it from in the second step
-        deployment_info = loads(self.server.service_store.services[msg.impl_name]['deployment_info'])
+        deployment_info = self.server.service_store.get_deployment_info(msg.impl_name)
         fs_location = deployment_info['fs_location']
 
         # Delete it from the service store
-        del self.server.service_store.services[msg.impl_name]
+        self.server.service_store.delete_service_data(msg.name)
+
+        # Remove rate limiting configuration
+        self.server.delete_object_rate_limiting(RATE_LIMIT.OBJECT_TYPE.SERVICE, msg.name)
 
         # Delete it from the filesystem, including any bytecode left over. Note that
         # other parallel servers may wish to do exactly the same so we just ignore
@@ -1729,12 +1741,22 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                     if e.errno != ENOENT:
                         raise
 
-        # Makes it actually gets reimported next time it's redeployed
-        del sys.modules[mod.__name__]
+        # It is possible that this module was already deleted from sys.modules
+        # in case there was more than one service in it and we first deleted
+        # one and then the other.
+        try:
+            service_info = self.server.service_store.services[msg.impl_name]
+        except KeyError:
+            return
+        else:
+            mod = inspect.getmodule(service_info['service_class'])
+            del sys.modules[mod.__name__]
 
     def on_broker_msg_SERVICE_EDIT(self, msg, *args):
-        for name in('is_active', 'slow_threshold'):
-            self.server.service_store.services[msg.impl_name][name] = msg[name]
+        # type: (dict)
+        del msg['action']
+        del msg['msg_type']
+        self.server.service_store.edit_service_data(msg)
 
 # ################################################################################################################################
 
@@ -1784,7 +1806,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_AFTER_DEPLOY(self, msg, *args):
-        self.rbac.create_resource(msg.id)
+
+        # Update RBAC configuration
+        self.rbac.create_resource(msg.service_id)
+
+        # Redeploy services that depended on the service just deployed.
+        # Uses .get below because the feature is new in 3.1 which is why it is optional.
+        if self.server.fs_server_config.hot_deploy.get('redeploy_on_parent_change', True):
+            self.server.service_store.redeploy_on_parent_changed(msg.service_name, msg.service_impl_name)
 
 # ################################################################################################################################
 
@@ -1929,6 +1958,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def on_broker_msg_CLOUD_AWS_S3_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an AWS S3 connection.
         """
+        msg.password = self.server.decrypt(msg.password)
+
         self._update_aws_config(msg)
         self._on_broker_msg_cloud_create_edit(msg, 'AWS S3', self.worker_config.cloud_aws_s3, S3Wrapper)
 

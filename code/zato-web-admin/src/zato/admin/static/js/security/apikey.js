@@ -38,6 +38,8 @@ $.fn.zato.security.apikey.data_table.new_row = function(item, data, include_tr) 
     }
 
     var is_active = item.is_active == true
+    var is_rate_limit_active = $.fn.zato.like_bool(data.is_rate_limit_active) == true;
+    var rate_limit_check_parent_def = $.fn.zato.like_bool(data.rate_limit_check_parent_def) == true;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -49,6 +51,11 @@ $.fn.zato.security.apikey.data_table.new_row = function(item, data, include_tr) 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
 
+    row += String.format("<td class='ignore'>{0}</td>", is_rate_limit_active);
+    row += String.format("<td class='ignore'>{0}</td>", data.rate_limit_type);
+    row += String.format("<td class='ignore'>{0}</td>", data.rate_limit_def);
+    row += String.format("<td class='ignore'>{0}</td>", rate_limit_check_parent_def);
+
     if(include_tr) {
         row += '</tr>';
     }
@@ -58,7 +65,7 @@ $.fn.zato.security.apikey.data_table.new_row = function(item, data, include_tr) 
 
 $.fn.zato.security.apikey.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'API key [{0}] deleted',
-        'Are you sure you want to delete the API key [{0}]?',
+        'API key `{0}` deleted',
+        'Are you sure you want to delete API key `{0}`?',
         true);
 }

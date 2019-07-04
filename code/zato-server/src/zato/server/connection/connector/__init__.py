@@ -121,6 +121,10 @@ class Connector(object):
         log_each = 10
         start = datetime.utcnow()
 
+        if not self.is_active:
+            logger.warning('Skipped creation of an inactive connection `%s` (%s)', self.name, self.type)
+            return
+
         try:
             while self.keep_connecting:
                 while not self.is_connected:
@@ -224,9 +228,10 @@ class Connector(object):
             if not predicate():
                 return
 
-        logger.info(
-            '%s %s connector `%s` (id:%s) %s', verb, self.type, self.name, self.id_self,
-            ' ({})'.format(log_details if log_details else self.get_log_details()))
+        if self.is_active:
+            logger.info(
+                '%s %s connector `%s` (id:%s) %s', verb, self.type, self.name, self.id_self,
+                ' ({})'.format(log_details if log_details else self.get_log_details()))
 
 # ################################################################################################################################
 
@@ -250,13 +255,17 @@ class Connector(object):
 # ################################################################################################################################
 
     def start(self, needs_log=True):
+        if self.is_inactive:
+            logger.warn('Skipped creation of an inactive connector `%s` (%s)', self.name, self.type)
+            return
+
         with self._start_stop_logger('Starting',' Started', self._wait_until_connected):
             self.keep_running = True
             self.keep_connecting = True
 
             try:
                 if self.start_in_greenlet:
-                    spawn_greenlet(self._spawn_start)
+                    spawn_greenlet(self._spawn_start, timeout=1)
                 else:
                     self._start_loop()
             except Exception:
@@ -267,7 +276,6 @@ class Connector(object):
     def stop(self):
         with self._start_stop_logger('Stopping',' Stopped'):
             self._stop()
-            self.is_connected = False
             self.keep_connecting = False # Set to False in case .stop is called before the connection was established
             self.keep_running = False
 

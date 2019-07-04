@@ -10,19 +10,19 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from ftplib import FTP_PORT
-from json import dumps as json_dumps, loads as json_loads
+from json import dumps as json_dumps
 
 # SQLAlchemy
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, false as sa_false, ForeignKey, Index, Integer, LargeBinary, \
-     Numeric, Sequence, SmallInteger, String, Text, true as sa_true, TypeDecorator, UniqueConstraint
+     Numeric, Sequence, SmallInteger, String, Text, true as sa_true, UniqueConstraint
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, \
-     ODOO, SAP, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
+from zato.common import AMQP, CASSANDRA, CLOUD, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, ODOO, SAP, PUBSUB, \
+     SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
-from zato.common.odb.model.base import Base
-from zato.common.odb.model.sso import _SSOAttr, _SSOSession, _SSOUser
+from zato.common.odb.model.base import Base, _JSON
+from zato.common.odb.model.sso import _SSOAttr, _SSOGroup, _SSOLinkedAuth, _SSOSession, _SSOUser
 
 # ################################################################################################################################
 
@@ -43,27 +43,13 @@ def to_json(model, return_as_dict=False):
 
 # ################################################################################################################################
 
-class _JSON(TypeDecorator):
-    """ Python 2.7 ships with SQLite 3.8 whereas it was 3.9 that introduced the JSON datatype.
-    Because of it, we need our own wrapper around JSON data.
-    """
-    @property
-    def python_type(self):
-        return object
+class SSOGroup(_SSOGroup):
+    pass
 
-    impl = Text
+# ################################################################################################################################
 
-    def process_bind_param(self, value, dialect):
-        return json_dumps(value)
-
-    def process_literal_param(self, value, dialect):
-        return value
-
-    def process_result_value(self, value, dialect):
-        try:
-            return json_loads(value)
-        except(ValueError, TypeError):
-            return None
+class SSOUser(_SSOUser):
+    pass
 
 # ################################################################################################################################
 
@@ -72,10 +58,12 @@ class SSOSession(_SSOSession):
 
 # ################################################################################################################################
 
-class SSOUser(_SSOUser):
+class SSOAttr(_SSOAttr):
     pass
 
-class SSOAttr(_SSOAttr):
+# ################################################################################################################################
+
+class SSOLinkedAuth(_SSOLinkedAuth):
     pass
 
 # ################################################################################################################################
@@ -556,8 +544,8 @@ class HTTPSOAP(Base):
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
 
-    connection = Column(Enum(CONNECTION.CHANNEL, CONNECTION.OUTGOING, name='http_soap_connection'), nullable=False)
-    transport = Column(Enum(URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP, name='http_soap_transport'), nullable=False)
+    connection = Column(String(200), nullable=False)
+    transport = Column(String(200), nullable=False)
 
     host = Column(String(200), nullable=True)
     url_path = Column(String(200), nullable=False)
@@ -648,6 +636,10 @@ class HTTPSOAP(Base):
         self.match_slash = match_slash # Not used by the DB
         self.http_accept = http_accept # Not used by the DB
         self.opaque1 = opaque
+        self.is_rate_limit_active = None
+        self.rate_limit_type = None
+        self.rate_limit_def = None
+        self.rate_limit_check_parent_def = None
 
 # ################################################################################################################################
 
@@ -2357,6 +2349,12 @@ class PubSubMessage(Base):
     # i.e. it can be said that it has been already transported to all subsriber queues (possibly to one only).
     is_in_sub_queue = Column(Boolean(), nullable=False, server_default=sa_false())
 
+    # User-defined arbitrary context data
+    user_ctx = Column(_JSON(), nullable=True)
+
+    # Zato-defined arbitrary context data
+    zato_ctx = Column(_JSON(), nullable=True)
+
     # JSON data is here
     opaque1 = Column(_JSON(), nullable=True)
 
@@ -2847,5 +2845,34 @@ class GenericConnClient(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(
         Cluster, backref=backref('gen_conn_clients', order_by=last_seen, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class RateLimitState(Base):
+    """ Rate limiting persistent storage for exact definitions.
+    """
+    __tablename__ = 'rate_limit_state'
+    __table_args__ = (
+        Index('object_idx', 'object_type', 'object_id', 'period', 'last_network', unique=True,
+              mysql_length={'object_type':191, 'object_id':191, 'period':191, 'last_network':191}),
+    {})
+
+    id = Column(Integer(), Sequence('rate_limit_state_seq'), primary_key=True)
+
+    object_type = Column(Text(191), nullable=False)
+    object_id = Column(Text(191), nullable=False)
+
+    period = Column(Text(), nullable=False)
+    requests = Column(Integer(), nullable=False, server_default='0')
+    last_cid = Column(Text(), nullable=False)
+    last_request_time_utc = Column(DateTime(), nullable=False)
+    last_from = Column(Text(), nullable=False)
+    last_network = Column(Text(), nullable=False)
+
+    # JSON data is here
+    opaque1 = Column(_JSON(), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('rate_limit_state_list', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################

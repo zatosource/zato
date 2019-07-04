@@ -26,13 +26,14 @@ import yaml
 
 # Python 2/3 compatibility
 from future.moves.urllib.request import urlopen
+from six import PY2
 
 # Zato
 from zato.agent.load_balancer.config import backend_template, config_from_string, string_from_config, zato_item_token
 from zato.agent.load_balancer.haproxy_stats import HAProxyStats
 from zato.common import MISC, TRACE1, ZATO_OK
 from zato.common.haproxy import haproxy_stats, validate_haproxy_config
-from zato.common.py23_.spring_ import SSLServer
+from zato.common.py23_.spring_ import RequestHandler, SimpleXMLRPCServer, SSLServer
 from zato.common.repo import RepoManager
 from zato.common.util import get_lb_agent_json_config, timeouting_popen
 
@@ -47,8 +48,11 @@ haproxy_commands = {}
 for version, commands in haproxy_stats.items():
     haproxy_commands.update(commands)
 
-class LoadBalancerAgent(SSLServer):
-    def __init__(self, repo_dir):
+# ################################################################################################################################
+# ################################################################################################################################
+
+class BaseLoadBalancerAgent(object):
+    def init_config(self, repo_dir):
 
         self.repo_dir = os.path.abspath(repo_dir)
         self.json_config = get_lb_agent_json_config(self.repo_dir)
@@ -74,11 +78,12 @@ class LoadBalancerAgent(SSLServer):
 
         RepoManager(self.repo_dir).ensure_repo_consistency()
 
-        SSLServer.__init__(self,
-            host=self.json_config['host'],
-            port=self.json_config['port'], keyfile=self.keyfile, certfile=self.certfile,
-            ca_certs=self.ca_certs, cert_reqs=ssl.CERT_REQUIRED,
-            verify_fields=self.verify_fields)
+        self.host = self.json_config['host']
+        self.port = self.json_config['port']
+
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+# ################################################################################################################################
 
     def _re_start_load_balancer(self, timeout_msg, rc_non_zero_msg, additional_params=[]):
         """ A common method for (re-)starting HAProxy.
@@ -87,10 +92,14 @@ class LoadBalancerAgent(SSLServer):
         command.extend(additional_params)
         timeouting_popen(command, 5.0, timeout_msg, rc_non_zero_msg)
 
+# ################################################################################################################################
+
     def start_load_balancer(self):
         """ Starts the HAProxy load balancer in background.
         """
         self._re_start_load_balancer("HAProxy didn't start in `{}` seconds. ", 'Failed to start HAProxy. ')
+
+# ################################################################################################################################
 
     def restart_load_balancer(self):
         """ Restarts the HAProxy load balancer without disrupting existing connections.
@@ -98,12 +107,16 @@ class LoadBalancerAgent(SSLServer):
         additional_params = ['-sf', open(self.haproxy_pidfile).read().strip()]
         self._re_start_load_balancer("Could not restart in `{}` seconds. ", 'Failed to restart HAProxy. ', additional_params)
 
+# ################################################################################################################################
+
     def _dispatch(self, method, params):
         try:
-            return SSLServer._dispatch(self, method, params)
+            return super(BaseLoadBalancerAgent, self)._dispatch(method, params)
         except Exception as e:
             logger.error(format_exc())
             raise e
+
+# ################################################################################################################################
 
     def register_functions(self):
         """ All methods with the '_lb_agent_' prefix will be exposed through
@@ -119,29 +132,39 @@ class LoadBalancerAgent(SSLServer):
                 logger.info(msg.format(attr=attr, public_name=public_name))  # TODO: Add logging config
                 self.register_function(attr, public_name)
 
+# ################################################################################################################################
+
     def _read_config_string(self):
         """ Returns the HAProxy config as a string.
         """
         return open(self.config_path).read()
+
+# ################################################################################################################################
 
     def _read_config(self):
         """ Read and parse the HAProxy configuration.
         """
         return config_from_string(self._read_config_string())
 
+# ################################################################################################################################
+
     def _validate(self, config_string):
         validate_haproxy_config(config_string, self.haproxy_command)
+
+# ################################################################################################################################
 
     def _save_config(self, config_string):
         """ Save a new HAProxy config file on disk. It is assumed the file
         has already been validated.
         """
-        # TODO: Use local bzr repo here
+        # TODO: Use local git repo here
         f = open(self.config_path, 'wb')
-        f.write(config_string)
+        f.write(config_string.encode('utf8'))
         f.close()
 
         self.config = self._read_config()
+
+# ################################################################################################################################
 
     def _validate_save_config_string(self, config_string, save):
         """ Given a string representing the HAProxy config file it first validates
@@ -155,7 +178,7 @@ class LoadBalancerAgent(SSLServer):
 
         return True
 
-# ##############################################################################
+# ################################################################################################################################
 
     def _show_stat(self):
         stat = self.haproxy_stats.execute('show stat')
@@ -179,11 +202,15 @@ class LoadBalancerAgent(SSLServer):
 
                 yield access_type, server_name, state
 
+# ################################################################################################################################
+
     def _lb_agent_validate_save_source_code(self, source_code, save=False):
         """ Validate or validates & saves (if 'save' flag is True) an HAProxy
         configuration passed in as a string. Note that the validation step is always performed.
         """
         return self._validate_save_config_string(source_code, save)
+
+# ################################################################################################################################
 
     def _lb_agent_validate_save(self, lb_config, save=False):
         """ Validate or validates /and/ saves (if 'save' flag is True) an HAProxy
@@ -191,6 +218,8 @@ class LoadBalancerAgent(SSLServer):
         """
         config_string = string_from_config(lb_config, open(self.config_path).readlines())
         return self._validate_save_config_string(config_string, save)
+
+# ################################################################################################################################
 
     def _lb_agent_get_servers_state(self):
         """ Return a three-key dictionary describing the current state of all Zato servers
@@ -222,6 +251,8 @@ class LoadBalancerAgent(SSLServer):
                 servers_state[state][access_type].append(server_name)
         return servers_state
 
+# ################################################################################################################################
+
     def _lb_agent_get_server_data_dict(self, name=None):
         """ Returns a dictionary whose keys are server names and values are their
         access types and the server's status as reported by HAProxy.
@@ -244,6 +275,8 @@ class LoadBalancerAgent(SSLServer):
                 servers[server_name] = _dict(access_type, state, server_name)
 
         return servers
+
+# ################################################################################################################################
 
     def _lb_agent_rename_server(self, old_name, new_name):
         """ Renames the server, validates and saves the config.
@@ -287,6 +320,8 @@ class LoadBalancerAgent(SSLServer):
 
         return True
 
+# ################################################################################################################################
+
     def _lb_agent_add_remove_server(self, action, server_name):
         bck_http_plain = self.config.backend['bck_http_plain']
 
@@ -328,6 +363,8 @@ class LoadBalancerAgent(SSLServer):
 
         return True
 
+# ################################################################################################################################
+
     def _lb_agent_execute_command(self, command, timeout, extra=""):
         """ Execute an HAProxy command through its UNIX socket interface.
         """
@@ -345,6 +382,8 @@ class LoadBalancerAgent(SSLServer):
 
         return result
 
+# ################################################################################################################################
+
     def _lb_agent_haproxy_version_info(self):
         """ Return a three-element tuple describing HAProxy's version,
         similar to what stdlib's sys.version_info does.
@@ -356,10 +395,14 @@ class LoadBalancerAgent(SSLServer):
                 version = line.split('Version:')[1]
                 return version.strip().split('.')
 
+# ################################################################################################################################
+
     def _lb_agent_ping(self):
         """ Always return ZATO_OK.
         """
         return ZATO_OK
+
+# ################################################################################################################################
 
     def _lb_agent_get_config(self):
         """ Return those pieces of an HAProxy configuration that are understood
@@ -367,16 +410,22 @@ class LoadBalancerAgent(SSLServer):
         """
         return self.config
 
+# ################################################################################################################################
+
     def _lb_agent_get_config_source_code(self):
         """ Return the HAProxy configuration file's source.
         """
         return self._read_config_string()
+
+# ################################################################################################################################
 
     def _lb_agent_get_uptime_info(self):
         """ Return the agent's (not HAProxy's) uptime info, currently returns
         only the time it was started at.
         """
         return self.start_time
+
+# ################################################################################################################################
 
     def _lb_agent_is_haproxy_alive(self, lb_use_tls):
         """ Invoke HAProxy through HTTP monitor_uri and return ZATO_OK if
@@ -406,9 +455,40 @@ class LoadBalancerAgent(SSLServer):
             finally:
                 conn.close()
 
+# ################################################################################################################################
+
     def _lb_agent_get_work_config(self):
         """ Return the agent's basic configuration.
         """
         return {'work_dir':self.work_dir, 'haproxy_command':self.haproxy_command, # noqa
                 'keyfile':self.keyfile, 'certfile':self.certfile,                 # noqa
                'ca_certs':self.ca_certs, 'verify_fields':self.verify_fields}      # noqa
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class LoadBalancerAgent(BaseLoadBalancerAgent, SimpleXMLRPCServer):
+    def __init__(self, repo_dir):
+        self.init_config(repo_dir)
+
+        if PY2:
+            SimpleXMLRPCServer.__init__(self, (self.host, self.port), requestHandler=RequestHandler)
+        else:
+            SimpleXMLRPCServer.__init__(self, (self.host, self.port))
+
+        self.register_functions()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TLSLoadBalancerAgent(BaseLoadBalancerAgent, SSLServer):
+    def __init__(self, repo_dir):
+        self.init_config(repo_dir)
+
+        SSLServer.__init__(self, host=self.host, port=self.port, keyfile=self.keyfile, certfile=self.certfile,
+            ca_certs=self.ca_certs, cert_reqs=ssl.CERT_REQUIRED, verify_fields=self.verify_fields)
+
+        self.register_functions()
+
+# ################################################################################################################################
+# ################################################################################################################################

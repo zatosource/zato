@@ -26,17 +26,20 @@ from lxml.objectify import ObjectifiedElement
 
 # gevent
 from gevent import Timeout, spawn
+from gevent.lock import RLock
 
 # Python 2/3 compatibility
 from past.builtins import basestring
+from future.utils import iterkeys
 from zato.common.py23_ import maxint
 
 # Zato
 from zato.bunch import Bunch
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, PUBSUB, WEB_SOCKET, \
      ZatoException, zato_no_op_marker
-from zato.common.broker_message import SERVICE
+from zato.common.broker_message import CHANNEL as BROKER_MSG_CHANNEL, SERVICE
 from zato.common.exception import Reportable
+from zato.common.json_schema import ValidationException as JSONSchemaValidationException
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify
 from zato.server.connection import slow_response
@@ -77,22 +80,40 @@ UUID = UUID
 
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
-
-# ################################################################################################################################
-
 # Type checking
 import typing
 
 if typing.TYPE_CHECKING:
 
+    # stdlib
+    from typing import Callable
+
     # Zato
+    from zato.broker.client import BrokerClient
+    from zato.common.audit import AuditPII
+    from zato.common.crypto import ServerCryptoManager
+    from zato.common.json_schema import Validator as JSONSchemaValidator
+    from zato.common.odb.api import ODBManager
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
+    from zato.server.connection.server import Servers
+    from zato.sso.api import SSOAPI
 
     # For pyflakes
+    AuditPII = AuditPII
+    BrokerClient = BrokerClient
+    Callable = Callable
+    JSONSchemaValidator = JSONSchemaValidator
+    ODBManager = ODBManager
     ParallelServer = ParallelServer
+    ServerCryptoManager = ServerCryptoManager
+    Servers = Servers
+    SSOAPI = SSOAPI
     WorkerStore = WorkerStore
+
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
@@ -144,6 +165,7 @@ class ChannelInfo(object):
     __slots__ = ('id', 'name', 'type', 'data_format', 'is_internal', 'match_target', 'impl', 'security', 'sec')
 
     def __init__(self, id, name, type, data_format, is_internal, match_target, security, impl):
+        # type: (int, str, str, str, bool, object, ChannelSecurityInfo, object)
         self.id = id
         self.name = name
         self.type = type
@@ -179,8 +201,72 @@ class ChannelSecurityInfo(object):
 
 # ################################################################################################################################
 
+class _WSXChannel(object):
+    """ Provides communication with WebSocket channels.
+    """
+    def __init__(self, server, channel_name):
+        # type: (ParallelServer, str)
+        self.server = server
+        self.channel_name = channel_name
+
+    def broadcast(self, data, _action=BROKER_MSG_CHANNEL.WEB_SOCKET_BROADCAST.value):
+        """ Sends data to all WSX clients connected to this channel.
+        """
+        # type: (str, str)
+
+        # If we are invoked, it means that self.channel_name points to an existing object
+        # so we can just let all servers know that they are to invoke their connected clients.
+        self.server.broker_client.publish({
+            'action': _action,
+            'channel_name': self.channel_name,
+            'data': data
+        })
+
+# ################################################################################################################################
+
+class _WSXChannelContainer(object):
+    """ A thin wrapper to mediate access to WebSocket channels.
+    """
+    def __init__(self, server):
+        # type: (ParallelServer)
+        self.server = server
+        self._lock = RLock()
+        self._channels = {}
+
+    def __getitem__(self, channel_name):
+        # type: (str) -> _WSXChannel
+        with self._lock:
+            if channel_name not in self._channels:
+                if self.server.worker_store.web_socket_api.connectors.get(channel_name):
+                    self._channels[channel_name] = _WSXChannel(self.server, channel_name)
+                else:
+                    raise KeyError('No such WebSocket channel `{}`'.format(channel_name))
+
+            return self._channels[channel_name]
+
+    def get(self, channel_name):
+        # type: (str) -> _WSXChannel
+        try:
+            return self[channel_name]
+        except KeyError:
+            return None # Be explicit in returning None
+
+# ################################################################################################################################
+
+class WSXFacade(object):
+    """ An object via which WebSocket channels and outgoing connections may be invoked or send broadcasts to.
+    """
+    __slots__ = 'server', 'channel', 'out'
+
+    def __init__(self, server):
+        # type: (ParallelServer)
+        self.server = server
+        self.channel = _WSXChannelContainer(self.server)
+
+# ################################################################################################################################
+
 class AMQPFacade(object):
-    """ Introduced solely to let service access outgoing connections through self.out.amqp.invoke/_async
+    """ Introduced solely to let service access outgoing connections through self.amqp.invoke/_async
     rather than self.out.amqp_invoke/_async. The .send method is kept for pre-3.0 backward-compatibility.
     """
     __slots__ = ('send', 'invoke', 'invoke_async')
@@ -213,14 +299,17 @@ class Service(object):
     cloud = Cloud()
     definition = Definition()
     im = InstantMessaging()
-    odb = None
-    kvdb = None
+    odb = None # type: ODBManager
+    kvdb = None # type: KVDB
     pubsub = None # type: PubSub
     cassandra_conn = None
     cassandra_query = None
     email = None
     search = None
     amqp = AMQPFacade()
+
+    # For WebSockets
+    wsx = None # type: WSXFacade
 
     _worker_store = None  # type: WorkerStore
     _worker_config = None
@@ -240,17 +329,26 @@ class Service(object):
     # Cython based SimpleIO definition created by service store when the class is deployed
     _sio = None
 
+    # Rate limiting
+    _has_rate_limiting = None
+
     # User management and SSO
-    sso = None
+    sso = None # type: SSOAPI
 
     # Crypto operations
-    crypto = None
+    crypto = None # type: ServerCryptoManager
 
     # Audit log
-    audit_pii = None
+    audit_pii = None # type: AuditPII
 
     # For invoking other servers directly
-    servers = None
+    servers = None # type: Servers
+
+    # By default, services do not use JSON Schema
+    schema = '' # type: unicode
+
+    # JSON Schema validator attached only if service declares a schema to use
+    _json_schema_validator = None # type: JSONSchemaValidator
 
     def __init__(self, _get_logger=logging.getLogger, _Bunch=Bunch, _Request=Request, _Response=Response,
             _DictNav=DictNav, _ListNav=ListNav, _Outgoing=Outgoing, _WMQFacade=WMQFacade, _ZMQFacade=ZMQFacade,
@@ -457,11 +555,25 @@ class Service(object):
 
         return name, target
 
-    def update_handle(self, set_response_func, service, raw_request, channel, data_format,
-            transport, server, broker_client, worker_store, cid, simple_io_config, _utcnow=datetime.utcnow,
-            _call_hook_with_service=call_hook_with_service, _call_hook_no_service=call_hook_no_service,
-            _CHANNEL_SCHEDULER=CHANNEL.SCHEDULER, _pattern_channels=(CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL),
-            *args, **kwargs):
+    def update_handle(self,
+        set_response_func, # type: Callable
+        service,       # type: Service
+        raw_request,   # type: object
+        channel,       # type: ChannelInfo
+        data_format,   # type: unicode
+        transport,     # type: unicode
+        server,        # type: ParallelServer
+        broker_client, # type: BrokerClient
+        worker_store,  # type: WorkerStore
+        cid,           # type: unicode
+        simple_io_config, # type: dict
+        _utcnow=datetime.utcnow,
+        _call_hook_with_service=call_hook_with_service,
+        _call_hook_no_service=call_hook_no_service,
+        _CHANNEL_SCHEDULER=CHANNEL.SCHEDULER,
+        _CHANNEL_SERVICE=CHANNEL.SERVICE,
+        _pattern_channels=(CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL),
+        *args, **kwargs):
 
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
@@ -494,9 +606,27 @@ class Service(object):
 
             try:
 
+                # Check rate limiting first
+                if self._has_rate_limiting:
+                    self.server.rate_limiting.check_limit(self.cid, _CHANNEL_SERVICE, self.name,
+                        self.wsgi_environ['zato.http.remote_addr'])
+
                 if service.server.component_enabled.stats:
                     service.usage = service.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, service.name))
                 service.invocation_time = _utcnow()
+
+                # Check if there is a JSON Schema validator attached to the service and if so,
+                # validate input before proceeding any further.
+                if service._json_schema_validator and service._json_schema_validator.is_initialized:
+                    validation_result = service._json_schema_validator.validate(cid, raw_request)
+                    if not validation_result:
+                        error = validation_result.get_error()
+
+                        error_msg = error.get_error_message()
+                        error_msg_details = error.get_error_message(True)
+
+                        raise JSONSchemaValidationException(cid, CHANNEL.SERVICE, service.name,
+                            error.needs_err_details, error_msg, error_msg_details)
 
                 # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
 
@@ -623,7 +753,13 @@ class Service(object):
                     if raise_timeout:
                         raise
             else:
-                return self.update_handle(*invoke_args, **kwargs)
+                out = self.update_handle(*invoke_args, **kwargs)
+                if kwargs.get('skip_response_elem') and hasattr(out, 'keys'):
+                    keys = list(iterkeys(out))
+                    response_elem = keys[0]
+                    return out[response_elem]
+                else:
+                    return out
         except Exception:
             logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc())
             raise
@@ -962,7 +1098,7 @@ class Service(object):
         context data.
         """
         service.server = server
-        service.broker_client = broker_client
+        service.broker_client = broker_client # type: BrokerClient
         service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request

@@ -58,7 +58,7 @@ $.fn.zato.security.aws.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.security.aws.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'AWS definition [{0}] deleted',
-        'Are you sure you want to delete the AWS definition [{0}]?',
+        'AWS definition `{0}` deleted',
+        'Are you sure you want to delete the AWS definition `{0}`?',
         true);
 }

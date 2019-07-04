@@ -14,21 +14,29 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from logging import getLogger
 from traceback import format_exc
+from uuid import uuid4
+
+# gevent
+from gevent.lock import RLock
 
 # SQLAlchemy
-from sqlalchemy import update as sql_update
+from sqlalchemy import and_ as sql_and, update as sql_update
+from sqlalchemy.exc import IntegrityError
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from past.builtins import basestring, unicode
 
 # Zato
+from zato.common import RATE_LIMIT, SEC_DEF_TYPE, TOTP
 from zato.common.audit import audit_pii
 from zato.common.crypto import CryptoManager
-from zato.common.odb.model import SSOUser as UserModel
+from zato.common.exception import BadRequest
+from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOUser as UserModel
 from zato.common.util.json_ import dumps
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
 from zato.sso.attr import AttrAPI
-from zato.sso.odb.query import get_sign_up_status_by_token, get_user_by_id, get_user_by_username, get_user_by_ust
+from zato.sso.odb.query import get_linked_auth_list, get_sign_up_status_by_token, get_user_by_id, get_user_by_username, \
+     get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.user_search import SSOSearch
 from zato.sso.util import check_credentials, check_remote_app_exists, make_data_secret, make_password_secret, new_confirm_token, \
@@ -36,7 +44,30 @@ from zato.sso.util import check_credentials, check_remote_app_exists, make_data_
 
 # ################################################################################################################################
 
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # stdlib
+    from typing import Callable
+
+    # Zato
+    from zato.common.odb.model import SSOSession
+    from zato.server.base.parallel import ParallelServer
+
+    # For pyflakes
+    Callable = Callable
+    ParallelServer = ParallelServer
+    SSOSession = SSOSession
+
+# ################################################################################################################################
+
 logger = getLogger('zato')
+
+# ################################################################################################################################
+
+linked_auth_supported = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
 
 # ################################################################################################################################
 
@@ -46,6 +77,10 @@ sso_search.set_up()
 # ################################################################################################################################
 
 _utcnow = datetime.utcnow
+
+LinkedAuthTable = LinkedAuth.__table__
+LinkedAuthTableDelete = LinkedAuthTable.delete
+
 UserModelTable = UserModel.__table__
 UserModelTableDelete = UserModelTable.delete
 UserModelTableUpdate = UserModelTable.update
@@ -61,6 +96,8 @@ regular_attrs = {
     'first_name': '',
     'middle_name': '',
     'last_name': '',
+    'is_totp_enabled': False,
+    'totp_label': '',
 }
 
 # Attributes accessible only to super-users
@@ -81,6 +118,10 @@ super_user_attrs = {
     'password_last_set': None,
     'sign_up_status': None,
     'sign_up_time': None,
+    'is_rate_limit_active': None,
+    'rate_limit_def': None,
+    'rate_limit_type': None,
+    'rate_limit_check_parent_def': None,
 }
 
 # This can be only changed but never read
@@ -112,10 +153,10 @@ _no_such_value = object()
 class update:
 
     # Accessible to regular users only
-    regular_attrs = set(('email', 'display_name', 'first_name', 'middle_name', 'last_name'))
+    regular_attrs = set(('email', 'display_name', 'first_name', 'middle_name', 'last_name', 'is_totp_enabled', 'totp_label'))
 
     # Accessible to super-users only
-    super_user_attrs = set(('is_approved', 'is_locked', 'password_expiry', 'password_must_change', 'sign_up_status',
+    super_user_attrs = set(('is_locked', 'password_expiry', 'password_must_change', 'sign_up_status',
         'approval_status'))
 
     # All updateable attributes
@@ -128,7 +169,7 @@ class update:
     max_len_attrs = len(all_update_attrs)
 
     # All boolean attributes
-    boolean_attrs = ('is_approved', 'is_locked', 'password_must_change')
+    boolean_attrs = ('is_locked', 'password_must_change')
 
     # All datetime attributes
     datetime_attrs = ('password_expiry',)
@@ -200,9 +241,11 @@ class UserAPI(object):
     """
     def __init__(self, server, sso_conf, odb_session_func, encrypt_func, decrypt_func, hash_func, verify_hash_func,
             new_user_id_func):
+        # type: (ParallelServer, dict, Callable, Callable, Callable, Callable, Callable, Callable)
         self.server = server
         self.sso_conf = sso_conf
         self.odb_session_func = odb_session_func
+        self.is_sqlite = None
         self.encrypt_func = encrypt_func
         self.decrypt_func = decrypt_func
         self.hash_func = hash_func
@@ -211,15 +254,53 @@ class UserAPI(object):
         self.encrypt_email = self.sso_conf.main.encrypt_email
         self.encrypt_password = self.sso_conf.main.encrypt_password
         self.password_expiry = self.sso_conf.password.expiry
+        self.lock = RLock()
+
+        # To look up auth_user_id by auth_username or the other way around
+        self.user_id_auth_type_func = {}
+        self.user_id_auth_type_func_by_id = {}
+
+        # In-RAM maps of auth IDs to SSO user IDs
+        self.auth_id_link_map = {
+            'zato.{}'.format(SEC_DEF_TYPE.BASIC_AUTH): {},
+            'zato.{}'.format(SEC_DEF_TYPE.JWT): {}
+        }
 
         # For convenience, sessions are accessible through user API.
         self.session = SessionAPI(self.sso_conf, self.encrypt_func, self.decrypt_func, self.hash_func, self.verify_hash_func)
 
 # ################################################################################################################################
 
-    def set_odb_session_func(self, func):
+    def post_configure(self, func, is_sqlite):
         self.odb_session_func = func
-        self.session.set_odb_session_func(func)
+        self.is_sqlite = is_sqlite
+        self.session.post_configure(func, is_sqlite)
+
+        # Maps all auth types that SSO users can be linked with to their server definitions
+        self.auth_link_map = {
+            SEC_DEF_TYPE.BASIC_AUTH: self.server.worker_store.request_dispatcher.url_data.basic_auth_config,
+            SEC_DEF_TYPE.JWT: self.server.worker_store.request_dispatcher.url_data.jwt_config,
+        }
+
+        # This cannot be done in __init__ because it references the worker store
+        self.user_id_auth_type_func[SEC_DEF_TYPE.BASIC_AUTH] = self.server.worker_store.basic_auth_get
+        self.user_id_auth_type_func[SEC_DEF_TYPE.JWT] = self.server.worker_store.jwt_get
+
+        self.user_id_auth_type_func_by_id[SEC_DEF_TYPE.BASIC_AUTH] = self.server.worker_store.basic_auth_get_by_id
+        self.user_id_auth_type_func_by_id[SEC_DEF_TYPE.JWT] = self.server.worker_store.jwt_get_by_id
+
+        # Load in initial mappings of SSO users and concrete security definitions
+        with closing(self.odb_session_func()) as session:
+            linked_auth_list = get_linked_auth_list(session)
+            for item in linked_auth_list: # type: LinkedAuth
+                self._add_user_id_to_linked_auth(item.auth_type, item.auth_id, item.user_id)
+
+# ################################################################################################################################
+
+    def _get_encrypted_email(self, email):
+        email = email or b''
+        email = email.encode('utf8') if isinstance(email, unicode) else email
+        return make_data_secret(email, self.encrypt_func)
 
 # ################################################################################################################################
 
@@ -279,11 +360,11 @@ class UserAPI(object):
 
         # Passwords must be strong and are always at least hashed and possibly encrypted too ..
         password = make_password_secret(
-            ctx.data['password'].encode('utf8'), self.encrypt_password, self.encrypt_func, self.hash_func)
+            ctx.data['password'], self.encrypt_password, self.encrypt_func, self.hash_func)
 
         # .. while emails are only encrypted, and it is optional.
         if self.encrypt_email:
-            email = make_data_secret(ctx.data.get('email', '').encode('utf8') or b'', self.encrypt_func)
+            email = self._get_encrypted_email(ctx.data.get('email'))
 
         user_model.username = ctx.data['username']
         user_model.email = email
@@ -294,9 +375,16 @@ class UserAPI(object):
         user_model.password_must_change = ctx.data.get('password_must_change') or False
         user_model.password_expiry = now + timedelta(days=self.password_expiry)
 
+        totp_key = ctx.data.get('totp_key') or CryptoManager.generate_totp_key()
+        totp_label = ctx.data.get('totp_label') or TOTP.default_label
+
+        user_model.is_totp_enabled = ctx.data.get('is_totp_enabled')
+        user_model.totp_key = self.encrypt_func(totp_key.encode('utf8'))
+        user_model.totp_label = self.encrypt_func(totp_label.encode('utf8'))
+
         user_model.sign_up_status = ctx.data.get('sign_up_status')
         user_model.sign_up_time = now
-        user_model.sign_up_confirm_token = ctx.data['sign_up_confirm_token']
+        user_model.sign_up_confirm_token = ctx.data.get('sign_up_confirm_token') or new_confirm_token()
 
         user_model.approval_status = ctx.data['approval_status']
         user_model.approval_status_mod_time = now
@@ -306,6 +394,11 @@ class UserAPI(object):
         user_model.first_name = ctx.data['first_name']
         user_model.middle_name = ctx.data['middle_name']
         user_model.last_name = ctx.data['last_name']
+
+        user_model.is_rate_limit_active = ctx.data.get('is_rate_limit_active', False)
+        user_model.rate_limit_type = ctx.data.get('rate_limit_type', RATE_LIMIT.TYPE.EXACT.id)
+        user_model.rate_limit_def = ctx.data.get('rate_limit_def')
+        user_model.rate_limit_check_parent_def = ctx.data.get('rate_limit_check_parent_def', False)
 
         # Uppercase any and all names for indexing purposes.
         for attr_name, attr_name_upper in _name_attrs.items():
@@ -324,14 +417,14 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _create_user(self, ctx, is_super_user, ust=None, current_app=None, remote_addr=None, require_super_user=True,
+    def _create_user(self, ctx, cid, is_super_user, ust=None, current_app=None, remote_addr=None, require_super_user=True,
         auto_approve=False):
         """ Creates a new regular or super-user out of initial user data.
         """
         with closing(self.odb_session_func()) as session:
 
             if require_super_user:
-                current_session = self._require_super_user(ust, current_app, remote_addr)
+                current_session = self._require_super_user(cid, ust, current_app, remote_addr)
                 current_user = current_session.user_id
             else:
                 current_user = 'auto'
@@ -389,6 +482,8 @@ class UserAPI(object):
             ctx.data['password_expiry'] = user.password_expiry
             ctx.data['sign_up_status'] = user.sign_up_status
             ctx.data['sign_up_time'] = user.sign_up_time
+            ctx.data['is_totp_enabled'] = user.is_totp_enabled
+            ctx.data['totp_label'] = user.totp_label
 
             # This one we do not want to reveal back
             ctx.data.pop('password', None)
@@ -396,7 +491,9 @@ class UserAPI(object):
             session.add(user)
             session.commit()
 
-        return user
+            user_id = user.user_id
+
+        return user_id
 
 # ################################################################################################################################
 
@@ -406,7 +503,7 @@ class UserAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'user.create_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._create_user(CreateUserCtx(data), False, ust, current_app, remote_addr, require_super_user, auto_approve)
+        return self._create_user(CreateUserCtx(data), cid, False, ust, current_app, remote_addr, require_super_user, auto_approve)
 
 # ################################################################################################################################
 
@@ -420,7 +517,7 @@ class UserAPI(object):
         # Super-users don't need to confirmation their own creation
         data['sign_up_status'] = const.signup_status.final
 
-        return self._create_user(CreateUserCtx(data), True, ust, current_app, remote_addr, require_super_user, auto_approve)
+        return self._create_user(CreateUserCtx(data), cid, True, ust, current_app, remote_addr, require_super_user, auto_approve)
 
 # ################################################################################################################################
 
@@ -510,6 +607,7 @@ class UserAPI(object):
         """ Returns current session info or raises an exception if it could not be found.
         Optionally, requires that a super-user be owner of current_ust.
         """
+        # type: (unicode, unicode, unicode, unicode, bool) -> SSOSession
         return self.session.get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user)
 
 # ################################################################################################################################
@@ -548,8 +646,13 @@ class UserAPI(object):
 
                 for key in attrs:
                     value = getattr(info, key)
+
                     if isinstance(value, datetime):
                         value = value.isoformat()
+
+                    elif key in ('totp_key', 'totp_label'):
+                        value = self.decrypt_func(value)
+
                     setattr(out, key, value)
 
                 if out.email:
@@ -557,11 +660,11 @@ class UserAPI(object):
                         try:
                             out.email = self.decrypt_func(out.email)
                         except Exception:
-                            logger.warn('Could not decrypt email, user_id:`%s`', out.user_id)
+                            logger.warn('Could not decrypt email, user_id:`%s` (%s)', out.user_id, format_exc())
 
                 # Custom attributes
                 out.attr = AttrAPI(cid, current_session.user_id, current_session.is_super_user, current_app, remote_addr,
-                    self.odb_session_func, self.encrypt_func, self.decrypt_func, out.user_id)
+                    self.odb_session_func, self.is_sqlite, self.encrypt_func, self.decrypt_func, out.user_id)
 
                 return out
 
@@ -620,13 +723,15 @@ class UserAPI(object):
                 user = get_user_by_username(session, username, needs_approved=False)
                 where = UserModelTable.c.username==username
 
+            user_id = user.user_id
+
             # Make sure the user exists at all
             if not user:
                 raise ValidationError(status_code.common.invalid_operation, False)
 
             # Users cannot delete themselves
             if not skip_sec:
-                if user.user_id == current_session.user_id:
+                if user_id == current_session.user_id:
                     raise ValidationError(status_code.common.invalid_operation, False)
 
             rows_matched = session.execute(
@@ -638,6 +743,18 @@ class UserAPI(object):
             if rows_matched != 1:
                 msg = 'Expected for rows_matched to be 1 instead of %d, user_id:`%s`, username:`%s`'
                 logger.warn(msg, rows_matched, user_id, username)
+
+            # After deleting the user from ODB, we can remove a reference to this account
+            # from the map of linked accounts.
+            for auth_id_link_map in self.auth_id_link_map.values(): # type: dict
+                to_delete = set()
+
+                for auth_id, sso_user_id in auth_id_link_map.items():
+                    if user_id == sso_user_id:
+                        to_delete.add(user_id)
+
+                for user_id in to_delete:
+                    del auth_id_link_map[user_id]
 
 # ################################################################################################################################
 
@@ -691,8 +808,8 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def login(self, cid, username, password, current_app, remote_addr, user_agent, has_remote_addr=False,
-        has_user_agent=False, new_password=''):
+    def login(self, cid, username, password, current_app, remote_addr, totp_code=None, user_agent=None,
+        has_remote_addr=False, has_user_agent=False, new_password=''):
         """ Logs a user in if username and password are correct, returning a user session token (UST) on success,
         or a ValidationError on error.
         """
@@ -700,23 +817,19 @@ class UserAPI(object):
         audit_pii.info(cid, 'user.login', target_user=username, extra={
             'current_app': current_app,
             'remote_addr': remote_addr,
-            'has_remote_addr': has_remote_addr,
-            'has_user_agent': has_user_agent,
+            'user_agent': user_agent,
             'new_password': bool(new_password) # To store information if a new password was sent or not
         })
 
-        return self.session.login(
-            LoginCtx(
-                remote_addr,
-                user_agent,
-                has_remote_addr,
-                has_user_agent,
-                {
-                    'username': username,
-                    'password': password,
-                    'current_app': current_app,
-                    'new_password': new_password
-            }))
+        ctx_input = {
+          'username': username,
+          'password': password,
+          'current_app': current_app,
+          'new_password': new_password,
+          'totp_code': totp_code,
+        }
+        login_ctx = LoginCtx(remote_addr, user_agent, has_remote_addr, has_user_agent, ctx_input)
+        return self.session.login(login_ctx, is_logged_in_ext=False)
 
 # ################################################################################################################################
 
@@ -854,6 +967,12 @@ class UserAPI(object):
                         if attr_name and isinstance(data[attr_name], basestring):
                             data[attr_name_upper] = data[attr_name].upper()
 
+            # Email may be optionally encrypted
+            if self.encrypt_email:
+                email = data.get('email')
+                if email:
+                    data['email'] = self._get_encrypted_email(email)
+
             # Everything is validated - we can save the data now
             with closing(self.odb_session_func()) as session:
                 session.execute(
@@ -871,7 +990,7 @@ class UserAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'user.update_current_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._update_user(data, current_ust, current_app, remote_addr, update_self=True)
+        return self._update_user(cid, data, current_ust, current_app, remote_addr, update_self=True)
 
 # ################################################################################################################################
 
@@ -882,11 +1001,11 @@ class UserAPI(object):
         audit_pii.info(cid, 'user.update_user_by_id', target_user=user_id,
             extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._update_user(data, current_ust, current_app, remote_addr, user_id=user_id)
+        return self._update_user(cid, data, current_ust, current_app, remote_addr, user_id=user_id)
 
 # ################################################################################################################################
 
-    def set_password(self, cid, user_id, password, must_change, password_expiry, current_app, remote_addr, _utcnow=_utcnow):
+    def set_password(self, cid, user_id, password, must_change, password_expiry, current_app, remote_addr):
         """ Sets a new password for user.
         """
         # PII audit comes first
@@ -898,7 +1017,80 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def change_password(self, cid, data, current_ust, current_app, remote_addr):
+    def reset_totp_key(self, cid, current_ust, user_id, key, key_label, current_app, remote_addr, skip_sec=False):
+        """ Saves a new TOTP key for user, either using the one provided on input or a newly generated one.
+        In the latter case, it is also returned on output.
+        """
+        # PII audit comes first
+        audit_pii.info(cid, 'user.reset_totp_key', target_user=user_id,
+            extra={
+                'current_app': current_app,
+                'remote_addr': remote_addr,
+                'skip_sec': skip_sec,
+                'user_id': user_id,
+            })
+
+        key = key or CryptoManager.generate_totp_key()
+        key_label = key_label or TOTP.default_label
+
+        # Flag skip_sec will be True if we are being called from CLI,
+        # in which case we are allowed to set the key for any user.
+        # Otherwise, regular users may change their own keys only
+        # while super-users may change any other user's key.
+
+        if skip_sec:
+            _user_id = user_id
+        else:
+
+            # Get current session by its UST ..
+            current_session = self._get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user=False)
+
+            # .. if user_id is given, reject the request if it does not belong to a super-user ..
+            if user_id:
+
+                # A non-super-user tries to reset TOTP key of another user
+                if not current_session.is_super_user:
+                    logger.warn('Current user `%s` is not a super-user, cannot reset TOTP key for user `%s`',
+                        current_session.user_id, user_id)
+                    raise ValidationError(status_code.common.invalid_input, False)
+
+                # This is good, it is a super-user resetting the TOTP key
+                else:
+
+                    # We need to confirm that such a user exists
+                    if not self.get_user_by_id(cid, user_id, current_ust, current_app, remote_addr):
+                        logger.warn('No such user `%s`', user_id)
+                        raise ValidationError(status_code.common.invalid_input, False)
+
+                    # Input user actually exists
+                    else:
+                        _user_id = user_id
+
+            # .. no user_id given on input, which means we reset the current user's TOTP key
+            else:
+                _user_id = current_session.user_id
+
+        # Data to be saved comprises the TOTP key in an encrypted form
+        # along with its label, alco encrypted.
+        data = {
+            'totp_key': self.encrypt_func(key.encode('utf8')),
+            'totp_label': self.encrypt_func(key_label.encode('utf8')),
+        }
+
+        # Everything is ready - we can save the data now
+        with closing(self.odb_session_func()) as session:
+            session.execute(
+                sql_update(UserModelTable).\
+                values(data).\
+                where(UserModelTable.c.user_id==_user_id)
+            )
+            session.commit()
+
+        return key
+
+# ################################################################################################################################
+
+    def change_password(self, cid, data, current_ust, current_app, remote_addr, _no_user_id='no-user-id'.format(uuid4().hex)):
         """ Changes a user's password. Super-admins may also set its expiration
         and whether the user must set it to a new one on next login.
         """
@@ -906,16 +1098,17 @@ class UserAPI(object):
         self._check_basic_update_attrs(data, change_password.max_len_attrs, change_password.all_attrs)
 
         # Get current user's session ..
-        current_session = self._get_current_session(current_ust, current_app, remote_addr, needs_super_user=False)
+        current_session = self._get_current_session(cid, current_ust, current_app, remote_addr, needs_super_user=False)
 
         # . only super-users may send user_id on input ..
-        user_id = data.get('user_id', _no_such_value)
+        user_id = data.get('user_id', _no_user_id)
 
         # PII audit goes here, once we know the target user's ID
-        audit_pii.info(cid, 'user.change_password', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
+        audit_pii.info(
+            cid, 'user.change_password', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
 
         # .. so if it is sent ..
-        if user_id != _no_such_value:
+        if user_id != _no_user_id:
 
             # .. we must confirm we have a super-user's session.
             if not current_session.is_super_user:
@@ -932,7 +1125,7 @@ class UserAPI(object):
 
             # .. but only if the user changes another user's password ..
             if current_session.user_id != user_id:
-                self.set_password(user_id, data['new_password'], data.get('must_change'), data.get('password_expiry'),
+                self.set_password(cid, user_id, data['new_password'], data.get('must_change'), data.get('password_expiry'),
                     current_app, remote_addr)
 
                 # All done, another user's password has been changed
@@ -962,17 +1155,17 @@ class UserAPI(object):
 
             # All done, we can set the new password now.
             try:
-                self.set_password(user_id, data['new_password'], must_change, password_expiry, current_app, remote_addr)
+                self.set_password(cid, user_id, data['new_password'], must_change, password_expiry, current_app, remote_addr)
             except Exception:
                 logger.warn('Could not set a new password for user_id:`%s`, e:`%s`', current_session.user_id, format_exc())
                 raise ValidationError(status_code.auth.not_allowed, True)
 
 # ################################################################################################################################
 
-    def _change_approval_status(self, user_id, new_value, current_ust, current_app, remote_addr):
+    def _change_approval_status(self, cid, user_id, new_value, current_ust, current_app, remote_addr):
         """ Changes a given user's approval_status to 'value'.
         """
-        return self._update_user({'approval_status': new_value}, current_ust, current_app, remote_addr, user_id=user_id)
+        return self._update_user(cid, {'approval_status': new_value}, current_ust, current_app, remote_addr, user_id=user_id)
 
 # ################################################################################################################################
 
@@ -983,7 +1176,7 @@ class UserAPI(object):
         audit_pii.info(cid, 'user.approve_user', target_user=user_id,
             extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._change_approval_status(user_id, const.approval_status.approved, current_ust, current_app, remote_addr)
+        return self._change_approval_status(cid, user_id, const.approval_status.approved, current_ust, current_app, remote_addr)
 
 # ################################################################################################################################
 
@@ -993,7 +1186,215 @@ class UserAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'user.reject_user', target_user=user_id, extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._change_approval_status(user_id, const.approval_status.rejected, current_ust, current_app, remote_addr)
+        return self._change_approval_status(cid, user_id, const.approval_status.rejected, current_ust, current_app, remote_addr)
+
+# ################################################################################################################################
+
+    def get_linked_auth_list(self, cid, ust, current_app, remote_addr, user_id=None):
+        """ Returns a list of linked auth accounts for input user, either current or another one.
+        """
+        # PII audit comes first
+        audit_pii.info(cid, 'user.get_linked_auth_list', extra={'current_app':current_app, 'remote_addr':remote_addr})
+
+        # Get current user, which may be possibly the one that we will return accounts for
+        user = self.get_current_user(cid, ust, current_app, remote_addr)
+
+        # We are to return linked accounts for another user ..
+        if user_id:
+
+            # .. in which case this will raise an exception if current caller is not a super-user
+            self._require_super_user(cid, ust, current_app, remote_addr)
+
+        else:
+            # No user_id given on input = we need to get accounts for current one
+            user_id = user.user_id
+
+        try:
+            with closing(self.odb_session_func()) as session:
+                out = []
+                auth_list = get_linked_auth_list(session, user_id)
+
+                for item in auth_list:
+                    item = item._asdict()
+                    item['auth_type'] = item['auth_type'].replace('zato.', '', 1)
+                    auth_func = self.user_id_auth_type_func_by_id[item['auth_type']]
+
+                    auth_config = auth_func(item['auth_id'])
+                    auth_username = auth_config['username']
+
+                    item['auth_username'] = auth_username
+                    out.append(item)
+
+                return out
+        except Exception:
+            logger.warn('Could not return linked accounts, e:`%s`', format_exc())
+
+# ################################################################################################################################
+
+    def _check_linked_auth_call(self, call_name, cid, ust, user_id, auth_type, auth_id, current_app, remote_addr,
+        _linked_auth_supported=linked_auth_supported):
+
+        # PII audit comes first
+        audit_pii.info(cid, call_name, extra={'current_app':current_app, 'remote_addr':remote_addr})
+
+        # Only super-users may link auth accounts
+        self._require_super_user(cid, ust, current_app, remote_addr)
+
+        if auth_type not in self.auth_link_map:
+            raise ValueError('Invalid auth_type:`{}`'.format(auth_type))
+
+        for item in self.auth_link_map[auth_type].values(): # type: dict
+            config = item['config']
+            if config['id'] == auth_id:
+                break
+        else:
+            raise ValueError('Invalid auth_id:`{}`'.format(auth_id))
+
+# ################################################################################################################################
+
+    def _get_auth_username_by_id(self, cid, auth_type, auth_username, _linked_auth_supported=linked_auth_supported):
+
+        # Confirm that input auth_type if of the allowed type
+        if auth_type not in _linked_auth_supported:
+            raise BadRequest(cid, 'Invalid auth_type `{}`'.format(auth_type))
+
+        # Input auth_username is the linked account's username
+        # and we need to translate it into its underlying auth_id
+        # which is what the SSO API expects.
+
+        func = self.user_id_auth_type_func[auth_type]
+        auth_config = func(auth_username)
+
+        if not auth_config:
+            raise BadRequest(cid, 'Invalid auth_username ({})'.format(auth_type))
+        else:
+            auth_user_id = auth_config['config']['id']
+            return auth_user_id
+
+# ################################################################################################################################
+
+    def create_linked_auth(self, cid, ust, user_id, auth_type, auth_username, is_active, current_app, remote_addr,
+        _linked_auth_supported=linked_auth_supported):
+        """ Creates a link between input user and a security account.
+        """
+        # Convert auth_username to auth_id, if it exists
+        auth_id = self._get_auth_username_by_id(cid, auth_type, auth_username)
+
+        # Validate input
+        self._check_linked_auth_call('user.create_linked_auth', cid, ust, user_id, auth_type, auth_id, current_app, remote_addr)
+
+        # We have validated everything and a link can be saved to the database now
+        now = datetime.utcnow()
+        auth_type = 'zato.{}'.format(auth_type)
+
+        with closing(self.odb_session_func()) as session:
+
+            instance = LinkedAuth()
+            instance.auth_id = auth_id
+            instance.auth_type = auth_type
+            instance.creation_time = now
+            instance.last_modified = now
+            instance.is_internal = False
+            instance.is_active = is_active
+            instance.user_id = user_id
+
+            # Reserved for future use
+            instance.has_ext_principal = False
+            instance.auth_principal = 'reserved'
+            instance.auth_source = 'reserved'
+
+            session.add(instance)
+
+            try:
+                session.commit()
+            except IntegrityError:
+                logger.warn('Could not add auth link e:`%s`', format_exc())
+                raise ValueError('Auth link could not be added')
+            else:
+                return instance.user_id, auth_id
+
+# ################################################################################################################################
+
+    def delete_linked_auth(self, cid, ust, user_id, auth_type, auth_username, current_app, remote_addr,
+        _linked_auth_supported=linked_auth_supported):
+        """ Creates a link between input user and a security account.
+        """
+        # Convert auth_username to auth_id, if it exists
+        auth_id = self._get_auth_username_by_id(cid, auth_type, auth_username)
+
+        # Validate input
+        self._check_linked_auth_call('user.delete_linked_auth', cid, ust, user_id, auth_type, auth_id, current_app, remote_addr)
+
+        # All internal auth types have this prefix
+        auth_type = 'zato.{}'.format(auth_type)
+
+        with closing(self.odb_session_func()) as session:
+
+            # First, confirm that such a mapping exists at all ..
+            existing = session.query(LinkedAuth).\
+                filter(LinkedAuth.auth_type==auth_type).\
+                filter(LinkedAuth.auth_id==auth_id).\
+                filter(LinkedAuth.user_id==user_id).\
+                first()
+
+            if not existing:
+                raise ValueError('No such auth link found')
+
+            # .. delete it now, knowing that it does ..
+            session.execute(LinkedAuthTableDelete().\
+                where(sql_and(
+                    LinkedAuthTable.c.auth_type==auth_type,
+                    LinkedAuthTable.c.auth_id==auth_id,
+                    LinkedAuthTable.c.user_id==user_id,
+                ))
+            )
+            session.commit()
+
+        return auth_id
+
+# ################################################################################################################################
+
+    def _add_user_id_to_linked_auth(self, auth_type, auth_id, user_id):
+        self.auth_id_link_map[auth_type].setdefault(auth_id, user_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SSO_LINK_AUTH_CREATE(self, auth_type, auth_id, user_id):
+        with self.lock:
+            self._add_user_id_to_linked_auth(auth_type, auth_id, user_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SSO_LINK_AUTH_DELETE(self, auth_type, auth_id, user_id):
+        with self.lock:
+            auth_id_link_map = self.auth_id_link_map[auth_type]
+            try:
+                del auth_id_link_map[auth_id]
+            except KeyError:
+                # It is fine, the user had not linked accounts
+                pass
+
+# ################################################################################################################################
+
+    def _on_broker_msg_sec_delete(self, sec_type, auth_id):
+        auth_id_link_map = self.auth_id_link_map['zato.{}'.format(sec_type)]
+        try:
+            del auth_id_link_map[auth_id]
+        except KeyError:
+            # It is fine, the account had no associated SSO users
+            pass
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, auth_id):
+        with self.lock:
+            self._on_broker_msg_sec_delete(SEC_DEF_TYPE.BASIC_AUTH, auth_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_JWT_DELETE(self, auth_id):
+        with self.lock:
+            self._on_broker_msg_sec_delete(SEC_DEF_TYPE.JWT, auth_id)
 
 # ################################################################################################################################
 
@@ -1089,7 +1490,7 @@ class UserAPI(object):
 
                 # Custom attributes
                 item.attr = AttrAPI(cid, current_session.user_id, current_session.is_super_user, current_app, remote_addr,
-                    self.odb_session_func, self.encrypt_func, self.decrypt_func, sql_item.user_id)
+                    self.odb_session_func, self.is_sqlite, self.encrypt_func, self.decrypt_func, sql_item['user_id'])
 
                 # Write out all super-user accessible attributes for each output row
                 for name in sorted(_all_super_user_attrs):
@@ -1106,7 +1507,7 @@ class UserAPI(object):
 
                     setattr(item, name, value)
 
-                out['result'].append(item)
+                out['result'].append(item.to_dict())
 
             return out
 

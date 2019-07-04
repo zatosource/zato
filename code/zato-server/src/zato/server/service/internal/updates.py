@@ -28,10 +28,13 @@ from requests import get as requests_get
 from requests.exceptions import ConnectionError
 
 # Zato
-from zato.common import version
+from zato.common import get_version
 from zato.server.service import Service
 
 # ################################################################################################################################
+
+# Current Zato version
+version = get_version()
 
 # If a version has this prefix it means someone is running from source code
 source_prefix = 'pre'
@@ -87,7 +90,10 @@ class CheckUpdates(Service):
             while True:
 
                 # Check if there are updates and notify if needed
-                self._check_notify(url_info, major, minor, _version)
+                try:
+                    self._check_notify(url_info, major, minor, _version)
+                except Exception:
+                    pass # Ignore any and all errors, e.g. due to the lack of Internet connectivity
 
                 # We can sleep for 1 day and then check again
                 sleep(day)

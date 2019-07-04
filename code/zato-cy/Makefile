@@ -1,7 +1,7 @@
 
 .PHONY: build
 
-default: simpleio
+default: build
 PY_DIR=$(CURDIR)/../bin
 
 build:

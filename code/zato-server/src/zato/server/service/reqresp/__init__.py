@@ -10,9 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from cgi import FieldStorage
 from copy import deepcopy
 from http.client import OK
 from itertools import chain
+from io import BytesIO
 from traceback import format_exc
 
 # anyjson
@@ -58,20 +60,43 @@ direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 class HTTPRequestData(object):
     """ Data regarding an HTTP request.
     """
+    __slots__ = 'method', 'GET', 'POST', 'path', 'params', '_wsgi_environ'
+
     def __init__(self, _Bunch=Bunch):
         self.method = None
         self.GET = _Bunch()
         self.POST = _Bunch()
         self.path = None
         self.params = _Bunch()
+        self._wsgi_environ = None # type: dict
 
     def init(self, wsgi_environ=None):
-        wsgi_environ = wsgi_environ or {}
+        self._wsgi_environ = wsgi_environ or {}
         self.method = wsgi_environ.get('REQUEST_METHOD')
         self.GET.update(wsgi_environ.get('zato.http.GET', {}))
         self.POST.update(wsgi_environ.get('zato.http.POST', {}))
         self.path = wsgi_environ.get('PATH_INFO')
         self.params.update(wsgi_environ.get('zato.http.path_params', {}))
+
+    def get_form_data(self):
+        # type: () -> FieldStorage
+
+        # This is the form data uploaded to the service
+        data = self._wsgi_environ['zato.http.raw_request']
+
+        # Create a buffer to hold the form data and write the form to it
+        buff = BytesIO()
+        buff.write(data)
+        buff.seek(0)
+
+        # Output to return
+        form = FieldStorage(fp=buff, environ=self._wsgi_environ, keep_blank_values=True)
+
+        # Clean up
+        buff.close()
+
+        # Return the parsed form data
+        return form
 
     def __repr__(self):
         return make_repr(self)

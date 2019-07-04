@@ -577,6 +577,8 @@ class GDMessage(Message):
         self.topic_name = topic_name
         self.size = msg.size
         self.sub_pattern_matched = msg.sub_pattern_matched
+        self.user_ctx = msg.user_ctx
+        self.zato_ctx = msg.zato_ctx
 
         # Load opaque attributes, if any were provided on input
         opaque = getattr(msg, _gen_attr, None)
@@ -626,6 +628,8 @@ class NonGDMessage(Message):
         self.pub_pattern_matched = msg['pub_pattern_matched']
         self.reply_to_sk = msg['reply_to_sk']
         self.deliver_to_sk = msg['deliver_to_sk']
+        self.user_ctx = msg.get('user_ctx')
+        self.zato_ctx = msg.get('zato_ctx')
 
         # msg.sub_pattern_matched is a shared dictionary of patterns for each subscriber - we .pop from it
         # so as not to keep this dictionary's contents for no particular reason. Since there can be only
@@ -803,6 +807,17 @@ class PubSubTool(object):
         """ Low-level implementation of add_non_gd_messages_by_sub_key, must be called with a lock for input sub_key.
         """
         for msg in messages:
+
+            # Ignore messages that are replies meant to be delievered only to sub_keys
+            # other than current one. This may happen because PubSub.trigger_notify_pubsub_tasks
+            # sends non-GD messages to all sub_keys subscribed to topic, no matter what deliver_to_sk
+            # of a message is. This is the reason why we need to sort it out here. Eventually,
+            # PubSub.trigger_notify_pubsub_tasks should be changed to notify sub_keys if deliver_to_sk
+            # does not point to them.
+            if msg['deliver_to_sk']:
+                if sub_key not in msg['deliver_to_sk']:
+                    continue
+
             self.delivery_lists[sub_key].add(NonGDMessage(sub_key, self.server_name, self.server_pid, msg))
 
 # ################################################################################################################################
