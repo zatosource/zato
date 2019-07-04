@@ -14,6 +14,9 @@ from operator import itemgetter
 from traceback import format_exc
 from uuid import uuid4
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 from zato.common import ZatoException, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import OUTGOING
@@ -156,7 +159,7 @@ class Edit(AdminService, _SQLService):
                 item.db_name = input.db_name
                 item.username = input.username
                 item.pool_size = input.pool_size
-                item.extra = input.extra
+                item.extra = input.extra.encode('utf8') if isinstance(input.extra, unicode) else input.extra
 
                 session.add(item)
                 session.commit()
