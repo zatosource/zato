@@ -1032,11 +1032,13 @@ class PubSub(object):
     def _get_subscription_by_sub_key(self, sub_key):
         """ Low-level implementation of self.get_subscription_by_sub_key, must be called with self.lock held.
         """
+        # type: (str) -> Subscription
         return self.subscriptions_by_sub_key[sub_key]
 
 # ################################################################################################################################
 
     def get_subscription_by_sub_key(self, sub_key):
+        # type: (str) -> Subscription
         with self.lock:
             try:
                 return self._get_subscription_by_sub_key(sub_key)
@@ -1046,6 +1048,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_subscription_by_id(self, sub_id):
+        # type: (str) -> Subscription
         with self.lock:
             for sub in itervalues(self.subscriptions_by_sub_key):
                 if sub.id == sub_id:
@@ -1054,6 +1057,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_subscription_by_ext_client_id(self, ext_client_id):
+        # type: (str) -> Subscription
         with self.lock:
             for sub in itervalues(self.subscriptions_by_sub_key):
                 if sub.ext_client_id == ext_client_id:
@@ -1062,12 +1066,14 @@ class PubSub(object):
 # ################################################################################################################################
 
     def has_sub_key(self, sub_key):
+        # type: (str) -> bool
         with self.lock:
             return sub_key in self.subscriptions_by_sub_key
 
 # ################################################################################################################################
 
     def has_messages_in_backlog(self, sub_key):
+        # type: (str) -> bool
         with self.lock:
             return self.sync_backlog.has_messages_by_sub_key(sub_key)
 
@@ -1076,6 +1082,7 @@ class PubSub(object):
     def _len_subscribers(self, topic_name):
         """ Low-level implementation of self.len_subscribers, must be called with self.lock held.
         """
+        # type: (str) -> int
         return len(self.subscriptions_by_topic[topic_name])
 
 # ################################################################################################################################
@@ -1083,6 +1090,7 @@ class PubSub(object):
     def len_subscribers(self, topic_name):
         """ Returns the amount of subscribers for a given topic.
         """
+        # type: (str) -> int
         with self.lock:
             return self._len_subscribers(topic_name)
 
@@ -1091,12 +1099,14 @@ class PubSub(object):
     def has_subscribers(self, topic_name):
         """ Returns True if input topic has at least one subscriber.
         """
+        # type: (str) -> bool
         with self.lock:
             return self._len_subscribers(topic_name) > 0
 
 # ################################################################################################################################
 
     def has_topic_by_name(self, topic_name):
+        # type: (str) -> bool
         with self.lock:
             try:
                 self._get_topic_by_name(topic_name)
@@ -1108,6 +1118,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def has_topic_by_id(self, topic_id):
+        # type: (int) -> bool
         with self.lock:
             try:
                 self.topics[topic_id]
