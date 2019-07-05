@@ -250,7 +250,7 @@ class SubscribeService(_PubSubService):
 
         if sub.is_wsx:
             self.invoke('zato.channel.web-socket.client.unregister-ws-sub-key', {
-                'sub_key_list': sub_keys,
+                'sub_key_list': [sub_key],
             })
 
 # ################################################################################################################################
