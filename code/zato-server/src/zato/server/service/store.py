@@ -214,6 +214,7 @@ class ServiceStore(object):
         self.deployment_info = {}  # impl_name to deployment information
         self.update_lock = RLock()
         self.patterns_matcher = Matcher()
+        self.needs_post_deploy_attr = 'needs_post_deploy'
 
 # ################################################################################################################################
 
@@ -243,11 +244,26 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
+    def post_deploy(self, class_):
+        self.set_up_class_json_schema(class_)
+
+# ################################################################################################################################
+
     def set_up_class_json_schema(self, class_, service_config=None):
         # type: (Service, dict)
 
         class_name = class_.get_name()
-        service_config = service_config or self.server.config.service[class_name]['config']
+
+        # We are required to configure JSON Schema for this service
+        # but first we need to check if the service is already deployed.
+        # If it is not, we need to set a flag indicating that our caller
+        # should do it later, once the service has been actually deployed.
+        service_info = self.server.config.service.get(class_name)
+        if not service_info:
+            setattr(class_, self.needs_post_deploy_attr, True)
+            return
+
+        service_config = service_config or service_info['config']
         json_schema_config = get_service_config(service_config, self.server)
 
         # Make sure the schema points to an absolute path and that it exists

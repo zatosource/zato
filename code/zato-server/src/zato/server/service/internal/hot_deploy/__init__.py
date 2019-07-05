@@ -260,7 +260,23 @@ class Create(AdminService):
                         self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires)
 
                     # .. all workers get here.
-                    self.response.payload.services_deployed = self.deploy_package(self.request.input.package_id, session)
+                    services_deployed = self.deploy_package(self.request.input.package_id, session)
+
+                    # Go through all services deployed, check if any needs post-processing
+                    # and if does, call the relevant function and clear the flag.
+                    service_store = self.server.service_store
+                    needs_post_deploy_attr = service_store.needs_post_deploy_attr
+
+                    for service_id in services_deployed:
+
+                        service_info = service_store.get_service_info_by_id(service_id)
+                        class_ = service_info['service_class']
+
+                        if getattr(class_, needs_post_deploy_attr, None):
+                            service_store.post_deploy(class_)
+                            delattr(class_, needs_post_deploy_attr)
+
+                    self.response.payload.services_deployed = services_deployed
 
                 except(IOError, OSError) as e:
                     if e.errno == ENOENT:
