@@ -218,7 +218,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         if other_servers:
             other_server = other_servers[0] # Index 0 is as random as any other because the list is not sorted.
-            missing = self.odb.get_missing_services(other_server, locally_deployed)
+            missing = self.odb.get_missing_services(other_server, set(item.name for item in locally_deployed))
 
             if missing:
 
