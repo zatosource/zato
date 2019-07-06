@@ -538,10 +538,9 @@ class ODBManager(SessionWrapper):
     def get_missing_services(self, server, locally_deployed):
         """ Returns services deployed on the server given on input that are not among locally_deployed.
         """
-        missing = []
+        missing = set()
 
         with closing(self.session()) as session:
-
             server_services = session.query(
                 Service.id, Service.name,
                 DeployedService.source_path, DeployedService.source).\
@@ -551,8 +550,8 @@ class ODBManager(SessionWrapper):
                 all()
 
             for item in server_services:
-                if item not in locally_deployed:
-                    missing.append(item)
+                if item.name not in locally_deployed:
+                    missing.add(item)
 
         return missing
 
