@@ -69,7 +69,11 @@ Examples:
 # ################################################################################################################################
 
     def delete_pidfile(self):
-        os.remove(os.path.join(self.component_dir, MISC.PIDFILE))
+        try:
+            path = os.path.join(self.component_dir, MISC.PIDFILE)
+            os.remove(path)
+        except Exception as e:
+            self.logger.info('Pidfile `%s` could not be deleted `%s`', path, e)
 
 # ################################################################################################################################
 
