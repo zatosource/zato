@@ -1078,7 +1078,7 @@ class PubSub(object):
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """
-        _logger.info('Storing in RAM. CID:`%s`, topic ID:`%s`, name:`%s`, sub_keys:`%s`, ngd-list:`%s`, e:`%d`',
+        _logger.warn('Storing in RAM. CID:`%r`, topic ID:`%r`, name:`%r`, sub_keys:`%r`, ngd-list:`%r`, e:`%s`',
             cid, topic_id, topic_name, sub_keys, [elem['pub_msg_id'] for elem in non_gd_msg_list], from_error)
 
         with self.lock:
@@ -1088,7 +1088,7 @@ class PubSub(object):
                 sub_keys, non_gd_msg_list)
 
             # .. and set a flag to signal that there are some available.
-            self._set_sync_has_msg(topic_id, False, True, 'PubSub.store_in_ram')
+            self._set_sync_has_msg(topic_id, False, True, 'PubSub.store_in_ram ({})'.format(from_error))
 
 # ################################################################################################################################
 
@@ -1307,6 +1307,17 @@ class PubSub(object):
 
     def invoke_service(self, name, msg, *args, **kwargs):
         return self.server.invoke(name, msg, *args, **kwargs)
+
+# ################################################################################################################################
+
+    def after_gd_sync_error(self, topic_id, source, pub_time_max):
+        """ Invoked by the after-publish service in case there was an error with letting
+        a delivery task know about GD messages it was to handle. Resets the topic's
+        sync_has_gd_msg flag to True to make sure the notification will be resent
+        in the main loop's next iteration.
+        """
+        logger.info('Will resubmit GD messages after sync error; topic:`%s`, src:`%s`', self.topics[topic_id].name, source)
+        self._set_sync_has_msg(topic_id, True, True, source, pub_time_max)
 
 # ################################################################################################################################
 

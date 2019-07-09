@@ -316,19 +316,15 @@ class InRAMSync(object):
         # Delete all messages marked to be deleted ..
         for msg_id in to_delete_msg:
 
-            logger.warn('BEFORE 1 %s', self.msg_id_to_msg)
-
             # .. first, direct mappings ..
             self.msg_id_to_msg.pop(msg_id, None)
 
-            logger.warn('Deleting msg from mapping dict `%s`, after:`%s`', msg_id, self.msg_id_to_msg)
-
-            logger.warn('BEFORE 2 %s', self.topic_msg_id)
+            logger.info('Deleting msg from mapping dict `%s`, before:`%s`', msg_id, self.msg_id_to_msg)
 
             # .. now, remove the message from topic ..
             self.topic_msg_id[topic_id].remove(msg_id)
 
-            logger.warn('Deleting msg from mapping topic `%s`, after:`%s`', msg_id, self.topic_msg_id)
+            logger.info('Deleting msg from mapping topic `%s`, after:`%s`', msg_id, self.topic_msg_id)
 
             # .. now, find the message for each sub_key ..
             for sub_key in sub_keys:
