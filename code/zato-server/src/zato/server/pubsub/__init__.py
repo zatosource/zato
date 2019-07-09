@@ -1337,7 +1337,7 @@ class PubSub(object):
             else:
                 new_pub_time_max = pub_time_max
 
-            self._set_sync_has_msg(topic_id, True, True, source, pub_time_max)
+            self._set_sync_has_msg(topic_id, True, True, source, new_pub_time_max)
 
 # ################################################################################################################################
 
