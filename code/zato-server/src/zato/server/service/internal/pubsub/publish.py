@@ -74,7 +74,7 @@ class PubCtx(object):
     def __init__(self, cluster_id, pubsub, topic, endpoint_id, endpoint_name, subscriptions_by_topic, msg_id_list, gd_msg_list,
             non_gd_msg_list, pub_pattern_matched, ext_client_id, is_re_run, now):
         self.cluster_id = cluster_id
-        self.pubsub = pubsub
+        self.pubsub = pubsub # type: PubSub
         self.topic = topic
         self.endpoint_id = endpoint_id
         self.endpoint_name = endpoint_name
