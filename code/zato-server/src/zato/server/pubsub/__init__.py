@@ -1310,14 +1310,34 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def after_gd_sync_error(self, topic_id, source, pub_time_max):
+    def after_gd_sync_error(self, topic_id, source, pub_time_max, _float_str=PUBSUB.FLOAT_STRING_CONVERT):
         """ Invoked by the after-publish service in case there was an error with letting
         a delivery task know about GD messages it was to handle. Resets the topic's
         sync_has_gd_msg flag to True to make sure the notification will be resent
         in the main loop's next iteration.
         """
-        logger.info('Will resubmit GD messages after sync error; topic:`%s`, src:`%s`', self.topics[topic_id].name, source)
-        self._set_sync_has_msg(topic_id, True, True, source, pub_time_max)
+        # Get the topic object
+        topic = self.topics[topic_id] # type: Topic
+
+        # Store information about what we are about to do
+        logger.info('Will resubmit GD messages after sync error; topic:`%s`, src:`%s`', topic.name, source)
+
+        with self.lock:
+
+            # We need to use the correct value of pub_time_max - since we are resyncing
+            # a failed message for a delivery task, it is possible that in the meantime
+            # another message was published to the topic so in case topic's gd_pub_time_max
+            # is bigger than our pub_time_max, the value from topic takes precedence.
+            topic_gd_pub_time_max = topic.gd_pub_time_max
+
+            if topic_gd_pub_time_max > pub_time_max:
+                logger.warn('Choosing topic\'s gd_pub_time_max:`%s` over `%s`',
+                    topic_gd_pub_time_max, _float_str.format(pub_time_max))
+                new_pub_time_max = topic_gd_pub_time_max
+            else:
+                new_pub_time_max = pub_time_max
+
+            self._set_sync_has_msg(topic_id, True, True, source, pub_time_max)
 
 # ################################################################################################################################
 
