@@ -263,7 +263,7 @@ class Servers(object):
                     server_is_ok = True
 
                     for per_pid_response in per_pid_responses:
-                        per_pid_is_ok = per_pid_response['is_ok']
+                        per_pid_is_ok = per_pid_response.get('is_ok')
 
                         # We check all PIDs but break as soon as it is known that there was an error
                         if not per_pid_is_ok:
