@@ -188,21 +188,6 @@ class SessionRenewTestCase(BaseTest):
 
 class SessionGetTestCase(BaseTest):
 
-    def test_get_super_user(self):
-
-        now = datetime.utcnow()
-
-        response = self.get('/zato/sso/user/session', {
-            'current_ust': self.ctx.super_user_ust,
-            'target_ust': self.ctx.super_user_ust,
-        })
-
-        self.assertLess(dt_parse(response.creation_time), now)
-        self.assertGreater(dt_parse(response.expiration_time), now)
-
-        # Instead of an assertion, this will raise an exception if remote_addr cannot be parsed
-        ip_address(response.remote_addr)
-
 # ################################################################################################################################
 
     def test_get_regular_user(self):

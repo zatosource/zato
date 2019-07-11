@@ -808,8 +808,8 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def login(self, cid, username, password, current_app, remote_addr, totp_code=None, user_agent=None,
-        has_remote_addr=False, has_user_agent=False, new_password=''):
+    def login(self, cid, username, password, current_app, remote_addr, user_agent=None,
+        has_remote_addr=False, has_user_agent=False, new_password='', totp_code=None):
         """ Logs a user in if username and password are correct, returning a user session token (UST) on success,
         or a ValidationError on error.
         """

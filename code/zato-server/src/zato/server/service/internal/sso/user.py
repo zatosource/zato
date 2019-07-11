@@ -79,7 +79,7 @@ class Login(BaseService):
             input.remote_addr = wsgi_remote_addr
 
         out = self.sso.user.login(input.cid, input.username, input.password, input.current_app, input.remote_addr,
-            input.totp_code, user_agent, has_remote_addr, has_user_agent, input.new_password)
+            user_agent, has_remote_addr, has_user_agent, input.new_password, input.totp_code)
 
         if out:
             self.response.payload.ust = out.ust
