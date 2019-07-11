@@ -69,6 +69,10 @@ SessionModelDelete = SessionModelTable.delete
 
 # ################################################################################################################################
 
+_dummy_password='dummy.{}'.format(uuid4().hex)
+
+# ################################################################################################################################
+
 class LoginCtx(object):
     """ A set of data about a login request.
     """
@@ -395,7 +399,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta, _dummy_password=uuid4().hex,
+    def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta, _dummy_password=_dummy_password,
         is_logged_in_ext=True):
         """ Logs a user in, returning session info on success or raising ValidationError on any error.
         """
