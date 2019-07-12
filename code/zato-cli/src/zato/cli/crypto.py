@@ -16,7 +16,7 @@ import anyjson
 
 # Zato
 from zato.cli import ManageCommand, ZatoCommand
-from zato.common.crypto import CryptoManager
+from zato.common.crypto import CryptoManager, SchedulerCryptoManager, ServerCryptoManager, WebAdminCryptoManager
 from zato.common.util import get_config
 
 # ################################################################################################################################
@@ -29,31 +29,47 @@ class CreateSecretKey(ZatoCommand):
 
 # ################################################################################################################################
 
-class Encrypt(ZatoCommand):
+class Encrypt(ManageCommand):
     """ Encrypts secrets using a public key.
     """
     allow_empty_secrets = True
     opts = [{'name':'--secret', 'help':'Secret to encrypt'}]
 
-    def execute(self, args):
-        cm = CryptoManager(pub_key_location=os.path.abspath(args.path))
-        cm.load_keys()
+    def _encrypt(self, class_, args):
+        repo_dir = os.path.abspath(os.path.join(args.path, 'config', 'repo'))
+        cm = class_(repo_dir=repo_dir)
+        self.logger.info('Encrypted value: `%s`' % cm.encrypt(args.secret))
 
-        self.logger.info('Encrypted value is [{}]'.format(cm.encrypt(args.secret)))
+    def _on_web_admin(self, args):
+        self._encrypt(WebAdminCryptoManager, args)
+
+    def _on_server(self, args):
+        self._encrypt(ServerCryptoManager, args)
+
+    def _on_scheduler(self, args):
+        self._encrypt(SchedulerCryptoManager, args)
 
 # ################################################################################################################################
 
-class Decrypt(ZatoCommand):
+class Decrypt(ManageCommand):
     """ Decrypts secrets using a private key.
     """
     allow_empty_secrets = True
     opts = [{'name':'--secret', 'help':'Secret to decrypt'}]
 
-    def execute(self, args):
-        cm = CryptoManager(priv_key_location=os.path.abspath(args.path))
-        cm.load_keys()
+    def _decrypt(self, class_, args):
+        repo_dir = os.path.abspath(os.path.join(args.path, 'config', 'repo'))
+        cm = class_(repo_dir=repo_dir)
+        self.logger.info('Decrypted value: `%s`' % cm.decrypt(args.secret))
 
-        self.logger.info('Secret is [{}]'.format(cm.decrypt(args.secret)))
+    def _on_web_admin(self, args):
+        self._decrypt(WebAdminCryptoManager, args)
+
+    def _on_server(self, args):
+        self._decrypt(ServerCryptoManager, args)
+
+    def _on_scheduler(self, args):
+        self._decrypt(SchedulerCryptoManager, args)
 
 # ################################################################################################################################
 
