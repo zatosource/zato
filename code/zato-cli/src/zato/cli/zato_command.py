@@ -389,13 +389,6 @@ def get_parser():
     update = subs.add_parser('update', description='Updates Zato components and users')
     update_subs = update.add_subparsers()
 
-    # .. update crypto
-
-    update_crypto = update_subs.add_parser('crypto', description=crypto_mod.UpdateCrypto.__doc__, parents=[base_parser])
-    update_crypto.add_argument('path', help='Path to a Zato component')
-    update_crypto.set_defaults(command='update_crypto')
-    add_opts(update_crypto, crypto_mod.UpdateCrypto.opts)
-
     # .. update password
 
     update_password = update_subs.add_parser(
