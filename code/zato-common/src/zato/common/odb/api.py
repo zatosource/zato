@@ -529,9 +529,10 @@ class ODBManager(SessionWrapper):
     def get_default_internal_pubsub_endpoint(self):
         with closing(self.session()) as session:
             return session.query(PubSubEndpoint).\
-                   filter(PubSubEndpoint.name==PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME).\
-                   filter(PubSubEndpoint.endpoint_type==PUBSUB.ENDPOINT_TYPE.INTERNAL.id).\
-                   one()
+                filter(PubSubEndpoint.name==PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME).\
+                filter(PubSubEndpoint.endpoint_type==PUBSUB.ENDPOINT_TYPE.INTERNAL.id).\
+                filter(PubSubEndpoint.cluster_id==self.cluster_id).\
+                one()
 
 # ################################################################################################################################
 
