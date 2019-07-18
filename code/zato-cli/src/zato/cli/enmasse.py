@@ -674,7 +674,7 @@ class ObjectImporter(object):
                     is_edit, attrs.name, attrs_dict, item_type, response.details)
             return self.results
 
-        # It's been just imported so we don't want to create in next steps
+        # It's been just imported so we don't want to create it in next steps
         # (this in fact would result in an error as the object already exists).
         if is_edit:
             self.remove_from_import_list(item_type, attrs.name)
@@ -729,6 +729,8 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def import_objects(self, already_existing):
+        # type: (Results)
+
         existing_defs = []
         existing_other = []
 
@@ -951,7 +953,13 @@ class ObjectManager(object):
     def is_ignored_name(self, item):
         if 'name' not in item:
             return False
+
         name = item.name.lower()
+
+        # Special-case scheduler jobs that can be overridden by users
+        if name.startswith('zato.wsx.cleanup'):
+            return False
+
         return 'zato' in name or name in self.IGNORED_NAMES
 
 # ################################################################################################################################
