@@ -35,7 +35,23 @@ output_optional_extra = ['current_size', 'cache_id']
 
 # ################################################################################################################################
 
-instance_hook = common_instance_hook
+def instance_hook(self, input, instance, attrs):
+
+    # Common functionality first ..
+    common_instance_hook(self, input, instance, attrs)
+
+    # .. now, if this is an update, we need to ensure that we have
+    # a handle to cache_id. It will be provided on input from web-admin
+    # but enmasse will not have it so we need to look it up ourselfves.
+    if not input.get('cache_id'):
+        if attrs.is_edit:
+            with attrs._meta_session.no_autoflush:
+                result = attrs._meta_session.query(CacheBuiltin.cache_id).\
+                    filter(CacheBuiltin.id==input.id).\
+                    filter(CacheBuiltin.cluster_id==self.server.cluster_id).\
+                    one()
+
+            instance.cache_id = result.cache_id
 
 # ################################################################################################################################
 
