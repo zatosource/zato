@@ -1209,10 +1209,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_VAULT_CONNECTION_CREATE(self, msg):
+        msg.token = self.server.decrypt(msg.token)
         self.vault_conn_api.create(msg)
         dispatcher.notify(broker_message.VAULT.CONNECTION_CREATE.value, msg)
 
     def on_broker_msg_VAULT_CONNECTION_EDIT(self, msg):
+        msg.token = self.server.decrypt(msg.token)
         self.vault_conn_api.edit(msg)
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.VAULT,
                 self._visit_wrapper_edit, keys=('username', 'name'))
