@@ -71,6 +71,7 @@ hook_type_to_method = {
     WEB_SOCKET.HOOK_TYPE.ON_CONNECTED: 'on_connected',
     WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED: 'on_disconnected',
     WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE: 'on_pubsub_response',
+    WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED: 'on_vault_mount_point_needed',
 }
 
 # ################################################################################################################################
@@ -144,6 +145,9 @@ class WebSocket(_WebSocket):
         self.user_data = Bunch() # Arbitrary user-defined data
         self._disconnect_requested = False # Have we been asked to disconnect this client?
 
+        # This will be populated by the on_vault_mount_point_needed hook
+        self.vault_mount_point = None
+
         # Last the we received a ping response (pong) from our peer
         self.ping_last_response_time = None
 
@@ -194,11 +198,15 @@ class WebSocket(_WebSocket):
             self.on_pubsub_response_service_invoker = self.hook_tool.get_hook_service_invoker(
                 self.config.hook_service, WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE)
 
+            self.on_vault_mount_point_needed = self.hook_tool.get_hook_service_invoker(
+                self.config.hook_service, WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED)
+
         else:
             self.hook_tool = None
             self.on_connected_service_invoker = None
             self.on_disconnected_service_invoker = None
             self.on_pubsub_response_service_invoker = None
+            self.on_vault_mount_point_needed = None
 
         # For publish/subscribe over WSX
         self.pubsub_tool = PubSubTool(self.config.parallel_server.worker_store.pubsub, self,
@@ -427,6 +435,14 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
+    def get_on_vault_mount_point_needed(self):
+        """ Returns a hook triggered when a Vault moint point needed to check credentials is not known.
+        """
+        if self.hook_tool:
+            return self.on_vault_mount_point_needed
+
+# ################################################################################################################################
+
     def parse_json(self, data, _create_session=WEB_SOCKET.ACTION.CREATE_SESSION, _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
 
         parsed = loads(data.decode('utf8'))
@@ -495,6 +511,15 @@ class WebSocket(_WebSocket):
         if not self.config.needs_auth:
             can_create_session = True
         else:
+
+            # Discover which Vault mount point credentials will be under, unless we know it already.
+            if not self.vault_mount_point:
+                hook = self.get_on_vault_mount_point_needed()
+                if hook:
+                    hook(**self._get_hook_request())
+
+            headers['HTTP_X_ZATO_VAULT_MOUNT_POINT'] = self.vault_mount_point
+
             can_create_session = self.config.auth_func(
                 request.cid, self.sec_type, {'username':request.username, 'secret':request.secret}, self.config.sec_name,
                 self.config.vault_conn_default_auth_method, self.initial_http_wsgi_environ, headers)
