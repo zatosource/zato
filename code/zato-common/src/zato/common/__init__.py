@@ -1242,6 +1242,7 @@ class WEB_SOCKET:
         ON_CONNECTED = 'wsx_on_connected'
         ON_DISCONNECTED = 'wsx_on_disconnected'
         ON_PUBSUB_RESPONSE = 'wsx_on_pubsub_response'
+        ON_VAULT_MOUNT_POINT_NEEDED = 'wsx_on_vault_mount_point_needed'
 
 # ################################################################################################################################
 # ################################################################################################################################
