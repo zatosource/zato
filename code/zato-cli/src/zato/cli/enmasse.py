@@ -280,6 +280,15 @@ SERVICES = [
     ),
     ServiceInfo(
         name='web_socket',
+        prefix='zato.channel.web-socket',
+        object_dependencies={
+            'sec_def': {
+                'dependent_type': 'def_sec',
+                'dependent_field': 'name',
+                'empty_value': ZATO_NO_SECURITY,
+                'id_field': 'security_id',
+            },
+        },
         service_dependencies={
             'service': {}
         },
@@ -534,12 +543,11 @@ class DependencyScanner(object):
 # ################################################################################################################################
 
     def scan_item(self, item_type, item, results):
-        """ Scan the data of a single item for required dependencies, recording any that are missing in :py:attr:`missing`.
-
-        :param item_type: ServiceInfo.name of the item's type.
-        :param item: dict describing the item.
+        """ Scan the data of a single item for required dependencies, recording any that are missing in self.missing.
         """
-        service_info = SERVICE_BY_NAME[item_type]
+        # type: (str, dict, Results)
+        service_info = SERVICE_BY_NAME[item_type] # type: ServiceInfo
+
         for dep_key, dep_info in iteritems(service_info.object_dependencies):
             if not test_item(item, dep_info.get('condition')):
                 continue
@@ -619,7 +627,7 @@ class ObjectImporter(object):
 
     def validate_import_data(self):
         results = Results()
-        dep_scanner = DependencyScanner(self.json,ignore_missing=self.ignore_missing)
+        dep_scanner = DependencyScanner(self.json, ignore_missing=self.ignore_missing)
         scan_results = dep_scanner.scan()
 
         if not scan_results.ok:
