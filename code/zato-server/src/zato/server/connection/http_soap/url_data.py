@@ -197,7 +197,7 @@ class URLData(CyURLData, OAuthDataStore):
         """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
         """
         headers = initial_headers if initial_headers is not None else {}
-        headers['zato.ws.initial_http_wsgi_environ'] =initial_http_wsgi_environ
+        headers['zato.ws.initial_http_wsgi_environ'] = initial_http_wsgi_environ
 
         if sec_def_type == _basic_auth:
             auth_func = self._handle_security_basic_auth

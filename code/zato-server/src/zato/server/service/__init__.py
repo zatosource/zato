@@ -1196,8 +1196,15 @@ class WSXHook(_Hook):
         """ Invoked each time a response to a previous pub/sub message arrives.
         """
 
+    def on_vault_mount_point_needed(self, _zato_no_op_marker=zato_no_op_marker):
+        """ Invoked each time there is need to discover the name of a Vault mount point
+        that a particular WSX channel is secured ultimately with, i.e. the mount point
+        where the incoming user's credentials are stored in.
+        """
+
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_CONNECTED] = 'on_connected'
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_DISCONNECTED] = 'on_disconnected'
 WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE] = 'on_pubsub_response'
+WSXHook._hook_func_name[WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED] = 'on_vault_mount_point_needed'
 
 # ################################################################################################################################
