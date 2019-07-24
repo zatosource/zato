@@ -252,7 +252,8 @@ class JSONRPCHandler(object):
                 raise MethodNotFound(cid, 'Method not supported `{}` in `{}`'.format(item.method, orig_message.decode('utf8')))
 
             # Try to invoke the service ..
-            service_response = self.invoke_func(item.method, item.params, skip_response_elem=True)
+            skip_response_elem = self.server.service_store.has_sio(item.method)
+            service_response = self.invoke_func(item.method, item.params, skip_response_elem=skip_response_elem)
 
             # .. no exception here = invocation was successful
             out.result = service_response

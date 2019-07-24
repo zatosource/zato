@@ -407,6 +407,19 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
+    def has_sio(self, service_name):
+        """ Returns True if service indicated by service_name has a SimpleIO definition.
+        """
+        # type: (str) -> bool
+
+        with self.update_lock:
+            service_id = self.get_service_id_by_name(service_name)
+            service_info = self.get_service_info_by_id(service_id) # type: Service
+            class_ = service_info['service_class'] # type: Service
+            return getattr(class_, 'has_sio', False)
+
+# ################################################################################################################################
+
     def get_service_info_by_id(self, service_id):
         if not isinstance(service_id, int):
             service_id = int(service_id)
