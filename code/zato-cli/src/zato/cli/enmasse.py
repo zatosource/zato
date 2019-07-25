@@ -1497,15 +1497,13 @@ class Enmasse(ManageCommand):
     def run_import(self):
         self.object_mgr.refresh()
 
-        importer = ObjectImporter(self.client, self.logger,
-            self.object_mgr, self.json,
+        importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,
             ignore_missing=self.args.ignore_missing_defs)
 
         # Find channels and jobs that require services that don't exist
         results = importer.validate_import_data()
         if not results.ok:
             return [results]
-
 
         already_existing = importer.find_already_existing_odb_objects()
         if not already_existing.ok and not self.args.replace_odb_objects:
