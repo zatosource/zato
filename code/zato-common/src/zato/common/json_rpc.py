@@ -28,10 +28,12 @@ if typing.TYPE_CHECKING:
 
     # Zato
     from zato.common.json_schema import ValidationException as JSONSchemaValidationException
+    from zato.server.service.store import ServiceStore
 
     # For pyflakes
     Callable = Callable
     JSONSchemaValidationException = JSONSchemaValidationException
+    ServiceStore = ServiceStore
 
 # ################################################################################################################################
 
@@ -203,9 +205,10 @@ class JSONRPCItem(object):
 # ################################################################################################################################
 
 class JSONRPCHandler(object):
-    def __init__(self, config, invoke_func, JSONSchemaValidationException):
-        # type: (dict, Callable, JSONSchemaValidationException)
+    def __init__(self, service_store, config, invoke_func, JSONSchemaValidationException):
+        # type: (ServiceStore, dict, Callable, JSONSchemaValidationException)
 
+        self.service_store = service_store
         self.config = config
         self.invoke_func = invoke_func
 
@@ -252,7 +255,7 @@ class JSONRPCHandler(object):
                 raise MethodNotFound(cid, 'Method not supported `{}` in `{}`'.format(item.method, orig_message.decode('utf8')))
 
             # Try to invoke the service ..
-            skip_response_elem = self.server.service_store.has_sio(item.method)
+            skip_response_elem = self.service_store.has_sio(item.method)
             service_response = self.invoke_func(item.method, item.params, skip_response_elem=skip_response_elem)
 
             # .. no exception here = invocation was successful
