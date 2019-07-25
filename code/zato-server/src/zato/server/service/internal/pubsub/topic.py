@@ -30,6 +30,17 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
 
+# Type checking
+if 0:
+    from bunch import Bunch
+    from zato.server.service import Service
+
+    # For pyflakes
+    Bunch = Bunch
+    Service = Service
+
+# ################################################################################################################################
+
 elem = 'pubsub_topic'
 model = PubSubTopic
 label = 'a pub/sub topic'
@@ -39,7 +50,7 @@ broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
 skip_input_params = ['is_internal', 'current_depth_gd', 'last_pub_time', 'last_pub_msg_id', 'last_endpoint_id',
     'last_endpoint_name']
-input_optional_extra = ['needs_details', 'on_no_subs_pub']
+input_optional_extra = ['needs_details', 'on_no_subs_pub', 'hook_service_name']
 output_optional_extra = ['is_internal', Int('current_depth_gd'), Int('current_depth_non_gd'), 'last_pub_time',
     'hook_service_name', 'last_pub_time', AsIs('last_pub_msg_id'), 'last_endpoint_id', 'last_endpoint_name',
     Bool('last_pub_has_gd'), 'last_pub_server_pid', 'last_pub_server_name', 'on_no_subs_pub']
@@ -96,13 +107,22 @@ def response_hook(self, input, instance, attrs, service_type):
 # ################################################################################################################################
 
 def instance_hook(self, input, instance, attrs):
+    # type: (Service, Bunch, PubSubTopic, Bunch)
 
-    # Validate if broker hook actually exists
-    ensure_pubsub_hook_is_valid(self, input, instance, attrs)
-
-    # Populate a field that ODB requires even if it is reserved for future use
     if attrs.is_create_edit:
+
+        # Populate a field that ODB requires even if it is reserved for future use
         instance.pub_buffer_size_gd = 0
+
+        # Validate if broker hook actually exists
+        ensure_pubsub_hook_is_valid(self, input, instance, attrs)
+
+        # If input hook service is provided by its name,
+        # turn it into a service ID and assign it to instance.
+        hook_service_name = input.get('hook_service_name')
+        if hook_service_name:
+            hook_service_id = self.server.service_store.get_service_id_by_name(hook_service_name)
+            instance.hook_service_id = hook_service_id
 
 # ################################################################################################################################
 
