@@ -565,7 +565,8 @@ class Create(ZatoCommand):
 
     def add_api_invoke(self, session, cluster, service, pubapi_sec):
         channel = HTTPSOAP(None, '/zato/api/invoke', True, True, 'channel', 'plain_http',
-            None, '/zato/api/invoke/{service_name}', None, '', None, None, merge_url_params_req=True, service=service,
+            None, '/zato/api/invoke/{service_name}', None, '', None, None,
+            merge_url_params_req=True, service=service, security=pubapi_sec,
             cluster=cluster)
         session.add(channel)
 
