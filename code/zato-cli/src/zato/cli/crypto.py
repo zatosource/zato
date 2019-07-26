@@ -53,7 +53,7 @@ class Encrypt(ManageCommand):
 class Decrypt(ManageCommand):
     """ Decrypts secrets using a private key.
     """
-    allow_empty_secrets = True
+    allow_empty_secrets = False
     opts = [{'name':'--secret', 'help':'Secret to decrypt'}]
 
     def _decrypt(self, class_, args):
