@@ -26,6 +26,9 @@ from lxml import objectify
 # requests
 import requests
 
+# urllib3 - need for requests
+from urllib3.util.retry import Retry
+
 # Python 2/3 compatibility
 from builtins import str as text
 from six import PY3
@@ -50,7 +53,7 @@ mod_logger = logging.getLogger(__name__)
 # Version
 # ################################################################################################################################
 
-version = '3.0.0'
+version = '3.1'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -380,6 +383,11 @@ class _Client(object):
         self.address = address
         self.service_address = '{}{}'.format(address, path)
         self.session = session or requests.session()
+
+        for adapter in self.session.adapters.values():
+            retry = Retry(connect=10, backoff_factor=0.1)
+            adapter.max_retries = retry
+
         self.to_bunch = to_bunch
         self.max_response_repr = max_response_repr
         self.max_cid_repr = max_cid_repr
