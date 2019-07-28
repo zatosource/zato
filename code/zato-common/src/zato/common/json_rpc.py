@@ -28,10 +28,12 @@ if typing.TYPE_CHECKING:
 
     # Zato
     from zato.common.json_schema import ValidationException as JSONSchemaValidationException
+    from zato.server.service import ChannelInfo
     from zato.server.service.store import ServiceStore
 
     # For pyflakes
     Callable = Callable
+    ChannelInfo = ChannelInfo
     JSONSchemaValidationException = JSONSchemaValidationException
     ServiceStore = ServiceStore
 
@@ -205,12 +207,13 @@ class JSONRPCItem(object):
 # ################################################################################################################################
 
 class JSONRPCHandler(object):
-    def __init__(self, service_store, config, invoke_func, JSONSchemaValidationException):
-        # type: (ServiceStore, dict, Callable, JSONSchemaValidationException)
+    def __init__(self, service_store, config, invoke_func, channel_info, JSONSchemaValidationException):
+        # type: (ServiceStore, dict, Callable, ChannelInfo, JSONSchemaValidationException)
 
         self.service_store = service_store
         self.config = config
         self.invoke_func = invoke_func
+        self.channel_info = channel_info
 
         # Kept here and provided by the caller to remove circular imports between common/json_rpc.py and common/json_schema.py
         self.JSONSchemaValidationException = JSONSchemaValidationException
@@ -256,7 +259,8 @@ class JSONRPCHandler(object):
 
             # Try to invoke the service ..
             skip_response_elem = self.service_store.has_sio(item.method)
-            service_response = self.invoke_func(item.method, item.params, skip_response_elem=skip_response_elem)
+            service_response = self.invoke_func(item.method, item.params, channel_info=self.channel_info,
+                skip_response_elem=skip_response_elem)
 
             # .. no exception here = invocation was successful
             out.result = service_response
