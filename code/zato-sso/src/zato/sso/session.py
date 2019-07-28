@@ -360,6 +360,8 @@ class SessionAPI(object):
         """
         # type: (unicode, Bunch, unicode, unicode, unicode, unicode) -> SessionInfo
 
+        remote_addr = remote_addr if isinstance(remote_addr, unicode) else remote_addr.decode('utf8')
+
         # PII audit comes first
         audit_pii.info(cid, 'session.on_external_auth_succeeded', extra={
             'current_app':current_app,
