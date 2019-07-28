@@ -363,7 +363,7 @@ class RequestDispatcher(object):
                                     sso_user_id,
                                     sec.sec_def if sec.sec_def.sec_type == _basic_auth else wsgi_environ['HTTP_AUTHORIZATION'],
                                     current_app,
-                                    wsgi_environ['zato.http.remote_addr'].decode('utf8'),
+                                    wsgi_environ['zato.http.remote_addr'],
                                     wsgi_environ.get('HTTP_USER_AGENT'),
                                 )
 
