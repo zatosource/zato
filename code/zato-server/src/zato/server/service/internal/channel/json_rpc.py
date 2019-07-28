@@ -227,7 +227,7 @@ class JSONRPCGateway(AdminService):
             ctx.orig_message = self.request.raw_request
 
             handler = JSONRPCHandler(
-                self.server.service_store, bunchify(channel_config), self.invoke, JSONSchemaValidationException)
+                self.server.service_store, bunchify(channel_config), self.invoke, self.channel, JSONSchemaValidationException)
             response = handler.handle(ctx)
 
         self.response.content_type = 'application/json'
