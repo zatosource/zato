@@ -35,8 +35,8 @@ from zato.common.odb.model import SSOLinkedAuth as LinkedAuth, SSOUser as UserMo
 from zato.common.util.json_ import dumps
 from zato.sso import const, not_given, status_code, User as UserEntity, ValidationError
 from zato.sso.attr import AttrAPI
-from zato.sso.odb.query import get_linked_auth_list, get_sign_up_status_by_token, get_user_by_id, get_user_by_username, \
-     get_user_by_ust
+from zato.sso.odb.query import get_linked_auth_list, get_sign_up_status_by_token, get_user_by_id, get_user_by_linked_sec, \
+     get_user_by_username, get_user_by_ust
 from zato.sso.session import LoginCtx, SessionAPI
 from zato.sso.user_search import SSOSearch
 from zato.sso.util import check_credentials, check_remote_app_exists, make_data_secret, make_password_secret, new_confirm_token, \
@@ -612,7 +612,7 @@ class UserAPI(object):
 
 # ################################################################################################################################
 
-    def _get_user_by_attr(self, cid, func, attr_value, current_ust, current_app, remote_addr, _needs_super_user,
+    def _get_user(self, cid, func, query_criteria, current_ust, current_app, remote_addr, _needs_super_user,
         queries_current_session, _utcnow=_utcnow):
         """ Returns a user by a specific function and business value.
         """
@@ -626,7 +626,7 @@ class UserAPI(object):
             if queries_current_session:
                 info = current_session
             else:
-                info = func(session, attr_value, _utcnow())
+                info = func(session, query_criteria, _utcnow())
 
             # Input UST is invalid for any reason (perhaps has just expired), raise an exception in that case
             if not info:
@@ -676,7 +676,7 @@ class UserAPI(object):
         # PII audit comes first
         audit_pii.info(cid, 'user.get_current_user', extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._get_user_by_attr(
+        return self._get_user(
             cid, get_user_by_ust, self.decrypt_func(current_ust), current_ust, current_app, remote_addr, False, True)
 
 # ################################################################################################################################
@@ -688,7 +688,19 @@ class UserAPI(object):
         audit_pii.info(cid, 'user.get_user_by_id', target_user=user_id,
             extra={'current_app':current_app, 'remote_addr':remote_addr})
 
-        return self._get_user_by_attr(cid, get_user_by_id, user_id, current_ust, current_app, remote_addr, True, False)
+        return self._get_user(cid, get_user_by_id, user_id, current_ust, current_app, remote_addr, True, False)
+
+# ################################################################################################################################
+
+    def get_user_by_linked_auth(self, cid, sec_type, sec_username, current_ust, current_app, remote_addr):
+        """ Returns a user object by that person's linked security name, e.g. maps a Basic Auth username to an SSO user.
+        """
+        # PII audit comes first
+        audit_pii.info(cid, 'user.get_user_by_linked_sec', target_user=sec_username,
+            extra={'current_app':current_app, 'remote_addr':remote_addr, 'sec_type': sec_type})
+
+        return self._get_user(
+            cid, get_user_by_linked_sec, (sec_type, sec_username) , current_ust, current_app, remote_addr, False, False)
 
 # ################################################################################################################################
 
