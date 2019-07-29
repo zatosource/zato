@@ -20,6 +20,9 @@ from uuid import uuid4
 # ipaddress
 from ipaddress import ip_address
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 from zato.common import GENERIC, SEC_DEF_TYPE
 from zato.common.audit import audit_pii
@@ -44,9 +47,6 @@ if typing.TYPE_CHECKING:
     # Bunch
     from bunch import Bunch
 
-    # Python 2/3 compatibility
-    from past.builtins import unicode
-
     # Zato
     from zato.common.odb.model import SSOUser
 
@@ -54,7 +54,6 @@ if typing.TYPE_CHECKING:
     Bunch = Bunch
     Callable = Callable
     SSOUser = SSOUser
-    unicode = unicode
 
 # ################################################################################################################################
 
