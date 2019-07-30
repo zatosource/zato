@@ -120,7 +120,7 @@ class _CreateUser(SSOCommand):
     create_func = None
     user_type = None
 
-    allow_empty_secrets = True
+    allow_empty_secrets = False
     opts = [
         {'name': 'username', 'help': 'Username to use'},
         {'name': '--email', 'help': "Person's email"},
