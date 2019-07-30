@@ -64,6 +64,8 @@ sub_broker_attrs = ('active_status', 'active_status', 'cluster_id', 'creation_ti
 # ################################################################################################################################
 
 def broker_message_hook(self, input, instance, attrs, service_type):
+    # type: (Service, Bunch, PubSubTopic, Bunch, str)
+
     if service_type == 'create_edit':
         with closing(self.odb.session()) as session:
             topic = pubsub_topic(session, input.cluster_id, instance.id)
@@ -76,6 +78,8 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 # ################################################################################################################################
 
 def response_hook(self, input, instance, attrs, service_type):
+    # type: (Service, Bunch, PubSubTopic, Bunch, str)
+
     if service_type == 'get_list':
 
         # Details are needed when topics are in their own main screen but if only basic information
@@ -103,6 +107,15 @@ def response_hook(self, input, instance, attrs, service_type):
                         item.last_endpoint_name = last_data['endpoint_name']
                         item.last_pub_server_pid = last_data.get('server_pid')
                         item.last_pub_server_name = last_data.get('server_name')
+
+# ################################################################################################################################
+
+def pre_opaque_attrs_hook(self, input, instance, attrs):
+    # type: (Service, Bunch, PubSubTopic, Bunch)
+
+    if not input.get('hook_service_name'):
+        hook_service_name = self.server.service_store.get_service_name_by_id(input.hook_service_id)
+        input.hook_service_name = hook_service_name
 
 # ################################################################################################################################
 
