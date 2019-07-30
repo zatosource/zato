@@ -29,14 +29,31 @@ from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO, GetListAdminSIO
 
+# ################################################################################################################################
+
+# Type checking
+if 0:
+    from zato.server.service import Service
+
+    # For pyflakes
+    Service = Service
+
+# ################################################################################################################################
+
 logger = getLogger(__name__)
 
+# ################################################################################################################################
+
 singleton = object()
+
+# ################################################################################################################################
 
 sa_to_sio = {
     Boolean: BoolSIO,
     Integer: IntSIO
 }
+
+# ################################################################################################################################
 
 req_resp = {
     'Create': 'create',
@@ -46,8 +63,12 @@ req_resp = {
     'Ping': 'ping',
 }
 
+# ################################################################################################################################
+
 def _is_column_required(column):
     return not (bool(column.nullable) is True)
+
+# ################################################################################################################################
 
 def get_columns_to_visit(columns, is_required):
     out = []
@@ -71,6 +92,8 @@ def get_columns_to_visit(columns, is_required):
             continue
 
     return out
+
+# ################################################################################################################################
 
 def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_cluster_id):
 
@@ -123,6 +146,8 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
                     columns.append(column.name)
 
     return columns
+
+# ################################################################################################################################
 
 def update_attrs(cls, name, attrs):
 
@@ -182,6 +207,9 @@ def update_attrs(cls, name, attrs):
 
     return attrs
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class AdminServiceMeta(type):
 
     @staticmethod
@@ -240,6 +268,9 @@ class AdminServiceMeta(type):
 
         return SimpleIO
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetListMeta(AdminServiceMeta):
     """ A metaclass customizing the creation of services returning lists of objects.
     """
@@ -254,12 +285,15 @@ class GetListMeta(AdminServiceMeta):
     @staticmethod
     def get_data(get_data_func):
         def get_data_impl(self, session):
+            # type: (Service, object)
             return self._search(get_data_func, session, self.request.input.cluster_id, False)
         return get_data_impl
 
     @staticmethod
     def handle(attrs):
         def handle_impl(self):
+            # type: (Service)
+
             with closing(self.odb.session()) as session:
                 self.response.payload[:] = elems_with_opaque(self.get_data(session))
 
@@ -267,6 +301,9 @@ class GetListMeta(AdminServiceMeta):
                 attrs.response_hook(self, self.request.input, None, attrs, 'get_list')
 
         return handle_impl
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class CreateEditMeta(AdminServiceMeta):
     is_create = False
@@ -283,6 +320,8 @@ class CreateEditMeta(AdminServiceMeta):
     @staticmethod
     def handle(attrs):
         def handle_impl(self):
+            # type: (Service)
+
             input = self.request.input
             input.update(attrs.initial_input)
             verb = 'edit' if attrs.is_edit else 'create'
@@ -368,6 +407,9 @@ class CreateEditMeta(AdminServiceMeta):
 
         return handle_impl
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class DeleteMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
@@ -379,6 +421,8 @@ class DeleteMeta(AdminServiceMeta):
     @staticmethod
     def handle(attrs):
         def handle_impl(self):
+            # type: (Service)
+
             input = self.request.input
             with closing(self.odb.session()) as session:
                 attrs._meta_session = session
@@ -428,6 +472,9 @@ class DeleteMeta(AdminServiceMeta):
 
         return handle_impl
 
+# ################################################################################################################################
+# ################################################################################################################################
+
 class PingMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
@@ -438,6 +485,8 @@ class PingMeta(AdminServiceMeta):
     @staticmethod
     def handle(attrs):
         def handle_impl(self):
+            # type: (Service)
+
             with closing(self.odb.session()) as session:
                 config = session.query(attrs.model).\
                     filter(attrs.model.id==self.request.input.id).\
@@ -451,3 +500,6 @@ class PingMeta(AdminServiceMeta):
                     response_time)
 
         return handle_impl
+
+# ################################################################################################################################
+# ################################################################################################################################
