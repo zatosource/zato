@@ -388,7 +388,11 @@ class SessionAPI(object):
 
         # .. if there is, renew it ..
         if existing_ust:
-            self.renew(cid, existing_ust, current_app, remote_addr, user_agent, False)
+            expiration_time = self.renew(cid, existing_ust, current_app, remote_addr, user_agent, False)
+            session_info = SessionInfo()
+            session_info.ust = existing_ust
+            session_info.expiration_time = expiration_time
+            return session_info
 
         # .. otherwise, create a new one. Note that we get here only if
         else:
