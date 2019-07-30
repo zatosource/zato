@@ -164,6 +164,7 @@ def update_attrs(cls, name, attrs):
     attrs.initial_input = getattr(mod, 'initial_input', {})
     attrs.skip_input_params = getattr(mod, 'skip_input_params', [])
     attrs.skip_output_params = getattr(mod, 'skip_output_params', [])
+    attrs.pre_opaque_attrs_hook = getattr(mod, 'pre_opaque_attrs_hook', None)
     attrs.instance_hook = getattr(mod, 'instance_hook', None)
     attrs.response_hook = getattr(mod, 'response_hook', None)
     attrs.delete_hook = getattr(mod, 'delete_hook', None)
@@ -361,6 +362,11 @@ class CreateEditMeta(AdminServiceMeta):
                     # if they are empty on input. If it's not desired,
                     # set skip_input_params = ['...'] to ignore such input parameters.
                     instance.fromdict(input, exclude=['password'], allow_pk=True)
+
+                    # Invoke a hook that will set any additional opaque attrs
+                    # that are required but were possibly not given on input.
+                    if attrs.pre_opaque_attrs_hook:
+                        attrs.pre_opaque_attrs_hook(self, input, instance, attrs)
 
                     # Populate all the opaque attrs now
                     set_instance_opaque_attrs(instance, input)
