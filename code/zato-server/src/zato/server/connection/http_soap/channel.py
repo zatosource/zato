@@ -357,7 +357,7 @@ class RequestDispatcher(object):
                                 current_app = wsgi_environ.get(self.server.sso_config.apps.http_header) or \
                                     self.server.sso_config.apps.default
 
-                                self.server.sso_api.user.session.on_external_auth_succeeded(
+                                session_info = self.server.sso_api.user.session.on_external_auth_succeeded(
                                     cid,
                                     sec.sec_def,
                                     sso_user_id,
@@ -366,6 +366,10 @@ class RequestDispatcher(object):
                                     wsgi_environ['zato.http.remote_addr'],
                                     wsgi_environ.get('HTTP_USER_AGENT'),
                                 )
+
+                                if session_info:
+                                    wsgi_environ['zato.http.response.headers']['X-Zato-SSO-UST'] = self.server.encrypt(
+                                        session_info.ust, _prefix='')
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
