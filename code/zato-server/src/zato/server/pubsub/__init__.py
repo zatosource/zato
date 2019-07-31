@@ -619,6 +619,9 @@ class PubSub(object):
     def _set_topic_config_hook_data(self, config):
         if config.hook_service_id:
 
+            if not config.hook_service_name:
+                config.hook_service_name = self.server.service_store.get_service_name_by_id(config.hook_service_id)
+
             # Invoked when a new subscription to topic is created
             config.on_subscribed_service_invoker = self.hook_tool.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.ON_SUBSCRIBED)
