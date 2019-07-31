@@ -385,7 +385,7 @@ class _Client(object):
         self.session = session or requests.session()
 
         for adapter in self.session.adapters.values():
-            retry = Retry(connect=10, backoff_factor=0.1)
+            retry = Retry(connect=4, backoff_factor=0.1)
             adapter.max_retries = retry
 
         self.to_bunch = to_bunch
