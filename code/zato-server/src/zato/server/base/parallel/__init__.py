@@ -59,6 +59,7 @@ from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.parallel.subprocess_.ibm_mq import IBMMQIPC
 from zato.server.base.parallel.subprocess_.sftp import SFTPIPC
 from zato.server.pickup import PickupManager
+from zato.server.sso import SSOTool
 
 # ################################################################################################################################
 
@@ -169,6 +170,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self._hash_secret_method = None
         self._hash_secret_rounds = None
         self._hash_secret_salt_size = None
+        self.sso_tool = SSOTool(self)
 
         # Our arbiter may potentially call the cleanup procedure multiple times
         # and this will be set to True the first time around.
