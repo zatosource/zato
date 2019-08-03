@@ -24,7 +24,6 @@ from cryptography.fernet import Fernet
 import jwt
 
 # Zato
-from zato.common import SEC_DEF_TYPE
 from zato.common.odb.model import JWT as JWT_
 from zato.server.cache import RobustCache
 
