@@ -219,7 +219,7 @@ class LogIn(Service):
         input_required = 'username', 'password'
         output_optional = 'token',
 
-    def handle(self):
+    def handle(self, _sec_type=SEC_DEF_TYPE.JWT):
         auth_info = JWTBackend(self.kvdb, self.odb, self.server.decrypt, self.server.jwt_secret).authenticate(
             self.request.input.username, self.server.decrypt(self.request.input.password))
 
@@ -227,7 +227,8 @@ class LogIn(Service):
 
             # Checks if there is an SSO user related to that JWT account
             # and logs that person in to SSO or resumes his or her session.
-            self.server.sso_tool.on_external_auth(auth_info.sec_def, self.cid, self.wsgi_environ)
+            self.server.sso_tool.on_external_auth(
+                _sec_type, auth_info.sec_def_id, auth_info.sec_def_username, self.cid, self.wsgi_environ)
 
             self.response.payload = {'token': auth_info.token}
             self.response.headers['Authorization'] = auth_info.token

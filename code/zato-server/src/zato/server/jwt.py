@@ -35,14 +35,13 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class AuthInfo(object):
-    __slots__ = 'sec_def_type', 'sec_def_id', 'sec_def_username', 'token'
+    __slots__ = 'sec_def_id', 'sec_def_username', 'token'
 
     def __init__(self, sec_def_id, sec_def_username, token):
         # type: (int, str, str)
         self.sec_def_id = sec_def_id
         self.sec_def_username = sec_def_username
         self.token = token
-        self.sec_def_type = SEC_DEF_TYPE.JWT
 
 # ################################################################################################################################
 
