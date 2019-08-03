@@ -24,12 +24,25 @@ from cryptography.fernet import Fernet
 import jwt
 
 # Zato
+from zato.common import SEC_DEF_TYPE
 from zato.common.odb.model import JWT as JWT_
 from zato.server.cache import RobustCache
 
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
+
+class AuthInfo(object):
+    __slots__ = 'sec_def_type', 'sec_def_id', 'sec_def_username', 'token'
+
+    def __init__(self, sec_def_id, sec_def_username, token):
+        # type: (int, str, str)
+        self.sec_def_id = sec_def_id
+        self.sec_def_username = sec_def_username
+        self.token = token
+        self.sec_def_type = SEC_DEF_TYPE.JWT
 
 # ################################################################################################################################
 
@@ -51,6 +64,7 @@ class JWT(object):
 # ################################################################################################################################
 
     def _lookup_jwt(self, username, password):
+        # type: (str, str) -> JWT_
         with closing(self.odb.session()) as session:
             item = session.query(JWT_).\
                 filter(JWT_.username==username).\
@@ -84,14 +98,14 @@ class JWT(object):
             4. Cache the new token synchronously (we wait for it to be truly stored).
             5. Return the token
         """
-        sec_def = self._lookup_jwt(username, password)
-        if sec_def:
-            token = self._create_token(username=username, ttl=sec_def.ttl)
-            self.cache.put(token, token, sec_def.ttl, async=False)
-            suffix = 's' if sec_def.ttl > 1 else ''
-            logger.info('New token generated for user `%s` with a TTL of `%i` second{}'.format(suffix), username, sec_def.ttl)
+        item = self._lookup_jwt(username, password)
+        if item:
+            token = self._create_token(username=username, ttl=item.ttl)
+            self.cache.put(token, token, item.ttl, async=False)
+            suffix = 's' if item.ttl > 1 else ''
+            logger.info('New token generated for user `%s` with a TTL of `%i` second{}'.format(suffix), username, item.ttl)
 
-            return token
+            return AuthInfo(item.id, item.username, token)
 
 # ################################################################################################################################
 
