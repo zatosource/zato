@@ -43,17 +43,20 @@ class SSOTool(object):
         # type: (ParallelServer)
         self.server = server
 
-    def on_external_auth(self, sec, cid, wsgi_environ, _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER,
-        _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
-        # type: (Bunch, str, dict, object, object)
+    def on_external_auth(self, sec_type, sec_def_id, sec_def_username, cid, wsgi_environ,
+        _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
+        # type: (str, int, str, str, dict, object, object)
 
-        if sec.sec_def.sec_type in _sec_def_sso_rate_limit:
+        logger.warn('QQQ %s %s %s %s', sec_type, sec_def_id, sec_def_username, cid)
+
+        if sec_type in _sec_def_sso_rate_limit:
 
             # Do we have an SSO user related to this sec_def?
-            auth_id_link_map = self.server.sso_api.user.auth_id_link_map['zato.{}'.format(
-                sec.sec_def.sec_type)] # type: dict
+            auth_id_link_map = self.server.sso_api.user.auth_id_link_map['zato.{}'.format(sec_type)] # type: dict
 
-            sso_user_id = auth_id_link_map.get(sec.sec_def.id)
+            sso_user_id = auth_id_link_map.get(sec_def_id)
+
+            logger.warn('EEE %s', auth_id_link_map)
 
             if sso_user_id:
 
@@ -76,9 +79,11 @@ class SSOTool(object):
 
                 session_info = self.server.sso_api.user.session.on_external_auth_succeeded(
                     cid,
-                    sec.sec_def,
+                    sec_type,
+                    sec_def_id,
+                    sec_def_username,
                     sso_user_id,
-                    sec.sec_def if sec.sec_def.sec_type == _basic_auth else wsgi_environ['HTTP_AUTHORIZATION'],
+                    '' if sec_type == _basic_auth else wsgi_environ['HTTP_AUTHORIZATION'],
                     current_app,
                     wsgi_environ['zato.http.remote_addr'],
                     wsgi_environ.get('HTTP_USER_AGENT'),
