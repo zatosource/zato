@@ -328,8 +328,7 @@ class RequestDispatcher(object):
 
                         # Try to log in the user to SSO by that account's external credentials.
                         self.server.sso_tool.on_external_auth(
-                            sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid, wsgi_environ,
-                            '' if sec.sec_def.sec_type == _basic_auth else wsgi_environ['HTTP_AUTHORIZATION'])
+                            sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid, wsgi_environ)
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
