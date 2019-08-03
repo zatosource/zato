@@ -81,11 +81,6 @@ _status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO
 
 # ################################################################################################################################
 
-# Definitions of these security types may be linked to SSO users and their rate limiting definitions
-_sec_def_sso_rate_limit = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
-
-# ################################################################################################################################
-
 status_response = {}
 for code, response in HTTP_RESPONSES.items():
     status_response[code] = '{} {}'.format(code, response)
@@ -236,8 +231,8 @@ class RequestDispatcher(object):
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
         _accept_any_internal=accept_any_internal, _rate_limit_type_http=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
-        _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format,
-        _exc_sep='*' * 80, _sec_def_sso_rate_limit=_sec_def_sso_rate_limit, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
+        _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format, _exc_sep='*' * 80,
+        _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -330,46 +325,10 @@ class RequestDispatcher(object):
 
                     # Not all sec_def types may have associated SSO users
                     if sec.sec_def != ZATO_NONE:
-                        if sec.sec_def.sec_type in _sec_def_sso_rate_limit:
 
-                            # Do we have an SSO user related to this sec_def?
-                            auth_id_link_map = self._sso_api_user.auth_id_link_map['zato.{}'.format(
-                                sec.sec_def.sec_type)] # type: dict
-
-                            sso_user_id = auth_id_link_map.get(sec.sec_def.id)
-
-                            if sso_user_id:
-
-                                # At this point we have an SSO user and we know that credentials
-                                # from the request were valid so we may check rate-limiting
-                                # first and then create or extend the user's associated SSO session.
-                                # In other words, we can already act as though the user was already
-                                # logged in because in fact he or she is logged in, just using
-                                # a security definition from sec_def.
-
-                                # Check rate-limiting
-                                self.server.rate_limiting.check_limit(cid, _rate_limit_type_sso_user,
-                                    sso_user_id, wsgi_environ['zato.http.remote_addr'], False)
-
-                                # Rate-limiting went fine, we can now create or extend
-                                # the person's SSO session linked to credentials from the request.
-
-                                current_app = wsgi_environ.get(self.server.sso_config.apps.http_header) or \
-                                    self.server.sso_config.apps.default
-
-                                session_info = self.server.sso_api.user.session.on_external_auth_succeeded(
-                                    cid,
-                                    sec.sec_def,
-                                    sso_user_id,
-                                    sec.sec_def if sec.sec_def.sec_type == _basic_auth else wsgi_environ['HTTP_AUTHORIZATION'],
-                                    current_app,
-                                    wsgi_environ['zato.http.remote_addr'],
-                                    wsgi_environ.get('HTTP_USER_AGENT'),
-                                )
-
-                                if session_info:
-                                    wsgi_environ['zato.http.response.headers']['X-Zato-SSO-UST'] = self.server.encrypt(
-                                        session_info.ust, _prefix='')
+                        # Try to log in the user to SSO by that account's external credentials.
+                        self.server.sso_tool.on_external_auth(
+                            sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid, wsgi_environ)
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
