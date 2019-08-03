@@ -17,9 +17,6 @@ from uuid import uuid4
 # Cryptography
 from cryptography.fernet import Fernet
 
-# Python 2/3 compatibility
-from past.builtins import unicode
-
 # Zato
 from zato.common import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
@@ -231,8 +228,7 @@ class LogIn(Service):
             # Checks if there is an SSO user related to that JWT account
             # and logs that person in to SSO or resumes his or her session.
             self.server.sso_tool.on_external_auth(
-                _sec_type, auth_info.sec_def_id, auth_info.sec_def_username, self.cid, self.wsgi_environ,
-                auth_info.token.encode('utf8') if isinstance(auth_info.token, unicode) else auth_info.token)
+                _sec_type, auth_info.sec_def_id, auth_info.sec_def_username, self.cid, self.wsgi_environ)
 
             self.response.payload = {'token': auth_info.token}
             self.response.headers['Authorization'] = auth_info.token

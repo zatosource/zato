@@ -351,7 +351,7 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def on_external_auth_succeeded(self, cid, sec_type, sec_def_id, sec_def_username, user_id, ext_session_id, current_app,
+    def on_external_auth_succeeded(self, cid, sec_type, sec_def_id, sec_def_username, user_id, current_app,
         remote_addr, user_agent=None, _utcnow=datetime.utcnow, _sha256=sha256,
         _sec_type_supported=(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT)):
         """ Invoked when a user succeeded in authentication via means external to default SSO credentials,

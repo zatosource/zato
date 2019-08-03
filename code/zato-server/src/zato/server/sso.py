@@ -43,7 +43,7 @@ class SSOTool(object):
         # type: (ParallelServer)
         self.server = server
 
-    def on_external_auth(self, sec_type, sec_def_id, sec_def_username, cid, wsgi_environ, ext_session_id,
+    def on_external_auth(self, sec_type, sec_def_id, sec_def_username, cid, wsgi_environ,
         _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
         # type: (str, int, str, str, dict, object, object)
 
@@ -78,7 +78,6 @@ class SSOTool(object):
                     sec_def_id,
                     sec_def_username,
                     sso_user_id,
-                    ext_session_id,
                     current_app,
                     wsgi_environ['zato.http.remote_addr'],
                     wsgi_environ.get('HTTP_USER_AGENT'),
