@@ -231,7 +231,8 @@ class RequestDispatcher(object):
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
         _accept_any_internal=accept_any_internal, _rate_limit_type_http=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
-        _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format, _exc_sep='*' * 80):
+        _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format, _exc_sep='*' * 80,
+        _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -327,7 +328,8 @@ class RequestDispatcher(object):
 
                         # Try to log in the user to SSO by that account's external credentials.
                         self.server.sso_tool.on_external_auth(
-                            sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid, wsgi_environ)
+                            sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid, wsgi_environ,
+                            '' if sec.sec_def.sec_type == _basic_auth else wsgi_environ['HTTP_AUTHORIZATION'])
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
