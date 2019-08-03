@@ -43,20 +43,15 @@ class SSOTool(object):
         # type: (ParallelServer)
         self.server = server
 
-    def on_external_auth(self, sec_type, sec_def_id, sec_def_username, cid, wsgi_environ,
+    def on_external_auth(self, sec_type, sec_def_id, sec_def_username, cid, wsgi_environ, ext_session_id,
         _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
         # type: (str, int, str, str, dict, object, object)
-
-        logger.warn('QQQ %s %s %s %s', sec_type, sec_def_id, sec_def_username, cid)
 
         if sec_type in _sec_def_sso_rate_limit:
 
             # Do we have an SSO user related to this sec_def?
             auth_id_link_map = self.server.sso_api.user.auth_id_link_map['zato.{}'.format(sec_type)] # type: dict
-
             sso_user_id = auth_id_link_map.get(sec_def_id)
-
-            logger.warn('EEE %s', auth_id_link_map)
 
             if sso_user_id:
 
@@ -83,7 +78,7 @@ class SSOTool(object):
                     sec_def_id,
                     sec_def_username,
                     sso_user_id,
-                    '' if sec_type == _basic_auth else wsgi_environ['HTTP_AUTHORIZATION'],
+                    ext_session_id,
                     current_app,
                     wsgi_environ['zato.http.remote_addr'],
                     wsgi_environ.get('HTTP_USER_AGENT'),
