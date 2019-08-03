@@ -351,9 +351,9 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def on_external_auth_succeeded(self, cid, sec_def, user_id, ext_session_id, current_app, remote_addr, user_agent=None,
-        _basic_auth=SEC_DEF_TYPE.BASIC_AUTH, _jwt=SEC_DEF_TYPE.JWT, _utcnow=datetime.utcnow,
-        _sha256=sha256):
+    def on_external_auth_succeeded(self, cid, sec_type, sec_def_id, sec_def_username, user_id, current_app,
+        remote_addr, user_agent=None, _utcnow=datetime.utcnow, _sha256=sha256,
+        _sec_type_supported=(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT)):
         """ Invoked when a user succeeded in authentication via means external to default SSO credentials,
         e.g. through Basic Auth or JWT. Creates an SSO session related to that event or renews an existing one.
         """
@@ -365,18 +365,15 @@ class SessionAPI(object):
         audit_pii.info(cid, 'session.on_external_auth_succeeded', extra={
             'current_app':current_app,
             'remote_addr':remote_addr,
-            'sec.sec_type': sec_def.sec_type,
-            'sec.id': sec_def.id,
-            'sec.username': sec_def.username,
+            'sec.sec_type': sec_type,
+            'sec.id': sec_def_id,
+            'sec.username': sec_def_username,
         })
 
-        if sec_def.sec_type == _basic_auth:
-            ext_session_id = '{}.{}'.format(sec_def.sec_type, sec_def.id)
-        elif sec_def.sec_type == _jwt:
-            # JWT tokens tend to be long so we store and hashes rather than raw values
-            ext_session_id = _sha256(ext_session_id).hexdigest()
+        if sec_type in _sec_type_supported:
+            ext_session_id = '{}.{}'.format(sec_type, sec_def_id)
         else:
-            raise NotImplementedError()
+            raise NotImplementedError('Unrecognized sec_type `{}`'.format(sec_type))
 
         existing_ust = None # type: unicode
 
