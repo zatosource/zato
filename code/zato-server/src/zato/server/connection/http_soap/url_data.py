@@ -90,18 +90,18 @@ class URLData(CyURLData, OAuthDataStore):
         super(URLData, self).__init__(channel_data)
         self.worker = worker # type: WorkerStore
         self.url_sec = url_sec
-        self.basic_auth_config = basic_auth_config
-        self.jwt_config = jwt_config
-        self.ntlm_config = ntlm_config
-        self.oauth_config = oauth_config
-        self.wss_config = wss_config
-        self.apikey_config = apikey_config
-        self.aws_config = aws_config
-        self.openstack_config = openstack_config
-        self.xpath_sec_config = xpath_sec_config
-        self.tls_channel_sec_config = tls_channel_sec_config
-        self.tls_key_cert_config = tls_key_cert_config
-        self.vault_conn_sec_config = vault_conn_sec_config
+        self.basic_auth_config = basic_auth_config # type: dict
+        self.jwt_config = jwt_config # type: dict
+        self.ntlm_config = ntlm_config # type: dict
+        self.oauth_config = oauth_config # type: dict
+        self.wss_config = wss_config # type: dict
+        self.apikey_config = apikey_config # type: dict
+        self.aws_config = aws_config # type: dict
+        self.openstack_config = openstack_config # type: dict
+        self.xpath_sec_config = xpath_sec_config # type: dict
+        self.tls_channel_sec_config = tls_channel_sec_config # type: dict
+        self.tls_key_cert_config = tls_key_cert_config # type: dict
+        self.vault_conn_sec_config = vault_conn_sec_config # type: dict
         self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
@@ -916,7 +916,7 @@ class URLData(CyURLData, OAuthDataStore):
         """ Same as jwt_get but returns information by definition ID.
         """
         with self.url_sec_lock:
-            return self._get_sec_def_by_id(self.basic_auth_config, def_id)
+            return self._get_sec_def_by_id(self.jwt_config, def_id)
 
     def on_broker_msg_SECURITY_JWT_CREATE(self, msg, *args):
         """ Creates a new JWT security definition.
