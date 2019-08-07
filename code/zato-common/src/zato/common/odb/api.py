@@ -21,6 +21,7 @@ from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
@@ -754,7 +755,13 @@ class ODBManager(SessionWrapper):
 
     def add_services(self, session, data):
         # type: (List[dict]) -> None
-        session.execute(ServiceTableInsert().values(data))
+        try:
+            session.execute(ServiceTableInsert().values(data))
+        except IntegrityError:
+            # This can be ignored because it is possible that there will be
+            # more than one server trying to insert rows related to services
+            # that are hot-deployed from web-admin or another source.
+            logger.debug('Ignoring IntegrityError with `%s`', data)
 
 # ################################################################################################################################
 
