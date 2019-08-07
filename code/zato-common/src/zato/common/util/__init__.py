@@ -1116,13 +1116,14 @@ def alter_column_nullable_false(table_name, column_name, default_value, column_t
 
 def validate_tls_from_payload(payload, is_key=False):
     with NamedTemporaryFile(prefix='zato-tls-') as tf:
+        payload = payload.encode('utf8') if isinstance(payload, unicode) else payload
         tf.write(payload)
         tf.flush()
 
         pem = open(tf.name).read()
 
         cert_info = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
-        cert_info = sorted(dict(iteritems(cert_info.get_subject().get_components())))
+        cert_info = sorted(cert_info.get_subject().get_components())
         cert_info = '; '.join('{}={}'.format(k, v) for k, v in cert_info)
 
         if is_key:
