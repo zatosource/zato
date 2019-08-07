@@ -10,12 +10,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from hashlib import sha256
 from http.client import BAD_REQUEST
 from traceback import format_exc
 from uuid import uuid4
 
 # Cryptography
 from cryptography.fernet import Fernet
+
+# Python 2/3 compatibility
+from past.builtins import unicode
 
 # Zato
 from zato.common import SEC_DEF_TYPE
@@ -217,24 +221,42 @@ class LogIn(Service):
     """
     class SimpleIO:
         input_required = 'username', 'password'
+        input_optional = 'totp_code'
         output_optional = 'token',
 
+# ################################################################################################################################
+
+    def _raise_unathorized(self):
+        raise Unauthorized(self.cid, 'Invalid credentials', 'jwt')
+
+# ################################################################################################################################
+
     def handle(self, _sec_type=SEC_DEF_TYPE.JWT):
-        auth_info = JWTBackend(self.kvdb, self.odb, self.server.decrypt, self.server.jwt_secret).authenticate(
-            self.request.input.username, self.server.decrypt(self.request.input.password))
 
-        if auth_info:
+        try:
+            auth_info = JWTBackend(self.kvdb, self.odb, self.server.decrypt, self.server.jwt_secret).authenticate(
+                self.request.input.username, self.server.decrypt(self.request.input.password))
 
-            # Checks if there is an SSO user related to that JWT account
-            # and logs that person in to SSO or resumes his or her session.
-            self.server.sso_tool.on_external_auth(
-                _sec_type, auth_info.sec_def_id, auth_info.sec_def_username, self.cid, self.wsgi_environ)
+            if auth_info:
 
-            self.response.payload = {'token': auth_info.token}
-            self.response.headers['Authorization'] = auth_info.token
+                token = auth_info.token
+                ext_session_id = sha256(token.encode('utf8') if isinstance(token, unicode) else token).hexdigest()
 
-        else:
-            raise Unauthorized(self.cid, 'Invalid username or password', 'jwt')
+                # Checks if there is an SSO user related to that JWT account
+                # and logs that person in to SSO or resumes his or her session.
+                self.server.sso_tool.on_external_auth(
+                    _sec_type, auth_info.sec_def_id, auth_info.sec_def_username, self.cid, self.wsgi_environ,
+                    ext_session_id, self.request.input.totp_code)
+
+                self.response.payload = {'token': auth_info.token}
+                self.response.headers['Authorization'] = auth_info.token
+
+            else:
+                self._raise_unathorized()
+
+        except Exception:
+            self.logger.warn(format_exc())
+            self._raise_unathorized()
 
 # ################################################################################################################################
 
