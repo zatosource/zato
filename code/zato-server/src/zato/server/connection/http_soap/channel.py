@@ -326,9 +326,12 @@ class RequestDispatcher(object):
                     # Not all sec_def types may have associated SSO users
                     if sec.sec_def != ZATO_NONE:
 
-                        # Try to log in the user to SSO by that account's external credentials.
-                        self.server.sso_tool.on_external_auth(
-                            sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid, wsgi_environ)
+                        if sec.sec_def.sec_type == _basic_auth:
+                            # Try to log in the user to SSO by that account's external credentials.
+                            self.server.sso_tool.on_external_auth(
+                                sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid, wsgi_environ)
+                        else:
+                            raise Exception('Unexpected sec_type `{}`'.format(sec.sec_def.sec_type))
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data

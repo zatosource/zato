@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from datetime import datetime, timedelta
 from json import dumps
-from hashlib import sha256
 from logging import getLogger
 from traceback import format_exc
 from uuid import uuid4
@@ -351,8 +350,8 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def on_external_auth_succeeded(self, cid, sec_type, sec_def_id, sec_def_username, user_id, current_app,
-        remote_addr, user_agent=None, _utcnow=datetime.utcnow, _sha256=sha256,
+    def on_external_auth_succeeded(self, cid, sec_type, sec_def_id, sec_def_username, user_id, ext_session_id, totp_code,
+        current_app, remote_addr, user_agent=None, _utcnow=datetime.utcnow,
         _sec_type_supported=(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT)):
         """ Invoked when a user succeeded in authentication via means external to default SSO credentials,
         e.g. through Basic Auth or JWT. Creates an SSO session related to that event or renews an existing one.
@@ -371,7 +370,9 @@ class SessionAPI(object):
         })
 
         if sec_type in _sec_type_supported:
-            ext_session_id = '{}.{}'.format(sec_type, sec_def_id)
+            _ext_session_id = '{}.{}'.format(sec_type, sec_def_id)
+            if sec_type == SEC_DEF_TYPE.JWT:
+                _ext_session_id += '.{}'.format(ext_session_id)
         else:
             raise NotImplementedError('Unrecognized sec_type `{}`'.format(sec_type))
 
@@ -379,7 +380,7 @@ class SessionAPI(object):
 
         # Check if there is already a session associated with this external one
         with closing(self.odb_session_func()) as session:
-            sso_session = get_session_by_ext_id(session, ext_session_id, _utcnow())
+            sso_session = get_session_by_ext_id(session, _ext_session_id, _utcnow())
             if sso_session:
                 existing_ust = sso_session.ust
 
@@ -395,8 +396,9 @@ class SessionAPI(object):
         else:
             ctx = LoginCtx(remote_addr, user_agent, False, False, {
                 'user_id': user_id,
-                'current_app': current_app
-            }, ext_session_id)
+                'current_app': current_app,
+                'totp_code': totp_code,
+            }, _ext_session_id)
             return self.login(ctx, is_logged_in_ext=True)
 
 # ################################################################################################################################
@@ -426,17 +428,17 @@ class SessionAPI(object):
                 if not self._check_credentials(ctx, user.password if user else _dummy_password):
                     raise ValidationError(status_code.auth.not_allowed, False)
 
-                # Check input TOTP key if two-factor authentication is enabled
-                if user.is_totp_enabled:
-                    input_totp_code = ctx.input.get('totp_code')
-                    if not input_totp_code:
-                        logger.warn('Missing TOTP code; user `%s`', user.username)
+            # Check input TOTP key if two-factor authentication is enabled
+            if user.is_totp_enabled:
+                input_totp_code = ctx.input.get('totp_code')
+                if not input_totp_code:
+                    logger.warn('Missing TOTP code; user `%s`', user.username)
+                    raise ValidationError(status_code.auth.not_allowed, False)
+                else:
+                    user_totp_key = self.decrypt_func(user.totp_key)
+                    if not CryptoManager.verify_totp_code(user_totp_key, input_totp_code):
+                        logger.warn('Invalid TOTP code; user `%s`', user.username)
                         raise ValidationError(status_code.auth.not_allowed, False)
-                    else:
-                        user_totp_key = self.decrypt_func(user.totp_key)
-                        if not CryptoManager.verify_totp_code(user_totp_key, input_totp_code):
-                            logger.warn('Invalid TOTP code; user `%s`', user.username)
-                            raise ValidationError(status_code.auth.not_allowed, False)
 
             # It must be possible to log into the application requested (CRM above)
             self._check_login_to_app_allowed(ctx)
