@@ -11,6 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from datetime import datetime
 from http.client import FORBIDDEN, NOT_FOUND, OK
+from logging import getLogger
+from traceback import format_exc
 
 # Bunch
 from bunch import Bunch
@@ -22,6 +24,10 @@ from rapidjson import dumps
 from zato.common import DATA_FORMAT
 from zato.common.util import make_repr, new_cid
 from zato.server.service.reqresp import SimpleIOPayload
+
+# ################################################################################################################################
+
+logger = getLogger('zato')
 
 # ################################################################################################################################
 
@@ -121,19 +127,24 @@ class ServerMessage(object):
         in WebSockets (opcode >= 0x07) must have at most 125 bytes.
         """
         msg = {'meta': self.meta}
-        if self.data:
-            if isinstance(self.data, SimpleIOPayload):
-                data = self.data.getvalue(serialize=False)
-                keys = list(data.keys())
-                if len(keys) != 1:
-                    raise ValueError('Unexpected data `{}`'.format(data))
+
+        try:
+            if self.data:
+                if isinstance(self.data, SimpleIOPayload):
+                    data = self.data.getvalue(serialize=False)
+                    keys = list(data.keys())
+                    if len(keys) != 1:
+                        raise ValueError('Unexpected data `{}`'.format(data))
+                    else:
+                        response_key = keys[0]
+                        data = data[response_key]
                 else:
-                    response_key = keys[0]
-                    data = data[response_key]
-            else:
-                data = self.data
-            msg['data'] = data
-        return dumps(msg)
+                    data = self.data
+                msg['data'] = data
+            return dumps(msg)
+        except Exception:
+            logger.warn('Exception while serializing message `%r`, e:`%s`', msg, format_exc())
+            raise
 
 # ################################################################################################################################
 
