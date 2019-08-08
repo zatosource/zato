@@ -1660,6 +1660,9 @@ class PubSub(object):
         from_service = kwargs.get('service') # type: Service
         ext_client_id = from_service.name if from_service else kwargs.get('ext_client_id')
 
+        # The first one is used if name is a service, the other one if it is a regular topic
+        correl_id = kwargs.get('cid') or kwargs.get('correl_id')
+
         has_gd = kwargs.get('has_gd')
         endpoint_id = kwargs.get('endpoint_id') or self.server.default_internal_pubsub_endpoint_id
 
@@ -1698,7 +1701,6 @@ class PubSub(object):
         priority = kwargs.get('priority')
         expiration = kwargs.get('expiration')
         mime_type = kwargs.get('mime_type')
-        correl_id = kwargs.get('correl_id')
         in_reply_to = kwargs.get('in_reply_to')
         ext_pub_time = kwargs.get('ext_pub_time')
         reply_to_sk = kwargs.get('reply_to_sk')
