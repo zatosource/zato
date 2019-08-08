@@ -35,7 +35,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.util import new_cid, spawn_greenlet
+from zato.common.util import fs_safe_name, new_cid, spawn_greenlet
 from zato.common.util.event import EventLog
 from zato.common.util.hook import HookTool
 from zato.common.util.python_ import get_current_stack
@@ -1637,6 +1637,8 @@ class PubSub(object):
         """ Publishes a new message to input name, which may point either to a topic or service.
         POST /zato/pubsub/topic/{topic_name}
         """
+        # For later use
+        endpoint_id = kwargs.get('endpoint_id') or self.server.default_internal_pubsub_endpoint_id
 
         # If input name is a topic, let us just use it
         if self.has_topic_by_name(name):
@@ -1649,13 +1651,23 @@ class PubSub(object):
             if not self.server.service_store.has_service(name):
                 raise ValueError('No such service `{}`'.format(name))
 
-            # .. otherwise, we create a topic for that service to receive messages from
-            # but only if the publisher is allowed to publish messages to that service.
-            #if not self.is_allowed_pub_topic_by_endpoint_id(name):
-            #    pass
+            # At this point we know this is a service so we may build the topic's full name,
+            # taking into account the fact that a service's name is arbitrary string
+            # so we need to make it filesystem-safe.
+            topic_name = '/zato/s/to/{}'.format(fs_safe_name(name))
 
-            else:
-                topic_name = '/zato/s/to/{}'.format(name)
+            # We continue only if the publisher is allowed to publish messages to that service.
+            if not self.is_allowed_pub_topic_by_endpoint_id(topic_name, endpoint_id):
+                msg = 'No pub pattern matched service `{}` and endpoint `{}` (#1)'.format(
+                    name, self.get_endpoint_by_id(endpoint_id).name)
+                raise ValueError(msg)
+
+            # We create a topic for that service to receive messages from unless it already exists
+            if not self.has_topic_by_name(topic_name):
+                self._create_topic_for_service(self, name, topic_name)
+
+        logger.warn('BBB RETURNING')
+        return
 
         data = kwargs.get('data') or ''
         data_list = kwargs.get('data_list') or []
@@ -1668,14 +1680,13 @@ class PubSub(object):
         in_reply_to = kwargs.get('in_reply_to')
         ext_client_id = kwargs.get('ext_client_id')
         ext_pub_time = kwargs.get('ext_pub_time')
-        endpoint_id = kwargs.get('endpoint_id')
         reply_to_sk = kwargs.get('reply_to_sk')
         deliver_to_sk = kwargs.get('deliver_to_sk')
         user_ctx = kwargs.get('user_ctx')
         zato_ctx = kwargs.get('zato_ctx')
 
         response = self.invoke_service('zato.pubsub.publish.publish', {
-            'topic_name': name,
+            'topic_name': topic_name,
             'data': data,
             'data_list': data_list,
             'msg_id': msg_id,
@@ -1687,7 +1698,7 @@ class PubSub(object):
             'in_reply_to': in_reply_to,
             'ext_client_id': ext_client_id,
             'ext_pub_time': ext_pub_time,
-            'endpoint_id': endpoint_id or self.server.default_internal_pubsub_endpoint_id,
+            'endpoint_id': endpoint_id,
             'reply_to_sk': reply_to_sk,
             'deliver_to_sk': deliver_to_sk,
             'user_ctx': user_ctx,
@@ -1887,3 +1898,51 @@ class PubSub(object):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+'''
+# -*- coding: utf-8 -*-
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+from contextlib import closing
+from logging import getLogger
+
+# Zato
+from zato.common.odb.model import SecurityBase
+from zato.server.service import Service
+from zato.sso.odb.query import _user_basic_columns, SSOUser, SSOLinkedAuth
+
+# ################################################################################################################################
+
+# Type checking
+if 0:
+    from zato.server.pubsub import PubSub
+
+# ################################################################################################################################
+
+logger = getLogger('zato')
+
+# ################################################################################################################################
+
+def _create_topic_for_service(self, service_name, topic_name):
+    # type: (PubSub, str, str)
+    logger.warn('AAA %s %s', service_name, self.get_topics())
+
+# ################################################################################################################################
+
+class MyTarget(Service):
+    def handle(self):
+        self.logger.warn('WWW message received %s', self.request.raw_request)
+
+# ################################################################################################################################
+
+class MyService(Service):
+    def handle(self):
+
+        self.pubsub._create_topic_for_service = _create_topic_for_service
+
+        self.pubsub.publish(MyTarget.get_name(), 'My message')
+
+# ################################################################################################################################
+'''
