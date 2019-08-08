@@ -305,6 +305,8 @@ class Publish(AdminService):
 
         # Not allowed, raise an exception in that case
         if not pub_pattern_matched:
+            self.logger.warn('No pub pattern matched topic `%s` and endpoint `%s`',
+                input.topic_name, self.pubsub.get_endpoint_by_id(endpoint_id).name)
             raise Forbidden(self.cid)
 
         # Alright, we are in

@@ -28,7 +28,7 @@ from past.builtins import basestring, unicode
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
-from zato.common.exception import BadRequest
+from zato.common.exception import BadRequest, Forbidden
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_delivery_server_for_sub_key, get_sql_messages_by_msg_id_list as _get_sql_messages_by_msg_id_list, \
@@ -43,6 +43,12 @@ from zato.common.util.time_ import utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
 from zato.server.pubsub.model import Endpoint, EventType, HookCtx, Subscription, SubKeyServer, Topic
 from zato.server.pubsub.sync import InRAMSync
+
+# ################################################################################################################################
+
+# Type checking
+if 0:
+    from zato.server.base.parallel import ParallelServer
 
 # ################################################################################################################################
 
@@ -130,6 +136,8 @@ def get_expiration(cid, input, default_expiration=_default_expiration):
 class PubSub(object):
 
     def __init__(self, cluster_id, server, broker_client=None):
+        # type: (int, ParallelServer, object)
+
         self.cluster_id = cluster_id
         self.server = server
         self.broker_client = broker_client
@@ -334,12 +342,14 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_endpoint_by_id(self, endpoint_id):
+        # type: (int) -> Endpoint
         with self.lock:
             return self.endpoints[endpoint_id]
 
 # ################################################################################################################################
 
     def get_endpoint_by_name(self, endpoint_name):
+        # type: (str) -> Endpoint
         with self.lock:
             for endpoint in self.endpoints.values():
                 if endpoint.name == endpoint_name:
@@ -350,6 +360,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_endpoint_id_by_sec_id(self, sec_id):
+        # type: (int) -> int
         with self.lock:
             return self.sec_id_to_endpoint_id[sec_id]
 
@@ -1622,10 +1633,30 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def publish(self, topic_name, *args, **kwargs):
-        """ Publishes a new message to input topic_name.
+    def publish(self, name, *args, **kwargs):
+        """ Publishes a new message to input name, which may point either to a topic or service.
         POST /zato/pubsub/topic/{topic_name}
         """
+
+        # If input name is a topic, let us just use it
+        if self.has_topic_by_name(name):
+            topic_name = name
+
+        # Otherwise, if there is no topic by input name, it may be actually a service name ..
+        else:
+
+            # .. but if there is no such service, we give up.
+            if not self.server.service_store.has_service(name):
+                raise ValueError('No such service `{}`'.format(name))
+
+            # .. otherwise, we create a topic for that service to receive messages from
+            # but only if the publisher is allowed to publish messages to that service.
+            #if not self.is_allowed_pub_topic_by_endpoint_id(name):
+            #    pass
+
+            else:
+                topic_name = '/zato/s/to/{}'.format(name)
+
         data = kwargs.get('data') or ''
         data_list = kwargs.get('data_list') or []
         msg_id = kwargs.get('msg_id') or ''
@@ -1644,7 +1675,7 @@ class PubSub(object):
         zato_ctx = kwargs.get('zato_ctx')
 
         response = self.invoke_service('zato.pubsub.publish.publish', {
-            'topic_name': topic_name,
+            'topic_name': name,
             'data': data,
             'data_list': data_list,
             'msg_id': msg_id,
