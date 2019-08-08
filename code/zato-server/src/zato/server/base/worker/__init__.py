@@ -871,7 +871,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.pubsub._subscribe(config)
 
         for value in self.worker_config.pubsub_topic.values():
-            self.pubsub.create_topic(bunchify(value['config']))
+            self.pubsub.create_topic_object(bunchify(value['config']))
 
         self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.AMQP.id] = None # Not used for now
         self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.REST.id] = self.worker_config.out_plain_http.get_by_id

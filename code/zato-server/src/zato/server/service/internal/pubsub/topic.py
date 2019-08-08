@@ -114,8 +114,9 @@ def pre_opaque_attrs_hook(self, input, instance, attrs):
     # type: (Service, Bunch, PubSubTopic, Bunch)
 
     if not input.get('hook_service_name'):
-        hook_service_name = self.server.service_store.get_service_name_by_id(input.hook_service_id)
-        input.hook_service_name = hook_service_name
+        if input.hook_service_id:
+            hook_service_name = self.server.service_store.get_service_name_by_id(input.hook_service_id)
+            input.hook_service_name = hook_service_name
 
 # ################################################################################################################################
 

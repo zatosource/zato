@@ -28,7 +28,7 @@ from past.builtins import basestring, unicode
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB, SEARCH
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
-from zato.common.exception import BadRequest, Forbidden
+from zato.common.exception import BadRequest
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_delivery_server_for_sub_key, get_sql_messages_by_msg_id_list as _get_sql_messages_by_msg_id_list, \
@@ -49,6 +49,10 @@ from zato.server.pubsub.sync import InRAMSync
 # Type checking
 if 0:
     from zato.server.base.parallel import ParallelServer
+    from zato.server.service import Service
+
+    ParallelServer = ParallelServer
+    Service = Service
 
 # ################################################################################################################################
 
@@ -86,6 +90,10 @@ _sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
 
 _update_attrs = ('data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_reply_to', 'mime_type',
     'expiration', 'expiration_time')
+
+# ################################################################################################################################
+
+_ps_default = PUBSUB.DEFAULT
 
 # ################################################################################################################################
 
@@ -657,18 +665,29 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _create_topic(self, config):
+    def _create_topic_object(self, config):
         self._set_topic_config_hook_data(config)
         config.meta_store_frequency = self.topic_meta_store_frequency
 
-        self.topics[config.id] = Topic(config, self.server.name, self.server.pid)
+        topic = Topic(config, self.server.name, self.server.pid)
+        self.topics[config.id] = topic
         self.topic_name_to_id[config.name] = config.id
+
+        logger.info('Created topic object `%s` (id:%s) on server `%s` (pid:%s)', topic.name, topic.id,
+            topic.server_name, topic.server_pid)
 
 # ################################################################################################################################
 
-    def create_topic(self, config):
+    def create_topic_object(self, config):
         with self.lock:
-            self._create_topic(config)
+            self._create_topic_object(config)
+
+# ################################################################################################################################
+
+    def create_topic_for_service(self, service_name, topic_name):
+        # type: (PubSub, str, str)
+        self.create_topic(topic_name)
+        logger.info('Created topic `%s` for service `%s`', topic_name, service_name)
 
 # ################################################################################################################################
 
@@ -690,7 +709,7 @@ class PubSub(object):
         with self.lock:
             subscriptions_by_topic = self.subscriptions_by_topic.pop(del_name, [])
             self._delete_topic(config.id, del_name)
-            self._create_topic(config)
+            self._create_topic_object(config)
             self.subscriptions_by_topic[config.name] = subscriptions_by_topic
 
 # ################################################################################################################################
@@ -1638,6 +1657,10 @@ class PubSub(object):
         POST /zato/pubsub/topic/{topic_name}
         """
         # For later use
+        from_service = kwargs.get('service') # type: Service
+        ext_client_id = from_service.name if from_service else kwargs.get('ext_client_id')
+
+        has_gd = kwargs.get('has_gd')
         endpoint_id = kwargs.get('endpoint_id') or self.server.default_internal_pubsub_endpoint_id
 
         # If input name is a topic, let us just use it
@@ -1664,21 +1687,19 @@ class PubSub(object):
 
             # We create a topic for that service to receive messages from unless it already exists
             if not self.has_topic_by_name(topic_name):
-                self._create_topic_for_service(self, name, topic_name)
+                self.create_topic_for_service(name, topic_name)
 
-        logger.warn('BBB RETURNING')
-        return
+            # Messages published to services always use GD
+            has_gd = True
 
         data = kwargs.get('data') or ''
         data_list = kwargs.get('data_list') or []
         msg_id = kwargs.get('msg_id') or ''
-        has_gd = kwargs.get('has_gd')
         priority = kwargs.get('priority')
         expiration = kwargs.get('expiration')
         mime_type = kwargs.get('mime_type')
         correl_id = kwargs.get('correl_id')
         in_reply_to = kwargs.get('in_reply_to')
-        ext_client_id = kwargs.get('ext_client_id')
         ext_pub_time = kwargs.get('ext_pub_time')
         reply_to_sk = kwargs.get('reply_to_sk')
         deliver_to_sk = kwargs.get('deliver_to_sk')
@@ -1899,6 +1920,27 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
+    def create_topic(self, name, has_gd=False, accept_on_no_sub=True, is_active=True, is_api_sub_allowed=True, hook_service_id=None,
+        task_sync_interval=_ps_default.TASK_SYNC_INTERVAL, task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL,
+        depth_check_freq=_ps_default.DEPTH_CHECK_FREQ):
+        # type: (PubSub)
+
+        self.invoke_service('zato.pubsub.topic.create', {
+            'cluster_id': self.server.cluster_id,
+            'name': name,
+            'is_active': is_active,
+            'is_api_sub_allowed': is_api_sub_allowed,
+            'has_gd': has_gd,
+            'hook_service_id': hook_service_id,
+            'on_no_subs_pub': PUBSUB.ON_NO_SUBS_PUB.ACCEPT.id if accept_on_no_sub else PUBSUB.ON_NO_SUBS_PUB.DROP.id,
+            'task_sync_interval': task_sync_interval,
+            'task_delivery_interval': task_delivery_interval,
+            'depth_check_freq': depth_check_freq,
+        })
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 '''
 # -*- coding: utf-8 -*-
 
@@ -1909,6 +1951,7 @@ from contextlib import closing
 from logging import getLogger
 
 # Zato
+from zato.common import PUBSUB
 from zato.common.odb.model import SecurityBase
 from zato.server.service import Service
 from zato.sso.odb.query import _user_basic_columns, SSOUser, SSOLinkedAuth
@@ -1925,12 +1968,6 @@ logger = getLogger('zato')
 
 # ################################################################################################################################
 
-def _create_topic_for_service(self, service_name, topic_name):
-    # type: (PubSub, str, str)
-    logger.warn('AAA %s %s', service_name, self.get_topics())
-
-# ################################################################################################################################
-
 class MyTarget(Service):
     def handle(self):
         self.logger.warn('WWW message received %s', self.request.raw_request)
@@ -1940,9 +1977,10 @@ class MyTarget(Service):
 class MyService(Service):
     def handle(self):
 
-        self.pubsub._create_topic_for_service = _create_topic_for_service
+        #self.pubsub._create_topic_for_service = _create_topic_for_service
+        #self.pubsub.create_topic = create_topic
 
-        self.pubsub.publish(MyTarget.get_name(), 'My message')
+        self.pubsub.publish(MyTarget.get_name(), data='My message', service=self)
 
 # ################################################################################################################################
 '''
