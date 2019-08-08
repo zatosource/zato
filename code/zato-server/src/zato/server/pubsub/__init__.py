@@ -1680,7 +1680,7 @@ class PubSub(object):
             # At this point we know this is a service so we may build the topic's full name,
             # taking into account the fact that a service's name is arbitrary string
             # so we need to make it filesystem-safe.
-            topic_name = '/zato/s/to/{}'.format(fs_safe_name(name))
+            topic_name = PUBSUB.TOPIC_PATTERN.TO_SERVICE.format(fs_safe_name(name))
 
             # We continue only if the publisher is allowed to publish messages to that service.
             if not self.is_allowed_pub_topic_by_endpoint_id(topic_name, endpoint_id):
@@ -1691,6 +1691,8 @@ class PubSub(object):
             # We create a topic for that service to receive messages from unless it already exists
             if not self.has_topic_by_name(topic_name):
                 self.create_topic_for_service(name, topic_name)
+
+            # Subscribe the default service delivery endpoint to messages from this topic
 
             # Messages published to services always use GD
             has_gd = True

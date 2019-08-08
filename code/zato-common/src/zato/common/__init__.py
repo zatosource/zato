@@ -911,6 +911,13 @@ class PUBSUB:
         ON_NO_SUBS_PUB = 'accept'
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
 
+        class SERVICE_SUBSCRIBER:
+            NAME = 'zato.pubsub.service.subscriber'
+            TOPICS_ALLOWED = 'sub=/zato/s/to/*'
+
+    class TOPIC_PATTERN:
+        TO_SERVICE = '/zato/s/to/{}'
+
     class QUEUE_TYPE:
         STAGING = 'staging'
         CURRENT = 'current'
