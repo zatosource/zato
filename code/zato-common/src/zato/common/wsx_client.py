@@ -13,7 +13,6 @@ import logging
 import subprocess
 from datetime import datetime, timedelta
 from json import loads
-from socket import error as SocketError
 from traceback import format_exc
 from uuid import uuid4
 
@@ -363,7 +362,7 @@ class Client(object):
         while needs_connect and now < until:
             try:
                 self.conn.connect()
-            except SocketError as e:
+            except Exception as e:
 
                 if use_warn:
                     log_func = logger.warn
@@ -374,7 +373,7 @@ class Client(object):
                     else:
                         log_func = logger.debug
 
-                log_func('Socket error caught `%s` while connecting to WSX `%s`', e, self.config.address)
+                log_func('Exception caught `%s` while connecting to WSX `%s (%s)`', e, self.config.address, format_exc())
                 sleep(2)
                 now = datetime.utcnow()
             else:
