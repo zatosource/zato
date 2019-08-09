@@ -1006,6 +1006,7 @@ class _PUBSUB_SUBSCRIBE_CLASS:
     classes = {
         PUBSUB.ENDPOINT_TYPE.AMQP.id: 'zato.pubsub.subscription.subscribe-amqp',
         PUBSUB.ENDPOINT_TYPE.REST.id: 'zato.pubsub.subscription.subscribe-rest',
+        PUBSUB.ENDPOINT_TYPE.SERVICE.id: 'zato.pubsub.subscription.subscribe-service',
         PUBSUB.ENDPOINT_TYPE.SOAP.id: 'zato.pubsub.subscription.subscribe-soap',
         PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: 'zato.pubsub.subscription.create-wsx-subscription',
     }

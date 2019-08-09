@@ -561,6 +561,16 @@ class SubscribeAMQP(SubscribeServiceImpl):
 
 # ################################################################################################################################
 
+class SubscribeService(SubscribeServiceImpl):
+    """ Handles pub/sub subscriptions for Zato services.
+    """
+    endpoint_type = PUBSUB.ENDPOINT_TYPE.SERVICE.id
+
+    def _handle_subscription(self, ctx):
+        self._subscribe_impl(ctx)
+
+# ################################################################################################################################
+
 class Create(_Subscribe):
     """ Creates a new pub/sub subscription by invoking a subscription service specific to input endpoint_type.
     """
