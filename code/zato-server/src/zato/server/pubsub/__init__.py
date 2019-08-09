@@ -1692,10 +1692,11 @@ class PubSub(object):
             if not self.has_topic_by_name(topic_name):
                 self.create_topic_for_service(name, topic_name)
 
-            # Subscribe the default service delivery endpoint to messages from this topic
-
             # Messages published to services always use GD
             has_gd = True
+
+            # Subscribe the default service delivery endpoint to messages from this topic
+            self.subscribe(topic_name, endpoint_name=PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME)
 
         data = kwargs.get('data') or ''
         data_list = kwargs.get('data_list') or []
