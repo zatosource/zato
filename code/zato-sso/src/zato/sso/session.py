@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from datetime import datetime, timedelta
+from hashlib import sha256
 from json import dumps
 from logging import getLogger
 from traceback import format_exc
@@ -372,7 +373,11 @@ class SessionAPI(object):
         if sec_type in _sec_type_supported:
             _ext_session_id = '{}.{}'.format(sec_type, sec_def_id)
             if sec_type == SEC_DEF_TYPE.JWT:
-                _ext_session_id += '.{}'.format(ext_session_id)
+
+                if isinstance(ext_session_id, unicode):
+                    ext_session_id = ext_session_id.encode('utf8')
+
+                _ext_session_id += '.{}'.format(sha256(ext_session_id).hexdigest())
         else:
             raise NotImplementedError('Unrecognized sec_type `{}`'.format(sec_type))
 

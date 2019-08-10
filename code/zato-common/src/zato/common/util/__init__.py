@@ -28,7 +28,7 @@ import sys
 import unicodedata
 from ast import literal_eval
 from base64 import b64decode
-from binascii import hexlify
+from binascii import hexlify as binascii_hexlify
 from contextlib import closing
 from datetime import datetime
 from glob import glob
@@ -382,7 +382,7 @@ def tech_account_password(password_clear, salt):
 
 # ################################################################################################################################
 
-def new_cid(bytes=12, _random_bytes=random_bytes, _hexlify=hexlify):
+def new_cid(bytes=12, _random_bytes=random_bytes, _hexlify=binascii_hexlify):
     """ Returns a new 96-bit correlation identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
@@ -857,10 +857,11 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
 
 # ################################################################################################################################
 
-def hexlify(item):
+def hexlify(item, _hexlify=binascii_hexlify):
     """ Returns a nice hex version of a string given on input.
     """
-    return ' '.join([elem1+elem2 for (elem1, elem2) in grouper(2, item.encode('hex'))])
+    item = item if isinstance(item, unicode) else item.decode('utf8')
+    return ' '.join(hex(ord(elem)) for elem in item)
 
 # ################################################################################################################################
 
