@@ -316,7 +316,7 @@ class URLData(CyURLData, OAuthDataStore):
             else:
                 return False
 
-        return True
+        return result
 
 # ################################################################################################################################
 
@@ -633,7 +633,8 @@ class URLData(CyURLData, OAuthDataStore):
         sec_def, sec_def_type = sec.sec_def, sec.sec_def['sec_type']
         handler_name = '_handle_security_%s' % sec_def_type.replace('-', '_')
 
-        if not getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ, post_data, enforce_auth):
+        auth_result = getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ, post_data, enforce_auth)
+        if not auth_result:
             return False
 
         # Ok, we now know that the credentials are valid so we can check RBAC permissions if need be.
@@ -650,7 +651,7 @@ class URLData(CyURLData, OAuthDataStore):
 
         self.enrich_with_sec_data(wsgi_environ, sec_def, sec_def_type)
 
-        return True
+        return auth_result
 
 # ################################################################################################################################
 
