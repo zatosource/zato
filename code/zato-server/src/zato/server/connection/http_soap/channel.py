@@ -81,6 +81,12 @@ _status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO
 
 # ################################################################################################################################
 
+_basic_auth = SEC_DEF_TYPE.BASIC_AUTH
+_jwt = SEC_DEF_TYPE.JWT
+_sso_ext_auth = _basic_auth, _jwt
+
+# ################################################################################################################################
+
 status_response = {}
 for code, response in HTTP_RESPONSES.items():
     status_response[code] = '{} {}'.format(code, response)
@@ -232,7 +238,7 @@ class RequestDispatcher(object):
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
         _accept_any_internal=accept_any_internal, _rate_limit_type_http=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
         _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format, _exc_sep='*' * 80,
-        _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
+        _jwt=_jwt, _sso_ext_auth=_sso_ext_auth):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -306,7 +312,7 @@ class RequestDispatcher(object):
                                 cid, payload, channel_item.data_format, channel_item.transport)
 
                     # Will raise an exception on any security violation
-                    self.url_data.check_security(
+                    auth_result = self.url_data.check_security(
                         sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
 
                 # Check rate limiting now - this could not have been done earlier because we wanted
@@ -326,10 +332,18 @@ class RequestDispatcher(object):
                     # Not all sec_def types may have associated SSO users
                     if sec.sec_def != ZATO_NONE:
 
-                        if sec.sec_def.sec_type == _basic_auth:
+                        if sec.sec_def.sec_type in _sso_ext_auth:
+
+                            # JWT comes with external sessions whereas Basic Auth does not
+                            if sec.sec_def.sec_type == _jwt:
+                                ext_session_id = auth_result.raw_token
+                            else:
+                                ext_session_id = None
+
                             # Try to log in the user to SSO by that account's external credentials.
                             self.server.sso_tool.on_external_auth(
-                                sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid, wsgi_environ)
+                                sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid,
+                                wsgi_environ, ext_session_id)
                         else:
                             raise Exception('Unexpected sec_type `{}`'.format(sec.sec_def.sec_type))
 

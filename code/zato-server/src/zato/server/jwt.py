@@ -126,7 +126,7 @@ class JWT(object):
 
                 # Renew the token expiration
                 self.cache.put(token, token, token_data.ttl, async=True)
-                return Bunch(valid=True, token=token_data)
+                return Bunch(valid=True, token=token_data, raw_token=token)
 
             else:
                 return Bunch(valid=False, message='Unexpected user for token found')
