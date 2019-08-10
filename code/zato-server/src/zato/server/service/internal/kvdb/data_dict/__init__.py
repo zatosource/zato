@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Python 2/3 compatibility
+from past.builtins import unicode
 from future.utils import iteritems
 
 # Zato
@@ -45,7 +46,8 @@ class DataDictService(AdminService):
         """
         if not self._dict_items:
             for id, item in iteritems(self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM)):
-                system, key, value = item.decode('utf-8').split(KVDB.SEPARATOR)
+                item = item if isinstance(item, unicode) else item.decode('utf8')
+                system, key, value = item.split(KVDB.SEPARATOR)
                 self._dict_items.append({'id':str(id), 'system':system, 'key':key, 'value':value})
             self._dict_items = multikeysort(self._dict_items, ['system', 'key', 'value'])
 
@@ -64,7 +66,12 @@ class DataDictService(AdminService):
         """
         for item in self.server.kvdb.conn.keys(KVDB.TRANSLATION + KVDB.SEPARATOR + '*'):
             vals = self.server.kvdb.conn.hgetall(item)
-            item = item.decode('utf-8').split(KVDB.SEPARATOR)
+            item = item if isinstance(item, unicode) else item.decode('utf8')
+            item = item.split(KVDB.SEPARATOR)
+
+            value2 = vals.get('value2')
+            value2 = value2 if isinstance(value2, unicode) else value2.decode('utf-8')
+
             yield {'system1':item[1], 'key1':item[2], 'value1':item[3], 'system2':item[4],
-                   'key2':item[5], 'id':str(vals.get('id')), 'value2':vals.get('value2').decode('utf-8'),
+                   'key2':item[5], 'id':str(vals.get('id')), 'value2':value2,
                    'id1':str(vals.get('id1')), 'id2':str(vals.get('id2')),}
