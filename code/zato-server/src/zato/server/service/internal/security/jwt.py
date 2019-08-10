@@ -10,16 +10,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from hashlib import sha256
 from http.client import BAD_REQUEST
 from traceback import format_exc
 from uuid import uuid4
 
 # Cryptography
 from cryptography.fernet import Fernet
-
-# Python 2/3 compatibility
-from past.builtins import unicode
 
 # Zato
 from zato.common import SEC_DEF_TYPE
@@ -240,13 +236,12 @@ class LogIn(Service):
             if auth_info:
 
                 token = auth_info.token
-                ext_session_id = sha256(token.encode('utf8') if isinstance(token, unicode) else token).hexdigest()
 
                 # Checks if there is an SSO user related to that JWT account
                 # and logs that person in to SSO or resumes his or her session.
                 self.server.sso_tool.on_external_auth(
                     _sec_type, auth_info.sec_def_id, auth_info.sec_def_username, self.cid, self.wsgi_environ,
-                    ext_session_id, self.request.input.totp_code)
+                    token, self.request.input.totp_code)
 
                 self.response.payload = {'token': auth_info.token}
                 self.response.headers['Authorization'] = auth_info.token
