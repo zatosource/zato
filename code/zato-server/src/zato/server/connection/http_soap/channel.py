@@ -580,14 +580,14 @@ class RequestHandler(object):
 
 # ################################################################################################################################
 
-    def set_response_in_cache(self, channel_item, key, response, _dumps=dumps):
+    def set_response_in_cache(self, channel_item, key, response, _dumps=dumps, _py3=PY3):
         """ Caches responses from this channel's invocation for as long as the cache is configured to keep it.
         """
         self.server.set_in_cache(channel_item['cache_type'], channel_item['cache_name'], key, _dumps({
             'payload': response.payload,
             'content_type': response.content_type,
             'headers': response.headers,
-            'status_code': response.status_code,
+            'status_code': response.status_code.value if _py3 else response.status_code,
         }))
 
 # ################################################################################################################################
