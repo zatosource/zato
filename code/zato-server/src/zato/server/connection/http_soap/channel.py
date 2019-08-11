@@ -561,7 +561,7 @@ class RequestHandler(object):
         else:
             query_string = str(sorted(channel_params.items()))
             data = '%s%s%s%s' % (wsgi_environ['REQUEST_METHOD'], wsgi_environ['PATH_INFO'], query_string, raw_request)
-            hash_value = _sha256(data).hexdigest()
+            hash_value = _sha256(data.encode('utf8')).hexdigest()
             hash_value = '-'.join(split_re(hash_value))
 
         # No matter if hash value is default or from service, always prefix it with channel's type and ID
