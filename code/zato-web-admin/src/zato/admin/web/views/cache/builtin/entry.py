@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from base64 import b64decode
+
 # Bunch
 from bunch import bunchify
 
@@ -28,7 +31,7 @@ def _create_edit(req, action, cache_id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_K
     if action == 'create':
         form = CreateForm()
     else:
-        key = req.GET['key'].decode('hex')
+        key = b64decode(req.GET['key'])
         entry = bunchify(req.zato.client.invoke('zato.cache.builtin.entry.get', {
                 'cluster_id': req.zato.cluster_id,
                 'cache_id': cache_id,
