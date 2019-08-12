@@ -594,7 +594,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _subscribe(self, config):
+    def create_subscription_object(self, config):
         """ Low-level implementation of self.subscribe. Must be called with self.lock held.
         """
         with self.lock:

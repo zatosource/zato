@@ -868,7 +868,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for value in self.worker_config.pubsub_subscription.values():
             config = bunchify(value['config'])
             config.add_subscription = True # We don't create WSX subscriptions here so it is always True
-            self.pubsub._subscribe(config)
+            self.pubsub.create_subscription_object(config)
 
         for value in self.worker_config.pubsub_topic.values():
             self.pubsub.create_topic_object(bunchify(value['config']))
