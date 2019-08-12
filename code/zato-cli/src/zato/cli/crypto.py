@@ -35,6 +35,7 @@ class Encrypt(ManageCommand):
     opts = [{'name':'--secret', 'help':'Secret to encrypt'}]
 
     def _encrypt(self, class_, args):
+        os.chdir(self.original_dir)
         repo_dir = os.path.abspath(os.path.join(args.path, 'config', 'repo'))
         cm = class_(repo_dir=repo_dir)
         self.logger.info('Encrypted value: `%s`' % cm.encrypt(args.secret))
@@ -57,6 +58,7 @@ class Decrypt(ManageCommand):
     opts = [{'name':'--secret', 'help':'Secret to decrypt'}]
 
     def _decrypt(self, class_, args):
+        os.chdir(self.original_dir)
         repo_dir = os.path.abspath(os.path.join(args.path, 'config', 'repo'))
         cm = class_(repo_dir=repo_dir)
         self.logger.info('Decrypted value: `%s`' % cm.decrypt(args.secret))
