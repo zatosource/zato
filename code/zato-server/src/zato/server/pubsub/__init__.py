@@ -1696,7 +1696,9 @@ class PubSub(object):
             has_gd = True
 
             # Subscribe the default service delivery endpoint to messages from this topic
-            self.subscribe(topic_name, endpoint_name=PUBSUB.SERVICE_SUBSCRIBER.NAME)
+            endpoint = self.get_endpoint_by_name(PUBSUB.SERVICE_SUBSCRIBER.NAME)
+            if not self.is_subscribed_to(endpoint.id, topic_name):
+                self.subscribe(topic_name, endpoint_name=endpoint.name)
 
         data = kwargs.get('data') or ''
         data_list = kwargs.get('data_list') or []

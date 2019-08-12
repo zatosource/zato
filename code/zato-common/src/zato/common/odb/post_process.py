@@ -18,6 +18,8 @@ from zato.common.odb.model import PubSubEndpoint
 if 0:
     from zato.common.odb.model import Cluster
 
+    Cluster = Cluster
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -39,23 +41,30 @@ class ODBPostProcess(object):
 
     def run(self):
         self.add_pubsub_service_endpoint()
+        self.session.commit()
 
 # ################################################################################################################################
 
     def add_pubsub_service_endpoint(self):
 
-        endpoint_demo = PubSubEndpoint()
-        endpoint_demo.name = PUBSUB.SERVICE_SUBSCRIBER.NAME
-        endpoint_demo.is_internal = True
-        endpoint_demo.role = PUBSUB.ROLE.SUBSCRIBER.id
-        endpoint_demo.topic_patterns = PUBSUB.SERVICE_SUBSCRIBER.TOPICS_ALLOWED
-        endpoint_demo.endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
+        existing = self.session.query(PubSubEndpoint.id).\
+            first()
 
-        if self.cluster:
-            endpoint_demo.cluster = self.cluster
-        else:
-            endpoint_demo.cluster_id = self.cluster_id
+        if not existing:
 
+            endpoint = PubSubEndpoint()
+            endpoint.name = PUBSUB.SERVICE_SUBSCRIBER.NAME
+            endpoint.is_internal = True
+            endpoint.role = PUBSUB.ROLE.SUBSCRIBER.id
+            endpoint.topic_patterns = PUBSUB.SERVICE_SUBSCRIBER.TOPICS_ALLOWED
+            endpoint.endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
+
+            if self.cluster:
+                endpoint.cluster = self.cluster
+            else:
+                endpoint.cluster_id = self.cluster_id
+
+            self.session.add(endpoint)
 
 # ################################################################################################################################
 # ################################################################################################################################
