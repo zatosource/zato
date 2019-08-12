@@ -112,7 +112,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, has_wsx_no_server,
+    def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, has_no_sk_server,
         _initialized=_initialized, _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT,
         _opaque_only=PUBSUB.DEFAULT.SK_OPAQUE, _float_str=PUBSUB.FLOAT_STRING_CONVERT):
 
@@ -129,9 +129,9 @@ class Publish(AdminService):
 
         # If there is at least one WSX subscriber to this topic which is not connected at the moment,
         # which means it has no delivery server, we uncoditionally turn this message into a GD one ..
-        if has_wsx_no_server:
+        if has_no_sk_server:
             has_gd = True
-            logger_pubsub.info(_log_turning_gd_msg.format('wsx'), pub_msg_id)
+            logger_pubsub.info(_log_turning_gd_msg.format('no SK server'), pub_msg_id)
 
         # .. otherwise, use input GD value or the default per topic.
         else:
@@ -230,7 +230,7 @@ class Publish(AdminService):
 # ################################################################################################################################
 
     def _get_messages_from_data(self, topic, data_list, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
-        has_wsx_no_server, reply_to_sk):
+        has_no_sk_server, reply_to_sk):
 
         # List of messages with GD enabled
         gd_msg_list = []
@@ -244,7 +244,7 @@ class Publish(AdminService):
         if data_list and isinstance(data_list, (list, tuple)):
             for elem in data_list:
                 msg = self._get_message(topic, elem, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
-                    has_wsx_no_server)
+                    has_no_sk_server)
                 if msg:
                     msg_id_list.append(msg.pub_msg_id)
                     msg_as_dict = msg.to_dict()
@@ -252,7 +252,7 @@ class Publish(AdminService):
                     target_list.append(msg_as_dict)
         else:
             msg = self._get_message(topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
-                has_wsx_no_server)
+                has_no_sk_server)
             if msg:
                 msg_id_list.append(msg.pub_msg_id)
                 msg_as_dict = msg.to_dict()
@@ -360,7 +360,7 @@ class Publish(AdminService):
         _subs_found = []
 
         # Assume that there are no missing servers for WSX clients by default
-        has_wsx_no_server = False
+        no_sk_server = False
 
         for sub in subscriptions_by_topic:
 
@@ -374,7 +374,7 @@ class Publish(AdminService):
                 if has_logger_pubsub_debug:
                     logger_pubsub.debug('No sk_server for sub_key `%s` among `%s`', sub.sub_key,
                         sorted(self.pubsub.sub_key_servers.keys()))
-                has_wsx_no_server = True # We have found at least one WSX subscriber that has no server = it is not connected
+                has_no_sk_server = True # We have found at least one WSX subscriber that has no server = it is not connected
 
         logger_pubsub.info('Subscriptions for topic `%s` `%s` (a:%d, %d/%d, cid:%s)',
             topic.name, _subs_found, has_all, len(subscriptions_by_topic), len_all_sub, self.cid)
@@ -386,7 +386,7 @@ class Publish(AdminService):
         # Input messages may contain a mix of GD and non-GD messages, and we need to extract them separately.
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
             topic, data_list, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic,
-            has_wsx_no_server, input.get('reply_to_sk', None))
+            has_no_sk_server, input.get('reply_to_sk', None))
 
         # Create a wrapper object for all the input data and metadata
         ctx = PubCtx(self.server.cluster_id, pubsub, topic, endpoint_id, pubsub.get_endpoint_by_id(endpoint_id).name,
