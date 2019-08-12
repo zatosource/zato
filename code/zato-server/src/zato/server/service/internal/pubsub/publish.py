@@ -360,7 +360,7 @@ class Publish(AdminService):
         _subs_found = []
 
         # Assume that there are no missing servers for WSX clients by default
-        no_sk_server = False
+        has_no_sk_server = False
 
         for sub in subscriptions_by_topic:
 
@@ -374,7 +374,10 @@ class Publish(AdminService):
                 if has_logger_pubsub_debug:
                     logger_pubsub.debug('No sk_server for sub_key `%s` among `%s`', sub.sub_key,
                         sorted(self.pubsub.sub_key_servers.keys()))
-                has_no_sk_server = True # We have found at least one WSX subscriber that has no server = it is not connected
+
+                # We have found at least one subscriber that has no server
+                # (E.g. this is a WSX that is not currently connected).
+                has_no_sk_server = True
 
         logger_pubsub.info('Subscriptions for topic `%s` `%s` (a:%d, %d/%d, cid:%s)',
             topic.name, _subs_found, has_all, len(subscriptions_by_topic), len_all_sub, self.cid)
