@@ -536,7 +536,7 @@ class CACHE:
 
     class DEFAULT:
         MAX_SIZE = 10000
-        MAX_ITEM_SIZE = 1000 # In characters for string/unicode, bytes otherwise
+        MAX_ITEM_SIZE = 10000 # In characters for string/unicode, bytes otherwise
 
     class PERSISTENT_STORAGE:
         NO_PERSISTENT_STORAGE = NameId('No persistent storage', 'no-persistent-storage')
