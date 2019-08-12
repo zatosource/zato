@@ -45,19 +45,20 @@ class ODBPostProcess(object):
 
 # ################################################################################################################################
 
-    def add_pubsub_service_endpoint(self):
+    def add_pubsub_service_endpoint(self, _name=PUBSUB.SERVICE_SUBSCRIBER.NAME):
 
         existing = self.session.query(PubSubEndpoint.id).\
+            filter(PubSubEndpoint.name==_name).\
             first()
 
         if not existing:
 
             endpoint = PubSubEndpoint()
-            endpoint.name = PUBSUB.SERVICE_SUBSCRIBER.NAME
+            endpoint.name = _name
             endpoint.is_internal = True
             endpoint.role = PUBSUB.ROLE.SUBSCRIBER.id
             endpoint.topic_patterns = PUBSUB.SERVICE_SUBSCRIBER.TOPICS_ALLOWED
-            endpoint.endpoint_type = PUBSUB.ENDPOINT_TYPE.REST.id
+            endpoint.endpoint_type = PUBSUB.ENDPOINT_TYPE.SERVICE.id
 
             if self.cluster:
                 endpoint.cluster = self.cluster

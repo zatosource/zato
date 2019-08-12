@@ -983,7 +983,7 @@ class PUBSUB:
         IMAP = NameId('IMAP', 'imap')
         INTERNAL = NameId('Internal', 'internal')
         REST = NameId('REST', 'rest')
-        SERVICE = NameId('Service', 'service')
+        SERVICE = NameId('Service', 'srv')
         SMS_TWILIO = NameId('SMS - Twilio', 'smstw')
         SMTP = NameId('SMTP', 'smtp')
         SOAP = NameId('SOAP', 'soap')
