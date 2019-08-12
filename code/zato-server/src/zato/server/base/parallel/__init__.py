@@ -42,7 +42,7 @@ from zato.common import DATA_FORMAT, default_internal_modules, KVDB, RATE_LIMIT,
 from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
-from zato.common.zato_keyutils import KeyUtils
+from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub import SkipDelivery
 from zato.common.rate_limiting import RateLimiting
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
@@ -50,6 +50,7 @@ from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, ge
      register_diag_handlers
 from zato.common.util.posix_ipc_ import ConnectorConfigIPC, ServerStartupIPC
 from zato.common.util.time_ import TimeUtil
+from zato.common.zato_keyutils import KeyUtils
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
@@ -487,6 +488,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.cluster_id = server.cluster_id
         self.cluster = self.odb.cluster
         self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, new_cid())
+
+        # SQL post-processing
+        ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
 
         # Looked up upfront here and assigned to services in their store
         self.enforce_service_invokes = asbool(self.fs_server_config.misc.enforce_service_invokes)
