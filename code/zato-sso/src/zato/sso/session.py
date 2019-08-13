@@ -403,13 +403,14 @@ class SessionAPI(object):
                 'user_id': user_id,
                 'current_app': current_app,
                 'totp_code': totp_code,
+                'sec_type': sec_type,
             }, _ext_session_id)
             return self.login(ctx, is_logged_in_ext=True)
 
 # ################################################################################################################################
 
     def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta, _dummy_password=_dummy_password,
-        is_logged_in_ext=True):
+        is_logged_in_ext=False):
         """ Logs a user in, returning session info on success or raising ValidationError on any error.
         """
         # type: (LoginCtx, unicode, datetime, timedelta, unicode, bool) -> SessionInfo
