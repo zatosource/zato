@@ -500,7 +500,7 @@ class SessionAPI(object):
                     'creation_time': creation_time,
                     'expiration_time': expiration_time,
                     'user_id': user.id,
-                    'auth_type': const.auth_type.default,
+                    'auth_type': ctx.input.get('sec_type') or const.auth_type.default,
                     'auth_principal': user.username,
                     'remote_addr': ', '.join(str(elem) for elem in ctx.remote_addr),
                     'user_agent': ctx.user_agent,
