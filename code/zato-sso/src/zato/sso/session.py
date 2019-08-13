@@ -403,13 +403,14 @@ class SessionAPI(object):
                 'user_id': user_id,
                 'current_app': current_app,
                 'totp_code': totp_code,
+                'sec_type': sec_type,
             }, _ext_session_id)
             return self.login(ctx, is_logged_in_ext=True)
 
 # ################################################################################################################################
 
     def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta, _dummy_password=_dummy_password,
-        is_logged_in_ext=True):
+        is_logged_in_ext=False):
         """ Logs a user in, returning session info on success or raising ValidationError on any error.
         """
         # type: (LoginCtx, unicode, datetime, timedelta, unicode, bool) -> SessionInfo
@@ -499,7 +500,7 @@ class SessionAPI(object):
                     'creation_time': creation_time,
                     'expiration_time': expiration_time,
                     'user_id': user.id,
-                    'auth_type': const.auth_type.default,
+                    'auth_type': ctx.input.get('sec_type') or const.auth_type.default,
                     'auth_principal': user.username,
                     'remote_addr': ', '.join(str(elem) for elem in ctx.remote_addr),
                     'user_agent': ctx.user_agent,
