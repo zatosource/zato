@@ -207,10 +207,11 @@ class JSONRPCItem(object):
 # ################################################################################################################################
 
 class JSONRPCHandler(object):
-    def __init__(self, service_store, config, invoke_func, channel_info, JSONSchemaValidationException):
-        # type: (ServiceStore, dict, Callable, ChannelInfo, JSONSchemaValidationException)
+    def __init__(self, service_store, wsgi_environ, config, invoke_func, channel_info, JSONSchemaValidationException):
+        # type: (ServiceStore, dict, dict, Callable, ChannelInfo, JSONSchemaValidationException)
 
         self.service_store = service_store
+        self.wsgi_environ = wsgi_environ
         self.config = config
         self.invoke_func = invoke_func
         self.channel_info = channel_info
@@ -260,7 +261,7 @@ class JSONRPCHandler(object):
             # Try to invoke the service ..
             skip_response_elem = self.service_store.has_sio(item.method)
             service_response = self.invoke_func(item.method, item.params, channel_info=self.channel_info,
-                skip_response_elem=skip_response_elem)
+                skip_response_elem=skip_response_elem, wsgi_environ=self.wsgi_environ)
 
             # .. no exception here = invocation was successful
             out.result = service_response
