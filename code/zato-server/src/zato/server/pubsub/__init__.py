@@ -671,7 +671,7 @@ class PubSub(object):
 
             # We have it, good
             with self.lock:
-                if name in self.topics:
+                if name in self.topic_name_to_id:
                     return True
 
             # No such topic, let us sleep for a moment
