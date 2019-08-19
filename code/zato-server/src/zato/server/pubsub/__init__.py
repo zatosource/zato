@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from contextlib import closing
+from datetime import datetime, timedelta
 from operator import attrgetter
 from traceback import format_exc
 
@@ -658,6 +659,27 @@ class PubSub(object):
     def create_topic(self, config):
         with self.lock:
             self._create_topic(config)
+
+# ################################################################################################################################
+
+    def wait_for_topic(self, name, timeout=10, _utcnow=datetime.utcnow):
+        now = _utcnow()
+        until = now + timedelta(seconds=timeout)
+
+        # Wait until topic has been created in self.topic or raise an exception on timeout
+        while now < until:
+
+            # We have it, good
+            with self.lock:
+                if name in self.topics:
+                    return True
+
+            # No such topic, let us sleep for a moment
+            sleep(1)
+            now = _utcnow()
+
+        # We get here on timeout
+        raise ValueError('No such topic `{}` after {}s'.format(name, timeout))
 
 # ################################################################################################################################
 
