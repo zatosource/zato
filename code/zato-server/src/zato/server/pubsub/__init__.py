@@ -671,7 +671,11 @@ class PubSub(object):
 
             # We have it, good
             with self.lock:
-                if name in self.topic_name_to_id:
+                try:
+                    self._get_topic_by_name(name)
+                except KeyError:
+                    pass # No such topic
+                else:
                     return True
 
             # No such topic, let us sleep for a moment
