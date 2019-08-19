@@ -427,7 +427,10 @@ class PoolStore(object):
         password.
         """
         with self._lock:
-            self[name].pool.engine.dispose()
+            # Do not check if the connection is active when changing the password,
+            # sometimes it is desirable to change it even if it is Inactive.
+            item = self.get(name, enforce_is_active=False)
+            item.pool.engine.dispose()
             config = deepcopy(self.wrappers[name].pool.config)
             config['password'] = password
             self[name] = config
