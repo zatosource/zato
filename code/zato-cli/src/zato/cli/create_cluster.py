@@ -481,6 +481,7 @@ class Create(ZatoCommand):
                         self.logger.debug('Cluster already exists, skipped its creation')
                     else:
                         self.logger.info('OK')
+                return
 
         with session.no_autoflush:
 
