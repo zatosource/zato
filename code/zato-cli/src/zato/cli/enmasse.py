@@ -118,7 +118,7 @@ def populate_services_from_apispec(client, logger):
 
     by_prefix = {}  # { "zato.apispec": {"get-api-spec": { .. } } }
 
-    for service in sorted(response.data['namespaces']['']['services']):
+    for service in response.data['namespaces']['']['services']:
         prefix, _, name = service['name'].rpartition('.')
         methods = by_prefix.setdefault(prefix, {})
         methods[name] = service
