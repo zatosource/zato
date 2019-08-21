@@ -69,6 +69,7 @@ SessionModelDelete = SessionModelTable.delete
 # ################################################################################################################################
 
 _dummy_password='dummy.{}'.format(uuid4().hex)
+_ext_sec_type_supported = SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT
 
 # ################################################################################################################################
 
@@ -351,9 +352,33 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
+    def _format_ext_session_id(self, sec_type, sec_def_id, ext_session_id, _ext_sec_type_supported=_ext_sec_type_supported):
+        """ Turns information about a security definition and potential external session ID
+        into a format that can be used in SQL.
+        """
+        # Make sure we let in only allowed security definitions
+        if sec_type in _ext_sec_type_supported:
+
+            # This is always required
+            _ext_session_id = '{}.{}'.format(sec_type, sec_def_id)
+
+            # JWT tokens need to be included if this is the security type used
+            if sec_type == SEC_DEF_TYPE.JWT:
+                if isinstance(ext_session_id, unicode):
+                    ext_session_id = ext_session_id.encode('utf8')
+                _ext_session_id += '.{}'.format(sha256(ext_session_id).hexdigest())
+
+            # Return the reformatted external session ID
+            return _ext_session_id
+
+        else:
+            raise NotImplementedError('Unrecognized sec_type `{}`'.format(sec_type))
+
+# ################################################################################################################################
+
     def on_external_auth_succeeded(self, cid, sec_type, sec_def_id, sec_def_username, user_id, ext_session_id, totp_code,
         current_app, remote_addr, user_agent=None, _utcnow=datetime.utcnow,
-        _sec_type_supported=(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.JWT)):
+        ):
         """ Invoked when a user succeeded in authentication via means external to default SSO credentials,
         e.g. through Basic Auth or JWT. Creates an SSO session related to that event or renews an existing one.
         """
@@ -370,24 +395,13 @@ class SessionAPI(object):
             'sec.username': sec_def_username,
         })
 
-        if sec_type in _sec_type_supported:
-            _ext_session_id = '{}.{}'.format(sec_type, sec_def_id)
-            if sec_type == SEC_DEF_TYPE.JWT:
-
-                if isinstance(ext_session_id, unicode):
-                    ext_session_id = ext_session_id.encode('utf8')
-
-                _ext_session_id += '.{}'.format(sha256(ext_session_id).hexdigest())
-        else:
-            raise NotImplementedError('Unrecognized sec_type `{}`'.format(sec_type))
-
         existing_ust = None # type: unicode
+        ext_session_id = self._format_ext_session_id(sec_type, sec_def_id, ext_session_id)
 
         # Check if there is already a session associated with this external one
-        with closing(self.odb_session_func()) as session:
-            sso_session = get_session_by_ext_id(session, _ext_session_id, _utcnow())
-            if sso_session:
-                existing_ust = sso_session.ust
+        sso_session = self._get_session_by_ext_id(sec_type, sec_def_id, ext_session_id)
+        if sso_session:
+            existing_ust = sso_session.ust
 
         # .. if there is, renew it ..
         if existing_ust:
@@ -404,7 +418,7 @@ class SessionAPI(object):
                 'current_app': current_app,
                 'totp_code': totp_code,
                 'sec_type': sec_type,
-            }, _ext_session_id)
+            }, ext_session_id)
             return self.login(ctx, is_logged_in_ext=True)
 
 # ################################################################################################################################
@@ -540,6 +554,36 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
+    def _get_session_by_ext_id(self, sec_type, sec_def_id, ext_session_id=None, _utcnow=datetime.utcnow):
+
+        with closing(self.odb_session_func()) as session:
+            return get_session_by_ext_id(session, ext_session_id, _utcnow())
+
+# ################################################################################################################################
+
+    def get_session_by_ext_id(self, sec_type, sec_def_id, ext_session_id=None):
+        ext_session_id = self._format_ext_session_id(sec_type, sec_def_id, ext_session_id)
+        result = self._get_session_by_ext_id(sec_type, sec_def_id, ext_session_id)
+
+        if result:
+
+            out = {
+                'session_state_change_list': self._extract_session_state_change_list(result)
+            }
+
+            for name in 'ust', 'creation_time', 'remote_addr', 'user_agent', 'auth_type':
+                out[name] = getattr(result, name)
+
+            return out
+
+# ################################################################################################################################
+
+    def _extract_session_state_change_list(self, session_data, _opaque=GENERIC.ATTR_NAME):
+        opaque = getattr(session_data, _opaque) or {}
+        return opaque.get('session_state_change_list', [])
+
+# ################################################################################################################################
+
     def update_session_state_change_list(self, current_state, remote_addr, user_agent, ctx_source, now):
         """ Adds information about a user interaction with SSO, keeping the history
         of such interactions to up to max_len entries.
@@ -549,6 +593,8 @@ class SessionAPI(object):
             idx = current_state[-1]['idx']
         else:
             idx = 0
+
+        remote_addr = remote_addr if isinstance(remote_addr, list) else [remote_addr]
 
         if len(remote_addr) == 1:
             remote_addr = str(remote_addr[0])
@@ -595,7 +641,7 @@ class SessionAPI(object):
 
             # Update current interaction details for this session
             opaque = getattr(sso_info, _opaque) or {}
-            session_state_change_list = opaque.get('session_state_change_list', [])
+            session_state_change_list = self._extract_session_state_change_list(sso_info)
             self.update_session_state_change_list(session_state_change_list, remote_addr, user_agent, ctx_source, now)
             opaque['session_state_change_list'] = session_state_change_list
 
