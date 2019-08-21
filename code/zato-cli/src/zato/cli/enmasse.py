@@ -1275,7 +1275,7 @@ class Enmasse(ManageCommand):
         self.client = get_client_from_server_conf(self.component_dir)
 
         # .. make sure /zato/ping replies which means the server is started
-        wait_for_zato_ping(self.client.address)
+        wait_for_zato_ping(self.client.address, 300)
 
         # .. just to be on the safe side, optionally wait a bit more
         initial_wait_time = os.environ.get('ZATO_ENMASSE_INITIAL_WAIT_TIME')
