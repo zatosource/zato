@@ -17,6 +17,7 @@ import os
 import re
 import sys
 from datetime import datetime
+from time import sleep
 
 # anyjson
 import anyjson
@@ -41,7 +42,8 @@ from past.builtins import basestring
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.common import SECRETS
-from zato.common.util import get_client_from_server_conf
+from zato.common.util import get_client_from_server_conf, wait_until_port_taken
+from zato.common.util.tcp import wait_for_zato_ping
 
 # ################################################################################################################################
 
@@ -1269,8 +1271,19 @@ class Enmasse(ManageCommand):
         #    4b) override whatever is found in ODB with values from JSON (--replace-odb-objects)
         #
 
-        # Get client and issue a sanity check as quickly as possible
+        # Get the client object ..
         self.client = get_client_from_server_conf(self.component_dir)
+
+        # .. make sure /zato/ping replies which means the server is started
+        wait_for_zato_ping(self.client.address)
+
+        # .. just to be on the safe side, optionally wait a bit more
+        initial_wait_time = os.environ.get('ZATO_ENMASSE_INITIAL_WAIT_TIME')
+        if initial_wait_time:
+            initial_wait_time = int(initial_wait_time)
+            self.logger.warn('Sleeping for %s s', initial_wait_time)
+            sleep(initial_wait_time)
+
         self.object_mgr = ObjectManager(self.client, self.logger)
         self.client.invoke('zato.ping')
         populate_services_from_apispec(self.client, self.logger)
