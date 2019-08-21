@@ -940,10 +940,16 @@ class ManageCommand(ZatoCommand):
 
 # ################################################################################################################################
 
-def is_arg_given(args, arg_name):
-    try:
-        return args.get(arg_name)
-    except AttributeError:
-        return getattr(args, arg_name, None)
+def is_arg_given(args, *arg_names):
+
+    for arg_name in arg_names:
+        try:
+            result = args.get(arg_name)
+            if result:
+                return True
+        except AttributeError:
+            result = getattr(args, arg_name, None)
+            if result:
+                return True
 
 # ################################################################################################################################

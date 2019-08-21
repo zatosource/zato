@@ -34,6 +34,8 @@ from zato.server.service.reqresp.sio import AsIs, SIO_TYPE_MAP, is_bool, is_int
 
 _sio_attrs = ('input_required', 'input_optional', 'output_required', 'output_optional')
 
+_SIO_TYPE_MAP = SIO_TYPE_MAP()
+
 # ################################################################################################################################
 
 class Config(object):
@@ -139,7 +141,7 @@ class ServiceInfo(object):
         sio = getattr(self.service_class, 'SimpleIO', None)
 
         if sio:
-            for api_spec_info in SIO_TYPE_MAP:
+            for api_spec_info in _SIO_TYPE_MAP:
 
                 _api_spec_info = Bunch()
                 _api_spec_info.name = api_spec_info.name

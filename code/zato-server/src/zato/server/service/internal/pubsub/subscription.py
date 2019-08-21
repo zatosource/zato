@@ -638,8 +638,21 @@ class DeleteAll(AdminService):
 
 # ################################################################################################################################
 
+class CreateWSXSubscriptionForCurrent(AdminService):
+    """ A high-level, simplified, service for creating subscriptions for a WSX. Calls CreateWSXSubscription ultimately.
+    """
+    class SimpleIO:
+        input_required = 'topic_name'
+        output_optional = 'sub_key'
+
+    def handle(self):
+        self.response.payload.sub_key = self.pubsub.subscribe(
+            self.request.input.topic_name, use_current_wsx=True, service=self)
+
+# ################################################################################################################################
+
 class CreateWSXSubscription(AdminService):
-    """ Creates a new pub/sub subscription for current WebSocket connection.
+    """ Low-level interface for creating a new pub/sub subscription for current WebSocket connection.
     """
     class SimpleIO:
         input_optional = 'topic_name', List('topic_name_list'), Bool('wrap_one_msg_in_list'), Int('delivery_batch_size')
