@@ -475,7 +475,7 @@ class Create(ZatoCommand):
         session = self._get_session(engine)
 
         if engine.dialect.has_table(engine.connect(), 'install_state'):
-            if is_arg_given(args, 'skip-if-exists'):
+            if is_arg_given(args, 'skip-if-exists', 'skip_if_exists'):
                 if show_output:
                     if self.verbose:
                         self.logger.debug('Cluster already exists, skipped its creation')
