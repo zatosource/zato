@@ -423,6 +423,21 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
+    def _needs_totp_login_check(self, user, is_logged_in_ext, sec_type, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
+        """ Returns True TOTP should be checked for user during logging in or False otherwise.
+        """
+        # type: (User, bool, str, str) -> bool
+        # If TOTP is enabled for user then return True unless the user is already
+        # logged in externally via Basic Auth in which case it is never required
+        # because Basic Auth itself does not have any means to relay current TOTP code
+        # (short of adding custom Zato-specific HTTP headers or similar parameters).
+        if is_logged_in_ext and sec_type == _basic_auth:
+            return False
+        else:
+            return user.is_totp_enabled
+
+# ################################################################################################################################
+
     def login(self, ctx, _ok=status_code.ok, _now=datetime.utcnow, _timedelta=timedelta, _dummy_password=_dummy_password,
         is_logged_in_ext=False):
         """ Logs a user in, returning session info on success or raising ValidationError on any error.
@@ -448,8 +463,8 @@ class SessionAPI(object):
                 if not self._check_credentials(ctx, user.password if user else _dummy_password):
                     raise ValidationError(status_code.auth.not_allowed, False)
 
-            # Check input TOTP key if two-factor authentication is enabled
-            if user.is_totp_enabled:
+            # Check input TOTP key if two-factor authentication is enabled ..
+            if self._needs_totp_login_check(user, is_logged_in_ext, ctx.input.sec_type):
                 input_totp_code = ctx.input.get('totp_code')
                 if not input_totp_code:
                     logger.warn('Missing TOTP code; user `%s`', user.username)
