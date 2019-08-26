@@ -464,7 +464,7 @@ class SessionAPI(object):
                     raise ValidationError(status_code.auth.not_allowed, False)
 
             # Check input TOTP key if two-factor authentication is enabled ..
-            if self._needs_totp_login_check(user, is_logged_in_ext, ctx.input.sec_type):
+            if self._needs_totp_login_check(user, is_logged_in_ext, ctx.input['sec_type']):
                 input_totp_code = ctx.input.get('totp_code')
                 if not input_totp_code:
                     logger.warn('Missing TOTP code; user `%s`', user.username)
