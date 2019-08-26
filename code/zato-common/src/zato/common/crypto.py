@@ -216,6 +216,8 @@ class CryptoManager(object):
     def encrypt(self, data):
         """ Encrypts incoming data, which must be a string.
         """
+        if not isinstance(data, bytes):
+            data = data.encode('utf8')
         return self.secret_key.encrypt(data)
 
 # ################################################################################################################################
