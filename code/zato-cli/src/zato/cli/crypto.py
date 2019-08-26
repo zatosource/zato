@@ -31,7 +31,7 @@ class CreateSecretKey(ZatoCommand):
 class Encrypt(ManageCommand):
     """ Encrypts secrets using a public key.
     """
-    allow_empty_secrets = True
+    allow_empty_secrets = False
     opts = [{'name':'--secret', 'help':'Secret to encrypt'}]
 
     def _encrypt(self, class_, args):
