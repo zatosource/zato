@@ -10,9 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import errno
+import logging
 import socket
 from datetime import datetime, timedelta
-from logging import getLogger
+from logging import getLogger, WARN
 from platform import system as platform_system
 from time import sleep
 
@@ -25,6 +26,11 @@ import psutil
 # ################################################################################################################################
 
 logger = getLogger('zato')
+
+# ################################################################################################################################
+
+log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+logging.basicConfig(level=WARN, format=log_format)
 
 # ################################################################################################################################
 
