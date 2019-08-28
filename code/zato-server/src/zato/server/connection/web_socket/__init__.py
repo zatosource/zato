@@ -769,7 +769,7 @@ class WebSocket(_WebSocket):
 
         serialized = response.serialize()
 
-        logger.info('Sending response `%s` from to `%s` `%s` `%s` `%s`', serialized,
+        logger.info('Sending response `%s` from to `%s` `%s` `%s` `%s` %s', serialized,
             self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
         try:
