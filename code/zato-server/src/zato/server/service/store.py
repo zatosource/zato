@@ -692,6 +692,21 @@ class ServiceStore(object):
 
 # ################################################################################################################################
 
+    def _should_delete_deployed_service(self, service, already_deployed):
+        """ Returns True if a given service has been already deployed but its current source code,
+        one that is about to be deployed, is changed in comparison to what is stored in ODB.
+        """
+        # type: (InRAMService, dict)
+
+        # Already deployed ..
+        if service.name in already_deployed:
+
+            # .. thus, return True if current source code is different to what we have already
+            if service.source_code_info.source != already_deployed[service.name]:
+                return True
+
+# ################################################################################################################################
+
     def _store_deployed_services_in_odb(self, session, batch_indexes, to_process, _utcnow=datetime.utcnow):
         """ Looks up all Service objects in ODB, checks if any is not deployed locally and deploys it if it is not.
         """
@@ -705,7 +720,7 @@ class ServiceStore(object):
         services = self.get_basic_data_services(session)
 
         # Same goes for deployed services objects (DeployedService)
-        deployed_services = self.get_basic_data_deployed_services()
+        already_deployed = self.get_basic_data_deployed_services()
 
         # Modules visited may return a service that has been already visited via another module,
         # in which case we need to skip such a duplicate service.
@@ -714,15 +729,28 @@ class ServiceStore(object):
         # Add any missing DeployedService objects from each batch delineated by indexes found
         for start_idx, end_idx in batch_indexes:
 
+            # Deployed services that need to be deleted before they can be re-added,
+            # which will happen if a service's name does not change but its source code does
+            to_delete = []
+
+            # DeployedService objects to be added
             to_add = []
+
+            # InRAMService objects to process in this iteration
             batch_services = to_process[start_idx:end_idx]
 
             for service in batch_services: # type: InRAMService
 
+                # Ignore service we have already processed
                 if service.name in already_visited:
                     continue
                 else:
                     already_visited.add(service.name)
+
+                # Make sure to re-deploy services that have changed their source code
+                if self._should_delete_deployed_service(service, already_deployed):
+                    to_delete.append(self.get_service_id_by_name(service.name))
+                    del already_deployed[service.name]
 
                 # At this point we wil always have IDs for all Service objects
                 service_id = services[service.name]['id']
@@ -735,7 +763,7 @@ class ServiceStore(object):
                 deployment_details = dumps(deployment_info_dict)
 
                 # No such Service object in ODB so we need to store it
-                if service.name not in deployed_services:
+                if service.name not in already_deployed:
                     to_add.append({
                         'server_id': self.server.id,
                         'service_id': service_id,
@@ -746,6 +774,10 @@ class ServiceStore(object):
                         'source_hash': service.source_code_info.hash,
                         'source_hash_method': service.source_code_info.hash_method,
                     })
+
+            # If any services are to be redeployed, delete them first now
+            if to_delete:
+                self.odb.drop_deployed_services_by_name(session, to_delete)
 
             # If any services are to be deployed, do it now.
             if to_add:
@@ -790,12 +822,12 @@ class ServiceStore(object):
 # ################################################################################################################################
 
     def get_basic_data_deployed_services(self):
-        # type: (None) -> set
+        # type: (None) -> dict
 
         # This is a list of services to turn into a set
         deployed_service_list = self.odb.get_basic_data_deployed_service_list()
 
-        return set(elem[0] for elem in deployed_service_list)
+        return dict((elem[0], elem[1]) for elem in deployed_service_list)
 
 # ################################################################################################################################
 
