@@ -746,6 +746,7 @@ class ODBManager(SessionWrapper):
 
             query = select([
                 ServiceTable.c.name,
+                DeployedServiceTable.c.source,
             ]).where(and_(
                 DeployedServiceTable.c.service_id==ServiceTable.c.id,
                 DeployedServiceTable.c.server_id==self.server_id
@@ -771,6 +772,14 @@ class ODBManager(SessionWrapper):
     def add_deployed_services(self, session, data):
         # type: (List[dict]) -> None
         session.execute(DeployedServiceInsert().values(data))
+
+# ################################################################################################################################
+
+    def drop_deployed_services_by_name(self, session, service_id_list):
+        session.execute(
+            DeployedServiceDelete().\
+            where(DeployedService.service_id.in_(service_id_list))
+        )
 
 # ################################################################################################################################
 
