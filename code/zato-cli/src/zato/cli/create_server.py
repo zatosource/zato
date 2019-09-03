@@ -736,6 +736,9 @@ class Create(ZatoCommand):
             if not zato_misc_jwt_secret:
                 zato_misc_jwt_secret = Fernet.generate_key()
 
+            if not isinstance(zato_misc_jwt_secret, bytes):
+                zato_misc_jwt_secret = zato_misc_jwt_secret.encode('utf8')
+
             zato_misc_jwt_secret = fernet1.encrypt(zato_misc_jwt_secret)
 
             if isinstance(zato_misc_jwt_secret, bytes):
