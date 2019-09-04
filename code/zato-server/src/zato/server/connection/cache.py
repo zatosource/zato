@@ -855,7 +855,7 @@ class CacheAPI(object):
                     data['is_value_pickled'] = False
                 else:
                     data['is_value_pickled'] = True
-                    value = _pickle_dumps(key)
+                    value = _pickle_dumps(value)
                     data['value'] = b64encode(value)
             else:
                 data['is_value_pickled'] = False
