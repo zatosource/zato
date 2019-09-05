@@ -672,7 +672,13 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def _import(self, item_type, attrs, is_edit):
+
         attrs_dict = dict(attrs)
+
+        # Generic connections cannot import their IDs during edits
+        if is_edit and item_type == 'zato_generic_connection':
+            attrs_dict.pop('id', None)
+
         attrs.cluster_id = self.client.cluster_id
 
         response = self._import_object(item_type, attrs, is_edit)
