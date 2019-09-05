@@ -665,6 +665,10 @@ class ObjectImporter(object):
         if item_type == 'rbac_role' and attrs.name == 'Root':
             return True
 
+        # RBAC client roles cannot be edited
+        elif item_type == 'rbac_client_role':
+            return True
+
 # ################################################################################################################################
 
     def _import(self, item_type, attrs, is_edit):
