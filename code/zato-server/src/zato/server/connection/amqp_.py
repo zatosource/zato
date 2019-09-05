@@ -50,6 +50,13 @@ no_ack = {
     AMQP.ACK_MODE.REJECT.id: True,
 }
 
+
+# ################################################################################################################################
+
+def _is_tls_config(config):
+    # type: (Bunc) -> bool
+    return config.host.startswith('amqps://')
+
 # ################################################################################################################################
 
 class _AMQPMessage(object):
@@ -72,7 +79,7 @@ class _AMQPProducers(object):
         self.get_conn_class_func = config.get_conn_class_func
         self.name = config.name
         self.conn = self.get_conn_class_func(
-            'out/{}'.format(self.config.name), self._is_tls_config())(self.config.conn_url, frame_max=self.config.frame_max)
+            'out/{}'.format(self.config.name), _is_tls_config(self.config))(self.config.conn_url, frame_max=self.config.frame_max)
 
         # Kombu uses a global object to keep all connections in (pools.connections) but we cannot use it
         # because multiple channels or outgoing connections may be using the same definition,
@@ -295,11 +302,6 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _is_tls_config(self):
-        return self.config.host.startswith('amqps://')
-
-# ################################################################################################################################
-
     def _start(self):
         self._consumers = {}
         self._producers = {}
@@ -307,7 +309,7 @@ class ConnectorAMQP(Connector):
 
         self.is_connected = True
 
-        test_conn = self._get_conn_class('test-conn', self._is_tls_config())(
+        test_conn = self._get_conn_class('test-conn', _is_tls_config(self.config))(
             self.config.conn_url, frame_max=self.config.frame_max)
         test_conn.connect()
         self.is_connected = test_conn.connected
@@ -375,7 +377,7 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def _enrich_channel_config(self, config):
-        config.conn_class = self._get_conn_class('channel/{}'.format(config.name), self._is_tls_config())
+        config.conn_class = self._get_conn_class('channel/{}'.format(config.name), _is_tls_config(self.config))
         config.conn_url = self.config.conn_url
 
 # ################################################################################################################################
