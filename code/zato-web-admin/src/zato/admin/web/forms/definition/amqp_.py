@@ -20,7 +20,7 @@ PORT = 5672
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     port = forms.CharField(initial=PORT, widget=forms.TextInput(attrs={'style':'width:20%'}))
     vhost = forms.CharField(initial='/', widget=forms.TextInput(attrs={'style':'width:50%'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))

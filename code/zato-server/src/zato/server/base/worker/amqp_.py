@@ -41,6 +41,9 @@ class AMQP(WorkerImpl):
     def on_broker_msg_DEFINITION_AMQP_EDIT(self, msg):
         msg.is_active = True
 
+        # Make sure connection passwords are always in clear text
+        msg.password = self.server.decrypt(msg.password)
+
         with self.update_lock:
 
             # Update outconn -> definition mappings
