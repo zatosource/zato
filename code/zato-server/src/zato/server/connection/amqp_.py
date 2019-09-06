@@ -53,7 +53,7 @@ no_ack = {
 # ################################################################################################################################
 
 def _is_tls_config(config):
-    # type: (Bunc) -> bool
+    # type: (Bunch) -> bool
     return config.conn_url.startswith('amqps://')
 
 # ################################################################################################################################
@@ -559,9 +559,9 @@ class ConnectorAMQP(Connector):
         # type: (dict)
         """ Deletes an outgoing connection. Must be called with self.lock held.
         """
-        self._producers[config.name].stop()
-        del self._producers[config.name]
-        del self.outconns[config.name]
+        self._producers[config.old_name].stop()
+        del self._producers[config.old_name]
+        del self.outconns[config.old_name]
 
 # ################################################################################################################################
 
