@@ -22,6 +22,9 @@ from django.template.response import TemplateResponse
 # PyOTP
 import pyotp
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 from zato.admin import zato_settings
 from zato.admin.web.forms.account import BasicSettingsForm
@@ -128,6 +131,11 @@ def settings_basic_save(req):
         # set_user_profile_totp_key(profile, zato_secret_key, key, label, opaque_attrs=None)
         set_user_profile_totp_key(req.zato.user_profile, zato_settings.zato_secret_key,
             totp_key, opaque_attrs.get('totp_key_label'), opaque_attrs)
+
+    # Make sure all values are Unicode objects before serializing opaque attrs to JSON
+    for key, value in opaque_attrs.items():
+        if not isinstance(value, unicode):
+            opaque_attrs[key] = value.decode('utf8')
 
     # Save all opaque attributes along with the profile
     req.zato.user_profile.opaque1 = dumps(opaque_attrs)
