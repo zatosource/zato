@@ -17,6 +17,7 @@ import os
 import re
 import sys
 from datetime import datetime
+from time import sleep
 
 # anyjson
 import anyjson
@@ -42,6 +43,7 @@ from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.common import SECRETS
 from zato.common.util import get_client_from_server_conf
+from zato.common.util.tcp import wait_for_zato_ping
 
 # ################################################################################################################################
 
@@ -116,7 +118,7 @@ def populate_services_from_apispec(client, logger):
 
     by_prefix = {}  # { "zato.apispec": {"get-api-spec": { .. } } }
 
-    for service in sorted(response.data['namespaces']['']['services']):
+    for service in response.data['namespaces']['']['services']:
         prefix, _, name = service['name'].rpartition('.')
         methods = by_prefix.setdefault(prefix, {})
         methods[name] = service
@@ -663,10 +665,20 @@ class ObjectImporter(object):
         if item_type == 'rbac_role' and attrs.name == 'Root':
             return True
 
+        # RBAC client roles cannot be edited
+        elif item_type == 'rbac_client_role':
+            return True
+
 # ################################################################################################################################
 
     def _import(self, item_type, attrs, is_edit):
+
         attrs_dict = dict(attrs)
+
+        # Generic connections cannot import their IDs during edits
+        if is_edit and item_type == 'zato_generic_connection':
+            attrs_dict.pop('id', None)
+
         attrs.cluster_id = self.client.cluster_id
 
         response = self._import_object(item_type, attrs, is_edit)
@@ -1269,8 +1281,19 @@ class Enmasse(ManageCommand):
         #    4b) override whatever is found in ODB with values from JSON (--replace-odb-objects)
         #
 
-        # Get client and issue a sanity check as quickly as possible
+        # Get the client object ..
         self.client = get_client_from_server_conf(self.component_dir)
+
+        # .. make sure /zato/ping replies which means the server is started
+        wait_for_zato_ping(self.client.address, 300)
+
+        # .. just to be on the safe side, optionally wait a bit more
+        initial_wait_time = os.environ.get('ZATO_ENMASSE_INITIAL_WAIT_TIME')
+        if initial_wait_time:
+            initial_wait_time = int(initial_wait_time)
+            self.logger.warn('Sleeping for %s s', initial_wait_time)
+            sleep(initial_wait_time)
+
         self.object_mgr = ObjectManager(self.client, self.logger)
         self.client.invoke('zato.ping')
         populate_services_from_apispec(self.client, self.logger)

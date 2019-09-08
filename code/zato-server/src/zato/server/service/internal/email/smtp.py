@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from time import time
 
+# Python 2/3 compatibility
+from six import add_metaclass
+
 # Zato
 from zato.common import SMTPMessage, get_version
 from zato.common.broker_message import EMAIL
@@ -42,24 +45,27 @@ def instance_hook(service, input, instance, attrs):
 
 # ################################################################################################################################
 
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = SMTP.name,
-    __metaclass__ = GetListMeta
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
 # ################################################################################################################################
 
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+    pass
 
 # ################################################################################################################################
 

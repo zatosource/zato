@@ -258,6 +258,23 @@ class DisconnectConnectionServer(_BaseServerCommand):
 
 # ################################################################################################################################
 
+class SubscribeWSX(_BaseAPICommand):
+    """ Subscribes a WebSocket, identified by pub_client_id, to a topic by its name
+    """
+    server_service = 'zato.channel.web-socket.server-subscribe-wsx'
+
+# ################################################################################################################################
+
+class ServerSubscribeWSX(_BaseServerCommand):
+    """ Low-level implementation of SubscribeWSX that is invoked on the same server a WSX is on.
+    """
+    func_name = 'subscribe_to_topic'
+
+    def _get_server_response(self, func, pub_client_id):
+        return func(self.cid, pub_client_id, self.request.input.request_data)
+
+# ################################################################################################################################
+
 class InvokeWSX(_BaseAPICommand):
     """ Invokes an existing WSX connection.
     """

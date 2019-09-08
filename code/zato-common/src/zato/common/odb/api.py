@@ -427,7 +427,10 @@ class PoolStore(object):
         password.
         """
         with self._lock:
-            self[name].pool.engine.dispose()
+            # Do not check if the connection is active when changing the password,
+            # sometimes it is desirable to change it even if it is Inactive.
+            item = self.get(name, enforce_is_active=False)
+            item.pool.engine.dispose()
             config = deepcopy(self.wrappers[name].pool.config)
             config['password'] = password
             self[name] = config
@@ -743,6 +746,7 @@ class ODBManager(SessionWrapper):
 
             query = select([
                 ServiceTable.c.name,
+                DeployedServiceTable.c.source,
             ]).where(and_(
                 DeployedServiceTable.c.service_id==ServiceTable.c.id,
                 DeployedServiceTable.c.server_id==self.server_id
@@ -768,6 +772,14 @@ class ODBManager(SessionWrapper):
     def add_deployed_services(self, session, data):
         # type: (List[dict]) -> None
         session.execute(DeployedServiceInsert().values(data))
+
+# ################################################################################################################################
+
+    def drop_deployed_services_by_name(self, session, service_id_list):
+        session.execute(
+            DeployedServiceDelete().\
+            where(DeployedService.service_id.in_(service_id_list))
+        )
 
 # ################################################################################################################################
 
