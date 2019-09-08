@@ -25,7 +25,7 @@ cdef object _debunchify(object data):
     if isinstance(data, dict):
         return {
             k: _debunchify(v)
-            for k, v in data.iteritems()
+            for k, v in data.items()
         }
 
     elif isinstance(data, list):
@@ -44,7 +44,7 @@ cdef object _bunchify(object data, _Bunch):
 
     if isinstance(data, dict):
         b = _Bunch()
-        for k, v in data.iteritems():
+        for k, v in data.items():
             b[k] = _bunchify(v, _Bunch)
         return b
 

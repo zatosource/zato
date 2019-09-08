@@ -22,7 +22,7 @@ from gevent import sleep, spawn
 
 # Kombu
 from kombu import Connection, Consumer as _Consumer, pools, Queue
-from kombu.transport.pyamqp import Connection as PyAMQPConnection, Transport
+from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport, Transport
 
 # Python 2/3 compatibility
 from future.utils import itervalues
@@ -52,6 +52,12 @@ no_ack = {
 
 # ################################################################################################################################
 
+def _is_tls_config(config):
+    # type: (Bunch) -> bool
+    return config.conn_url.startswith('amqps://')
+
+# ################################################################################################################################
+
 class _AMQPMessage(object):
     __slots__ = ('body', 'impl')
 
@@ -72,7 +78,7 @@ class _AMQPProducers(object):
         self.get_conn_class_func = config.get_conn_class_func
         self.name = config.name
         self.conn = self.get_conn_class_func(
-            'out/{}'.format(self.config.name))(self.config.conn_url, frame_max=self.config.frame_max)
+            'out/{}'.format(self.config.name), _is_tls_config(self.config))(self.config.conn_url, frame_max=self.config.frame_max)
 
         # Kombu uses a global object to keep all connections in (pools.connections) but we cannot use it
         # because multiple channels or outgoing connections may be using the same definition,
@@ -269,7 +275,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _get_conn_class(self, suffix):
+    def _get_conn_class(self, suffix, is_tls):
         """ Subclasses below are needed so as to be able to return per-greenlet/thread/process/definition
         information in an AMQP connection's zato.* properties and, except for zato.version,
         this information is not available on module level hence the classes are declared here,
@@ -284,7 +290,7 @@ class ConnectorAMQP(Connector):
                     'zato.definition.name':self.config.name,
                 }, *args, **kwargs)
 
-        class _AMQPTransport(Transport):
+        class _AMQPTransport(SSLTransport if is_tls else Transport):
             Connection = _PyAMQPConnection
 
         class _AMQPConnection(Connection):
@@ -302,7 +308,8 @@ class ConnectorAMQP(Connector):
 
         self.is_connected = True
 
-        test_conn = self._get_conn_class('test-conn')(self.config.conn_url, frame_max=self.config.frame_max)
+        test_conn = self._get_conn_class('test-conn', _is_tls_config(self.config))(
+            self.config.conn_url, frame_max=self.config.frame_max)
         test_conn.connect()
         self.is_connected = test_conn.connected
 
@@ -345,9 +352,21 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _get_conn_string(self, needs_password=True):
-        return 'amqp://{}:{}@{}:{}{}'.format(self.config.username, self.config.password if needs_password else SECRET_SHADOW,
-            self.config.host, self.config.port, self.config.vhost)
+    def _get_conn_string(self, needs_password=True, _amqp_prefix=('amqp://', 'amqps://')):
+
+        host = self.config.host
+        for name in _amqp_prefix:
+            if host.startswith(name):
+                host = host.replace(name, '')
+                prefix = name
+                break
+        else:
+            prefix = 'amqp://'
+
+        conn_string = '{}{}:{}@{}:{}{}'.format(prefix, self.config.username,
+            self.config.password if needs_password else SECRET_SHADOW, host, self.config.port, self.config.vhost)
+
+        return conn_string
 
 # ################################################################################################################################
 
@@ -357,7 +376,7 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def _enrich_channel_config(self, config):
-        config.conn_class = self._get_conn_class('channel/{}'.format(config.name))
+        config.conn_class = self._get_conn_class('channel/{}'.format(config.name), _is_tls_config(self.config))
         config.conn_url = self.config.conn_url
 
 # ################################################################################################################################
@@ -540,9 +559,9 @@ class ConnectorAMQP(Connector):
         # type: (dict)
         """ Deletes an outgoing connection. Must be called with self.lock held.
         """
-        self._producers[config.name].stop()
-        del self._producers[config.name]
-        del self.outconns[config.name]
+        self._producers[config.old_name].stop()
+        del self._producers[config.old_name]
+        del self.outconns[config.old_name]
 
 # ################################################################################################################################
 

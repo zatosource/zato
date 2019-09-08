@@ -113,11 +113,11 @@ def _get_session(session, now, _columns=_session_columns_with_user, _approved=_a
 
 def get_session_by_ext_id(session, ext_session_id, now):
     # type: (object, object, object) -> SSOSession
-    session = _get_session(session, now).\
+    result = _get_session(session, now).\
         filter(SSOSession.ext_session_id==ext_session_id).\
         first()
 
-    return _session_with_opaque(session)
+    return _session_with_opaque(result)
 
 # ################################################################################################################################
 

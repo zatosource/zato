@@ -769,7 +769,7 @@ class WebSocket(_WebSocket):
 
         serialized = response.serialize()
 
-        logger.info('Sending response `%s` from to `%s` `%s` `%s` `%s`', serialized,
+        logger.info('Sending response `%s` from to `%s` `%s` `%s` `%s` %s', serialized,
             self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
         try:
@@ -904,6 +904,15 @@ class WebSocket(_WebSocket):
         """
         self.pubsub_tool.handle_new_messages(HandleNewMessageCtx(cid, request['has_gd'], request['sub_key_list'],
             request['non_gd_msg_list'], request['is_bg_call'], request['pub_time_max']))
+
+# ################################################################################################################################
+
+    def subscribe_to_topic(self, cid, request):
+        """ Subscribes current WebSocket a topic pointed to by input request object.
+        """
+        self.invoke_service('zato.pubsub.subscription.create-wsx-subscription-for-current', {
+            'topic_name': request
+        }, cid=cid)
 
 # ################################################################################################################################
 
@@ -1089,9 +1098,13 @@ class WebSocketContainer(WebSocketWSGIApplication):
     def notify_pubsub_message(self, cid, pub_client_id, request):
         return self.clients[pub_client_id].notify_pubsub_message(cid, request)
 
+    def subscribe_to_topic(self, cid, pub_client_id, request):
+        return self.clients[pub_client_id].subscribe_to_topic(cid, request)
+
     def get_client_by_pub_id(self, pub_client_id):
         return self.clients[pub_client_id]
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class WebSocketServer(WSGIServer):
@@ -1148,6 +1161,7 @@ class WebSocketServer(WSGIServer):
         return sock
 
 # ################################################################################################################################
+# ################################################################################################################################
 
     def invoke_client(self, cid, pub_client_id, request, timeout):
         return self.application.invoke_client(cid, pub_client_id, request, timeout)
@@ -1161,9 +1175,13 @@ class WebSocketServer(WSGIServer):
     def notify_pubsub_message(self, cid, pub_client_id, request):
         return self.application.notify_pubsub_message(cid, pub_client_id, request)
 
+    def subscribe_to_topic(self, cid, pub_client_id, request):
+        return self.application.subscribe_to_topic(cid, pub_client_id, request)
+
     def get_client_by_pub_id(self, pub_client_id):
         return self.application.get_client_by_pub_id(pub_client_id)
 
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ChannelWebSocket(Connector):
@@ -1200,7 +1218,11 @@ class ChannelWebSocket(Connector):
     def notify_pubsub_message(self, cid, pub_client_id, request):
         return self._wsx_server.notify_pubsub_message(cid, pub_client_id, request)
 
+    def subscribe_to_topic(self, cid, pub_client_id, request):
+        return self._wsx_server.subscribe_to_topic(cid, pub_client_id, request)
+
     def get_client_by_pub_id(self, pub_client_id):
         return self._wsx_server.get_client_by_pub_id(pub_client_id)
 
+# ################################################################################################################################
 # ################################################################################################################################
