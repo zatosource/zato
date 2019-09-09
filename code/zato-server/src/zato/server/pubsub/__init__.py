@@ -156,6 +156,9 @@ class PubSub(object):
         self.sk_server_table_columns = self.server.fs_server_config.pubsub.get('sk_server_table_columns') or \
             default_sk_server_table_columns
 
+        # This is a pub/sub tool for delivery of Zato services within this server
+        self.service_pubsub_tool = None # type: PubSubTool
+
         self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
 
@@ -923,17 +926,21 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _set_sub_key_server(self, config):
+    def _set_sub_key_server(self, config, _endpoint_type=PUBSUB.ENDPOINT_TYPE):
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
         sub = self._get_subscription_by_sub_key(config['sub_key'])
         config['endpoint_id'] = sub.endpoint_id
         config['endpoint_name'] = self._get_endpoint_by_id(sub.endpoint_id)
-        config['wsx'] = int(config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
+        endpoint_type = config['endpoint_type']
+
+        config['wsx'] = int(endpoint_type == _endpoint_type.WEB_SOCKETS.id)
+        config['srv'] = int(endpoint_type == _endpoint_type.SERVICE.id)
+
         sks_table = self.format_sk_servers()
-        msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s`, '\
+        msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx/srv:%(wsx)s/%(srv)s) - `%(server_name)s:%(server_pid)s`, '\
             'current sk_servers:\n{}'.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
 
         logger.info(msg, config)
