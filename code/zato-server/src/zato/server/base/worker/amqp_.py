@@ -16,6 +16,9 @@ from traceback import format_exc
 from zato.common.util import spawn_greenlet, start_connectors
 from zato.server.base.worker.common import WorkerImpl
 
+# Python 2/3 compatibility
+from future.utils import iteritems
+
 # ################################################################################################################################
 
 logger = getLogger(__name__)
@@ -58,7 +61,7 @@ class AMQP(WorkerImpl):
 
     def on_broker_msg_DEFINITION_AMQP_DELETE(self, msg):
         with self.update_lock:
-            for out_name, def_name in self.amqp_out_name_to_def.items():
+            for out_name, def_name in iteritems(self.amqp_out_name_to_def):
                 if def_name == msg.name:
                     del self.amqp_out_name_to_def[out_name]
 
