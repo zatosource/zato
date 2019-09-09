@@ -146,8 +146,13 @@ class DeliverMessage(AdminService):
 
 # ################################################################################################################################
 
-    def _deliver_wsx(self, msg, subscription, _ignored):
+    def _deliver_wsx(self, msg, subscription, _ignored_impl_getter):
         raise NotImplementedError('WSX deliveries should be handled by each socket\'s deliver_pubsub_msg')
+
+# ################################################################################################################################
+
+    def _deliver_srv(self, msg, subscription, _ignored_impl_getter):
+        self.logger.warn('WWW %s', msg)
 
 # ################################################################################################################################
 
@@ -157,6 +162,7 @@ deliver_func = {
     PUBSUB.ENDPOINT_TYPE.REST.id: DeliverMessage._deliver_rest_soap,
     PUBSUB.ENDPOINT_TYPE.SOAP.id: DeliverMessage._deliver_rest_soap,
     PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: DeliverMessage._deliver_wsx,
+    PUBSUB.ENDPOINT_TYPE.SERVICE.id: DeliverMessage._deliver_srv,
 }
 
 # ################################################################################################################################

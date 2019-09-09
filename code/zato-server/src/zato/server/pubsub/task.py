@@ -646,7 +646,7 @@ class NonGDMessage(Message):
 class PubSubTool(object):
     """ A utility object for pub/sub-related tasks.
     """
-    def __init__(self, pubsub, parent, endpoint_type, deliver_pubsub_msg=None):
+    def __init__(self, pubsub, parent, endpoint_type, is_for_services=False, deliver_pubsub_msg=None):
         self.pubsub = pubsub # type: PubSub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
         self.endpoint_type = endpoint_type
@@ -683,6 +683,9 @@ class PubSubTool(object):
 
         # How many times self.handle_new_messages has been called
         self.msg_handler_counter = 0
+
+        # Is this tool solely dedicated to delivery of messages to Zato services
+        self.is_for_services = is_for_services
 
 # ################################################################################################################################
 
