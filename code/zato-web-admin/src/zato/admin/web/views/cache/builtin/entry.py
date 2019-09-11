@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from base64 import b64decode
+from base64 import b64decode, b64encode
 
 # Bunch
 from bunch import bunchify
@@ -21,6 +21,9 @@ from django.template.response import TemplateResponse
 from zato.admin.web.views import invoke_service_with_json_response, method_allowed
 from zato.admin.web.forms.cache.builtin.entry import CreateForm, EditForm
 from zato.common import CACHE
+
+# Python 2/3 compatibility
+from past.builtins import unicode
 
 # ################################################################################################################################
 
@@ -106,7 +109,10 @@ def create_action(req, cache_id, cluster_id):
 @method_allowed('POST')
 def edit_action(req, cache_id, cluster_id):
 
-    key_encoded = req.POST['key'].encode('utf8').encode('hex')
+    key = req.POST['key']
+    key = key.encode('utf8') if isinstance(key, unicode) else key
+
+    key_encoded = b64encode(key).decode('utf8')
     new_path = '{}?key={}'.format(req.path.replace('action/', ''), key_encoded)
 
     extra = {'new_path': new_path}
