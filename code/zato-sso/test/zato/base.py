@@ -171,9 +171,9 @@ class BaseTest(TestCase):
 
 # ################################################################################################################################
 
-    def _assert_default_user_data(self, response, now):
+    def _assert_default_user_data(self, response, now, approval_status=None):
 
-        self.assertEquals(response.approval_status, const.approval_status.before_decision)
+        self.assertEquals(response.approval_status, approval_status or const.approval_status.before_decision)
         self.assertEquals(response.sign_up_status, const.signup_status.final)
 
         self.assertTrue(response.is_active)
