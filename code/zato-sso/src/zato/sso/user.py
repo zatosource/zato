@@ -470,10 +470,10 @@ class UserAPI(object):
             ctx.data['last_name'] = user.last_name
             ctx.data['is_active'] = user.is_active
             ctx.data['is_internal'] = user.is_internal
-            ctx.data['approval_status'] = user.approval_status
+            ctx.data['approval_status'] = approval_status
             ctx.data['approval_status_mod_time'] = user.approval_status_mod_time
             ctx.data['approval_status_mod_by'] = user.approval_status_mod_by
-            ctx.data['is_approval_needed'] = self.sso_conf.signup.is_approval_needed
+            ctx.data['is_approval_needed'] = approval_status != const.approval_status.approved
             ctx.data['is_locked'] = user.is_locked
             ctx.data['is_super_user'] = user.is_super_user
             ctx.data['password_is_set'] = user.password_is_set
