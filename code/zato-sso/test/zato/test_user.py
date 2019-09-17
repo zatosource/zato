@@ -557,6 +557,7 @@ class UserChangePasswordTestCase(BaseTest):
 
         response = self.patch('/zato/sso/user/password', {
             'ust': ust,
+            'user_id': user_id,
             'old_password': password,
             'new_password': new_pasword
         })

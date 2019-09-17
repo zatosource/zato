@@ -1122,11 +1122,14 @@ class UserAPI(object):
         # .. so if it is sent ..
         if user_id != _no_user_id:
 
-            # .. we must confirm we have a super-user's session.
-            if not current_session.is_super_user:
-                logger.warn('Current user `%s` is not a super-user, cannot change password for user `%s`',
-                    current_session.user_id, user_id)
-                raise ValidationError(status_code.common.invalid_input, False)
+            # .. and we are not changing our own password ..
+            if current_session.user_id != user_id:
+
+                # .. we must confirm we have a super-user's session.
+                if not current_session.is_super_user:
+                    logger.warn('Current user `%s` is not a super-user, cannot change password for user `%s`',
+                        current_session.user_id, user_id)
+                    raise ValidationError(status_code.common.invalid_input, False)
 
         # .. if ID is not given on input, we change current user's password.
         else:
