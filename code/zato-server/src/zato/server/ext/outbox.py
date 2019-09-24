@@ -149,8 +149,8 @@ class Outbox(object):
         if mode not in ('SSL', 'TLS', None):
             raise ValueError("Mode must be one of TLS, SSL, or None")
 
-        self.username = username
-        self.password = password
+        self.username = username.encode('utf8') if PY2 else username
+        self.password = password.encode('utf8') if PY2 else password
         self.connection_details = (server, port, mode, debug, timeout)
         self._conn = None
 
