@@ -21,7 +21,6 @@ Description: Simple wrapper around smtplib for sending an email.
 import smtplib
 import socket, sys
 
-from email import encoders
 from email.header import Header
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart

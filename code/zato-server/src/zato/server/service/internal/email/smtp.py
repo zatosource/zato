@@ -100,8 +100,6 @@ class Ping(AdminService):
         with closing(self.odb.session()) as session:
             item = session.query(SMTP).filter_by(id=self.request.input.id).one()
 
-        ping_address = item.ping_address.encode('utf8')
-
         msg = SMTPMessage()
         msg.from_ = item.ping_address
         msg.to = item.ping_address
