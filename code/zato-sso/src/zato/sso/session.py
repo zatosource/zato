@@ -352,7 +352,8 @@ class SessionAPI(object):
 
 # ################################################################################################################################
 
-    def _format_ext_session_id(self, sec_type, sec_def_id, ext_session_id, _ext_sec_type_supported=_ext_sec_type_supported):
+    def _format_ext_session_id(self, sec_type, sec_def_id, ext_session_id, _ext_sec_type_supported=_ext_sec_type_supported,
+        _bearer=b'Bearer '):
         """ Turns information about a security definition and potential external session ID
         into a format that can be used in SQL.
         """
@@ -364,8 +365,12 @@ class SessionAPI(object):
 
             # JWT tokens need to be included if this is the security type used
             if sec_type == SEC_DEF_TYPE.JWT:
+
                 if isinstance(ext_session_id, unicode):
                     ext_session_id = ext_session_id.encode('utf8')
+
+                ext_session_id = ext_session_id.replace(_bearer, b'')
+
                 _ext_session_id += '.{}'.format(sha256(ext_session_id).hexdigest())
 
             # Return the reformatted external session ID
