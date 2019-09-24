@@ -100,14 +100,17 @@ class Ping(AdminService):
         with closing(self.odb.session()) as session:
             item = session.query(SMTP).filter_by(id=self.request.input.id).one()
 
+        ping_address = item.ping_address.encode('utf8')
+
         msg = SMTPMessage()
         msg.from_ = item.ping_address
         msg.to = item.ping_address
         msg.cc = item.ping_address
         msg.bcc = item.ping_address
-        msg.subject = 'Zato SMTP ping (Α Β Γ Δ Ε Ζ Η)'.encode('utf-8')
-        msg.body = 'Hello from {}\nUTF-8 test: Α Β Γ Δ Ε Ζ Η'.encode('utf-8').format(version)
+        msg.subject = 'Zato SMTP ping (Α Β Γ Δ Ε Ζ Η)'
         msg.headers['Charset'] = 'utf-8'
+
+        msg.body = 'Hello from {}\nUTF-8 test: Α Β Γ Δ Ε Ζ Η'.format(version).encode('utf-8')
 
         msg.attach('utf-8.txt', 'Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω'.encode('utf-8'))
         msg.attach('ascii.txt', 'A B C D E F G H I J K L M N O P Q R S T U V W X Y Z')
