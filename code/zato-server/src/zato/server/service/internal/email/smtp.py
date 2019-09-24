@@ -105,7 +105,7 @@ class Ping(AdminService):
         msg = SMTPMessage()
         msg.from_ = item.ping_address
         msg.to = item.ping_address
-        msg.cc = [item.ping_address, item.ping_address]
+        msg.cc = item.ping_address
         msg.bcc = item.ping_address
         msg.subject = 'Zato SMTP ping (Α Β Γ Δ Ε Ζ Η)'
         msg.headers['Charset'] = 'utf-8'
