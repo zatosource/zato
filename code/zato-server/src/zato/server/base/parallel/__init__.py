@@ -74,12 +74,14 @@ import typing
 if typing.TYPE_CHECKING:
 
     # Zato
+    from zato.common.crypto import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.server.service.store import ServiceStore
     from zato.sso.api import SSOAPI
 
     # For pyflakes
     ODBManager = ODBManager
+    ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
     SSOAPI = SSOAPI
 
@@ -101,7 +103,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def __init__(self):
         self.host = None
         self.port = None
-        self.crypto_manager = None
+        self.crypto_manager = None # type: ServerCryptoManager
         self.odb = None # type: ODBManager
         self.odb_data = None
         self.config = None # type: ConfigStore
