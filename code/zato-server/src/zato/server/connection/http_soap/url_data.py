@@ -601,6 +601,14 @@ class URLData(CyURLData, OAuthDataStore):
                         _sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
 
                     if is_allowed:
+
+                        # If input sec object is a dict/Bunch-like one, it means that we have just confirmed
+                        # credentials of the underlying security definition behind an RBAC one,
+                        # in which case we need to overwrite the sec object's sec_def attribute and make it
+                        # point to the one that we have just found. Otherwise, it would still point to ZATO_NONE.
+                        if hasattr(sec, 'keys'):
+                            sec.sec_def = _sec['sec_def']
+
                         self.enrich_with_sec_data(wsgi_environ, _sec.sec_def, sec_type)
                         break
 
