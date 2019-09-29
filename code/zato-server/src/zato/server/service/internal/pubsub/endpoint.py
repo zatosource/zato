@@ -8,9 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# Python 2/3 compatibility
-from six import add_metaclass
-
 # stdlib
 from contextlib import closing
 from json import loads
@@ -32,6 +29,10 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
 from zato.server.service.internal.pubsub.search import NonGDSearchService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+
+# Python 2/3 compatibility
+from past.builtins import unicode
+from six import add_metaclass
 
 # ################################################################################################################################
 
@@ -306,7 +307,8 @@ class GetEndpointQueueList(_GetEndpointQueue):
                     item.last_interaction_time = datetime_from_ms(item.last_interaction_time * 1000.0)
 
                 if item.last_interaction_details:
-                    item.last_interaction_details = item.last_interaction_details.decode('utf8')
+                    if not isinstance(item.last_interaction_details, unicode):
+                        item.last_interaction_details = item.last_interaction_details.decode('utf8')
 
                 response.append(item)
 
