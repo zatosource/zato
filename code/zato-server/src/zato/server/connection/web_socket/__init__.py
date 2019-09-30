@@ -76,6 +76,10 @@ hook_type_to_method = {
 
 # ################################################################################################################################
 
+_cannot_send = 'Cannot send on a terminated websocket'
+
+# ################################################################################################################################
+
 class HookCtx(object):
     __slots__ = ('hook_type', 'config', 'pub_client_id', 'ext_client_id', 'ext_client_name', 'connection_time', 'user_data',
         'forwarded_for', 'forwarded_for_fqdn', 'peer_address', 'peer_host', 'peer_fqdn', 'peer_conn_info_pretty', 'msg')
@@ -869,8 +873,8 @@ class WebSocket(_WebSocket):
                 try:
                     self.handle_client_message(cid, request) if not request.is_auth else self.handle_create_session(cid, request)
                 except RuntimeError as e:
-                    if str(e) == 'Cannot send on a terminated websocket':
-                        msg = 'Ignoring message (client disconnected), cid:`%s`, request:`%s` conn:`%s`'
+                    if str(e) == _cannot_send:
+                        msg = 'Ignoring message (socket terminated #1), cid:`%s`, request:`%s` conn:`%s`'
                         logger.info(msg, cid, request, self.peer_conn_info_pretty)
                         logger_zato.info(msg, cid, request, self.peer_conn_info_pretty)
                     else:
@@ -966,8 +970,17 @@ class WebSocket(_WebSocket):
             logger.info('Sending message `%s` from `%s` to `%s` `%s` `%s` `%s`', serialized,
                 self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
-        # Actually send the message now
-        (self.send if use_send else self.ping)(serialized)
+        try:
+            (self.send if use_send else self.ping)(serialized)
+        except RuntimeError as e:
+            if str(e) == _cannot_send:
+                msg = 'Cannot send message (socket terminated #2), disconnecting client, cid:`%s`, msg:`%s` conn:`%s`'
+                logger.info(msg, cid, serialized, self.peer_conn_info_pretty)
+                logger_zato.info(msg, cid, serialized, self.peer_conn_info_pretty)
+                self.disconnect_client()
+                raise Exception('WSX client disconnected cid:`{}, peer:`{}`'.format(cid, self.peer_conn_info_pretty))
+            else:
+                raise
 
         # Wait for response but only if it is not a pub/sub message,
         # these are always asynchronous and that channel's WSX hook
