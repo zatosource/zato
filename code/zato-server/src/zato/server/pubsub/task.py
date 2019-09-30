@@ -410,6 +410,11 @@ class DeliveryTask(object):
                         # successfully delivered.
                         result = self.run_delivery()
 
+                        if not self.keep_running:
+                            logger.warn('Skipping delivery loop after r:%s, kr:%d [dlvc:%d]',
+                                result, self.keep_running, self.delivery_counter)
+                            continue
+
                         # On success, sleep for a moment because we have just run out of all messages.
                         if result == _status.OK:
                             continue
