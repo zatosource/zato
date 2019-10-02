@@ -29,6 +29,8 @@
 
             '_last_gd_run',
             '_last_task_run',
+            '_details',
+
             'name',
             'pid'
 
@@ -68,6 +70,7 @@
 
                         <th><a href="#">Last GD run</a></th>
                         <th><a href="#">Last task run</a></th>
+                        <th></th>
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -84,11 +87,8 @@
 
                         <td>
                             {% if item.tasks %}
-                                <!--
-                                <a href="{% url "pubsub-task" item.name item.pid cluster_id %}"></a>
-                                -->
-                                {{ item.tasks }}
 
+                                {{ item.tasks }}
                                 <span title="# of tasks (running/stopped)">
                                 ({{ item.tasks_running }}/{{ item.tasks_stopped }})
                                 </span>
@@ -104,8 +104,7 @@
                         <td>
                             {{ item.messages }}
 
-                                <span title="
-                                {{ item.messages_gd }} GD message{% if item.messages_gd == 1%} {% else %}s in progress{% endif %}
+                                <span title="{{ item.messages_gd }} GD message{% if item.messages_gd == 1%} {% else %}s in progress{% endif %}
 {{ item.messages_non_gd }} non-GD message{% if item.messages_non_gd == 1%} {% else %}s in progress{% endif %}">
 
                             ({{ item.messages_gd }}/{{ item.messages_non_gd }})
@@ -130,6 +129,14 @@
                                 </a>
                             {% else %}
                                 <span class='form_hint'>---</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if item.tasks %}
+                                <a href="{% url "pubsub-task" item.name item.pid %}?cluster={{ cluster_id }}">Details</a>
+                            {% else %}
+                                <span class="form_hint">---</span>
                             {% endif %}
                         </td>
 
