@@ -35,11 +35,14 @@ class DeliveryTask(object):
         self.topics = None
         self.messages = None
 
-        self.last_gd_run = None
+        self.last_sync = None
         self.last_sync_utc = None
 
-        self.last_delivery = None
-        self.last_delivery_utc = None
+        self.last_sync_sk = None
+        self.last_sync_sk_utc = None
+
+        self.last_iter_run = None
+        self.last_iter_run_utc = None
 
 # ################################################################################################################################
 
@@ -54,8 +57,8 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'server_name', 'server_pid'
         output_required = ('id', 'server_name', 'server_pid', 'thread_id', 'object_id', 'sub_key', 'topic_id', 'topic_name',
-            'messages', 'ext_client_id', 'is_active')
-        output_optional = 'last_gd_run', 'last_gd_run_utc', 'last_delivery', 'last_delivery_utc'
+            'messages', 'delivery_counter', 'ext_client_id', 'is_active')
+        output_optional = 'last_sync', 'last_sync_utc', 'last_sync_sk', 'last_sync_sk_utc', 'last_iter_run', 'last_iter_run_utc'
         output_repeated = True
 
     def get_initial_input(self):
@@ -67,13 +70,17 @@ class Index(_Index):
 
             item.id = fs_safe_name('{}-{}'.format(item.thread_id, item.object_id))
 
-            if item.last_gd_run:
-                item.last_gd_run_utc = item.last_gd_run
-                item.last_gd_run = from_utc_to_user(item.last_gd_run_utc + '+00:00', self.req.zato.user_profile)
+            if item.last_sync:
+                item.last_sync_utc = item.last_sync
+                item.last_sync = from_utc_to_user(item.last_sync_utc + '+00:00', self.req.zato.user_profile)
 
-            if item.last_delivery:
-                item.last_delivery_utc = item.last_delivery
-                item.last_delivery = from_utc_to_user(item.last_delivery_utc + '+00:00', self.req.zato.user_profile)
+            if item.last_sync_sk:
+                item.last_sync_sk_utc = item.last_sync_sk
+                item.last_sync_sk = from_utc_to_user(item.last_sync_sk_utc + '+00:00', self.req.zato.user_profile)
+
+            if item.last_iter_run:
+                item.last_iter_run_utc = item.last_iter_run
+                item.last_iter_run = from_utc_to_user(item.last_iter_run_utc + '+00:00', self.req.zato.user_profile)
 
         return return_data
 

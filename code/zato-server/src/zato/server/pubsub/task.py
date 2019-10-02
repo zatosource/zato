@@ -91,7 +91,7 @@ class DeliveryTask(object):
         self.topic_name = sub_config.topic_name
         self.wait_sock_err = float(self.sub_config.wait_sock_err)
         self.wait_non_sock_err = float(self.sub_config.wait_non_sock_err)
-        self.last_run = utcnow_as_ms()
+        self.last_iter_run = utcnow_as_ms()
         self.delivery_interval = self.sub_config.task_delivery_interval / 1000.0
         self.delivery_max_retry = self.sub_config.delivery_max_retry
         self.previous_delivery_method = self.sub_config.delivery_method
@@ -345,12 +345,12 @@ class DeliveryTask(object):
         assumming there are any waiting for it.
         """
         now = _now()
-        diff = round(now - self.last_run, 2)
+        diff = round(now - self.last_iter_run, 2)
 
         if diff >= self.delivery_interval:
             if self.delivery_list:
                 logger.info('Waking task:%s now:%s last:%s diff:%s interval:%s len-list:%d',
-                    self.sub_key, now, self.last_run, diff, self.delivery_interval, len(self.delivery_list))
+                    self.sub_key, now, self.last_iter_run, diff, self.delivery_interval, len(self.delivery_list))
                 return True
 
 # ################################################################################################################################
@@ -403,7 +403,7 @@ class DeliveryTask(object):
                     with self.delivery_lock:
 
                         # Update last run time to be able to wake up in time for the next delivery
-                        self.last_run = utcnow_as_ms()
+                        self.last_iter_run = utcnow_as_ms()
 
                         # Get the list of all message IDs for which delivery was successful,
                         # indicating whether all currently lined up messages have been
@@ -681,6 +681,15 @@ class PubSubTool(object):
         # A pub/sub delivery task for each sub_key
         self.delivery_tasks = {}
 
+        # Last sync time - updated even if there are no messages in a given synchronization request,
+        # which is unlike self.last_sync_time_by_sub_key which updates only if there are messages
+        # for a particular sub_key.
+        self.last_sync_time = None
+
+        # Last sync time for any kind of messages, by sub_key, no matter if they are GD or not
+        self.last_sync_time_by_sub_key = {}
+
+        # Last time we tried to pull GD messages from SQL, by sub_key
         self.last_gd_run = {}
 
         # Register with this server's pubsub
