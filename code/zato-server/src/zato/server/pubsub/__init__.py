@@ -144,7 +144,7 @@ class PubSub(object):
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
 
         self.subscriptions_by_topic = {}       # Topic name     -> List of Subscription objects
-        self._subscriptions_by_sub_key = {}     # Sub key        -> Subscription object
+        self._subscriptions_by_sub_key = {}    # Sub key        -> Subscription object
         self.sub_key_servers = {}              # Sub key        -> Server/PID handling it
 
         self.endpoints = {}                    # Endpoint ID    -> Endpoint object

@@ -1,3 +1,4 @@
+'''
 # -*- coding: utf-8 -*-
 
 """
@@ -7,40 +8,84 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, GetListAdminSIO
 
-class DeliveryTaskGetList(AdminService):
-    """ Returns all delivery servers defined for cluster.
-    """
-    name = 'pubsub.task.get-list'
+# ################################################################################################################################
 
-    class SimpleIO(GetListAdminSIO):
-        input_required = 'cluster_id',
-        output_required = ('server_name', 'server_pid', AsIs('thread_id'), AsIs('object_id'),
-            'sub_key', 'topic_id', 'topic_name', Int('messages'))
-        output_optional = 'last_sync', 'last_delivery', AsIs('ext_client_id')
-        output_repeated = True
-        output_elem = None
+# Type checking
+if 0:
+    from zato.server.pubsub.task import DeliveryTask, PubSubTool
+
+# ################################################################################################################################
+
+class _GetListSIO(object):
+    output_required = ('server_name', 'server_pid', AsIs('thread_id'), AsIs('object_id'),
+        'sub_key', 'topic_id', 'topic_name', Int('messages'), Int('delivery_counter'))
+    output_optional = 'last_sync', 'last_sync_sk', 'last_iter_run', AsIs('ext_client_id')
+    output_repeated = True
+    output_elem = None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetServerDeliveryTaskList(AdminService):
+    """ Returns all delivery tasks for a particular server process (must be invoked on the required one).
+    """
+    class SimpleIO(_GetListSIO):
+        pass
 
     def get_data(self):
-        return [
-            {'server_name':'ZZZ', 'server_pid':'1101',
-             'thread_id':'DummyThread-183', 'object_id':'0x7f4ca83e68c0',
-             'sub_key':'zpsk.wsx.32a358b555a4d2ec0f06b1cb', 'topic_id':1, 'topic_name':'/my/topic',
-             'messages':39,
-             'last_sync':'2018-09-03T10:49:00.431767', 'last_delivery':'2018-09-03T10:49:00.97212'
-             },
 
-            {'server_name':'QQQ', 'server_pid':'2341',
-             'thread_id':'DummyThread-184', 'object_id':'0x7f4ca8380690',
-             'sub_key':'zpsk.rest.bcb442f15ba7fa0765aa7d62', 'topic_id':1, 'topic_name':'/my/topic/2',
-             'messages':1982,
-             'last_sync':'2018-08-21T15:17:07.014784', 'last_delivery':'2018-08-30T11:19:45.09732',
-             'ext_client_id':'RUID-3971'},
-        ]
+        out = []
+
+        for ps_tool in self.pubsub.pubsub_tools: # type: PubSubTool
+            with ps_tool.lock:
+                for sub_key, task in ps_tool.delivery_tasks.items(): # type: (str, DeliveryTask)
+
+                    last_sync = task.last_iter_run #ps_tool.last_gd_run
+                    if last_sync:
+                        last_sync = datetime_from_ms(last_sync * 1000)
+
+                    out.append({
+                        'server_name': ps_tool.server_name,
+                        'server_pid': ps_tool.server_pid,
+                        'thread_id': 'zzz',
+                        'object_id': hex(id(task)),
+                        'sub_key': task.sub_key,
+                        'topic_id': self.pubsub.get_topic_id_by_name(task.topic_name),
+                        'topic_name': task.topic_name,
+                        'messages': len(task.delivery_list),
+                        'last_sync': last_sync,
+                        'last_iter_run': datetime_from_ms(task.last_iter_run * 1000),
+                        'delivery_counter': task.delivery_counter
+                    })
+
+        return out
 
     def handle(self):
         self.response.payload[:] = self.get_data()
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class GetDeliveryTaskList(AdminService):
+    """ Returns all delivery tasks for a particular server process (possibly a remote one).
+    """
+    name = 'pubsub.task.get-list2'
+
+    class SimpleIO(GetListAdminSIO, _GetListSIO):
+        input_required = 'cluster_id', 'server_name', 'server_pid'
+
+    def handle(self):
+
+        response = self.servers[self.request.input.server_name].invoke(GetServerDeliveryTaskList.get_name(), {
+            'cluster_id': self.request.input.cluster_id,
+        }, pid=self.request.input.server_pid)
+
+        self.response.payload[:] = response['response']
+
+# ################################################################################################################################
+# ################################################################################################################################
+'''

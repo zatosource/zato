@@ -94,7 +94,7 @@ class GetDeliveryServerDetails(AdminService):
 
             for task in item.get_delivery_tasks():
 
-                max_last_task_run = max(max_last_task_run, task.last_run)
+                max_last_task_run = max(max_last_task_run, task.last_iter_run)
                 topics_seen.add(task.topic_name)
 
                 if task.is_running():
