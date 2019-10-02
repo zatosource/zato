@@ -119,7 +119,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-task-sync'
     template = 'zato/pubsub/task/sync/index.html'
-    service_name = 'zato.pubsub.task.main.get-list'
+    service_name = 'zato.pubsub.task.sync.get-list'
     output_class = PubSubTool
     paginate = True
 
@@ -157,7 +157,7 @@ class _DictView(_Index):
 class SubscriptionDictKeys(_DictView):
     url_name = 'pubsub-task-sync-subscription-dict-keys'
     template = 'zato/pubsub/task/sync/dict/keys.html'
-    service_name = 'zato.pubsub.task.main.get-dict-keys'
+    service_name = 'zato.pubsub.task.sync.get-dict-keys'
     output_class = _SubscriptionDictKeys
 
     class SimpleIO(_DictView.SimpleIO):
@@ -173,7 +173,7 @@ class SubscriptionDictKeys(_DictView):
 # ################################################################################################################################
 
 class DictValues(_DictView):
-    service_name = 'zato.pubsub.task.main.get-dict-values'
+    service_name = 'zato.pubsub.task.sync.get-dict-values'
     output_class = _DictValuesData
     _dict_sort_by = None
 
@@ -258,7 +258,7 @@ class EventList(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-task-event-list'
     template = 'zato/pubsub/task/sync/event/index.html'
-    service_name = 'zato.pubsub.task.main.get-event-list'
+    service_name = 'zato.pubsub.task.sync.get-event-list'
     output_class = _Event
     paginate = True
 
