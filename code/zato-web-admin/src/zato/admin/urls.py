@@ -1538,7 +1538,7 @@ urlpatterns += [
 
     # Per-server delivery tasks
 
-    url(r'^zato/pubsub/task/(?P<server_name>.*)/(?P<server_pid>.*)/cluster/(?P<cluster_id>.*)/$',
+    url(r'^zato/pubsub/task/(?P<server_name>.*)/(?P<server_pid>.*)/$',
         login_required(pubsub_task.Index()), name=pubsub_task.Index.url_name),
     url(r'^zato/pubsub/task/clear-messages/(?P<server_name>.*)/(?P<server_pid>.*)/(?P<task_id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(pubsub_task.clear_messages), name='pubsub.task.clear-messages'),

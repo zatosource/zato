@@ -46,16 +46,16 @@ class DeliveryTask(object):
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-task'
-    template = 'zato/pubsub/task/index.html'
-    service_name = 'pubsub.task.get-list'
+    template = 'zato/pubsub/task/delivery/task/index.html'
+    service_name = 'pubsub.task.get-list2'
     output_class = DeliveryTask
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'server_name', 'server_pid')
+        input_required = 'cluster_id', 'server_name', 'server_pid'
         output_required = ('id', 'server_name', 'server_pid', 'thread_id', 'object_id', 'sub_key', 'topic_id', 'topic_name',
             'messages', 'ext_client_id', 'is_active')
-        output_optional = ('last_gd_run', 'last_gd_run_utc', 'last_delivery', 'last_delivery_utc')
+        output_optional = 'last_gd_run', 'last_gd_run_utc', 'last_delivery', 'last_delivery_utc'
         output_repeated = True
 
     def get_initial_input(self):
@@ -93,6 +93,6 @@ def clear_messages(req, server_name, server_pid, task_id, cluster_id):
 
 @method_allowed('POST')
 def toggle_active(req, server_name, server_pid, task_id, cluster_id):
-    return id_only_service(req, 'pubsub.task.toggle-active', id, 'Could not toggle server\'s active flag, e:`{}`')
+    return id_only_service(req, 'pubsub.task.toggle-active', id, 'Task active flag could not be toggled, e:`{}`')
 
 # ################################################################################################################################
