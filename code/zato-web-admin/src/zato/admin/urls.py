@@ -56,9 +56,9 @@ from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import subscription as pubsub_subscription
-from zato.admin.web.views.pubsub import task as pubsub_task
-from zato.admin.web.views.pubsub.task import delivery_server as pubsub_task_delivery_server
-from zato.admin.web.views.pubsub.task import main as pubsub_task_main
+from zato.admin.web.views.pubsub import sync as pubsub_task_sync
+from zato.admin.web.views.pubsub.delivery import task as pubsub_task
+from zato.admin.web.views.pubsub.delivery import server as pubsub_task_delivery_server
 from zato.admin.web.views.pubsub import topic as pubsub_topic
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
@@ -1509,32 +1509,32 @@ urlpatterns += [
         login_required(pubsub_task_delivery_server.Index()), name=pubsub_task_delivery_server.Index.url_name),
 
     # PubSub objects / tools
-    url(r'^zato/pubsub/task/main/$',
-        login_required(pubsub_task_main.Index()), name=pubsub_task_main.Index.url_name),
+    url(r'^zato/pubsub/task/sync/$',
+        login_required(pubsub_task_sync.Index()), name=pubsub_task_sync.Index.url_name),
 
     # PubSub tools - dict keys
-    url(r'^zato/pubsub/task/main/dict-keys/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-        login_required(pubsub_task_main.SubscriptionDictKeys()), name=pubsub_task_main.SubscriptionDictKeys.url_name),
+    url(r'^zato/pubsub/task/sync/dict-keys/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+        login_required(pubsub_task_sync.SubscriptionDictKeys()), name=pubsub_task_sync.SubscriptionDictKeys.url_name),
 
     # PubSub tools - dict values - subscriptions
-    url(r'^zato/pubsub/task/main/dict-values/sub/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-        login_required(pubsub_task_main.DictValuesSubscriptions()), name=pubsub_task_main.DictValuesSubscriptions.url_name),
+    url(r'^zato/pubsub/task/sync/dict-values/sub/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+        login_required(pubsub_task_sync.DictValuesSubscriptions()), name=pubsub_task_sync.DictValuesSubscriptions.url_name),
 
     # PubSub tools - dict values - sub key servers
-    url(r'^zato/pubsub/task/main/dict-values/sks/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-        login_required(pubsub_task_main.DictValuesSubKeyServer()), name=pubsub_task_main.DictValuesSubKeyServer.url_name),
+    url(r'^zato/pubsub/task/sync/dict-values/sks/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+        login_required(pubsub_task_sync.DictValuesSubKeyServer()), name=pubsub_task_sync.DictValuesSubKeyServer.url_name),
 
     # PubSub tools - dict values - endpoints
-    url(r'^zato/pubsub/task/main/dict-values/endpoint/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-        login_required(pubsub_task_main.DictValuesEndpoints()), name=pubsub_task_main.DictValuesEndpoints.url_name),
+    url(r'^zato/pubsub/task/sync/dict-values/endpoint/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+        login_required(pubsub_task_sync.DictValuesEndpoints()), name=pubsub_task_sync.DictValuesEndpoints.url_name),
 
     # PubSub tools - dict values - topics
-    url(r'^zato/pubsub/task/main/dict-values/topic/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-        login_required(pubsub_task_main.DictValuesTopics()), name=pubsub_task_main.DictValuesTopics.url_name),
+    url(r'^zato/pubsub/task/sync/dict-values/topic/(?P<dict_name>.*)/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+        login_required(pubsub_task_sync.DictValuesTopics()), name=pubsub_task_sync.DictValuesTopics.url_name),
 
     # PubSub tools - event list
-    url(r'^zato/pubsub/task/main/event-list/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
-        login_required(pubsub_task_main.EventList()), name=pubsub_task_main.EventList.url_name),
+    url(r'^zato/pubsub/task/sync/event-list/cluster/(?P<cluster>.*)/(?P<server_name>.*)/(?P<server_pid>.*)/$',
+        login_required(pubsub_task_sync.EventList()), name=pubsub_task_sync.EventList.url_name),
 
     # Per-server delivery tasks
 
