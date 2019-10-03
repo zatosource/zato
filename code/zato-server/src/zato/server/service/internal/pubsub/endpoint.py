@@ -206,7 +206,7 @@ class GetTopicList(AdminService):
         for elem in out:
             elem['pub_time'] = datetime_from_ms(elem['pub_time'] * 1000.0)
             if elem['ext_pub_time']:
-                elem['ext_pub_time'] = datetime_from_ms(elem['ext_pub_time'] * 1000.0)
+                elem['ext_pub_time'] = datetime_from_ms(float(elem['ext_pub_time']) * 1000.0)
 
         self.response.payload[:] = out
 
