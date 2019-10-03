@@ -29,11 +29,13 @@ class DeliveryTask(object):
         self.server_name = None
         self.server_pid = None
         self.task_id = None
-        self.thread_id = None
-        self.object_id = None
         self.sub_keys = None
         self.topics = None
         self.messages = None
+        self.py_object = None
+
+        self.endpoint_id = None
+        self.endpoint_name = None
 
         self.last_sync = None
         self.last_sync_utc = None
@@ -56,7 +58,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'server_name', 'server_pid'
-        output_required = ('id', 'server_name', 'server_pid', 'thread_id', 'object_id', 'sub_key', 'topic_id', 'topic_name',
+        output_required = ('id', 'server_name', 'server_pid', 'py_object',
+            'endpoint_id', 'endpoint_name', 'sub_key', 'topic_id', 'topic_name',
             'messages', 'delivery_counter', 'ext_client_id', 'is_active')
         output_optional = 'last_sync', 'last_sync_utc', 'last_sync_sk', 'last_sync_sk_utc', 'last_iter_run', 'last_iter_run_utc'
         output_repeated = True
@@ -68,7 +71,7 @@ class Index(_Index):
 
         for item in return_data['items']:
 
-            item.id = fs_safe_name('{}-{}'.format(item.thread_id, item.object_id))
+            item.id = fs_safe_name(item.py_object)
 
             if item.last_sync:
                 item.last_sync_utc = item.last_sync

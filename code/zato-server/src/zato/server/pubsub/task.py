@@ -14,11 +14,13 @@ from copy import deepcopy
 from json import loads
 from logging import getLogger
 from socket import error as SocketError
+from threading import current_thread
 from traceback import format_exc
 
 # gevent
 from gevent import sleep, spawn
 from gevent.lock import RLock
+from gevent.thread import getcurrent
 
 # sortedcontainers
 from sortedcontainers import SortedList as _SortedList
@@ -95,6 +97,7 @@ class DeliveryTask(object):
         self.delivery_interval = self.sub_config.task_delivery_interval / 1000.0
         self.delivery_max_retry = self.sub_config.delivery_max_retry
         self.previous_delivery_method = self.sub_config.delivery_method
+        self.py_object = '<empty>'
 
         # This is a total of messages processed so far
         self.delivery_counter = 0
@@ -358,8 +361,11 @@ class DeliveryTask(object):
     def run(self, default_sleep_time=0.1, _status=PUBSUB.RUN_DELIVERY_STATUS, _notify_methods=_notify_methods):
         """ Runs the delivery task's main loop.
         """
-        logger.info('Starting delivery task for sub_key:`%s` (%s, %s)',
-            self.sub_key, self.topic_name, self.sub_config.delivery_method)
+        # Fill out Python-level metadata first
+        self.py_object = '{}; {}; {}'.format(hex(id(self)), current_thread().name, getcurrent().name)
+
+        logger.info('Starting delivery task for sub_key:`%s` (%s, %s, %s)',
+            self.sub_key, self.topic_name, self.sub_config.delivery_method, self.py_object)
 
         #
         # Before starting anything, check if there are any messages already queued up in the database for this task.
