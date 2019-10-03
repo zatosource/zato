@@ -362,7 +362,7 @@ class DeliveryTask(object):
         """ Runs the delivery task's main loop.
         """
         # Fill out Python-level metadata first
-        self.py_object = '{}; {}; {}'.format(hex(id(self)), current_thread().name, getcurrent().name)
+        self.py_object = '{}; {}; {}'.format(current_thread().name, getcurrent().name, hex(id(self)))
 
         logger.info('Starting delivery task for sub_key:`%s` (%s, %s, %s)',
             self.sub_key, self.topic_name, self.sub_config.delivery_method, self.py_object)
