@@ -7,6 +7,9 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from operator import itemgetter
+
 # Zato
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Int
@@ -21,8 +24,8 @@ if 0:
 # ################################################################################################################################
 
 class _GetListSIO(object):
-    output_required = ('server_name', 'server_pid', AsIs('thread_id'), AsIs('object_id'),
-        'sub_key', 'topic_id', 'topic_name', Int('messages'), Int('delivery_counter'))
+    output_required = ('server_name', 'server_pid', 'sub_key', 'topic_id', 'topic_name',
+        'endpoint_id', 'endpoint_name', 'py_object', Int('messages'), Int('delivery_counter'))
     output_optional = 'last_sync', 'last_sync_sk', 'last_iter_run', AsIs('ext_client_id')
     output_repeated = True
     output_elem = None
@@ -33,8 +36,7 @@ class _GetListSIO(object):
 class GetServerDeliveryTaskList(AdminService):
     """ Returns all delivery tasks for a particular server process (must be invoked on the required one).
     """
-    class SimpleIO(_GetListSIO):
-        pass
+    SimpleIO = _GetListSIO
 
     def get_data(self):
 
@@ -48,11 +50,15 @@ class GetServerDeliveryTaskList(AdminService):
                     if last_sync:
                         last_sync = datetime_from_ms(last_sync * 1000)
 
+                    endpoint_id = self.pubsub.get_subscription_by_sub_key(task.sub_key).endpoint_id
+                    endpoint = self.pubsub.get_endpoint_by_id(endpoint_id)
+
                     out.append({
                         'server_name': ps_tool.server_name,
                         'server_pid': ps_tool.server_pid,
-                        'thread_id': 'zzz',
-                        'object_id': hex(id(task)),
+                        'endpoint_id': endpoint.id,
+                        'endpoint_name': endpoint.name,
+                        'py_object': task.py_object,
                         'sub_key': task.sub_key,
                         'topic_id': self.pubsub.get_topic_id_by_name(task.topic_name),
                         'topic_name': task.topic_name,
@@ -62,7 +68,8 @@ class GetServerDeliveryTaskList(AdminService):
                         'delivery_counter': task.delivery_counter
                     })
 
-        return out
+        # Return the list of tasks sorted by sub_keys and their Python names
+        return sorted(out, key=itemgetter('sub_key', 'py_object'))
 
     def handle(self):
         self.response.payload[:] = self.get_data()
