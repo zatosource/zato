@@ -97,6 +97,7 @@ class DeliveryTask(object):
         self.delivery_interval = self.sub_config.task_delivery_interval / 1000.0
         self.delivery_max_retry = self.sub_config.delivery_max_retry
         self.previous_delivery_method = self.sub_config.delivery_method
+        self.python_id = str(hex(id(self)))
         self.py_object = '<empty>'
 
         # This is a total of message batches processed so far
@@ -367,7 +368,7 @@ class DeliveryTask(object):
         """ Runs the delivery task's main loop.
         """
         # Fill out Python-level metadata first
-        self.py_object = '{}; {}; {}'.format(current_thread().name, getcurrent().name, hex(id(self)))
+        self.py_object = '{}; {}; {}'.format(current_thread().name, getcurrent().name, self.python_id)
 
         logger.info('Starting delivery task for sub_key:`%s` (%s, %s, %s)',
             self.sub_key, self.topic_name, self.sub_config.delivery_method, self.py_object)

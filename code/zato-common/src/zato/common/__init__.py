@@ -1892,6 +1892,7 @@ default_internal_modules = {
     'zato.server.service.internal.pubsub.queue': True,
     'zato.server.service.internal.pubsub.task': True,
     'zato.server.service.internal.pubsub.task.delivery': True,
+    'zato.server.service.internal.pubsub.task.delivery.message': True,
     'zato.server.service.internal.pubsub.task.delivery.server': True,
     'zato.server.service.internal.pubsub.task.sync': True,
     'zato.server.service.internal.pubsub.topic': True,

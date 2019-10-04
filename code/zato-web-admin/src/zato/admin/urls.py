@@ -1509,11 +1509,11 @@ urlpatterns += [
     url(r'^zato/pubsub/task/delivery/$',
         login_required(pubsub_task_delivery_server.Index()), name=pubsub_task_delivery_server.Index.url_name),
 
-    url(r'^zato/pubsub/task/delivery/browser/in-flight/$',
-        login_required(pubsub_task_message.MessageBrowser()), name=pubsub_task_message.MessageBrowser.url_name),
+    url(r'^zato/pubsub/task/delivery/browser/in-flight/(?P<server_name>.*)/(?P<server_pid>.*)/(?P<python_id>.*)/$',
+        login_required(pubsub_task_message.MessageBrowserInFlight()), name=pubsub_task_message.MessageBrowserInFlight.url_name),
 
-    url(r'^zato/pubsub/task/delivery/browser/history/$',
-        login_required(pubsub_task_message.MessageBrowser()), name=pubsub_task_message.MessageBrowser.url_name),
+    url(r'^zato/pubsub/task/delivery/browser/history/(?P<server_name>.*)/(?P<server_pid>.*)/(?P<python_id>.*)/$',
+        login_required(pubsub_task_message.MessageBrowserHistory()), name=pubsub_task_message.MessageBrowserHistory.url_name),
 
     # PubSub objects / tools
     url(r'^zato/pubsub/task/sync/$',
