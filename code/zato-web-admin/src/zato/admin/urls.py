@@ -58,6 +58,7 @@ from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import subscription as pubsub_subscription
 from zato.admin.web.views.pubsub.task import sync as pubsub_task_sync
 from zato.admin.web.views.pubsub.task import delivery as pubsub_task
+from zato.admin.web.views.pubsub.task.delivery import message as pubsub_task_message
 from zato.admin.web.views.pubsub.task.delivery import server as pubsub_task_delivery_server
 from zato.admin.web.views.pubsub import topic as pubsub_topic
 from zato.admin.web.views.query import cassandra as query_cassandra
@@ -1503,10 +1504,16 @@ urlpatterns += [
     url(r'^zato/pubsub/message/publish/cluster/(?P<cluster_id>.*)/topic/(?P<topic_id>.*)$',
         login_required(pubsub_message.publish), name='pubsub-message-publish'),
 
-    # Delivery servers
+    # Delivery tasks
 
-    url(r'^zato/pubsub/task/delivery-server/$',
+    url(r'^zato/pubsub/task/delivery/$',
         login_required(pubsub_task_delivery_server.Index()), name=pubsub_task_delivery_server.Index.url_name),
+
+    url(r'^zato/pubsub/task/delivery/browser/in-flight/$',
+        login_required(pubsub_task_message.MessageBrowser()), name=pubsub_task_message.MessageBrowser.url_name),
+
+    url(r'^zato/pubsub/task/delivery/browser/history/$',
+        login_required(pubsub_task_message.MessageBrowser()), name=pubsub_task_message.MessageBrowser.url_name),
 
     # PubSub objects / tools
     url(r'^zato/pubsub/task/sync/$',

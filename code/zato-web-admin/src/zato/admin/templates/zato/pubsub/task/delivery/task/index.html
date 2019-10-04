@@ -23,7 +23,8 @@
             'sub_key',
             '_topic',
 
-            '_messages',
+            '_len_messages_history',
+
             '_dlvc',
             'thread_id',
 
@@ -70,7 +71,7 @@
                         <th><a href="#">Topic</a></th>
 
                         <th><a href="#">Messages</a></th>
-                        <th><a href="#">DLVC</a></th>
+                        <th><a href="#">DLV</a></th>
                         <th><a href="#">Python</a></th>
 
                         <th><a href="#">Last sync</a></th>
@@ -101,11 +102,11 @@
                         </td>
 
                         <td>
-                            <a href="#">{{ item.messages }}</a>
+                            <a href="#">{{ item.len_messages }}</a>/ <a href="#">{{ item.len_history }}</a>
                         </td>
 
                         <td>
-                            {{ item.delivery_counter }}
+                            {{ item.len_delivered }} / {{ item.len_batches }}
                         </td>
 
                         <td>{{ item.py_object }}</td>

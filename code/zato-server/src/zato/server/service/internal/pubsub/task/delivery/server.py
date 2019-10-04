@@ -17,7 +17,7 @@ from bunch import bunchify
 # Zato
 from zato.common.odb.model import PubSubSubscription, Server, WebSocketClient, WebSocketClientPubSubKeys, WebSocketSubscription
 from zato.common.util.time_ import datetime_from_ms
-from zato.server.service import AsIs, Int
+from zato.server.service import Int
 from zato.server.service.internal import AdminService, GetListAdminSIO
 
 # ################################################################################################################################

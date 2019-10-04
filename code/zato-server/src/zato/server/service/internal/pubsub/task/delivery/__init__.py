@@ -1,4 +1,3 @@
-'''
 # -*- coding: utf-8 -*-
 
 """
@@ -21,11 +20,15 @@ from zato.server.service.internal import AdminService, GetListAdminSIO
 if 0:
     from zato.server.pubsub.task import DeliveryTask, PubSubTool
 
+    DeliveryTask = DeliveryTask
+    PubSubTool = PubSubTool
+
 # ################################################################################################################################
 
 class _GetListSIO(object):
-    output_required = ('server_name', 'server_pid', 'sub_key', 'topic_id', 'topic_name',
-        'endpoint_id', 'endpoint_name', 'py_object', Int('messages'), Int('delivery_counter'))
+    output_required = ('server_name', 'server_pid', 'sub_key', 'topic_id', 'topic_name', 'is_active',
+        'endpoint_id', 'endpoint_name', 'py_object', Int('len_messages'), Int('len_history'), Int('len_batches'),
+        Int('len_delivered'))
     output_optional = 'last_sync', 'last_sync_sk', 'last_iter_run', AsIs('ext_client_id')
     output_repeated = True
     output_elem = None
@@ -62,10 +65,13 @@ class GetServerDeliveryTaskList(AdminService):
                         'sub_key': task.sub_key,
                         'topic_id': self.pubsub.get_topic_id_by_name(task.topic_name),
                         'topic_name': task.topic_name,
-                        'messages': len(task.delivery_list),
+                        'is_active': task.keep_running,
+                        'len_messages': len(task.delivery_list),
+                        'len_history': len(task.delivery_list),
                         'last_sync': last_sync,
                         'last_iter_run': datetime_from_ms(task.last_iter_run * 1000),
-                        'delivery_counter': task.delivery_counter
+                        'len_batches': task.len_batches,
+                        'len_delivered': task.len_delivered,
                     })
 
         # Return the list of tasks sorted by sub_keys and their Python names
@@ -80,8 +86,6 @@ class GetServerDeliveryTaskList(AdminService):
 class GetDeliveryTaskList(AdminService):
     """ Returns all delivery tasks for a particular server process (possibly a remote one).
     """
-    name = 'pubsub.task.get-list2'
-
     class SimpleIO(GetListAdminSIO, _GetListSIO):
         input_required = 'cluster_id', 'server_name', 'server_pid'
 
@@ -95,4 +99,3 @@ class GetDeliveryTaskList(AdminService):
 
 # ################################################################################################################################
 # ################################################################################################################################
-'''

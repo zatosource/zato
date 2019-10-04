@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Messages for queue{% endblock %}
+{% block html_title %}Message browser{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -37,10 +37,12 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">{% if has_gd %}GD{% else %}Non-GD{% endif %} messages for endpoint
+<h2 class="zato">Delivery messages for endpoint
     <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint_id }}">{{ endpoint_name }}</a>,
-    queue
-    <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id name_slug %}">{{ name }}</a>
+    topic
+    <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id name_slug %}">{{ name }}</a>,
+    Python
+    {{ "PYTHON" }}
 
     {% if ws_ext_client_id %}
         <span class="form_hint">wsx: {{ ws_ext_client_id|default:'' }}</span>
