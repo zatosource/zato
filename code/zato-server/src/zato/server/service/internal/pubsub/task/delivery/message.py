@@ -1,3 +1,4 @@
+'''
 # -*- coding: utf-8 -*-
 
 """
@@ -20,14 +21,11 @@ from zato.server.service.internal import AdminService, GetListAdminSIO
 if 0:
     from zato.server.pubsub.task import DeliveryTask, PubSubTool
 
-    DeliveryTask = DeliveryTask
-    PubSubTool = PubSubTool
-
 # ################################################################################################################################
 
 class _GetListSIO(object):
     output_required = ('server_name', 'server_pid', 'sub_key', 'topic_id', 'topic_name', 'is_active',
-        'endpoint_id', 'endpoint_name', 'py_object', AsIs('python_id'), Int('len_messages'), Int('len_history'), Int('len_batches'),
+        'endpoint_id', 'endpoint_name', 'py_object', Int('len_messages'), Int('len_history'), Int('len_batches'),
         Int('len_delivered'))
     output_optional = 'last_sync', 'last_sync_sk', 'last_iter_run', AsIs('ext_client_id')
     output_repeated = True
@@ -36,7 +34,7 @@ class _GetListSIO(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetServerDeliveryTaskList(AdminService):
+class GetServerDeliveryTaskMessageList(AdminService):
     """ Returns all delivery tasks for a particular server process (must be invoked on the required one).
     """
     SimpleIO = _GetListSIO
@@ -62,7 +60,6 @@ class GetServerDeliveryTaskList(AdminService):
                         'endpoint_id': endpoint.id,
                         'endpoint_name': endpoint.name,
                         'py_object': task.py_object,
-                        'python_id': task.python_id,
                         'sub_key': task.sub_key,
                         'topic_id': self.pubsub.get_topic_id_by_name(task.topic_name),
                         'topic_name': task.topic_name,
@@ -84,15 +81,17 @@ class GetServerDeliveryTaskList(AdminService):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetDeliveryTaskList(AdminService):
+class GetDeliveryTaskMessageList(AdminService):
     """ Returns all delivery tasks for a particular server process (possibly a remote one).
     """
+    name = 'pubsub.task.message.get-list2'
+
     class SimpleIO(GetListAdminSIO, _GetListSIO):
         input_required = 'cluster_id', 'server_name', 'server_pid'
 
     def handle(self):
 
-        response = self.servers[self.request.input.server_name].invoke(GetServerDeliveryTaskList.get_name(), {
+        response = self.servers[self.request.input.server_name].invoke(GetServerDeliveryTaskMessageList.get_name(), {
             'cluster_id': self.request.input.cluster_id,
         }, pid=self.request.input.server_pid)
 
@@ -100,3 +99,4 @@ class GetDeliveryTaskList(AdminService):
 
 # ################################################################################################################################
 # ################################################################################################################################
+'''

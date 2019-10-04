@@ -102,7 +102,7 @@
                         </td>
 
                         <td>
-                            <a href="#">{{ item.len_messages }}</a>/ <a href="#">{{ item.len_history }}</a>
+                            <a href="{% url "pubsub-task-message-browser" server_name server_pid item.python_id %}?cluster={{ cluster_id }}">{{ item.len_messages }}</a><!--/ <a href="#">{{ item.len_history }}</a>-->
                         </td>
 
                         <td>

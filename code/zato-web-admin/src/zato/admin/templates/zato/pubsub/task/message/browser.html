@@ -37,12 +37,12 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Delivery messages for endpoint
+<h2 class="zato">In-flight messages for endpoint
     <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint_id }}">{{ endpoint_name }}</a>,
     topic
     <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id name_slug %}">{{ name }}</a>,
     Python
-    {{ "PYTHON" }}
+    {{ python_id }}
 
     {% if ws_ext_client_id %}
         <span class="form_hint">wsx: {{ ws_ext_client_id|default:'' }}</span>

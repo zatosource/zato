@@ -53,7 +53,7 @@ class Message(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class MessageBrowser(_Index):
+class MessageBrowserInFlight(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-task-message-browser'
     template = 'zato/pubsub/task/message/browser.html'
@@ -62,30 +62,52 @@ class MessageBrowser(_Index):
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'pid', 'tasks', 'tasks_running', 'tasks_stopped', 'sub_keys', 'topics',
-            'messages', 'messages_gd', 'messages_non_gd', 'msg_handler_counter')
-        output_optional = ('last_gd_run', 'last_gd_run_utc', 'last_task_run', 'last_task_run_utc')
+        input_required = 'cluster_id', 'server_name', 'server_pid', 'python_id'
+        output_required = ('id', 'server_name', 'server_pid', 'py_object',
+            'endpoint_id', 'endpoint_name', 'sub_key', 'topic_id', 'topic_name',
+            'len_messages', 'len_history', 'len_batches', 'len_delivered', 'ext_client_id', 'is_active')
+        output_optional = 'last_sync', 'last_sync_utc', 'last_sync_sk', 'last_sync_sk_utc', 'last_iter_run', 'last_iter_run_utc'
         output_repeated = True
+
+    def get_initial_input(self):
+        return {
+            'server_pid':self.input.server_pid,
+            'python_id':self.input.python_id,
+        }
 
     def handle_return_data(self, return_data):
 
         for item in return_data['items']:
 
-            item.id = fs_safe_name('{}-{}'.format(item.name, item.pid))
+            item.id = fs_safe_name(item.py_object)
 
-            if item.last_gd_run:
-                item.last_gd_run_utc = item.last_gd_run
-                item.last_gd_run = from_utc_to_user(item.last_gd_run_utc + '+00:00', self.req.zato.user_profile)
+            if item.last_sync:
+                item.last_sync_utc = item.last_sync
+                item.last_sync = from_utc_to_user(item.last_sync_utc + '+00:00', self.req.zato.user_profile)
 
-            if item.last_task_run:
-                item.last_task_run_utc = item.last_task_run
-                item.last_task_run = from_utc_to_user(item.last_task_run_utc + '+00:00', self.req.zato.user_profile)
+            if item.last_sync_sk:
+                item.last_sync_sk_utc = item.last_sync_sk
+                item.last_sync_sk = from_utc_to_user(item.last_sync_sk_utc + '+00:00', self.req.zato.user_profile)
+
+            if item.last_iter_run:
+                item.last_iter_run_utc = item.last_iter_run
+                item.last_iter_run = from_utc_to_user(item.last_iter_run_utc + '+00:00', self.req.zato.user_profile)
 
         return return_data
 
     def handle(self):
-        return {}
+        return {
+            'server_name': self.req.zato.args.server_name,
+            'server_pid': self.req.zato.args.server_pid,
+            'python_id': self.req.zato.args.python_id,
+        }
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class MessageBrowserHistory(object):
+    url_name = 'zzz'
+
+# ################################################################################################################################
+# ################################################################################################################################
+

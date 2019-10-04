@@ -31,9 +31,12 @@ class DeliveryTask(object):
         self.task_id = None
         self.sub_keys = None
         self.topics = None
+
         self.len_messages = None
         self.len_history = None
+
         self.py_object = None
+        self.python_id = None
 
         self.len_batches = None
         self.len_delivered = None
@@ -62,14 +65,16 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id', 'server_name', 'server_pid'
-        output_required = ('id', 'server_name', 'server_pid', 'py_object',
+        output_required = ('id', 'server_name', 'server_pid', 'py_object', 'python_id',
             'endpoint_id', 'endpoint_name', 'sub_key', 'topic_id', 'topic_name',
             'len_messages', 'len_history', 'len_batches', 'len_delivered', 'ext_client_id', 'is_active')
         output_optional = 'last_sync', 'last_sync_utc', 'last_sync_sk', 'last_sync_sk_utc', 'last_iter_run', 'last_iter_run_utc'
         output_repeated = True
 
     def get_initial_input(self):
-        return {'server_pid':self.input.server_pid}
+        return {
+            'server_pid':self.input.server_pid,
+        }
 
     def handle_return_data(self, return_data):
 
@@ -94,7 +99,7 @@ class Index(_Index):
     def handle(self):
         return {
             'server_name': self.req.zato.args.server_name,
-            'server_pid': self.req.zato.args.server_pid
+            'server_pid': self.req.zato.args.server_pid,
         }
 
 # ################################################################################################################################
