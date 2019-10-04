@@ -99,8 +99,11 @@ class DeliveryTask(object):
         self.previous_delivery_method = self.sub_config.delivery_method
         self.py_object = '<empty>'
 
-        # This is a total of messages processed so far
-        self.delivery_counter = 0
+        # This is a total of message batches processed so far
+        self.len_batches = 0
+
+        # A total of messages processed so far
+        self.len_delivered = 0
 
         # A list of messages that were requested to be deleted while a delivery was in progress,
         # checked before each delivery.
@@ -292,7 +295,7 @@ class DeliveryTask(object):
                 logger.info('Skipping messages `%s`', to_skip)
 
             # This is the call that actually delivers messages
-            deliver_pubsub_msg(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
+            #deliver_pubsub_msg(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
 
         except Exception as e:
             # Do not attempt to deliver any other message in case of an error. Our parent will sleep for a small amount of
@@ -322,7 +325,8 @@ class DeliveryTask(object):
                 with self.delivery_lock:
                     for msg in to_deliver:
                         try:
-                            self.delivery_list.remove_pubsub_msg(msg)
+                            #self.delivery_list.remove_pubsub_msg(msg)
+                            pass
                         except Exception:
                             msg = 'Caught exception in run_delivery/remove_pubsub_msg, e:`%s`'
                             logger.warn(msg, format_exc())
@@ -331,11 +335,12 @@ class DeliveryTask(object):
                 # Status of messages is updated in both SQL and RAM so we can now log success
                 len_delivered = len(delivered_msg_id_list)
                 suffix = ' ' if len_delivered == 1 else 's '
-                logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [dlvc:%d]',
+                logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [lend:%d]',
                     len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config.endpoint_name,
-                    self.delivery_counter)
+                    self.len_delivered)
 
-                self.delivery_counter += 1
+                self.len_batches += 1
+                self.len_delivered += len_delivered
 
                 # Indicates that we have successfully delivered all messages currently queued up
                 # and our delivery list is currently empty.
@@ -417,8 +422,8 @@ class DeliveryTask(object):
                         result = self.run_delivery()
 
                         if not self.keep_running:
-                            logger.warn('Skipping delivery loop after r:%s, kr:%d [dlvc:%d]',
-                                result, self.keep_running, self.delivery_counter)
+                            logger.warn('Skipping delivery loop after r:%s, kr:%d [lend:%d]',
+                                result, self.keep_running, self.len_delivered)
                             continue
 
                         # On success, sleep for a moment because we have just run out of all messages.

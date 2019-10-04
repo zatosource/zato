@@ -31,8 +31,12 @@ class DeliveryTask(object):
         self.task_id = None
         self.sub_keys = None
         self.topics = None
-        self.messages = None
+        self.len_messages = None
+        self.len_history = None
         self.py_object = None
+
+        self.len_batches = None
+        self.len_delivered = None
 
         self.endpoint_id = None
         self.endpoint_name = None
@@ -52,7 +56,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-task'
     template = 'zato/pubsub/task/delivery/task/index.html'
-    service_name = 'pubsub.task.get-list2'
+    service_name = 'zato.pubsub.task.delivery.get-delivery-task-list'
     output_class = DeliveryTask
     paginate = True
 
@@ -60,7 +64,7 @@ class Index(_Index):
         input_required = 'cluster_id', 'server_name', 'server_pid'
         output_required = ('id', 'server_name', 'server_pid', 'py_object',
             'endpoint_id', 'endpoint_name', 'sub_key', 'topic_id', 'topic_name',
-            'messages', 'delivery_counter', 'ext_client_id', 'is_active')
+            'len_messages', 'len_history', 'len_batches', 'len_delivered', 'ext_client_id', 'is_active')
         output_optional = 'last_sync', 'last_sync_utc', 'last_sync_sk', 'last_sync_sk_utc', 'last_iter_run', 'last_iter_run_utc'
         output_repeated = True
 
