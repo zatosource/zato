@@ -93,11 +93,9 @@ class GetDeliveryTaskList(AdminService):
 
     def handle(self):
 
-        response = self.servers[self.request.input.server_name].invoke(GetServerDeliveryTaskList.get_name(), {
+        self.response.payload[:] = self.servers[self.request.input.server_name].invoke(GetServerDeliveryTaskList.get_name(), {
             'cluster_id': self.request.input.cluster_id,
         }, pid=self.request.input.server_pid)
-
-        self.response.payload[:] = response['response']
 
 # ################################################################################################################################
 # ################################################################################################################################
