@@ -20,34 +20,71 @@ from zato.server.service.internal.pubsub.task.delivery import GetTaskSIO
 
 # Type checking
 if 0:
-    from zato.server.pubsub.task import DeliveryTask, PubSubTool
+    from zato.server.pubsub.task import DeliveryTask, Message, PubSubTool
+
+    DeliveryTask = DeliveryTask
+    Message = Message
+    PubSubTool = PubSubTool
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-class _GetListSIO(object):
-    output_required = ('server_name', 'server_pid', 'sub_key', 'topic_id', 'topic_name', 'is_active',
-        'endpoint_id', 'endpoint_name', 'py_object', Int('len_messages'), Int('len_history'), Int('len_batches'),
-        Int('len_delivered'))
-    output_optional = 'last_sync', 'last_sync_sk', 'last_iter_run', AsIs('ext_client_id')
-    output_repeated = True
-    output_elem = None
+class _GetMessageSIO(object):
+    output_required = (AsIs('msg_id'),)
+    response_elem = None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetDeliveryTask(AdminService):
+    name = 'task2.get-delivery-task'
+
+    class SimpleIO(GetTaskSIO):
+        input_required = 'server_name', 'server_pid', AsIs('python_id')
+
+    def handle(self):
+        service_name = 'zato.pubsub.task.delivery.get-delivery-task-list'
+
+        request = {
+            'cluster_id': self.server.cluster_id,
+            'server_name': self.request.input.server_name,
+            'server_pid': self.request.input.server_pid,
+        }
+
+        response = self.servers[self.request.input.server_name].invoke(service_name, request)
+
+        for item in response:
+            if item['python_id'] == self.request.input.python_id:
+                self.response.payload = item
+                return
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class GetServerDeliveryTaskMessageList(AdminService):
-    """ Returns all delivery tasks for a particular server process (must be invoked on the required one).
+    """ Returns all in-flight messages tasks from a particular delivery task, which must exist on current server.
     """
-    SimpleIO = _GetListSIO
+    class SimpleIO(_GetMessageSIO):
+        input_required = (AsIs('python_id'),)
+        output_repeated = True
 
     def get_data(self):
 
         out = []
 
+        self.logger.warn('EEE')
+
+
         for ps_tool in self.pubsub.pubsub_tools: # type: PubSubTool
             with ps_tool.lock:
                 for sub_key, task in ps_tool.delivery_tasks.items(): # type: (str, DeliveryTask)
 
+                    if task.python_id == self.request.input.python_id:
+
+                        for msg in task.delivery_list: # type: Message
+                            self.logger.warn('EEE %s', msg.asdict())
+
+                    '''
                     last_sync = task.last_iter_run #ps_tool.last_gd_run
                     if last_sync:
                         last_sync = datetime_from_ms(last_sync * 1000)
@@ -72,6 +109,7 @@ class GetServerDeliveryTaskMessageList(AdminService):
                         'len_batches': task.len_batches,
                         'len_delivered': task.len_delivered,
                     })
+                    '''
 
         # Return the list of tasks sorted by sub_keys and their Python names
         return sorted(out, key=itemgetter('sub_key', 'py_object'))
@@ -83,11 +121,11 @@ class GetServerDeliveryTaskMessageList(AdminService):
 # ################################################################################################################################
 
 class GetDeliveryTaskMessageList(AdminService):
-    """ Returns all delivery tasks for a particular server process (possibly a remote one).
+    """ Returns all in-flight messages tasks from a particular delivery task.
     """
     name = 'pubsub.task.message.get-list2'
 
-    class SimpleIO(GetListAdminSIO, _GetListSIO):
+    class SimpleIO(GetListAdminSIO, _GetMessageSIO):
         input_optional = GetListAdminSIO.input_optional + (AsIs('python_id'),)
         input_required = 'cluster_id', 'server_name', 'server_pid'
 
@@ -95,30 +133,10 @@ class GetDeliveryTaskMessageList(AdminService):
 
         response = self.servers[self.request.input.server_name].invoke(GetServerDeliveryTaskMessageList.get_name(), {
             'cluster_id': self.request.input.cluster_id,
+            'python_id': self.request.input.python_id,
         }, pid=self.request.input.server_pid)
 
-        self.response.payload[:] = response['response']
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class GetDeliveryTask(AdminService):
-    name = 'task2.get-delivery-task'
-
-    class SimpleIO(GetTaskSIO):
-        input_required = 'server_name', 'server_pid', AsIs('python_id')
-
-    def handle(self):
-        service_name = 'zato.pubsub.task.delivery.get-delivery-task-list'
-
-        request = {'cluster_id': self.server.cluster_id}
-        request.update(self.request.input)
-
-        response = self.servers[self.request.input.server_name].invoke(service_name, request)
-        response = response['response']
-        response = response[0]
-
-        self.response.payload = response
+        self.response.payload[:] = response
 
 # ################################################################################################################################
 # ################################################################################################################################

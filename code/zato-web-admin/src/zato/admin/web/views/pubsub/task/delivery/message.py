@@ -84,7 +84,7 @@ class MessageBrowserInFlight(_Index):
             'server_pid':self.input.server_pid,
             'python_id':self.input.python_id,
         })
-        return_data['task'] = response.data.response
+        return_data['task'] = response.data
 
         # Handle the list of results now
         for item in return_data['items']:
