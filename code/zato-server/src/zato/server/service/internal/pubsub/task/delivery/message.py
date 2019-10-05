@@ -14,6 +14,7 @@ from operator import itemgetter
 from zato.common.util.time_ import datetime_from_ms
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, GetListAdminSIO
+from zato.server.service.internal.pubsub.task.delivery import GetTaskSIO
 
 # ################################################################################################################################
 
@@ -87,6 +88,7 @@ class GetDeliveryTaskMessageList(AdminService):
     name = 'pubsub.task.message.get-list2'
 
     class SimpleIO(GetListAdminSIO, _GetListSIO):
+        input_optional = GetListAdminSIO.input_optional + (AsIs('python_id'),)
         input_required = 'cluster_id', 'server_name', 'server_pid'
 
     def handle(self):
@@ -96,6 +98,27 @@ class GetDeliveryTaskMessageList(AdminService):
         }, pid=self.request.input.server_pid)
 
         self.response.payload[:] = response['response']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetDeliveryTask(AdminService):
+    name = 'task2.get-delivery-task'
+
+    class SimpleIO(GetTaskSIO):
+        input_required = 'server_name', 'server_pid', AsIs('python_id')
+
+    def handle(self):
+        service_name = 'zato.pubsub.task.delivery.get-delivery-task-list'
+
+        request = {'cluster_id': self.server.cluster_id}
+        request.update(self.request.input)
+
+        response = self.servers[self.request.input.server_name].invoke(service_name, request)
+        response = response['response']
+        response = response[0]
+
+        self.response.payload = response
 
 # ################################################################################################################################
 # ################################################################################################################################

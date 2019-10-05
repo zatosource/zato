@@ -57,11 +57,9 @@ def delivery_server_list(session, cluster_id):
 
 # ################################################################################################################################
 
-class GetDeliveryServerDetails(AdminService):
+class GetDetails(AdminService):
     """ Returns a summary of current activity for all delivery tasks on current PID (non-WSX clients only).
     """
-    name = 'pubsub.task.get-delivery-server-details'
-
     class SimpleIO:
         output_optional = _summary_delivery_server_sio
         response_elem = None
@@ -132,11 +130,9 @@ class GetDeliveryServerDetails(AdminService):
 
 # ################################################################################################################################
 
-class DeliveryServerGetList(AdminService):
+class GetList(AdminService):
     """ Returns all delivery servers defined for cluster.
     """
-    name = 'pubsub.task.delivery-server.get-list'
-
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id',)
         output_required = ('name', 'pid')
@@ -169,7 +165,7 @@ class DeliveryServerGetList(AdminService):
 
             for pid in pids:
 
-                pid_response = bunchify(self.servers[server_name].invoke(GetDeliveryServerDetails.name, pid=pid))
+                pid_response = bunchify(self.servers[server_name].invoke(GetDetails.get_name(), pid=pid))
 
                 # A summary of each PID's current pub/sub activities
                 pid_data = bunchify({

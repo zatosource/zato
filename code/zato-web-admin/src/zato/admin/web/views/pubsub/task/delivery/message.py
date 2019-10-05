@@ -70,6 +70,7 @@ class MessageBrowserInFlight(_Index):
         output_repeated = True
 
     def get_initial_input(self):
+
         return {
             'server_pid':self.input.server_pid,
             'python_id':self.input.python_id,
@@ -77,6 +78,15 @@ class MessageBrowserInFlight(_Index):
 
     def handle_return_data(self, return_data):
 
+        # Get task metadata from a relevant service
+        response = self.req.zato.client.invoke('task2.get-delivery-task', {
+            'server_name':self.input.server_name,
+            'server_pid':self.input.server_pid,
+            'python_id':self.input.python_id,
+        })
+        return_data['task'] = response.data.response
+
+        # Handle the list of results now
         for item in return_data['items']:
 
             item.id = fs_safe_name(item.py_object)
