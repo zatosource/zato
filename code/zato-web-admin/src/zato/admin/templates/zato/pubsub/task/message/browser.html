@@ -37,10 +37,11 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">In-flight messages for endpoint
-    <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint_id }}">{{ endpoint_name }}</a>,
-    topic
-    <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id name_slug %}">{{ name }}</a>,
+<h2 class="zato">In-flight messages for
+    {{ server_name }}:{{ server_pid }},
+    endpoint
+    <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ task.endpoint_name }}">{{ task.endpoint_name }}</a>, topic
+    <a href="{% url "pubsub-endpoint-queues" cluster_id task.endpoint_id name_slug %}?cluster={{ cluster_id }}">{{ task.topic_name }}</a>,
     Python
     {{ python_id }}
 

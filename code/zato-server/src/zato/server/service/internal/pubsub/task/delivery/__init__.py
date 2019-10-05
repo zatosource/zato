@@ -25,13 +25,13 @@ if 0:
 
 # ################################################################################################################################
 
-class _GetListSIO(object):
+class GetTaskSIO(object):
     output_required = ('server_name', 'server_pid', 'sub_key', 'topic_id', 'topic_name', 'is_active',
         'endpoint_id', 'endpoint_name', 'py_object', AsIs('python_id'), Int('len_messages'), Int('len_history'), Int('len_batches'),
         Int('len_delivered'))
     output_optional = 'last_sync', 'last_sync_sk', 'last_iter_run', AsIs('ext_client_id')
-    output_repeated = True
     output_elem = None
+    response_elem = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,7 +39,8 @@ class _GetListSIO(object):
 class GetServerDeliveryTaskList(AdminService):
     """ Returns all delivery tasks for a particular server process (must be invoked on the required one).
     """
-    SimpleIO = _GetListSIO
+    class SimpleIO(GetTaskSIO):
+        output_repeated = True
 
     def get_data(self):
 
@@ -87,7 +88,7 @@ class GetServerDeliveryTaskList(AdminService):
 class GetDeliveryTaskList(AdminService):
     """ Returns all delivery tasks for a particular server process (possibly a remote one).
     """
-    class SimpleIO(GetListAdminSIO, _GetListSIO):
+    class SimpleIO(GetListAdminSIO, GetTaskSIO):
         input_required = 'cluster_id', 'server_name', 'server_pid'
 
     def handle(self):
