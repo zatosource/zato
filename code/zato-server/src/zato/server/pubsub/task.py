@@ -266,7 +266,7 @@ class DeliveryTask(object):
             # Go through each message and check if any has reached our delivery_max_retry.
             # Any such message should be deleted so we add it to to_delete. Note that we do it here
             # because we want for a sub hook to have access to them.
-            for msg in current_batch:
+            for msg in current_batch: # type: Message
                 if msg.delivery_count >= self.delivery_max_retry:
                     to_delete.append(msg)
 
@@ -327,6 +327,7 @@ class DeliveryTask(object):
                     for msg in to_deliver:
                         try:
                             #self.delivery_list.remove_pubsub_msg(msg)
+                            msg.delivery_count += 1
                             pass
                         except Exception:
                             msg = 'Caught exception in run_delivery/remove_pubsub_msg, e:`%s`'
