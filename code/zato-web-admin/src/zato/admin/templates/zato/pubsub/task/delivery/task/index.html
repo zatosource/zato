@@ -133,8 +133,8 @@
                             {% endif %}
                         </td>
 
-                        <td><a href="javascript:$.fn.zato.pubsub.task.delivery-server.clear-messages('{{ item.server_name }}', '{{ item.server_pid }}', '{{ item.task_id }}')">Clear</a></td>
-                        <td><a href="javascript:$.fn.zato.pubsub.task.delivery-server.toggle-active('{{ item.server_name }}', '{{ item.server_pid }}', '{{ item.task_id }}')">{% if item.is_active %}Stop{% else %}Start{% endif %}</a></td>
+                        <td><!--<a href="javascript:$.fn.zato.pubsub.task.delivery-server.clear-messages('{{ item.server_name }}', '{{ item.server_pid }}', '{{ item.task_id }}')">Clear</a>--></td>
+                        <td><!--<a href="javascript:$.fn.zato.pubsub.task.delivery-server.toggle-active('{{ item.server_name }}', '{{ item.server_pid }}', '{{ item.task_id }}')">{% if item.is_active %}Stop{% else %}Start{% endif %}</a>--></td>
 
                         <td class='ignore'>{{ item.server_name }}</td>
                         <td class='ignore'>{{ item.server_pid }}</td>

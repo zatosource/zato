@@ -593,6 +593,7 @@ class GDMessage(Message):
         self.has_gd = True
         self.topic_name = topic_name
         self.size = msg.size
+        self.published_by_id = msg.published_by_id
         self.sub_pattern_matched = msg.sub_pattern_matched
         self.user_ctx = msg.user_ctx
         self.zato_ctx = msg.zato_ctx

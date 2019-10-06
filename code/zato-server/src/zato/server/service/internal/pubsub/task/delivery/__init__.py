@@ -99,3 +99,27 @@ class GetDeliveryTaskList(AdminService):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class GetDeliveryTask(AdminService):
+    """ Returns a particular delivery task by its Python object's ID.
+    """
+    class SimpleIO(GetTaskSIO):
+        input_required = 'server_name', 'server_pid', AsIs('python_id')
+
+    def handle(self):
+
+        request = {
+            'cluster_id': self.server.cluster_id,
+            'server_name': self.request.input.server_name,
+            'server_pid': self.request.input.server_pid,
+        }
+
+        response = self.servers[self.request.input.server_name].invoke(GetDeliveryTaskList.get_name(), request)
+
+        for item in response:
+            if item['python_id'] == self.request.input.python_id:
+                self.response.payload = item
+                return
+
+# ################################################################################################################################
+# ################################################################################################################################
