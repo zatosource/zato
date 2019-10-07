@@ -131,7 +131,7 @@ class Publish(AdminService):
         # which means it has no delivery server, we uncoditionally turn this message into a GD one ..
         if has_wsx_no_server:
             has_gd = True
-            logger_pubsub.info(_log_turning_gd_msg.format('wsx'), pub_msg_id)
+            logger_pubsub.info(_log_turning_gd_msg.format('no WSX server'), pub_msg_id)
 
         # .. otherwise, use input GD value or the default per topic.
         else:
