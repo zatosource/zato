@@ -30,15 +30,19 @@ from regex import compile as regex_compile
 
 # Python 2/3 compatibility
 from six import PY3
-from past.builtins import basestring
+from past.builtins import basestring, unicode
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, HTTP_SOAP, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
+from zato.common import CHANNEL, DATA_FORMAT, JSON_RPC, HTTP_RESPONSES, HTTP_SOAP, RATE_LIMIT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
+from zato.common.json_schema import DictError as JSONSchemaDictError, ValidationException as JSONSchemaValidationException
+from zato.common.rate_limiting.common import AddressNotAllowed, BaseException as RateLimitingException, RateLimitReached
 from zato.common.util import payload_from_request
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
+
+stack_format = None
 
 # ################################################################################################################################
 
@@ -46,9 +50,11 @@ from zato.server.service.internal import AdminService
 import typing
 
 if typing.TYPE_CHECKING:
+    from zato.server.base.parallel import ParallelServer
     from zato.server.connection.http_soap.url_data import URLData
 
     # For pyflakes
+    ParallelServer = ParallelServer
     URLData = URLData
 
 # ################################################################################################################################
@@ -63,6 +69,8 @@ accept_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
 
 # ################################################################################################################################
 
+TOO_MANY_REQUESTS = 429
+
 _status_bad_request = '{} {}'.format(BAD_REQUEST, HTTP_RESPONSES[BAD_REQUEST])
 _status_internal_server_error = '{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
 _status_not_found = '{} {}'.format(NOT_FOUND, HTTP_RESPONSES[NOT_FOUND])
@@ -73,17 +81,23 @@ _status_too_many_requests = '{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO
 
 # ################################################################################################################################
 
+_basic_auth = SEC_DEF_TYPE.BASIC_AUTH
+_jwt = SEC_DEF_TYPE.JWT
+_sso_ext_auth = _basic_auth, _jwt
+
+# ################################################################################################################################
+
 status_response = {}
 for code, response in HTTP_RESPONSES.items():
     status_response[code] = '{} {}'.format(code, response)
 
 # ################################################################################################################################
 
-soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>""" # noqa
+soap_doc = """<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>""" # noqa
 
 # ################################################################################################################################
 
-zato_message_soap = b"""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
+zato_message_soap = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
   <soap:Body>{data}</soap:Body>
 </soap:Envelope>"""
 
@@ -91,6 +105,7 @@ zato_message_soap = b"""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/so
 
 zato_message_plain = b'{data}'
 zato_message_declaration = b"<?xml version='1.0' encoding='UTF-8'?>" + zato_message_plain
+zato_message_declaration_uni = zato_message_declaration.decode('utf8')
 
 # ################################################################################################################################
 
@@ -173,10 +188,11 @@ class _HashCtx(object):
 class RequestDispatcher(object):
     """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
     """
-    def __init__(self, url_data=None, security=None, request_handler=None, simple_io_config=None, return_tracebacks=None,
-            default_error_message=None, http_methods_allowed=None):
-        # type: (URLData, object, object, dict, bool, unicode, list)
+    def __init__(self, server=None, url_data=None, security=None, request_handler=None, simple_io_config=None,
+            return_tracebacks=None, default_error_message=None, http_methods_allowed=None):
+        # type: (ParallelServer, URLData, object, object, dict, bool, unicode, list)
 
+        self.server = server
         self.url_data = url_data
         self.security = security
 
@@ -186,6 +202,9 @@ class RequestDispatcher(object):
 
         self.default_error_message = default_error_message
         self.http_methods_allowed = http_methods_allowed
+
+        # To reduce the number of attribute lookups
+        self._sso_api_user = self.server.sso_api.user if self.server.sso_api else None
 
 # ################################################################################################################################
 
@@ -217,7 +236,9 @@ class RequestDispatcher(object):
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
         _http_soap_action='HTTP_SOAPACTION', _stringio=StringIO, _gzipfile=GzipFile, _accept_any_http=accept_any_http,
-        _accept_any_internal=accept_any_internal):
+        _accept_any_internal=accept_any_internal, _rate_limit_type_http=RATE_LIMIT.OBJECT_TYPE.HTTP_SOAP,
+        _rate_limit_type_sso_user=RATE_LIMIT.OBJECT_TYPE.SSO_USER, _stack_format=stack_format, _exc_sep='*' * 80,
+        _jwt=_jwt, _sso_ext_auth=_sso_ext_auth):
 
         # Needed as one of the first steps
         http_method = wsgi_environ['REQUEST_METHOD']
@@ -253,7 +274,11 @@ class RequestDispatcher(object):
         # This is needed in parallel.py's on_wsgi_request
         wsgi_environ['zato.channel_item'] = channel_item
 
+        # Read the raw data
         payload = wsgi_environ['wsgi.input'].read()
+
+        # Store for later use prior to any kind of parsing
+        wsgi_environ['zato.http.raw_request'] = payload
 
         # OK, we can possibly handle it
         if url_match not in no_url_match:
@@ -265,12 +290,13 @@ class RequestDispatcher(object):
                     logger.warn('url_data:`%s` is not active, raising NotFound', sorted(url_match.items()))
                     raise NotFound(cid, 'Channel inactive')
 
-                # Need to read security info here so we know if POST needs to be
+                # We need to read security info here so we know if POST needs to be
                 # parsed. If so, we do it here and reuse it in other places
                 # so it doesn't have to be parsed two or more times.
                 post_data = {}
 
-                sec = self.url_data.url_sec[channel_item['match_target']]
+                match_target = channel_item['match_target']
+                sec = self.url_data.url_sec[match_target]
 
                 if sec.sec_def != ZATO_NONE or sec.sec_use_rbac is True:
 
@@ -286,8 +312,40 @@ class RequestDispatcher(object):
                                 cid, payload, channel_item.data_format, channel_item.transport)
 
                     # Will raise an exception on any security violation
-                    self.url_data.check_security(
+                    auth_result = self.url_data.check_security(
                         sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
+
+                # Check rate limiting now - this could not have been done earlier because we wanted
+                # for security checks to be made first. Otherwise, someone would be able to invoke
+                # our endpoint without credentials as many times as it is needed to exhaust the rate limit
+                # denying in this manner access to genuine users.
+                if channel_item.get('is_rate_limit_active'):
+                    self.server.rate_limiting.check_limit(
+                        cid, _rate_limit_type_http, channel_item['name'], wsgi_environ['zato.http.remote_addr'])
+
+                # Security definition-based checks went fine but it is still possible
+                # that this sec_def is linked to an SSO user whose rate limits we need to check.
+
+                # Check SSO-related limits only if SSO is enabled
+                if self._sso_api_user:
+
+                    # Not all sec_def types may have associated SSO users
+                    if sec.sec_def != ZATO_NONE:
+
+                        if sec.sec_def.sec_type in _sso_ext_auth:
+
+                            # JWT comes with external sessions whereas Basic Auth does not
+                            if sec.sec_def.sec_type == _jwt:
+                                ext_session_id = auth_result.raw_token
+                            else:
+                                ext_session_id = None
+
+                            # Try to log in the user to SSO by that account's external credentials.
+                            self.server.sso_tool.on_external_auth(
+                                sec.sec_def.sec_type, sec.sec_def.id, sec.sec_def.username, cid,
+                                wsgi_environ, ext_session_id)
+                        else:
+                            raise Exception('Unexpected sec_type `{}`'.format(sec.sec_def.sec_type))
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
@@ -310,7 +368,7 @@ class RequestDispatcher(object):
 
                     wsgi_environ['zato.http.response.headers']['Content-Encoding'] = 'gzip'
 
-                # Finally return payload to the client
+                # Finally, return payload to the client
                 return response.payload
 
             except Exception as e:
@@ -344,13 +402,30 @@ class RequestDispatcher(object):
                         status = _status_too_many_requests
 
                 else:
-                    status_code = INTERNAL_SERVER_ERROR
-                    response = _format_exc if self.return_tracebacks else self.default_error_message
+
+                    # JSON Schema validation
+                    if isinstance(e, JSONSchemaValidationException):
+                        status_code = _status_bad_request
+                        needs_prefix = False if e.needs_err_details else True
+                        response = JSONSchemaDictError(
+                            cid, e.needs_err_details, e.error_msg, needs_prefix=needs_prefix).serialize()
+
+                    # Rate limiting and whitelisting
+                    elif isinstance(e, RateLimitingException):
+                        response, status_code, status = self._on_rate_limiting_exception(cid, e, channel_item)
+
+                    else:
+                        status_code = INTERNAL_SERVER_ERROR
+                        response = _format_exc if self.return_tracebacks else self.default_error_message
+
+                _exc = _stack_format(e, style='color', show_vals='like_source', truncate_vals=5000,
+                    add_summary=True, source_lines=20) if _stack_format else _format_exc
 
                 # TODO: This should be configurable. Some people may want such
                 # things to be on DEBUG whereas for others ERROR will make most sense
                 # in given circumstances.
-                logger.error('Caught an exception, cid:`%s`, status_code:`%s`, _format_exc:`%s`', cid, status_code, _format_exc)
+                logger.error(
+                    'Caught an exception, cid:`%s`, status_code:`%s`, `%s`', cid, status_code, _exc)
 
                 try:
                     error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'])
@@ -369,12 +444,29 @@ class RequestDispatcher(object):
 
         # This is 404, no such URL path and SOAP action is not known either.
         else:
-            response = _response_404.format(path_info.encode('utf8'),
+            response = _response_404.format(path_info,
                 wsgi_environ.get('REQUEST_METHOD'), wsgi_environ.get('HTTP_ACCEPT'), cid)
             wsgi_environ['zato.http.response.status'] = _status_not_found
 
             logger.error(response)
             return response
+
+# ################################################################################################################################
+
+    def _on_rate_limiting_exception(self, cid, e, channel_item, _json=DATA_FORMAT.JSON, _json_rpc=JSON_RPC.PREFIX.CHANNEL):
+        # type: (unicode, RateLimitingException, dict, unicode, unicode) -> (unicode, int, unicode)
+
+        if isinstance(e, RateLimitReached):
+            status_code = TOO_MANY_REQUESTS
+            status = _status_too_many_requests
+
+        elif isinstance(e, AddressNotAllowed):
+            status_code = FORBIDDEN
+            status = _status_forbidden
+
+        error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'] or _json)
+
+        return error_wrapper(cid, 'Error {}'.format(status)), status_code, status
 
 # ################################################################################################################################
 
@@ -406,7 +498,7 @@ class RequestHandler(object):
         if params:
             params = QueryDict(params, encoding='utf-8')
             out = {}
-            for key, value in params.iterlists():
+            for key, value in params.lists():
                 if len(value) > 1:
                     out[key] = value
                 else:
@@ -469,7 +561,7 @@ class RequestHandler(object):
         else:
             query_string = str(sorted(channel_params.items()))
             data = '%s%s%s%s' % (wsgi_environ['REQUEST_METHOD'], wsgi_environ['PATH_INFO'], query_string, raw_request)
-            hash_value = _sha256(data).hexdigest()
+            hash_value = _sha256(data.encode('utf8')).hexdigest()
             hash_value = '-'.join(split_re(hash_value))
 
         # No matter if hash value is default or from service, always prefix it with channel's type and ID
@@ -488,14 +580,14 @@ class RequestHandler(object):
 
 # ################################################################################################################################
 
-    def set_response_in_cache(self, channel_item, key, response, _dumps=dumps):
+    def set_response_in_cache(self, channel_item, key, response, _dumps=dumps, _py3=PY3):
         """ Caches responses from this channel's invocation for as long as the cache is configured to keep it.
         """
         self.server.set_in_cache(channel_item['cache_type'], channel_item['cache_name'], key, _dumps({
             'payload': response.payload,
             'content_type': response.content_type,
             'headers': response.headers,
-            'status_code': response.status_code,
+            'status_code': response.status_code.value if _py3 else response.status_code,
         }))
 
 # ################################################################################################################################
@@ -556,7 +648,7 @@ class RequestHandler(object):
                        namespace=getattr(service_instance.SimpleIO, 'namespace', zato_namespace),
                          cid=service_instance.cid, result=ZATO_OK)
 
-        return zato_message_template.format(data=data.encode('utf-8'))
+        return zato_message_template.format(data=data.encode('utf-8') if isinstance(data, unicode) else data)
 
 # ################################################################################################################################
 
@@ -580,7 +672,7 @@ class RequestHandler(object):
                 if transport == URL_TYPE.SOAP:
                     zato_message_template = zato_message_soap
                 else:
-                    zato_message_template = zato_message_declaration
+                    zato_message_template = zato_message_declaration_uni
 
                 if response.payload:
                     if not isinstance(response.payload, basestring):

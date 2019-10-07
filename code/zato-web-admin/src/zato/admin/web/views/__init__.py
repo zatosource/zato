@@ -30,6 +30,11 @@ from future.utils import iterkeys
 from past.builtins import basestring
 
 # Zato
+try:
+    from zato.admin.settings import lb_agent_use_tls
+except ImportError:
+    lb_agent_use_tls = True
+
 from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
 from zato.common import SEC_DEF_TYPE_NAME, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
@@ -113,7 +118,7 @@ def get_lb_client(cluster):
     which may use web admin's SSL material (the client from zato.common can't use
     it because it would make it dependent on the zato.admin package).
     """
-    return _get_lb_client(cluster.lb_host, cluster.lb_agent_port, ssl_ca_certs,
+    return _get_lb_client(lb_agent_use_tls, cluster.lb_host, cluster.lb_agent_port, ssl_ca_certs,
                           ssl_key_file, ssl_cert_file, LB_AGENT_CONNECT_TIMEOUT)
 
 # ################################################################################################################################
@@ -440,7 +445,7 @@ class CreateEdit(_BaseView):
     """ Subclasses of this class will handle the creation/updates of Zato objects.
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super(CreateEdit, self).__init__()
         self.input = Bunch()
         self.input_dict = {}
@@ -647,5 +652,19 @@ def upload_to_server(req, cluster_id, service, error_msg_template):
         msg = error_msg_template.format(format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+
+def get_http_channel_security_id(item):
+    _security_id = item.security_id
+    if _security_id:
+        security_id = '{0}/{1}'.format(item.sec_type, _security_id)
+    else:
+        if item.sec_use_rbac:
+            security_id = ZATO_SEC_USE_RBAC
+        else:
+            security_id = ZATO_NONE
+
+    return security_id
 
 # ################################################################################################################################

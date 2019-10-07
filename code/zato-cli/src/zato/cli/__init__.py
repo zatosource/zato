@@ -27,12 +27,15 @@ from socket import gethostname
 import sqlalchemy
 
 # Zato
-from zato import common
 from zato.cli import util as cli_util
-from zato.common import odb, util, ZATO_INFO_FILE
+from zato.common import get_version, MS_SQL, odb, util, ZATO_INFO_FILE
 from zato.common.util import get_engine_url, get_full_stack, get_session
 from zato.common.util.cli import read_stdin_data
 from zato.common.util.import_ import import_string
+
+# ################################################################################################################################
+
+zato_version = get_version()
 
 # ################################################################################################################################
 
@@ -83,19 +86,17 @@ common_ca_create_opts = [
     {'name':'--common-name', 'help':'Common name (defaults to {default})'.format(default=default_common_name)},
 ]
 
+common_totp_opts = [
+    {'name': 'username', 'help': 'Username to reset the TOTP secret key of'},
+    {'name': '--key', 'help': 'Key to use'},
+    {'name': '--key-label', 'help': 'Label to apply to the key'},
+]
+
 kvdb_opts = [
     {'name':'kvdb_host', 'help':_opts_kvdb_host},
     {'name':'kvdb_port', 'help':_opts_kvdb_port},
     {'name':'--kvdb_password', 'help':'Key/value database password'},
 ]
-
-# ################################################################################################################################
-
-def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
-    return [
-        {'name':'tech_account_name', 'help':'Technical account name {}'.format(help_suffix)},
-        {'name':'--tech_account_password', 'help':'Technical account password'},
-    ]
 
 # ################################################################################################################################
 
@@ -313,6 +314,10 @@ ping_query=SELECT 1
 display_name=Oracle
 ping_query=SELECT 1 FROM dual
 
+[{}]
+display_name="MS SQL (Direct)"
+ping_query=SELECT 1
+
 # ######### ################################# ######### #
 # ######### User-defined SQL engines go below ######### #
 # ######### ################################# ######### #
@@ -320,7 +325,7 @@ ping_query=SELECT 1 FROM dual
 #[label]
 #friendly_name=My DB
 #sqlalchemy_driver=sa-name
-""".lstrip() # nopep8
+""".lstrip().format(MS_SQL.ZATO_DIRECT) # nopep8
 
 # ################################################################################################################################
 
@@ -347,7 +352,7 @@ def run_command(args):
         ('delete_odb', 'zato.cli.delete_odb.Delete'),
         ('decrypt', 'zato.cli.crypto.Decrypt'),
         ('encrypt', 'zato.cli.crypto.Encrypt'),
-        ('enmasse', 'zato.cli.enmasse.EnMasse'),
+        ('enmasse', 'zato.cli.enmasse.Enmasse'),
         ('from_config', 'zato.cli.FromConfig'),
         ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
         ('info', 'zato.cli.info.Info'),
@@ -355,13 +360,14 @@ def run_command(args):
         ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('service_invoke', 'zato.cli.service.Invoke'),
-        ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),
+        ('set_admin_invoke_password', 'zato.cli.web_admin_auth.SetAdminInvokePassword'),
         ('sso_change_user_password', 'zato.cli.sso.ChangeUserPassword'),
         ('sso_create_odb', 'zato.cli.sso.CreateODB'),
         ('sso_create_user', 'zato.cli.sso.CreateUser'),
         ('sso_create_super_user', 'zato.cli.sso.CreateSuperUser'),
         ('sso_delete_user', 'zato.cli.sso.DeleteUser'),
         ('sso_lock_user', 'zato.cli.sso.LockUser'),
+        ('sso_reset_totp_key', 'zato.cli.sso.ResetTOTPKey'),
         ('sso_reset_user_password', 'zato.cli.sso.ResetUserPassword'),
         ('sso_unlock_user', 'zato.cli.sso.UnlockUser'),
         ('start', 'zato.cli.start.Start'),
@@ -531,7 +537,7 @@ class ZatoCommand(object):
 # ################################################################################################################################
 
     def store_initial_info(self, target_dir, component):
-        info = {'version': common.version, # noqa
+        info = {'version': zato_version, # noqa
                 'created_user_host': self._get_user_host(),
                 'created_ts': datetime.utcnow().isoformat(), # noqa
                 'component': component
@@ -581,7 +587,7 @@ class ZatoCommand(object):
 
             # It is OK if password is an empty string and empty secrets are allowed
             if not password_arg:
-                if isinstance(password_arg, str) and self.allow_empty_secrets:
+                if self.allow_empty_secrets:
                     continue
 
                 password = self._get_secret(opt_help, self.needs_secrets_confirm, self.allow_empty_secrets, opt_name)
@@ -931,5 +937,19 @@ class ManageCommand(ZatoCommand):
         os.chdir(self.component_dir)
         return self._get_dispatch()[json_data['component']](args)
 
+
+# ################################################################################################################################
+
+def is_arg_given(args, *arg_names):
+
+    for arg_name in arg_names:
+        try:
+            result = args.get(arg_name)
+            if result:
+                return True
+        except AttributeError:
+            result = getattr(args, arg_name, None)
+            if result:
+                return True
 
 # ################################################################################################################################

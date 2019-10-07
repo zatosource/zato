@@ -11,11 +11,32 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os
 
+# PyOTP
+import pyotp
+
 # Zato
 from zato.client import AnyServiceInvoker
-from zato.common import odb
+from zato.common import odb, TOTP
+from zato.common.crypto import CryptoManager
 from zato.common.util import get_config, get_crypto_manager_from_server_config, get_odb_session_from_server_config, \
      get_server_client_auth
+
+# ################################################################################################################################
+
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # stdlib
+    from argparse import Namespace
+
+    # Python 2/3 compatibility
+    from past.builtins import unicode
+
+    # For pyflakes
+    Namespace = Namespace
+    unicode = unicode
 
 # ################################################################################################################################
 
@@ -52,7 +73,28 @@ class Util(object):
 
         self.client.odb_session = session
 
-        # Sanity check
+        # Configuration check
         self.client.invoke('zato.ping')
+
+# ################################################################################################################################
+
+def get_totp_info_from_args(args, default_key_label=TOTP.default_label):
+    """ Returns a key and its label extracted from command line arguments
+    or auto-generates a new pair if they are missing in args.
+    """
+    # type: (Namespace, unicode) -> (unicode, unicode)
+
+    # If there was a key given on input, we need to validate it,
+    # this report an erorr if the key cannot be used.
+    if args.key:
+        totp = pyotp.TOTP(args.key)
+        totp.now()
+
+        # If we are here, it means that the key was valid
+        key = args.key
+    else:
+        key = CryptoManager.generate_totp_key()
+
+    return key, args.key_label if args.key_label else default_key_label
 
 # ################################################################################################################################

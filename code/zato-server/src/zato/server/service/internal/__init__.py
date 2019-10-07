@@ -28,7 +28,6 @@ from zato.server.service.reqresp.sio import convert_sio
 # ################################################################################################################################
 
 logger = logging.getLogger('zato_admin')
-has_info = logger.isEnabledFor(logging.INFO)
 
 # ################################################################################################################################
 
@@ -94,8 +93,13 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def before_handle(self, has_info=has_info):
-        if has_info:
+    def before_handle(self):
+
+        # Do not log BASE64-encoded messages
+        if self.name == 'zato.service.invoke':
+            return
+
+        if self.server.is_admin_enabled_for_info:
             request = dict(self.request.input)
             for k, v in request.items():
 
@@ -104,7 +108,7 @@ class AdminService(Service):
                 if 'password' in k:
                     request[k] = SECRET_SHADOW
 
-            logger.info('cid:`%s`, name:`%s`, request:`%s`', self.cid, self.name, request)
+            logger.info('Request; service:`%s`, data:`%s` cid:`%s`, ', self.name, request, self.cid)
 
 # ################################################################################################################################
 
@@ -125,16 +129,22 @@ class AdminService(Service):
 
     def after_handle(self):
 
-        payload = self.response.payload
-        is_text = isinstance(payload, basestring)
-        needs_meta = self.request.input.get('needs_meta', True)
+        # Do not log BASE64-encoded messages
+        if self.name == 'zato.service.invoke':
+            return
 
-        if needs_meta and hasattr(self, '_search_tool'):
-            if not is_text:
-                payload.zato_meta = self._search_tool.output_meta
+        if self.server.is_admin_enabled_for_info:
 
-        logger.info(
-            'cid:`%s`, name:`%s`, response:`%r`', self.cid, self.name, replace_private_key(get_response_value(self.response)))
+            payload = self.response.payload
+            is_text = isinstance(payload, basestring)
+            needs_meta = self.request.input.get('needs_meta', True)
+
+            if needs_meta and hasattr(self, '_search_tool'):
+                if not is_text:
+                    payload.zato_meta = self._search_tool.output_meta
+
+            logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
+                self.name, replace_private_key(get_response_value(self.response)), self.cid)
 
 # ################################################################################################################################
 
@@ -180,6 +190,13 @@ class Ping(AdminService):
 
 # ################################################################################################################################
 
+class PubPing(Ping):
+    """ Just like zato.ping but available by default in web-admin (because of its prefix).
+    """
+    name = 'pub.zato.ping'
+
+# ################################################################################################################################
+
 class Ping2(Ping):
     """ Works exactly the same as zato.ping, added to have another service for API testing.
     """
@@ -203,8 +220,8 @@ class ChangePasswordBase(AdminService):
             password1 = self.request.input.get('password1', '')
             password2 = self.request.input.get('password2', '')
 
-            password1_decrypted = self.server.decrypt(password1)
-            password2_decrypted = self.server.decrypt(password2)
+            password1_decrypted = self.server.decrypt(password1) if password1 else password1
+            password2_decrypted = self.server.decrypt(password2) if password2 else password2
 
             try:
                 if self.password_required:

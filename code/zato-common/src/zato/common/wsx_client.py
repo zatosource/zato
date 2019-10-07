@@ -13,7 +13,6 @@ import logging
 import subprocess
 from datetime import datetime, timedelta
 from json import loads
-from socket import error as SocketError
 from traceback import format_exc
 from uuid import uuid4
 
@@ -28,7 +27,6 @@ from six.moves.http_client import OK
 from ws4py.client.geventclient import WebSocketClient
 
 # Zato
-from zato.common.util import spawn_greenlet
 from zato.common.util.json_ import dumps
 
 # ################################################################################################################################
@@ -60,6 +58,7 @@ class Config(object):
         self.secret = secret
         self.on_request_callback = on_request_callback
         self.wait_time = wait_time
+        self.needs_auth = bool(self.username)
 
 # ################################################################################################################################
 
@@ -219,13 +218,17 @@ class Client(object):
     """ A WebSocket client that knows how to invoke Zato services.
     """
     def __init__(self, config):
+        # type: (Config)
         self.config = config
         self.conn = _WSClient(self.on_connected, self.on_message, self.on_error, self.on_closed, self.config.address)
         self.keep_running = True
         self.is_authenticated = False
+        self.is_connected = False
+        self.is_auth_needed = bool(self.config.username)
         self.auth_token = None
         self.on_request_callback = self.config.on_request_callback
         self.on_closed_callback = self.config.on_closed_callback
+        self.needs_auth = self.config.needs_auth
 
         # Keyed by IDs of requests sent from this client to Zato
         self.requests_sent = {}
@@ -359,7 +362,7 @@ class Client(object):
         while needs_connect and now < until:
             try:
                 self.conn.connect()
-            except SocketError as e:
+            except Exception as e:
 
                 if use_warn:
                     log_func = logger.warn
@@ -370,21 +373,22 @@ class Client(object):
                     else:
                         log_func = logger.debug
 
-                log_func('Socket error caught `%s` while connecting to WSX `%s`', e, self.config.address)
+                log_func('Exception caught `%s` while connecting to WSX `%s (%s)`', e, self.config.address, format_exc())
                 sleep(2)
                 now = datetime.utcnow()
             else:
                 needs_connect = False
+                self.is_connected = True
 
 # ################################################################################################################################
 
     def run(self, max_wait=20):
-        spawn_greenlet(self._run, timeout=10)
+        self._run()
 
         now = datetime.utcnow()
         until = now + timedelta(seconds=max_wait)
 
-        while not self.is_authenticated:
+        while not self.is_connected:
             sleep(0.01)
             now = datetime.utcnow()
             if now >= until:
@@ -392,14 +396,15 @@ class Client(object):
 
 # ################################################################################################################################
 
-    def stop(self):
+    def stop(self, reason=''):
         self.keep_running = False
-        self.conn.close()
+        self.conn.close(reason=reason)
+        self.is_connected = False
 
 # ################################################################################################################################
 
     def invoke(self, request):
-        if not self.is_authenticated:
+        if self.needs_auth and (not self.is_authenticated):
             raise Exception('Client is not authenticated')
 
         request_id = MSG_PREFIX.INVOKE_SERVICE.format(uuid4().hex)

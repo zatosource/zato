@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from future.utils import iteritems
 
 # Zato
-from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
+from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
 from zato.common import CACHE, CONNECTION, DATA_FORMAT, IPC, MISC, PUBSUB, SIMPLE_IO, URL_TYPE
 from zato.common.odb.model import CacheBuiltin, Cluster, HTTPBasicAuth, HTTPSOAP, PubSubEndpoint, \
      PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, Service, WSSDefinition
@@ -465,59 +465,83 @@ class Create(ZatoCommand):
     opts.append({'name':'broker_host', 'help':"Redis host"})
     opts.append({'name':'broker_port', 'help':'Redis port'})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
-
-    opts += get_tech_account_opts('for web-admin instances to use')
+    opts.append({'name':'--admin-invoke-password', 'help':'Password for web-admin to connect to servers with'})
+    opts.append({'name':'--skip-if-exists',
+        'help':'Return without raising an error if cluster already exists', 'action':'store_true'})
 
     def execute(self, args, show_output=True):
 
         engine = self._get_engine(args)
         session = self._get_session(engine)
 
-        cluster = Cluster()
-        cluster.name = args.cluster_name
-        cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), datetime.utcnow().isoformat())
+        if engine.dialect.has_table(engine.connect(), 'install_state'):
+            if is_arg_given(args, 'skip-if-exists', 'skip_if_exists'):
+                if show_output:
+                    if self.verbose:
+                        self.logger.debug('Cluster already exists, skipped its creation')
+                    else:
+                        self.logger.info('OK')
+                return
 
-        for name in(
-              'odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name',
-              'broker_host', 'broker_port', 'lb_host', 'lb_port', 'lb_agent_port'):
-            setattr(cluster, name, getattr(args, name))
-        session.add(cluster)
+        with session.no_autoflush:
 
-        # TODO: getattrs below should be squared away - one of the attrs should win
-        #       and the other one should be get ridden of.
-        admin_invoke_sec = HTTPBasicAuth(
-            None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke', getattr(
-                args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password'), cluster)
-        session.add(admin_invoke_sec)
+            cluster = Cluster()
+            cluster.name = args.cluster_name
+            cluster.description = 'Created by {} on {} (UTC)'.format(self._get_user_host(), datetime.utcnow().isoformat())
 
-        pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', new_password(), cluster)
-        session.add(pubapi_sec)
+            for name in(
+                  'odb_type', 'odb_host', 'odb_port', 'odb_user', 'odb_db_name',
+                  'broker_host', 'broker_port', 'lb_host', 'lb_port', 'lb_agent_port'):
+                setattr(cluster, name, getattr(args, name))
+            session.add(cluster)
 
-        internal_invoke_sec = HTTPBasicAuth(None, 'zato.internal.invoke', True, 'zato.internal.invoke.user',
-            'Zato internal invoker', new_password(), cluster)
-        session.add(internal_invoke_sec)
+            # admin.invoke user's password may be possibly in one of these attributes,
+            # but if it is now, generate a new one.
 
-        self.add_default_rbac_permissions(session, cluster)
-        root_rbac_role = self.add_default_rbac_roles(session, cluster)
-        ide_pub_rbac_role = self.add_rbac_role_and_acct(
-            session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
+            admin_invoke_password = getattr(args, 'admin-invoke-password', None)
 
-        self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, ide_pub_rbac_role)
+            if not admin_invoke_password:
+                admin_invoke_password = getattr(args, 'admin_invoke_password', None)
 
-        self.add_ping_services(session, cluster)
-        self.add_default_cache(session, cluster)
-        self.add_cache_endpoints(session, cluster)
-        self.add_crypto_endpoints(session, cluster)
-        self.add_pubsub_sec_endpoints(session, cluster)
+            if not admin_invoke_password:
+                admin_invoke_password = new_password()
 
-        # IBM MQ connections / connectors
-        self.add_internal_callback_wmq(session, cluster)
+            admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke',
+                admin_invoke_password, cluster)
+            session.add(admin_invoke_sec)
 
-        # SFTP connections / connectors
-        self.add_sftp_credentials(session, cluster)
+            pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', new_password(), cluster)
+            session.add(pubapi_sec)
 
-        # SSO
-        self.add_sso_endpoints(session, cluster)
+            internal_invoke_sec = HTTPBasicAuth(None, 'zato.internal.invoke', True, 'zato.internal.invoke.user',
+                'Zato internal invoker', new_password(), cluster)
+            session.add(internal_invoke_sec)
+
+            self.add_default_rbac_permissions(session, cluster)
+            root_rbac_role = self.add_default_rbac_roles(session, cluster)
+            ide_pub_rbac_role = self.add_rbac_role_and_acct(
+                session, cluster, root_rbac_role, 'IDE Publishers', 'ide_publisher', 'ide_publisher')
+
+            # We need to flush the session here, after adding default RBAC permissions
+            # which are needed by REST channels with security delegated to RBAC.
+            session.flush()
+
+            self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, ide_pub_rbac_role)
+
+            self.add_ping_services(session, cluster)
+            self.add_default_cache(session, cluster)
+            self.add_cache_endpoints(session, cluster)
+            self.add_crypto_endpoints(session, cluster)
+            self.add_pubsub_sec_endpoints(session, cluster)
+
+            # IBM MQ connections / connectors
+            self.add_internal_callback_wmq(session, cluster)
+
+            # SFTP connections / connectors
+            self.add_sftp_credentials(session, cluster)
+
+            # SSO
+            self.add_sso_endpoints(session, cluster)
 
         try:
             session.commit()
@@ -542,7 +566,8 @@ class Create(ZatoCommand):
 
     def add_api_invoke(self, session, cluster, service, pubapi_sec):
         channel = HTTPSOAP(None, '/zato/api/invoke', True, True, 'channel', 'plain_http',
-            None, '/zato/api/invoke/{service_name}', None, '', None, None, merge_url_params_req=True, service=service,
+            None, '/zato/api/invoke/{service_name}', None, '', None, None,
+            merge_url_params_req=True, service=service, security=pubapi_sec,
             cluster=cluster)
         session.add(channel)
 
@@ -1067,6 +1092,8 @@ class Create(ZatoCommand):
     def add_sso_endpoints(self, session, cluster):
 
         data = [
+
+            # Users
             ['zato.sso.user.create', 'zato.server.service.internal.sso.user.Create', '/zato/sso/user/create'],
             ['zato.sso.user.signup', 'zato.server.service.internal.sso.user.Signup', '/zato/sso/user/signup'],
             ['zato.sso.user.approve', 'zato.server.service.internal.sso.user.Approve', '/zato/sso/user/approve'],
@@ -1076,16 +1103,25 @@ class Create(ZatoCommand):
             ['zato.sso.user.user', 'zato.server.service.internal.sso.user.User', '/zato/sso/user'],
             ['zato.sso.user.password', 'zato.server.service.internal.sso.user.Password', '/zato/sso/user/password'],
             ['zato.sso.user.search', 'zato.server.service.internal.sso.user.Search', '/zato/sso/user/search'],
+            ['zato.sso.user.totp', 'zato.server.service.internal.sso.user.TOTP', '/zato/sso/user/totp'],
 
+            # Linked accounts
+            ['zato.sso.user.linked-auth', 'zato.server.service.internal.sso.user.LinkedAuth', '/zato/sso/user/linked'],
+
+            # User sessions
             ['zato.sso.session.session', 'zato.server.service.internal.sso.session.Session', '/zato/sso/user/session'],
+            ['zato.sso.session.session-list', 'zato.server.service.internal.sso.session.SessionList', '/zato/sso/user/session/list'],
 
+            # Password reset
             ['zato.sso.user.password-reset.begin', 'zato.server.service.internal.sso.password_reset.Begin', '/zato/sso/user/password/reset/begin'],
             ['zato.sso.user.password-reset.complete', 'zato.server.service.internal.sso.password_reset.Complete', '/zato/sso/user/password/reset/complete'],
 
+            # User attributes
             ['zato.sso.user-attr.user-attr', 'zato.server.service.internal.sso.user_attr.UserAttr', '/zato/sso/user/attr'],
             ['zato.sso.user-attr.user-attr-exists', 'zato.server.service.internal.sso.user_attr.UserAttrExists', '/zato/sso/user/attr/exists'],
             ['zato.sso.user-attr.user-attr-names', 'zato.server.service.internal.sso.user_attr.UserAttrNames', '/zato/sso/user/attr/names'],
 
+            # Session attributes
             ['zato.sso.session-attr.session-attr', 'zato.server.service.internal.sso.session_attr.SessionAttr', '/zato/sso/session/attr'],
             ['zato.sso.session-attr.session-attr-exists', 'zato.server.service.internal.sso.session_attr.SessionAttrExists', '/zato/sso/session/attr/exists'],
             ['zato.sso.session-attr.session-attr-names', 'zato.server.service.internal.sso.session_attr.SessionAttrNames', '/zato/sso/session/attr/names'],

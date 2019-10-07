@@ -160,14 +160,21 @@ class AfterPublish(AdminService):
                 # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
                 # Note that only non-GD messages go to RAM because the GD ones are still in the SQL database.
                 if notif_error_sub_keys:
-                    self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, _notify_error)
+
+                    # This will signal that non-GD messages should be retried
+                    if non_gd_msg_list:
+                        self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, _notify_error)
+
+                    # This will signal that GD messages should be retried
+                    if has_gd_msg_list:
+                        self.pubsub.after_gd_sync_error(topic_id, 'AfterPublish.gd_notif_error_sub_keys', pub_time_max)
 
         except Exception:
             self.logger.warn('Error in after_publish callback, e:`%s`', format_exc())
 
 # ################################################################################################################################
 
-    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_error=False):
+    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, is_gd, from_error=False):
         """ Stores in RAM all input messages for all sub_keys.
         """
         self.pubsub.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_error)
@@ -303,6 +310,13 @@ class ResumeWSXSubscription(AdminService):
             # No exception = all good and we can register this pubsub_tool with self.pubsub now
             for sub_key in sub_key_list:
                 self.pubsub.set_pubsub_tool_for_sub_key(sub_key, pubsub_tool)
+
+            # No exceptions here = we have resumed the subscription(s) successfully and we can report it
+            _log_info = {}
+            for _sub_key in sub_key_list:
+                _log_info[_sub_key] = self.pubsub.get_topic_by_sub_key(_sub_key).name
+
+            self.logger.info('Subscription%sresumed: `%s', ' ' if len(sub_key_list) == 1 else 's ', _log_info)
 
 # ################################################################################################################################
 

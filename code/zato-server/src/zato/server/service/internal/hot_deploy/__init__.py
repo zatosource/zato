@@ -30,8 +30,26 @@ from zato.common.util import fs_safe_now, is_python_file, is_archive_file, new_c
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
 
+# ################################################################################################################################
+
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # Zato
+    from zato.server.service.store import InRAMService
+
+    # For pyflakes
+    InRAMService = InRAMService
+
+# ################################################################################################################################
+
 MAX_BACKUPS = 1000
 _first_prefix = '0' * (len(str(MAX_BACKUPS)) - 1) # So it runs from, e.g.,  000 to 999
+
+# ################################################################################################################################
+# ################################################################################################################################
 
 class Create(AdminService):
     """ Creates all the filesystem directories and files out of a deployment package stored in the ODB.
@@ -43,6 +61,8 @@ class Create(AdminService):
         input_optional = ('is_startup',)
         output_optional = (AsIs('services_deployed'),)
 
+# ################################################################################################################################
+
     def _delete(self, items):
         for item in items:
             if os.path.isfile(item):
@@ -50,8 +70,10 @@ class Create(AdminService):
             elif os.path.isdir(item):
                 shutil.rmtree(item)
             else:
-                msg = "Could not delete [{}], it's neither file nor a directory, stat:[{}]".format(item, os.stat(item))
-                self.logger.warn(msg)
+                msg = "Could not delete `%s`, it's neither file nor a directory, stat:`%s`"
+                self.logger.warn(msg, item, os.stat(item))
+
+# ################################################################################################################################
 
     def _backup_last(self, fs_now, current_work_dir, backup_format, last_backup_work_dir):
 
@@ -68,6 +90,8 @@ class Create(AdminService):
 
         # Delete everything previously found in the last backup directory
         self._delete(last_backup_contents)
+
+# ################################################################################################################################
 
     def _backup_linear_log(self, fs_now, current_work_dir, backup_format, backup_work_dir, backup_history):
 
@@ -103,6 +127,8 @@ class Create(AdminService):
         if delete_previous_backups:
             self._delete(backup_contents)
 
+# ################################################################################################################################
+
     def backup_current_work_dir(self):
 
         # Save a few keystrokes
@@ -121,6 +147,8 @@ class Create(AdminService):
         # Now store the same thing in the linear log of backups
         self._backup_linear_log(fs_now, current_work_dir, backup_format, backup_work_dir, backup_history)
 
+# ################################################################################################################################
+
     def _deploy_file(self, current_work_dir, payload, file_name):
 
         f = open(file_name, 'w')
@@ -130,19 +158,23 @@ class Create(AdminService):
         services_deployed = []
         info = self.server.service_store.import_services_from_anywhere(file_name, current_work_dir)
 
-        for service in info.to_process:
+        for service in info.to_process: # type: InRAMService
 
             service_id = self.server.service_store.impl_name_to_id[service.impl_name]
             services_deployed.append(service_id)
 
             msg = {}
             msg['cid'] = new_cid()
-            msg['id'] = service_id
+            msg['service_id'] = service_id
+            msg['service_name'] = service.name
+            msg['service_impl_name'] = service.impl_name
             msg['action'] = HOT_DEPLOY.AFTER_DEPLOY.value
 
             self.broker_client.publish(msg)
 
         return services_deployed
+
+# ################################################################################################################################
 
     def _deploy_package(self, session, package_id, payload_name, payload):
         """ Deploy a package, either a plain Python file or an archive, and update
@@ -161,6 +193,8 @@ class Create(AdminService):
             msg = 'No services were deployed from module `%s`'
             self.logger.warn(msg, payload_name)
 
+# ################################################################################################################################
+
     def _update_deployment_status(self, session, package_id, status):
         ds = session.query(DeploymentStatus).\
             filter(DeploymentStatus.package_id==package_id).\
@@ -171,6 +205,8 @@ class Create(AdminService):
 
         session.add(ds)
         session.commit()
+
+# ################################################################################################################################
 
     def deploy_package(self, package_id, session):
         dp = self.get_package(package_id, session)
@@ -184,10 +220,14 @@ class Create(AdminService):
             self.logger.warn(
                 'Ignoring package id:`%s`, payload_name:`%s`, not a Python file nor an archive', dp.id, dp.payload_name)
 
+# ################################################################################################################################
+
     def get_package(self, package_id, session):
         return session.query(DeploymentPackage).\
             filter(DeploymentPackage.id==package_id).\
             first()
+
+# ################################################################################################################################
 
     def handle(self):
         package_id = self.request.input.package_id
@@ -220,10 +260,29 @@ class Create(AdminService):
                         self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires)
 
                     # .. all workers get here.
-                    self.response.payload.services_deployed = self.deploy_package(self.request.input.package_id, session)
+                    services_deployed = self.deploy_package(self.request.input.package_id, session)
+
+                    # Go through all services deployed, check if any needs post-processing
+                    # and if does, call the relevant function and clear the flag.
+                    service_store = self.server.service_store
+                    needs_post_deploy_attr = service_store.needs_post_deploy_attr
+
+                    for service_id in services_deployed:
+
+                        service_info = service_store.get_service_info_by_id(service_id)
+                        class_ = service_info['service_class']
+
+                        if getattr(class_, needs_post_deploy_attr, None):
+                            service_store.post_deploy(class_)
+                            delattr(class_, needs_post_deploy_attr)
+
+                    self.response.payload.services_deployed = services_deployed
 
                 except(IOError, OSError) as e:
                     if e.errno == ENOENT:
                         self.logger.debug('Caught ENOENT e:`%s`', format_exc())
                     else:
                         raise
+
+# ################################################################################################################################
+# ################################################################################################################################

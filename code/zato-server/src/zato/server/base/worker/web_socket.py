@@ -17,12 +17,23 @@ from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
 
+# Type hints
+import typing
+
+if typing.TYPE_CHECKING:
+    from zato.server.connection.connector import ConnectorStore
+
+    # Pyflakes
+    ConnectorStore = ConnectorStore
+
+# ################################################################################################################################
+
 class WebSocket(WorkerImpl):
     """ WebSocket-related functionality for worker objects.
     """
     def __init__(self):
         super(WebSocket, self).__init__()
-        self.web_socket_api = None
+        self.web_socket_api = None # type: ConnectorStore
 
 # ################################################################################################################################
 
@@ -46,10 +57,7 @@ class WebSocket(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_CHANNEL_WEB_SOCKET_EDIT(self, msg):
-
-        # Each worker uses a unique bind port
         msg = bunchify(msg)
-
         self.web_socket_channel_create_edit(msg.old_name, msg, 'edit', 5, False)
 
 # ################################################################################################################################
@@ -57,5 +65,13 @@ class WebSocket(WorkerImpl):
     def on_broker_msg_CHANNEL_WEB_SOCKET_DELETE(self, msg):
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=5):
             self.web_socket_api.delete(msg.name)
+
+# ################################################################################################################################
+
+    def on_broker_msg_CHANNEL_WEB_SOCKET_BROADCAST(self, msg):
+        self.invoke('zato.channel.web-socket.broadcast', {
+            'channel_name': msg.channel_name,
+            'data': msg.data
+        })
 
 # ################################################################################################################################

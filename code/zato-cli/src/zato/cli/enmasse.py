@@ -17,6 +17,7 @@ import os
 import re
 import sys
 from datetime import datetime
+from time import sleep
 
 # anyjson
 import anyjson
@@ -42,6 +43,26 @@ from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.common import SECRETS
 from zato.common.util import get_client_from_server_conf
+from zato.common.util.tcp import wait_for_zato_ping
+
+# ################################################################################################################################
+
+# Type checking
+import typing
+
+if typing.TYPE_CHECKING:
+
+    # stdlib
+    from logging import Logger
+
+    # Zato
+    from zato.client import APIClient
+
+    # For pyflakes
+    APIClient = APIClient
+    Logger = Logger
+
+# ################################################################################################################################
 
 DEFAULT_COLS_WIDTH = '15,100'
 ZATO_NO_SECURITY = 'zato-no-security'
@@ -102,10 +123,21 @@ def populate_services_from_apispec(client, logger):
         methods = by_prefix.setdefault(prefix, {})
         methods[name] = service
 
+    # Services belonging here may not have all the CRUD methods and it is expected that they do not
+    allow_incomplete_methods = [
+        'zato.security',
+        'zato.security.rbac.client-role'
+    ]
+
     for prefix, methods in iteritems(by_prefix):
-        # Ignore prefixes lacking "get-list", "create" and "edit" methods.
+
+        # Ignore prefixes lacking 'get-list', 'create' and 'edit' methods.
         if not all(n in methods for n in ('get-list', 'create', 'edit')):
-            continue
+
+            # RBAC client roles cannot be edited so it is fine that they lack the 'edit' method.
+            if prefix not in allow_incomplete_methods:
+                continue
+
         if prefix in IGNORE_PREFIXES:
             continue
 
@@ -188,16 +220,16 @@ class ServiceInfo(object):
 
         # Specifies a list of object dependencies:
         # field_name: {"dependent_type": "shortname", "dependent_field":
-        #  "fieldname", "empty_value": None, or e.g. ZATO_NO_SECURITY}
+        # "fieldname", "empty_value": None, or e.g. ZATO_NO_SECURITY}
         self.object_dependencies = object_dependencies or {}
 
-        #: Specifies a list of service dependencies. The field's value contains
-        #: the name of a service that must exist.
-        #:      field_name: {"only_if_field": "field_name" or None, "only_if_value": "value" or None}
+        # Specifies a list of service dependencies. The field's value contains
+        # the name of a service that must exist.
+        # field_name: {"only_if_field": "field_name" or None, "only_if_value": "value" or None}
         self.service_dependencies = service_dependencies or {}
 
         # List of field/value specifications that should be ignored during export:
-        #      field_name: value
+        # field_name: value
         self.export_filter = export_filter or {}
 
 # ################################################################################################################################
@@ -250,6 +282,15 @@ SERVICES = [
     ),
     ServiceInfo(
         name='web_socket',
+        prefix='zato.channel.web-socket',
+        object_dependencies={
+            'sec_def': {
+                'dependent_type': 'def_sec',
+                'dependent_field': 'name',
+                'empty_value': ZATO_NO_SECURITY,
+                'id_field': 'security_id',
+            },
+        },
         service_dependencies={
             'service': {}
         },
@@ -412,10 +453,13 @@ class Notice(object):
 
 class Results(object):
     def __init__(self, warnings=None, errors=None, service=None):
-        #: List of Warning instances.
+
+        # List of Warning instances
         self.warnings = warnings or []
-        #: List of Error instances.
+
+        # List of Error instances
         self.errors = errors or []
+
         self.service_name = service.get_name() if service else None
 
 # ################################################################################################################################
@@ -484,7 +528,7 @@ class DependencyScanner(object):
 # ################################################################################################################################
 
     def find(self, item_type, fields):
-        if item_type == 'sec_def':
+        if item_type == 'def_sec':
             return self.find_sec(fields)
         lst = self.json.get(item_type, ())
         return find_first(lst, lambda item: dict_match(item, fields))
@@ -501,12 +545,11 @@ class DependencyScanner(object):
 # ################################################################################################################################
 
     def scan_item(self, item_type, item, results):
-        """ Scan the data of a single item for required dependencies, recording any that are missing in :py:attr:`missing`.
-
-        :param item_type: ServiceInfo.name of the item's type.
-        :param item: dict describing the item.
+        """ Scan the data of a single item for required dependencies, recording any that are missing in self.missing.
         """
-        service_info = SERVICE_BY_NAME[item_type]
+        # type: (str, dict, Results)
+        service_info = SERVICE_BY_NAME[item_type] # type: ServiceInfo
+
         for dep_key, dep_info in iteritems(service_info.object_dependencies):
             if not test_item(item, dep_info.get('condition')):
                 continue
@@ -517,6 +560,8 @@ class DependencyScanner(object):
 
             value = item.get(dep_key)
             if value != dep_info.get('empty_value'):
+
+
                 dep = self.find(dep_info['dependent_type'], {dep_info['dependent_field']: value})
                 if dep is None:
                     key = (dep_info['dependent_type'], item[dep_key])
@@ -526,16 +571,15 @@ class DependencyScanner(object):
 # ################################################################################################################################
 
     def scan(self):
-        """
-        :rtype Results:
-        """
+        # type: () -> Results
+
         results = Results()
         for item_type, items in iteritems(self.json):
             for item in items:
                 self.scan_item(item_type, item, results)
 
         if not self.ignore_missing:
-            for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing.items)):
+            for (missing_type, missing_name), dep_names in sorted(iteritems(self.missing)):
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
                 raw = (missing_type, missing_name, dep_names, existing)
                 results.add_warning(
@@ -546,15 +590,22 @@ class DependencyScanner(object):
 
 class ObjectImporter(object):
     def __init__(self, client, logger, object_mgr, json, ignore_missing):
-        #: Zato client.
+        # type: (APIClient, Logger, ObjectManager, dict, bool)
+
+        # Zato client.
         self.client = client
+
         self.logger = logger
-        #: Validation result.
+
+        # Validation result.
         self.results = Results()
-        #: ObjectManager instance.
+
+        # ObjectManager instance.
         self.object_mgr = object_mgr
-        #: JSON to import.
+
+        # JSON to import.
         self.json = bunchify(json)
+
         self.ignore_missing = ignore_missing
 
 # ################################################################################################################################
@@ -563,7 +614,7 @@ class ObjectImporter(object):
         service_info = SERVICE_BY_NAME[item_type]
         item_dict = dict(item)
 
-        for dep_field, dep_info in iteritems(service_info.service_dependencies.items):
+        for dep_field, dep_info in iteritems(service_info.service_dependencies):
             if not test_item(item, dep_info.get('condition')):
                 continue
 
@@ -578,10 +629,9 @@ class ObjectImporter(object):
 
     def validate_import_data(self):
         results = Results()
-        dep_scanner = DependencyScanner(self.json,
-            ignore_missing=self.ignore_missing)
-
+        dep_scanner = DependencyScanner(self.json, ignore_missing=self.ignore_missing)
         scan_results = dep_scanner.scan()
+
         if not scan_results.ok:
             return scan_results
 
@@ -592,7 +642,7 @@ class ObjectImporter(object):
                 results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB, "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
                                     missing_name, missing_type, dep_names)
 
-        for item_type, items in iteritems(self.json.items):
+        for item_type, items in iteritems(self.json):
             for item in items:
                 self.validate_service_required(item_type, item)
 
@@ -615,10 +665,20 @@ class ObjectImporter(object):
         if item_type == 'rbac_role' and attrs.name == 'Root':
             return True
 
+        # RBAC client roles cannot be edited
+        elif item_type == 'rbac_client_role':
+            return True
+
 # ################################################################################################################################
 
     def _import(self, item_type, attrs, is_edit):
+
         attrs_dict = dict(attrs)
+
+        # Generic connections cannot import their IDs during edits
+        if is_edit and item_type == 'zato_generic_connection':
+            attrs_dict.pop('id', None)
+
         attrs.cluster_id = self.client.cluster_id
 
         response = self._import_object(item_type, attrs, is_edit)
@@ -634,7 +694,7 @@ class ObjectImporter(object):
                     is_edit, attrs.name, attrs_dict, item_type, response.details)
             return self.results
 
-        # It's been just imported so we don't want to create in next steps
+        # It's been just imported so we don't want to create it in next steps
         # (this in fact would result in an error as the object already exists).
         if is_edit:
             self.remove_from_import_list(item_type, attrs.name)
@@ -653,14 +713,12 @@ class ObjectImporter(object):
 
     def find_already_existing_odb_objects(self):
         results = Results()
-        for item_type, items in iteritems(self.json.items):
+        for item_type, items in iteritems(self.json):
             for item in items:
                 name = item.get('name')
                 if not name:
                     raw = (item_type, item)
-                    results.add_error(raw, ERROR_KEYS_MISSING,
-                        "{} has no 'name' key ({})",
-                        dict(item), item_type)
+                    results.add_error(raw, ERROR_KEYS_MISSING, '{} has no `name` key ({})', dict(item), item_type)
 
                 if item_type == 'http_soap':
                     connection = item.get('connection')
@@ -681,11 +739,27 @@ class ObjectImporter(object):
 
 # ################################################################################################################################
 
+    def may_be_dependency(self, item_type):
+        """ Returns True if input item_type may be possibly a dependency, for instance,
+        a security definition may be potentially a dependency of channels or a web socket
+        object may be a dependency of pub/sub endpoints.
+        """
+        return SERVICE_BY_NAME[item_type].is_security or 'def' in item_type or item_type == 'web_socket'
+
+# ################################################################################################################################
+
     def import_objects(self, already_existing):
+        # type: (Results)
+
         existing_defs = []
         existing_other = []
 
+        # Definitions or other objects for which self.may_be_dependency returns True,
+        # as they are found in the input enmasse file - they do not exist in ODB yet.
         new_defs = []
+
+        # Objects other than the ones from new_defs that are found in the enmasse file
+        # and which do not exist in ODB yet.
         new_other = []
 
         #
@@ -712,8 +786,8 @@ class ObjectImporter(object):
         #
         # Create new objects, again, definitions come first ..
         #
-        for item_type, items in iteritems(self.json.items):
-            if SERVICE_BY_NAME[item_type].is_security or 'def' in item_type:
+        for item_type, items in iteritems(self.json):
+            if self.may_be_dependency(item_type):
                 new_defs.append({item_type: items})
             else:
                 new_other.append({item_type: items})
@@ -722,7 +796,7 @@ class ObjectImporter(object):
         # .. actually create the objects now.
         #
         for elem in new_defs + new_other:
-            for item_type, attr_list in iteritems(elem.items):
+            for item_type, attr_list in iteritems(elem):
                 for attrs in attr_list:
 
                     if self.should_skip_item(item_type, attrs, False):
@@ -757,21 +831,28 @@ class ObjectImporter(object):
 
         # Fetch an item from a cache of ODB object and assign its ID to item so that the Edit service knows what to update.
         if is_edit:
-            odb_item = self.object_mgr.find(def_type, {'name': item.name})
+            lookup_config = {'name': item.name}
+            if def_type == 'http_soap':
+                lookup_config['connection'] = item.connection
+                lookup_config['transport'] = item.transport
+            odb_item = self.object_mgr.find(def_type, lookup_config)
             item.id = odb_item.id
 
-        for field_name, info in iteritems(service_info.object_dependencies.items):
+        for field_name, info in iteritems(service_info.object_dependencies):
+
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
                 dep_obj = self.object_mgr.find(info['dependent_type'], {
                     info['dependent_field']: item[field_name]
                 })
+
                 item[info['id_field']] = dep_obj.id
 
-        self.logger.debug("Invoking {} for {}".format(service_name, service_info.name))
+        self.logger.info('Invoking %s for %s', service_name, service_info.name)
+
         response = self.client.invoke(service_name, item)
         if response.ok:
             verb = 'Updated' if is_edit else 'Created'
-            self.logger.info("{} object '{}' with {}".format(verb, item.name, service_name))
+            self.logger.info('%s object `%s` with %s', verb, item.name, service_name)
 
         return response
 
@@ -795,8 +876,8 @@ class ObjectImporter(object):
 
 class ObjectManager(object):
     def __init__(self, client, logger):
-        self.client = client
-        self.logger = logger
+        self.client = client # type: APIClient
+        self.logger = logger # type: Logger
 
 # ################################################################################################################################
 
@@ -836,6 +917,9 @@ class ObjectManager(object):
             'name_filter': '*'
         })
 
+        if not response.ok:
+            raise Exception('Unexpected response from Zato; e:{}'.format(response))
+
         if response.has_data:
             self.services = {
                 service['name']: Bunch(service)
@@ -852,7 +936,7 @@ class ObjectManager(object):
         normalize_service_name(item)
         service_info = SERVICE_BY_NAME[item_type]
 
-        for field_name, info in iteritems(service_info.object_dependencies.items):
+        for field_name, info in iteritems(service_info.object_dependencies):
 
             if 'id_field' not in info:
                 continue
@@ -872,8 +956,8 @@ class ObjectManager(object):
             dep = self.find(info['dependent_type'], {'id': dep_id})
 
             if not dep:
-                raise Exception('Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`'.format(
-                    service_info.name, field_name, info['dependent_type'], dep_id, dep))
+                raise Exception('Dependency not found, name:`{}`, field_name:`{}`, type:`{}`, dep_id:`{}`, dep:`{}`, ' \
+                    'item:`{}`'.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
             else:
                 item[field_name] = dep[info['dependent_field']]
 
@@ -889,7 +973,13 @@ class ObjectManager(object):
     def is_ignored_name(self, item):
         if 'name' not in item:
             return False
+
         name = item.name.lower()
+
+        # Special-case scheduler jobs that can be overridden by users
+        if name.startswith('zato.wsx.cleanup'):
+            return False
+
         return 'zato' in name or name in self.IGNORED_NAMES
 
 # ################################################################################################################################
@@ -915,7 +1005,7 @@ class ObjectManager(object):
 
     def delete_all(self):
         count = 0
-        for item_type, items in iteritems(self.objects.items):
+        for item_type, items in iteritems(self.objects):
             for item in items:
                 self.delete(item_type, item)
                 count += 1
@@ -930,10 +1020,10 @@ class ObjectManager(object):
         service_name = service_info.get_service_name('get-list')
 
         if service_name is None:
-            self.logger.debug("Type {} has no 'get-list' service".format(service_info.name))
+            self.logger.info('Type `%s` has no `get-list` service (%s)', service_info, item_type)
             return
 
-        self.logger.debug("Invoking {} for {}".format(service_name, service_info.name))
+        self.logger.debug('Invoking %s for %s', service_name, service_info.name)
         response = self.client.invoke(service_name, {
             'cluster_id': self.client.cluster_id
         })
@@ -1102,8 +1192,8 @@ class InputParser(object):
 
 # ################################################################################################################################
 
-    def parse_items(self, dct, results):
-        for item_type, items in iteritems(dct):
+    def parse_items(self, dict_, results):
+        for item_type, items in iteritems(dict_):
             if item_type not in SERVICE_BY_NAME and item_type not in HTTP_SOAP_ITEM_TYPES:
                 raw = (item_type,)
                 results.add_error(raw, ERROR_UNKNOWN_ELEM, "Ignoring unknown element type {} in the input.", item_type)
@@ -1129,7 +1219,7 @@ class InputParser(object):
         self.parse_items(parsed, results)
         return results
 
-class EnMasse(ManageCommand):
+class Enmasse(ManageCommand):
     """ Manages server objects en masse.
     """
     opts = [
@@ -1191,8 +1281,19 @@ class EnMasse(ManageCommand):
         #    4b) override whatever is found in ODB with values from JSON (--replace-odb-objects)
         #
 
-        # Get client and issue a sanity check as quickly as possible
+        # Get the client object ..
         self.client = get_client_from_server_conf(self.component_dir)
+
+        # .. make sure /zato/ping replies which means the server is started
+        wait_for_zato_ping(self.client.address, 300)
+
+        # .. just to be on the safe side, optionally wait a bit more
+        initial_wait_time = os.environ.get('ZATO_ENMASSE_INITIAL_WAIT_TIME')
+        if initial_wait_time:
+            initial_wait_time = int(initial_wait_time)
+            self.logger.warn('Sleeping for %s s', initial_wait_time)
+            sleep(initial_wait_time)
+
         self.object_mgr = ObjectManager(self.client, self.logger)
         self.client.invoke('zato.ping')
         populate_services_from_apispec(self.client, self.logger)
@@ -1348,7 +1449,7 @@ class EnMasse(ManageCommand):
         results = Results()
         merged = copy.deepcopy(self.object_mgr.objects)
 
-        for json_key, json_elems in iteritems(self.json.items):
+        for json_key, json_elems in iteritems(self.json):
             if 'http' in json_key or 'soap' in json_key:
                 odb_key = 'http_soap'
             else:
@@ -1418,8 +1519,8 @@ class EnMasse(ManageCommand):
 
     def run_import(self):
         self.object_mgr.refresh()
-        importer = ObjectImporter(self.client, self.logger,
-            self.object_mgr, self.json,
+
+        importer = ObjectImporter(self.client, self.logger, self.object_mgr, self.json,
             ignore_missing=self.args.ignore_missing_defs)
 
         # Find channels and jobs that require services that don't exist
@@ -1438,3 +1539,22 @@ class EnMasse(ManageCommand):
         return []
 
 # ################################################################################################################################
+
+if __name__ == '__main__':
+
+    args = Bunch()
+    args.verbose = True
+    args.store_log = False
+    args.store_config = False
+    args.dump_format = 'yaml'
+    args.export_local = False
+    args.export_odb = False
+    args.clean_odb = True
+    args.ignore_missing_defs = False
+    args['import'] = True
+
+    args.path = sys.argv[1]
+    args.input = sys.argv[2]
+
+    enmasse = Enmasse(args)
+    enmasse.run(args)

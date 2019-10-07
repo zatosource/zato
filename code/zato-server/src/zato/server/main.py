@@ -8,6 +8,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# gevent monkeypatch is needed as soon as possible
+from gevent.monkey import patch_all
+patch_all()
+
 # stdlib
 import locale, logging, os, ssl, sys
 from logging.config import dictConfig
@@ -20,10 +24,6 @@ cloghandler = cloghandler # For pyflakes
 from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log
-
-# gevent monkeypatch is needed
-from gevent.monkey import patch_all
-patch_all()
 
 # Django
 import django
@@ -39,10 +39,6 @@ from bunch import Bunch
 
 # ConfigObj
 from configobj import ConfigObj
-
-# gunicorn
-import gunicorn
-from gunicorn.app.base import Application
 
 # psycopg2
 import psycopg2
@@ -67,6 +63,8 @@ from zato.common.util import absjoin, asbool, clear_locks, get_config, get_kvdb_
      register_diag_handlers, store_pidfile
 from zato.common.util.cli import read_stdin_data
 from zato.server.base.parallel import ParallelServer
+from zato.server.ext import zunicorn
+from zato.server.ext.zunicorn.app.base import Application
 from zato.server.service.store import ServiceStore
 from zato.server.startup_callable import StartupCallableTool
 from zato.sso.api import SSOAPI
@@ -212,8 +210,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
             server_config.newrelic.config, server_config.newrelic.environment or None, server_config.newrelic.ignore_errors or None,
             server_config.newrelic.log_file or None, server_config.newrelic.log_level or None)
 
-    # New in 2.0 - override gunicorn-set Server HTTP header
-    gunicorn.SERVER_SOFTWARE = server_config.misc.get('http_server_header', 'Zato')
+    zunicorn.SERVER_SOFTWARE = server_config.misc.get('http_server_header', 'Zato')
 
     # Store KVDB config in logs, possibly replacing its password if told to
     kvdb_config = get_kvdb_config_for_log(server_config.kvdb)
@@ -257,6 +254,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
     zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
 
+    server.has_fg = options.get('fg')
     server.crypto_manager = crypto_manager
     server.odb_data = server_config.odb
     server.host = zato_gunicorn_app.zato_host
@@ -267,6 +265,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.logs_dir = os.path.join(server.base_dir, 'logs')
     server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
     server.static_dir = os.path.join(server.base_dir, 'config', 'repo', 'static')
+    server.json_schema_dir = os.path.join(server.base_dir, 'config', 'repo', 'schema', 'json')
     server.fs_server_config = server_config
     server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
     server.pickup_config = pickup_config

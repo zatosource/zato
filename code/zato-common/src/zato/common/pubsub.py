@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from logging import getLogger
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # Zato
 from zato.common import GENERIC
 from zato.common.util import new_cid
@@ -36,7 +39,7 @@ msg_pub_attrs = ('topic', 'sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to
     'expiration', 'expiration_time', 'has_gd', 'delivery_status', 'size', 'published_by_id', 'topic_id',
     'is_in_sub_queue', 'topic_name', 'cluster_id', 'pub_time_iso', 'ext_pub_time_iso', 'expiration_time_iso',
     'recv_time', 'data_prefix_short', 'server_name', 'server_pid', 'pub_pattern_matched', 'sub_pattern_matched',
-    'delivery_count')
+    'delivery_count', 'user_ctx', 'zato_ctx')
 
 class MSG_PREFIX:
     GROUP_ID = 'zpsg'
@@ -51,7 +54,7 @@ def new_msg_id(_new_cid=new_cid, _prefix=MSG_PREFIX.MSG_ID):
 # ################################################################################################################################
 
 def new_sub_key(endpoint_type, ext_client_id='zeci', _new_cid=new_cid, _prefix=MSG_PREFIX.SUB_KEY):
-    return '%s.%s.%s.%s' % (_prefix, endpoint_type, ext_client_id, _new_cid())
+    return '%s.%s.%s.%s' % (_prefix, endpoint_type, ext_client_id, _new_cid(3))
 
 # ################################################################################################################################
 
@@ -104,6 +107,8 @@ class PubSubMessage(object):
         self.expiration_time_iso = None
         self.reply_to_sk = []
         self.deliver_to_sk = []
+        self.user_ctx = None
+        self.zato_ctx = None
         self.serialized = None # May be set by hooks to provide an explicitly serialized output for this message
         setattr(self, GENERIC.ATTR_NAME, None) # To make this class look more like an SQLAlchemy one
 
@@ -119,7 +124,7 @@ class PubSubMessage(object):
                 if value is not None:
                     if needs_utf8_encode:
                         if key in _data_keys:
-                            value = value.encode('utf8')
+                            value = value.encode('utf8') if isinstance(value, unicode) else value
                     out[key] = value
 
         if add_id_attrs:

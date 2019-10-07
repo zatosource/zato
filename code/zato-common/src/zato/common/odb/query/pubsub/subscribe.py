@@ -35,7 +35,7 @@ def has_subscription(session, cluster_id, topic_id, endpoint_id):
         PubSubSubscription.topic_id==topic_id,
         PubSubSubscription.cluster_id==cluster_id,
         ))).\
-        scalar()[0]
+        scalar()
 
 # ################################################################################################################################
 
@@ -120,10 +120,10 @@ def add_subscription(session, cluster_id, sub_key, ctx):
 
 # ################################################################################################################################
 
-def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_key, pub_time_max, _initialized=_initialized):
-    """ Move all unexpired messages from topic to a given subscriber's queue and returns the number of messages moved.
-    This method must be called with a global lock held for topic because it carries out its job through a couple
-    of non-atomic queries.
+def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_pattern_matched, sub_key, pub_time_max,
+    _initialized=_initialized):
+    """ Move all unexpired messages from topic to a given subscriber's queue. This method must be called with a global lock
+    held for topic because it carries out its job through a couple of non-atomic queries.
     """
     enqueued_id_subquery = session.query(
         PubSubEndpointEnqueuedMessage.pub_msg_id
@@ -139,6 +139,7 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_k
         PubSubMessage.topic_id,
         expr.bindparam('creation_time', now),
         expr.bindparam('endpoint_id', endpoint_id),
+        expr.bindparam('sub_pattern_matched', sub_pattern_matched),
         expr.bindparam('sub_key', sub_key),
         expr.bindparam('is_in_staging', False),
         expr.bindparam('cluster_id', cluster_id),
@@ -164,6 +165,7 @@ def move_messages_to_sub_queue(session, cluster_id, topic_id, endpoint_id, sub_k
                 PubSubEndpointEnqueuedMessage.topic_id,
                 expr.column('creation_time'),
                 expr.column('endpoint_id'),
+                expr.column('sub_pattern_matched'),
                 expr.column('sub_key'),
                 expr.column('is_in_staging'),
                 expr.column('cluster_id'),

@@ -9,7 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os, sys
+import logging
+import os
+import sys
 
 # Bunch
 from bunch import Bunch
@@ -21,6 +23,15 @@ from zato.cli.stop import Stop
 from zato.common import MISC
 from zato.common.util import get_haproxy_agent_pidfile
 from zato.common.util.proc import start_python_process
+
+# ################################################################################################################################
+
+# During development, it is convenient to configure it here to catch information that should be logged
+# even prior to setting up main loggers in each of components.
+if 0:
+    log_level = logging.INFO
+    log_format = '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+    logging.basicConfig(level=log_level, format=log_format)
 
 # ################################################################################################################################
 
@@ -58,7 +69,11 @@ Examples:
 # ################################################################################################################################
 
     def delete_pidfile(self):
-        os.remove(os.path.join(self.component_dir, MISC.PIDFILE))
+        try:
+            path = os.path.join(self.component_dir, MISC.PIDFILE)
+            os.remove(path)
+        except Exception as e:
+            self.logger.info('Pidfile `%s` could not be deleted `%s`', path, e)
 
 # ################################################################################################################################
 

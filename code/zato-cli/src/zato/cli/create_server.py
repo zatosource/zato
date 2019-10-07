@@ -73,7 +73,7 @@ ca_certs_location=zato-server-ca-certs.pem
 [odb]
 db_name={{odb_db_name}}
 engine={{odb_engine}}
-extra=
+extra=echo=False
 host={{odb_host}}
 port={{odb_port}}
 password=zato+secret://zato.server_conf.odb.password
@@ -88,6 +88,7 @@ backup_history=100
 backup_format=bztar
 delete_after_pick_up=False
 max_batch_size=1000 # In kilobytes, default is 1 megabyte
+redeploy_on_parent_change=True
 
 # These three are relative to work_dir
 current_work_dir=./hot-deploy/current
@@ -105,16 +106,6 @@ order=true_false
 [invoke_target_patterns_allowed]
 order=true_false
 *=True
-
-[singleton]
-initial_sleep_time=2500
-
-# If a server doesn't update its keep alive data in
-# connector_server_keep_alive_job_time * grace_time_multiplier seconds
-# it will be considered down and another server from the cluster will assume
-# the control of connectors
-connector_server_keep_alive_job_time=30 # In seconds
-grace_time_multiplier=3
 
 [spring]
 context_class=zato.server.spring_context.ZatoContext
@@ -138,6 +129,7 @@ enforce_service_invokes=False
 return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
+return_json_schema_errors=False
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
@@ -229,7 +221,7 @@ log_if_deliv_server_not_found=True
 log_if_wsx_deliv_server_not_found=False
 data_prefix_len=2048
 data_prefix_short_len=64
-sk_server_table_columns=6, 15, 8, 6, 17, 80
+sk_server_table_columns=6, 15, 8, 6, 17, 75
 
 [pubsub_meta_topic]
 enabled=True
@@ -277,6 +269,9 @@ allow_loopback=False
 
 [shmem]
 size=0.1 # In MB
+
+[logging]
+http_access_log_ignore=
 
 [os_environ]
 sample_key=sample_value
@@ -366,6 +361,8 @@ salt_size=64 # In bytes = 512 bits
 
 [apps]
 all=CRM
+default=CRM
+http_header=X-Zato-SSO-Current-App
 signup_allowed=
 login_allowed=CRM
 login_metadata_allowed=
@@ -558,6 +555,8 @@ directories = (
     'config/repo/lua',
     'config/repo/lua/internal',
     'config/repo/lua/user',
+    'config/repo/schema',
+    'config/repo/schema/json',
     'config/repo/static',
     'config/repo/static/email',
     'config/repo/tls',
@@ -591,7 +590,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--pub_key_path', 'help':"Path to the server's public key in PEM"})
     opts.append({'name':'--priv_key_path', 'help':"Path to the server's private key in PEM"})
     opts.append({'name':'--cert_path', 'help':"Path to the server's certificate in PEM"})
-    opts.append({'name':'--ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
+    opts.append({'name':'--ca_certs_path', 'help':"Path to list of PEM certificates the server will trust"})
     opts.append({'name':'--secret_key', 'help':"Server's secret key (must be the same for all servers)"})
     opts.append({'name':'--jwt_secret', 'help':"Server's JWT secret (must be the same for all servers)"})
     opts.append({'name':'--http_port', 'help':"Server's HTTP port"})
@@ -629,7 +628,10 @@ class Create(ZatoCommand):
 
         server = Server(cluster=cluster)
         server.name = args.server_name
-        server.token = self.token
+        if isinstance(self.token, (bytes, bytearray)):
+            server.token = self.token.decode('utf8')
+        else:
+            server.token = self.token
         server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED
         server.last_join_mod_by = self._get_user_host()
         server.last_join_mod_date = datetime.utcnow()
@@ -724,13 +726,23 @@ class Create(ZatoCommand):
             zato_well_known_data = fernet1.encrypt(well_known_data.encode('utf8'))
             zato_well_known_data = zato_well_known_data.decode('utf8')
 
-            key1 = key1.decode('utf8')
+            if isinstance(key1, (bytes, bytearray)):
+                key1 = key1.decode('utf8')
 
             zato_main_token = fernet1.encrypt(self.token)
             zato_main_token = zato_main_token.decode('utf8')
 
-            zato_misc_jwt_secret = fernet1.encrypt(getattr(args, 'jwt_secret', Fernet.generate_key()))
-            zato_misc_jwt_secret = zato_misc_jwt_secret.decode('utf8')
+            zato_misc_jwt_secret = getattr(args, 'jwt_secret', None)
+            if not zato_misc_jwt_secret:
+                zato_misc_jwt_secret = Fernet.generate_key()
+
+            if not isinstance(zato_misc_jwt_secret, bytes):
+                zato_misc_jwt_secret = zato_misc_jwt_secret.encode('utf8')
+
+            zato_misc_jwt_secret = fernet1.encrypt(zato_misc_jwt_secret)
+
+            if isinstance(zato_misc_jwt_secret, bytes):
+                zato_misc_jwt_secret = zato_misc_jwt_secret.decode('utf8')
 
             secrets_conf.write(secrets_conf_template.format(
                 keys_key1=key1,

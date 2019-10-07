@@ -12,13 +12,20 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from time import time
 
+# Python 2/3 compatibility
+from six import add_metaclass
+
 # Zato
-from zato.common import SMTPMessage, version
+from zato.common import SMTPMessage, get_version
 from zato.common.broker_message import EMAIL
 from zato.common.odb.model import SMTP
 from zato.common.odb.query import email_smtp_list
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+
+# ################################################################################################################################
+
+version = get_version()
 
 # ################################################################################################################################
 
@@ -38,24 +45,27 @@ def instance_hook(service, input, instance, attrs):
 
 # ################################################################################################################################
 
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
     _filter_by = SMTP.name,
-    __metaclass__ = GetListMeta
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
 # ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
+    pass
 
 # ################################################################################################################################
 
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    __metaclass__ = DeleteMeta
+    pass
 
 # ################################################################################################################################
 
@@ -95,9 +105,10 @@ class Ping(AdminService):
         msg.to = item.ping_address
         msg.cc = item.ping_address
         msg.bcc = item.ping_address
-        msg.subject = 'Zato SMTP ping (Α Β Γ Δ Ε Ζ Η)'.encode('utf-8')
-        msg.body = 'Hello from {}\nUTF-8 test: Α Β Γ Δ Ε Ζ Η'.encode('utf-8').format(version)
+        msg.subject = 'Zato SMTP ping (Α Β Γ Δ Ε Ζ Η)'
         msg.headers['Charset'] = 'utf-8'
+
+        msg.body = 'Hello from {}\nUTF-8 test: Α Β Γ Δ Ε Ζ Η'.format(version).encode('utf-8')
 
         msg.attach('utf-8.txt', 'Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω'.encode('utf-8'))
         msg.attach('ascii.txt', 'A B C D E F G H I J K L M N O P Q R S T U V W X Y Z')

@@ -22,6 +22,7 @@ from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
 from zato.admin.web.views.cache import memcached_ as cache_memcached
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
+from zato.admin.web.views.channel import json_rpc as channel_json_rpc
 from zato.admin.web.views.channel import stomp as channel_stomp
 from zato.admin.web.views.channel import web_socket as channel_web_socket
 from zato.admin.web.views.channel import zmq as channel_zmq
@@ -925,6 +926,21 @@ urlpatterns += [
         login_required(channel_jms_wmq.edit), name='channel-jms-wmq-edit'),
     url(r'^zato/channel/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_jms_wmq.Delete()), name=channel_jms_wmq.Delete.url_name),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. JSON-RPC
+    url(r'^zato/channel/json-rpc/$',
+        login_required(channel_json_rpc.Index()), name=channel_json_rpc.Index.url_name),
+    url(r'^zato/channel/json-rpc/create/$',
+        login_required(channel_json_rpc.Create()), name=channel_json_rpc.Create.url_name),
+    url(r'^zato/channel/json-rpc/edit/$',
+        login_required(channel_json_rpc.Edit()), name=channel_json_rpc.Edit.url_name),
+    url(r'^zato/channel/json-rpc/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_json_rpc.Delete()), name=channel_json_rpc.Delete.url_name),
     ]
 
 # ################################################################################################################################

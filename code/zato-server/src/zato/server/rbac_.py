@@ -163,8 +163,8 @@ class RBAC(object):
             if role_id not in self.role_id_to_name:
                 raise ValueError('Role `{}` not found among `{}`'.format(role_id, self.role_id_to_name))
 
-            self.client_def_to_role_id.setdefault(client_def, set()).add(role_id)
-            self.role_id_to_client_def.setdefault(role_id, set()).add(client_def)
+            self.client_def_to_role_id.setdefault(client_def, []).append(role_id)
+            self.role_id_to_client_def.setdefault(role_id, []).append(client_def)
 
     def delete_client_role(self, client_def, role_id):
         with self.update_lock:

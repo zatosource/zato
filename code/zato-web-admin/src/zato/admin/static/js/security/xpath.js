@@ -64,7 +64,7 @@ $.fn.zato.security.xpath.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.security.xpath.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'XPath security definition [{0}] deleted',
-        'Are you sure you want to delete the XPath security definition [{0}]?',
+        'XPath security definition `{0}` deleted',
+        'Are you sure you want to delete XPath security definition `{0}`?',
         true);
 }

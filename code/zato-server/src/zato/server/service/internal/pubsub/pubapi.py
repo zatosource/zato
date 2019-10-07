@@ -242,11 +242,16 @@ class SubscribeService(_PubSubService):
                         self_endpoint.name, sub_key, self.pubsub.get_topic_by_sub_key(sub_key).name, sub_endpoint.name)
                     raise Forbidden(self.cid)
 
-        # We have all permissions checked now and can proceed to the actual call
+        # We have all permissions checked now and can proceed to the actual calls
         self.response.payload = self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
             'cluster_id': self.server.cluster_id,
             'sub_key': sub_key
         })
+
+        if sub.is_wsx:
+            self.invoke('zato.channel.web-socket.client.unregister-ws-sub-key', {
+                'sub_key_list': [sub_key],
+            })
 
 # ################################################################################################################################
 

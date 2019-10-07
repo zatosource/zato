@@ -17,7 +17,7 @@ from socket import gethostname
 from sqlalchemy.dialects.postgresql.base import PGTypeCompiler
 
 # Zato
-from zato.cli import ZatoCommand, common_odb_opts
+from zato.cli import common_odb_opts, is_arg_given, ZatoCommand
 from zato.common.odb import VERSION
 from zato.common.odb.model import AlembicRevision, Base, ZatoInstallState
 
@@ -27,21 +27,31 @@ class Create(ZatoCommand):
     """ Creates a new Zato ODB (Operational Database)
     """
     opts = common_odb_opts
+    opts.append({'name':'--skip-if-exists',
+        'help':'Return without raising an error if ODB already exists', 'action':'store_true'})
 
     def execute(self, args, show_output=True):
         engine = self._get_engine(args)
         session = self._get_session(engine)
 
         if engine.dialect.has_table(engine.connect(), 'install_state'):
-            if show_output:
-                version = session.query(ZatoInstallState.version).one().version
-                msg = (
-                    'The ODB (v. {}) already exists, not creating it. ' +
-                    "Use the 'zato delete odb' command first if you'd like to start afresh and " +
-                    'recreate all ODB objects.').format(version)
-                self.logger.error(msg)
 
-            return self.SYS_ERROR.ODB_EXISTS
+            if is_arg_given(args, 'skip-if-exists'):
+                if show_output:
+                    if self.verbose:
+                        self.logger.debug('ODB already exists, skipped its creation')
+                    else:
+                        self.logger.info('OK')
+            else:
+                if show_output:
+                    version = session.query(ZatoInstallState.version).one().version
+                    msg = (
+                        'The ODB (v. {}) already exists, not creating it. ' +
+                        "Use the 'zato delete odb' command first if you'd like to start afresh and " +
+                        'recreate all ODB objects.').format(version)
+                    self.logger.error(msg)
+
+                return self.SYS_ERROR.ODB_EXISTS
 
         else:
 

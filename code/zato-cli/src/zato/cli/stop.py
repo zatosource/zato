@@ -18,13 +18,19 @@ from zato.common.util import get_haproxy_agent_pidfile
 class Stop(ManageCommand):
     """ Stops a Zato component
     """
-    def signal(self, component_name, signal_name, signal_code, pidfile=None, component_dir=None):
+    def signal(self, component_name, signal_name, signal_code, pidfile=None, component_dir=None, ignore_missing=False,
+        needs_logging=True):
         """ Sends a signal to a process known by its pidfile.
         """
         component_dir = component_dir or self.component_dir
         pidfile = pidfile or os.path.join(component_dir, 'pidfile')
 
         if not os.path.exists(pidfile):
+            if ignore_missing:
+                # No such pidfile - it may be a connector process and these are optional,
+                # in this case, we just simply return because there is not anything else for us to do.
+                return
+
             self.logger.error('No pidfile found in `%s`', pidfile)
             sys.exit(self.SYS_ERROR.FILE_MISSING)
 
@@ -34,14 +40,22 @@ class Stop(ManageCommand):
             sys.exit(self.SYS_ERROR.NO_PID_FOUND)
 
         pid = int(pid)
-        self.logger.debug('\nWill now send `%s` to pid `%s` (as found in `%s`)\n', signal_name, pid, pidfile)
+        if needs_logging:
+            self.logger.debug('Sending `%s` to pid `%s` (found in `%s`)', signal_name, pid, pidfile)
 
         os.kill(pid, signal_code)
         os.remove(pidfile)
 
-        self.logger.info('%s `%s` shutting down', component_name, component_dir)
+        if needs_logging:
+            self.logger.info('%s `%s` shutting down', component_name, component_dir)
 
     def _on_server(self, *ignored):
+        pidfile_ibm_mq = os.path.join(self.component_dir, 'pidfile-ibm-mq')
+        pidfile_sftp = os.path.join(self.component_dir, 'pidfile-sftp')
+
+        self.signal('IBM MQ connector', 'SIGTERM', signal.SIGTERM, pidfile_ibm_mq, ignore_missing=True, needs_logging=False)
+        self.signal('SFTP connector', 'SIGTERM', signal.SIGTERM, pidfile_sftp, ignore_missing=True, needs_logging=False)
+
         self.signal('Server', 'SIGTERM', signal.SIGTERM)
 
     def stop_haproxy(self, component_dir):
