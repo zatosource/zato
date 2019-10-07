@@ -35,7 +35,10 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
   elif [ "$(type -p yum)" ]
   then
       sudo yum update -y
-      if [[ $PY_BINARY != python2* ]];then
+      if ! [ -x "$(command -v lsb_release)" ]; then
+          sudo yum install -y redhat-lsb-core
+      fi
+      if [[ $PY_BINARY != python2* && -z "$(lsb_release -r|grep '\s8.')" ]];then
         # Python3 customizations
         PY_V=3
         sudo yum install -y centos-release-scl-rh
