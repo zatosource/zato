@@ -18,7 +18,7 @@ from zato.common.broker_message import code_to_name
 from zato.common.util import new_cid
 from zato.common.util.config import resolve_env_variables
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('zato')
 has_debug = logger.isEnabledFor(logging.DEBUG)
 
 # ################################################################################################################################

@@ -58,7 +58,7 @@ $.fn.zato.security.openstack.data_table.new_row = function(item, data, include_t
 
 $.fn.zato.security.openstack.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'OpenStack definition [{0}] deleted',
-        'Are you sure you want to delete the OpenStack definition [{0}]?',
+        'OpenStack definition `{0}` deleted',
+        'Are you sure you want to delete OpenStack definition `{0}`?',
         true);
 }

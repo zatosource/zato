@@ -22,9 +22,11 @@ from zato.common import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service, TLSCACert, to_json
 from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
+from zato.common.rate_limiting import DefinitionParser
 from zato.common.util.json_ import dumps
-from zato.common.util.sql import get_security_by_id, elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
-from zato.server.service import Boolean, Integer
+from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
+     set_instance_opaque_attrs
+from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
@@ -80,12 +82,13 @@ class _BaseGet(AdminService):
     """ Base class for services returning information about HTTP/SOAP objects.
     """
     class SimpleIO:
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
-        output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
-            'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
-            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
-            'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type',
-            'content_encoding', Boolean('match_slash'), 'http_accept')
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'url_path'
+        output_optional = 'service_id', 'service_name', 'security_id', 'security_name', 'sec_type', \
+            'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req', \
+            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), \
+            'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type', \
+            'content_encoding', Boolean('match_slash'), 'http_accept', List('service_whitelist'), 'is_rate_limit_active', \
+                'rate_limit_type', 'rate_limit_def', Boolean('rate_limit_check_parent_def')
 
 # ################################################################################################################################
 
@@ -95,18 +98,19 @@ class Get(_BaseGet):
     class SimpleIO(_BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_request'
         response_elem = 'zato_http_soap_get_response'
-        input_required = 'cluster_id'
+        input_required = 'cluster_id',
         input_optional = 'id', 'name'
 
     def handle(self):
         with closing(self.odb.session()) as session:
             self.request.input.require_any('id', 'name')
-            self.response.payload = http_soap(session, self.request.input.cluster_id, self.request.input.id)
+            item = http_soap(session, self.request.input.cluster_id, self.request.input.id, self.request.input.name)
+            out = get_dict_with_opaque(item)
+            self.response.payload = out
 
 # ################################################################################################################################
 
 class GetList(_BaseGet):
-
     """ Returns a list of HTTP/SOAP connections.
     """
     _filter_by = HTTPSOAP.name,
@@ -183,14 +187,20 @@ class Create(_CreateEdit):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_http_soap_create_request'
         response_elem = 'zato_http_soap_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path')
-        input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
-            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
-            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept')
+        input_required = 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path'
+        input_optional = 'service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', \
+            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
+            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
+            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
+            List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
+            Boolean('rate_limit_check_parent_def')
         output_required = ('id', 'name')
 
     def handle(self):
+
+        # If we have a rate limiting definition, let's check it upfront
+        DefinitionParser.check_definition_from_input(self.request.input)
+
         input = self.request.input
         input.sec_use_rbac = input.security_id == ZATO_SEC_USE_RBAC
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
@@ -209,7 +219,7 @@ class Create(_CreateEdit):
                 first()
 
             if existing_one:
-                raise Exception('An object of that name `{}` already exists on this cluster'.format(input.name))
+                raise Exception('An object of that name `{}` already exists in this cluster'.format(input.name))
 
             # Is the service's name correct?
             service = session.query(Service).\
@@ -258,7 +268,7 @@ class Create(_CreateEdit):
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac
                 item.cache_id = input.cache_id or None
-                item.cache_expiry = input.cache_expiry
+                item.cache_expiry = input.cache_expiry or 0
                 item.content_encoding = input.content_encoding
 
                 if input.security_id:
@@ -304,8 +314,7 @@ class Create(_CreateEdit):
                 self.response.payload.name = item.name
 
             except Exception:
-                msg = 'Could not create the object, e:`{}'.format(format_exc())
-                self.logger.error(msg)
+                self.logger.error('Object could not be created, e:`%s', format_exc())
                 session.rollback()
 
                 raise
@@ -318,14 +327,20 @@ class Edit(_CreateEdit):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_http_soap_edit_request'
         response_elem = 'zato_http_soap_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path')
-        input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
-            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type',
-            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept')
-        output_required = ('id', 'name')
+        input_required = 'id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path'
+        input_optional = 'service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', \
+            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
+            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type', \
+            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
+            List('service_whitelist'), 'is_rate_limit_active', 'rate_limit_type', 'rate_limit_def', \
+            Boolean('rate_limit_check_parent_def')
+        output_required = 'id', 'name'
 
     def handle(self):
+
+        # If we have a rate limiting definition, let's check it upfront
+        DefinitionParser.check_definition_from_input(self.request.input)
+
         input = self.request.input
         input.sec_use_rbac = input.security_id == ZATO_SEC_USE_RBAC
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
@@ -345,7 +360,9 @@ class Edit(_CreateEdit):
                 first()
 
             if existing_one:
-                raise Exception('An object of that name `{}` already exists on this cluster'.format(input.name))
+                raise Exception('An object of that input.name:`{}` already exists in this cluster ' \
+                '(input.connection:`{}` input.transport:`{}` input.id:`{}` existing_one.id:`{}`)'.format(
+                    input.name, input.connection, input.transport, input.id, existing_one.id))
 
             # Is the service's name correct?
             service = session.query(Service).\
@@ -380,7 +397,7 @@ class Edit(_CreateEdit):
                 item.is_active = input.is_active
                 item.host = input.host
                 item.url_path = input.url_path
-                item.security_id = input.security_id or None # So SQLite doesn't reject ''
+                item.security_id = input.security_id or None # So that SQLite does not reject ''
                 item.connection = input.connection
                 item.transport = input.transport
                 item.cluster_id = input.cluster_id
@@ -453,7 +470,7 @@ class Edit(_CreateEdit):
                 self.response.payload.name = item.name
 
             except Exception:
-                self.logger.error('Object could not be updated, e:`{}`'.format(format_exc()))
+                self.logger.error('Object could not be updated, e:`%s`', format_exc())
                 session.rollback()
 
                 raise
@@ -466,7 +483,7 @@ class Delete(AdminService, _HTTPSOAPService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_http_soap_delete_request'
         response_elem = 'zato_http_soap_delete_response'
-        input_required = ('id',)
+        input_required = 'id',
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -503,7 +520,7 @@ class Delete(AdminService, _HTTPSOAPService):
 
             except Exception:
                 session.rollback()
-                self.logger.error('Object could not be deleted, e:`{}`'.format(format_exc()))
+                self.logger.error('Object could not be deleted, e:`%s`', format_exc())
 
                 raise
 

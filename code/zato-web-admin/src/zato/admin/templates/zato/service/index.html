@@ -33,10 +33,19 @@
             'mean_1h',
             '_edit',
             '_delete',
+
             'id',
             'is_active',
             'is_internal',
             'slow_threshold',
+
+            'is_json_schema_enabled',
+            'needs_json_schema_err_details',
+
+            'is_rate_limit_active',
+            'rate_limit_type',
+            'rate_limit_def',
+            'rate_limit_check_parent_def',
         ]
     }
 
@@ -55,10 +64,10 @@
             action: 'cluster/{{ cluster_id }}/upload/',
             onComplete: on_upload_complete,
             debug: true,
-            template: '<div class="qq-uploader" style="width:150px">' + 
+            template: '<div class="qq-uploader" style="width:150px">' +
                     '<div class="qq-upload-drop-area"><span>Drop files here to upload</span></div>' +
                     '<div class="qq-upload-button" style="width:100px">Upload services</div>' +
-                    '<ul class="qq-upload-list" style="width:500px"></ul>' + 
+                    '<ul class="qq-upload-list" style="width:500px"></ul>' +
                  '</div>'
         });
     }
@@ -90,7 +99,9 @@
                 </noscript>
             </div>
         </div>
-        
+
+        <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+
         <div id="markup">
             <table id="data-table">
                 <thead>
@@ -103,12 +114,24 @@
                         <th><a href="#">Internal</a></th>
                         <th>1h req/s</th>
                         <th>1h mean</th>
+
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -123,16 +146,28 @@
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
                         <td id="rate_1h_{{ item.id }}">&lt;0.01</td>
                         <td id="mean_1h_{{ item.id }}">&lt;0.01</td>
+
                         <td><a href="javascript:$.fn.zato.service.edit('{{ item.id }}')">Edit</a></td>
                         <td>
                             {% if item.may_be_deleted %}
                             <a href="javascript:$.fn.zato.service.delete_('{{ item.id }}')">Delete</a>
                             {% endif %}
                         </td>
+
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_internal }}</td>
                         <td class='ignore'>{{ item.slow_threshold }}</td>
+
+                        <td class='ignore'>{{ item.is_json_schema_enabled }}</td>
+                        <td class='ignore'>{{ item.needs_json_schema_err_details }}</td>
+
+                        <td class='ignore'>{{ item.is_rate_limit_active }}</td>
+                        <td class='ignore'>{{ item.rate_limit_type }}</td>
+                        <td class='ignore'>{{ item.rate_limit_def }}</td>
+                        <td class='ignore'>{{ item.rate_limit_check_parent_def }}</td>
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -147,54 +182,35 @@
 
 {% include "zato/paginate/action-panel.html" %}
 
-        <div id="create-div" class='data-popup ignore'>
+        <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "service-create" %}" method="post" id="create-form">
+                <form action="{% url "service-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
-                    
+
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Active</td>
-                            <td>{{ create_form.is_active }}</td>
+                            <td style="vertical-align:middle;width:14%">Options</td>
+                            <td>
+                            <label>
+                            Active
+                            {{ edit_form.is_active }}
+                            </label>
+                            |
+                            <label>
+                                Slow threshold <span class="form_hint">(ms)</span>
+                                {{ edit_form.slow_threshold }}
+                            </label>
+                            </td>
                         </tr>
-                        
-                        <tr>
-                            <td style="vertical-align:middle">Slow threshold <span class="form_hint">(ms)</span></td>
-                            <td>{{ create_form.slow_threshold }}</td>
-                        </tr>
+
+                        {% include "zato/include/json-schema/edit.html" %}
+                        {% include "zato/include/rate-limiting/edit.html" %}
 
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
-                        </tr>                        
-                    </table>
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                </form>
-            </div>
-        </div>
-        
-        <div id="edit-div" class='data-popup ignore'>
-            <div class="bd">
-                <form action="{% url "service-edit" %}" method="post" id="edit-form">
-                    <table class="form-data">
-                    
-                        <tr>
-                            <td style="vertical-align:middle;width:20%">Active</td>
-                            <td>{{ edit_form.is_active }}</td>
                         </tr>
-                        
-                        <tr>
-                            <td style="vertical-align:middle">Slow threshold <span class="form_hint">(ms)</span></td>
-                            <td>{{ edit_form.slow_threshold }}</td>
-                        </tr>
-                        
-                        <tr>
-                            <td colspan="2" style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                            </td>
-                        </tr>                        
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="edit-id" />

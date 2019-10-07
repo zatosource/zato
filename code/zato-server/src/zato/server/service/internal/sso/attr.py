@@ -35,9 +35,9 @@ class _AttrBase(object):
     _api_entity = None
 
     class SimpleIO(BaseSIO):
-        input_required = ('current_ust', 'current_app')
-        input_optional = (AsIs('user_id'), 'name', 'value', Opaque('data'), Bool('decrypt'), Bool('serialize_dt'),
-            Int('expiration'), Bool('encrypt'), 'target_ust')
+        input_required = 'current_app',
+        input_optional = 'ust', 'current_ust', AsIs('user_id'), 'name', 'value', Opaque('data'), Bool('decrypt'), \
+            Bool('serialize_dt'), Int('expiration'), Bool('encrypt'), 'target_ust'
         output_optional = BaseSIO.output_optional + (Bool('found'), 'result', 'name', 'value', 'creation_time',
             'last_modified', 'expiration_time', 'is_encrypted')
         default_value = _invalid
@@ -64,11 +64,11 @@ class _AttrBase(object):
             data_elem_value = None
 
         if self._api_entity == 'user':
-            entity = self.sso.user.get_user_by_id(cid, ctx.input.user_id, ctx.input.current_ust, ctx.input.current_app,
+            entity = self.sso.user.get_user_by_id(cid, ctx.input.user_id, ctx.input.ust, ctx.input.current_app,
                 ctx.remote_addr)
         elif self._api_entity == 'session':
             entity = self.sso.user.session.get(self.cid, ctx.input.target_ust, ctx.input.current_ust,
-                ctx.input.current_app, ctx.input.remote_addr)
+                ctx.input.current_app, ctx.remote_addr, user_agent=None)
         else:
             logger.warn('Could not establish API entity to use out of `%s`', self._api_entity)
             raise ValidationError(status_code.common.internal_error)
@@ -104,9 +104,12 @@ class _AttrBase(object):
 
         try:
             result = call_data.func(**(kwargs if needs_input else {}))
-        except Exception:
+        except Exception as e:
             self.logger.warn(format_exc())
-            raise ValidationError(status_code.common.invalid_input)
+            if isinstance(e, ValidationError):
+                raise
+            else:
+                raise ValidationError(status_code.common.invalid_input)
         else:
             if needs_result:
                 self.response.payload.result = result

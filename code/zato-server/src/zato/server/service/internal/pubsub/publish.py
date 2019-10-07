@@ -74,7 +74,7 @@ class PubCtx(object):
     def __init__(self, cluster_id, pubsub, topic, endpoint_id, endpoint_name, subscriptions_by_topic, msg_id_list, gd_msg_list,
             non_gd_msg_list, pub_pattern_matched, ext_client_id, is_re_run, now):
         self.cluster_id = cluster_id
-        self.pubsub = pubsub
+        self.pubsub = pubsub # type: PubSub
         self.topic = topic
         self.endpoint_id = endpoint_id
         self.endpoint_name = endpoint_name
@@ -99,7 +99,7 @@ class Publish(AdminService):
         input_optional = (AsIs('data'), List('data_list'), AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'),
             'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'), 'ext_pub_time', 'pub_pattern_matched',
             'security_id', 'ws_channel_id', 'service_id', 'data_parsed', 'meta', AsIs('group_id'),
-            Int('position_in_group'), 'endpoint_id', List('reply_to_sk'), List('deliver_to_sk'))
+            Int('position_in_group'), 'endpoint_id', List('reply_to_sk'), List('deliver_to_sk'), 'user_ctx', 'zato_ctx')
         output_optional = (AsIs('msg_id'), List('msg_id_list'))
 
 # ################################################################################################################################
@@ -114,7 +114,7 @@ class Publish(AdminService):
 
     def _get_message(self, topic, input, now, pub_pattern_matched, endpoint_id, subscriptions_by_topic, has_wsx_no_server,
         _initialized=_initialized, _zato_none=ZATO_NONE, _skip=PUBSUB.HOOK_ACTION.SKIP, _default_pri=PUBSUB.PRIORITY.DEFAULT,
-        _opaque_only=PUBSUB.DEFAULT.SK_OPAQUE):
+        _opaque_only=PUBSUB.DEFAULT.SK_OPAQUE, _float_str=PUBSUB.FLOAT_STRING_CONVERT):
 
         priority = get_priority(self.cid, input)
 
@@ -159,12 +159,19 @@ class Publish(AdminService):
         reply_to_sk = input.get('reply_to_sk') or []
         deliver_to_sk = input.get('deliver_to_sk') or []
 
+        user_ctx = input.get('user_ctx')
+        zato_ctx = input.get('zato_ctx')
+
         ps_msg = PubSubMessage()
         ps_msg.topic = topic
         ps_msg.pub_msg_id = pub_msg_id
         ps_msg.pub_correl_id = pub_correl_id
         ps_msg.in_reply_to = in_reply_to
-        ps_msg.pub_time = now
+
+        # Convert to string to prevent pg8000 from rounding up float values
+        ps_msg.pub_time = _float_str.format(now)
+        ps_msg.ext_pub_time = _float_str.format(ext_pub_time) if ext_pub_time else ext_pub_time
+
         ps_msg.delivery_status = _initialized
         ps_msg.pub_pattern_matched = pub_pattern_matched
         ps_msg.data = input['data']
@@ -178,12 +185,13 @@ class Publish(AdminService):
         ps_msg.cluster_id = self.server.cluster_id
         ps_msg.has_gd = has_gd
         ps_msg.ext_client_id = ext_client_id
-        ps_msg.ext_pub_time = ext_pub_time
         ps_msg.group_id = input.get('group_id') or None
         ps_msg.position_in_group = input.get('position_in_group') or None
         ps_msg.is_in_sub_queue = bool(subscriptions_by_topic)
         ps_msg.reply_to_sk = reply_to_sk
         ps_msg.deliver_to_sk = deliver_to_sk
+        ps_msg.user_ctx = user_ctx
+        ps_msg.zato_ctx = zato_ctx
 
         # Opaque attributes - we only need reply to sub_keys to be placed in there
         # but we do not do it unless we known that any such sub key was actually requested.
@@ -361,8 +369,9 @@ class Publish(AdminService):
             # If so, later on we will need to turn all the messages into GD ones.
             sk_server = self.pubsub.get_sub_key_server(sub.sub_key)
             if not sk_server:
-                logger_pubsub.info('No sk_server for sub_key `%s` among `%s`', sub.sub_key,
-                    sorted(self.pubsub.sub_key_servers.keys()))
+                if has_logger_pubsub_debug:
+                    logger_pubsub.debug('No sk_server for sub_key `%s` among `%s`', sub.sub_key,
+                        sorted(self.pubsub.sub_key_servers.keys()))
                 has_wsx_no_server = True # We have found at least one WSX subscriber that has no server = it is not connected
 
         logger_pubsub.info('Subscriptions for topic `%s` `%s` (a:%d, %d/%d, cid:%s)',

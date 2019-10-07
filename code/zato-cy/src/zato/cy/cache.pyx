@@ -170,7 +170,7 @@ cdef class Entry:
         value = value if isinstance(value, bytes) else value.encode('utf8')
 
         h.update(value)
-        self.hash = h.hexdigest()
+        self.hash = str(h.hexdigest())
 
         # Timestamps in formats other than seconds since epoch
 

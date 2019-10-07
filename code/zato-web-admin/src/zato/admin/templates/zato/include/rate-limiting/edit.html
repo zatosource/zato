@@ -1,0 +1,34 @@
+<tr>
+    <td style="vertical-align:middle">
+    Rate limit
+    </td>
+    <td>
+    <a href="javascript:$.fn.zato.toggle_visibility('.rate-limiting-block')">Toggle options</a>
+    </td>
+</tr>
+
+<tr class="rate-limiting-block hidden">
+    <td></td>
+    <td>
+        <label>
+        Enabled
+        {{ edit_form.is_rate_limit_active }}
+        </label>
+        |
+        <label>
+        Type
+        {{ edit_form.rate_limit_type }}
+        </label>
+    </td>
+</tr>
+
+<tr class="rate-limiting-block hidden">
+    <td></td>
+    <td>
+        <label>
+        Definition
+        <br/>
+        {{ edit_form.rate_limit_def }}
+        </label>
+    </td>
+</tr>

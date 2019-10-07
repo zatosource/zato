@@ -44,6 +44,8 @@ sql_messages_columns = (
     PubSubMessage.expiration,
     PubSubMessage.expiration_time,
     PubSubMessage.size,
+    PubSubMessage.user_ctx,
+    PubSubMessage.zato_ctx,
     PubSubMessage.opaque1,
     PubSubEndpointEnqueuedMessage.id.label('endp_msg_queue_id'),
     PubSubEndpointEnqueuedMessage.sub_key,
@@ -56,22 +58,22 @@ sql_msg_id_columns = (
 
 # ################################################################################################################################
 
-def _get_base_sql_msg_query(session, columns, sub_key_list, pub_time_max, cluster_id):
+def _get_base_sql_msg_query(session, columns, sub_key_list, pub_time_max, cluster_id, _float_str=PUBSUB.FLOAT_STRING_CONVERT):
     return session.query(*columns).\
         filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
         filter(PubSubEndpointEnqueuedMessage.sub_key.in_(sub_key_list)).\
         filter(PubSubEndpointEnqueuedMessage.delivery_status==_initialized).\
-        filter(PubSubMessage.expiration_time > pub_time_max).\
+        filter(PubSubMessage.expiration_time > _float_str.format(pub_time_max)).\
         filter(PubSubMessage.cluster_id==cluster_id)
 
 # ################################################################################################################################
 
 def _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key_list, last_sql_run, pub_time_max, columns, ignore_list=None,
-    needs_result=True, _initialized=_initialized):
+    needs_result=True, _initialized=_initialized, _float_str=PUBSUB.FLOAT_STRING_CONVERT):
     """ Returns all SQL messages queued up for a given sub_key that are not being delivered
     or have not been delivered already.
     """
-    logger.info('Getting GD messages for `%s` last_run:%r pub_time_max:%r res:%d', sub_key_list, last_sql_run,
+    logger.info('Getting GD messages for `%s` last_run:%r pub_time_max:%r needs_result:%d', sub_key_list, last_sql_run,
         pub_time_max, int(needs_result))
 
     query = _get_base_sql_msg_query(session, columns, sub_key_list, pub_time_max, cluster_id)
@@ -80,10 +82,10 @@ def _get_sql_msg_data_by_sub_key(session, cluster_id, sub_key_list, last_sql_run
     # enqueued for that subscriber since that time ..
     if last_sql_run:
         query = query.\
-            filter(PubSubEndpointEnqueuedMessage.creation_time > last_sql_run)
+            filter(PubSubEndpointEnqueuedMessage.creation_time > _float_str.format(last_sql_run))
 
     query = query.\
-        filter(PubSubEndpointEnqueuedMessage.creation_time <= pub_time_max)
+        filter(PubSubEndpointEnqueuedMessage.creation_time <= _float_str.format(pub_time_max))
 
     if ignore_list:
         query = query.\

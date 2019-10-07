@@ -36,13 +36,15 @@ create_edit_rewrite = ['id']
 # ################################################################################################################################
 
 def instance_hook(service, input, instance, attrs):
-    is_root = input.name.lower() == 'root'
 
-    if is_root:
-        raise ValueError('Root role cannot be changed')
+    if attrs.is_create_edit:
+        is_root = input.name.lower() == 'root'
 
-    if input.parent_id == instance.id:
-        raise ValueError('A role cannot be its own parent')
+        if is_root:
+            raise ValueError('Root role cannot be changed')
+
+        if input.parent_id == instance.id:
+            raise ValueError('A role cannot be its own parent')
 
 # ################################################################################################################################
 

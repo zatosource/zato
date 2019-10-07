@@ -23,14 +23,18 @@ from bunch import bunchify
 # configobj
 from configobj import ConfigObj
 
+# py-cpuinfo
+from cpuinfo import get_cpu_info
+
 # cryptography
 from cryptography.fernet import Fernet, InvalidToken
 
 # hashlib
 from passlib import hash as passlib_hash
 
-# py-cpuinfo
-from cpuinfo import get_cpu_info
+# PyOTP
+import pyotp
+from pyotp.totp import TOTP
 
 # Python 2/3 compatibility
 from builtins import bytes
@@ -179,6 +183,20 @@ class CryptoManager(object):
 
 # ################################################################################################################################
 
+    @staticmethod
+    def generate_totp_key():
+        return pyotp.random_base32()
+
+    @staticmethod
+    def verify_totp_code(totp_key, totp_code):
+        return TOTP(totp_key).verify(totp_code)
+
+    @staticmethod
+    def get_current_totp_code(totp_key):
+        return TOTP(totp_key).now()
+
+# ################################################################################################################################
+
     @classmethod
     def from_repo_dir(cls, secret_key, repo_dir, stdin_data):
         """ Creates a new CryptoManager instance from a path to configuration file(s).
@@ -198,6 +216,8 @@ class CryptoManager(object):
     def encrypt(self, data):
         """ Encrypts incoming data, which must be a string.
         """
+        if not isinstance(data, bytes):
+            data = data.encode('utf8')
         return self.secret_key.encrypt(data)
 
 # ################################################################################################################################
@@ -374,6 +394,9 @@ def resolve_secret_key(secret_key, _url_prefix=SECRETS.URL_PREFIX):
     """
     # We always require a string
     secret_key = secret_key or ''
+
+    if secret_key and (not isinstance(_url_prefix, bytes)):
+        _url_prefix = _url_prefix.encode('utf8')
 
     # This is a direct value, to be used as-is
     if not secret_key.startswith(_url_prefix):

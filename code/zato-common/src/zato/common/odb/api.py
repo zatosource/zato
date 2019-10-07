@@ -21,6 +21,7 @@ from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy import and_, create_engine, event, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.orm.query import Query
 from sqlalchemy.pool import NullPool
@@ -28,11 +29,12 @@ from sqlalchemy.sql.expression import true
 from sqlalchemy.sql.type_api import TypeEngine
 
 # Bunch
-from bunch import Bunch
+from bunch import Bunch, bunchify
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
+from zato.common import DEPLOYMENT_STATUS, GENERIC, HTTP_SOAP, Inactive, MS_SQL, NotGiven, PUBSUB, SEC_DEF_TYPE, SECRET_SHADOW, \
      SERVER_UP_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
 from zato.common.odb import get_ping_query, query
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      JWT, OAuth, PubSubEndpoint, SecurityBase, Server, Service, TLSChannelSecurity, XPathSecurity, \
@@ -40,9 +42,10 @@ from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, Depl
 from zato.common.odb.query.pubsub import subscription as query_ps_subscription
 from zato.common.odb.query import generic as query_generic
 from zato.common.util import current_host, get_component_name, get_engine_url, parse_extra_into_dict, \
-     parse_tls_channel_security_definition
-from zato.common.util.sql import elems_with_opaque
+     parse_tls_channel_security_definition, spawn_greenlet
+from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.url_dispatcher import get_match_target
+from zato.sso.odb.query import get_rate_limiting_info as get_sso_user_rate_limiting_info
 
 # ################################################################################################################################
 
@@ -58,6 +61,10 @@ if typing.TYPE_CHECKING:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+rate_limit_keys = 'is_rate_limit_active', 'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def'
 
 # ################################################################################################################################
 
@@ -140,9 +147,13 @@ class SessionWrapper(object):
         self.session_initialized = False
         self.pool = None
         self.config = None
+        self.is_sqlite = None
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def init_session(self, name, config, pool, use_scoped_session=True):
+    def init_session(self, *args, **kwargs):
+        spawn_greenlet(self._init_session, *args, **kwargs)
+
+    def _init_session(self, name, config, pool, use_scoped_session=True):
         self.config = config
         self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
@@ -153,13 +164,17 @@ class SessionWrapper(object):
             msg = 'Could not ping:`%s`, session will be left uninitialized, e:`%s`'
             self.logger.warn(msg, name, format_exc())
         else:
-            if use_scoped_session:
-                self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
+            if config['engine'] == MS_SQL.ZATO_DIRECT:
+                self._Session = SimpleSession(self.pool.engine)
             else:
-                self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
+                if use_scoped_session:
+                    self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
+                else:
+                    self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
+                self._session = self._Session()
 
-            self._session = self._Session()
             self.session_initialized = True
+            self.is_sqlite = self.pool.engine.name == 'sqlite'
 
     def session(self):
         return self._Session()
@@ -207,7 +222,7 @@ class SQLConnectionPool(object):
         engine_url = get_engine_url(config)
         self.engine = self._create_engine(engine_url, config, _extra)
 
-        if self.engine:
+        if self.engine and self._is_sa_engine(engine_url):
             event.listen(self.engine, 'checkin', self.on_checkin)
             event.listen(self.engine, 'checkout', self.on_checkout)
             event.listen(self.engine, 'connect', self.on_connect)
@@ -230,35 +245,33 @@ class SQLConnectionPool(object):
 
 # ################################################################################################################################
 
+    def _is_sa_engine(self, engine_url):
+        return 'zato+mssql1' not in engine_url
+
+# ################################################################################################################################
+
     def _create_engine(self, engine_url, config, extra):
-        if 'mxodbc' in engine_url:
+        if self._is_sa_engine(engine_url):
+            return create_engine(engine_url, **extra)
+        else:
 
-            from mx.ODBCConnect.Client import ServerSession as mxServerSession
-            from mx.ODBCConnect.Error import OperationalError
-
-            config_data = {
-                'Server_Connection': {},
-                'Logging': {},
-                'Integration': {},
+            # This is a direct MS SQL connection
+            connect_kwargs = {
+                'dsn': config['host'],
+                'port': config['port'],
+                'database': config['db_name'],
+                'user': config['username'],
+                'password': config['password'],
+                'login_timeout': 3,
+                'as_dict': True,
             }
 
-            config_data['Server_Connection']['host'] = config['host']
-            config_data['Server_Connection']['port'] = config['port']
-            config_data['Server_Connection']['using_ssl'] = extra.pop('mxodbc_using_ssl', False)
+            for name in MS_SQL.EXTRA_KWARGS:
+                value = extra.get(name, NotGiven)
+                if value is not NotGiven:
+                    connect_kwargs[name] = value
 
-            config_data['Integration']['gevent'] = True
-
-            try:
-                session = mxServerSession(config_data=config_data)
-                odbc = session.open()
-            except OperationalError:
-                self.logger.warn('SQL connection could not be created, caught mxODBC exception, e:`%s`', format_exc())
-            else:
-                url = '{engine}://{username}:{password}@{db_name}'.format(**config)
-                return create_engine(url, module=odbc, **extra)
-
-        else:
-            return create_engine(engine_url, **extra)
+            return MSSQLDirectAPI(config['name'], config['pool_size'], connect_kwargs)
 
 # ################################################################################################################################
 
@@ -294,12 +307,19 @@ class SQLConnectionPool(object):
     def ping(self, fs_sql_config):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
-        query = get_ping_query(fs_sql_config, self.config)
+        if hasattr(self.engine, 'ping'):
+            func = self.engine.ping
+            query = self.engine.ping_query
+            args = []
+        else:
+            func = self.engine.connect().execute
+            query = get_ping_query(fs_sql_config, self.config)
+            args = [query]
 
         self.logger.debug('About to ping the SQL connection pool:`%s`, query:`%s`', self.config_no_sensitive, query)
 
         start_time = time()
-        self.engine.connect().execute(query)
+        func(*args)
         response_time = time() - start_time
 
         self.logger.debug('Ping OK, pool:`%s`, response_time:`%s` s', self.config_no_sensitive, response_time)
@@ -407,7 +427,10 @@ class PoolStore(object):
         password.
         """
         with self._lock:
-            self[name].pool.engine.dispose()
+            # Do not check if the connection is active when changing the password,
+            # sometimes it is desirable to change it even if it is Inactive.
+            item = self.get(name, enforce_is_active=False)
+            item.pool.engine.dispose()
             config = deepcopy(self.wrappers[name].pool.config)
             config['password'] = password
             self[name] = config
@@ -510,19 +533,19 @@ class ODBManager(SessionWrapper):
     def get_default_internal_pubsub_endpoint(self):
         with closing(self.session()) as session:
             return session.query(PubSubEndpoint).\
-                   filter(PubSubEndpoint.name==PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME).\
-                   filter(PubSubEndpoint.endpoint_type==PUBSUB.ENDPOINT_TYPE.INTERNAL.id).\
-                   one()
+                filter(PubSubEndpoint.name==PUBSUB.DEFAULT.INTERNAL_ENDPOINT_NAME).\
+                filter(PubSubEndpoint.endpoint_type==PUBSUB.ENDPOINT_TYPE.INTERNAL.id).\
+                filter(PubSubEndpoint.cluster_id==self.cluster_id).\
+                one()
 
 # ################################################################################################################################
 
     def get_missing_services(self, server, locally_deployed):
         """ Returns services deployed on the server given on input that are not among locally_deployed.
         """
-        missing = []
+        missing = set()
 
         with closing(self.session()) as session:
-
             server_services = session.query(
                 Service.id, Service.name,
                 DeployedService.source_path, DeployedService.source).\
@@ -533,7 +556,7 @@ class ODBManager(SessionWrapper):
 
             for item in server_services:
                 if item.name not in locally_deployed:
-                    missing.append(item)
+                    missing.add(item)
 
         return missing
 
@@ -570,9 +593,20 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def _copy_rate_limiting_config(self, copy_from, copy_to, _keys=rate_limit_keys):
+        for key in _keys:
+            copy_to[key] = copy_from.get(key)
+
+# ################################################################################################################################
+
     def get_url_security(self, cluster_id, connection=None, any_internal=HTTP_SOAP.ACCEPT.ANY_INTERNAL):
         """ Returns the security configuration of HTTP URLs.
         """
+
+        # Temporary cache of security definitions visited so as not to
+        # look the same ones for each HTTP object that uses them.
+        sec_def_cache = {}
+
         with closing(self.session()) as session:
             # What DB class to fetch depending on the string value of the security type.
             sec_type_db_class = {
@@ -610,14 +644,26 @@ class ODBManager(SessionWrapper):
                 result[target].sec_use_rbac = item.sec_use_rbac
 
                 if item.security_id:
+
+                    # For later use
                     result[target].sec_def = Bunch()
 
-                    # Will raise KeyError if the DB gets somehow misconfigured.
-                    db_class = sec_type_db_class[item.sec_type]
+                    # We either have already seen this security definition ..
+                    if item.security_id in sec_def_cache:
+                        sec_def = sec_def_cache[item.security_id]
 
-                    sec_def = session.query(db_class).\
-                            filter(db_class.id==item.security_id).\
-                            one()
+                    # .. or we have not, in which case we need to look it up
+                    # and then cache it for later use.
+                    else:
+
+                        # Will raise KeyError if the DB gets somehow misconfigured.
+                        db_class = sec_type_db_class[item.sec_type]
+                        sec_def_item = session.query(db_class).\
+                                filter(db_class.id==item.security_id).\
+                                one()
+                        sec_def = bunchify(sec_def_item.asdict())
+                        ElemsWithOpaqueMaker.process_config_dict(sec_def)
+                        sec_def_cache[item.security_id] = sec_def
 
                     # Common things first
                     result[target].sec_def.id = sec_def.id
@@ -628,12 +674,15 @@ class ODBManager(SessionWrapper):
                     if item.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
                         result[target].sec_def.username = sec_def.username
                         result[target].sec_def.realm = sec_def.realm
+                        self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.JWT:
                         result[target].sec_def.username = sec_def.username
+                        self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.APIKEY:
                         result[target].sec_def.username = 'HTTP_{}'.format(sec_def.username.upper().replace('-', '_'))
+                        self._copy_rate_limiting_config(sec_def, result[target].sec_def)
 
                     elif item.sec_type == SEC_DEF_TYPE.WSS:
                         result[target].sec_def.username = sec_def.username
@@ -674,21 +723,19 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_basic_data_service_list(self):
+    def get_basic_data_service_list(self, session):
         """ Returns basic information about all the services in ODB.
         """
-        with closing(self.session()) as session:
+        query = select([
+            ServiceTable.c.id,
+            ServiceTable.c.name,
+            ServiceTable.c.impl_name,
+        ]).where(
+            ServiceTable.c.cluster_id==self.cluster_id
+        )
 
-            query = select([
-                ServiceTable.c.id,
-                ServiceTable.c.name,
-                ServiceTable.c.impl_name,
-            ]).where(
-                ServiceTable.c.cluster_id==self.cluster_id
-            )
-
-            return session.execute(query).\
-                fetchall()
+        return session.execute(query).\
+            fetchall()
 
 # ################################################################################################################################
 
@@ -699,6 +746,7 @@ class ODBManager(SessionWrapper):
 
             query = select([
                 ServiceTable.c.name,
+                DeployedServiceTable.c.source,
             ]).where(and_(
                 DeployedServiceTable.c.service_id==ServiceTable.c.id,
                 DeployedServiceTable.c.server_id==self.server_id
@@ -711,13 +759,27 @@ class ODBManager(SessionWrapper):
 
     def add_services(self, session, data):
         # type: (List[dict]) -> None
-        session.execute(ServiceTableInsert().values(data))
+        try:
+            session.execute(ServiceTableInsert().values(data))
+        except IntegrityError:
+            # This can be ignored because it is possible that there will be
+            # more than one server trying to insert rows related to services
+            # that are hot-deployed from web-admin or another source.
+            logger.debug('Ignoring IntegrityError with `%s`', data)
 
 # ################################################################################################################################
 
     def add_deployed_services(self, session, data):
         # type: (List[dict]) -> None
         session.execute(DeployedServiceInsert().values(data))
+
+# ################################################################################################################################
+
+    def drop_deployed_services_by_name(self, session, service_id_list):
+        session.execute(
+            DeployedServiceDelete().\
+            where(DeployedService.service_id.in_(service_id_list))
+        )
 
 # ################################################################################################################################
 
@@ -814,7 +876,23 @@ class ODBManager(SessionWrapper):
         """ Returns a list of services defined on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.service_list(session, cluster_id, needs_columns)
+            return elems_with_opaque(query.service_list(session, cluster_id, needs_columns))
+
+# ################################################################################################################################
+
+    def get_service_id_list(self, session, cluster_id, name_list):
+        """ Returns a list of IDs matching input service names.
+        """
+        # type: (object, int, list)
+        return query.service_id_list(session, cluster_id, name_list)
+
+# ################################################################################################################################
+
+    def get_service_list_with_include(self, session, cluster_id, include_list, needs_columns=False):
+        """ Returns a list of all services from the input include_list.
+        """
+        # type: (object, int, list)
+        return query.service_list_with_include(session, cluster_id, include_list, needs_columns)
 
 # ################################################################################################################################
 
@@ -822,7 +900,7 @@ class ODBManager(SessionWrapper):
         """ Returns a list of API keys existing on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.apikey_security_list(session, cluster_id, needs_columns)
+            return elems_with_opaque(query.apikey_security_list(session, cluster_id, needs_columns))
 
 # ################################################################################################################################
 
@@ -838,7 +916,7 @@ class ODBManager(SessionWrapper):
         """ Returns a list of HTTP Basic Auth definitions existing on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.basic_auth_list(session, cluster_id, cluster_name, needs_columns)
+            return elems_with_opaque(query.basic_auth_list(session, cluster_id, cluster_name, needs_columns))
 
 # ################################################################################################################################
 
@@ -846,7 +924,7 @@ class ODBManager(SessionWrapper):
         """ Returns a list of JWT definitions existing on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.jwt_list(session, cluster_id, cluster_name, needs_columns)
+            return elems_with_opaque(query.jwt_list(session, cluster_id, cluster_name, needs_columns))
 
 # ################################################################################################################################
 
@@ -1358,6 +1436,14 @@ class ODBManager(SessionWrapper):
         """ Returns a list of generic connections.
         """
         return query_generic.connection_list(self._session, cluster_id, needs_columns=needs_columns)
+
+# ################################################################################################################################
+
+    def get_sso_user_rate_limiting_info(self):
+        """ Returns a list of SSO users that have rate limiting enabled.
+        """
+        with closing(self.session()) as session:
+            return get_sso_user_rate_limiting_info(session)
 
 # ################################################################################################################################
 

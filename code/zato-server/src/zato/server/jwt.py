@@ -33,6 +33,17 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
+class AuthInfo(object):
+    __slots__ = 'sec_def_id', 'sec_def_username', 'token'
+
+    def __init__(self, sec_def_id, sec_def_username, token):
+        # type: (int, str, str)
+        self.sec_def_id = sec_def_id
+        self.sec_def_username = sec_def_username
+        self.token = token
+
+# ################################################################################################################################
+
 class JWT(object):
     """ JWT authentication backend.
     """
@@ -40,9 +51,10 @@ class JWT(object):
 
 # ################################################################################################################################
 
-    def __init__(self, kvdb, odb, secret):
+    def __init__(self, kvdb, odb, decrypt_func, secret):
         self.odb = odb
         self.cache = RobustCache(kvdb, odb)
+        self.decrypt_func = decrypt_func
 
         self.secret = secret
         self.fernet = Fernet(self.secret)
@@ -50,8 +62,15 @@ class JWT(object):
 # ################################################################################################################################
 
     def _lookup_jwt(self, username, password):
+        # type: (str, str) -> JWT_
         with closing(self.odb.session()) as session:
-            return session.query(JWT_).filter_by(username=username, password=password).first()
+            item = session.query(JWT_).\
+                filter(JWT_.username==username).\
+                first()
+
+            if item:
+                if self.decrypt_func(item.password) == password:
+                    return item
 
 # ################################################################################################################################
 
@@ -63,7 +82,7 @@ class JWT(object):
         token_data.update(data)
 
         token = jwt.encode(token_data, self.secret, algorithm=self.ALGORITHM)
-        return self.fernet.encrypt(token.encode('utf-8'))
+        return self.fernet.encrypt(token).decode('utf8')
 
 # ################################################################################################################################
 
@@ -77,14 +96,14 @@ class JWT(object):
             4. Cache the new token synchronously (we wait for it to be truly stored).
             5. Return the token
         """
-        sec_def = self._lookup_jwt(username, password)
-        if sec_def:
-            token = self._create_token(username=username, ttl=sec_def.ttl)
-            self.cache.put(token, token, sec_def.ttl, async=False)
-            suffix = 's' if sec_def.ttl > 1 else ''
-            logger.info('New token generated for user `%s` with a TTL of `%i` second{}'.format(suffix), username, sec_def.ttl)
+        item = self._lookup_jwt(username, password)
+        if item:
+            token = self._create_token(username=username, ttl=item.ttl)
+            self.cache.put(token, token, item.ttl, async=False)
+            suffix = 's' if item.ttl > 1 else ''
+            logger.info('New token generated for user `%s` with a TTL of `%i` second{}'.format(suffix), username, item.ttl)
 
-            return token
+            return AuthInfo(item.id, item.username, token)
 
 # ################################################################################################################################
 
@@ -96,7 +115,7 @@ class JWT(object):
         2.b If found:
             3. decrypt
             4. decode
-            5. renew the cache expiration asyncronouysly (do not wait for the update confirmation).
+            5. renew the cache expiration asynchronously (do not wait for the update confirmation).
             5. return "valid" + the token contents
         """
         if self.cache.get(token):
@@ -107,7 +126,7 @@ class JWT(object):
 
                 # Renew the token expiration
                 self.cache.put(token, token, token_data.ttl, async=True)
-                return Bunch(valid=True, token=token_data)
+                return Bunch(valid=True, token=token_data, raw_token=token)
 
             else:
                 return Bunch(valid=False, message='Unexpected user for token found')

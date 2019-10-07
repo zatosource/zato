@@ -30,7 +30,7 @@ from zato.cli import apispec as apispec_mod, ca_create_ca as ca_create_ca_mod, c
      delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, migrate as migrate_mod, \
      quickstart as quickstart_mod, run_command, service as service_mod, sso as sso_mod, start as start_mod, \
      stop as stop_mod, web_admin_auth as web_admin_auth_mod
-from zato.common import version
+from zato.common import get_version
 
 def add_opts(parser, opts):
     """ Adds parser-specific options.
@@ -53,7 +53,7 @@ def get_parser():
         help='Whether to store config options in a file for a later use', action='store_true')
 
     parser = argparse.ArgumentParser(prog='zato')
-    parser.add_argument('--version', action='version', version=version)
+    parser.add_argument('--version', action='version', version=get_version())
 
     subs = parser.add_subparsers()
 
@@ -158,7 +158,7 @@ def get_parser():
     add_opts(create_server, create_server_mod.Create.opts)
 
     create_user = create_subs.add_parser('user', description=web_admin_auth_mod.CreateUser.__doc__, parents=[base_parser])
-    create_user.add_argument('path', help='Path to a web admin')
+    create_user.add_argument('path', help='Path to a web-admin instance')
     create_user.set_defaults(command='create_user')
     add_opts(create_user, web_admin_auth_mod.CreateUser.opts)
 
@@ -206,10 +206,10 @@ def get_parser():
     #
     # enmasse
     #
-    enmasse = subs.add_parser('enmasse', description=enmasse_mod.EnMasse.__doc__, parents=[base_parser])
+    enmasse = subs.add_parser('enmasse', description=enmasse_mod.Enmasse.__doc__, parents=[base_parser])
     enmasse.add_argument('path', help='Path to a running Zato server')
     enmasse.set_defaults(command='enmasse')
-    add_opts(enmasse, enmasse_mod.EnMasse.opts)
+    add_opts(enmasse, enmasse_mod.Enmasse.opts)
 
     #
     # update
@@ -254,6 +254,15 @@ def get_parser():
     reset_totp_key.add_argument('path', help='Path to web-admin')
     reset_totp_key.set_defaults(command='reset_totp_key')
     add_opts(reset_totp_key, web_admin_auth_mod.ResetTOTPKey.opts)
+
+    #
+    # set-admin-invoke-password
+    #
+    set_admin_invoke_password = subs.add_parser('set-admin-invoke-password',
+        description=web_admin_auth_mod.SetAdminInvokePassword.__doc__, parents=[base_parser])
+    set_admin_invoke_password.add_argument('path', help='Path to web-admin')
+    set_admin_invoke_password.set_defaults(command='set_admin_invoke_password')
+    add_opts(set_admin_invoke_password, web_admin_auth_mod.SetAdminInvokePassword.opts)
 
     #
     # quickstart
@@ -333,6 +342,15 @@ def get_parser():
     add_opts(sso_change_user_password, sso_mod.ChangeUserPassword.opts)
 
     #
+    # reset-totp-key (sso)
+    #
+    sso_reset_totp_key_password = sso_subs.add_parser(
+        'reset-totp-key', description=sso_mod.ResetTOTPKey.__doc__, parents=[base_parser])
+    sso_reset_totp_key_password.add_argument('path', help='Path to a Zato server')
+    sso_reset_totp_key_password.set_defaults(command='sso_reset_totp_key')
+    add_opts(sso_reset_totp_key_password, sso_mod.ResetTOTPKey.opts)
+
+    #
     # reset-user-password
     #
     sso_reset_user_password = sso_subs.add_parser(
@@ -342,7 +360,7 @@ def get_parser():
     add_opts(sso_reset_user_password, sso_mod.ResetUserPassword.opts)
 
     #
-    # reset-user-password
+    # create-odb
     #
     sso_create_odb = sso_subs.add_parser(
         'create-odb', description=sso_mod.CreateODB.__doc__, parents=[base_parser])
@@ -371,13 +389,6 @@ def get_parser():
     update = subs.add_parser('update', description='Updates Zato components and users')
     update_subs = update.add_subparsers()
 
-    # .. update crypto
-
-    update_crypto = update_subs.add_parser('crypto', description=crypto_mod.UpdateCrypto.__doc__, parents=[base_parser])
-    update_crypto.add_argument('path', help='Path to a Zato component')
-    update_crypto.set_defaults(command='update_crypto')
-    add_opts(update_crypto, crypto_mod.UpdateCrypto.opts)
-
     # .. update password
 
     update_password = update_subs.add_parser(
@@ -389,4 +400,9 @@ def get_parser():
     return parser
 
 def main():
-    return run_command(get_parser().parse_args())
+    parser = get_parser()
+    args = parser.parse_args()
+    if not hasattr(args, 'command'):
+        parser.print_help()
+    else:
+        return run_command(args)

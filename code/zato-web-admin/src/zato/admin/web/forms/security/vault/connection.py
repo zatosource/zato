@@ -15,6 +15,9 @@ from django import forms
 from zato.admin.web.forms import add_initial_select, add_select_from_service, add_services
 from zato.common import VAULT
 
+_auth_method = VAULT.AUTH_METHOD
+vault_methods = [_auth_method.GITHUB, _auth_method.TOKEN, _auth_method.USERNAME_PASSWORD]
+
 class CreateForm(forms.Form):
 
     id = forms.CharField(widget=forms.HiddenInput())
@@ -37,7 +40,7 @@ class CreateForm(forms.Form):
         add_services(self, req, True)
         add_initial_select(self, 'default_auth_method')
 
-        for item in VAULT.AUTH_METHOD:
+        for item in vault_methods:
             self.fields['default_auth_method'].choices.append([item.id, item.name])
 
         add_select_from_service(self, req, 'zato.security.tls.key-cert.get-list', 'tls_key_cert_id')

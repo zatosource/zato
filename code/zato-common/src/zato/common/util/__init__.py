@@ -28,9 +28,9 @@ import sys
 import unicodedata
 from ast import literal_eval
 from base64 import b64decode
-from binascii import hexlify
+from binascii import hexlify as binascii_hexlify
 from contextlib import closing
-from datetime import datetime, timedelta
+from datetime import datetime
 from glob import glob
 from hashlib import sha256
 from inspect import isfunction, ismethod
@@ -39,7 +39,6 @@ from io import StringIO
 from operator import itemgetter
 from os import getuid
 from os.path import abspath, isabs, join
-from platform import system as platform_system
 from pprint import pprint as _pprint, PrettyPrinter
 from pwd import getpwuid
 from string import Template
@@ -120,6 +119,7 @@ from zato.common import CHANNEL, CLI_ARG_SEP, DATA_FORMAT, engine_def, engine_de
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
+from zato.common.util.tcp import get_free_port, is_port_taken, wait_until_port_free, wait_until_port_taken
 
 # ################################################################################################################################
 
@@ -134,6 +134,14 @@ _epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
 cid_symbols = '0123456789abcdefghjkmnpqrstvwxyz'
 encode_cid_symbols = {idx: elem for (idx, elem) in enumerate(cid_symbols)}
 cid_base = len(cid_symbols)
+
+# ################################################################################################################################
+
+# Kept here for backward compatibility
+get_free_port = get_free_port
+is_port_taken = is_port_taken
+wait_until_port_free = wait_until_port_free
+wait_until_port_taken = wait_until_port_taken
 
 # ################################################################################################################################
 
@@ -206,7 +214,7 @@ def absjoin(base, path):
 # ################################################################################################################################
 
 def absolutize(path, base=''):
-    """ Turns a relative path to an absolute one or returns it as is if it's already absolute.
+    """ Turns a relative path into an absolute one or returns it as is if it's already absolute.
     """
     if not isabs(path):
         path = os.path.expanduser(path)
@@ -340,26 +348,30 @@ def to_form(_object):
 
 # ################################################################################################################################
 
-def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_file, timeout):
+def get_lb_client(is_tls_enabled, lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_file, timeout):
     """ Returns an SSL XML-RPC client to the load-balancer.
     """
-    from zato.agent.load_balancer.client import LoadBalancerAgentClient
+    from zato.agent.load_balancer.client import LoadBalancerAgentClient, TLSLoadBalancerAgentClient
 
-    agent_uri = 'https://{host}:{port}/RPC2'.format(host=lb_host, port=lb_agent_port)
+    http_proto = 'https' if is_tls_enabled else 'http'
+    agent_uri = '{}://{}:{}/RPC2'.format(http_proto, lb_host, lb_agent_port)
 
-    if sys.version_info >= (2, 7):
-        class Python27CompatTransport(SSLClientTransport):
-            def make_connection(self, host):
-                return CAValidatingHTTPSConnection(
-                    host, strict=self.strict, ca_certs=self.ca_certs,
-                    keyfile=self.keyfile, certfile=self.certfile, cert_reqs=self.cert_reqs,
-                    ssl_version=self.ssl_version, timeout=self.timeout)
-        transport = Python27CompatTransport
+    if is_tls_enabled:
+        if sys.version_info >= (2, 7):
+            class Python27CompatTransport(SSLClientTransport):
+                def make_connection(self, host):
+                    return CAValidatingHTTPSConnection(
+                        host, strict=self.strict, ca_certs=self.ca_certs,
+                        keyfile=self.keyfile, certfile=self.certfile, cert_reqs=self.cert_reqs,
+                        ssl_version=self.ssl_version, timeout=self.timeout)
+            transport = Python27CompatTransport
+        else:
+            transport = None
+
+        return TLSLoadBalancerAgentClient(
+            agent_uri, ssl_ca_certs, ssl_key_file, ssl_cert_file, transport=transport, timeout=timeout)
     else:
-        transport = None
-
-    return LoadBalancerAgentClient(
-        agent_uri, ssl_ca_certs, ssl_key_file, ssl_cert_file, transport=transport, timeout=timeout)
+        return LoadBalancerAgentClient(agent_uri)
 
 # ################################################################################################################################
 
@@ -368,7 +380,7 @@ def tech_account_password(password_clear, salt):
 
 # ################################################################################################################################
 
-def new_cid(bytes=12, _random_bytes=random_bytes, _hexlify=hexlify):
+def new_cid(bytes=12, _random_bytes=random_bytes, _hexlify=binascii_hexlify):
     """ Returns a new 96-bit correlation identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
@@ -843,10 +855,11 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
 
 # ################################################################################################################################
 
-def hexlify(item):
+def hexlify(item, _hexlify=binascii_hexlify):
     """ Returns a nice hex version of a string given on input.
     """
-    return ' '.join([elem1+elem2 for (elem1, elem2) in grouper(2, item.encode('hex'))])
+    item = item if isinstance(item, unicode) else item.decode('utf8')
+    return ' '.join(hex(ord(elem)) for elem in item)
 
 # ################################################################################################################################
 
@@ -1032,6 +1045,11 @@ def parse_extra_into_dict(lines, convert_bool=True):
         for line in extra.split(';'):
             original_line = line
             if line:
+
+                line = line.strip()
+                if line.startswith('#'):
+                    continue
+
                 line = line.split('=', 1)
                 if not len(line) == 2:
                     raise ValueError('Each line must be a single key=value entry, not `{}`'.format(original_line))
@@ -1068,68 +1086,6 @@ def validate_xpath(expr):
 
 # ################################################################################################################################
 
-def get_free_port(start=30000):
-    port = start
-    while is_port_taken(port):
-        port += 1
-    return port
-
-# ################################################################################################################################
-
-# Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
-def is_port_taken(port, is_linux=platform_system().lower()=='linux'):
-    # Short for Linux so as not to bind to a socket which in turn means waiting until it's closed by OS
-    if is_linux:
-        for conn in psutil.net_connections(kind='tcp'):
-            if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
-                return True
-    else:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            sock.bind(('', port))
-            sock.close()
-        except socket.error as e:
-            if e[0] == errno.EADDRINUSE:
-                return True
-            raise
-
-# ################################################################################################################################
-
-def _is_port_ready(port, needs_taken):
-    taken = is_port_taken(port)
-    return taken if needs_taken else not taken
-
-def _wait_for_port(port, timeout, interval, needs_taken):
-    port_ready = _is_port_ready(port, needs_taken)
-
-    if not port_ready:
-        start = datetime.utcnow()
-        wait_until = start + timedelta(seconds=timeout)
-
-        while not port_ready:
-            sleep(interval)
-            port_ready = _is_port_ready(port, needs_taken)
-            if datetime.utcnow() > wait_until:
-                break
-
-    return port_ready
-
-# ################################################################################################################################
-
-def wait_until_port_taken(port, timeout=2, interval=0.1):
-    """ Waits until a given TCP port becomes taken, i.e. a process binds to a TCP socket.
-    """
-    return _wait_for_port(port, timeout, interval, True)
-
-# ################################################################################################################################
-
-def wait_until_port_free(port, timeout=2, interval=0.1):
-    """ Waits until a given TCP port becomes free, i.e. a process releases a TCP socket.
-    """
-    return _wait_for_port(port, timeout, interval, False)
-
-# ################################################################################################################################
-
 def get_haproxy_agent_pidfile(component_dir):
     json_config = json.loads(open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf')).read())
     return os.path.abspath(os.path.join(component_dir, json_config['pid_file']))
@@ -1161,13 +1117,14 @@ def alter_column_nullable_false(table_name, column_name, default_value, column_t
 
 def validate_tls_from_payload(payload, is_key=False):
     with NamedTemporaryFile(prefix='zato-tls-') as tf:
+        payload = payload.encode('utf8') if isinstance(payload, unicode) else payload
         tf.write(payload)
         tf.flush()
 
         pem = open(tf.name).read()
 
         cert_info = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
-        cert_info = sorted(dict(iteritems(cert_info.get_subject().get_components())))
+        cert_info = sorted(cert_info.get_subject().get_components())
         cert_info = '; '.join('{}={}'.format(k, v) for k, v in cert_info)
 
         if is_key:

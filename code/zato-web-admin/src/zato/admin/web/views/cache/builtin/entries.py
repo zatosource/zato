@@ -10,9 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from base64 import b64decode, b64encode
 
 # Python 2/3 compatibility
-from past.builtins import basestring
+from past.builtins import unicode
 
 # Zato
 from zato.admin.web import from_utc_to_user
@@ -67,7 +68,9 @@ class Index(_Index):
         }
 
     def on_before_append_item(self, item, _to_user_dt=('expires_at', 'last_read', 'prev_read', 'last_write', 'prev_write')):
-        item.key_escaped = item.key.encode('utf8').encode('hex') if isinstance(item.key, basestring) else item.key
+
+        item.key_escaped = item.key.encode('utf8') if isinstance(item.key, unicode) else item.key
+        item.key_escaped = b64encode(item.key_escaped)
 
         for name in _to_user_dt:
             value = getattr(item, name)
@@ -86,7 +89,7 @@ class Delete(_Delete):
     def get_input_dict(self, *args, **kwargs):
         return {
             'cache_id': self.req.POST['cache_id'],
-            'key': self.req.POST['key'].decode('hex'),
+            'key': b64decode(self.req.POST['key']),
             'cluster_id': self.cluster_id
         }
 

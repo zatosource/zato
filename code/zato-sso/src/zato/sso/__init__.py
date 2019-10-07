@@ -109,6 +109,11 @@ class const:
         def __iter__(self):
             return iter([self.and_, self.or_])
 
+    class auth_type:
+        basic_auth = 'basic_auth'
+        default    = 'default'
+        jwt        = 'jwt'
+
 # ################################################################################################################################
 
 class ValidationError(Exception):
@@ -181,7 +186,8 @@ class User(object):
     __slots__ = ('approval_status', 'approval_status_mod_by', 'approval_status_mod_time','attr', 'creation_ctx', 'display_name',
         'email', 'first_name', 'is_active', 'is_approval_needed', 'is_internal', 'is_locked', 'is_super_user',
         'last_name', 'locked_by', 'locked_time', 'middle_name', 'password_expiry', 'password_is_set', 'password_last_set',
-        'password_must_change', 'sign_up_status', 'sign_up_time', 'user_id', 'username')
+        'password_must_change', 'sign_up_status', 'sign_up_time', 'user_id', 'username', 'is_rate_limit_active',
+        'rate_limit_def', 'rate_limit_type', 'rate_limit_check_parent_def', 'is_totp_enabled', 'totp_label')
 
     def __init__(self):
         self.approval_status = None
@@ -209,6 +215,12 @@ class User(object):
         self.sign_up_time = None
         self.user_id = None
         self.username = None
+        self.is_rate_limit_active = None
+        self.rate_limit_def = None
+        self.rate_limit_type = None
+        self.rate_limit_check_parent_def = None
+        self.is_totp_enabled = None
+        self.totp_label = None
 
     def to_dict(self):
         return dict((name, getattr(self, name)) for name in self.__slots__ if name != 'attr')

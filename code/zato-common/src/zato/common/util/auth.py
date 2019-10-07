@@ -13,6 +13,7 @@ from logging import getLogger
 from base64 import b64decode, b64encode
 
 # Python 2/3 compatibility
+from past.builtins import unicode
 from six import PY2
 
 # Zato
@@ -92,11 +93,13 @@ class AuthResult(object):
             self.__class__.__name__, hex(id(self)), self.status, self.code,
             self.description, self.auth_info)
 
-    def __nonzero__(self):
+    def __bool__(self):
         """ Returns the boolean value of self.status. Useful when an instance
         must be compared in a boolean context.
         """
         return bool(self.status)
+
+    __nonzero__ = __bool__
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -155,8 +158,7 @@ def _on_basic_auth(auth, expected_username, expected_password):
     _, auth = auth.split(prefix)
     auth = auth.strip()
     auth = b64decode(auth)
-    auth = auth if PY2 else auth.decode('utf8')
-
+    auth = auth if isinstance(auth, unicode) else auth.decode('utf8')
     username, password = auth.split(':', 1)
 
     if username == expected_username and password == expected_password:

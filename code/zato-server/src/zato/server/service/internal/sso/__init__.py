@@ -25,12 +25,13 @@ from zato.sso import status_code, ValidationError
 class SSOCtx(object):
     """ A set of attributes describing current SSO request.
     """
-    __slots__ = ('input', 'sso_conf', 'remote_addr')
+    __slots__ = ('input', 'sso_conf', 'remote_addr', 'user_agent')
 
-    def __init__(self, input, sso_conf, remote_addr):
+    def __init__(self, input, sso_conf, remote_addr, user_agent):
         self.input = input
         self.sso_conf = sso_conf
         self.remote_addr = remote_addr
+        self.user_agent = user_agent
 
 # ################################################################################################################################
 
@@ -73,6 +74,9 @@ class BaseService(Service):
         self.response.payload.status = status_code.error
         self.response.payload.sub_status = []
 
+        # Will be set to True if the default value of status_code.ok should not be returned
+        self.environ['status_changed'] = False
+
 # ################################################################################################################################
 
     def after_handle(self):
@@ -107,7 +111,8 @@ class BaseService(Service):
             remote_addr =  [ip_address(elem) for elem in remote_addr]
 
         # OK, we can proceed to the actual call now
-        self._call_sso_api(self._handle_sso, 'Could not call service', ctx=SSOCtx(self.request.input, sso_conf, remote_addr))
+        self._call_sso_api(self._handle_sso, 'Could not call service',
+            ctx=SSOCtx(self.request.input, sso_conf, remote_addr, self.wsgi_environ.get('HTTP_USER_AGENT')))
 
 # ################################################################################################################################
 
@@ -133,7 +138,8 @@ class BaseService(Service):
 
         # All went fine, we can set status OK and return business data
         else:
-            self._set_response_ok()
+            if not self.environ.get('status_changed'):
+                self._set_response_ok()
             return out
 
 # ################################################################################################################################
@@ -151,9 +157,10 @@ class BaseRESTService(BaseService):
 
         try:
             getattr(self, '_handle_sso_{}'.format(http_verb))(ctx)
-        except Exception:
+        except Exception as e:
             self.response.payload.status = status_code.error
-            self.response.payload.sub_status = [status_code.auth.not_allowed]
+            sub_status = e.sub_status if isinstance(e, ValidationError) else [status_code.auth.not_allowed]
+            self.response.payload.sub_status = sub_status
             raise
         else:
             self.response.payload.status = status_code.ok

@@ -15,9 +15,6 @@ from logging import getLogger
 # Bunch
 from bunch import Bunch
 
-# dateutil
-from dateutil.parser import parse as dt_parse
-
 # SQLAlchemy
 from sqlalchemy import update
 
@@ -35,7 +32,7 @@ from zato.common.util import get_sa_model_columns, make_repr
 from zato.common.util.time_ import datetime_to_ms, utcnow_as_ms
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic
-from zato.server.service import Bool, Int, List
+from zato.server.service import Bool, Int, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pubsub import common_sub_data
 
@@ -383,7 +380,7 @@ class SubscribeServiceImpl(_Subscribe):
                             self.pubsub.emit_in_subscribe_impl({'stage':'has_subscription', 'data':{
                                 'ctx.cluster_id': ctx.cluster_id,
                                 'ctx.topic_id': ctx.topic.id,
-                                'ctx.topic_id': ctx.endpoint_id.id,
+                                'ctx.topic_id': ctx.endpoint_id,
                             }})
 
                             raise PubSubSubscriptionExists(self.cid, 'Endpoint `{}` is already subscribed to topic `{}`'.format(
@@ -449,7 +446,9 @@ class SubscribeServiceImpl(_Subscribe):
                     #
                     # * If there are no subscribers and no messages in the topic then this is a no-op
                     #
-                    move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id, sub_key, now)
+
+                    move_messages_to_sub_queue(session, ctx.cluster_id, ctx.topic.id, ctx.endpoint_id,
+                        ctx.sub_pattern_matched, sub_key, now)
 
                     # Subscription's ID is available only now, after the session was flushed
                     sub_config.id = ps_sub.id
@@ -639,8 +638,21 @@ class DeleteAll(AdminService):
 
 # ################################################################################################################################
 
+class CreateWSXSubscriptionForCurrent(AdminService):
+    """ A high-level, simplified, service for creating subscriptions for a WSX. Calls CreateWSXSubscription ultimately.
+    """
+    class SimpleIO:
+        input_required = 'topic_name'
+        output_optional = 'sub_key'
+
+    def handle(self):
+        self.response.payload.sub_key = self.pubsub.subscribe(
+            self.request.input.topic_name, use_current_wsx=True, service=self)
+
+# ################################################################################################################################
+
 class CreateWSXSubscription(AdminService):
-    """ Creates a new pub/sub subscription for current WebSocket connection.
+    """ Low-level interface for creating a new pub/sub subscription for current WebSocket connection.
     """
     class SimpleIO:
         input_optional = 'topic_name', List('topic_name_list'), Bool('wrap_one_msg_in_list'), Int('delivery_batch_size')
@@ -654,6 +666,7 @@ class CreateWSXSubscription(AdminService):
         topic_name = self.request.input.topic_name
         topic_name_list = set(self.request.input.topic_name_list)
         async_msg = self.wsgi_environ['zato.request_ctx.async_msg']
+
         unsub_on_wsx_close = async_msg['wsgi_environ'].get('zato.request_ctx.pubsub.unsub_on_wsx_close')
 
         # This will exist if we are being invoked directly ..
@@ -728,7 +741,7 @@ class UpdateInteractionMetadata(AdminService):
     """ Updates last interaction metadata for input sub keys.
     """
     class SimpleIO:
-        input_required = List('sub_key'), 'last_interaction_time', 'last_interaction_type', 'last_interaction_details'
+        input_required = List('sub_key'), Opaque('last_interaction_time'), 'last_interaction_type', 'last_interaction_details'
 
     def handle(self):
 
@@ -736,9 +749,7 @@ class UpdateInteractionMetadata(AdminService):
         req = self.request.input
 
         # Convert from string to milliseconds as expected by the database
-        last_interaction_time = req.last_interaction_time
-        last_interaction_time = dt_parse(last_interaction_time)
-        last_interaction_time = datetime_to_ms(last_interaction_time) / 1000.0
+        last_interaction_time = datetime_to_ms(req.last_interaction_time) / 1000.0
 
         with closing(self.odb.session()) as session:
 

@@ -91,8 +91,6 @@ class OutconnIMTelegramWrapper(Wrapper):
 
         with self.update_lock:
 
-            #logger.warn('QQQ %r', self.config)
-
             # Configuration of the underlying client
             client_config = {
                 'address': self.config.address,

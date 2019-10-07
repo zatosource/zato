@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from base64 import b64decode, b64encode
+
 # Bunch
 from bunch import bunchify
 
@@ -19,6 +22,9 @@ from zato.admin.web.views import invoke_service_with_json_response, method_allow
 from zato.admin.web.forms.cache.builtin.entry import CreateForm, EditForm
 from zato.common import CACHE
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # ################################################################################################################################
 
 def _create_edit(req, action, cache_id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_KV_DATA_TYPE):
@@ -28,7 +34,7 @@ def _create_edit(req, action, cache_id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_K
     if action == 'create':
         form = CreateForm()
     else:
-        key = req.GET['key'].decode('hex')
+        key = b64decode(req.GET['key'])
         entry = bunchify(req.zato.client.invoke('zato.cache.builtin.entry.get', {
                 'cluster_id': req.zato.cluster_id,
                 'cache_id': cache_id,
@@ -103,7 +109,10 @@ def create_action(req, cache_id, cluster_id):
 @method_allowed('POST')
 def edit_action(req, cache_id, cluster_id):
 
-    key_encoded = req.POST['key'].encode('utf8').encode('hex')
+    key = req.POST['key']
+    key = key.encode('utf8') if isinstance(key, unicode) else key
+
+    key_encoded = b64encode(key).decode('utf8')
     new_path = '{}?key={}'.format(req.path.replace('action/', ''), key_encoded)
 
     extra = {'new_path': new_path}

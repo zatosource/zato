@@ -20,7 +20,7 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import ChannelWebSocket, Cluster, WebSocketClient
 from zato.common.odb.query import web_socket_client_by_pub_id, web_socket_clients_by_server_id
 from zato.common.util.sql import set_instance_opaque_attrs
-from zato.server.service import AsIs, List
+from zato.server.service import AsIs, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -101,7 +101,7 @@ class UnregisterWSSubKey(AdminService):
         for sub_key in self.request.input.sub_key_list:
             sub = self.pubsub.get_subscription_by_sub_key(sub_key)
 
-            if self.request.input.needs_wsx_close or sub.unsub_on_wsx_close:
+            if self.request.input.needs_wsx_close or (sub and sub.unsub_on_wsx_close):
                 self.invoke('zato.pubsub.pubapi.unsubscribe',{
                     'sub_key': sub.sub_key,
                     'topic_name': sub.topic_name,
@@ -154,7 +154,7 @@ class SetLastSeen(AdminService):
     """ Sets last_seen for input WSX client.
     """
     class SimpleIO(AdminSIO):
-        input_required = 'id', 'last_seen'
+        input_required = 'id', Opaque('last_seen')
 
     def handle(self):
 

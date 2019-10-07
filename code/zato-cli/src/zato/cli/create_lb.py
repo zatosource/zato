@@ -12,21 +12,22 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, uuid
 
 # Zato
-from zato.cli import common_logging_conf_contents, ZatoCommand
+from zato.cli import common_logging_conf_contents, is_arg_given, ZatoCommand
 from zato.common.defaults import http_plain_server_port
 
-config_template = """{
+config_template = """{{
   "haproxy_command": "haproxy",
   "host": "localhost",
   "port": 20151,
+  "is_tls_enabled": {is_tls_enabled},
   "keyfile": "./zato-lba-priv-key.pem",
   "certfile": "./zato-lba-cert.pem",
   "ca_certs": "./zato-lba-ca-certs.pem",
   "work_dir": "../",
-  "verify_fields": {},
+  "verify_fields": {{}},
   "log_config": "./logging.conf",
   "pid_file": "zato-lb-agent.pid"
-}
+}}
 """
 
 zato_config_template = """
@@ -106,10 +107,10 @@ class Create(ZatoCommand):
     """ Creates a new Zato load-balancer
     """
     opts = []
-    opts.append({'name':'pub_key_path', 'help':"Path to the load-balancer agent's public key in PEM"})
-    opts.append({'name':'priv_key_path', 'help':"Path to the load-balancer agent's private key in PEM"})
-    opts.append({'name':'cert_path', 'help':"Path to the load-balancer agent's certificate in PEM"})
-    opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the load-balancer's agent will trust"})
+    opts.append({'name':'--pub_key_path', 'help':"Path to the load-balancer agent's public key in PEM"})
+    opts.append({'name':'--priv_key_path', 'help':"Path to the load-balancer agent's private key in PEM"})
+    opts.append({'name':'--cert_path', 'help':"Path to the load-balancer agent's certificate in PEM"})
+    opts.append({'name':'--ca_certs_path', 'help':"Path to the a PEM list of certificates the load-balancer's agent will trust"})
 
     needs_empty_dir = True
 
@@ -127,7 +128,12 @@ class Create(ZatoCommand):
         log_path = os.path.abspath(os.path.join(repo_dir, '..', '..', 'logs', 'lb-agent.log')) # noqa
         stats_socket = os.path.join(self.target_dir, 'haproxy-stat.sock') # noqa
 
-        open(os.path.join(repo_dir, 'lb-agent.conf'), 'w').write(config_template) # noqa
+        is_tls_enabled = is_arg_given(args, 'priv_key_path')
+        config = config_template.format(**{
+            'is_tls_enabled': 'true' if is_tls_enabled else 'false',
+        })
+
+        open(os.path.join(repo_dir, 'lb-agent.conf'), 'w').write(config) # noqa
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write((common_logging_conf_contents.format(log_path=log_path))) # noqa
 
         if use_default_backend:

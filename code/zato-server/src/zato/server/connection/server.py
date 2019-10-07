@@ -13,6 +13,9 @@ from contextlib import closing
 from logging import getLogger
 from traceback import format_exc
 
+# gevent
+from gevent import spawn
+
 # Zato
 from zato.client import AnyServiceInvoker
 from zato.common import SERVER_UP_STATUS
@@ -210,14 +213,30 @@ class Servers(object):
 
 # ################################################################################################################################
 
+    def invoke_async_all(self, service, request):
+        """ Just like self.invoke, but runs in background greenlets.
+        """
+        # Look up current state of servers in ODB
+        if not self._servers:
+            self.populate_servers()
+
+        for server in self._servers.values():
+            spawn(server.invoke_all_pids, service, request)
+
+# ################################################################################################################################
+
     def invoke_all(self, service, request=None, *args, **kwargs):
         """ Invokes a service on all servers, including all of their processes, and returns combined output.
         """
         # Look up current state of servers in ODB
-        self.populate_servers()
+        if not self._servers:
+            self.populate_servers()
 
         # Server name -> Responses for all PIDs from that server
         out = {}
+
+        # If True, we will not check any responses from servers,
+        # instead all requests will be sent in their own greenlets.
 
         # Will be set to False if there is at least one error messages among all the servers and worker processes.
         out_ok = True
@@ -244,7 +263,7 @@ class Servers(object):
                     server_is_ok = True
 
                     for per_pid_response in per_pid_responses:
-                        per_pid_is_ok = per_pid_response['is_ok']
+                        per_pid_is_ok = per_pid_response.get('is_ok')
 
                         # We check all PIDs but break as soon as it is known that there was an error
                         if not per_pid_is_ok:
