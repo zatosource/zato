@@ -572,7 +572,7 @@ class URLData(CyURLData, OAuthDataStore):
     def check_rbac_delegated_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
             sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP):
 
-        is_allowed = False
+        auth_result = False
 
         http_method = wsgi_environ.get('REQUEST_METHOD')
         http_method_permission_id = worker_store.rbac.http_permissions.get(http_method)
@@ -583,8 +583,8 @@ class URLData(CyURLData, OAuthDataStore):
 
         for role_id, perm_id, resource_id in iterkeys(worker_store.rbac.registry._allowed):
 
-            if is_allowed:
-                break
+            if auth_result:
+                return auth_result
 
             if perm_id == http_method_permission_id and resource_id == channel_item['service_id']:
                 for client_def in worker_store.rbac.role_id_to_client_def[role_id]:
@@ -597,10 +597,10 @@ class URLData(CyURLData, OAuthDataStore):
                     _sec.sec_use_rbac = False
                     _sec.sec_def = self.sec_config_getter[sec_type](sec_name)['config']
 
-                    is_allowed = self.check_security(
+                    auth_result = self.check_security(
                         _sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
 
-                    if is_allowed:
+                    if auth_result:
 
                         # If input sec object is a dict/Bunch-like one, it means that we have just confirmed
                         # credentials of the underlying security definition behind an RBAC one,
@@ -612,7 +612,7 @@ class URLData(CyURLData, OAuthDataStore):
                         self.enrich_with_sec_data(wsgi_environ, _sec.sec_def, sec_type)
                         break
 
-        if not is_allowed:
+        if not auth_result:
             logger.warn('None of RBAC definitions allowed request in, cid:`%s`', cid)
 
             # We need to return 401 Unauthorized but we need to send a challenge, i.e. authentication type
