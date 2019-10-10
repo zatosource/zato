@@ -41,7 +41,7 @@ from past.builtins import basestring
 # Zato
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
-from zato.common import SECRETS
+from zato.common import SECRETS, ZATO_NONE
 from zato.common.util import get_client_from_server_conf
 from zato.common.util.tcp import wait_for_zato_ping
 
@@ -561,7 +561,6 @@ class DependencyScanner(object):
             value = item.get(dep_key)
             if value != dep_info.get('empty_value'):
 
-
                 dep = self.find(dep_info['dependent_type'], {dep_info['dependent_field']: value})
                 if dep is None:
                     key = (dep_info['dependent_type'], item[dep_key])
@@ -936,6 +935,10 @@ class ObjectManager(object):
         normalize_service_name(item)
         service_info = SERVICE_BY_NAME[item_type]
 
+        if item_type == 'json_rpc':
+            if item['security_id'] is None:
+                item['security_id'] = ZATO_NONE
+
         for field_name, info in iteritems(service_info.object_dependencies):
 
             if 'id_field' not in info:
@@ -960,6 +963,11 @@ class ObjectManager(object):
                     'item:`{}`'.format(service_info.name, field_name, info['dependent_type'], dep_id, dep, item))
             else:
                 item[field_name] = dep[info['dependent_field']]
+
+            # JSON-RPC channels cannot have empty security definitions on exports
+            if item_type == 'http_soap' and item['name'].startswith('json.rpc.channel'):
+                if not item['security_id']:
+                    item['security_id'] = 'ZATO_NONE'
 
         return item
 
