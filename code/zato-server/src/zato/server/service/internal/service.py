@@ -202,6 +202,9 @@ class Edit(AdminService):
                 if class_.schema:
                     self.server.service_store.set_up_class_json_schema(class_, input)
 
+                # Set up rate-limiting each time an object was edited
+                self.server.service_store.set_up_rate_limiting(service.name)
+
                 session.add(service)
                 session.commit()
 
