@@ -24,7 +24,7 @@ from gevent import lock, sleep
 from paodate import Delta
 
 # Python 2/3 compatibility
-from future.utils import itervalues
+from future.utils import iterkeys, itervalues
 
 # Zato
 from zato.common import SCHEDULER
@@ -349,11 +349,11 @@ class Scheduler(object):
         found = False
         job.keep_running = False
 
-        if name in self.jobs.iterkeys():
+        if name in iterkeys(self.jobs):
             del self.jobs[name]
             found = True
 
-        if name in self.job_greenlets.keys():
+        if name in iterkeys(self.job_greenlets):
             self.job_greenlets[name].kill(block=False, timeout=2.0)
             del self.job_greenlets[name]
             found = True
