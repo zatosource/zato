@@ -26,7 +26,7 @@ def default_json_handler(value):
 
 # ################################################################################################################################
 
-def dumps(value):
-    return json_dumps(value, default=default_json_handler)
+def dumps(value, indent=4):
+    return json_dumps(value, default=default_json_handler, indent=indent)
 
 # ################################################################################################################################
