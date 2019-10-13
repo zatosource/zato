@@ -296,7 +296,7 @@ class DeliveryTask(object):
                 logger.info('Skipping messages `%s`', to_skip)
 
             # This is the call that actually delivers messages
-            deliver_pubsub_msg(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
+            #deliver_pubsub_msg(self.sub_key, to_deliver if self.wrap_in_list else to_deliver[0])
 
         except Exception as e:
             # Do not attempt to deliver any other message in case of an error. Our parent will sleep for a small amount of
@@ -327,7 +327,7 @@ class DeliveryTask(object):
                     for msg in to_deliver:
                         try:
                             msg.delivery_count += 1
-                            self.delivery_list.remove_pubsub_msg(msg)
+                            #self.delivery_list.remove_pubsub_msg(msg)
                         except Exception:
                             msg = 'Caught exception in run_delivery/remove_pubsub_msg, e:`%s`'
                             logger.warn(msg, format_exc())
