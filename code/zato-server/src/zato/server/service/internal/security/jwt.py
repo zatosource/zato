@@ -270,7 +270,7 @@ class LogOut(AdminService):
             self.response.payload.result = 'No JWT found'
 
         try:
-            JWTBackend(self.kvdb, self.odb, self.server.jwt_secret).delete(token)
+            JWTBackend(self.kvdb, self.odb, self.server.decrypt, self.server.jwt_secret).delete(token)
         except Exception:
             self.logger.warn(format_exc())
             self.response.status_code = BAD_REQUEST
