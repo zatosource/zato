@@ -55,12 +55,16 @@ cdef class Matcher(object):
         public bint is_static, is_internal
         object _brace_pattern
         object _elem_re_template
+        set ignore_http_methods
 
     def __init__(self, pattern, match_slash=True):
 
         # If True, we will include slashes in pattern matching,
         # otherwise they will not be taken into account.
         slash_pattern = '\/' if match_slash else ''
+
+        # HTTP methods to ignore in case one is set for a particular HTTP channel
+        self.ignore_http_methods = set(['CONNECT', 'DELETE', 'GET', 'HEAD', 'OPTIONS', 'PATCH', 'POST', 'PUT', 'TRACE'])
 
         self.group_names = []
         self.pattern = pattern
@@ -105,6 +109,7 @@ cdef class Matcher(object):
 
     cpdef match(self, unicode value):
         cdef tuple groups
+        cdef int start_index
         m = self.match_func(value)
         if m:
             if self.is_static:
@@ -112,12 +117,17 @@ cdef class Matcher(object):
             else:
                 groups = m.groups()
 
-                # Note that below we skip the first group and provide only the remaining ones
-                # to the dict constructor. This is because the first element is the HTTP method matched
+                # Note that below we may want to skip the first group and provide only the remaining ones
+                # to the dict constructor. This is because the first element may be the HTTP method matched
                 # and we do not require it on output from this function,
                 # e.g. it is POST in the example below:
                 # :::POST:::haanyHTTP_SEPhaany:::/zato/api/invoke/zato.server.get-list
-                return dict(zip(self.group_names, groups[1:]))
+                if groups[0] in self.ignore_http_methods:
+                    start_index = 1
+                else:
+                    start_index = 0
+
+                return dict(zip(self.group_names, groups[start_index:]))
 
 # ################################################################################################################################
 # ################################################################################################################################
