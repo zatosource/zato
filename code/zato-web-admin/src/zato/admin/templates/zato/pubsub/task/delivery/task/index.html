@@ -22,11 +22,14 @@
 
             'sub_key',
             '_topic',
-            '_messages',
 
+            '_len_messages_history',
+
+            '_dlvc',
             'thread_id',
-            'last_sync',
-            'last_delivery',
+
+            '_last_sync',
+            'last_iter_run',
 
             'server_name',
             'server_pid',
@@ -36,6 +39,9 @@
 
             '_clear',
             '_toggle',
+
+            'last_sync',
+            'last_sync_sk',
 
         ]
     }
@@ -62,13 +68,14 @@
                         <th>&nbsp;</th>
 
                         <th><a href="#">Sub key</a></th>
-                        <th><a href="#">Queue</a></th>
+                        <th><a href="#">Topic</a></th>
 
                         <th><a href="#">Messages</a></th>
+                        <th><a href="#">DLV</a></th>
+                        <th><a href="#">Python</a></th>
 
-                        <th><a href="#">Thread</a></th>
                         <th><a href="#">Last sync</a></th>
-                        <th><a href="#">Last delivery</a></th>
+                        <th><a href="#">Last iter run</a></th>
 
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -86,18 +93,24 @@
                         <td class="impexp"><input type="checkbox" /></td>
 
                         <td>
-                            <a href="#">{{ item.sub_key }}</a>
+
+                        <a href="{% url "pubsub-endpoint-queues" cluster_id item.endpoint_id item.endpoint_name|slugify %}?cluster={{ cluster_id }}&amp;query={{ item.sub_key }}">{{ item.sub_key }}</a>
                         </td>
 
                         <td>
-                            <a href="#">{{ item.topic_name }}</a>
+                            <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ item.topic_name }}">{{ item.topic_name }}</a>
                         </td>
 
                         <td>
-                            <a href="#">{{ item.messages }}</a>
+                            <a href="{% url "pubsub-task-message-browser" server_name server_pid item.python_id %}?cluster={{ cluster_id }}">{{ item.len_messages }}</a><!--/ <a href="#">{{ item.len_history }}</a>-->
                         </td>
 
-                        <td>{{ item.thread_id }}</td>
+                        <td>
+                            {{ item.len_delivered }} / {{ item.len_batches }}
+                        </td>
+
+                        <td>{{ item.py_object }}</td>
+
                         <td style="min-width:170px">
                             {% if item.last_sync %}
                                 <a
@@ -108,19 +121,20 @@
                                 <span class='form_hint'>---</span>
                             {% endif %}
                         </td>
+
                         <td style="min-width:170px">
-                            {% if item.last_delivery %}
+                            {% if item.last_iter_run %}
                                 <a
-                                    id="a_last_delivery_{{ item.id }}"
-                                    href="javascript:$.fn.zato.toggle_time('last_delivery_{{ item.id }}', '{{ item.last_delivery }}', '{{ item.last_delivery_utc }}')">{{ item.last_delivery }}
+                                    id="a_last_iter_run_{{ item.id }}"
+                                    href="javascript:$.fn.zato.toggle_time('last_iter_run_{{ item.id }}', '{{ item.last_iter_run }}', '{{ item.last_iter_run_utc }}')">{{ item.last_iter_run }}
                                 </a>
                             {% else %}
                                 <span class='form_hint'>---</span>
                             {% endif %}
                         </td>
 
-                        <td><a href="javascript:$.fn.zato.pubsub.task.delivery-server.clear-messages('{{ item.server_name }}', '{{ item.server_pid }}', '{{ item.task_id }}')">Clear</a></td>
-                        <td><a href="javascript:$.fn.zato.pubsub.task.delivery-server.toggle-active('{{ item.server_name }}', '{{ item.server_pid }}', '{{ item.task_id }}')">{% if item.is_active %}Stop{% else %}Start{% endif %}</a></td>
+                        <td><!--<a href="javascript:$.fn.zato.pubsub.task.delivery-server.clear-messages('{{ item.server_name }}', '{{ item.server_pid }}', '{{ item.task_id }}')">Clear</a>--></td>
+                        <td><!--<a href="javascript:$.fn.zato.pubsub.task.delivery-server.toggle-active('{{ item.server_name }}', '{{ item.server_pid }}', '{{ item.task_id }}')">{% if item.is_active %}Stop{% else %}Start{% endif %}</a>--></td>
 
                         <td class='ignore'>{{ item.server_name }}</td>
                         <td class='ignore'>{{ item.server_pid }}</td>
