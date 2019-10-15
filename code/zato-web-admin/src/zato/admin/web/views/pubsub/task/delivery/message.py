@@ -13,7 +13,7 @@ import logging
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.admin.web.views import Index as _Index
+from zato.admin.web.views import Index as _Index, method_allowed
 
 # ################################################################################################################################
 
@@ -95,6 +95,7 @@ class MessageBrowserHistory(object):
 
 @method_allowed('GET')
 def get(req, cluster_id, object_id, msg_id):
+    pass
 
 # ################################################################################################################################
 # ################################################################################################################################
