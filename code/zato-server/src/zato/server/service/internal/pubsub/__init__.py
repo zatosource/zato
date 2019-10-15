@@ -368,7 +368,7 @@ class _BaseCleanup(AdminService):
                 # Log what was done
                 suffix = 's' if total > 1 else ''
                 if total:
-                    self.logger.info('GD. Deleted %s %s pub/sub message%s' % (total, kind, suffix))
+                    self.logger.info('GD. Deleted %s pub/sub message%s (%s)' % (total, suffix, kind))
 
                 # Actually commit on SQL level
                 session.commit()
