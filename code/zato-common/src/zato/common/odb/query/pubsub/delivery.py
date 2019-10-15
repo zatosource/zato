@@ -33,6 +33,7 @@ sql_messages_columns = (
     PubSubMessage.pub_msg_id,
     PubSubMessage.pub_correl_id,
     PubSubMessage.in_reply_to,
+    PubSubMessage.published_by_id,
     PubSubMessage.ext_client_id,
     PubSubMessage.group_id,
     PubSubMessage.position_in_group,

@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Messages for queue{% endblock %}
+{% block html_title %}Message browser{% endblock %}
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -23,8 +23,10 @@
             '_selection',
 
             '_recv_time',
+            'delivery_count',
             '_msg_id',
 
+            'ext_client_id',
             'published_by',
             'msg_prefix',
 
@@ -37,10 +39,13 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">{% if has_gd %}GD{% else %}Non-GD{% endif %} messages for endpoint
-    <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint_id }}">{{ endpoint_name }}</a>,
-    queue
-    <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id name_slug %}">{{ name }}</a>
+<h2 class="zato">In-flight messages for
+    {{ server_name }}:{{ server_pid }},
+    endpoint
+    <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ task.endpoint_name }}">{{ task.endpoint_name }}</a>, topic
+    <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;query={{ task.topic_name }}">{{ task.topic_name }}</a>,
+    Python
+    {{ python_id }}
 
     {% if ws_ext_client_id %}
         <span class="form_hint">wsx: {{ ws_ext_client_id|default:'' }}</span>
@@ -70,9 +75,11 @@
                         <th>&nbsp;</th>
 
                         <th><a href="#">Recv time</a></th>
+                        <th><a href="#">DLVC</a></th>
                         <th><a href="#">Msg ID</a></th>
 
                         <th><a href="#">Published by</a></th>
+                        <th><a href="#">EXTCLI</a></th>
                         <th style="width:32%"><a href="#">Msg prefix</a></th>
 
                         <th style="width:5%">&nbsp;</th>
@@ -92,12 +99,18 @@
                                 href="javascript:$.fn.zato.toggle_time('recv_time_{{ item.msg_id }}', '{{ item.recv_time }}', '{{ item.recv_time_utc }}')">{{ item.recv_time }}
                             </a>
                         </td>
-                        <td><a href="{% url "pubsub-message" cluster_id "queue" sub_id item.msg_id %}?has_gd={{ has_gd }}&amp;server_name={{ item.server_name }}&amp;server_pid={{ item.server_pid }}&amp;sub_key={{ item.sub_key }}">{{ item.msg_id }}</a></td>
+                        <td>{{ item.delivery_count }}</td>
 
-                        <td><a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ item.published_by_id }}">{{ item.published_by_name }}</a></td>
+                        <!--
+                        <td><a href="{% url "pubsub-message" cluster_id "queue" sub_id item.msg_id %}?has_gd={{ has_gd }}&amp;server_name={{ item.server_name }}&amp;server_pid={{ item.server_pid }}&amp;sub_key={{ item.sub_key }}">{{ item.msg_id }}</a></td>
+                        -->
+                        <td>{{ item.msg_id }}</td>
+
+                        <td><a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;query={{ item.published_by_name }}">{{ item.published_by_name }}</a></td>
+                        <td>{{ item.ext_client_id|default:"<span class='form_hint'>---</span>" }}</td>
                         <td>{{ item.data_prefix_short }}</td>
 
-                        <td><a href="javascript:$.fn.zato.pubsub.delete_message('queue', '', '{{ item.msg_id }}', '{{ item.sub_key|default:"" }}', '{% if has_gd %}1{% endif %}', '{% if not has_gd %}{{ item.server_name }}{% endif %}', '{% if not has_gd %}{{ item.server_pid }}{% endif %}')">Delete</a></td>
+                        <td><!--<a href="javascript:$.fn.zato.pubsub.delete_message('queue', '', '{{ item.msg_id }}', '{{ item.sub_key|default:"" }}', '{% if has_gd %}1{% endif %}', '{% if not has_gd %}{{ item.server_name }}{% endif %}', '{% if not has_gd %}{{ item.server_pid }}{% endif %}')">Delete</a>--></td>
                         <td class='ignore item_id_{{ item.msg_id }}'>{{ item.msg_id }}</td>
                     </tr>
                 {% endfor %}

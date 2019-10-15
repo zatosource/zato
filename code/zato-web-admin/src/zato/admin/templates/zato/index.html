@@ -268,7 +268,7 @@
                             <span class="like-a">Tasks &rarr;</span>
                             <ul>
                                 <li><a href="{% url "pubsub-task-delivery-server" %}?cluster={{ cluster_id|default:'' }}">Delivery</a></li>
-                                <li><a href="{% url "pubsub-task-main" %}?cluster={{ cluster_id|default:'' }}">Sync</a></li>
+                                <li><a href="{% url "pubsub-task-sync" %}?cluster={{ cluster_id|default:'' }}">Sync</a></li>
                             </ul>
                         </li>
                     </ul>
