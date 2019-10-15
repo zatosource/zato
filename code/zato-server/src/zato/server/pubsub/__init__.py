@@ -144,7 +144,7 @@ class PubSub(object):
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
 
         self.subscriptions_by_topic = {}       # Topic name     -> List of Subscription objects
-        self._subscriptions_by_sub_key = {}     # Sub key        -> Subscription object
+        self._subscriptions_by_sub_key = {}    # Sub key        -> Subscription object
         self.sub_key_servers = {}              # Sub key        -> Server/PID handling it
 
         self.endpoints = {}                    # Endpoint ID    -> Endpoint object
@@ -335,6 +335,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_endpoint_by_id(self, endpoint_id):
+        # type: (int) -> Endpoint
         with self.lock:
             return self.endpoints[endpoint_id]
 
@@ -1107,7 +1108,7 @@ class PubSub(object):
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """
-        _logger.warn('Storing in RAM. CID:`%r`, topic ID:`%r`, name:`%r`, sub_keys:`%r`, ngd-list:`%r`, e:`%s`',
+        _logger.info('Storing in RAM. CID:`%r`, topic ID:`%r`, name:`%r`, sub_keys:`%r`, ngd-list:`%r`, e:`%s`',
             cid, topic_id, topic_name, sub_keys, [elem['pub_msg_id'] for elem in non_gd_msg_list], from_error)
 
         with self.lock:

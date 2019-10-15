@@ -14,11 +14,13 @@ from copy import deepcopy
 from json import loads
 from logging import getLogger
 from socket import error as SocketError
+from threading import current_thread
 from traceback import format_exc
 
 # gevent
 from gevent import sleep, spawn
 from gevent.lock import RLock
+from gevent.thread import getcurrent
 
 # sortedcontainers
 from sortedcontainers import SortedList as _SortedList
@@ -91,13 +93,18 @@ class DeliveryTask(object):
         self.topic_name = sub_config.topic_name
         self.wait_sock_err = float(self.sub_config.wait_sock_err)
         self.wait_non_sock_err = float(self.sub_config.wait_non_sock_err)
-        self.last_run = utcnow_as_ms()
+        self.last_iter_run = utcnow_as_ms()
         self.delivery_interval = self.sub_config.task_delivery_interval / 1000.0
         self.delivery_max_retry = self.sub_config.delivery_max_retry
         self.previous_delivery_method = self.sub_config.delivery_method
+        self.python_id = str(hex(id(self)))
+        self.py_object = '<empty>'
 
-        # This is a total of messages processed so far
-        self.delivery_counter = 0
+        # This is a total of message batches processed so far
+        self.len_batches = 0
+
+        # A total of messages processed so far
+        self.len_delivered = 0
 
         # A list of messages that were requested to be deleted while a delivery was in progress,
         # checked before each delivery.
@@ -259,7 +266,7 @@ class DeliveryTask(object):
             # Go through each message and check if any has reached our delivery_max_retry.
             # Any such message should be deleted so we add it to to_delete. Note that we do it here
             # because we want for a sub hook to have access to them.
-            for msg in current_batch:
+            for msg in current_batch: # type: Message
                 if msg.delivery_count >= self.delivery_max_retry:
                     to_delete.append(msg)
 
@@ -319,6 +326,7 @@ class DeliveryTask(object):
                 with self.delivery_lock:
                     for msg in to_deliver:
                         try:
+                            msg.delivery_count += 1
                             self.delivery_list.remove_pubsub_msg(msg)
                         except Exception:
                             msg = 'Caught exception in run_delivery/remove_pubsub_msg, e:`%s`'
@@ -328,11 +336,12 @@ class DeliveryTask(object):
                 # Status of messages is updated in both SQL and RAM so we can now log success
                 len_delivered = len(delivered_msg_id_list)
                 suffix = ' ' if len_delivered == 1 else 's '
-                logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [dlvc:%d]',
+                logger.info('Successfully delivered %s message%s%s to %s (%s -> %s) [lend:%d]',
                     len_delivered, suffix, delivered_msg_id_list, self.sub_key, self.topic_name, self.sub_config.endpoint_name,
-                    self.delivery_counter)
+                    self.len_delivered)
 
-                self.delivery_counter += 1
+                self.len_batches += 1
+                self.len_delivered += len_delivered
 
                 # Indicates that we have successfully delivered all messages currently queued up
                 # and our delivery list is currently empty.
@@ -345,12 +354,12 @@ class DeliveryTask(object):
         assumming there are any waiting for it.
         """
         now = _now()
-        diff = round(now - self.last_run, 2)
+        diff = round(now - self.last_iter_run, 2)
 
         if diff >= self.delivery_interval:
             if self.delivery_list:
                 logger.info('Waking task:%s now:%s last:%s diff:%s interval:%s len-list:%d',
-                    self.sub_key, now, self.last_run, diff, self.delivery_interval, len(self.delivery_list))
+                    self.sub_key, now, self.last_iter_run, diff, self.delivery_interval, len(self.delivery_list))
                 return True
 
 # ################################################################################################################################
@@ -358,8 +367,11 @@ class DeliveryTask(object):
     def run(self, default_sleep_time=0.1, _status=PUBSUB.RUN_DELIVERY_STATUS, _notify_methods=_notify_methods):
         """ Runs the delivery task's main loop.
         """
-        logger.info('Starting delivery task for sub_key:`%s` (%s, %s)',
-            self.sub_key, self.topic_name, self.sub_config.delivery_method)
+        # Fill out Python-level metadata first
+        self.py_object = '{}; {}; {}'.format(current_thread().name, getcurrent().name, self.python_id)
+
+        logger.info('Starting delivery task for sub_key:`%s` (%s, %s, %s)',
+            self.sub_key, self.topic_name, self.sub_config.delivery_method, self.py_object)
 
         #
         # Before starting anything, check if there are any messages already queued up in the database for this task.
@@ -403,7 +415,7 @@ class DeliveryTask(object):
                     with self.delivery_lock:
 
                         # Update last run time to be able to wake up in time for the next delivery
-                        self.last_run = utcnow_as_ms()
+                        self.last_iter_run = utcnow_as_ms()
 
                         # Get the list of all message IDs for which delivery was successful,
                         # indicating whether all currently lined up messages have been
@@ -411,8 +423,8 @@ class DeliveryTask(object):
                         result = self.run_delivery()
 
                         if not self.keep_running:
-                            logger.warn('Skipping delivery loop after r:%s, kr:%d [dlvc:%d]',
-                                result, self.keep_running, self.delivery_counter)
+                            msg = 'Skipping delivery loop after r:%s, kr:%d [lend:%d]'
+                            logger.warn(msg, result, self.keep_running, self.len_delivered)
                             continue
 
                         # On success, sleep for a moment because we have just run out of all messages.
@@ -581,6 +593,7 @@ class GDMessage(Message):
         self.has_gd = True
         self.topic_name = topic_name
         self.size = msg.size
+        self.published_by_id = msg.published_by_id
         self.sub_pattern_matched = msg.sub_pattern_matched
         self.user_ctx = msg.user_ctx
         self.zato_ctx = msg.zato_ctx
@@ -681,6 +694,15 @@ class PubSubTool(object):
         # A pub/sub delivery task for each sub_key
         self.delivery_tasks = {}
 
+        # Last sync time - updated even if there are no messages in a given synchronization request,
+        # which is unlike self.last_sync_time_by_sub_key which updates only if there are messages
+        # for a particular sub_key.
+        self.last_sync_time = None
+
+        # Last sync time for any kind of messages, by sub_key, no matter if they are GD or not
+        self.last_sync_time_by_sub_key = {}
+
+        # Last time we tried to pull GD messages from SQL, by sub_key
         self.last_gd_run = {}
 
         # Register with this server's pubsub
