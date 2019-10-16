@@ -675,15 +675,16 @@ class ObjectImporter(object):
         attrs_dict = dict(attrs)
 
         # Generic connections cannot import their IDs during edits
-        if is_edit and item_type == 'zato_generic_connection':
+        if item_type == 'zato_generic_connection' and is_edit:
             attrs_dict.pop('id', None)
 
         attrs.cluster_id = self.client.cluster_id
 
         response = self._import_object(item_type, attrs, is_edit)
         if response.ok:
-            object_id = response.data['id']
-            response = self._maybe_change_password(object_id, item_type, attrs)
+            if not (item_type == 'rbac_role_permission' and is_edit):
+                object_id = response.data['id']
+                response = self._maybe_change_password(object_id, item_type, attrs)
 
         # We quit on first error encountered
         if response and not response.ok:
@@ -764,6 +765,7 @@ class ObjectImporter(object):
         #
         # Update already existing objects first, definitions before any object that may depend on them ..
         #
+
         for w in already_existing.warnings:
             item_type, _ = w.value_raw
             existing = existing_defs if 'def' in item_type else existing_other
@@ -773,6 +775,7 @@ class ObjectImporter(object):
         # .. actually invoke the updates now ..
         #
         for w in existing_defs + existing_other:
+
             item_type, attrs = w.value_raw
 
             if self.should_skip_item(item_type, attrs, True):
@@ -888,7 +891,6 @@ class ObjectManager(object):
         # This probably isn't necessary any more:
         item_type = item_type.replace('-', '_')
         objects_by_type = self.objects.get(item_type, ())
-
         return find_first(objects_by_type, lambda item: dict_match(item, fields))
 
 # ################################################################################################################################
@@ -978,7 +980,7 @@ class ObjectManager(object):
         'pubapi',
     )
 
-    def is_ignored_name(self, item):
+    def is_ignored_name(self, item_type, item):
         if 'name' not in item:
             return False
 
@@ -988,7 +990,8 @@ class ObjectManager(object):
         if name.startswith('zato.wsx.cleanup'):
             return False
 
-        return 'zato' in name or name in self.IGNORED_NAMES
+        if item_type != 'rbac_role_permission':
+            return 'zato' in name or name in self.IGNORED_NAMES
 
 # ################################################################################################################################
 
@@ -1049,9 +1052,11 @@ class ObjectManager(object):
             data = response.data
 
         for item in map(Bunch, data):
+
             if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)):
                 continue
-            if self.is_ignored_name(item):
+
+            if self.is_ignored_name(item_type, item):
                 continue
 
             # Passwords are always exported in an encrypted form so we need to decrypt them ourselves
