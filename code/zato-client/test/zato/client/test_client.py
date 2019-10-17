@@ -429,10 +429,10 @@ class TestHeaders(TestCase):
     """ GH #221 - Clients don't always properly pass headers on to super classes.
     """
     class InnerInvokeResponse(object):
-        def __init__(self, request, response_class, async, headers):
+        def __init__(self, request, response_class, is_async, headers):
             self.request = request
             self.response_class = response_class
-            self.async = async
+            self.is_async = is_async
             self.headers = headers
 
         def __repr__(self):

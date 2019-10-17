@@ -99,7 +99,7 @@ class JWT(object):
         item = self._lookup_jwt(username, password)
         if item:
             token = self._create_token(username=username, ttl=item.ttl)
-            self.cache.put(token, token, item.ttl, async=False)
+            self.cache.put(token, token, item.ttl, is_async=False)
             suffix = 's' if item.ttl > 1 else ''
             logger.info('New token generated for user `%s` with a TTL of `%i` second{}'.format(suffix), username, item.ttl)
 
@@ -125,7 +125,7 @@ class JWT(object):
             if token_data.username == expected_username:
 
                 # Renew the token expiration
-                self.cache.put(token, token, token_data.ttl, async=True)
+                self.cache.put(token, token, token_data.ttl, is_async=True)
                 return Bunch(valid=True, token=token_data, raw_token=token)
 
             else:
