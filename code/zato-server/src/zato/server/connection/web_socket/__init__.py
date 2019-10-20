@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from json import loads
 from logging import getLogger
 from threading import current_thread
 from traceback import format_exc
@@ -21,9 +22,6 @@ from bunch import Bunch, bunchify
 # gevent
 from gevent import sleep, socket, spawn
 from gevent.lock import RLock
-
-# pyrapidjson
-from rapidjson import loads
 
 # ws4py
 from ws4py.websocket import WebSocket as _WebSocket
@@ -449,7 +447,8 @@ class WebSocket(_WebSocket):
 
     def parse_json(self, data, _create_session=WEB_SOCKET.ACTION.CREATE_SESSION, _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
 
-        parsed = loads(data.decode('utf8'))
+        data = data.decode('utf8')
+        parsed = loads(data)
         msg = ClientMessage()
 
         meta = parsed.get('meta', {})
