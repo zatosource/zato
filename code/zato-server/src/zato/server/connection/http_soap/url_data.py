@@ -529,7 +529,7 @@ class URLData(CyURLData, OAuthDataStore):
             #
             # 1.
             #
-            if sec_def_config['service_name']:
+            if sec_def_config.get('service_name'):
                 response = self.worker.invoke(sec_def_config['service_name'], {
                     'sec_def': sec_def,
                     'body': body,
