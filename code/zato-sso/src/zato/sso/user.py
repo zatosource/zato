@@ -1326,6 +1326,7 @@ class UserAPI(object):
                 logger.warn('Could not add auth link e:`%s`', format_exc())
                 raise ValueError('Auth link could not be added')
             else:
+                self._add_user_id_to_linked_auth(auth_type, auth_id, user_id)
                 return instance.user_id, auth_id
 
 # ################################################################################################################################
