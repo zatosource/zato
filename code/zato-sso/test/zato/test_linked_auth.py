@@ -20,7 +20,7 @@ SEC_DEF_TYPE = SEC_DEF_TYPE
 
 # ################################################################################################################################
 
-basic_auth_user_name = 'pubapi'
+basic_auth_user_name = 'qq'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,7 +32,7 @@ class LinkedAuthTestCase(BaseTest):
         self.post('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
-            'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
+            'auth_type': SEC_DEF_TYPE.JWT,
             'auth_username': basic_auth_user_name,
             'is_active': True,
         })
@@ -42,12 +42,14 @@ class LinkedAuthTestCase(BaseTest):
             'user_id': self.ctx.super_user_id
         })
 
+        '''
         self.delete('/zato/sso/user/linked', {
             'ust': self.ctx.super_user_ust,
             'user_id': self.ctx.super_user_id,
-            'auth_type': SEC_DEF_TYPE.BASIC_AUTH,
+            'auth_type': SEC_DEF_TYPE.JWT,
             'auth_username': basic_auth_user_name,
         })
+        '''
 
 # ################################################################################################################################
 # ################################################################################################################################
