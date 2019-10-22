@@ -683,6 +683,21 @@ class ObjectImporter(object):
         if item_type == 'zato_generic_connection' and is_edit:
             attrs_dict.pop('id', None)
 
+        # RBAC objects cannot refer to other objects by their IDs
+        elif item_type == 'rbac_role_permission':
+            attrs_dict.pop('id', None)
+            attrs_dict.pop('perm_id', None)
+            attrs_dict.pop('role_id', None)
+            attrs_dict.pop('service_id', None)
+
+        elif item_type == 'rbac_client_role':
+            attrs_dict.pop('id', None)
+            attrs_dict.pop('role_id', None)
+
+        elif item_type == 'rbac_role':
+            attrs_dict.pop('id', None)
+            attrs_dict.pop('parent_id', None)
+
         attrs.cluster_id = self.client.cluster_id
 
         response = self._import_object(item_type, attrs, is_edit)

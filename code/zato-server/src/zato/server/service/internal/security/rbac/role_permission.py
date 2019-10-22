@@ -72,6 +72,10 @@ def instance_hook(self, input, instance, attrs):
             instance.service_id = _service.id
             instance.perm_id = perm.id
 
+            input.role_id = role.id
+            input.service_id = _service.id
+            input.perm_id = perm.id
+
         instance.name = '{}:::{}::{}'.format(role.name, _service.name, perm.name)
 
 # ################################################################################################################################
