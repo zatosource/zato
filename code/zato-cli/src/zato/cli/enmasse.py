@@ -660,8 +660,13 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def should_skip_item(self, item_type, attrs, is_edit):
+
+        # Plain HTTP channels cannot create JSON-RPC ones
+        if item_type == 'http_soap' and attrs.name.startswith('json.rpc.channel'):
+            return True
+
         # Root RBAC role cannot be edited
-        if item_type == 'rbac_role' and attrs.name == 'Root':
+        elif item_type == 'rbac_role' and attrs.name == 'Root':
             return True
 
         # RBAC client roles cannot be edited
