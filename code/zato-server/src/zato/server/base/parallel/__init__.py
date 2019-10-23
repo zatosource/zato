@@ -934,10 +934,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def decrypt(self, encrypted, _prefix=SECRETS.PREFIX):
+    def decrypt(self, data, _prefix=SECRETS.PREFIX):
         """ Returns data decrypted using server's CryptoManager.
         """
-        return self.crypto_manager.decrypt(encrypted.replace(_prefix, '', 1))
+        if data.startswith(_prefix):
+            return self.crypto_manager.decrypt(data.replace(_prefix, '', 1))
+        else:
+            return data # Already decrypted, return as is
 
 # ################################################################################################################################
 
