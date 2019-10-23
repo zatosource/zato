@@ -447,8 +447,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
             if sec_config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT:
                 tls = self.request_dispatcher.url_data.tls_key_cert_get(security_name)
+                auth_data = self.server.decrypt(tls.config.auth_data)
                 sec_config['tls_key_cert_full_path'] = get_tls_key_cert_full_path(
-                    self.server.tls_dir, get_tls_from_payload(tls.config.value, True))
+                    self.server.tls_dir, get_tls_from_payload(auth_data, True))
 
         wrapper_config = {'id':config.id,
             'is_active':config.is_active, 'method':config.method,
