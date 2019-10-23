@@ -64,6 +64,7 @@ def response_hook(self, input, instance, attrs, service_type):
 # ################################################################################################################################
 
 def broker_message_hook(self, input, instance, attrs, service_type):
+    input.sec_type = SEC_DEF_TYPE.TLS_KEY_CERT
     if service_type == 'delete':
         input.auth_data = instance.auth_data
 
