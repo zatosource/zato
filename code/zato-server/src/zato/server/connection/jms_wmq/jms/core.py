@@ -24,6 +24,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import locale
+from base64 import b64encode
 from binascii import hexlify
 from string import Template
 from io import StringIO
@@ -181,7 +182,7 @@ class TextMessage(object):
             'destination':self.jms_destination,
             'reply_to':self.jms_reply_to,
             'redelivered':self.jms_redelivered,
-            'mqmd': pickle_dumps(self.mqmd)
+            'mqmd': b64encode(pickle_dumps(self.mqmd))
         }
 
 # ################################################################################################################################
