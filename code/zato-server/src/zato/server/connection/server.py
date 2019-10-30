@@ -16,6 +16,9 @@ from traceback import format_exc
 # gevent
 from gevent import spawn
 
+# requests
+from requests import get as requests_get
+
 # Zato
 from zato.client import AnyServiceInvoker
 from zato.common import SERVER_UP_STATUS
@@ -79,12 +82,17 @@ class _RemoteServer(_Server):
         self.up_status = up_status
         self.address = 'http{}://{}:{}'.format(
             's' if self.crypto_use_tls else '', self.preferred_address, self.port)
-
         self.invoker = AnyServiceInvoker(self.address, '/zato/internal/invoke', (api_user, self.api_password))
+        self.ping_address = '{}/zato/ping'.format(self.address)
+        self.ping_timeout = 2
 
 # ################################################################################################################################
 
     def invoke(self, service, request=None, *args, **kwargs):
+
+        # Ping the remote server to quickly find out if it is still available
+        requests_get(self.ping_address, timeout=self.ping_timeout)
+
         response = self.invoker.invoke(service, request, *args, **kwargs)
 
         if response.ok:
@@ -95,6 +103,10 @@ class _RemoteServer(_Server):
 # ################################################################################################################################
 
     def invoke_all_pids(self, service, request=None, *args, **kwargs):
+
+        # Ping the remote server to quickly find out if it is still available
+        requests_get(self.ping_address, timeout=self.ping_timeout)
+
         return self.invoker.invoke(service, request, all_pids=True, *args, **kwargs)
 
 # ################################################################################################################################
@@ -190,6 +202,7 @@ class Servers(object):
         invoke_sec_def = self._get_invoke_sec_def(session, cluster_name)
 
         for item in server_list(session, None, cluster_name, None, False):
+
             yield _RemoteServer(
                 item.cluster_id, self.cluster_name, item.name, item.preferred_address, item.bind_port,
                 item.crypto_use_tls, self.decrypt_func(invoke_sec_def.password), item.up_status)
