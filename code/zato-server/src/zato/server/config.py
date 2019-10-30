@@ -232,9 +232,11 @@ class ConfigDict(object):
                             config['_encryption_needed'] = True
 
                             if not isinstance(original, unicode):
-                                original = original.decode('utf8')
+                                orig_uni = original.decode('utf8')
+                            else:
+                                orig_uni = original
 
-                            if original.startswith(SECRETS.PREFIX):
+                            if orig_uni.startswith(SECRETS.PREFIX):
                                 config['_encrypted_in_odb'] = True
                             else:
                                 config['_encrypted_in_odb'] = False
