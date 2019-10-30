@@ -675,6 +675,21 @@ class ObjectImporter(object):
 
 # ################################################################################################################################
 
+    def _set_generic_connection_secret(self, name, type_, secret):
+        response = self.client.invoke('zato.generic.connection.change-password', {
+            'name': name,
+            'type_': type_,
+            'password1': secret,
+            'password2': secret
+        })
+
+        if not response.ok:
+            raise Exception('Unexpected response; e:{}'.format(response))
+        else:
+            self.logger.info('Set password for generic connection `%s` (%s)', name, type_)
+
+# ################################################################################################################################
+
     def _import(self, item_type, attrs, is_edit):
 
         attrs_dict = dict(attrs)
@@ -718,6 +733,11 @@ class ObjectImporter(object):
         # (this in fact would result in an error as the object already exists).
         if is_edit:
             self.remove_from_import_list(item_type, attrs.name)
+
+        # If this is a generic connection and it has a secret set (e.g. MongoDB password),
+        # we need to explicitly set it for the connection we are editing.
+        if is_edit and item_type == 'zato_generic_connection' and attrs_dict.get('secret'):
+            self._set_generic_connection_secret(attrs_dict['name'], attrs_dict['type_'], attrs_dict['secret'])
 
         # We'll see how expensive this call is. Seems to be but let's see in practice if it's a burden.
         self.object_mgr.get_objects_by_type(item_type)
@@ -939,7 +959,7 @@ class ObjectManager(object):
         })
 
         if not response.ok:
-            raise Exception('Unexpected response from Zato; e:{}'.format(response))
+            raise Exception('Unexpected response; e:{}'.format(response))
 
         if response.has_data:
             self.services = {
