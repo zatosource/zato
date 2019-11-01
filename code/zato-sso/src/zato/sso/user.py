@@ -470,10 +470,10 @@ class UserAPI(object):
             ctx.data['last_name'] = user.last_name
             ctx.data['is_active'] = user.is_active
             ctx.data['is_internal'] = user.is_internal
-            ctx.data['approval_status'] = user.approval_status
+            ctx.data['approval_status'] = approval_status
             ctx.data['approval_status_mod_time'] = user.approval_status_mod_time
             ctx.data['approval_status_mod_by'] = user.approval_status_mod_by
-            ctx.data['is_approval_needed'] = self.sso_conf.signup.is_approval_needed
+            ctx.data['is_approval_needed'] = approval_status != const.approval_status.approved
             ctx.data['is_locked'] = user.is_locked
             ctx.data['is_super_user'] = user.is_super_user
             ctx.data['password_is_set'] = user.password_is_set
@@ -1122,11 +1122,14 @@ class UserAPI(object):
         # .. so if it is sent ..
         if user_id != _no_user_id:
 
-            # .. we must confirm we have a super-user's session.
-            if not current_session.is_super_user:
-                logger.warn('Current user `%s` is not a super-user, cannot change password for user `%s`',
-                    current_session.user_id, user_id)
-                raise ValidationError(status_code.common.invalid_input, False)
+            # .. and we are not changing our own password ..
+            if current_session.user_id != user_id:
+
+                # .. we must confirm we have a super-user's session.
+                if not current_session.is_super_user:
+                    logger.warn('Current user `%s` is not a super-user, cannot change password for user `%s`',
+                        current_session.user_id, user_id)
+                    raise ValidationError(status_code.common.invalid_input, False)
 
         # .. if ID is not given on input, we change current user's password.
         else:
@@ -1323,6 +1326,7 @@ class UserAPI(object):
                 logger.warn('Could not add auth link e:`%s`', format_exc())
                 raise ValueError('Auth link could not be added')
             else:
+                self._add_user_id_to_linked_auth(auth_type, auth_id, user_id)
                 return instance.user_id, auth_id
 
 # ################################################################################################################################

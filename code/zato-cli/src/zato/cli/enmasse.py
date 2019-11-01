@@ -41,7 +41,7 @@ from past.builtins import basestring
 # Zato
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
-from zato.common import SECRETS
+from zato.common import SECRETS, ZATO_NONE
 from zato.common.util import get_client_from_server_conf
 from zato.common.util.tcp import wait_for_zato_ping
 
@@ -561,7 +561,6 @@ class DependencyScanner(object):
             value = item.get(dep_key)
             if value != dep_info.get('empty_value'):
 
-
                 dep = self.find(dep_info['dependent_type'], {dep_info['dependent_field']: value})
                 if dep is None:
                     key = (dep_info['dependent_type'], item[dep_key])
@@ -661,8 +660,13 @@ class ObjectImporter(object):
 # ################################################################################################################################
 
     def should_skip_item(self, item_type, attrs, is_edit):
+
+        # Plain HTTP channels cannot create JSON-RPC ones
+        if item_type == 'http_soap' and attrs.name.startswith('json.rpc.channel'):
+            return True
+
         # Root RBAC role cannot be edited
-        if item_type == 'rbac_role' and attrs.name == 'Root':
+        elif item_type == 'rbac_role' and attrs.name == 'Root':
             return True
 
         # RBAC client roles cannot be edited
@@ -671,20 +675,51 @@ class ObjectImporter(object):
 
 # ################################################################################################################################
 
+    def _set_generic_connection_secret(self, name, type_, secret):
+        response = self.client.invoke('zato.generic.connection.change-password', {
+            'name': name,
+            'type_': type_,
+            'password1': secret,
+            'password2': secret
+        })
+
+        if not response.ok:
+            raise Exception('Unexpected response; e:{}'.format(response))
+        else:
+            self.logger.info('Set password for generic connection `%s` (%s)', name, type_)
+
+# ################################################################################################################################
+
     def _import(self, item_type, attrs, is_edit):
 
         attrs_dict = dict(attrs)
 
         # Generic connections cannot import their IDs during edits
-        if is_edit and item_type == 'zato_generic_connection':
+        if item_type == 'zato_generic_connection' and is_edit:
             attrs_dict.pop('id', None)
+
+        # RBAC objects cannot refer to other objects by their IDs
+        elif item_type == 'rbac_role_permission':
+            attrs_dict.pop('id', None)
+            attrs_dict.pop('perm_id', None)
+            attrs_dict.pop('role_id', None)
+            attrs_dict.pop('service_id', None)
+
+        elif item_type == 'rbac_client_role':
+            attrs_dict.pop('id', None)
+            attrs_dict.pop('role_id', None)
+
+        elif item_type == 'rbac_role':
+            attrs_dict.pop('id', None)
+            attrs_dict.pop('parent_id', None)
 
         attrs.cluster_id = self.client.cluster_id
 
         response = self._import_object(item_type, attrs, is_edit)
         if response.ok:
-            object_id = response.data['id']
-            response = self._maybe_change_password(object_id, item_type, attrs)
+            if not (item_type == 'rbac_role_permission' and is_edit):
+                object_id = response.data['id']
+                response = self._maybe_change_password(object_id, item_type, attrs)
 
         # We quit on first error encountered
         if response and not response.ok:
@@ -698,6 +733,11 @@ class ObjectImporter(object):
         # (this in fact would result in an error as the object already exists).
         if is_edit:
             self.remove_from_import_list(item_type, attrs.name)
+
+        # If this is a generic connection and it has a secret set (e.g. MongoDB password),
+        # we need to explicitly set it for the connection we are editing.
+        if is_edit and item_type == 'zato_generic_connection' and attrs_dict.get('secret'):
+            self._set_generic_connection_secret(attrs_dict['name'], attrs_dict['type_'], attrs_dict['secret'])
 
         # We'll see how expensive this call is. Seems to be but let's see in practice if it's a burden.
         self.object_mgr.get_objects_by_type(item_type)
@@ -765,6 +805,7 @@ class ObjectImporter(object):
         #
         # Update already existing objects first, definitions before any object that may depend on them ..
         #
+
         for w in already_existing.warnings:
             item_type, _ = w.value_raw
             existing = existing_defs if 'def' in item_type else existing_other
@@ -774,6 +815,7 @@ class ObjectImporter(object):
         # .. actually invoke the updates now ..
         #
         for w in existing_defs + existing_other:
+
             item_type, attrs = w.value_raw
 
             if self.should_skip_item(item_type, attrs, True):
@@ -889,7 +931,6 @@ class ObjectManager(object):
         # This probably isn't necessary any more:
         item_type = item_type.replace('-', '_')
         objects_by_type = self.objects.get(item_type, ())
-
         return find_first(objects_by_type, lambda item: dict_match(item, fields))
 
 # ################################################################################################################################
@@ -918,7 +959,7 @@ class ObjectManager(object):
         })
 
         if not response.ok:
-            raise Exception('Unexpected response from Zato; e:{}'.format(response))
+            raise Exception('Unexpected response; e:{}'.format(response))
 
         if response.has_data:
             self.services = {
@@ -935,6 +976,10 @@ class ObjectManager(object):
         """
         normalize_service_name(item)
         service_info = SERVICE_BY_NAME[item_type]
+
+        if item_type == 'json_rpc':
+            if item['security_id'] is None:
+                item['security_id'] = ZATO_NONE
 
         for field_name, info in iteritems(service_info.object_dependencies):
 
@@ -961,6 +1006,11 @@ class ObjectManager(object):
             else:
                 item[field_name] = dep[info['dependent_field']]
 
+            # JSON-RPC channels cannot have empty security definitions on exports
+            if item_type == 'http_soap' and item['name'].startswith('json.rpc.channel'):
+                if not item['security_id']:
+                    item['security_id'] = 'ZATO_NONE'
+
         return item
 
 # ################################################################################################################################
@@ -970,7 +1020,7 @@ class ObjectManager(object):
         'pubapi',
     )
 
-    def is_ignored_name(self, item):
+    def is_ignored_name(self, item_type, item):
         if 'name' not in item:
             return False
 
@@ -980,7 +1030,8 @@ class ObjectManager(object):
         if name.startswith('zato.wsx.cleanup'):
             return False
 
-        return 'zato' in name or name in self.IGNORED_NAMES
+        if item_type != 'rbac_role_permission':
+            return 'zato' in name or name in self.IGNORED_NAMES
 
 # ################################################################################################################################
 
@@ -1041,9 +1092,11 @@ class ObjectManager(object):
             data = response.data
 
         for item in map(Bunch, data):
+
             if any(getattr(item, key, None) == value for key, value in iteritems(service_info.export_filter)):
                 continue
-            if self.is_ignored_name(item):
+
+            if self.is_ignored_name(item_type, item):
                 continue
 
             # Passwords are always exported in an encrypted form so we need to decrypt them ourselves

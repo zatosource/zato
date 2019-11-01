@@ -397,7 +397,7 @@ class _Client(object):
         if not self.session.auth:
             self.session.auth = auth
 
-    def inner_invoke(self, request, response_class, async, headers, output_repeated=False):
+    def inner_invoke(self, request, response_class, is_async, headers, output_repeated=False):
         """ Actually invokes a service through HTTP and returns its response.
         """
         raw_response = self.session.post(self.service_address, request, headers=headers, verify=self.tls_verify)
@@ -409,16 +409,16 @@ class _Client(object):
             request = request.decode('utf-8')
 
         if self.logger.isEnabledFor(logging.DEBUG):
-            msg = 'request:[%s]\nresponse_class:[%s]\nasync:[%s]\nheaders:[%s]\n text:[%s]\ndata:[%s]'
-            self.logger.debug(msg, request, response_class, async, headers, raw_response.text, response.data)
+            msg = 'request:[%s]\nresponse_class:[%s]\nis_async:[%s]\nheaders:[%s]\n text:[%s]\ndata:[%s]'
+            self.logger.debug(msg, request, response_class, is_async, headers, raw_response.text, response.data)
 
         return response
 
-    def invoke(self, request, response_class, async=False, headers=None, output_repeated=False):
+    def invoke(self, request, response_class, is_async=False, headers=None, output_repeated=False):
         """ Input parameters are like when invoking a service directly.
         """
         headers = headers or {}
-        return self.inner_invoke(request, response_class, async, headers)
+        return self.inner_invoke(request, response_class, is_async, headers)
 
 # ################################################################################################################################
 
@@ -458,7 +458,7 @@ class AnyServiceInvoker(_Client):
     to be exposed over HTTP.
     """
     def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json',
-                transport=None, async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
+                transport=None, is_async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
                 to_json=True, output_repeated=ZATO_NOT_GIVEN, pid=None, all_pids=False, timeout=None):
 
         if not(name or id):
@@ -478,7 +478,7 @@ class AnyServiceInvoker(_Client):
             'channel': channel,
             'data_format': data_format,
             'transport': transport,
-            'async': async,
+            'is_async': is_async,
             'expiration':expiration,
             'pid':pid,
             'all_pids': all_pids,
@@ -486,13 +486,13 @@ class AnyServiceInvoker(_Client):
         }
 
         return super(AnyServiceInvoker, self).invoke(dumps(request, default=default_json_handler),
-            ServiceInvokeResponse, async, headers, output_repeated)
+            ServiceInvokeResponse, is_async, headers, output_repeated)
 
     def invoke(self, *args, **kwargs):
-        return self._invoke(async=False, *args, **kwargs)
+        return self._invoke(is_async=False, *args, **kwargs)
 
     def invoke_async(self, *args, **kwargs):
-        return self._invoke(async=True, *args, **kwargs)
+        return self._invoke(is_async=True, *args, **kwargs)
 
 # ################################################################################################################################
 

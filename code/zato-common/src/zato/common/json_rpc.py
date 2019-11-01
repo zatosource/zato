@@ -15,6 +15,7 @@ from traceback import format_exc
 # Zato
 from zato.common import NotGiven
 from zato.common.exception import BadRequest, InternalServerError
+from zato.common.rate_limiting.common import RateLimitReached as RateLimitReachedError
 
 # ################################################################################################################################
 
@@ -271,6 +272,7 @@ class JSONRPCHandler(object):
         except Exception as e:
 
             is_schema_error = isinstance(e, self.JSONSchemaValidationException)
+            is_rate_limit_error = isinstance(e, RateLimitReachedError)
             error_ctx = ErrorCtx()
             error_ctx.cid = cid
 
@@ -278,6 +280,9 @@ class JSONRPCHandler(object):
             if is_schema_error:
                 err_code = InvalidRequest.code
                 err_message = e.error_msg_details if e.needs_err_details else e.error_msg
+            elif is_rate_limit_error:
+                err_code = RateLimitReached.code
+                err_message = 'Too Many Requests'
             else:
                 # Any JSON-RPC error
                 if isinstance(e, JSONRPCException):

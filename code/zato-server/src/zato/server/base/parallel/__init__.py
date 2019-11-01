@@ -75,12 +75,14 @@ import typing
 if typing.TYPE_CHECKING:
 
     # Zato
+    from zato.common.crypto import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.server.service.store import ServiceStore
     from zato.sso.api import SSOAPI
 
     # For pyflakes
     ODBManager = ODBManager
+    ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
     SSOAPI = SSOAPI
 
@@ -102,7 +104,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def __init__(self):
         self.host = None
         self.port = None
-        self.crypto_manager = None
+        self.crypto_manager = None # type: ServerCryptoManager
         self.odb = None # type: ODBManager
         self.odb_data = None
         self.config = None # type: ConfigStore
@@ -936,10 +938,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def decrypt(self, encrypted, _prefix=SECRETS.PREFIX):
+    def decrypt(self, data, _prefix=SECRETS.PREFIX):
         """ Returns data decrypted using server's CryptoManager.
         """
-        return self.crypto_manager.decrypt(encrypted.replace(_prefix, '', 1))
+        if data.startswith(_prefix):
+            return self.crypto_manager.decrypt(data.replace(_prefix, '', 1))
+        else:
+            return data # Already decrypted, return as is
 
 # ################################################################################################################################
 

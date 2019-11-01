@@ -21,6 +21,7 @@ from zato.bunch import Bunch
 
 # Python 2/3 compatibility
 from future.utils import itervalues
+from past.builtins import unicode
 
 # Zato
 from zato.common import SECRETS, ZATO_NONE
@@ -224,10 +225,18 @@ class ConfigDict(object):
 
                         # Temporarily, add a flag to indicate whether the password in ODB was encrypted or not.
                         if attr_name in SECRETS.PARAMS:
+
                             if original is None:
                                 original = ''
+
                             config['_encryption_needed'] = True
-                            if original.startswith(SECRETS.PREFIX):
+
+                            if not isinstance(original, unicode):
+                                orig_uni = original.decode('utf8')
+                            else:
+                                orig_uni = original
+
+                            if orig_uni.startswith(SECRETS.PREFIX):
                                 config['_encrypted_in_odb'] = True
                             else:
                                 config['_encrypted_in_odb'] = False

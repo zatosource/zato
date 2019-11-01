@@ -17,7 +17,7 @@ from six import add_metaclass
 # Zato
 from zato.common.broker_message import RBAC
 from zato.common.odb.model import RBACRole, RBACPermission, RBACRolePermission, Service
-from zato.common.odb.query import rbac_role_permission_list
+from zato.common.odb.query import rbac_role, rbac_permission, rbac_role_permission_list, service
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -30,6 +30,7 @@ get_list_docs = 'RBAC role permissions'
 broker_message = RBAC
 broker_message_prefix = 'ROLE_PERMISSION_'
 list_func = rbac_role_permission_list
+input_optional_extra = ['role_name', 'service_name', 'perm_name']
 output_optional_extra = ['role_name', 'service_name', 'perm_name']
 create_edit_rewrite = ['id']
 skip_input_params = ['name']
@@ -58,16 +59,22 @@ def get_extra(service, role_id, service_id, perm_id):
 def instance_hook(self, input, instance, attrs):
 
     if attrs.is_create_edit:
+
+        cluster_id = self.server.cluster_id
+
         with closing(self.odb.session()) as session:
 
-            role = session.query(RBACRole).\
-                filter(RBACRole.id==input.role_id).one()
+            role = rbac_role(session, cluster_id, input.role_id, input.role_name)
+            _service = service(session, cluster_id, input.service_id, input.service_name)
+            perm = rbac_permission(session, cluster_id, input.perm_id, input.perm_name)
 
-            _service = session.query(Service).\
-                filter(Service.id==input.service_id).one()
+            instance.role_id = role.id
+            instance.service_id = _service.id
+            instance.perm_id = perm.id
 
-            perm = session.query(RBACPermission).\
-                filter(RBACPermission.id==input.perm_id).one()
+            input.role_id = role.id
+            input.service_id = _service.id
+            input.perm_id = perm.id
 
         instance.name = '{}:::{}::{}'.format(role.name, _service.name, perm.name)
 
@@ -87,16 +94,13 @@ def response_hook(self, input, instance, attrs, service_type):
 
     elif service_type == 'create_edit':
 
+        cluster_id = self.server.cluster_id
+
         with closing(self.odb.session()) as session:
 
-            role = session.query(RBACRole).\
-                filter(RBACRole.id==instance.role_id).one()
-
-            _service = session.query(Service).\
-                filter(Service.id==instance.service_id).one()
-
-            perm = session.query(RBACPermission).\
-                filter(RBACPermission.id==input.perm_id).one()
+            role = rbac_role(session, cluster_id, input.role_id, input.role_name)
+            _service = service(session, cluster_id, input.service_id, input.service_name)
+            perm = rbac_permission(session, cluster_id, input.perm_id, input.perm_name)
 
         self.response.payload.role_name = role.name
         self.response.payload.service_name = _service.name

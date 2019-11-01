@@ -342,7 +342,11 @@ class WebSphereMQConnection(object):
             if self.has_debug:
                 logger.debug('send -> _is_connected2 %s' % self.is_connected)
 
+        if not isinstance(destination, unicode):
+            destination = destination.decode('utf8')
+
         destination = self._strip_prefixes_from_destination(destination)
+        destination = destination.encode('utf8')
 
         # Will consist of an MQRFH2 header and the actual business payload.
         buff = BytesIO()
@@ -364,6 +368,8 @@ class WebSphereMQConnection(object):
         buff.close()
 
         queue = self.get_queue_for_sending(destination)
+
+        #raise Exception('QQQ {}'.format(repr(md)))
 
         try:
             queue.put(body, md)
@@ -505,8 +511,12 @@ class WebSphereMQConnection(object):
     def _get_jms_timestamp_from_md(self, put_date, put_time):
         pattern = '%Y%m%d%H%M%S'
         centi = int(put_time[6:]) / 100.0
+        put_date_time = put_date + put_time[:6]
 
-        strp = strptime(put_date + put_time[:6], pattern)
+        if not isinstance(put_date_time, unicode):
+            put_date_time = put_date_time.decode('utf8')
+
+        strp = strptime(put_date_time, pattern)
         mk = mktime(strp)
 
         return long((mk - altzone + centi) * 1000.0)
@@ -618,12 +628,15 @@ class WebSphereMQConnection(object):
 # ################################################################################################################################
 
     def _strip_prefixes_from_destination(self, destination):
+
         if destination.startswith('queue:///'):
             return destination.replace('queue:///', '', 1)
+
         elif destination.startswith('queue://'):
             no_qm_dest = destination.replace('queue://', '', 1)
             no_qm_dest = no_qm_dest.split('/')[1:]
             return '/'.join(no_qm_dest)
+
         else:
             return destination
 
@@ -680,7 +693,7 @@ class WebSphereMQConnection(object):
             if message.jms_expiration / 1000 > _WMQ_MAX_EXPIRY_TIME:
                 md.Expiry = self.CMQC.MQEI_UNLIMITED
             else:
-                md.Expiry = message.jms_expiration / 10
+                md.Expiry = int(message.jms_expiration / 10)
 
         # IBM MQ provider-specific JMS headers
 

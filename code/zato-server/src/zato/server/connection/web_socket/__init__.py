@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from json import loads
 from logging import getLogger
 from threading import current_thread
 from traceback import format_exc
@@ -21,9 +22,6 @@ from bunch import Bunch, bunchify
 # gevent
 from gevent import sleep, socket, spawn
 from gevent.lock import RLock
-
-# pyrapidjson
-from rapidjson import loads
 
 # ws4py
 from ws4py.websocket import WebSocket as _WebSocket
@@ -73,6 +71,10 @@ hook_type_to_method = {
     WEB_SOCKET.HOOK_TYPE.ON_PUBSUB_RESPONSE: 'on_pubsub_response',
     WEB_SOCKET.HOOK_TYPE.ON_VAULT_MOUNT_POINT_NEEDED: 'on_vault_mount_point_needed',
 }
+
+# ################################################################################################################################
+
+_cannot_send = 'Cannot send on a terminated websocket'
 
 # ################################################################################################################################
 
@@ -445,7 +447,8 @@ class WebSocket(_WebSocket):
 
     def parse_json(self, data, _create_session=WEB_SOCKET.ACTION.CREATE_SESSION, _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
 
-        parsed = loads(data.decode('utf8'))
+        data = data.decode('utf8')
+        parsed = loads(data)
         msg = ClientMessage()
 
         meta = parsed.get('meta', {})
@@ -869,8 +872,8 @@ class WebSocket(_WebSocket):
                 try:
                     self.handle_client_message(cid, request) if not request.is_auth else self.handle_create_session(cid, request)
                 except RuntimeError as e:
-                    if str(e) == 'Cannot send on a terminated websocket':
-                        msg = 'Ignoring message (client disconnected), cid:`%s`, request:`%s` conn:`%s`'
+                    if str(e) == _cannot_send:
+                        msg = 'Ignoring message (socket terminated #1), cid:`%s`, request:`%s` conn:`%s`'
                         logger.info(msg, cid, request, self.peer_conn_info_pretty)
                         logger_zato.info(msg, cid, request, self.peer_conn_info_pretty)
                     else:
@@ -966,8 +969,17 @@ class WebSocket(_WebSocket):
             logger.info('Sending message `%s` from `%s` to `%s` `%s` `%s` `%s`', serialized,
                 self.python_id, self.pub_client_id, self.ext_client_id, self.ext_client_name, self.peer_conn_info_pretty)
 
-        # Actually send the message now
-        (self.send if use_send else self.ping)(serialized)
+        try:
+            (self.send if use_send else self.ping)(serialized)
+        except RuntimeError as e:
+            if str(e) == _cannot_send:
+                msg = 'Cannot send message (socket terminated #2), disconnecting client, cid:`%s`, msg:`%s` conn:`%s`'
+                logger.info(msg, cid, serialized, self.peer_conn_info_pretty)
+                logger_zato.info(msg, cid, serialized, self.peer_conn_info_pretty)
+                self.disconnect_client()
+                raise Exception('WSX client disconnected cid:`{}, peer:`{}`'.format(cid, self.peer_conn_info_pretty))
+            else:
+                raise
 
         # Wait for response but only if it is not a pub/sub message,
         # these are always asynchronous and that channel's WSX hook
@@ -1078,7 +1090,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
 
         try:
             if environ['PATH_INFO'] != self.config.path:
-                start_response(http404_bytes, {})
+                start_response(http404, {})
                 return [error_response[NOT_FOUND][self.config.data_format]]
 
             super(WebSocketContainer, self).__call__(environ, start_response)
