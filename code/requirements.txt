@@ -75,7 +75,6 @@ nltk==3.2.1
 nose==1.3.3
 numpy==1.14.5
 oslo.config==1.2.1
-outbox==0.1.8
 parse-type==0.3.4
 parse==1.6.6
 passlib==1.7.1

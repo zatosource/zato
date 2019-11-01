@@ -197,9 +197,20 @@ class ChangePassword(ChangePasswordBase):
         response_elem = None
 
     def handle(self):
+
         def _auth(instance, secret):
             instance.secret = secret
-        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value,
+
+        if self.request.input.id:
+            instance_id = self.request.input.id
+        else:
+            with closing(self.odb.session()) as session:
+                instance_id = session.query(ModelGenericConn).\
+                    filter(ModelGenericConn.name==self.request.input.name).\
+                    filter(ModelGenericConn.type_==self.request.input.type_).\
+                    one().id
+
+        return self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value, instance_id=instance_id,
             publish_instance_attrs=['type_'])
 
 # ################################################################################################################################

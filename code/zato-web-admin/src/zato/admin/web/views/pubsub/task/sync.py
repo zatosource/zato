@@ -23,18 +23,18 @@ from zato.common.util.time_ import datetime_from_ms
 logger = logging.getLogger(__name__)
 
 dict_name_to_url_name = {
-    'subscriptions_by_topic': 'pubsub-task-main-dict-values-subscriptions',
-    'subscriptions_by_sub_key': 'pubsub-task-main-dict-values-subscriptions',
-    'sub_key_servers': 'pubsub-task-main-dict-values-sks',
-    'endpoints': 'pubsub-task-main-dict-values-endpoints',
-    'topics': 'pubsub-task-main-dict-values-topics',
-    'sec_id_to_endpoint_id': 'pubsub-task-main-dict-values-endpoints',
-    'ws_channel_id_to_endpoint_id': 'pubsub-task-main-dict-values-endpoints',
-    'service_id_to_endpoint_id': 'pubsub-task-main-dict-values-endpoints',
-    'topic_name_to_id': 'pubsub-task-main-dict-values-topics',
-    'pubsub_tool_by_sub_key': 'pubsub-task-main-dict-values-pst',
-    'pubsub_tools': 'pubsub-task-main-dict-values-pst',
-    'endpoint_msg_counter': 'pubsub-task-main-dict-values-messages'
+    'subscriptions_by_topic': 'pubsub-task-sync-dict-values-subscriptions',
+    'subscriptions_by_sub_key': 'pubsub-task-sync-dict-values-subscriptions',
+    'sub_key_servers': 'pubsub-task-sync-dict-values-sks',
+    'endpoints': 'pubsub-task-sync-dict-values-endpoints',
+    'topics': 'pubsub-task-sync-dict-values-topics',
+    'sec_id_to_endpoint_id': 'pubsub-task-sync-dict-values-endpoints',
+    'ws_channel_id_to_endpoint_id': 'pubsub-task-sync-dict-values-endpoints',
+    'service_id_to_endpoint_id': 'pubsub-task-sync-dict-values-endpoints',
+    'topic_name_to_id': 'pubsub-task-sync-dict-values-topics',
+    'pubsub_tool_by_sub_key': 'pubsub-task-sync-dict-values-pst',
+    'pubsub_tools': 'pubsub-task-sync-dict-values-pst',
+    'endpoint_msg_counter': 'pubsub-task-sync-dict-values-messages'
 }
 
 dict_name_to_template_name = {
@@ -117,9 +117,9 @@ class _Event(object):
 
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'pubsub-task-main'
-    template = 'zato/pubsub/task/main/index.html'
-    service_name = 'zato.pubsub.task.main.get-list'
+    url_name = 'pubsub-task-sync'
+    template = 'zato/pubsub/task/sync/index.html'
+    service_name = 'zato.pubsub.task.sync.get-list'
     output_class = PubSubTool
     paginate = True
 
@@ -155,9 +155,9 @@ class _DictView(_Index):
 # ################################################################################################################################
 
 class SubscriptionDictKeys(_DictView):
-    url_name = 'pubsub-task-main-subscription-dict-keys'
-    template = 'zato/pubsub/task/main/dict/keys.html'
-    service_name = 'zato.pubsub.task.main.get-dict-keys'
+    url_name = 'pubsub-task-sync-subscription-dict-keys'
+    template = 'zato/pubsub/task/sync/dict/keys.html'
+    service_name = 'zato.pubsub.task.sync.get-dict-keys'
     output_class = _SubscriptionDictKeys
 
     class SimpleIO(_DictView.SimpleIO):
@@ -173,7 +173,7 @@ class SubscriptionDictKeys(_DictView):
 # ################################################################################################################################
 
 class DictValues(_DictView):
-    service_name = 'zato.pubsub.task.main.get-dict-values'
+    service_name = 'zato.pubsub.task.sync.get-dict-values'
     output_class = _DictValuesData
     _dict_sort_by = None
 
@@ -224,32 +224,32 @@ class DictValues(_DictView):
         return item
 
     def get_template_name(self):
-        pattern = 'zato/pubsub/task/main/dict/values/{}.html'
+        pattern = 'zato/pubsub/task/sync/dict/values/{}.html'
         name = dict_name_to_template_name[self.input.dict_name]
         return pattern.format(name)
 
 # ################################################################################################################################
 
 class DictValuesSubscriptions(DictValues):
-    url_name = 'pubsub-task-main-dict-values-subscriptions'
+    url_name = 'pubsub-task-sync-dict-values-subscriptions'
     _dict_sort_by = ['creation_time']
 
 # ################################################################################################################################
 
 class DictValuesSubKeyServer(DictValues):
-    url_name = 'pubsub-task-main-dict-values-sks'
+    url_name = 'pubsub-task-sync-dict-values-sks'
     _dict_sort_by = ['creation_time']
 
 # ################################################################################################################################
 
 class DictValuesEndpoints(DictValues):
-    url_name = 'pubsub-task-main-dict-values-endpoints'
+    url_name = 'pubsub-task-sync-dict-values-endpoints'
     _dict_sort_by = ['endpoint_type', 'name']
 
 # ################################################################################################################################
 
 class DictValuesTopics(DictValues):
-    url_name = 'pubsub-task-main-dict-values-topics'
+    url_name = 'pubsub-task-sync-dict-values-topics'
     _dict_sort_by = ['name']
 
 # ################################################################################################################################
@@ -257,8 +257,8 @@ class DictValuesTopics(DictValues):
 class EventList(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-task-event-list'
-    template = 'zato/pubsub/task/main/event/index.html'
-    service_name = 'zato.pubsub.task.main.get-event-list'
+    template = 'zato/pubsub/task/sync/event/index.html'
+    service_name = 'zato.pubsub.task.sync.get-event-list'
     output_class = _Event
     paginate = True
 

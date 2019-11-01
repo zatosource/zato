@@ -29,6 +29,9 @@ from zato.server.jwt import JWT as JWTBackend
 from zato.server.service import Boolean, Integer, Service
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
+# Python 2/3 compatibility
+from past.builtins import unicode
+
 # ################################################################################################################################
 
 class GetList(AdminService):
@@ -255,22 +258,25 @@ class LogIn(Service):
 
 # ################################################################################################################################
 
-class LogOut(AdminService):
+class LogOut(Service):
     """ Logs a user out of an existing JWT token.
     """
     class SimpleIO(AdminSIO):
-        response_elem = 'zato_security_jwt_log_out_response'
+        response_elem = None
         output_optional = 'result',
+        skip_empty_keys = True
 
     def handle(self):
         token = self.wsgi_environ.get('HTTP_AUTHORIZATION', '').replace('Bearer ', '')
+        if isinstance(token, unicode):
+            token = token.encode('utf8')
 
         if not token:
             self.response.status_code = BAD_REQUEST
             self.response.payload.result = 'No JWT found'
 
         try:
-            JWTBackend(self.kvdb, self.odb, self.server.jwt_secret).delete(token)
+            JWTBackend(self.kvdb, self.odb, self.server.decrypt, self.server.jwt_secret).delete(token)
         except Exception:
             self.logger.warn(format_exc())
             self.response.status_code = BAD_REQUEST

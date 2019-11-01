@@ -37,6 +37,22 @@ class UserCreateTestCase(BaseTest):
         self._assert_default_user_data(response, now)
 
 # ################################################################################################################################
+
+    def test_user_create_with_auto_approve(self):
+
+        now = datetime.utcnow()
+        username = self._get_random_username()
+
+        response = self.post('/zato/sso/user', {
+            'ust': self.ctx.super_user_ust,
+            'username': username,
+            'auto_approve': True
+        })
+
+        self.assertFalse(response.is_approval_needed)
+        self._assert_default_user_data(response, now, const.approval_status.approved)
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class UserSignupTestCase(BaseTest):
@@ -541,6 +557,7 @@ class UserChangePasswordTestCase(BaseTest):
 
         response = self.patch('/zato/sso/user/password', {
             'ust': ust,
+            'user_id': user_id,
             'old_password': password,
             'new_password': new_pasword
         })

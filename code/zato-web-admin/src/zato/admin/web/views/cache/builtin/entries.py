@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from base64 import b64encode
+from base64 import b64decode, b64encode
 
 # Python 2/3 compatibility
 from past.builtins import unicode
@@ -89,7 +89,7 @@ class Delete(_Delete):
     def get_input_dict(self, *args, **kwargs):
         return {
             'cache_id': self.req.POST['cache_id'],
-            'key': self.req.POST['key'].decode('hex'),
+            'key': b64decode(self.req.POST['key']),
             'cluster_id': self.cluster_id
         }
 
