@@ -53,11 +53,22 @@ def add_select(form, field_name, elems, needs_initial_select=True, skip=None):
     else:
         form.fields[field_name].choices = []
 
+    print()
+    print(111, elems)
+    print()
+
     for elem in elems:
-        id = getattr(elem, 'id', None) or elem['id']
+
+        if isinstance(elem, str):
+            id = elem
+            name = elem
+        else:
+            id = getattr(elem, 'id', None) or elem['id']
+            name = getattr(elem, 'name', None) or elem['name']
+
         if id in skip:
             continue
-        name = getattr(elem, 'name', None) or elem['name']
+
         form.fields[field_name].choices.append([id, name])
 
 # ################################################################################################################################
