@@ -598,6 +598,9 @@ class GDMessage(Message):
         self.user_ctx = msg.user_ctx
         self.zato_ctx = msg.zato_ctx
 
+        if self.zato_ctx:
+            self.zato_ctx = loads(self.zato_ctx)
+
         # Load opaque attributes, if any were provided on input
         opaque = getattr(msg, _gen_attr, None)
         if opaque:
