@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from contextlib import closing
 from datetime import datetime, timedelta
+from json import dumps
 from operator import attrgetter
 from traceback import format_exc
 
@@ -1703,6 +1704,9 @@ class PubSub(object):
         if self.has_topic_by_name(name):
             topic_name = name
 
+            # There is no particular Zato context if the topic name is not really a service name
+            zato_ctx = None
+
         # Otherwise, if there is no topic by input name, it may be actually a service name ..
         else:
 
@@ -1733,6 +1737,11 @@ class PubSub(object):
             if not self.is_subscribed_to(endpoint.id, topic_name):
                 self.subscribe(topic_name, endpoint_name=endpoint.name)
 
+            # We need a Zato context to relay information about the service pointed to by the published message
+            zato_ctx = dumps({
+                'target_service_name': name
+            })
+
         data = kwargs.get('data') or ''
         data_list = kwargs.get('data_list') or []
         msg_id = kwargs.get('msg_id') or ''
@@ -1744,7 +1753,7 @@ class PubSub(object):
         reply_to_sk = kwargs.get('reply_to_sk')
         deliver_to_sk = kwargs.get('deliver_to_sk')
         user_ctx = kwargs.get('user_ctx')
-        zato_ctx = kwargs.get('zato_ctx')
+        zato_ctx = zato_ctx or kwargs.get('zato_ctx')
 
         response = self.invoke_service('zato.pubsub.publish.publish', {
             'topic_name': topic_name,
