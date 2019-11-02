@@ -53,10 +53,6 @@ def add_select(form, field_name, elems, needs_initial_select=True, skip=None):
     else:
         form.fields[field_name].choices = []
 
-    print()
-    print(111, elems)
-    print()
-
     for elem in elems:
 
         if isinstance(elem, str):
