@@ -212,9 +212,13 @@ class ChangePasswordBase(AdminService):
     password_required = True
 
     class SimpleIO(AdminSIO):
-        input_required = (Int('id'), 'password1', 'password2')
+        input_required = 'password1', 'password2'
+        input_optional = Int('id'), 'name', 'type_'
 
-    def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *args, **kwargs):
+    def _handle(self, class_, auth_func, action, name_func=None, instance_id=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL,
+        *args, **kwargs):
+
+        instance_id = instance_id or self.request.input.id
 
         with closing(self.odb.session()) as session:
             password1 = self.request.input.get('password1', '')
@@ -235,7 +239,7 @@ class ChangePasswordBase(AdminService):
                     raise Exception('Passwords need to be the same')
 
                 instance = session.query(class_).\
-                    filter(class_.id==self.request.input.id).\
+                    filter(class_.id==instance_id).\
                     one()
 
                 auth_func(instance, password1)
@@ -246,6 +250,7 @@ class ChangePasswordBase(AdminService):
                 if msg_type:
                     name = name_func(instance) if name_func else instance.name
 
+                    self.request.input.id = instance_id
                     self.request.input.action = action
                     self.request.input.name = name
                     self.request.input.password = password1_decrypted

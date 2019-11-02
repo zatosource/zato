@@ -67,7 +67,7 @@ class Index(_Index):
         edit_form = None
 
         for endpoint_type in PUBSUB.ENDPOINT_TYPE():
-            select_data_target[endpoint_type.id] = []
+            select_data_target[endpoint_type] = []
 
         if self.req.zato.cluster_id:
 
