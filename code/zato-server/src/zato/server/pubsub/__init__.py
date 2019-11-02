@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from contextlib import closing
 from datetime import datetime, timedelta
+from json import dumps
 from operator import attrgetter
 from traceback import format_exc
 
@@ -36,7 +37,7 @@ from zato.common.odb.query.pubsub.delivery import confirm_pubsub_msg_delivered a
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key, get_sql_msg_ids_by_sub_key as _get_sql_msg_ids_by_sub_key
 from zato.common.odb.query.pubsub.queue import set_to_delete
 from zato.common.pubsub import skip_to_external
-from zato.common.util import new_cid, spawn_greenlet
+from zato.common.util import fs_safe_name, new_cid, spawn_greenlet
 from zato.common.util.event import EventLog
 from zato.common.util.hook import HookTool
 from zato.common.util.python_ import get_current_stack
@@ -44,6 +45,16 @@ from zato.common.util.time_ import utcnow_as_ms
 from zato.common.util.wsx import find_wsx_environ
 from zato.server.pubsub.model import Endpoint, EventType, HookCtx, Subscription, SubKeyServer, Topic
 from zato.server.pubsub.sync import InRAMSync
+
+# ################################################################################################################################
+
+# Type checking
+if 0:
+    from zato.server.base.parallel import ParallelServer
+    from zato.server.service import Service
+
+    ParallelServer = ParallelServer
+    Service = Service
 
 # ################################################################################################################################
 
@@ -81,6 +92,10 @@ _sub_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.id)
 
 _update_attrs = ('data', 'size', 'expiration', 'priority', 'pub_correl_id', 'in_reply_to', 'mime_type',
     'expiration', 'expiration_time')
+
+# ################################################################################################################################
+
+_ps_default = PUBSUB.DEFAULT
 
 # ################################################################################################################################
 
@@ -131,6 +146,8 @@ def get_expiration(cid, input, default_expiration=_default_expiration):
 class PubSub(object):
 
     def __init__(self, cluster_id, server, broker_client=None):
+        # type: (int, ParallelServer, object)
+
         self.cluster_id = cluster_id
         self.server = server
         self.broker_client = broker_client
@@ -139,6 +156,9 @@ class PubSub(object):
         self.keep_running = True
         self.sk_server_table_columns = self.server.fs_server_config.pubsub.get('sk_server_table_columns') or \
             default_sk_server_table_columns
+
+        # This is a pub/sub tool for delivery of Zato services within this server
+        self.service_pubsub_tool = None # type: PubSubTool
 
         self.log_if_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_deliv_server_not_found
         self.log_if_wsx_deliv_server_not_found = self.server.fs_server_config.pubsub.log_if_wsx_deliv_server_not_found
@@ -342,6 +362,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_endpoint_by_name(self, endpoint_name):
+        # type: (str) -> Endpoint
         with self.lock:
             for endpoint in self.endpoints.values():
                 if endpoint.name == endpoint_name:
@@ -352,6 +373,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_endpoint_id_by_sec_id(self, sec_id):
+        # type: (int) -> int
         with self.lock:
             return self.sec_id_to_endpoint_id[sec_id]
 
@@ -577,7 +599,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _subscribe(self, config):
+    def create_subscription_object(self, config):
         """ Low-level implementation of self.subscribe. Must be called with self.lock held.
         """
         with self.lock:
@@ -648,18 +670,29 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _create_topic(self, config):
+    def _create_topic_object(self, config):
         self._set_topic_config_hook_data(config)
         config.meta_store_frequency = self.topic_meta_store_frequency
 
-        self.topics[config.id] = Topic(config, self.server.name, self.server.pid)
+        topic = Topic(config, self.server.name, self.server.pid)
+        self.topics[config.id] = topic
         self.topic_name_to_id[config.name] = config.id
+
+        logger.info('Created topic object `%s` (id:%s) on server `%s` (pid:%s)', topic.name, topic.id,
+            topic.server_name, topic.server_pid)
 
 # ################################################################################################################################
 
-    def create_topic(self, config):
+    def create_topic_object(self, config):
         with self.lock:
-            self._create_topic(config)
+            self._create_topic_object(config)
+
+# ################################################################################################################################
+
+    def create_topic_for_service(self, service_name, topic_name):
+        # type: (PubSub, str, str)
+        self.create_topic(topic_name)
+        logger.info('Created topic `%s` for service `%s`', topic_name, service_name)
 
 # ################################################################################################################################
 
@@ -706,7 +739,7 @@ class PubSub(object):
         with self.lock:
             subscriptions_by_topic = self.subscriptions_by_topic.pop(del_name, [])
             self._delete_topic(config.id, del_name)
-            self._create_topic(config)
+            self._create_topic_object(config)
             self.subscriptions_by_topic[config.name] = subscriptions_by_topic
 
 # ################################################################################################################################
@@ -894,17 +927,21 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _set_sub_key_server(self, config):
+    def _set_sub_key_server(self, config, _endpoint_type=PUBSUB.ENDPOINT_TYPE):
         """ Low-level implementation of self.set_sub_key_server - must be called with self.lock held.
         """
         sub = self._get_subscription_by_sub_key(config['sub_key'])
         config['endpoint_id'] = sub.endpoint_id
         config['endpoint_name'] = self._get_endpoint_by_id(sub.endpoint_id)
-        config['wsx'] = int(config['endpoint_type'] == PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
+        endpoint_type = config['endpoint_type']
+
+        config['wsx'] = int(endpoint_type == _endpoint_type.WEB_SOCKETS.id)
+        config['srv'] = int(endpoint_type == _endpoint_type.SERVICE.id)
+
         sks_table = self.format_sk_servers()
-        msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx:%(wsx)s) - `%(server_name)s:%(server_pid)s`, '\
+        msg = 'Set sk_server{}for sub_key `%(sub_key)s` (wsx/srv:%(wsx)s/%(srv)s) - `%(server_name)s:%(server_pid)s`, '\
             'current sk_servers:\n{}'.format(' ' if config['server_pid'] else ' (no PID) ', sks_table)
 
         logger.info(msg, config)
@@ -1649,26 +1686,74 @@ class PubSub(object):
 # ################################################################################################################################
 # ################################################################################################################################
 
-    def publish(self, topic_name, *args, **kwargs):
-        """ Publishes a new message to input topic_name.
+    def publish(self, name, *args, **kwargs):
+        """ Publishes a new message to input name, which may point either to a topic or service.
         POST /zato/pubsub/topic/{topic_name}
         """
+        # For later use
+        from_service = kwargs.get('service') # type: Service
+        ext_client_id = from_service.name if from_service else kwargs.get('ext_client_id')
+
+        # The first one is used if name is a service, the other one if it is a regular topic
+        correl_id = kwargs.get('cid') or kwargs.get('correl_id')
+
+        has_gd = kwargs.get('has_gd')
+        endpoint_id = kwargs.get('endpoint_id') or self.server.default_internal_pubsub_endpoint_id
+
+        # If input name is a topic, let us just use it
+        if self.has_topic_by_name(name):
+            topic_name = name
+
+            # There is no particular Zato context if the topic name is not really a service name
+            zato_ctx = None
+
+        # Otherwise, if there is no topic by input name, it may be actually a service name ..
+        else:
+
+            # .. but if there is no such service, we give up.
+            if not self.server.service_store.has_service(name):
+                raise ValueError('No such service `{}`'.format(name))
+
+            # At this point we know this is a service so we may build the topic's full name,
+            # taking into account the fact that a service's name is arbitrary string
+            # so we need to make it filesystem-safe.
+            topic_name = PUBSUB.TOPIC_PATTERN.TO_SERVICE.format(fs_safe_name(name))
+
+            # We continue only if the publisher is allowed to publish messages to that service.
+            if not self.is_allowed_pub_topic_by_endpoint_id(topic_name, endpoint_id):
+                msg = 'No pub pattern matched service `{}` and endpoint `{}` (#1)'.format(
+                    name, self.get_endpoint_by_id(endpoint_id).name)
+                raise ValueError(msg)
+
+            # We create a topic for that service to receive messages from unless it already exists
+            if not self.has_topic_by_name(topic_name):
+                self.create_topic_for_service(name, topic_name)
+
+            # Messages published to services always use GD
+            has_gd = True
+
+            # Subscribe the default service delivery endpoint to messages from this topic
+            endpoint = self.get_endpoint_by_name(PUBSUB.SERVICE_SUBSCRIBER.NAME)
+            if not self.is_subscribed_to(endpoint.id, topic_name):
+                self.subscribe(topic_name, endpoint_name=endpoint.name)
+
+            # We need a Zato context to relay information about the service pointed to by the published message
+            zato_ctx = dumps({
+                'target_service_name': name
+            })
+
         data = kwargs.get('data') or ''
         data_list = kwargs.get('data_list') or []
         msg_id = kwargs.get('msg_id') or ''
-        has_gd = kwargs.get('has_gd')
         priority = kwargs.get('priority')
         expiration = kwargs.get('expiration')
         mime_type = kwargs.get('mime_type')
-        correl_id = kwargs.get('correl_id')
         in_reply_to = kwargs.get('in_reply_to')
-        ext_client_id = kwargs.get('ext_client_id')
         ext_pub_time = kwargs.get('ext_pub_time')
-        endpoint_id = kwargs.get('endpoint_id')
         reply_to_sk = kwargs.get('reply_to_sk')
         deliver_to_sk = kwargs.get('deliver_to_sk')
         user_ctx = kwargs.get('user_ctx')
-        zato_ctx = kwargs.get('zato_ctx')
+        zato_ctx = zato_ctx or kwargs.get('zato_ctx')
 
         response = self.invoke_service('zato.pubsub.publish.publish', {
             'topic_name': topic_name,
@@ -1683,7 +1768,7 @@ class PubSub(object):
             'in_reply_to': in_reply_to,
             'ext_client_id': ext_client_id,
             'ext_pub_time': ext_pub_time,
-            'endpoint_id': endpoint_id or self.server.default_internal_pubsub_endpoint_id,
+            'endpoint_id': endpoint_id,
             'reply_to_sk': reply_to_sk,
             'deliver_to_sk': deliver_to_sk,
             'user_ctx': user_ctx,
@@ -1880,6 +1965,27 @@ class PubSub(object):
 
         logger.info(msg.wsx_sub_resumed, sub_key, peer_info)
         logger_zato.info(msg.wsx_sub_resumed, sub_key, peer_info)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+    def create_topic(self, name, has_gd=False, accept_on_no_sub=True, is_active=True, is_api_sub_allowed=True, hook_service_id=None,
+        task_sync_interval=_ps_default.TASK_SYNC_INTERVAL, task_delivery_interval=_ps_default.TASK_DELIVERY_INTERVAL,
+        depth_check_freq=_ps_default.DEPTH_CHECK_FREQ):
+        # type: (PubSub)
+
+        self.invoke_service('zato.pubsub.topic.create', {
+            'cluster_id': self.server.cluster_id,
+            'name': name,
+            'is_active': is_active,
+            'is_api_sub_allowed': is_api_sub_allowed,
+            'has_gd': has_gd,
+            'hook_service_id': hook_service_id,
+            'on_no_subs_pub': PUBSUB.ON_NO_SUBS_PUB.ACCEPT.id if accept_on_no_sub else PUBSUB.ON_NO_SUBS_PUB.DROP.id,
+            'task_sync_interval': task_sync_interval,
+            'task_delivery_interval': task_delivery_interval,
+            'depth_check_freq': depth_check_freq,
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -135,6 +135,8 @@ cid_symbols = '0123456789abcdefghjkmnpqrstvwxyz'
 encode_cid_symbols = {idx: elem for (idx, elem) in enumerate(cid_symbols)}
 cid_base = len(cid_symbols)
 
+_re_fs_safe_name = '[{}]'.format(string.punctuation + string.whitespace)
+
 # ################################################################################################################################
 
 # Kept here for backward compatibility
@@ -554,7 +556,7 @@ def is_python_file(name):
 # ################################################################################################################################
 
 def fs_safe_name(value):
-    return re.sub('[{}]'.format(string.punctuation + string.whitespace), '_', value)
+    return re.sub(_re_fs_safe_name, '_', value)
 
 # ################################################################################################################################
 

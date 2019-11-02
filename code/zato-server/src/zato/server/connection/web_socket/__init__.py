@@ -212,7 +212,7 @@ class WebSocket(_WebSocket):
 
         # For publish/subscribe over WSX
         self.pubsub_tool = PubSubTool(self.config.parallel_server.worker_store.pubsub, self,
-            PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id, self.deliver_pubsub_msg)
+            PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id, deliver_pubsub_msg=self.deliver_pubsub_msg)
 
         # Active WebSocket client ID (WebSocketClient model, web_socket_client.id in SQL)
         self._sql_ws_client_id = None

@@ -911,6 +911,13 @@ class PUBSUB:
         ON_NO_SUBS_PUB = 'accept'
         SK_OPAQUE = ('deliver_to_sk', 'reply_to_sk')
 
+    class SERVICE_SUBSCRIBER:
+        NAME = 'zato.pubsub.service.endpoint'
+        TOPICS_ALLOWED = 'sub=/zato/s/to/*'
+
+    class TOPIC_PATTERN:
+        TO_SERVICE = '/zato/s/to/{}'
+
     class QUEUE_TYPE:
         STAGING = 'staging'
         CURRENT = 'current'
@@ -984,7 +991,8 @@ class PUBSUB:
         WEB_SOCKETS = NameId('WebSockets', 'wsx')
 
         def __iter__(self):
-            return iter((self.AMQP, self.INTERNAL, self.REST, self.SERVICE, self.SOAP, self.WEB_SOCKETS))
+            return iter((self.AMQP.id, self.INTERNAL.id, self.REST.id, self.SERVICE.id, self.SOAP.id,
+                self.WEB_SOCKETS.id, self.SERVICE.id))
 
     class REDIS:
         META_TOPIC_LAST_KEY = 'zato.ps.meta.topic.last.%s.%s'
@@ -999,6 +1007,7 @@ class _PUBSUB_SUBSCRIBE_CLASS:
     classes = {
         PUBSUB.ENDPOINT_TYPE.AMQP.id: 'zato.pubsub.subscription.subscribe-amqp',
         PUBSUB.ENDPOINT_TYPE.REST.id: 'zato.pubsub.subscription.subscribe-rest',
+        PUBSUB.ENDPOINT_TYPE.SERVICE.id: 'zato.pubsub.subscription.subscribe-service',
         PUBSUB.ENDPOINT_TYPE.SOAP.id: 'zato.pubsub.subscription.subscribe-soap',
         PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: 'zato.pubsub.subscription.create-wsx-subscription',
     }
