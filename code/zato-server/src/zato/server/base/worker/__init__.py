@@ -84,6 +84,7 @@ from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 from zato.server.generic.api.outconn_wsx import OutconnWSXWrapper
 from zato.server.pubsub import PubSub
+from zato.server.pubsub.task import PubSubTool
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
@@ -860,19 +861,37 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def init_pubsub(self):
+    def init_pubsub(self, _srv=PUBSUB.ENDPOINT_TYPE.SERVICE.id):
         """ Sets up all pub/sub endpoints, subscriptions and topics. Also, configures pubsub with getters for each endpoint type.
         """
+
+        # This is a pub/sub tool for delivery of Zato services within this server
+        service_pubsub_tool = PubSubTool(self.pubsub, self.server, _srv, True)
+        self.pubsub.service_pubsub_tool = service_pubsub_tool
+
         for value in self.worker_config.pubsub_endpoint.values():
             self.pubsub.create_endpoint(bunchify(value['config']))
 
         for value in self.worker_config.pubsub_subscription.values():
+
             config = bunchify(value['config'])
             config.add_subscription = True # We don't create WSX subscriptions here so it is always True
-            self.pubsub._subscribe(config)
+
+            self.pubsub.create_subscription_object(config)
+
+            # Special-case delivery of messages to services
+            if config.sub_key.startswith('zpsk.srv'):
+                service_pubsub_tool.add_sub_key(config['sub_key'])
+                self.pubsub.set_sub_key_server({
+                    'sub_key': config.sub_key,
+                    'cluster_id': self.server.cluster_id,
+                    'server_name': self.server.name,
+                    'server_pid': self.server.pid,
+                    'endpoint_type': _srv
+                })
 
         for value in self.worker_config.pubsub_topic.values():
-            self.pubsub.create_topic(bunchify(value['config']))
+            self.pubsub.create_topic_object(bunchify(value['config']))
 
         self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.AMQP.id] = None # Not used for now
         self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.REST.id] = self.worker_config.out_plain_http.get_by_id
