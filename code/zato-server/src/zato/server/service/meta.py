@@ -484,7 +484,7 @@ class DeleteMeta(AdminServiceMeta):
 class PingMeta(AdminServiceMeta):
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
-        cls.SimpleIO = PingMeta.get_sio(attrs, name, ['id'], ['info'])
+        cls.SimpleIO = PingMeta.get_sio(attrs, name, ['id'], ['info', 'id'])
         cls.handle = PingMeta.handle(attrs)
         return super(PingMeta, cls).__init__(cls)
 
@@ -502,6 +502,10 @@ class PingMeta(AdminServiceMeta):
                 self.ping(config)
                 response_time = time() - start_time
 
+                # Always return ID of the object we pinged
+                self.response.payload.id = self.request.input.id
+
+                # Return ping details
                 self.response.payload.info = 'Ping issued in {0:03.4f} s, check server logs for details, if any.'.format(
                     response_time)
 
