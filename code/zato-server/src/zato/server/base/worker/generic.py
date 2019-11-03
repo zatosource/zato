@@ -44,7 +44,6 @@ class Generic(WorkerImpl):
     def _delete_generic_connection(self, msg):
 
         conn_dict, conn_value = self._find_conn_info(msg.id)
-
         if not conn_dict:
             raise Exception('Could not find configuration matching input message `{}`'.format(msg))
         else:
