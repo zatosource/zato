@@ -346,7 +346,7 @@ class Client(object):
 
 # ################################################################################################################################
 
-    def _run(self, max_wait=10):
+    def _run(self, max_wait=10, _sleep_time=2):
 
         needs_connect = True
         start = now = datetime.utcnow()
@@ -359,9 +359,12 @@ class Client(object):
         # Wait for max_wait seconds until we have the connection
         until = now + timedelta(seconds=max_wait)
 
-        while needs_connect and now < until:
+        while self.keep_running and needs_connect and now < until:
             try:
-                self.conn.connect()
+                if self.conn.sock:
+                    self.conn.connect()
+                else:
+                    raise ValueError('No WSX connection to {} after {}'.format(self.config.address, now - start))
             except Exception as e:
 
                 if use_warn:
@@ -374,7 +377,7 @@ class Client(object):
                         log_func = logger.debug
 
                 log_func('Exception caught `%s` while connecting to WSX `%s (%s)`', e, self.config.address, format_exc())
-                sleep(2)
+                sleep(_sleep_time)
                 now = datetime.utcnow()
             else:
                 needs_connect = False
