@@ -14,6 +14,7 @@ code/local/*
 code/man/*
 code/mx/*
 code/OpenSSL/*
+code/cx_Oracle-doc/
 code/parts/*
 code/pip-selfcheck.json
 code/release-info/revision.txt
