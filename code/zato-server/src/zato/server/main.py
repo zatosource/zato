@@ -179,6 +179,27 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     sso_config = get_config(repo_location, 'sso.conf', needs_user_config=False)
     normalize_sso_config(sso_config)
 
+    # Now that we have access to server.conf, greenify libraries required to be made greenlet-friendly,
+    # assuming that there are any - otherwise do not do anything.
+    to_greenify = []
+    for key, value in server_config.get('greenify', {}).items():
+        if asbool(value):
+            if not os.path.exists(key):
+                raise ValueError('No such path `{}`'.format(key))
+            else:
+                to_greenify.append(key)
+
+    # Go ahead only if we actually have anything to greenify
+    if to_greenify:
+        import greenify
+        greenify.greenify()
+        for name in to_greenify:
+            result = greenify.patch_lib(name)
+            if not result:
+                raise ValueError('Library `{}` could not be greenified'.format(name))
+            else:
+                logger.info('Greenified library `%s`', name)
+
     server_config.main.token = server_config.main.token.encode('utf8')
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.

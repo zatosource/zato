@@ -532,13 +532,14 @@ class Ping(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_http_soap_ping_request'
         response_elem = 'zato_http_soap_ping_response'
-        input_required = ('id',)
-        output_required = ('info',)
+        input_required = 'id'
+        output_required = 'id', 'info'
 
     def handle(self):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             config_dict = getattr(self.outgoing, item.transport)
+            self.response.payload.id = self.request.input.id
             self.response.payload.info = config_dict.get(item.name).ping(self.cid)
 
 # ################################################################################################################################
