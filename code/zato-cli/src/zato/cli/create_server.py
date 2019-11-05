@@ -273,6 +273,8 @@ size=0.1 # In MB
 [logging]
 http_access_log_ignore=
 
+[greenify]
+
 [os_environ]
 sample_key=sample_value
 
