@@ -601,7 +601,6 @@ class WebSocket(_WebSocket):
                             self.ping_last_response_time = datetime.utcnow()
                             self.token.extend(ping_extend)
                         else:
-                            # self._peer_address, action, self._local_address, self.config.name
                             self.pings_missed += 1
                             if self.pings_missed < self.pings_missed_threshold:
                                 logger.warn(
@@ -623,8 +622,19 @@ class WebSocket(_WebSocket):
                                 self.on_forbidden('missed {}/{} ping messages'.format(
                                     self.pings_missed, self.pings_missed_threshold))
 
-                # No stream or server already = we can quit
+                # No stream or server already terminated = we can quit
                 else:
+                    logger.info('Stopping background pings for peer %s (%s), stream:`%s`, st:`%s`, m:%s/%s (%s)',
+                        self._peer_address,
+                        self._peer_fqdn,
+
+                        self.stream,
+                        self.server_terminated,
+
+                        self.pings_missed,
+                        self.pings_missed_threshold,
+
+                        self.peer_conn_info_pretty)
                     return
 
         except Exception:
