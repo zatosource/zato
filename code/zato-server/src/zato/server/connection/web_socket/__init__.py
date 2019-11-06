@@ -606,9 +606,19 @@ class WebSocket(_WebSocket):
                             if self.pings_missed < self.pings_missed_threshold:
                                 logger.warn(
                                     'Peer %s (%s) missed %s/%s ping messages from %s (%s). Last response time: %s{} (%s)'.format(
-                                        ' UTC' if self.ping_last_response_time else '', self.peer_conn_info_pretty),
-                                    self._peer_address, self._peer_fqdn, self.pings_missed, self.pings_missed_threshold,
-                                    self._local_address, self.config.name, self.ping_last_response_time)
+                                        ' UTC' if self.ping_last_response_time else ''),
+
+                                    self._peer_address,
+                                    self._peer_fqdn,
+
+                                    self.pings_missed,
+                                    self.pings_missed_threshold,
+
+                                    self._local_address,
+                                    self.config.name,
+
+                                    self.ping_last_response_time,
+                                    self.peer_conn_info_pretty)
                             else:
                                 self.on_forbidden('missed {}/{} ping messages'.format(
                                     self.pings_missed, self.pings_missed_threshold))
