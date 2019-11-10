@@ -1675,10 +1675,19 @@ def _web_socket_client(session, cluster_id, channel_id):
 
 # ################################################################################################################################
 
-def web_socket_client(session, cluster_id, channel_id, pub_client_id):
-    return _web_socket_client(session, cluster_id, channel_id).\
-           filter(WebSocketClient.pub_client_id==pub_client_id).\
-           first()
+def web_socket_client(session, cluster_id, channel_id, pub_client_id=None, ext_client_id=None, use_first=True):
+    query = _web_socket_client(session, cluster_id, channel_id)
+
+    if pub_client_id:
+        query = query.filter(WebSocketClient.pub_client_id==pub_client_id)
+
+    elif ext_client_id:
+        query = query.filter(WebSocketClient.ext_client_id==ext_client_id)
+
+    else:
+        raise ValueError('Either pub_client_id or ext_client_id is required on input')
+
+    return query.first() if use_first else query.all()
 
 # ################################################################################################################################
 
