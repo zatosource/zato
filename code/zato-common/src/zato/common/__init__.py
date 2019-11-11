@@ -1517,6 +1517,36 @@ class MS_SQL:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class FTP:
+    class CHANNEL:
+        class DEFAULT:
+            ADDRESS = 'ftp://0.0.0.0:21021'
+            MAX_CONN = 200
+            MAX_CONN_PER_IP = 20
+            COMMAND_TIMEOUT = 300
+            BANNER = 'Welcome'
+            LOG_PREFIX = '%(remote_ip)s:%(remote_port)s-[%(username)s]'
+            BASE_DIRECTORY = './work/ftp'
+            THROTTLE_READ  = 10
+            THROTTLE_WRITE = 10
+
+        class LOG_LEVEL:
+            INFO = NameId('Info', 'INFO')
+            DEBUG = NameId('Debug', 'DEBUG')
+
+            def __iter__(self):
+                return iter((self.INFO, self.DEBUG))
+
+        class INVOKE_MODE:
+            SYNC = NameId('Sync', 'sync')
+            IN_BACKGROUND = NameId('In-backgorund', 'in-background')
+
+            def __iter__(self):
+                return iter((self.IN_BACKGROUND, self.SYNC))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 ZATO_INFO_FILE = '.zato-info'
 
 # ################################################################################################################################
