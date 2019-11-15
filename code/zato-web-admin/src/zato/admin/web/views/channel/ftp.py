@@ -14,20 +14,21 @@ import logging
 # Zato
 from zato.admin.web.forms.channel.ftp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
-from zato.common.odb.model import ChannelZMQ
+from zato.common.model import FTPChannel
 
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'channel-ftp'
     template = 'zato/channel/ftp.html'
     service_name = 'channel.ftp.get-list'
-    output_class = ChannelZMQ
+    output_class = FTPChannel
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'socket_method', 'sub_key',
-            'service_name', 'pool_strategy', 'service_source', 'data_format')
+        input_required = 'cluster_id',
+        output_required = 'id',  'name',  'is_active',  'max_connections',  'max_conn_per_ip',  'command_timeout', \
+            'banner',  'log_prefix',  'base_directory',  'read_throttle',  'write_throttle',  'masq_address', \
+            'passive_ports',  'log_level',  'service_name', 'srv_invoke_mode'
         output_repeated = True
 
     def handle(self):
@@ -40,23 +41,24 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'address', 'socket_type', 'socket_method', 'sub_key',
-            'service', 'pool_strategy', 'service_source', 'data_format')
-        output_required = ('id', 'name')
+        input_required = 'name',  'is_active',  'max_connections',  'max_conn_per_ip',  'command_timeout', \
+            'banner',  'log_prefix',  'base_directory',  'read_throttle',  'write_throttle',  'masq_address', \
+            'passive_ports',  'log_level',  'service_name', 'srv_invoke_mode'
+        output_required = 'id', 'name'
 
     def success_message(self, item):
-        return 'ZeroMQ channel `{}` successfully {}'.format(item.name, self.verb)
+        return 'FTP channel `{}` successfully {}'.format(item.name, self.verb)
 
 class Create(_CreateEdit):
-    url_name = 'channel-zmq-create'
-    service_name = 'zato.channel.zmq.create'
+    url_name = 'channel-ftp-create'
+    service_name = 'channel.ftp.create'
 
 class Edit(_CreateEdit):
-    url_name = 'channel-zmq-edit'
+    url_name = 'channel-ftp-edit'
     form_prefix = 'edit-'
-    service_name = 'zato.channel.zmq.edit'
+    service_name = 'channel.ftp.edit'
 
 class Delete(_Delete):
-    url_name = 'channel-zmq-delete'
-    error_message = 'Could not delete the Zero MQ channel'
-    service_name = 'zato.channel.zmq.delete'
+    url_name = 'channel-ftp-delete'
+    error_message = 'FTP channel could not be deleted'
+    service_name = 'channel.ftp.delete'

@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 '''
 * Name
-* Address (ftp:// or ftps://) = ftp://0.0.0.0:21021
+* Address (ftp:// or ftps://) = ftp://0.0.0.0:21021, if ftps:// use server's TLS certificate
 * Is active = True
 * Max connections = 300
 * Max connections per IP = 20
@@ -21,7 +21,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 * Banner = 'Welcome'
 * Log prefix = '%(remote_ip)s:%(remote_port)s-[%(username)s]'
 * Base directory = './work/ftp'
-* TLS certificate
 * Read throttle = 10
 * Write throttle = 10
 * Masquerade address
@@ -38,3 +37,14 @@ class FTPChannel(object):
         self.is_active = None       # type: bool
         self.max_connections = None # type: int
         self.max_conn_per_ip = None # type: int
+        self.command_timeout = None # type: int
+        self.banner = None          # type: str
+        self.log_prefix = None      # type: str
+        self.base_directory = None  # type: str
+        self.read_throttle = None   # type: int
+        self.write_throttle = None  # type: int
+        self.masq_address = None    # type: str
+        self.passive_ports = None   # type: str
+        self.log_level = None       # type: str
+        self.service_name = None    # type: str
+        self.srv_invoke_mode = None # type: str
