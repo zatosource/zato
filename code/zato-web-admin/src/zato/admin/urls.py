@@ -923,9 +923,9 @@ urlpatterns += [
     url(r'^zato/channel/ftp/$',
         login_required(channel_ftp.Index()), name=channel_ftp.Index.url_name),
     url(r'^zato/channel/ftp/create/$',
-        login_required(channel_ftp.create), name='channel-ftp-create'),
+        login_required(channel_ftp.Create()), name=channel_ftp.Create.url_name),
     url(r'^zato/channel/ftp/edit/$',
-        login_required(channel_ftp.edit), name='channel-ftp-edit'),
+        login_required(channel_ftp.Edit()), name=channel_ftp.Edit.url_name),
     url(r'^zato/channel/ftp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_ftp.Delete()), name=channel_ftp.Delete.url_name),
     ]
