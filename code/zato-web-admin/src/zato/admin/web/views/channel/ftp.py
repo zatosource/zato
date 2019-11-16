@@ -26,24 +26,26 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
-           'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle', 'masq_address', \
-           'passive_ports', 'log_level', 'service_name', 'srv_invoke_mode'
+        output_required = 'id', 'name', 'is_active', 'address', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
+          'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle',  \
+          'log_level', 'srv_invoke_mode'
+        output_optional = 'service_id', 'service_name', 'topic_name'
         output_repeated = True
 
     def handle(self):
         return {
-            'create_form': CreateForm(req=self.req),
-            'edit_form': EditForm(prefix='edit', req=self.req),
+           'create_form': CreateForm(req=self.req),
+           'edit_form': EditForm(prefix='edit', req=self.req),
         }
 
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name',  'is_active',  'max_connections',  'max_conn_per_ip',  'command_timeout', \
-            'banner',  'log_prefix',  'base_directory',  'read_throttle',  'write_throttle',  'masq_address', \
-            'passive_ports',  'log_level',  'service_name', 'srv_invoke_mode'
+        input_required = 'name', 'is_active', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
+           'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle', \
+           'passive_ports', 'log_level', 'srv_invoke_mode'
+        input_optional = 'service_name', 'topic_name'
         output_required = 'id', 'name'
 
     def success_message(self, item):
@@ -82,9 +84,9 @@ class GetList(Service):
 
     class SimpleIO:
         input_required = 'cluster_id',
-        output_required = 'id',  'name',  'is_active',  Int('max_connections'),  Int('max_conn_per_ip'),  \
-            Int('command_timeout'), 'banner',  'log_prefix',  'base_directory',  'read_throttle',  'write_throttle', \
-            'masq_address', 'passive_ports', 'log_level',  'service_name', 'srv_invoke_mode'
+        output_required = 'id', 'name', 'is_active',  Int('max_connections'),  Int('max_conn_per_ip'),  \
+            Int('command_timeout'), 'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle', \
+           'masq_address', 'passive_ports', 'log_level', 'service_name', 'srv_invoke_mode'
         output_repeated = True
 
     def handle(self):
