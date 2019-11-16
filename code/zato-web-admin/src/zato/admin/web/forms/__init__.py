@@ -37,6 +37,12 @@ SELECT_SERVICE_FIELDS = [
 
 # ################################################################################################################################
 
+SELECT_TOPICS_FIELDS = [
+    'topic_name',
+]
+
+# ################################################################################################################################
+
 def add_initial_select(form, field_name):
     form.fields[field_name].choices = []
     form.fields[field_name].choices.append(INITIAL_CHOICES)
@@ -146,6 +152,11 @@ def add_services(form, req, by_id=False, initial_service=None, api_name='zato.se
 
 def add_pubsub_services(form, req, by_id=False, initial_service=None):
     return add_services(form, req, by_id, initial_service, 'zato.pubsub.hook.get-hook-service-list', False)
+
+# ################################################################################################################################
+
+def add_topics(form, req, by_id=True):
+    return add_select_from_service(form, req, 'zato.pubsub.topic.get-list', SELECT_TOPICS_FIELDS, by_id=by_id)
 
 # ################################################################################################################################
 

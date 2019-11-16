@@ -12,12 +12,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_services, DataFormatForm
+from zato.admin.web.forms import add_services, add_topics
 from zato.common import FTP
 
 _default = FTP.CHANNEL.DEFAULT
 
-class CreateForm(DataFormatForm):
+class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:22%'}), initial=_default.ADDRESS)
@@ -31,7 +31,7 @@ class CreateForm(DataFormatForm):
 
     banner = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.BANNER)
     log_prefix = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.LOG_PREFIX)
-    base_directory = forms.CharField(widget=forms.TextInput(attrs={'style':'width:45%'}), initial=_default.BASE_DIRECTORY)
+    base_directory = forms.CharField(widget=forms.TextInput(attrs={'style':'width:46%'}), initial=_default.BASE_DIRECTORY)
 
     read_throttle = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=_default.THROTTLE_READ)
     write_throttle = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=_default.THROTTLE_WRITE)
@@ -41,6 +41,9 @@ class CreateForm(DataFormatForm):
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
+
+        add_services(self, req)
+        add_topics(self, req, by_id=False)
 
         '''
         self._add_field('socket_type', ZMQ.CHANNEL)
