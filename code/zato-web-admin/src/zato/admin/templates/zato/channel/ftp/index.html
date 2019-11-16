@@ -1,0 +1,284 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}FTP channels{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} HTTP Basic Auth {% endcomment %}
+    <script type="text/javascript" src="/static/js/channel/ftp/index.js"></script>
+
+
+<!--
+, \
+            ,  , \
+            ,
+-->
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            'name',
+            '_is_active',
+            'address',
+
+            '_service',
+            'log_level',
+            'base_directory',
+
+            'max_connections',
+            'max_conn_per_ip',
+            'command_timeout',
+
+            'banner',
+            'log_prefix',
+            'read_throttle',
+
+            'write_throttle',
+            'masq_address',
+            'passive_ports',
+
+            'service',
+            'srv_invoke_mode'
+            '_edit',
+
+            '_delete',
+            'id',
+            'is_active',
+
+            'service_name',
+
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">FTP channels</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show channels"%}
+
+
+    {% if cluster_id %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.channel.zmq.create()">Create a new FTP channel</a>
+        </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Address</a></th>
+
+                        <th><a href="#">Socket type</a></th>
+                        <th><a href="#">Socket method</a></th>
+                        <th><a href="#">Subscription key</a></th>
+                        <th><a href="#">Service</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.address }}</td>
+                        <td>{{ item.socket_type }}</td>
+                        <td>{{ item.socket_method }}</td>
+                        <td>{{ item.sub_key|default:''}}</td>
+                        <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.zmq.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.zmq.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.data_format }}</td>
+                        <td class='ignore'>{{ item.pool_strategy }}</td>
+                        <td class='ignore'>{{ item.service_source }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='16'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "channel-zmq-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:22%">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ create_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Address</td>
+                            <td>{{ create_form.address }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Socket type</td>
+                            <td>{{ create_form.socket_type }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Socket method</td>
+                            <td>{{ create_form.socket_method }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Subscription key<span class='form_hint'><br/>(SUB only)</span></td>
+                            <td>{{ create_form.sub_key }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Pool strategy<span class='form_hint'><br/>(MDP only)</span></td>
+                            <td>{{ create_form.pool_strategy }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service source<span class='form_hint'><br/>(MDP only)</span></td>
+                            <td>{{ create_form.service_source }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_form.service }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Data format</td>
+                            <td>{{ create_form.data_format }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "channel-zmq-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:22%">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ edit_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Address</td>
+                            <td>{{ edit_form.address }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Socket type</td>
+                            <td>{{ edit_form.socket_type }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Socket method</td>
+                            <td>{{ edit_form.socket_method }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Subscription key<span class='form_hint'><br/>(SUB only)</span></td>
+                            <td>{{ edit_form.sub_key }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Pool strategy<span class='form_hint'><br/>(MDP only)</span></td>
+                            <td>{{ edit_form.pool_strategy }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service source<span class='form_hint'><br/>(MDP only)</span></td>
+                            <td>{{ edit_form.service_source }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_form.service }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Data format</td>
+                            <td>{{ edit_form.data_format }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
