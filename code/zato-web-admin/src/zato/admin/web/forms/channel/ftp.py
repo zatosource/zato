@@ -15,27 +15,28 @@ from django import forms
 from zato.admin.web.forms import add_services, DataFormatForm
 from zato.common import FTP
 
+_default = FTP.CHANNEL.DEFAULT
+
 class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    service = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
+    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:22%'}), initial=_default.ADDRESS)
 
-    max_connections = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
-    max_conn_per_ip = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
-    command_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    service_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
+    topic_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
 
-    banner = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    log_prefix = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    base_directory = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    max_connections = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=_default.MAX_CONN)
+    max_conn_per_ip = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=_default.MAX_CONN_PER_IP)
+    command_timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=_default.COMMAND_TIMEOUT)
 
-    read_throttle = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
-    write_throttle = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    banner = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.BANNER)
+    log_prefix = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), initial=_default.LOG_PREFIX)
+    base_directory = forms.CharField(widget=forms.TextInput(attrs={'style':'width:45%'}), initial=_default.BASE_DIRECTORY)
 
-    masq_address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
-    passive_ports = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    read_throttle = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=_default.THROTTLE_READ)
+    write_throttle = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=_default.THROTTLE_WRITE)
 
-    log_level = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
+    log_level = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:10%'}), initial=FTP.CHANNEL.LOG_LEVEL.INFO.id)
     srv_invoke_mode = forms.HiddenInput()
 
     def __init__(self, prefix=None, post_data=None, req=None):

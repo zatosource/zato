@@ -1520,7 +1520,7 @@ class MS_SQL:
 class FTP:
     class CHANNEL:
         class DEFAULT:
-            ADDRESS = 'ftp://0.0.0.0:21021'
+            ADDRESS = '0.0.0.0:21021'
             MAX_CONN = 200
             MAX_CONN_PER_IP = 20
             COMMAND_TIMEOUT = 300
