@@ -10,10 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import getLogger
-from uuid import uuid4
-
-# Bunch
-from bunch import bunchify
 
 # Zato
 from zato.server.connection.wrapper import Wrapper
