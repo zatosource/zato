@@ -45,10 +45,7 @@ class ChannelFTPWrapper(Wrapper):
             #
             # Create FTP channels here
 
-            # Confirm the connection was established
-            self.ping()
-
-            # We can assume we are connected now
+            # We can assume we are done building the channel now
             self.is_connected = True
 
 # ################################################################################################################################
