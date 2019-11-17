@@ -858,6 +858,10 @@ $.fn.zato.data_table.service_text = function(service, cluster_id) {
     return String.format('<a href="/zato/service/overview/{0}/?cluster={1}">{0}</a>', service, cluster_id);
 }
 
+$.fn.zato.data_table.topic_text = function(topic, cluster_id) {
+    return String.format('<a href="/zato/pubsub/topic/?cluster={1}&amp;query={0}">{0}</a>', topic, cluster_id);
+}
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.ping = function(id) {
