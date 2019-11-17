@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_services, add_topics
+from zato.admin.web.forms import add_select, add_services, add_topics
 from zato.common import FTP
 
 _default = FTP.CHANNEL.DEFAULT
@@ -37,27 +37,13 @@ class CreateForm(forms.Form):
     write_throttle = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}), initial=_default.THROTTLE_WRITE)
 
     log_level = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:10%'}), initial=FTP.CHANNEL.LOG_LEVEL.INFO.id)
-    srv_invoke_mode = forms.HiddenInput()
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
         add_services(self, req)
         add_topics(self, req, by_id=False)
-
-        '''
-        self._add_field('socket_type', ZMQ.CHANNEL)
-        self._add_field('socket_method', ZMQ.METHOD)
-        self._add_field('pool_strategy', ZMQ.POOL_STRATEGY)
-        self._add_field('service_source', ZMQ.SERVICE_SOURCE)
-
-        add_services(self, req)
-
-    def _add_field(self, field_name, source):
-        self.fields[field_name].choices = []
-        for code, name in source.items():
-            self.fields[field_name].choices.append([code, name])
-    '''
+        add_select(self, 'log_level', FTP.CHANNEL.LOG_LEVEL(), False)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
