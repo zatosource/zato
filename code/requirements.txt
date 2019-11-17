@@ -59,7 +59,7 @@ jsonpatch==1.23
 jsonpointer==2.0
 jsonschema==3.0.1
 keyring==3.7
-keyutils==0.5
+keyutils==0.5; platform_system == 'Linux'
 kombu==4.2.1
 ldap3==2.5.2
 lxml==3.7.3
@@ -160,6 +160,6 @@ zato-redis-paginator==1.0
 zato-vault-client==1.3
 
 
-gevent-inotifyx==0.1.1
-https://github.com/dsuch/inotifyx/archive/main.zip#egg=inotifyx
+gevent-inotifyx==0.1.1; platform_system == 'Linux'
+https://github.com/dsuch/inotifyx/archive/main.zip#egg=inotifyx; platform_system == 'Linux'
 https://github.com/dsuch/warlock/archive/main.zip#egg=warlock
