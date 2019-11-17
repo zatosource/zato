@@ -28,7 +28,7 @@ dateparser==0.7.1
 davis==0.1
 decorator==3.4.0
 dictalchemy==0.1.2.6
-dill==0.2.5
+dill==0.3.1.1
 Django==1.9.7
 docformatter==0.8
 elasticsearch==7.0.0
