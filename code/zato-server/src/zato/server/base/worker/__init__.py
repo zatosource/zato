@@ -77,6 +77,7 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.vault import VaultConnAPI
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
+from zato.server.generic.api.channel_ftp import ChannelFTPWrapper
 from zato.server.generic.api.def_kafka import DefKafkaWrapper
 from zato.server.generic.api.outconn_im_slack import OutconnIMSlackWrapper
 from zato.server.generic.api.outconn_im_telegram import OutconnIMTelegramWrapper
@@ -181,6 +182,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # To expedite look-ups
         self._simple_types = simple_types
 
+        # Generic connections - FTP channels
+        self.channel_ftp = {}
+
         # Generic connections - Kafka definitions
         self.def_kafka = {}
 
@@ -251,6 +255,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FTP: self.channel_ftp,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: self.def_kafka,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: self.outconn_im_slack,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: self.outconn_im_telegram,
@@ -260,6 +265,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         }
 
         self._generic_conn_handler = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FTP: ChannelFTPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA: DefKafkaWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK: OutconnIMSlackWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM: OutconnIMTelegramWrapper,
@@ -989,6 +995,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def init_generic_connections_config(self):
 
         # Local aliases
+        channel_ftp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_FTP, {})
         def_kafka_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.DEF_KAFKA, {})
         outconn_im_slack_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_SLACK, {})
         outconn_im_telegram_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_IM_TELEGRAM, {})
@@ -999,6 +1006,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
+            channel_ftp_map,
             def_kafka_map,
             outconn_im_slack_map,
             outconn_im_telegram_map,
