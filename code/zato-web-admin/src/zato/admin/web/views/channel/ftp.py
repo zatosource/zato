@@ -28,7 +28,7 @@ class Index(_Index):
         input_required = 'cluster_id',
         output_required = 'id', 'name', 'is_active', 'address', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
           'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle',  \
-          'log_level', 'srv_invoke_mode'
+          'log_level'
         output_optional = 'service_id', 'service_name', 'topic_name'
         output_repeated = True
 
@@ -44,7 +44,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'name', 'is_active', 'max_connections', 'max_conn_per_ip', 'command_timeout', \
            'banner', 'log_prefix', 'base_directory', 'read_throttle', 'write_throttle', \
-           'passive_ports', 'log_level', 'srv_invoke_mode'
+           'passive_ports', 'log_level'
         input_optional = 'service_name', 'topic_name'
         output_required = 'id', 'name'
 
